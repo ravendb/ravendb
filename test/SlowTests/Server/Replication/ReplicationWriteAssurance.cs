@@ -5,7 +5,7 @@ using Xunit;
 
 namespace SlowTests.Server.Replication
 {
-    public class ReplicationWriteAssurance : ReplicationTestsBase
+    public class ReplicationWriteAssurance : ReplicationTestBase
     {
         [Fact]
         public async Task ServerSideWriteAssurance()

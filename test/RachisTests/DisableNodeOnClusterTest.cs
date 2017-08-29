@@ -12,7 +12,7 @@ using Xunit;
 
 namespace RachisTests
 {
-    public class DisableNodeOnClusterTest : ReplicationTestsBase
+    public class DisableNodeOnClusterTest : ReplicationTestBase
     {
         [Fact]
         public async Task BackToFirstNodeAfterRevive()

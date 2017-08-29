@@ -26,9 +26,9 @@ namespace FastTests.Client
                 IncludesUtil.Include(json, "CustomerId(customer/)", customerId =>
                 {
                     if (customerId == null)
-                        return false;
+                        return;
+
                     ids.Add(customerId);
-                    return true;
                 });
 
                 Assert.Equal(new[] { "customer/1", "1" }, ids);
@@ -50,9 +50,9 @@ namespace FastTests.Client
                 IncludesUtil.Include(json, "CustomerId[{0}/customer]", customerId =>
                 {
                     if (customerId == null)
-                        return false;
+                        return;
+
                     ids.Add(customerId);
-                    return true;
                 });
 
                 Assert.Equal(new[] { "1/customer", "1" }, ids);

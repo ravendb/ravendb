@@ -11,7 +11,7 @@ using Xunit;
 
 namespace SlowTests.Server.Replication
 {
-    public class ReplicationBasicTestsSlow : ReplicationTestsBase
+    public class ReplicationBasicTestsSlow : ReplicationTestBase
     {
         public readonly string DbName = "TestDB" + Guid.NewGuid();
 

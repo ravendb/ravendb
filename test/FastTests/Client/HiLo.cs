@@ -12,7 +12,7 @@ using Xunit;
 
 namespace FastTests.Client
 {
-    public class Hilo : ReplicationTestsBase
+    public class Hilo : ReplicationTestBase
     {
         private class HiloDoc
         {

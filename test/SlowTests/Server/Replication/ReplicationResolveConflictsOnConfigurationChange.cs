@@ -10,7 +10,7 @@ using Xunit;
 
 namespace SlowTests.Server.Replication
 {
-    public class ReplicationResolveConflictsOnConfigurationChange : ReplicationTestsBase
+    public class ReplicationResolveConflictsOnConfigurationChange : ReplicationTestBase
     {
 
         public async Task<List<ModifyOngoingTaskResult>> GenerateConflicts(DocumentStore store1, DocumentStore store2, string id = "foo/bar")

@@ -17,7 +17,7 @@ using Xunit;
 
 namespace SlowTests.Server.Replication
 {
-    public class AutomaticConflictResolution : ReplicationTestsBase
+    public class AutomaticConflictResolution : ReplicationTestBase
     {
         [Fact]
         public async Task ScriptResolveToTombstone()

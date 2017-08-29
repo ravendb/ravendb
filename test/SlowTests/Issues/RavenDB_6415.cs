@@ -7,7 +7,7 @@ using Raven.Server.Documents.Replication;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_6415 : ReplicationTestsBase
+    public class RavenDB_6415 : ReplicationTestBase
     {
         private class User
         {

@@ -18,7 +18,7 @@ using Xunit;
 
 namespace RachisTests.DatabaseCluster
 {
-    public class ClusterDatabaseMaintenance : ReplicationTestsBase
+    public class ClusterDatabaseMaintenance : ReplicationTestBase
     {
         [Fact]
         public async Task MoveToRehabOnServerDown()

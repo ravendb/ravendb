@@ -14,7 +14,7 @@ using Xunit;
 
 namespace SlowTests.Server.Documents.Indexing.MapReduce
 {
-    public class RavenDB_4323_Replication : ReplicationTestsBase, IDocumentTombstoneAware
+    public class RavenDB_4323_Replication : ReplicationTestBase, IDocumentTombstoneAware
     {
         [Fact]
         public async Task ReduceOutputShouldNotBeReplicated()

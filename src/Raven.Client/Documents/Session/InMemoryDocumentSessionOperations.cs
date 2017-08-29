@@ -1071,7 +1071,7 @@ more responsive application.
                 var json = (BlittableJsonReaderObject)propertyDetails.Value;
 
                 var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(json);
-                if (newDocumentInfo.Metadata.TryGet(Constants.Documents.Metadata.Conflict, out bool conflict) && conflict)
+                if (newDocumentInfo.Metadata.TryGetConflict(out var conflict) && conflict)
                     continue;
 
                 IncludedDocumentsById[newDocumentInfo.Id] = newDocumentInfo;
@@ -1093,13 +1093,19 @@ more responsive application.
                     IncludesUtil.Include(result, include, id =>
                     {
                         if (id == null)
-                            return false;
-                        if (IsLoaded(id) == false)
+                            return;
+
+                        if (IsLoaded(id))
+                            return;
+
+                        if (includes.TryGet(id, out BlittableJsonReaderObject document))
                         {
-                            RegisterMissing(id);
-                            return false;
+                            var metadata = document.GetMetadata();
+                            if (metadata.TryGetConflict(out var conflict) && conflict)
+                                return;
                         }
-                        return true;
+
+                        RegisterMissing(id);
                     });
                 }
             }
@@ -1205,8 +1211,8 @@ more responsive application.
                     IncludesUtil.Include(documentInfo.Document, include, s =>
                     {
                         hasAll &= IsLoaded(s);
-                        return true;
                     });
+
                     if (hasAll == false)
                         return false;
                 }

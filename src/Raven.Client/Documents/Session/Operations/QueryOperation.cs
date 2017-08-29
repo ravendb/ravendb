@@ -108,7 +108,7 @@ namespace Raven.Client.Documents.Session.Operations
             }
 
             if (DisableEntitiesTracking == false)
-                _session.RegisterMissingIncludes(queryResult.Results,  queryResult.Includes, queryResult.IncludedPaths);
+                _session.RegisterMissingIncludes(queryResult.Results, queryResult.Includes, queryResult.IncludedPaths);
 
             return list;
         }

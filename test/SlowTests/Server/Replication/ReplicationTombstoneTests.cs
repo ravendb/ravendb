@@ -5,7 +5,7 @@ using Xunit;
 
 namespace SlowTests.Server.Replication
 {
-    public class ReplicationTombstoneTests : ReplicationTestsBase
+    public class ReplicationTombstoneTests : ReplicationTestBase
     {
         [Fact]
         public async Task Tombstones_replication_should_delete_document_at_multiple_destinations_fan()

@@ -8,6 +8,7 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Extensions;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
@@ -324,18 +325,6 @@ namespace Raven.Server.Json
             {
                 writer.WritePropertyName(nameof(result.Includes));
                 writer.WriteIncludes(context, includeDocuments);
-                writer.WriteComma();
-            }
-            else if (results is List<BlittableJsonReaderObject> includeObjects)
-            {
-                writer.WritePropertyName(nameof(result.Includes));
-                writer.WriteObjects(context, includeObjects, out _);
-                writer.WriteComma();
-            }
-            else if (includes is Dictionary<LazyStringValue, BlittableJsonReaderObject> includeObjectsDictionary)
-            {
-                writer.WritePropertyName(nameof(result.Includes));
-                writer.WriteIncludes(context, includeObjectsDictionary);
                 writer.WriteComma();
             }
             else
@@ -923,6 +912,13 @@ namespace Raven.Server.Json
                     writer.WriteComma();
                 first = false;
 
+                if (document is IncludeDocumentsCommand.ConflictDocument conflict)
+                {
+                    writer.WritePropertyName(conflict.Id);
+                    WriteConflict(writer, conflict);
+                    continue;
+                }
+
                 writer.WritePropertyName(document.Id);
                 WriteDocument(writer, context, metadataOnly: false, document: document);
             }
@@ -930,20 +926,25 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteIncludes(this BlittableJsonTextWriter writer, JsonOperationContext context, Dictionary<LazyStringValue, BlittableJsonReaderObject> includes)
+        private static void WriteConflict(BlittableJsonTextWriter writer, IncludeDocumentsCommand.ConflictDocument conflict)
         {
             writer.WriteStartObject();
 
-            var first = true;
-            foreach (var kvp in includes)
-            {
-                if (first == false)
-                    writer.WriteComma();
-                first = false;
+            writer.WritePropertyName(Constants.Documents.Metadata.Key);
+            writer.WriteStartObject();
 
-                writer.WritePropertyName(kvp.Key);
-                writer.WriteObject(kvp.Value);
-            }
+            writer.WritePropertyName(Constants.Documents.Metadata.Id);
+            writer.WriteString(conflict.Id);
+            writer.WriteComma();
+
+            writer.WritePropertyName(Constants.Documents.Metadata.ChangeVector);
+            writer.WriteString(string.Empty);
+            writer.WriteComma();
+
+            writer.WritePropertyName(Constants.Documents.Metadata.Conflict);
+            writer.WriteBool(true);
+
+            writer.WriteEndObject();
 
             writer.WriteEndObject();
         }
