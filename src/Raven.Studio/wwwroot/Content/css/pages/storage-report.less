@@ -18,6 +18,13 @@
 
 #storage-report {
 
+    .base-path {
+        line-height: 18px;
+        margin-bottom: @grid-gutter-width/4;
+        color: @gray;
+        text-align: right;
+    }
+
     .chart-tooltip {
         box-shadow: 0 3px 10px -3px rgba(0, 0, 0, 0.45);
         position: absolute;
@@ -35,21 +42,21 @@
 
     #storage-report-container {
         position: relative;
-        transition:background .2s ease;
+        transition: background .2s ease;
 
         &.processing {
-            pointer-events:none;
-            .global-spinner;  
-            background:fadeout(@gray-darker,50%);          
+            pointer-events: none;
+            .global-spinner;
+            background: fadeout(@gray-darker,50%);
 
             &:before {
                 .vcenter;
-                margin-right:-22px;
-                margin-top:-22px;
+                margin-right: -22px;
+                margin-top: -22px;
             }
 
             .chart {
-                opacity:.1;
+                opacity: .1;
             }
         }
     }
@@ -232,27 +239,30 @@
     }
 
     .current-path {
+        margin-top: @grid-gutter-width/4;
+
         a {
             padding: 2px 10px;
             background-color: @brand-primary;
-            color:@gray-lighter;
+            color: @gray-lighter;
             display: inline-block;
-            font-size: 12px;            
-            margin-bottom:0;
-            width:auto;
+            font-size: 12px;
+            margin-bottom: 0;
+            width: auto;
             text-shadow: 0 0 1px rgba(0,0,0,.3), 0 0 5px rgba(0,0,0,.5);
+
             small {
-                display:block;
+                display: block;
                 margin-bottom: -6px;
-                color:@gray-lighter;
-                opacity:.8;
-                font-weight:bold;
-                text-transform:uppercase;
-                font-size:11px;
+                color: @gray-lighter;
+                opacity: .8;
+                font-weight: bold;
+                text-transform: uppercase;
+                font-size: 11px;
             }
 
             span {
-                display:block;                
+                display: block;
             }
 
             &.documents {
@@ -397,8 +407,8 @@
             color: @gray-dark;
             width: 20px;
             display: inline-block;
-            position:relative;
-            top:-1px;
+            position: relative;
+            top: -1px;
             margin-left: -4px;
         }
     }
