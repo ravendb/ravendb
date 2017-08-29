@@ -327,6 +327,16 @@ namespace Raven.Server.Json
                 writer.WriteIncludes(context, includeDocuments);
                 writer.WriteComma();
             }
+            else if (includes is List<BlittableJsonReaderObject> includeObjects)
+            {
+                if (includeObjects.Count != 0)
+                    throw new NotSupportedException("Cannot write query includes of List<BlittableJsonReaderObject>, but got non zero response");
+
+                writer.WritePropertyName(nameof(result.Includes));
+                writer.WriteStartObject();
+                writer.WriteEndObject();
+                writer.WriteComma();
+            }
             else
                 throw new NotSupportedException($"Cannot write query includes of '{typeof(TInclude)}' type in '{result.GetType()}'.");
 
