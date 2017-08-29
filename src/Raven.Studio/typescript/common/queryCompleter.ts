@@ -508,19 +508,20 @@ class queryCompleter {
         }
 
         const keywords = [
-            {value: "load", score: 7, meta: "keyword"},
+            {value: "(", score: 8, meta: "collection filter"}, // TODO RavenDB-8357: Add snippet here '(${1:collection_filter}) '
             {value: "where", score: 6, meta: "keyword"},
-            {value: "order", score: 9, meta: "keyword"},
-            {value: "include", score: 10, meta: "keyword"},
+            {value: "load", score: 4, meta: "keyword"},
+            {value: "order", score: 2, meta: "keyword"},
+            {value: "include", score: 1, meta: "keyword"},
         ];
         if (!isStaticIndex) {
             keywords.push({value: "group", score: 5, meta: "keyword"})
         }
         if (!lastKeyword.keywordModifier) {
-            keywords.push({value: "as", score: 4, meta: "keyword"})
+            keywords.push({value: "as", score: 7, meta: "keyword"})
         }
         if (!lastKeyword.keywordsBefore.find(keyword => keyword === "select")) {
-            keywords.push({value: "select", score: 8, meta: "keyword"})
+            keywords.push({value: "select", score: 3, meta: "keyword"})
         }
 
         this.completeWords(callback, keywords);
