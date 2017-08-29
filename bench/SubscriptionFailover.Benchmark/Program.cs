@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Tests.Core.Utils.Entities;
@@ -13,7 +12,6 @@ namespace SubscriptionFailover.Benchmark
 {
     public class SubscriptionFailoverBenchmark : ClusterTestBase
     {
-
         public async Task RunTestSimple()
         {
             using (var store = GetDocumentStore())
@@ -67,10 +65,6 @@ namespace SubscriptionFailover.Benchmark
             var counter = 0;
             var tcs = new TaskCompletionSource<bool>();
 
-
-
-            
-
             subscripiton.AfterAcknowledgment += b =>
             {
                 if (counter == DocsAmount)
@@ -98,7 +92,7 @@ namespace SubscriptionFailover.Benchmark
 
             var leader = await CreateRaftClusterAndGetLeader(nodesAmount, false);
 
-            await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrls[0]).ConfigureAwait(false);
+            await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrl).ConfigureAwait(false);
 
             var docsCreationTasks = new Task[docsCreationTasksAmount];
 
@@ -112,7 +106,7 @@ namespace SubscriptionFailover.Benchmark
                 var curI = i;
                 docsCreationTasks[i] = Task.Run(async () =>
                 {
-                    await GenerateDocumentsForNode(defaultDatabase, docsCreationTasks, Servers[curI].WebUrls[0], curI * DocsAmount / nodesAmount);
+                    await GenerateDocumentsForNode(defaultDatabase, docsCreationTasks, Servers[curI].WebUrl, curI * DocsAmount / nodesAmount);
                 });
             }
 
@@ -151,7 +145,7 @@ namespace SubscriptionFailover.Benchmark
         {
             using (var store = new DocumentStore
             {
-                Urls = Servers[0].WebUrls,
+                Urls = new[] { Servers[0].WebUrl },
                 Database = defaultDatabase
             }.Initialize())
             {
@@ -167,7 +161,7 @@ namespace SubscriptionFailover.Benchmark
 
                 log = new List<(string, DateTime)>();
 
-               
+
                 subscripiton.AfterAcknowledgment += b =>
                 {
                     if (counter == 1 * DocsAmount)
@@ -175,10 +169,10 @@ namespace SubscriptionFailover.Benchmark
                     return Task.CompletedTask;
                 };
 
-               GC.KeepAlive(subscripiton.Run(x =>
-               {
-                   Interlocked.Increment(ref counter);
-               }));
+                GC.KeepAlive(subscripiton.Run(x =>
+                {
+                    Interlocked.Increment(ref counter);
+                }));
 
                 await tcs.Task;
             }
@@ -238,9 +232,10 @@ namespace SubscriptionFailover.Benchmark
             //}
         }
     }
-    class Program
+
+    public class Program
     {
-        static void Main(string[] args)
+        public static void Main(string[] args)
         {
             new SubscriptionFailoverBenchmark().RunTest().Wait();
         }
