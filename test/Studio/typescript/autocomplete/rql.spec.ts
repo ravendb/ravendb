@@ -32,9 +32,24 @@ describe("RQL Autocomplete", () => {
                 {caption: "Shippers", value: "Shippers ", score: 2, meta: "collection"},
                 {caption: "Companies", value: "Companies ", score: 2, meta: "collection"},
                 {caption: "Orders", value: "Orders ", score: 2, meta: "collection"},
+                {caption: "Collection With Space", value: "'Collection With Space' ", score: 2, meta: "collection"},
+                {caption: "Collection!", value: "'Collection!' ", score: 2, meta: "collection"},
+                //TODO: {caption: "Collection With Space", value: "'Collection With ' And \" in name' ", score: 2, meta: "collection"},
                 {caption: "index", value: "index ", score: 4, meta: "keyword"},
                 {caption: "@all_docs", value: "@all_docs ", score: 3, meta: "collection"},
                 {caption: "@system", value: "@system ", score: 1, meta: "collection"},
+           ]);
+
+           done();
+       }));
+   });
+   
+   it('from index should get index names', done => {
+       rqlTestUtils.autoComplete("from index |", northwindProvider(),  ((errors, wordlist) => {
+           assert.deepEqual(wordlist, [
+                {caption: "Orders/ByCompany", value: "'Orders/ByCompany' ", score: 1, meta: "index"},
+                {caption: "Product/Sales", value: "'Product/Sales' ", score: 1, meta: "index"},
+                {caption: "Orders/Totals", value: "'Orders/Totals' ", score: 1, meta: "index"},
            ]);
 
            done();

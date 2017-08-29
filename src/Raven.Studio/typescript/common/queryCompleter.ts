@@ -456,9 +456,6 @@ class queryCompleter {
         callback(null,  keywords.map(keyword  => {
             const word = <autoCompleteWordList>keyword;
             word.caption = _.trim(keyword.value, "'");
-            if (keyword.value.includes(" ")){
-                keyword.value = "'" + keyword.value + "'"; // wrap collection name in 'collection name' if it has spaces. Also used for other values.
-            }
             if (keyword.meta === "function"){
                 keyword.value += "(";
             } else {
@@ -468,32 +465,40 @@ class queryCompleter {
         }))
     }
 
+    private isLetterOrDigit(str: string) {
+        // TODO: Add support for more letters in other lanuagse.
+        return /^[0-9a-zA-Z_@]+$/.test(str)
+    }
+
     private completeEmpty(callback: (errors: any[], wordList: autoCompleteWordList[]) => void) {
-        this.providers.collections(collections => {
-            const keywords = [
-                {value: "from", score: 2, meta: "keyword"},
-                {value: "declare", score: 1, meta: "keyword"},
-                {value: "select", score: 0, meta: "keyword"}
-            ];
-            this.completeWords(callback, keywords);
-        });
+        const keywords = [
+            {value: "from", score: 2, meta: "keyword"},
+            {value: "declare", score: 1, meta: "keyword"},
+            {value: "select", score: 0, meta: "keyword"}
+        ];
+        this.completeWords(callback, keywords);
     }
 
     private completeFrom(callback: (errors: any[], wordList: autoCompleteWordList[]) => void) {
         this.providers.collections(collections => {
-           const wordList = collections.map(name => ({
-               value: name,
-               score: 2,
-               meta: "collection"
-           })); 
-           
-           wordList.push(
-               {value: "index", score: 4, meta: "keyword"},
-               {value: "@all_docs", score: 3, meta: "collection"},
-               {value: "@system", score: 1, meta: "collection"}
-           );
-           
-           this.completeWords(callback,  wordList);
+            const wordList = collections.map(name => {
+                if (!this.isLetterOrDigit(name)) {
+                    name = "'" + name + "'";     // wrap collection name in 'collection name' if it has spaces.
+                }
+                return {
+                    value: name,
+                    score: 2,
+                    meta: "collection"
+                };
+            });
+
+            wordList.push(
+                {value: "index", score: 4, meta: "keyword"},
+                {value: "@all_docs", score: 3, meta: "collection"},
+                {value: "@system", score: 1, meta: "collection"}
+            );
+
+            this.completeWords(callback, wordList);
         });
     }
 

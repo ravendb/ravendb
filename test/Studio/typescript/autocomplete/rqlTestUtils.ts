@@ -53,11 +53,28 @@ class rqlTestUtils {
         const completer = new queryCompleter({
             terms: (indexName, field, pageSize, callback) => callback([]),
             collections: callback => {
-                callback(["Regions", "Suppliers", "Employees", "Categories", "Products", "Shippers", "Companies", "Orders"]);
+                callback([
+                    "Regions", 
+                    "Suppliers", 
+                    "Employees", 
+                    "Categories", 
+                    "Products", 
+                    "Shippers", 
+                    "Companies", 
+                    "Orders", 
+                    "Collection With Space",
+                    "Collection!"
+                    //TODO: "Collection With ' And \" in name"
+                ]);
             },
             indexFields: (indexName, callback) => callback([]),
             collectionFields: (collectionName, prefix, callback) => callback({}),
-            indexNames: callback => callback([])
+            indexNames: callback => callback([
+                "Orders/ByCompany", 
+                "Product/Sales", 
+                "Orders/Totals", 
+                // TODO: "Index With ' And \" in name"
+                ])
         });
 
         return () => completer;
