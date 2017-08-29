@@ -8,19 +8,16 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Runtime.ExceptionServices;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Raven.Client;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Exceptions.Documents.Transformers;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
-using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
@@ -30,6 +27,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Base64 = Sparrow.Utils.Base64;
 using ConcurrencyException = Voron.Exceptions.ConcurrencyException;
+using DeleteDocumentCommand = Raven.Server.Documents.TransactionCommands.DeleteDocumentCommand;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents.Handlers
@@ -160,7 +158,6 @@ namespace Raven.Server.Documents.Handlers
 
             var includePaths = GetStringValuesQueryString("include", required: false);
             var documents = new List<Document>(ids.Count);
-            List<string> changeVectors = null;
             var includes = new List<Document>(includePaths.Count * ids.Count);
             var includeDocs = new IncludeDocumentsCommand(Database.DocumentsStorage, context, includePaths);
             foreach (var id in ids)
@@ -178,7 +175,7 @@ namespace Raven.Server.Documents.Handlers
 
             includeDocs.Fill(includes);
 
-            var actualEtag = ComputeEtagFor(documents, includes, changeVectors);
+            var actualEtag = ComputeEtagFor(documents, includes);
 
             var etag = GetStringFromHeaders("If-None-Match");
             if (etag == actualEtag)
@@ -208,19 +205,19 @@ namespace Raven.Server.Documents.Handlers
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
-                writer.WritePropertyName("Results");
+                writer.WritePropertyName(nameof(GetDocumentResult.Results));
                 writer.WriteDocuments(context, documentsToWrite, metadataOnly, out numberOfResults);
 
                 writer.WriteComma();
-                writer.WritePropertyName("Includes");
+                writer.WritePropertyName(nameof(GetDocumentResult.Includes));
                 if (includes.Count > 0)
                 {
-                    writer.WriteDocuments(context, includes, metadataOnly, out numberOfResults);
+                    writer.WriteIncludes(context, includes);
                 }
                 else
                 {
-                    writer.WriteStartArray();
-                    writer.WriteEndArray();
+                    writer.WriteStartObject();
+                    writer.WriteEndObject();
                 }
 
                 writer.WriteEndObject();
@@ -239,7 +236,7 @@ namespace Raven.Server.Documents.Handlers
                 writer.StartWriteObjectDocument();
 
                 writer.StartWriteObject();
-                writer.WritePropertyName("Results");
+                writer.WritePropertyName(nameof(GetDocumentResult.Results));
 
                 writer.StartWriteArray();
 
@@ -251,16 +248,17 @@ namespace Raven.Server.Documents.Handlers
 
                 writer.WriteArrayEnd();
 
-                writer.WritePropertyName("Includes");
+                writer.WritePropertyName(nameof(GetDocumentResult.Includes));
 
-                writer.StartWriteArray();
+                writer.StartWriteObject();
 
                 foreach (var include in includes)
                 {
+                    writer.WritePropertyName(include.Id);
                     writer.WriteEmbeddedBlittableDocument(include.Data);
                 }
 
-                writer.WriteArrayEnd();
+                writer.WriteObjectEnd();
 
                 writer.WriteObjectEnd();
 
@@ -268,12 +266,12 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private static unsafe string ComputeEtagFor(List<Document> documents, List<Document> includes, List<string> additionalChangeVectors)
+        private static unsafe string ComputeEtagFor(List<Document> documents, List<Document> includes)
         {
             // This method is efficient because we aren't materializing any values
             // except the etag, which we need
-            if (documents.Count == 1 && (includes == null || includes.Count == 0) && (additionalChangeVectors == null || additionalChangeVectors.Count == 0))
-                return documents[0]?.ChangeVector ?? "";
+            if (documents.Count == 1 && (includes == null || includes.Count == 0))
+                return documents[0]?.ChangeVector ?? string.Empty;
 
             var size = Sodium.crypto_generichash_bytes();
             Debug.Assert((int)size == 32);
@@ -290,18 +288,9 @@ namespace Raven.Server.Documents.Handlers
 
             if (includes != null)
             {
-                for (int i = 0; i < includes.Count; i++)
+                foreach (var doc in includes)
                 {
-                    var doc = includes[i];
                     HashDocumentByChangeVector(state, doc);
-                }
-            }
-
-            if (additionalChangeVectors != null)
-            {
-                for (int i = 0; i < additionalChangeVectors.Count; i++)
-                {
-                    HashChangeVector(state, additionalChangeVectors[i]);
                 }
             }
 

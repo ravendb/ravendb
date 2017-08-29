@@ -21,7 +21,6 @@ using Raven.Client.ServerWide.Operations.ConnectionStrings;
 using Raven.Client.ServerWide.PeriodicBackup;
 using Raven.Client.ServerWide.Revisions;
 using Raven.Server.Commercial;
-using Raven.Server.Documents;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.Handlers;
@@ -166,7 +165,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(ClusterTopology));
 
             // query 
-            scripter.AddType(typeof(QueryResult<>));
+            scripter.AddType(typeof(QueryResult<,>));
             scripter.AddType(typeof(PutResult));
 
             // patch
@@ -246,8 +245,8 @@ namespace TypingsGenerator
             scripter.AddType(typeof(SubscriptionCriteria));
             scripter.AddType(typeof(ChangeVectorEntry));
             scripter.AddType(typeof(SubscriptionCreationOptions));
-            scripter.AddType(typeof(Constants.Documents.SubscriptionChangeVectorSpecialStates)); 
-            scripter.AddType(typeof(SubscriptionOpeningStrategy)); 
+            scripter.AddType(typeof(Constants.Documents.SubscriptionChangeVectorSpecialStates));
+            scripter.AddType(typeof(SubscriptionOpeningStrategy));
 
             // ongoing tasks - ravenDB ETL
             scripter.AddType(typeof(OngoingTaskRavenEtl));
@@ -262,12 +261,12 @@ namespace TypingsGenerator
             scripter.AddType(typeof(SqlEtlTable));
 
             // connection strings
-            scripter.AddType(typeof(ConnectionString)); 
-            scripter.AddType(typeof(RavenConnectionString)); 
-            scripter.AddType(typeof(SqlConnectionString)); 
-            scripter.AddType(typeof(ConnectionStringType)); 
-            scripter.AddType(typeof(GetConnectionStringsResult)); 
-            
+            scripter.AddType(typeof(ConnectionString));
+            scripter.AddType(typeof(RavenConnectionString));
+            scripter.AddType(typeof(SqlConnectionString));
+            scripter.AddType(typeof(ConnectionStringType));
+            scripter.AddType(typeof(GetConnectionStringsResult));
+
             // certificates
             scripter.AddType(typeof(CertificateDefinition));
 

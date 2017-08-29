@@ -63,7 +63,7 @@ namespace Raven.Server.Documents.Handlers
                     {
                         case Constants.Documents.SubscriptionChangeVectorSpecialStates.BeginningOfTime:
                         case Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange:
-                            state.ChangeVectorForNextBatchStartingPoint= null;
+                            state.ChangeVectorForNextBatchStartingPoint = null;
                             break;
                         case Constants.Documents.SubscriptionChangeVectorSpecialStates.LastDocument:
                             state.ChangeVectorForNextBatchStartingPoint = Database.DocumentsStorage.GetLastDocumentChangeVector(context, state.Criteria.Collection);
@@ -83,15 +83,15 @@ namespace Raven.Server.Documents.Handlers
 
                         foreach (var itemDetails in fetcher.GetDataToSend(context, state, patch, 0))
                         {
-                            if(itemDetails.Doc.Data == null)
+                            if (itemDetails.Doc.Data == null)
                                 continue;
-                            
+
                             if (first == false)
                                 writer.WriteComma();
 
                             if (itemDetails.Exception == null)
                             {
-                                writer.WriteDocument(context, itemDetails.Doc);
+                                writer.WriteDocument(context, itemDetails.Doc, metadataOnly: false);
                             }
                             else
                             {
@@ -114,12 +114,12 @@ namespace Raven.Server.Documents.Handlers
                 }
             }
         }
-        
+
         [RavenAction("/databases/*/subscriptions", "PUT", AuthorizationStatus.ValidUser)]
         public async Task Create()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using(context.OpenReadTransaction())
+            using (context.OpenReadTransaction())
             {
 
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), null);
@@ -182,7 +182,7 @@ namespace Raven.Server.Documents.Handlers
                     .SubscriptionStorage
                     .GetSubscriptionFromServerStore(subscriptionName);
 
-                
+
                 if (subscriptionState == null)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -194,7 +194,7 @@ namespace Raven.Server.Documents.Handlers
                 return Task.CompletedTask;
             }
         }
-        
+
         [RavenAction("/databases/*/subscriptions/connection-details", "GET", AuthorizationStatus.ValidUser)]
         public Task GetSubscriptionConnectionDetails()
         {
@@ -284,7 +284,7 @@ namespace Raven.Server.Documents.Handlers
                             x.Connection?.Stats,
                             ConnectionException = x.Connection?.ConnectionException?.Message
                         },
-                        RecentConnections = x.RecentConnections?.Select(r=> new
+                        RecentConnections = x.RecentConnections?.Select(r => new
                         {
                             r.SubscriptionState.SubscriptionId,
                             r.SubscriptionState.SubscriptionName,
@@ -318,7 +318,7 @@ namespace Raven.Server.Documents.Handlers
                                 r.ConnectionException?.Message
                             }
                         }).ToList()
-                        
+
                     }, DocumentConventions.Default, context));
                     writer.WriteArray(context, "Results", subscriptionsAsBlittable, (w, c, subscription) =>
                     {
@@ -336,7 +336,7 @@ namespace Raven.Server.Documents.Handlers
         public Task DropSubscriptionConnection()
         {
             var subscriptionId = GetLongQueryString("id");
-            
+
             if (Database.SubscriptionStorage.DropSubscriptionConnection(subscriptionId, new SubscriptionClosedException("Dropped by API request")) == false)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -356,13 +356,13 @@ namespace Raven.Server.Documents.Handlers
 
         public virtual DynamicJsonValue ToJson()
         {
-           return new DynamicJsonValue
-           {
+            return new DynamicJsonValue
+            {
                 [nameof(Id)] = Id,
                 [nameof(ChangeVector)] = ChangeVector,
                 [nameof(Exception)] = Exception,
                 [nameof(DocumentData)] = DocumentData
-           };
+            };
         }
-   }
+    }
 }

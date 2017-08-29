@@ -451,8 +451,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                 }
                                 else
                                 {
-                                    writer.WriteDocument(docsContext, result.Doc);
-                                    result.Doc.Data.Dispose();
+                                    writer.WriteDocument(docsContext, result.Doc, metadataOnly: false);
                                 }
 
                                 writer.WriteEndObject();

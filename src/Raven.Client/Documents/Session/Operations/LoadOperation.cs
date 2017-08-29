@@ -107,17 +107,7 @@ namespace Raven.Client.Documents.Session.Operations
             if (result == null)
                 return;
 
-            if (result.Includes != null)
-            {
-                foreach (BlittableJsonReaderObject include in result.Includes)
-                {
-                    if (include == null)
-                        continue;
-
-                    var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(include);
-                    _session.IncludedDocumentsById[newDocumentInfo.Id] = newDocumentInfo;
-                }
-            }
+            _session.RegisterIncludes(result.Includes);
 
             foreach (BlittableJsonReaderObject document in result.Results)
             {
@@ -127,11 +117,8 @@ namespace Raven.Client.Documents.Session.Operations
                 var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(document);
                 _session.DocumentsById.Add(newDocumentInfo);
             }
-            
-            if (_includes != null && _includes.Length > 0)
-            {
-                _session.RegisterMissingIncludes(result.Results, _includes);
-            }
+
+            _session.RegisterMissingIncludes(result.Results, result.Includes, _includes);
         }
     }
 }

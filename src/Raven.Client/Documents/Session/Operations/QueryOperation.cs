@@ -93,14 +93,9 @@ namespace Raven.Client.Documents.Session.Operations
         public List<T> Complete<T>()
         {
             var queryResult = _currentQueryResults.CreateSnapshot();
-            foreach (BlittableJsonReaderObject include in queryResult.Includes)
-            {
-                if (include == null)
-                    continue;
 
-                var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(include);
-                _session.IncludedDocumentsById[newDocumentInfo.Id] = newDocumentInfo;
-            }
+            if (DisableEntitiesTracking == false)
+                _session.RegisterIncludes(queryResult.Includes);
 
             var list = new List<T>();
             foreach (BlittableJsonReaderObject document in queryResult.Results)
@@ -113,7 +108,7 @@ namespace Raven.Client.Documents.Session.Operations
             }
 
             if (DisableEntitiesTracking == false)
-                _session.RegisterMissingIncludes(queryResult.Results, queryResult.IncludedPaths);
+                _session.RegisterMissingIncludes(queryResult.Results,  queryResult.Includes, queryResult.IncludedPaths);
 
             return list;
         }

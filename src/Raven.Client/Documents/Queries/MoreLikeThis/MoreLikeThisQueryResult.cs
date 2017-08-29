@@ -2,11 +2,11 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Queries.MoreLikeThis
 {
-    public class MoreLikeThisQueryResult : MoreLikeThisQueryResult<BlittableJsonReaderArray>
+    public class MoreLikeThisQueryResult : MoreLikeThisQueryResult<BlittableJsonReaderArray, BlittableJsonReaderObject>
     {
     }
 
-    public abstract class MoreLikeThisQueryResult<T> : QueryResultBase<T>
+    public abstract class MoreLikeThisQueryResult<TResult, TInclude> : QueryResultBase<TResult, TInclude>
     {
         /// <summary>
         /// The duration of actually executing the query server side
