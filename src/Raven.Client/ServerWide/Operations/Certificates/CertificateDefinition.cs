@@ -16,10 +16,11 @@ namespace Raven.Client.ServerWide.Operations.Certificates
         public DynamicJsonValue ToJson()
         {
             var permissions = new DynamicJsonValue();
-            foreach (var kvp in Permissions)
-            {
-                permissions[kvp.Key] = kvp.Value.ToString();
-            }
+            
+            if (Permissions != null)
+                foreach (var kvp in Permissions)
+                    permissions[kvp.Key] = kvp.Value.ToString();
+            
             return new DynamicJsonValue
             {
                 [nameof(Name)] = Name,
