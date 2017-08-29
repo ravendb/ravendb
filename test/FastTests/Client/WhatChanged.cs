@@ -81,7 +81,7 @@ namespace FastTests.Client
 
                 using (var newSession = store.OpenSession())
                 {
-                    newSession.Load<Number>("users/1");
+                    newSession.Load<Int>("users/1");
                     var changes = newSession.Advanced.WhatChanged();
                     Assert.Equal(changes["users/1"].Length, 2);
                     Assert.Equal(changes["users/1"][0].Change, DocumentsChanges.ChangeType.RemovedField);
@@ -198,6 +198,47 @@ namespace FastTests.Client
                 }
             }
         }
+
+        [Fact]
+        public void RavenDB_8169()
+        {
+            //Test that when old and new values are of different type
+            //but have the same value, we consider them unchanged
+
+            using (var store = GetDocumentStore())
+            {
+                using (var newSession = store.OpenSession())
+                {
+                    newSession.Store(new Int
+                    {
+                        Number = 1
+                    }, "num/1");
+
+                    newSession.Store(new Double
+                    {
+                        Number = 2.0
+                    }, "num/2");
+
+                    newSession.SaveChanges();
+                }
+
+                using (var newSession = store.OpenSession())
+                {
+                    newSession.Load<Double>("num/1");                    
+                    var changes = newSession.Advanced.WhatChanged();
+
+                    Assert.Equal(0 , changes.Count);
+                }
+
+                using (var newSession = store.OpenSession())
+                {
+                    newSession.Load<Int>("num/2");
+                    var changes = newSession.Advanced.WhatChanged();
+
+                    Assert.Equal(0, changes.Count);
+                }
+            }
+        }
     }
 
     public class BasicName
@@ -216,9 +257,14 @@ namespace FastTests.Client
         public int Age { set; get; }
     }
 
-    public class Number
+    public class Int
     {
-        public int Num { set; get; }
+        public int Number { set; get; }
+    }
+
+    public class Double
+    {
+        public double Number { set; get; }
     }
 
     public class Arr

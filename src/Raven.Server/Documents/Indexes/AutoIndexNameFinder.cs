@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using Raven.Client;
@@ -24,7 +25,7 @@ namespace Raven.Server.Documents.Indexes
             var reducedByFields = string.Join("And", groupBy.Select(x =>
             {
                 if (x.Indexing == FieldIndexing.Search)
-                    return IndexField.GetSearchAutoIndexFieldName(x.Name);
+                    return CultureInfo.InvariantCulture.TextInfo.ToTitleCase(IndexField.GetSearchAutoIndexFieldName(x.Name));
 
                 return x.Name;
             }).OrderBy(x => x));
@@ -50,7 +51,7 @@ namespace Raven.Server.Documents.Indexes
             var combinedFields = string.Join("And", fields.Select(x =>
             {
                 if (x.Indexing == FieldIndexing.Search)
-                    return IndexField.GetSearchAutoIndexFieldName(x.Name);
+                    return CultureInfo.InvariantCulture.TextInfo.ToTitleCase(IndexField.GetSearchAutoIndexFieldName(x.Name));
 
                 return x.Name;
             }).OrderBy(x => x));

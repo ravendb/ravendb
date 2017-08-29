@@ -50,17 +50,19 @@ namespace Raven.Server.ServerWide.BackgroundTasks
         {
             try
             {
-                // TODO @gregolsky make channel customizable 
-                var stream =
-                    await ApiRavenDbClient.GetStreamAsync("/api/v1/versions/latest?channel=dev&min=40000&max=49999");
+                var buildNumber = ServerVersion.Build;
+                if (buildNumber == ServerVersion.DevBuildNumber)
+                    return;
+
+                var stream = await ApiRavenDbClient.GetStreamAsync(
+                    $"/api/v2/versions/latest?channel=dev&build={buildNumber}");
 
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
                     var json = context.ReadForMemory(stream, "latest/version");
                     var latestVersionInfo = JsonDeserializationServer.LatestVersionCheckVersionInfo(json);
 
-                    if (ServerVersion.Build != ServerVersion.DevBuildNumber &&
-                        latestVersionInfo?.BuildNumber > ServerVersion.Build)
+                    if (latestVersionInfo?.BuildNumber > buildNumber)
                     {
                         var severityInfo = DetermineSeverity(latestVersionInfo);
 
@@ -104,17 +106,7 @@ namespace Raven.Server.ServerWide.BackgroundTasks
 
         private static NotificationSeverity DetermineSeverity(VersionInfo latestVersionInfo)
         {
-            var diff = SystemTime.UtcNow - latestVersionInfo.PublishedAt;
-            var severityInfo = NotificationSeverity.Info;
-            if (diff.TotalDays > 21)
-            {
-                severityInfo = NotificationSeverity.Error;
-            }
-            else if (diff.TotalDays > 7)
-            {
-                severityInfo = NotificationSeverity.Warning;
-            }
-            return severityInfo;
+            return Enum.Parse<NotificationSeverity>(latestVersionInfo.UpdateSeverity);
         }
 
         public class VersionInfo
@@ -127,6 +119,8 @@ namespace Raven.Server.ServerWide.BackgroundTasks
 
             public DateTime PublishedAt { get; set; }
 
+            public string UpdateSeverity { get; set; }
+
             public DynamicJsonValue ToJson()
             {
                 return new DynamicJsonValue(GetType())
@@ -134,7 +128,8 @@ namespace Raven.Server.ServerWide.BackgroundTasks
                     [nameof(Version)] = Version,
                     [nameof(BuildNumber)] = BuildNumber,
                     [nameof(BuildType)] = BuildType,
-                    [nameof(PublishedAt)] = PublishedAt
+                    [nameof(PublishedAt)] = PublishedAt,
+                    [nameof(UpdateSeverity)] = UpdateSeverity
                 };
             }
         }

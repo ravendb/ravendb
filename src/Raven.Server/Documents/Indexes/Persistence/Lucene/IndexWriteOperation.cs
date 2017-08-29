@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
     public class IndexWriteOperation : IndexOperationBase
     {
         private readonly Term _documentId = new Term(Constants.Documents.Indexing.Fields.DocumentIdFieldName, "Dummy");
-        private readonly Term _reduceKeyHash = new Term(Constants.Documents.Indexing.Fields.ReduceKeyFieldName, "Dummy");
+        private readonly Term _reduceKeyHash = new Term(Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName, "Dummy");
 
         protected readonly LuceneIndexWriter _writer;
         protected readonly Dictionary<string, LuceneSuggestionIndexWriter> _suggestionsWriters;

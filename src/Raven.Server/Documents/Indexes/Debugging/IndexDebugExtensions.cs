@@ -406,7 +406,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
                 {
                     ["p0"] = reduceKeyHash.ToString()
                 }, "query/parameters");
-                var query = new IndexQueryServerSide($"FROM INDEX '{index.Name}' WHERE {Constants.Documents.Indexing.Fields.ReduceKeyFieldName} = $p0", queryParameters);
+                var query = new IndexQueryServerSide($"FROM INDEX '{index.Name}' WHERE '{Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName}' = $p0", queryParameters);
 
                 var fieldsToFetch = new FieldsToFetch(query, index.Definition);
 

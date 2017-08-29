@@ -80,8 +80,8 @@ namespace Raven.Server.Documents.Queries.Results
                 {
                     fields = input.GetFields()
                         .Where(x => x.Name != Constants.Documents.Indexing.Fields.DocumentIdFieldName
-                                    && x.Name != Constants.Documents.Indexing.Fields.ReduceKeyFieldName
-                                    && x.Name != Constants.Documents.Indexing.Fields.ReduceValueFieldName
+                                    && x.Name != Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName
+                                    && x.Name != Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName
                                     && FieldUtil.GetRangeTypeFromFieldName(x.Name) == RangeType.None)
                         .Distinct(UniqueFieldNames.Instance)
                         .ToDictionary(x => x.Name, x => new FieldsToFetch.FieldToFetch(x.Name, null, null, x.IsStored, isDocumentId: false));
