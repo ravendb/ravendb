@@ -7,10 +7,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Security.Cryptography.X509Certificates;
-using System.Threading;
-using Raven.Client;
+using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Security;
@@ -19,8 +17,6 @@ using Raven.Client.ServerWide.ETL;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Operations.ConnectionStrings;
-using Raven.Server;
-using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -28,7 +24,7 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Xunit;
 
-namespace FastTests.Server.Authentication
+namespace SlowTests.Authentication
 {
     public class AuthenticationBasicTests : RavenTestBase
     {
