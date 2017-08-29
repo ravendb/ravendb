@@ -207,10 +207,9 @@ namespace Raven.Client.Documents.Session
 
         /// <summary>
         ///   Order the results by the specified fields
-        ///   The fields are the names of the fields to sort, defaulting to sorting by ascending.
-        ///   You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
+        ///   The field is the name of the field to sort, defaulting to sorting by ascending.
         /// </summary>
-        /// <param name = "fields">The fields.</param>
+        /// <param name = "field">The fields.</param>
         void OrderBy(string field, OrderingType ordering = OrderingType.String);
 
         void OrderByDescending(string field, OrderingType ordering = OrderingType.String);

@@ -277,30 +277,26 @@ If you really want to do in memory filtering on the data returned from the query
 
         /// <summary>
         ///     Order the results by the specified fields
-        ///     The fields are the names of the fields to sort, defaulting to sorting by ascending.
-        ///     You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
+        ///     The field is the name of the field to sort, defaulting to sorting by ascending.
         /// </summary>
         TSelf OrderBy(string field, OrderingType ordering = OrderingType.String);
 
         /// <summary>
         ///     Order the results by the specified fields
-        ///     The fields are the names of the fields to sort, defaulting to sorting by ascending.
-        ///     You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
+        ///     The field is the name of the field to sort, defaulting to sorting by ascending.
         /// </summary>
         /// <param name="propertySelectors">Property selectors for the fields.</param>
         TSelf OrderBy<TValue>(params Expression<Func<T, TValue>>[] propertySelectors);
 
         /// <summary>
         ///     Order the results by the specified fields
-        ///     The fields are the names of the fields to sort, defaulting to sorting by descending.
-        ///     You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
+        ///     The field is the name of the field to sort, defaulting to sorting by descending.
         /// </summary>
         TSelf OrderByDescending(string field, OrderingType ordering = OrderingType.String);
 
         /// <summary>
         ///     Order the results by the specified fields
-        ///     The fields are the names of the fields to sort, defaulting to sorting by descending.
-        ///     You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
+        ///     The field is the name of the field to sort, defaulting to sorting by descending.
         /// </summary>
         /// <param name="propertySelectors">Property selectors for the fields.</param>
         TSelf OrderByDescending<TValue>(params Expression<Func<T, TValue>>[] propertySelectors);
