@@ -344,11 +344,13 @@ namespace Raven.Server.Documents.Queries.Results
             _loadedDocumentIds.Clear();
 
             //_loadedDocuments.Clear(); - explicitly not clearing this, we want to cahce this for the duration of the query
-            _loadedDocuments[document.Id] = document;
+            
+            
+            _loadedDocuments[document.Id??string.Empty] = document;
             if (fieldToFetch.QueryField.SourceAlias != null)
                 IncludeUtil.GetDocIdFromInclude(document.Data, fieldToFetch.QueryField.SourceAlias, _loadedDocumentIds);
             else
-                _loadedDocumentIds.Add(document.Id); // null source alias is the root doc
+                _loadedDocumentIds.Add(document.Id??string.Empty); // null source alias is the root doc
 
             if (_loadedDocumentIds.Count == 0)
             {
