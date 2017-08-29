@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using Raven.Client.Documents.Session;
@@ -91,9 +92,8 @@ namespace Raven.Client.Json
                     case BlittableJsonToken.LazyNumber:
                     case BlittableJsonToken.CompressedString:
                     case BlittableJsonToken.String:
-                        if (newProp.Value.Equals(oldProp.Value))
-                            break;
-
+                        if (newProp.Value.Equals(oldProp.Value) || ComapreValues(oldProp, newProp))
+                            break;                       
                         if (changes == null)
                             return true;
                         NewChange(newProp.Name, newProp.Value, oldProp.Value, docChanges,
@@ -133,6 +133,27 @@ namespace Raven.Client.Json
 
             changes[id] = docChanges.ToArray();
             return true;
+        }
+
+        private static bool ComapreValues(BlittableJsonReaderObject.PropertyDetails oldProp, BlittableJsonReaderObject.PropertyDetails newProp)
+        {
+            if (newProp.Token == BlittableJsonToken.Integer && oldProp.Token == BlittableJsonToken.LazyNumber)
+            {
+                var @long = (long)newProp.Value;
+                var @double = ((LazyNumberValue)oldProp.Value).ToDouble(CultureInfo.InvariantCulture);
+
+                return @double % 1 == 0 && @long.Equals((long)@double);
+            }
+
+            if (oldProp.Token == BlittableJsonToken.Integer && newProp.Token == BlittableJsonToken.LazyNumber)
+            {
+                var @long = (long)oldProp.Value;
+                var @double = ((LazyNumberValue)newProp.Value).ToDouble(CultureInfo.InvariantCulture);
+
+                return @double % 1 == 0 && @long.Equals((long)@double);
+            }
+
+            return false;
         }
 
         private static bool CompareBlittableArray(string id, BlittableJsonReaderArray oldArray, BlittableJsonReaderArray newArray, IDictionary<string, DocumentsChanges[]> changes, List<DocumentsChanges> docChanges, LazyStringValue propName)
