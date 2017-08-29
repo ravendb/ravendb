@@ -9,6 +9,8 @@ using Jint.Native;
 using Jint.Native.Object;
 using Jint.Runtime.Interop;
 using Jint.Runtime.References;
+using Lucene.Net.Store;
+using Raven.Client;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -439,9 +441,19 @@ namespace Raven.Server.Documents.Patch
                     _disposables.Add(cloned);
                     return cloned;
                 }
-
+                if( o is Tuple<Document, Lucene.Net.Documents.Document, IState> t)
+                {
+                    var d = t.Item1;
+                    return new BlittableObjectInstance(engine, null, Clone(d.Data), d.Id, d.LastModified)
+                    {
+                        LuceneDocument = t.Item2,
+                        LuceneState = t.Item3
+                    };
+                }
                 if (o is Document doc)
+                {
                     return new BlittableObjectInstance(engine, null, Clone(doc.Data), doc.Id, doc.LastModified);
+                }
                 if (o is DocumentConflict dc)
                     return new BlittableObjectInstance(engine, null, Clone(dc.Doc), dc.Id, dc.LastModified);
                 if (o is BlittableJsonReaderObject json)

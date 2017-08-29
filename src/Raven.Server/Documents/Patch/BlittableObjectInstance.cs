@@ -2,9 +2,13 @@
 using System.Collections.Generic;
 using Jint;
 using Jint.Native;
+using Jint.Native.Json;
 using Jint.Native.Object;
 using Jint.Runtime;
 using Jint.Runtime.Descriptors;
+using Lucene.Net.Store;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Collation;
+using Raven.Server.Documents.Queries.Results;
 using Sparrow.Json;
 
 
@@ -20,6 +24,8 @@ namespace Raven.Server.Documents.Patch
         public HashSet<string> Deletes;
         public Dictionary<string, BlittableObjectProperty> OwnValues = new Dictionary<string, BlittableObjectProperty>();
         public Dictionary<string, BlittableJsonToken> OriginalPropertiesTypes;
+        public Lucene.Net.Documents.Document LuceneDocument;
+        public IState LuceneState;
 
         private void MarkChanged()
         {
@@ -64,7 +70,30 @@ namespace Raven.Server.Documents.Patch
                 var index = _parent.Blittable?.GetPropertyIndex(_property);
                 if (index == null || index == -1)
                 {
-                    Value = JsValue.Undefined;
+                    if (_parent.LuceneDocument != null)
+                    {
+                        // if it isn't on the document, check if it is stored in the index?
+                        var fieldType = QueryResultRetrieverBase.GetFieldType(property, _parent.LuceneDocument);
+                        var values = _parent.LuceneDocument.GetValues(property, _parent.LuceneState);
+                        if (fieldType.IsArray)
+                        {
+                            Value = JsValue.FromObject(_parent.Engine, values);
+                        }
+                        else if (values.Length == 1)
+                        {
+                            Value = fieldType.IsJson
+                                ? new JsonParser(_parent.Engine).Parse(values[0])
+                                : new JsValue(values[0]);
+                        }
+                        else
+                        {
+                            Value = JsValue.Undefined;
+                        }
+                    }
+                    else
+                    {
+                        Value = JsValue.Undefined;
+                    }
                 }
                 else
                 {
@@ -90,7 +119,7 @@ namespace Raven.Server.Documents.Patch
                 var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
 
                 _parent.Blittable.GetPropertyByIndex(propertyIndex, ref propertyDetails, true);
-
+                
                 return TranslateToJs(_parent, key, propertyDetails.Token, propertyDetails.Value);
             }
 

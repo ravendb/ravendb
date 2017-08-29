@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Queries.Results
                 if (doc == null)
                     return null;
 
-                return GetProjectionFromDocument(doc, score, FieldsToFetch, _context);
+                return GetProjectionFromDocument(doc, input, score, FieldsToFetch, _context, state);
             }
 
             var documentLoaded = false;
@@ -109,14 +109,24 @@ namespace Raven.Server.Documents.Queries.Results
                 if (documentLoaded == false)
                 {
                     doc = DirectGet(input, id, state);
+
                     documentLoaded = true;
                 }
 
                 if (doc == null)
                     continue;
 
-                if (TryGetValue(fieldToFetch, doc, out var fieldVal))
+                if (TryGetValue(fieldToFetch, doc, input, state, out var fieldVal))
                 {
+                    if (FieldsToFetch.SingleBodyOrMethodWithNoAlias)
+                    {
+                        if (fieldVal is BlittableJsonReaderObject nested)
+                            doc.Data = nested;
+                        else
+                            ThrowInvalidQueryBodyResponse(fieldVal);
+                        doc.IndexScore = score;
+                        return doc;
+                    }
                     if (fieldVal is List<object> list)
                         fieldVal = new DynamicJsonArray(list);
                     result[fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value] = fieldVal;
@@ -134,13 +144,13 @@ namespace Raven.Server.Documents.Queries.Results
             return ReturnProjection(result, doc, score, _context);
         }
 
-        public Document GetProjectionFromDocument(Document doc, float score, FieldsToFetch fieldsToFetch, JsonOperationContext context)
+        public Document GetProjectionFromDocument(Document doc, Lucene.Net.Documents.Document luceneDoc, float score, FieldsToFetch fieldsToFetch, JsonOperationContext context, IState state)
         {
             var result = new DynamicJsonValue();
 
             foreach (var fieldToFetch in fieldsToFetch.Fields.Values)
             {
-                if (TryGetValue(fieldToFetch, doc, out var fieldVal))
+                if (TryGetValue(fieldToFetch, doc, luceneDoc, state, out var fieldVal))
                 {
                     if (fieldsToFetch.SingleBodyOrMethodWithNoAlias)
                     {
@@ -214,9 +224,9 @@ namespace Raven.Server.Documents.Queries.Results
             foreach (var field in indexDocument.GetFields(fieldToFetch.Name))
             {
                 if (fieldType == null)
-                    fieldType = GetFieldType(field, indexDocument);
+                    fieldType = GetFieldType(field.Name, indexDocument);
 
-                var fieldValue = ConvertType(field, fieldType, state);
+                var fieldValue = ConvertType(_context, field, fieldType, state);
 
                 if (fieldType.IsArray)
                 {
@@ -238,22 +248,22 @@ namespace Raven.Server.Documents.Queries.Results
             return anyExtracted;
         }
 
-        private static FieldType GetFieldType(IFieldable field, Lucene.Net.Documents.Document indexDocument)
+        internal static FieldType GetFieldType(string field, Lucene.Net.Documents.Document indexDocument)
         {
             return new FieldType
             {
-                IsArray = indexDocument.GetField(field.Name + LuceneDocumentConverterBase.IsArrayFieldSuffix) != null,
-                IsJson = indexDocument.GetField(field.Name + LuceneDocumentConverterBase.ConvertToJsonSuffix) != null
+                IsArray = indexDocument.GetField(field+ LuceneDocumentConverterBase.IsArrayFieldSuffix) != null,
+                IsJson = indexDocument.GetField(field+ LuceneDocumentConverterBase.ConvertToJsonSuffix) != null
             };
         }
 
-        private class FieldType
+        internal class FieldType
         {
             public bool IsArray;
             public bool IsJson;
         }
 
-        private object ConvertType(IFieldable field, FieldType fieldType, IState state)
+        private static object ConvertType(JsonOperationContext context,IFieldable field, FieldType fieldType, IState state)
         {
             if (field.IsBinary)
                 ThrowBinaryValuesNotSupported();
@@ -269,7 +279,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             var bytes = Encodings.Utf8.GetBytes(stringValue);
             var ms = new MemoryStream(bytes);
-            return _context.ReadForMemory(ms, field.Name);
+            return context.ReadForMemory(ms, field.Name);
         }
 
         private static void ThrowBinaryValuesNotSupported()
@@ -277,7 +287,7 @@ namespace Raven.Server.Documents.Queries.Results
             throw new NotSupportedException("Cannot convert binary values");
         }
 
-        private bool TryGetValue(FieldsToFetch.FieldToFetch fieldToFetch, Document document, out object value)
+        private bool TryGetValue(FieldsToFetch.FieldToFetch fieldToFetch, Document document, Lucene.Net.Documents.Document luceneDoc, IState state, out object value)
         {
             if (fieldToFetch.QueryField == null)
             {
@@ -289,7 +299,11 @@ namespace Raven.Server.Documents.Queries.Results
                 var args = new object[fieldToFetch.QueryField.FunctionArgs.Length + 1];
                 for (int i = 0; i < fieldToFetch.FunctionArgs.Length; i++)
                 {
-                    TryGetValue(fieldToFetch.FunctionArgs[i], document, out args[i]);
+                    TryGetValue(fieldToFetch.FunctionArgs[i], document, luceneDoc, state, out args[i]);
+                    if (ReferenceEquals(args[i], document))
+                    {
+                        args[i] = Tuple.Create(document, luceneDoc, state);
+                    }
                 }
 
                 args[args.Length - 1] = _query.QueryParameters;
