@@ -44,9 +44,9 @@ describe("RQL Autocomplete", () => {
        }));
    });
    
-   it('from Collection |', done => {
+   it('from Collection | should list collections', done => {
        rqlTestUtils.autoComplete("from Orders |", northwindProvider(),  ((errors, wordlist) => {
-           assert.deepEqual(wordlist, [
+           assert.deepEqual(_.sortBy(wordlist, [(x: autoCompleteWordList) => x.score]).reverse(), [
                 {caption: "(", value: "( ", score: 8, meta: "collection filter"},
                 {caption: "as", value: "as ", score: 7, meta: "keyword"},
                 {caption: "where", value: "where ", score: 6, meta: "keyword"},
@@ -55,6 +55,25 @@ describe("RQL Autocomplete", () => {
                 {caption: "select", value: "select ", score: 3, meta: "keyword"},
                 {caption: "order", value: "order ", score: 2, meta: "keyword"},
                 {caption: "include", value: "include ", score: 1, meta: "keyword"}
+           ]);
+           
+           done();
+       }));
+   });
+   
+   it('from Collection (| should list fields', done => {
+       rqlTestUtils.autoComplete("from Orders (|", northwindProvider(),  ((errors, wordlist) => {
+           assert.deepEqual(wordlist, [
+                {caption: "Company", value: "Company", score: 1, meta: "string field"},
+                {caption: "Employee", value: "Employee", score: 1, meta: "string field"},
+                {caption: "OrderedAt", value: "OrderedAt", score: 1, meta: "string field"},
+                {caption: "RequireAt", value: "RequireAt", score: 1, meta: "string field"},
+                {caption: "ShippedAt", value: "ShippedAt", score: 1, meta: "string field"},
+                {caption: "ShipTo", value: "ShipTo", score: 1, meta: "object field"},
+                {caption: "ShipVia", value: "ShipVia", score: 1, meta: "string field"},
+                {caption: "Freight", value: "Freight", score: 1, meta: "number field"},
+                {caption: "Lines", value: "Lines", score: 1, meta: "object[] field"},
+                {caption: "@metadata", value: "@metadata", score: 1, meta: "object field"}
            ]);
            
            done();

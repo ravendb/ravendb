@@ -68,7 +68,28 @@ class rqlTestUtils {
                 ]);
             },
             indexFields: (indexName, callback) => callback([]),
-            collectionFields: (collectionName, prefix, callback) => callback({}),
+            collectionFields: (collectionName, prefix, callback) => {
+                switch (collectionName){
+                    case "Orders":
+                        callback({
+                            "Company": "String",
+                            "Employee": "String",
+                            "OrderedAt": "String",
+                            "RequireAt": "String",
+                            "ShippedAt": "String",
+                            "ShipTo": "Object",
+                            "ShipVia": "String",
+                            "Freight": "Number",
+                            "Lines": "ArrayObject",
+                            "@metadata": "Object"
+                        });
+                        break;
+                    default:
+                        callback({});
+                        break;
+                }
+                
+            },
             indexNames: callback => callback([
                 "Orders/ByCompany", 
                 "Product/Sales", 
