@@ -37,6 +37,20 @@ namespace SlowTests.Bugs.Indexing
             }
         }
 
+
+        private class Product_ByAttributeStored : AbstractIndexCreationTask<Product>
+        {
+            public Product_ByAttributeStored()
+            {
+                Map = products =>
+                    from p in products
+                    select new
+                    {
+                        _ = p.Attributes.Select(attribute => new Field(attribute.Name, attribute.Value, Field.Store.YES, Field.Index.ANALYZED))
+                    };
+            }
+        }
+
         private class Product_ByNumericAttribute : AbstractIndexCreationTask<Product>
         {
             public Product_ByNumericAttribute()
@@ -105,6 +119,42 @@ namespace SlowTests.Bugs.Indexing
                         .ToList();
 
                     Assert.NotEmpty(products);
+                }
+            }
+        }        
+
+        [Fact]
+        public void CanCreateCompletelyDynamicFieldsWithProjection()
+        {
+            using (var store = GetDocumentStore())
+            {
+                new Product_ByAttributeStored().Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Product
+                    {
+                        Attributes = new List<Attribute>
+                        {
+                            new Attribute{Name = "Color", Value = "Red"}
+                        }
+                    });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var products = session.Advanced.DocumentQuery<dynamic>()
+                        .RawQuery(@"from index 'Product/ByAttributeStored' as product
+where product.Color='Red'
+select {
+Color: product.Color
+}")
+                        .WaitForNonStaleResults(TimeSpan.FromMinutes(3))
+                        .ToList();
+                    Assert.NotEmpty(products);
+                    Assert.Equal("Red",products.First().Color.ToString());
                 }
             }
         }

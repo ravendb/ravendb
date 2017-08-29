@@ -48,7 +48,7 @@ namespace SlowTests.Verifications
 
                 using (var session = documentStore.OpenSession())
                 {
-                    var results = session.Advanced.DocumentQuery<TaskSummary>()
+                    var results = session.Advanced.DocumentQuery<dynamic>()
                         .RawQuery(@"
 declare function fetch(r){
 	var g = load('users/'  + r.GiverId);
