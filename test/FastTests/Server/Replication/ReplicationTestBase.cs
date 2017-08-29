@@ -17,7 +17,7 @@ using Xunit.Sdk;
 
 namespace FastTests.Server.Replication
 {
-    public class ReplicationTestsBase : ClusterTestBase
+    public class ReplicationTestBase : ClusterTestBase
     {
         protected void EnsureReplicating(DocumentStore src, DocumentStore dst)
         {

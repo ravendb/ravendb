@@ -48,40 +48,36 @@ namespace Raven.Client.Documents.Session
             return result;
         }
 
-
-
-
-        public static void Include(BlittableJsonReaderObject document, string include, Func<string, bool> loadId)
+        public static void Include(BlittableJsonReaderObject document, string include, Action<string> loadId)
         {
             if (string.IsNullOrEmpty(include) || document == null)
                 return;
-            bool isPrefix;
-            var path = GetIncludePath(include, out isPrefix);
+            var path = GetIncludePath(include, out var isPrefix);
 
             foreach (var token in document.SelectTokenWithRavenSyntaxReturningFlatStructure(path.Path))
             {
                 ExecuteInternal(token.Item1, path.Addition, (value, addition) =>
                 {
-                    value = (addition != null ?
-                    (isPrefix ? addition + value : string.Format(addition, value)) : value);
-                    return loadId(value);
+                    value = addition != null
+                        ? (isPrefix ? addition + value : string.Format(addition, value))
+                        : value;
+
+                    loadId(value);
                 });
             }
         }
 
-        private static void ExecuteInternal(object token, string addition, Func<string, string, bool> loadId)
+        private static void ExecuteInternal(object token, string addition, Action<string, string> loadId)
         {
             if (token == null)
                 return; // nothing to do
 
             //Convert.ToDecimal()
-            if (token is BlittableJsonReaderArray)
+            if (token is BlittableJsonReaderArray array)
             {
-                var blitArray = (BlittableJsonReaderArray)token;
-
-                for (var i = 0; i < blitArray.Length; i++)
+                for (var i = 0; i < array.Length; i++)
                 {
-                    ExecuteInternal(blitArray[i], addition, loadId);
+                    ExecuteInternal(i, addition, loadId);
                 }
             }
             else if (token is string)
@@ -110,7 +106,7 @@ namespace Raven.Client.Documents.Session
             }
             else if (token is long)
             {
-                long value = (long)token;
+                var value = (long)token;
 
                 try
                 {

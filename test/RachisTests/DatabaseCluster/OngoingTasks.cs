@@ -13,7 +13,7 @@ using Xunit;
 
 namespace RachisTests.DatabaseCluster
 {
-    public class OngoingTasks : ReplicationTestsBase
+    public class OngoingTasks : ReplicationTestBase
     {
         [Fact]
         public async Task CanGetTaskInfo()

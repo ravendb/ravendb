@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.Server.Replication
 {
-    public class ReplicationSpecialCases : ReplicationTestsBase
+    public class ReplicationSpecialCases : ReplicationTestBase
     {
 
         [Fact]

@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.Server.Replication
 {
-    public class AutomaticConflictResolvingOnPut : ReplicationTestsBase
+    public class AutomaticConflictResolvingOnPut : ReplicationTestBase
     {
         [Fact]
         public async Task CanAutomaticlyResolveConflict()

@@ -5,7 +5,7 @@ using Xunit;
 
 namespace FastTests.Server.Replication
 {
-    public class ReplicationBasicTests : ReplicationTestsBase
+    public class ReplicationBasicTests : ReplicationTestBase
     {
         public readonly string DbName = "TestDB" + Guid.NewGuid();
 

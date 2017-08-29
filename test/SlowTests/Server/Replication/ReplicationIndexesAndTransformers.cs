@@ -12,7 +12,7 @@ using Xunit;
 
 namespace SlowTests.Server.Replication
 {
-    public class ReplicationIndexesAndTransformers : ReplicationTestsBase
+    public class ReplicationIndexesAndTransformers : ReplicationTestBase
     {
         private class User
         {

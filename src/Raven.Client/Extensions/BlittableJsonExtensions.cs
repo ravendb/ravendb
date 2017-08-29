@@ -28,6 +28,11 @@ namespace Raven.Client.Extensions
             return metadata.TryGet(Constants.Documents.Metadata.Id, out id) && id != null;
         }
 
+        public static bool TryGetConflict(this BlittableJsonReaderObject metadata, out bool conflict)
+        {
+            return metadata.TryGet(Constants.Documents.Metadata.Conflict, out conflict);
+        }
+
         public static string GetChangeVector(BlittableJsonReaderObject metadata)
         {
             if (metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out string changeVector) == false)

@@ -16,7 +16,7 @@ using Xunit;
 
 namespace RachisTests
 {
-    public class AddNodeToClusterTests : ReplicationTestsBase
+    public class AddNodeToClusterTests : ReplicationTestBase
     {
         [Fact]
         public async Task FailOnAddingNonPassiveNode()

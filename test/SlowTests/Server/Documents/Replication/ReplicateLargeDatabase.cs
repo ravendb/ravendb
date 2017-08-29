@@ -10,7 +10,7 @@ using Xunit;
 
 namespace SlowTests.Server.Documents.Replication
 {
-    public class ReplicateLargeDatabase : ReplicationTestsBase
+    public class ReplicateLargeDatabase : ReplicationTestBase
     {
         [Fact]
         public async Task AutomaticResolveWithIdenticalContent()

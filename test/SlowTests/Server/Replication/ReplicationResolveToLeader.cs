@@ -9,7 +9,7 @@ using Xunit;
 
 namespace SlowTests.Server.Replication
 {
-    public class ReplicationResolveToDatabase : ReplicationTestsBase, IDocumentTombstoneAware
+    public class ReplicationResolveToDatabase : ReplicationTestBase, IDocumentTombstoneAware
     {
         [Fact]
         public async Task ResolveToDatabase()

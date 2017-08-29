@@ -21,7 +21,7 @@ using Xunit;
 
 namespace SlowTests.Client.Attachments
 {
-    public class AttachmentsReplication : ReplicationTestsBase
+    public class AttachmentsReplication : ReplicationTestBase
     {
         public static Guid dbId1 = new Guid("00000000-48c4-421e-9466-000000000000");
         public static Guid dbId2 = new Guid("99999999-48c4-421e-9466-000000000000");

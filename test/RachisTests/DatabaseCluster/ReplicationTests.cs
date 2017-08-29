@@ -17,7 +17,7 @@ using Xunit;
 
 namespace RachisTests.DatabaseCluster
 {
-    public class ReplicationTests : ReplicationTestsBase
+    public class ReplicationTests : ReplicationTestBase
     {
 
         [Fact]

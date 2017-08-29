@@ -280,9 +280,8 @@ namespace Raven.Server.Documents.Handlers
             if (Sodium.crypto_generichash_init(state, null, UIntPtr.Zero, size) != 0)
                 ThrowFailToInitHash();
 
-            for (int i = 0; i < documents.Count; i++)
+            foreach (var doc in documents)
             {
-                var doc = documents[i];
                 HashDocumentByChangeVector(state, doc);
             }
 
@@ -290,6 +289,9 @@ namespace Raven.Server.Documents.Handlers
             {
                 foreach (var doc in includes)
                 {
+                    if (doc is IncludeDocumentsCommand.ConflictDocument)
+                        continue;
+
                     HashDocumentByChangeVector(state, doc);
                 }
             }
