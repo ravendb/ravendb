@@ -44,6 +44,23 @@ describe("RQL Autocomplete", () => {
        }));
    });
    
+   it('from Collection |', done => {
+       rqlTestUtils.autoComplete("from Orders |", northwindProvider(),  ((errors, wordlist) => {
+           assert.deepEqual(wordlist, [
+                {caption: "(", value: "( ", score: 8, meta: "collection filter"},
+                {caption: "as", value: "as ", score: 7, meta: "keyword"},
+                {caption: "where", value: "where ", score: 6, meta: "keyword"},
+                {caption: "group", value: "group ", score: 5, meta: "keyword"},
+                {caption: "load", value: "load ", score: 4, meta: "keyword"},
+                {caption: "select", value: "select ", score: 3, meta: "keyword"},
+                {caption: "order", value: "order ", score: 2, meta: "keyword"},
+                {caption: "include", value: "include ", score: 1, meta: "keyword"}
+           ]);
+           
+           done();
+       }));
+   });
+   
    it('from index should get index names', done => {
        rqlTestUtils.autoComplete("from index |", northwindProvider(),  ((errors, wordlist) => {
            assert.deepEqual(wordlist, [
