@@ -23,7 +23,7 @@
                         <span>Close Test Area</span>
                     </button>
                 </div>
-                <div class="scroll" data-bind="with: editedSubscription">
+                <div class="flex-grow" data-bind="with: editedSubscription">
                     <div class="panel padding flex-form">
                         <div data-bind="if: liveConnection() && !$root.isAddingNewSubscriptionTask()">
                             <div class="bg-warning inline-block padding padding-xs small" title="Note: Client connection will be disconnected upon Save !">
@@ -110,11 +110,11 @@
                             <label for="latest-change-vector">Next batch starting point is :</label>
                             <textarea id="latest-change-vector" rows="2" class="form-control" disabled="disabled" data-bind="textInput: changeVectorForNextBatchStartingPoint"></textarea>
                         </div>
-                    </div><br /><br />
+                    </div>
                 </div>
             </div>
             <div class="col-sm-12 col-lg-6 flex-vertical" id="subscriptionTestArea" data-bind="visible: enableTestArea">
-                <div class="panel padding flex-vertical flex-grow">
+                <div class="panel padding flex-vertical flex-grow fixed">
                     <div class="flex-header"> 
                         <div class="flex-horizontal">
                             <div class="flex-grow"><h3>Test Subscription</h3></div>
