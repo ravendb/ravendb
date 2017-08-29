@@ -138,8 +138,8 @@ namespace SlowTests.Verifications
             public string Id { get; set; }
             public string Title { get; set; }
         }
-
-        [Fact(Skip="RavenDB-8257")]
+        
+        [Fact]
         public void WillMapPropertiesOnMapIndexes()
         {
             using (var store = GetDocumentStore())
@@ -156,7 +156,7 @@ namespace SlowTests.Verifications
 from index 'TranslatedEntities/Map' as p
 select {
     Id: p.Id,
-    Title: p['Title_'+ lang]
+    Title: p['Title_'+ $lang]
 }")
                         .AddParameter("lang", "pt")
                         .ToList();
