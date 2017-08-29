@@ -438,7 +438,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 fieldNames = query.Fields;
             else
                 fieldNames = ir.GetFieldNames(IndexReader.FieldOption.INDEXED)
-                    .Where(x => x != Constants.Documents.Indexing.Fields.DocumentIdFieldName && x != Constants.Documents.Indexing.Fields.ReduceKeyFieldName)
+                    .Where(x => x != Constants.Documents.Indexing.Fields.DocumentIdFieldName && x != Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName)
                     .ToArray();
 
             mlt.SetFieldNames(fieldNames);
@@ -476,7 +476,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     continue;
 
                 var doc = _searcher.Doc(hit.Doc, _state);
-                var id = doc.Get(Constants.Documents.Indexing.Fields.DocumentIdFieldName, _state) ?? doc.Get(Constants.Documents.Indexing.Fields.ReduceKeyFieldName, _state);
+                var id = doc.Get(Constants.Documents.Indexing.Fields.DocumentIdFieldName, _state) ?? doc.Get(Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName, _state);
                 if (id == null)
                     continue;
 

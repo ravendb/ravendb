@@ -59,7 +59,7 @@ namespace SlowTests.Issues
                     Assert.True(item.TryGet("Count", out long count));
                     Assert.Equal(5, count);
 
-                    Assert.True(item.TryGet(Constants.Documents.Indexing.Fields.ReduceKeyFieldName, out object _));
+                    Assert.True(item.TryGet(Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName, out object _));
                 }
             }
         }

@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors
                 var subQueryResult = new SubQueryResult
                 {
                     LuceneId = scoreDoc.Doc,
-                    RavenDocId = document.Get(Constants.Documents.Indexing.Fields.DocumentIdFieldName, state) ?? document.Get(Constants.Documents.Indexing.Fields.ReduceKeyFieldName, state),
+                    RavenDocId = document.Get(Constants.Documents.Indexing.Fields.DocumentIdFieldName, state) ?? document.Get(Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName, state),
                     Score = float.IsNaN(scoreDoc.Score) ? 0.0f : scoreDoc.Score,
                     Count = 1
                 };
@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors
         {
             //Don't need to add the currentBase here, it's already accounted for
             var document = _currentReader.Document(doc, state);
-            var key = document.Get(Constants.Documents.Indexing.Fields.DocumentIdFieldName, state) ?? document.Get(Constants.Documents.Indexing.Fields.ReduceKeyFieldName, state);
+            var key = document.Get(Constants.Documents.Indexing.Fields.DocumentIdFieldName, state) ?? document.Get(Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName, state);
             var currentScore = _currentScorer.Score(state);
 
             if (_results.TryGetValue(key, out SubQueryResult value) == false)
