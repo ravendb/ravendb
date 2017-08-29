@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Patch
         public bool TryResolveConflict(DocumentsOperationContext context, PatchRequest patch, out BlittableJsonReaderObject resolved)
         {
             using (_database.Scripts.GetScriptRunner(patch, false, out var run))
-            using (var result = run.Run(context, "resolve", new object[] {_docs, _hasTombstone, TombstoneResolverValue}))
+            using (var result = run.Run(context, "resolve", new object[] { _docs, _hasTombstone, TombstoneResolverValue }))
             {
                 if (result.IsNull)
                 {
@@ -60,9 +60,8 @@ namespace Raven.Server.Documents.Patch
                 // if user didn't specify it, we'll take it from the first doc
                 // we cannot change collections here anyway, anything else, the 
                 // user need to merge on their own
-                instance.Put(Constants.Documents.Metadata.Collection,new JsValue(_fstDocumentConflict.Collection), false);
-                resolved = result.TranslateToObject(context,
-                    BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                instance.Put(Constants.Documents.Metadata.Collection, new JsValue(_fstDocumentConflict.Collection), false);
+                resolved = result.TranslateToObject(context, usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                 return true;
             }
         }

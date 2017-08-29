@@ -8,6 +8,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Json;
 using System.IO;
+using System.Runtime.CompilerServices;
 using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Server.Documents.Includes;
@@ -70,8 +71,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             var result = new DynamicJsonValue();
 
-            if (FieldsToFetch.IsDistinct == false && string.IsNullOrEmpty(id) == false)
-                result[Constants.Documents.Metadata.Id] = id;
+            AddIdIfNeeded(FieldsToFetch, null, id, result);
 
             Dictionary<string, FieldsToFetch.FieldToFetch> fields = null;
             if (FieldsToFetch.ExtractAllFromIndex)
@@ -100,7 +100,7 @@ namespace Raven.Server.Documents.Queries.Results
                     fields[kvp.Key] = kvp.Value;
                 }
             }
-            
+
             foreach (var fieldToFetch in fields.Values)
             {
                 if (TryExtractValueFromIndex(fieldToFetch, input, result, state))
@@ -148,6 +148,7 @@ namespace Raven.Server.Documents.Queries.Results
                             doc.Data = nested;
                         else
                             ThrowInvalidQueryBodyResponse(fieldVal);
+
                         doc.IndexScore = score;
                         return doc;
                     }
@@ -158,10 +159,21 @@ namespace Raven.Server.Documents.Queries.Results
                 }
             }
 
-            if (fieldsToFetch.IsDistinct == false && doc.Id != null)
-                result[Constants.Documents.Metadata.Id] = doc.Id;
+            AddIdIfNeeded(fieldsToFetch, doc.Id, null, result);
 
             return ReturnProjection(result, doc, score, context);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void AddIdIfNeeded(FieldsToFetch fieldsToFetch, LazyStringValue lazyId, string id, DynamicJsonValue result)
+        {
+            if (fieldsToFetch.IsDistinct)
+                return;
+
+            if (lazyId != null)
+                result[Constants.Documents.Metadata.Id] = lazyId;
+            else if (string.IsNullOrEmpty(id) == false)
+                result[Constants.Documents.Metadata.Id] = id;
         }
 
         private static void ThrowInvalidQueryBodyResponse(object fieldVal)
@@ -265,7 +277,7 @@ namespace Raven.Server.Documents.Queries.Results
             throw new NotSupportedException("Cannot convert binary values");
         }
 
-        bool TryGetValue(FieldsToFetch.FieldToFetch fieldToFetch, Document document, out object value)
+        private bool TryGetValue(FieldsToFetch.FieldToFetch fieldToFetch, Document document, out object value)
         {
             if (fieldToFetch.QueryField == null)
             {
@@ -283,6 +295,7 @@ namespace Raven.Server.Documents.Queries.Results
                 args[args.Length - 1] = _query.QueryParameters;
 
                 value = InvokeFunction(
+                    document.Id,
                     fieldToFetch.QueryField.Name,
                     _query.Metadata.Query,
                     args);
@@ -390,9 +403,12 @@ namespace Raven.Server.Documents.Queries.Results
 
             public override bool Equals(object obj)
             {
-                if (ReferenceEquals(null, obj)) return false;
-                if (ReferenceEquals(this, obj)) return true;
-                if (obj.GetType() != this.GetType()) return false;
+                if (ReferenceEquals(null, obj))
+                    return false;
+                if (ReferenceEquals(this, obj))
+                    return true;
+                if (obj.GetType() != GetType())
+                    return false;
                 return Equals((QueryKey)obj);
             }
 
@@ -400,7 +416,7 @@ namespace Raven.Server.Documents.Queries.Results
             {
                 unchecked
                 {
-                    int hashCode =0;
+                    int hashCode = 0;
                     foreach (var function in _functions)
                     {
                         hashCode = (hashCode * 397) ^ (function.Value.GetHashCode());
@@ -423,23 +439,24 @@ namespace Raven.Server.Documents.Queries.Results
             }
         }
 
-        private object InvokeFunction(string methodName, Query query, object[] args)
+        private object InvokeFunction(LazyStringValue id, string methodName, Query query, object[] args)
         {
+            var modifier = new QueryResultModifier(id);
             var key = new QueryKey(query.DeclaredFunctions);
-            using (_database.Scripts.GetScriptRunner(key, true, out var run))
-            using(var result = run.Run(_context as DocumentsOperationContext, methodName, args))
+            using (_database.Scripts.GetScriptRunner(key, readOnly: true, patchRun: out var run))
+            using (var result = run.Run(_context as DocumentsOperationContext, methodName, args))
             {
                 _includeDocumentsCommand?.AddRange(run.Includes);
 
                 if (result.IsNull)
                     return null;
 
-                return run.Translate(result, _context);
+                return run.Translate(result, _context, modifier);
             }
         }
 
 
-        bool TryGetFieldValueFromDocument(Document document, FieldsToFetch.FieldToFetch field, out object value)
+        private bool TryGetFieldValueFromDocument(Document document, FieldsToFetch.FieldToFetch field, out object value)
         {
             if (field.IsDocumentId)
             {
@@ -465,7 +482,6 @@ namespace Raven.Server.Documents.Queries.Results
             return true;
         }
 
-
         private static void ThrowOnlyArrayFieldCanHaveMultipleValues(FieldsToFetch.FieldToFetch fieldToFetch)
         {
             throw new NotSupportedException(
@@ -484,6 +500,25 @@ namespace Raven.Server.Documents.Queries.Results
             public int GetHashCode(IFieldable obj)
             {
                 return obj.Name.GetHashCode();
+            }
+        }
+
+        private class QueryResultModifier : JsBlittableBridge.IResultModifier
+        {
+            private readonly LazyStringValue _id;
+
+            public QueryResultModifier(LazyStringValue id)
+            {
+                _id = id;
+            }
+
+            public void Modify(ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> writer)
+            {
+                if (_id == null)
+                    return;
+
+                writer.WritePropertyName(Constants.Documents.Metadata.Id);
+                writer.WriteValue(_id);
             }
         }
     }

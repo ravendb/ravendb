@@ -23,20 +23,22 @@ namespace Raven.Server.Smuggler.Documents
 
         public Document Transform(Document document, JsonOperationContext context)
         {
-			object translatedResult;
-            using (var result = _run.Run(null, "execute", new object[] {document}))
-            try
+            object translatedResult;
+            using (var result = _run.Run(null, "execute", new object[] { document }))
             {
-                translatedResult = _run.Translate(result, context, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-            }
-            finally
-            {
-                document.Data.Dispose();
+                try
+                {
+                    translatedResult = _run.Translate(result, context, usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                }
+                finally
+                {
+                    document.Data.Dispose();
+                }
             }
 
-            if (translatedResult is  BlittableJsonReaderObject == false)
+            if (translatedResult is BlittableJsonReaderObject == false)
                 return null;
-            
+
             return new Document
             {
                 Data = (BlittableJsonReaderObject)translatedResult,

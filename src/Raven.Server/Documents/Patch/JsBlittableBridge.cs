@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using Jint.Native;
 using Jint.Native.Array;
@@ -27,10 +25,13 @@ namespace Raven.Server.Documents.Patch
             _usageMode = usageMode;
         }
 
-        public void WriteInstance(ObjectInstance jsObject)
+        public void WriteInstance(ObjectInstance jsObject, IResultModifier modifier = null)
         {
             _writer.StartWriteObject();
+
             WriteRawObjectProperties(jsObject);
+            modifier?.Modify(_writer);
+
             _writer.WriteObjectEnd();
         }
 
@@ -76,7 +77,8 @@ namespace Raven.Server.Documents.Patch
             _writer.StartWriteArray();
             foreach (var property in arrayInstance.GetOwnProperties())
             {
-                if (property.Key == "length") continue;
+                if (property.Key == "length")
+                    continue;
                 WriteJsonValue(arrayInstance, property.Key, property.Value.Value);
             }
             _writer.WriteArrayEnd();
@@ -143,7 +145,7 @@ namespace Raven.Server.Documents.Patch
                 _recursive = new HashSet<object>();
             try
             {
-                if (_recursive.Add(obj) 
+                if (_recursive.Add(obj)
                     && obj is FunctionInstance == false)
                     WriteInstance(obj);
                 else
@@ -172,7 +174,7 @@ namespace Raven.Server.Documents.Patch
                     return;
             }
 
-            else if(boi.Blittable != null)
+            else if (boi.Blittable != null)
             {
                 var propIndex = boi.Blittable.GetPropertyIndex(propName);
                 if (propIndex != -1)
@@ -223,7 +225,7 @@ namespace Raven.Server.Documents.Patch
                     continue;
 
                 var value = property.Value;
-                if (value == null )
+                if (value == null)
                     continue;
 
                 _writer.WritePropertyName(propertyName);
@@ -285,8 +287,7 @@ namespace Raven.Server.Documents.Patch
                    property == Constants.Documents.Metadata.Flags;
         }
 
-        public static BlittableJsonReaderObject Translate(JsonOperationContext context, ObjectInstance objectInstance,
-            BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
+        public static BlittableJsonReaderObject Translate(JsonOperationContext context, ObjectInstance objectInstance, IResultModifier modifier = null, BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
         {
             if (objectInstance == null)
                 return null;
@@ -299,12 +300,18 @@ namespace Raven.Server.Documents.Patch
                 writer.Reset(usageMode);
                 writer.StartWriteObjectDocument();
 
-                var jurrasicBlittableBridge = new JsBlittableBridge(writer, usageMode);
-                jurrasicBlittableBridge.WriteInstance(objectInstance);
+                var blittableBridge = new JsBlittableBridge(writer, usageMode);
+                blittableBridge.WriteInstance(objectInstance, modifier);
 
                 writer.FinalizeDocument();
+
                 return writer.CreateReader();
             }
+        }
+
+        public interface IResultModifier
+        {
+            void Modify(ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> writer);
         }
     }
 }
