@@ -1,12 +1,13 @@
 <div id="storage-report" class="content-margin">
-
+    <div class="base-path" title="Base path">
+        <i class="icon-folder"></i><span class="small" data-bind="text: basePath"></span>
+    </div>
     <div id="storage-report-container" data-bind="css: { 'processing': showLoader() }">
         <div class="chart-tooltip" style="opacity: 0">
         </div>
         <div class="chart"></div>
     </div>
 
-    <h4>Current path: <span data-bind="text: basePath"></span></h4>
     <div class="current-path">
         <span data-bind="foreach: currentPath">
             <a href="#" data-bind="click: _.partial($root.onClick, $data, false), attr: { class: type }">
