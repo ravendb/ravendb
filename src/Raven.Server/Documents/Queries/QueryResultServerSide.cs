@@ -4,7 +4,7 @@ using Raven.Client.Documents.Queries;
 
 namespace Raven.Server.Documents.Queries
 {
-    public abstract class QueryResultServerSide<T> : QueryResult<List<T>>
+    public abstract class QueryResultServerSide<T> : QueryResult<List<T>, List<T>>
     {
         protected QueryResultServerSide()
         {

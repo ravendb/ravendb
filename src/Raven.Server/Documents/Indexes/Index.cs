@@ -1734,8 +1734,6 @@ namespace Raven.Server.Documents.Indexes
                                     retriever, documentsContext, GetOrAddSpatialField, token.Token);
                             }
 
-                         
-
                             try
                             {
                                 foreach (var document in documents)
@@ -2109,7 +2107,7 @@ namespace Raven.Server.Documents.Indexes
             result.ResultEtag = CalculateIndexEtag(result.IsStale, documentsContext, indexContext);
         }
 
-        private void FillQueryResult<T>(QueryResultBase<T> result, bool isStale,
+        private void FillQueryResult<TResult, TInclude>(QueryResultBase<TResult, TInclude> result, bool isStale,
             DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
         {
             result.IndexName = Name;

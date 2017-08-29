@@ -1,19 +1,18 @@
 ﻿using System;
-using Sparrow.Json;
 
 namespace Raven.Client.Documents.Queries
 {
-    public abstract class QueryResultBase<T>
+    public abstract class QueryResultBase<TResult, TInclude>
     {
         /// <summary>
         /// Gets or sets the document resulting from this query.
         /// </summary>
-        public T Results { get; set; }
+        public TResult Results { get; set; }
 
         /// <summary>
         /// Gets or sets the document included in the result.
         /// </summary>
-        public T Includes { get; set; }
+        public TInclude Includes { get; set; }
 
         /// <summary>
         /// The paths that the server included in the results

@@ -18,7 +18,6 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Session.Operations.Lazy;
-using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Session;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
@@ -682,10 +681,10 @@ more responsive application.
         protected void AssertNoNonUniqueInstance(object entity, string id)
         {
             DocumentInfo info;
-            if (string.IsNullOrEmpty(id) || 
-                id[id.Length-1] == '|' ||
+            if (string.IsNullOrEmpty(id) ||
+                id[id.Length - 1] == '|' ||
                 id[id.Length - 1] == '/' ||
-                DocumentsById.TryGetValue(id, out info) == false || 
+                DocumentsById.TryGetValue(id, out info) == false ||
                 ReferenceEquals(info.Entity, entity))
                 return;
 
@@ -802,9 +801,9 @@ more responsive application.
                 {
                     var beforeStoreEventArgs = new BeforeStoreEventArgs(this, entity.Value.Id, entity.Key);
                     onOnBeforeStore(this, beforeStoreEventArgs);
-                    if(beforeStoreEventArgs.MetadataAccessed)
+                    if (beforeStoreEventArgs.MetadataAccessed)
                         UpdateMetadataModifications(entity.Value);
-                    if (beforeStoreEventArgs.MetadataAccessed || 
+                    if (beforeStoreEventArgs.MetadataAccessed ||
                         EntityChanged(document, entity.Value, null))
                         document = EntityToBlittable.ConvertEntityToBlittable(entity.Key, entity.Value);
                 }
@@ -1056,14 +1055,37 @@ more responsive application.
             KnownMissingIds.Remove(id);
         }
 
-        public void RegisterMissingIncludes(BlittableJsonReaderArray results, ICollection<string> includes)
+        internal void RegisterIncludes(BlittableJsonReaderObject includes)
         {
-            if (includes == null || includes.Count == 0)
+            if (includes == null)
+                return;
+
+            var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+            foreach (var propertyIndex in includes.GetPropertiesByInsertionOrder())
+            {
+                includes.GetPropertyByIndex(propertyIndex, ref propertyDetails);
+
+                if (propertyDetails.Value == null)
+                    continue;
+
+                var json = (BlittableJsonReaderObject)propertyDetails.Value;
+
+                var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(json);
+                if (newDocumentInfo.Metadata.TryGet(Constants.Documents.Metadata.Conflict, out bool conflict) && conflict)
+                    continue;
+
+                IncludedDocumentsById[newDocumentInfo.Id] = newDocumentInfo;
+            }
+        }
+
+        public void RegisterMissingIncludes(BlittableJsonReaderArray results, BlittableJsonReaderObject includes, ICollection<string> includePaths)
+        {
+            if (includePaths == null || includePaths.Count == 0)
                 return;
 
             foreach (BlittableJsonReaderObject result in results)
             {
-                foreach (var include in includes)
+                foreach (var include in includePaths)
                 {
                     if (include == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
                         continue;
@@ -1352,15 +1374,11 @@ more responsive application.
 
         public static DocumentInfo GetNewDocumentInfo(BlittableJsonReaderObject document)
         {
-            BlittableJsonReaderObject metadata;
-            string id;
-            string changeVector;
-
-            if (document.TryGet(Constants.Documents.Metadata.Key, out metadata) == false)
+            if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
                 throw new InvalidOperationException("Document must have a metadata");
-            if (metadata.TryGet(Constants.Documents.Metadata.Id, out id) == false)
+            if (metadata.TryGet(Constants.Documents.Metadata.Id, out string id) == false)
                 throw new InvalidOperationException("Document must have an id");
-            if (metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out changeVector) == false)
+            if (metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out string changeVector) == false)
                 throw new InvalidOperationException("Document " + id + " must have an Change Vector");
 
             var newDocumentInfo = new DocumentInfo

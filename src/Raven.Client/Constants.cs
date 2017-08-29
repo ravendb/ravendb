@@ -121,6 +121,8 @@ namespace Raven.Client
 
                 public const string Id = "@id";
 
+                public const string Conflict = "@conflict";
+
                 public const string IdProperty = "Id";
 
                 public const string Flags = "@flags";

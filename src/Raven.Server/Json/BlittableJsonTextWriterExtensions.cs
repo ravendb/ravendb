@@ -294,7 +294,7 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteQueryResult<T>(this BlittableJsonTextWriter writer, JsonOperationContext context, QueryResultBase<T> result, bool metadataOnly, out int numberOfResults, bool partial = false)
+        public static void WriteQueryResult<TResult, TInclude>(this BlittableJsonTextWriter writer, JsonOperationContext context, QueryResultBase<TResult, TInclude> result, bool metadataOnly, out int numberOfResults, bool partial = false)
         {
             if (partial == false)
                 writer.WriteStartObject();
@@ -303,29 +303,43 @@ namespace Raven.Server.Json
             writer.WriteString(result.IndexName);
             writer.WriteComma();
 
-            var type = typeof(T);
-            if (type == typeof(List<Document>))
+            var results = (object)result.Results;
+            if (results is List<Document> documents)
             {
                 writer.WritePropertyName(nameof(result.Results));
-                writer.WriteDocuments(context, (List<Document>)(object)result.Results, metadataOnly, out numberOfResults);
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(result.Includes));
-                writer.WriteDocuments(context, (List<Document>)(object)result.Includes, metadataOnly, out int _);
+                writer.WriteDocuments(context, documents, metadataOnly, out numberOfResults);
                 writer.WriteComma();
             }
-            else if (type == typeof(List<BlittableJsonReaderObject>))
+            else if (results is List<BlittableJsonReaderObject> objects)
             {
                 writer.WritePropertyName(nameof(result.Results));
-                writer.WriteObjects(context, (List<BlittableJsonReaderObject>)(object)result.Results, out numberOfResults);
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(result.Includes));
-                writer.WriteObjects(context, (List<BlittableJsonReaderObject>)(object)result.Includes, out int _);
+                writer.WriteObjects(context, objects, out numberOfResults);
                 writer.WriteComma();
             }
             else
-                throw new NotSupportedException($"Cannot write query result of '{type.Name}' type.");
+                throw new NotSupportedException($"Cannot write query result of '{typeof(TResult)}' type in '{result.GetType()}'.");
+
+            var includes = (object)result.Includes;
+            if (includes is List<Document> includeDocuments)
+            {
+                writer.WritePropertyName(nameof(result.Includes));
+                writer.WriteIncludes(context, includeDocuments);
+                writer.WriteComma();
+            }
+            else if (results is List<BlittableJsonReaderObject> includeObjects)
+            {
+                writer.WritePropertyName(nameof(result.Includes));
+                writer.WriteObjects(context, includeObjects, out _);
+                writer.WriteComma();
+            }
+            else if (includes is Dictionary<LazyStringValue, BlittableJsonReaderObject> includeObjectsDictionary)
+            {
+                writer.WritePropertyName(nameof(result.Includes));
+                writer.WriteIncludes(context, includeObjectsDictionary);
+                writer.WriteComma();
+            }
+            else
+                throw new NotSupportedException($"Cannot write query includes of '{typeof(TInclude)}' type in '{result.GetType()}'.");
 
             writer.WritePropertyName(nameof(result.IndexTimestamp));
             writer.WriteString(result.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite));
@@ -869,28 +883,69 @@ namespace Raven.Server.Json
                     writer.WriteComma();
                 first = false;
 
-                if (document == null)
-                {
-                    writer.WriteNull();
-                    continue;
-                }
-
-                if (document == Document.ExplicitNull)
-                {
-                    writer.WriteNull();
-                    continue;
-                }
-
-                using (document.Data)
-                {
-                    if (metadataOnly == false)
-                        writer.WriteDocument(context, document);
-                    else
-                        writer.WriteDocumentMetadata(context, document);
-                }
+                WriteDocument(writer, context, document, metadataOnly);
             }
 
             writer.WriteEndArray();
+        }
+
+        public static void WriteDocument(this BlittableJsonTextWriter writer, JsonOperationContext context, Document document, bool metadataOnly)
+        {
+            if (document == null)
+            {
+                writer.WriteNull();
+                return;
+            }
+
+            if (document == Document.ExplicitNull)
+            {
+                writer.WriteNull();
+                return;
+            }
+
+            using (document.Data)
+            {
+                if (metadataOnly == false)
+                    writer.WriteDocumentInternal(context, document);
+                else
+                    writer.WriteDocumentMetadata(context, document);
+            }
+        }
+
+        public static void WriteIncludes(this BlittableJsonTextWriter writer, JsonOperationContext context, List<Document> includes)
+        {
+            writer.WriteStartObject();
+
+            var first = true;
+            foreach (var document in includes)
+            {
+                if (first == false)
+                    writer.WriteComma();
+                first = false;
+
+                writer.WritePropertyName(document.Id);
+                WriteDocument(writer, context, metadataOnly: false, document: document);
+            }
+
+            writer.WriteEndObject();
+        }
+
+        public static void WriteIncludes(this BlittableJsonTextWriter writer, JsonOperationContext context, Dictionary<LazyStringValue, BlittableJsonReaderObject> includes)
+        {
+            writer.WriteStartObject();
+
+            var first = true;
+            foreach (var kvp in includes)
+            {
+                if (first == false)
+                    writer.WriteComma();
+                first = false;
+
+                writer.WritePropertyName(kvp.Key);
+                writer.WriteObject(kvp.Value);
+            }
+
+            writer.WriteEndObject();
         }
 
         public static void WriteObjects(this BlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<BlittableJsonReaderObject> objects, out int numberOfResults)
@@ -904,12 +959,15 @@ namespace Raven.Server.Json
             {
                 numberOfResults++;
 
-                if (o == null)
-                    continue;
-
                 if (first == false)
                     writer.WriteComma();
                 first = false;
+
+                if (o == null)
+                {
+                    writer.WriteNull();
+                    continue;
+                }
 
                 using (o)
                 {
@@ -996,14 +1054,14 @@ namespace Raven.Server.Json
 
         private static readonly StringSegment MetadataKeySegment = new StringSegment(Constants.Documents.Metadata.Key);
 
-        public static void WriteDocument(this BlittableJsonTextWriter writer, JsonOperationContext context, Document document)
+        private static void WriteDocumentInternal(this BlittableJsonTextWriter writer, JsonOperationContext context, Document document)
         {
             writer.WriteStartObject();
             WriteDocumentProperties(writer, context, document);
             writer.WriteEndObject();
         }
 
-        public static void WriteDocumentProperties(this BlittableJsonTextWriter writer, JsonOperationContext context, Document document)
+        private static void WriteDocumentProperties(this BlittableJsonTextWriter writer, JsonOperationContext context, Document document)
         {
             if (_buffers == null)
                 _buffers = new BlittableJsonReaderObject.PropertiesInsertionBuffer();
@@ -1060,160 +1118,160 @@ namespace Raven.Server.Json
             }
         }
 
-    public static void WriteOperationId(this BlittableJsonTextWriter writer, JsonOperationContext context, long operationId)
-    {
-        writer.WriteStartObject();
-
-        writer.WritePropertyName("OperationId");
-        writer.WriteInteger(operationId);
-
-        writer.WriteEndObject();
-    }
-
-    public static void WriteArrayOfResultsAndCount(this BlittableJsonTextWriter writer, IEnumerable<string> results)
-    {
-        writer.WriteStartObject();
-        writer.WritePropertyName("Results");
-        writer.WriteStartArray();
-
-        var first = true;
-        var count = 0;
-
-        foreach (var id in results)
+        public static void WriteOperationId(this BlittableJsonTextWriter writer, JsonOperationContext context, long operationId)
         {
-            if (first == false)
-                writer.WriteComma();
-
-            writer.WriteString(id);
-            count++;
-
-            first = false;
-        }
-
-        writer.WriteEndArray();
-        writer.WriteComma();
-
-        writer.WritePropertyName("Count");
-        writer.WriteInteger(count);
-
-        writer.WriteEndObject();
-    }
-
-    public static void WriteReduceTrees(this BlittableJsonTextWriter writer, IEnumerable<ReduceTree> trees)
-    {
-        writer.WriteStartObject();
-        writer.WritePropertyName("Results");
-
-        writer.WriteStartArray();
-
-        var first = true;
-
-        foreach (var tree in trees)
-        {
-            if (first == false)
-                writer.WriteComma();
-
             writer.WriteStartObject();
 
-            writer.WritePropertyName(nameof(ReduceTree.Name));
-            writer.WriteString(tree.Name);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(ReduceTree.DisplayName));
-            writer.WriteString(tree.DisplayName);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(ReduceTree.Depth));
-            writer.WriteInteger(tree.Depth);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(ReduceTree.PageCount));
-            writer.WriteInteger(tree.PageCount);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(ReduceTree.NumberOfEntries));
-            writer.WriteInteger(tree.NumberOfEntries);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(ReduceTree.Root));
-            writer.WriteTreePagesRecursively(new[] { tree.Root });
+            writer.WritePropertyName("OperationId");
+            writer.WriteInteger(operationId);
 
             writer.WriteEndObject();
-
-            first = false;
         }
 
-        writer.WriteEndArray();
-
-        writer.WriteEndObject();
-    }
-
-    public static void WriteTreePagesRecursively(this BlittableJsonTextWriter writer, IEnumerable<ReduceTreePage> pages)
-    {
-        var first = true;
-
-        foreach (var page in pages)
+        public static void WriteArrayOfResultsAndCount(this BlittableJsonTextWriter writer, IEnumerable<string> results)
         {
-            if (first == false)
-                writer.WriteComma();
-
             writer.WriteStartObject();
+            writer.WritePropertyName("Results");
+            writer.WriteStartArray();
 
-            writer.WritePropertyName(nameof(TreePage.PageNumber));
-            writer.WriteInteger(page.PageNumber);
-            writer.WriteComma();
+            var first = true;
+            var count = 0;
 
-            writer.WritePropertyName(nameof(ReduceTreePage.AggregationResult));
-            if (page.AggregationResult != null)
-                writer.WriteObject(page.AggregationResult);
-            else
-                writer.WriteNull();
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(ReduceTreePage.Children));
-            if (page.Children != null)
+            foreach (var id in results)
             {
-                writer.WriteStartArray();
-                WriteTreePagesRecursively(writer, page.Children);
-                writer.WriteEndArray();
-            }
-            else
-                writer.WriteNull();
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(ReduceTreePage.Entries));
-            if (page.Entries != null)
-            {
-                writer.WriteStartArray();
-
-                var firstEntry = true;
-                foreach (var entry in page.Entries)
-                {
-                    if (firstEntry == false)
-                        writer.WriteComma();
-
-                    writer.WriteStartObject();
-
-                    writer.WritePropertyName(nameof(MapResultInLeaf.Data));
-                    writer.WriteObject(entry.Data);
+                if (first == false)
                     writer.WriteComma();
 
-                    writer.WritePropertyName(nameof(MapResultInLeaf.Source));
-                    writer.WriteString(entry.Source);
+                writer.WriteString(id);
+                count++;
 
-                    writer.WriteEndObject();
-
-                    firstEntry = false;
-                }
-
-                writer.WriteEndArray();
+                first = false;
             }
-            else
-                writer.WriteNull();
+
+            writer.WriteEndArray();
+            writer.WriteComma();
+
+            writer.WritePropertyName("Count");
+            writer.WriteInteger(count);
 
             writer.WriteEndObject();
-            first = false;
+        }
+
+        public static void WriteReduceTrees(this BlittableJsonTextWriter writer, IEnumerable<ReduceTree> trees)
+        {
+            writer.WriteStartObject();
+            writer.WritePropertyName("Results");
+
+            writer.WriteStartArray();
+
+            var first = true;
+
+            foreach (var tree in trees)
+            {
+                if (first == false)
+                    writer.WriteComma();
+
+                writer.WriteStartObject();
+
+                writer.WritePropertyName(nameof(ReduceTree.Name));
+                writer.WriteString(tree.Name);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(ReduceTree.DisplayName));
+                writer.WriteString(tree.DisplayName);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(ReduceTree.Depth));
+                writer.WriteInteger(tree.Depth);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(ReduceTree.PageCount));
+                writer.WriteInteger(tree.PageCount);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(ReduceTree.NumberOfEntries));
+                writer.WriteInteger(tree.NumberOfEntries);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(ReduceTree.Root));
+                writer.WriteTreePagesRecursively(new[] { tree.Root });
+
+                writer.WriteEndObject();
+
+                first = false;
+            }
+
+            writer.WriteEndArray();
+
+            writer.WriteEndObject();
+        }
+
+        public static void WriteTreePagesRecursively(this BlittableJsonTextWriter writer, IEnumerable<ReduceTreePage> pages)
+        {
+            var first = true;
+
+            foreach (var page in pages)
+            {
+                if (first == false)
+                    writer.WriteComma();
+
+                writer.WriteStartObject();
+
+                writer.WritePropertyName(nameof(TreePage.PageNumber));
+                writer.WriteInteger(page.PageNumber);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(ReduceTreePage.AggregationResult));
+                if (page.AggregationResult != null)
+                    writer.WriteObject(page.AggregationResult);
+                else
+                    writer.WriteNull();
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(ReduceTreePage.Children));
+                if (page.Children != null)
+                {
+                    writer.WriteStartArray();
+                    WriteTreePagesRecursively(writer, page.Children);
+                    writer.WriteEndArray();
+                }
+                else
+                    writer.WriteNull();
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(ReduceTreePage.Entries));
+                if (page.Entries != null)
+                {
+                    writer.WriteStartArray();
+
+                    var firstEntry = true;
+                    foreach (var entry in page.Entries)
+                    {
+                        if (firstEntry == false)
+                            writer.WriteComma();
+
+                        writer.WriteStartObject();
+
+                        writer.WritePropertyName(nameof(MapResultInLeaf.Data));
+                        writer.WriteObject(entry.Data);
+                        writer.WriteComma();
+
+                        writer.WritePropertyName(nameof(MapResultInLeaf.Source));
+                        writer.WriteString(entry.Source);
+
+                        writer.WriteEndObject();
+
+                        firstEntry = false;
+                    }
+
+                    writer.WriteEndArray();
+                }
+                else
+                    writer.WriteNull();
+
+                writer.WriteEndObject();
+                first = false;
+            }
         }
     }
-}
 }

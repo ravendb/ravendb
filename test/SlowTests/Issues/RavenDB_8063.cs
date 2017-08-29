@@ -42,7 +42,7 @@ namespace SlowTests.Issues
                     commands.RequestExecutor.Execute(command, commands.Context, CancellationToken.None);
 
                     var result = command.Result;
-                    Assert.Equal(1, result.Includes.Length);
+                    Assert.Equal(1, result.Includes.Count);
                 }
             }
         }
