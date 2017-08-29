@@ -1,6 +1,6 @@
 /// <reference path="../../typescript/common/constants.ts"/>
 
-interface collectionInfoDto extends Raven.Client.Documents.Queries.QueryResult<Array<documentDto>> {
+interface collectionInfoDto extends Raven.Client.Documents.Queries.QueryResult<Array<documentDto>, any> {
 }
 
 interface logNotificationDto {
