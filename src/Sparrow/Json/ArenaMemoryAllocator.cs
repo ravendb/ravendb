@@ -34,7 +34,7 @@ namespace Sparrow.Json
 
         private readonly FreeSection*[] _freed = new FreeSection*[32];
 
-        private bool _isDisposed;
+        private readonly SingleUseFlag _isDisposed = new SingleUseFlag();
         private NativeMemory.ThreadStats _allocatingThread;
         private readonly int _initialSize;
 
@@ -268,14 +268,11 @@ namespace Sparrow.Json
 
         public void Dispose()
         {
-            if (_isDisposed)
+            if (!_isDisposed.Raise())
                 return;
+
             lock (this)
             {
-                if (_isDisposed)
-                    return;
-                _isDisposed = true;
-
                 if (_olderBuffers != null)
                 {
                     foreach (var unusedBuffer in _olderBuffers)
