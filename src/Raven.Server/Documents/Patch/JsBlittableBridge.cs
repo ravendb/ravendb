@@ -278,7 +278,7 @@ namespace Raven.Server.Documents.Patch
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool ShouldFilterProperty(string property)
         {
-            return property == Constants.Documents.Indexing.Fields.ReduceKeyFieldName ||
+            return property == Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName ||
                    property == Constants.Documents.Indexing.Fields.DocumentIdFieldName ||
                    property == Constants.Documents.Metadata.Id ||
                    property == Constants.Documents.Metadata.LastModified ||

@@ -59,7 +59,7 @@ namespace Raven.Server.Utils
                 return value.ToString();
 
             if (value is IEnumerable<IFieldable> || value is IFieldable)
-                return Constants.Documents.Indexing.Fields.IgnoredDynamicField;
+                return "__ignored";
 
             var dictionary = value as IDictionary;
             if (dictionary != null)

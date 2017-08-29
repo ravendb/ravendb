@@ -161,23 +161,21 @@ namespace Raven.Client
 
                     public const string DocumentIdFieldName = "id()";
 
-                    public const string ReduceKeyFieldName = "__reduce_key";
+                    public const string ReduceKeyHashFieldName = "hash(key())";
 
-                    public const string ReduceValueFieldName = "__reduced_val";
+                    public const string ReduceKeyValueFieldName = "key()";
 
                     public const string AllFields = "__all_fields";
 
                     public const string AllStoredFields = "__all_stored_fields";
 
-                    public const string SpatialShapeFieldName = "__spatial_shape";
+                    public const string SpatialShapeFieldName = "spatial(shape)";
 
                     internal const string RangeFieldSuffix = "_Range";
 
                     public const string RangeFieldSuffixLong = "_L" + RangeFieldSuffix;
 
                     public const string RangeFieldSuffixDouble = "_D" + RangeFieldSuffix;
-
-                    public const string IgnoredDynamicField = "__ignored";
 
                     public const string NullValue = "NULL_VALUE";
 
