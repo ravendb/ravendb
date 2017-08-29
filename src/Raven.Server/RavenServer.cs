@@ -110,7 +110,7 @@ namespace Raven.Server
                 Logger.Info(string.Format("Server store started took {0:#,#;;0} ms", sp.ElapsedMilliseconds));
 
             sp.Restart();
-            ListenToPipe().IgnoreUnobservedExceptions();
+            ListenToPipes().IgnoreUnobservedExceptions();
             Router = new RequestRouter(RouteScanner.Scan(), this);
 
             try
@@ -243,62 +243,13 @@ namespace Raven.Server
             {
                 throw new InvalidOperationException("Unable to start the server due to invalid certificate configuration! Admin assistance required.", e);
             }
-
         }
 
-        private async Task ListenToPipe()
+        private Task ListenToPipes()
         {
-            // We start the server pipe only when running as a server
-            // so we won't generate one per server in our test environment 
-            if (Pipe == null)
-                return;
-            try
-            {
-                while (true)
-                {
-                    await Pipe.WaitForConnectionAsync();
-                    var reader = new StreamReader(Pipe);
-                    var writer = new StreamWriter(Pipe);
-                    try
-                    {
-                        var cli = new RavenCli();
-                        var restart = cli.Start(this, writer, reader, false);
-                        if (restart)
-                        {
-                            writer.WriteLine("Restarting Server...<DELIMETER_RESTART>");
-                            Program.ResetServerMre.Set();
-                            Program.ShutdownServerMre.Set();
-                            // server restarting
-                            return;
-                        }
-
-                        writer.WriteLine("Shutting Down Server...<DELIMETER_RESTART>");
-                        Program.ShutdownServerMre.Set();
-                        // server shutting down
-                        return;
-                    }
-                    catch (Exception e)
-                    {
-                        if (Logger.IsInfoEnabled)
-                        {
-                            Logger.Info("Got an exception inside cli (internal error) while in pipe connection", e);
-                        }
-                    }
-
-                    Pipe.Disconnect();
-                }
-            }
-            catch (ObjectDisposedException)
-            {
-                //Server shutting down
-            }
-            catch (Exception e)
-            {
-                if (Logger.IsInfoEnabled)
-                {
-                    Logger.Info("Got an exception trying to connect to server pipe", e);
-                }
-            }
+            return Task.WhenAll(
+                Pipes.ListenToLogStreamPipe(this, LogStreamPipe), 
+                Pipes.ListenToAdminConsolePipe(this, AdminConsolePipe));
         }
 
         public class AuthenticateConnection : IHttpAuthenticationFeature
@@ -941,7 +892,10 @@ namespace Raven.Server
         public MetricsCountersManager Metrics { get; }
 
         public bool Disposed { get; private set; }
-        internal NamedPipeServerStream Pipe { get; set; }
+
+        internal NamedPipeServerStream AdminConsolePipe { get; set; }
+
+        internal NamedPipeServerStream LogStreamPipe { get; set; }
 
         public void Dispose()
         {
@@ -955,7 +909,8 @@ namespace Raven.Server
                 Disposed = true;
                 var ea = new ExceptionAggregator("Failed to properly close RavenServer");
 
-                ea.Execute(() => Pipe?.Dispose());
+                ea.Execute(() => AdminConsolePipe?.Dispose());
+                ea.Execute(() => LogStreamPipe?.Dispose());
                 ea.Execute(() => Metrics?.Dispose());
                 ea.Execute(() => _webHost?.Dispose());
                 if (_tcpListenerStatus != null)
@@ -988,61 +943,11 @@ namespace Raven.Server
 
         }
 
-        public const string PipePrefix = "raven-control-pipe-";
-
-        public void OpenPipe()
+        public void OpenPipes()
         {
-            var pipeDir = Path.Combine(Path.GetTempPath(), "ravendb-pipe");
-
-            if (PlatformDetails.RunningOnPosix)
-            {
-                try
-                {
-                    if (Directory.Exists(pipeDir) == false)
-                    {
-                        const FilePermissions mode = FilePermissions.S_IRWXU;
-                        var rc = Syscall.mkdir(pipeDir, (ushort)mode);
-                        if (rc != 0)
-                            throw new IOException($"Unable to create directory {pipeDir} with permission {mode}. LastErr={Marshal.GetLastWin32Error()}");
-                    }
-
-
-
-
-                    foreach (var pipeFile in Directory.GetFiles(pipeDir, PipePrefix + "*"))
-                    {
-                        try
-                        {
-                            File.Delete(pipeFile);
-                        }
-                        catch (Exception e)
-                        {
-                            if (Logger.IsInfoEnabled)
-                                Logger.Info("Unable to delete old pipe file " + pipeFile, e);
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info("Unable to list old pipe files for deletion", ex);
-                }
-            }
-
-            var pipeName = PipePrefix + Process.GetCurrentProcess().Id;
-            Pipe = new NamedPipeServerStream(pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte,
-                PipeOptions.Asynchronous, 1024, 1024);
-
-            if (PlatformDetails.RunningOnPosix
-            ) // TODO: remove this if and after https://github.com/dotnet/corefx/issues/22141 (both in RavenServer.cs and AdminChannel.cs)
-            {
-                var pathField = Pipe.GetType().GetField("_path", BindingFlags.NonPublic | BindingFlags.Instance);
-                if (pathField == null)
-                {
-                    throw new InvalidOperationException("Unable to set the proper path for the admin pipe, admin channel will not be available");
-                }
-                pathField.SetValue(Pipe, Path.Combine(pipeDir, pipeName));
-            }
+            Pipes.CleanupOldPipeFiles(); 
+            LogStreamPipe = Pipes.OpenLogStreamPipe();
+            AdminConsolePipe = Pipes.OpenAdminConsolePipe();
         }
 
         public enum AuthenticationStatus

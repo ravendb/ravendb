@@ -120,18 +120,7 @@ namespace Raven.Server.Config
 
         private void AddEnvironmentVariables()
         {
-            const string prefix = "RAVEN.";
-
-            foreach (DictionaryEntry de in Environment.GetEnvironmentVariables())
-            {
-                var s = de.Key as string;
-                if (s == null)
-                    continue;
-                if (s.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) == false)
-                    continue;
-
-                _configBuilder.Properties[s.Substring(prefix.Length)] = de.Value;
-            }
+            _configBuilder.AddEnvironmentVariables("RAVEN.");
         }
 
         public LogsConfiguration Logs { get; set; }

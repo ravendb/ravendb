@@ -7,7 +7,9 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading;
+using rvn.Utils;
 using Raven.Server;
+using Raven.Server.Utils;
 using Raven.Server.Utils.Cli;
 using Sparrow.Platform;
 
@@ -25,12 +27,12 @@ namespace rvn
 
                 if (pid == null)
                 {
-                    pid = GetRavenServerPid();
+                    pid = ServerProcessUtil.GetRavenServerPid();
                 }
 
                 try
                 {
-                    var pipeName = RavenServer.PipePrefix + pid;
+                    var pipeName = Pipes.GetPipeName(Pipes.AdminConsolePipePrefix, pid.Value);
                     var client = new NamedPipeClientStream(pipeName);
                     if (PlatformDetails.RunningOnPosix) // TODO: remove this if and after https://github.com/dotnet/corefx/issues/22141 (both in RavenServer.cs and AdminChannel.cs)
                     {
@@ -40,7 +42,6 @@ namespace rvn
                             throw new InvalidOperationException("Unable to set the proper path for the admin pipe, admin channel will not be available");
                         }
                         var pipeDir = Path.Combine(Path.GetTempPath(), "ravendb-pipe");
-                        ;
                         pathField.SetValue(client, Path.Combine(pipeDir, pipeName));
                     }
                     try
@@ -180,40 +181,6 @@ namespace rvn
                     throw;
                 }
             }
-        }
-
-        private static int GetRavenServerPid()
-        {
-            var processes = Process.GetProcessesByName("Raven.Server");
-            var thisProcess = Process.GetCurrentProcess();
-            var availableRavenProcesses = new List<Process>();
-            foreach (var pr in processes)
-            {
-                if (thisProcess.Id == pr.Id)
-                    continue;
-                availableRavenProcesses.Add(pr);
-            }
-
-            if (availableRavenProcesses.Count == 0)
-            {
-                Console.WriteLine("Couldn't find automatically another Raven.Server process." + Environment.NewLine +
-                                  "Please specify RavenDB Server proccess manually" + Environment.NewLine);
-                Console.Out.Flush();
-                Environment.Exit(1);
-            }
-            else if (availableRavenProcesses.Count == 1)
-            {
-                Console.WriteLine("Will try to connect to discovered Raven.Server process : " + availableRavenProcesses.First().Id + "..." + Environment.NewLine);
-                Console.Out.Flush();
-                return availableRavenProcesses.First().Id;
-            }
-
-            Console.Write("More then one Raven.Server process where found:");
-            availableRavenProcesses.ForEach(x => Console.Write(" " + x.Id));
-            Console.WriteLine(Environment.NewLine + "Please specify RavenDB Server proccess manually" + Environment.NewLine);
-            Console.Out.Flush();
-            Environment.Exit(2);
-            return 0;
         }
     }
 }

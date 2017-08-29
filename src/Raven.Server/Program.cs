@@ -55,6 +55,8 @@ namespace Raven.Server
             configuration.Initialize();
 
             LoggingSource.Instance.SetupLogMode(configuration.Logs.Mode, Path.Combine(AppContext.BaseDirectory, configuration.Logs.Path));
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"Logging to { configuration.Logs.Path } set to {configuration.Logs.Mode} level.");
 
             if (WindowsServiceRunner.ShouldRunAsWindowsService())
             {
@@ -90,7 +92,7 @@ namespace Raven.Server
                         {
                             try
                             {
-                                server.OpenPipe();
+                                server.OpenPipes();
                             }
                             catch (Exception e)
                             {
