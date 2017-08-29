@@ -19,13 +19,25 @@ namespace SlowTests.Queries
                 {
                     FirstName = "Oscar",
                     LastName = "Aharon-Eini",
+                    Notes = new List<string>
+                    {
+                        "Dark",
+                        "Dog",
+                        "Small"
+                    }
                 };
                 session.Store(oscar);
                 session.Store(new Employee
                 {
                     FirstName = "Phoebe",
                     LastName = "Eini",
-                    ReportsTo = oscar.Id
+                    ReportsTo = oscar.Id,
+                    Notes = new List<string>
+                    {
+                        "Pale",
+                        "Dog",
+                        "Big"
+                    }
                 });
 
                 session.Store(new Company
@@ -79,7 +91,21 @@ namespace SlowTests.Queries
                 }
             }
         }
+        [Fact]
+        public void QueriesUsingArrowFunc()
+        {
+            var actual = Query(@"
+from Employees as e
+select {
+    Notes: e.Notes.map(x=>x.toUpperCase())
+}
+", new Employee());
 
+            Assert.Equal(2, actual.Count);
+            Assert.Equal(new[] { "DARK", "DOG", "SMALL" }, actual[0].Notes);
+            Assert.Equal(new[] { "PALE", "DOG", "BIG" }, actual[1].Notes);
+
+        }
         [Theory]
         [InlineData("from Companies select Address.City as City")]
         [InlineData("from Companies c select c.Address.City as City")]
@@ -87,7 +113,7 @@ namespace SlowTests.Queries
         [InlineData("from Companies as c select { City: c.Address.City }")]
         public void SimpleFieldProjection(string q)
         {
-            var actual = Query(q, new { City  = ""});
+            var actual = Query(q, new { City = "" });
             Assert.Equal(new[]
             {
                 new {City = "Hadera" },
@@ -101,7 +127,7 @@ namespace SlowTests.Queries
         [Theory]
         [InlineData("from Categories select 1 as V", "1")]
         [InlineData("from Categories select 1.2 as V", "1.2")]
-        [InlineData( "from Categories select $t as V", "1234")]
+        [InlineData("from Categories select $t as V", "1234")]
         [InlineData("from Categories select 'hello there' as V", "hello there")]
         [InlineData("from Categories select \"hello there\" as V", "hello there")]
         [InlineData("from Categories as c select {V: c['@metadata']['@collection'] }", "Categories")]
@@ -162,14 +188,14 @@ select project(e)")]
         [InlineData("from Companies where Address.City = $city ")]
         public void FilterByProperty(string q)
         {
-            var actual = Query(q, new Company {}, new Dictionary<string, object>
+            var actual = Query(q, new Company { }, new Dictionary<string, object>
             {
-                ["city"] = "Hadera" 
+                ["city"] = "Hadera"
             });
             Assert.Equal(1, actual.Count);
             Assert.Equal("Hadera", actual[0].Address.City);
         }
-        
+
         [Theory]
         [InlineData(@"
 from Employees e 
@@ -212,7 +238,7 @@ select {
 } ", "Phoebe Eini", "Oscar Aharon-Eini")]
         public void ProjectingRelated(string q, string nameA, string nameB)
         {
-            var actual = Query(q, new  {A = "", B = ""});
+            var actual = Query(q, new { A = "", B = "" });
             Assert.Equal(1, actual.Count);
             Assert.Equal(new { A = nameA, B = nameB }, actual[0]);
         }
