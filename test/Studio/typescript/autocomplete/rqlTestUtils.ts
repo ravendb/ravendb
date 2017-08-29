@@ -42,21 +42,21 @@ class rqlTestUtils {
             terms: (indexName, field, pageSize, callback) => callback([]),
             collections: callback => callback([]),
             indexFields: (indexName, callback) => callback([]),
-            collectionFields: (collectionName, callback) => callback([]),
+            collectionFields: (collectionName, prefix, callback) => callback({}),
             indexNames: callback => callback([])
         });
         
         return () => completer;
     }
 
-    static northWindProvider() { //TODO: fill with real data
+    static northwindProvider() {
         const completer = new queryCompleter({
             terms: (indexName, field, pageSize, callback) => callback([]),
             collections: callback => {
-                callback(["Categories", "Companies", "Employees", "Orders", "Products", "Regions", "Shippers", "Suppliers"]);
+                callback(["Regions", "Suppliers", "Employees", "Categories", "Products", "Shippers", "Companies", "Orders"]);
             },
             indexFields: (indexName, callback) => callback([]),
-            collectionFields: (collectionName, callback) => callback([]),
+            collectionFields: (collectionName, prefix, callback) => callback({}),
             indexNames: callback => callback([])
         });
 
