@@ -11,7 +11,7 @@ class queryStatsDialog extends dialogViewModelBase {
 
     canNavigateToIndex: boolean;
 
-    constructor(private queryStats: Raven.Client.Documents.Queries.QueryResult<any>, private db: database) {
+    constructor(private queryStats: Raven.Client.Documents.Queries.QueryResult<any, any>, private db: database) {
         super();
 
         this.selectedIndexEditUrl = appUrl.forEditIndex(queryStats.IndexName, this.db);

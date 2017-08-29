@@ -61,7 +61,7 @@ class query extends viewModelBase {
     columnsSelector = new columnsSelector<document>();
 
     fetcher = ko.observable<fetcherType>();
-    queryStats = ko.observable<Raven.Client.Documents.Queries.QueryResult<any>>();
+    queryStats = ko.observable<Raven.Client.Documents.Queries.QueryResult<any, any>>();
     staleResult: KnockoutComputed<boolean>;
     dirtyResult = ko.observable<boolean>();
 
