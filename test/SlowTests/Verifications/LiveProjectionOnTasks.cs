@@ -77,8 +77,8 @@ select fetch(r)
                     var first = results.FirstOrDefault();
 
                     Assert.NotNull(first);
-                    Assert.Equal(first.Id, "tasks/1-A");
-                    Assert.Equal(first.GiverId, 1);
+                    Assert.Equal((string)first.Id, "tasks/1-A");
+                    Assert.Equal((int)first.GiverId, 1);
                 }
             }
         }
