@@ -43,9 +43,11 @@ using Raven.Client;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Tcp;
+using Raven.Client.Util;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils.Cli;
+using Sparrow;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
 using Voron.Platform.Posix;
@@ -132,6 +134,31 @@ namespace Raven.Server
                 void ConfigureKestrel(KestrelServerOptions options)
                 {
                     options.Limits.MaxRequestBodySize = null;
+
+                    if (Configuration.Core.MinDataRateDisable == false)
+                    {
+                        if (Configuration.Core.MinDataRateBytesPerSecond != 0 ||
+                            Configuration.Core.MinDataRateGracePeriod != 0
+                        ) // zero bytes and zero seconds - use kestrel defaults (which are 240 bytesPerSec with 5 seconds grace)
+                        {
+                            options.Limits.MinResponseDataRate =
+                                new MinDataRate(Configuration.Core.MinDataRateBytesPerSecond, TimeSpan.FromSeconds(Configuration.Core.MinDataRateGracePeriod));
+                            options.Limits.MinRequestBodyDataRate=
+                                new MinDataRate(Configuration.Core.MinDataRateBytesPerSecond, TimeSpan.FromSeconds(Configuration.Core.MinDataRateGracePeriod));
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("Kestrel minimum data rate is not enforced");
+                        options.Limits.MinResponseDataRate = null; // no limit!
+                        options.Limits.MinRequestBodyDataRate = null; // no limit!
+                    }
+
+                    if (Configuration.Core.MaxRequestBufferSizeInKb != 0)
+                    {
+                        options.Limits.MaxRequestBufferSize = Configuration.Core.MaxRequestBufferSizeInKb * 1024;
+                    }
+                
 
                     var actualCert = httpsCert ?? clusterCert;
                     if (actualCert != null)
