@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 
@@ -12,9 +13,10 @@ namespace Raven.Server.Documents.Handlers.Debugging
             using (Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var identitiesBlittable = Database.ServerStore.Cluster.ReadIdentitiesAsBlittable(context, Database.Name,out _);
-                context.Write(ResponseBodyStream(), identitiesBlittable);
+                var json = Database.ServerStore.Cluster.Read(context, Constants.Documents.IdentitiesPrefix + Database.Name.ToLowerInvariant());
+                context.Write(ResponseBodyStream(), json);
             }
+
             return Task.CompletedTask;
         }
     }

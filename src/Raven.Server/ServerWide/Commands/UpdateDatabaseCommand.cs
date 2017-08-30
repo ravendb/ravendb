@@ -31,7 +31,6 @@ namespace Raven.Server.ServerWide.Commands
 
         public virtual void Initialize(ServerStore serverStore, TransactionOperationContext context)
         {
-            
         }
     }
 }

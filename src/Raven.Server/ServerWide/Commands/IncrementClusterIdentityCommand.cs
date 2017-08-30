@@ -1,38 +1,63 @@
-﻿using System.Collections.Generic;
+﻿using Raven.Client;
+using Raven.Client.ServerWide;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class IncrementClusterIdentityCommand : CommandBase
+    public class IncrementClusterIdentityCommand : UpdateValueForDatabaseCommand
     {
-        public string DatabaseName { get; set; }
+        private long _identity;
+
+        private string _itemId;
+
         public string Prefix { get; set; }
 
         public IncrementClusterIdentityCommand()
+            : base(null)
         {
+            // for deserialization
         }
 
-        public IncrementClusterIdentityCommand(string databaseName)
+        public IncrementClusterIdentityCommand(string databaseName, string prefix)
+            : base(databaseName)
         {
-            DatabaseName = databaseName;
+            Prefix = prefix;
         }
 
-        public void Increment(Dictionary<string,long> identities)
+        public override string GetItemId()
         {
-            identities.TryGetValue(Prefix, out var prev);
-            identities[Prefix] = prev + 1;
+            return _itemId ?? (_itemId = $"{Constants.Documents.IdentitiesPrefix}{DatabaseName.ToLowerInvariant()}");
         }
 
-        public override DynamicJsonValue ToJson(JsonOperationContext context)
+        protected override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue, bool isPassive)
         {
-            var json = base.ToJson(context);
-            FillJson(json);
+            if (existingValue == null)
+            {
+                var djv = new DynamicJsonValue
+                {
+                    [Prefix] = _identity = 1
+                };
 
-            return json;
+                return context.ReadObject(djv, GetItemId());
+            }
+
+            existingValue.TryGet(Prefix, out long value);
+
+            if (existingValue.Modifications == null)
+                existingValue.Modifications = new DynamicJsonValue();
+
+            existingValue.Modifications[Prefix] = _identity = value + 1;
+
+            return context.ReadObject(existingValue, GetItemId());
         }
 
-        private void FillJson(DynamicJsonValue json)
+        public override object GetResult()
+        {
+            return _identity;
+        }
+
+        public override void FillJson(DynamicJsonValue json)
         {
             json[nameof(DatabaseName)] = DatabaseName;
             json[nameof(Prefix)] = Prefix;

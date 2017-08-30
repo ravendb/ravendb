@@ -17,7 +17,6 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Security;
-using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Tcp;
@@ -48,6 +47,8 @@ namespace Raven.Server.ServerWide
     public class ClusterStateMachine : RachisStateMachine
     {
         private const string LocalNodeStateTreeName = "LocalNodeState";
+        private static readonly StringSegment DatabaseName = new StringSegment("DatabaseName");
+
         private static readonly TableSchema ItemsSchema;
 
         private static readonly TableSchema CmpXchgItemsSchema;
@@ -127,34 +128,23 @@ namespace Raven.Server.ServerWide
                         DeleteValue(context, type, cmd, index, leader);
                         break;
                     case nameof(IncrementClusterIdentityCommand):
-                        if (!ValidatePropertyExistence(cmd,
-                            nameof(IncrementClusterIdentityCommand),
-                            nameof(IncrementClusterIdentityCommand.Prefix),
-                            out errorMessage))
+                        if (ValidatePropertyExistence(cmd, nameof(IncrementClusterIdentityCommand), nameof(IncrementClusterIdentityCommand.Prefix), out errorMessage) == false)
                         {
-                            NotifyLeaderAboutError(index, leader,
-                                new InvalidDataException(errorMessage));
+                            NotifyLeaderAboutError(index, leader, new InvalidDataException(errorMessage));
                             return;
                         }
 
-                        var incrementCommand = JsonDeserializationCluster.IncrementClusterIdentityCommand(cmd);
-                        var identities = IncrementIdentities(context, incrementCommand, index, leader);
-                        leader?.SetStateOf(index, identities[incrementCommand.Prefix]);
+                        SetValueForTypedDatabaseCommand(context, type, cmd, index, leader, out object result);
+                        leader?.SetStateOf(index, result);
                         break;
                     case nameof(UpdateClusterIdentityCommand):
-                        if (!ValidatePropertyExistence(cmd,
-                            nameof(UpdateClusterIdentityCommand),
-                            nameof(UpdateClusterIdentityCommand.Identities),
-                            out errorMessage))
+                        if (ValidatePropertyExistence(cmd, nameof(UpdateClusterIdentityCommand), nameof(UpdateClusterIdentityCommand.Identities), out errorMessage) == false)
                         {
-                            NotifyLeaderAboutError(index, leader,
-                                new InvalidDataException(errorMessage));
+                            NotifyLeaderAboutError(index, leader, new InvalidDataException(errorMessage));
                             return;
                         }
 
-                        var updateCommand = JsonDeserializationCluster.UpdateClusterIdentityCommand(cmd);
-                        UpdateIdentities(context, updateCommand, index, leader);
-
+                        SetValueForTypedDatabaseCommand(context, type, cmd, index, leader, out _);
                         break;
                     case nameof(PutIndexCommand):
                     case nameof(PutAutoIndexCommand):
@@ -188,7 +178,7 @@ namespace Raven.Server.ServerWide
                     case nameof(UpdateEtlProcessStateCommand):
                     case nameof(ToggleSubscriptionStateCommand):
                     case nameof(UpdateSubscriptionClientConnectionTime):
-                        SetValueForTypedDatabaseCommand(context, type, cmd, index, leader);
+                        SetValueForTypedDatabaseCommand(context, type, cmd, index, leader, out _);
                         break;
                     case nameof(CompareExchangeCommand):
                         CompareExchange(context, type, cmd, index);
@@ -271,8 +261,9 @@ namespace Raven.Server.ServerWide
             return true;
         }
 
-        private void SetValueForTypedDatabaseCommand(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader)
+        private void SetValueForTypedDatabaseCommand(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader, out object result)
         {
+            result = null;
             UpdateValueForDatabaseCommand updateCommand = null;
             try
             {
@@ -290,7 +281,7 @@ namespace Raven.Server.ServerWide
 
                 try
                 {
-                    updateCommand.Execute(context, items, index, record, _parent.CurrentState == RachisConsensus.State.Passive);
+                    updateCommand.Execute(context, items, index, record, _parent.CurrentState == RachisConsensus.State.Passive, out result);
                 }
                 catch (Exception e)
                 {
@@ -570,83 +561,6 @@ namespace Raven.Server.ServerWide
                         }
                     }, null);
             };
-        }
-
-        private static readonly StringSegment DatabaseName = new StringSegment("DatabaseName");
-
-        private void UpdateIdentities(TransactionOperationContext context, UpdateClusterIdentityCommand cmd, long index, Leader leader)
-        {
-            var key = $"{Constants.Documents.IdentitiesPrefix}{cmd.DatabaseName}";
-            using (Slice.From(context.Allocator, key, out Slice valueName))
-            using (Slice.From(context.Allocator, key.ToLowerInvariant(), out Slice valueNameLowered))
-            {
-                Dictionary<string, long> identities;
-                var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
-                var identitiesJson = ReadInternal(context, out long etag, valueNameLowered);
-                if (cmd.RaftCommandIndex != null && etag != cmd.RaftCommandIndex.Value)
-                {
-                    NotifyLeaderAboutError(index, leader,
-                        new ConcurrencyException(
-                            $"Concurrency violation at executing IncrementClusterIdentityCommand command, the database {cmd.DatabaseName} has etag {etag} but was expecting {cmd.RaftCommandIndex}"));
-                    return;
-                }
-
-                if (identitiesJson == null)
-                {
-                    identities = cmd.Identities;
-                }
-                else
-                {
-                    identities = JsonDeserializationCluster.Identities(identitiesJson);
-                    cmd.ApplyIdentityValues(identities);
-                }
-
-                using (var itemBlittable = context.ReadObject(identities.ToJson(), "IncrementIdentities/updated identities", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
-                {
-                    UpdateValue(index, items, valueNameLowered, valueName, itemBlittable);
-                }
-            }
-        }
-
-        private Dictionary<string, long> IncrementIdentities(TransactionOperationContext context, IncrementClusterIdentityCommand cmd, long index, Leader leader)
-        {
-            var key = $"{Constants.Documents.IdentitiesPrefix}{cmd.DatabaseName}";
-            using (Slice.From(context.Allocator, key, out Slice valueName))
-            using (Slice.From(context.Allocator, key.ToLowerInvariant(), out Slice valueNameLowered))
-            {
-                Dictionary<string, long> identities;
-                var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
-
-                var identitiesJson = ReadInternal(context, out long etag, valueNameLowered);
-
-                if (cmd.RaftCommandIndex != null && etag != cmd.RaftCommandIndex.Value)
-                {
-                    NotifyLeaderAboutError(index, leader,
-                        new ConcurrencyException(
-                            $"Concurrency violation at executing IncrementClusterIdentityCommand command, the database {cmd.DatabaseName} has etag {etag} but was expecting {cmd.RaftCommandIndex}"));
-                    return null;
-                }
-
-                if (identitiesJson == null)
-                {
-                    identities = new Dictionary<string, long>
-                    {
-                        {cmd.Prefix, 1}
-                    };
-                }
-                else
-                {
-                    identities = JsonDeserializationCluster.Identities(identitiesJson);
-                    cmd.Increment(identities);
-                }
-
-                using (var itemBlittable = context.ReadObject(identities.ToJson(), "IncrementIdentities/updated identities", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
-                {
-                    UpdateValue(index, items, valueNameLowered, valueName, itemBlittable);
-                }
-
-                return identities;
-            }
         }
 
         private void UpdateDatabase(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore)
@@ -937,14 +851,16 @@ namespace Raven.Server.ServerWide
         public Dictionary<string, long> ReadIdentities<T>(TransactionOperationContext<T> context, string name, out long etag)
             where T : RavenTransaction
         {
-            var identitiesJson = Read(context, Constants.Documents.IdentitiesPrefix + name.ToLowerInvariant(), out etag);
-            return identitiesJson == null ? null : JsonDeserializationCluster.Identities(identitiesJson);
-        }
+            var identities = new Dictionary<string, long>();
 
-        public BlittableJsonReaderObject ReadIdentitiesAsBlittable<T>(TransactionOperationContext<T> context, string name, out long etag)
-            where T : RavenTransaction
-        {
-            return Read(context, Constants.Documents.IdentitiesPrefix + name.ToLowerInvariant(), out etag);
+            var identitiesJson = Read(context, Constants.Documents.IdentitiesPrefix + name.ToLowerInvariant(), out etag);
+            if (identitiesJson != null)
+            {
+                foreach (var propertyName in identitiesJson.GetPropertyNames())
+                    identities[propertyName] = (long)identitiesJson[propertyName];
+            }
+
+            return identities;
         }
 
         public BlittableJsonReaderObject Read<T>(TransactionOperationContext<T> context, string name)
