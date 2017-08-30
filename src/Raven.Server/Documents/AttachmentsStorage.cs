@@ -341,7 +341,7 @@ namespace Raven.Server.Documents
         {
             using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice lowerDocumentId))
             {
-                var exists = _documentsStorage.GetTableValueReaderForDocument(context, lowerDocumentId, out TableValueReader tvr);
+                var exists = _documentsStorage.GetTableValueReaderForDocument(context, lowerDocumentId, throwOnConflict: true, tvr: out TableValueReader tvr);
                 if (exists == false)
                     return null;
                 return UpdateDocumentAfterAttachmentChange(context, lowerDocumentId, documentId, tvr, null);
@@ -426,7 +426,7 @@ namespace Raven.Server.Documents
             bool hasDoc;
             try
             {
-                hasDoc = _documentsStorage.GetTableValueReaderForDocument(context, lowerDocumentId, out tvr);
+                hasDoc = _documentsStorage.GetTableValueReaderForDocument(context, lowerDocumentId, throwOnConflict: true, tvr: out tvr);
             }
             catch (DocumentConflictException e)
             {
@@ -808,8 +808,8 @@ namespace Raven.Server.Documents
             var currentChangeVector = TableValueToChangeVector(context, (int)AttachmentsTable.ChangeVector, ref tvr);
             var etag = TableValueToEtag((int)AttachmentsTable.Etag, ref tvr);
 
-            using (isPartialKey ? 
-                TableValueToSlice(context, (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType, ref tvr, out key) 
+            using (isPartialKey ?
+                TableValueToSlice(context, (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType, ref tvr, out key)
               : default(ByteStringContext.InternalScope))
             using (TableValueToSlice(context, (int)AttachmentsTable.Hash, ref tvr, out Slice hash))
             {

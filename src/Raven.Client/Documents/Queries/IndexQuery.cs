@@ -26,7 +26,6 @@ namespace Raven.Client.Documents.Queries
                 hasher.Write(Query);
                 hasher.Write(WaitForNonStaleResults);
                 hasher.Write(WaitForNonStaleResultsAsOfNow);
-                hasher.Write(WaitForNonStaleResultsAsOfNow);
                 hasher.Write(SkipDuplicateChecking);
                 hasher.Write(ShowTimings);
                 hasher.Write(ExplainScores);
