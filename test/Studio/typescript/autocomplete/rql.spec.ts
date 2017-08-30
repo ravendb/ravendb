@@ -80,6 +80,15 @@ describe("RQL Autocomplete", () => {
        }));
    });
    
+   it('from Collection (Company| should not list anything', done => {
+       rqlTestUtils.autoComplete("from Orders (Company|", northwindProvider(),  ((errors, wordlist) => {
+           // TODO: We need to assert here that we have prefix with the full word, so the auto complete is actually empty
+           // assert.isEmpty(wordlist);
+           
+            done();
+       }));
+   });
+   
    it('from index should get index names', done => {
        rqlTestUtils.autoComplete("from index |", northwindProvider(),  ((errors, wordlist) => {
            assert.deepEqual(wordlist, [
