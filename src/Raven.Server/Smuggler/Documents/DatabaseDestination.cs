@@ -51,7 +51,12 @@ namespace Raven.Server.Smuggler.Documents
         {
             return new DatabaseDocumentActions(_database, _buildType, isRevision: true, log: _log);
         }
-     
+
+        public IDocumentActions Tombstones()
+        {
+            return new DatabaseDocumentActions(_database, _buildType, isRevision: false, log: _log);
+        }
+
         public IIdentityActions Identities()
         {
             return new DatabaseIdentityActions(_database);
@@ -119,6 +124,15 @@ namespace Raven.Server.Smuggler.Documents
                 if (item.Attachments != null)
                     progress.Attachments.ReadCount += item.Attachments.Count;
                 _command.Add(item);
+                HandleBatchOfDocumentsIfNecessary();
+            }
+
+            public void WriteTombstone(DocumentTombstone tombstone, SmugglerProgressBase.CountsWithLastEtag progress)
+            {
+                _command.Add(new DocumentItem
+                {
+                    Tombstone = tombstone
+                });
                 HandleBatchOfDocumentsIfNecessary();
             }
 
@@ -253,6 +267,30 @@ namespace Raven.Server.Smuggler.Documents
 
                 foreach (var documentType in Documents)
                 {
+                    var tombstone = documentType.Tombstone;
+                    if (tombstone != null)
+                    {
+                        using (Slice.External(context.Allocator, tombstone.LowerId, out Slice key))
+                        {
+                            var newEtag = _database.DocumentsStorage.GenerateNextEtag();
+                            var changeVector = _database.DocumentsStorage.GetNewChangeVector(context, newEtag);
+                            switch (tombstone.Type)
+                            {
+                                case DocumentTombstone.TombstoneType.Document:
+                                    _database.DocumentsStorage.Delete(context, key, tombstone.LowerId, null, null, changeVector, new CollectionName(tombstone.Collection));
+                                    break;
+                                case DocumentTombstone.TombstoneType.Attachment:
+                                    _database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, key, false, "$fromReplication", null, changeVector);
+                                    break;
+                                case DocumentTombstone.TombstoneType.Revision:
+                                    _database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, key, tombstone.Collection, changeVector);
+                                    break;
+                            }
+                        }
+
+                        continue;
+                    }
+
                     if (documentType.Attachments != null)
                     {
                         foreach (var attachment in documentType.Attachments)

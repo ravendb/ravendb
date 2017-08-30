@@ -100,6 +100,7 @@ namespace Raven.Server.Smuggler.Documents
                     return 0;
                 case DatabaseItemType.Documents:
                 case DatabaseItemType.RevisionDocuments:
+                case DatabaseItemType.Tombstones:
                 case DatabaseItemType.Indexes:
                 case DatabaseItemType.Identities:
                     return SkipArray();
@@ -116,6 +117,11 @@ namespace Raven.Server.Smuggler.Documents
         public IEnumerable<DocumentItem> GetRevisionDocuments(List<string> collectionsToExport, INewDocumentActions actions)
         {
             return ReadDocuments(actions);
+        }
+
+        public IEnumerable<DocumentTombstone> GetTombstones(List<string> collectionsToExport, INewDocumentActions actions)
+        {
+            return ReadTombstones(actions);
         }
 
         public IEnumerable<IndexDefinitionAndType> GetIndexes()
@@ -349,6 +355,59 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
+        private IEnumerable<DocumentTombstone> ReadTombstones(INewDocumentActions actions = null)
+        {
+            if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
+                ThrowInvalidJson("Unexpected end of json");
+
+            if (_state.CurrentTokenType != JsonParserToken.StartArray)
+                ThrowInvalidJson("Expected start array, but got " + _state.CurrentTokenType);
+
+            var context = _context;
+            var builder = CreateBuilder(context, null);
+            try
+            {
+                while (true)
+                {
+                    if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
+                        ThrowInvalidJson("Unexpected end of json while reading docs");
+
+                    if (_state.CurrentTokenType == JsonParserToken.EndArray)
+                        break;
+
+                    if (actions != null)
+                    {
+                        var oldContext = context;
+                        context = actions.GetContextForNewDocument();
+                        if (oldContext != context)
+                        {
+                            builder.Dispose();
+                            builder = CreateBuilder(context, null);
+                        }
+                    }
+                    builder.Renew("import/object", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+
+                    ReadObject(builder);
+
+                    var data = builder.CreateReader();
+                    builder.Reset();
+
+                    var tombstone = new DocumentTombstone();
+                    if (data.TryGet("Key", out tombstone.LowerId) && 
+                        data.TryGet(nameof(DocumentTombstone.Type), out string type) &&
+                        data.TryGet(nameof(DocumentTombstone.Collection), out tombstone.Collection))
+                    {
+                        tombstone.Type = Enum.Parse<DocumentTombstone.TombstoneType>(type);
+                        yield return tombstone;
+                    }
+                }
+            }
+            finally
+            {
+                builder.Dispose();
+            }
+        }
+
         public unsafe void ProcessAttachmentStream(DocumentsOperationContext context, BlittableJsonReaderObject data, ref DocumentItem.AttachmentStream attachment)
         {
             if (data.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false ||
@@ -395,13 +454,16 @@ namespace Raven.Server.Smuggler.Documents
             if (type.Equals("Docs", StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.Documents;
 
-            if (type.Equals("RevisionDocuments", StringComparison.OrdinalIgnoreCase))
+            if (type.Equals(nameof(DatabaseItemType.RevisionDocuments), StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.RevisionDocuments;
 
-            if (type.Equals("Indexes", StringComparison.OrdinalIgnoreCase))
+            if (type.Equals(nameof(DatabaseItemType.Tombstones), StringComparison.OrdinalIgnoreCase))
+                return DatabaseItemType.Tombstones;
+
+            if (type.Equals(nameof(DatabaseItemType.Indexes), StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.Indexes;
 
-            if (type.Equals("Identities", StringComparison.OrdinalIgnoreCase))
+            if (type.Equals(nameof(DatabaseItemType.Identities), StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.Identities;
 
             throw new InvalidOperationException("Got unexpected property name '" + type + "' on " + _parser.GenerateErrorState());

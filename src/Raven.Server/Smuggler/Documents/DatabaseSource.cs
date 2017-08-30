@@ -29,6 +29,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             DatabaseItemType.Documents,
             DatabaseItemType.RevisionDocuments,
+            DatabaseItemType.Tombstones,
             DatabaseItemType.Indexes,
             DatabaseItemType.Identities,
             DatabaseItemType.None
@@ -95,6 +96,18 @@ namespace Raven.Server.Smuggler.Documents
             using (Slice.External(_context.Allocator, hash, out Slice hashSlice))
             {
                 return _database.DocumentsStorage.AttachmentsStorage.GetAttachmentStream(_context, hashSlice, out tag);
+            }
+        }
+
+        public IEnumerable<DocumentTombstone> GetTombstones(List<string> collectionsToExport, INewDocumentActions actions)
+        {
+            var tombstones = collectionsToExport.Count != 0
+                ? _database.DocumentsStorage.GetTombstonesFrom(_context, collectionsToExport, _startDocumentEtag, int.MaxValue)
+                : _database.DocumentsStorage.GetTombstonesFrom(_context, _startDocumentEtag, 0, int.MaxValue);
+
+            foreach (var tombstone in tombstones)
+            {
+                yield return tombstone;
             }
         }
 

@@ -65,6 +65,7 @@ namespace Raven.Server.Smuggler.Documents
                 EnsureStepProcessed(result.Documents.Attachments);
                 EnsureStepProcessed(result.RevisionDocuments);
                 EnsureStepProcessed(result.RevisionDocuments.Attachments);
+                EnsureStepProcessed(result.Tombstones);
                 EnsureStepProcessed(result.Indexes);
                 EnsureStepProcessed(result.Identities);
 
@@ -101,6 +102,9 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.RevisionDocuments:
                     counts = ProcessRevisionDocuments(result);
                     break;
+                case DatabaseItemType.Tombstones:
+                    counts = ProcessTombstones(result);
+                    break;
                 case DatabaseItemType.Indexes:
                     counts = ProcessIndexes(result);
                     break;
@@ -136,6 +140,9 @@ namespace Raven.Server.Smuggler.Documents
                     break;
                 case DatabaseItemType.RevisionDocuments:
                     counts = result.RevisionDocuments;
+                    break;
+                case DatabaseItemType.Tombstones:
+                    counts = result.Tombstones;
                     break;
                 case DatabaseItemType.Indexes:
                     counts = result.Indexes;
@@ -377,6 +384,40 @@ namespace Raven.Server.Smuggler.Documents
                     actions.WriteDocument(item, result.Documents);
 
                     result.Documents.LastEtag = item.Document.Etag;
+                }
+            }
+
+            return result.Documents;
+        }
+
+        private SmugglerProgressBase.Counts ProcessTombstones(SmugglerResult result)
+        {
+            using (var actions = _destination.Tombstones())
+            {
+                foreach (var tombstone in _source.GetTombstones(_options.CollectionsToExport, actions))
+                {
+                    _token.ThrowIfCancellationRequested();
+                    result.Tombstones.ReadCount++;
+
+                    if (result.Tombstones.ReadCount % 1000 == 0)
+                    {
+                        var message = $"Read {result.Tombstones.ReadCount:#,#;;0} tombstones.";
+                        result.AddInfo(message);
+                        _onProgress.Invoke(result.Progress);
+                    }
+
+                    if (tombstone == null)
+                    {
+                        result.Tombstones.ErroredCount++;
+                        continue;
+                    }
+
+                    if (tombstone.LowerId == null)
+                        ThrowInvalidData();
+
+                    actions.WriteTombstone(tombstone, result.Tombstones);
+
+                    result.Tombstones.LastEtag = tombstone.Etag;
                 }
             }
 
