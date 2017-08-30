@@ -26,7 +26,8 @@ class queryCommand extends commandBase {
             pageSize: this.take,
             fetch: criteria.showFields() ? "__all_stored_fields" : undefined,
             debug: criteria.indexEntries() ? "entries" : undefined,
-            disableCache: this.disableCache ? Date.now() : undefined
+            disableCache: this.disableCache ? Date.now() : undefined,
+            "metadata-only": typeof(criteria.metadataOnly()) !== 'undefined' ? criteria.metadataOnly() : undefined
         });
         return url + urlArgs;
     }

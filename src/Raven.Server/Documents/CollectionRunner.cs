@@ -42,7 +42,7 @@ namespace Raven.Server.Documents
         {
             return ExecuteOperation(collectionName, options, Context, onProgress,
                 key => new PatchDocumentCommand(Context, key, null, false,(patch, patchArgs),(null,null),
-                    Database, false,false), token);
+                    Database, false, false), token);
         }
 
         protected async Task<IOperationResult> ExecuteOperation(string collectionName, CollectionOperationOptions options, DocumentsOperationContext context,

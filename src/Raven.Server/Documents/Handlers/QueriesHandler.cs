@@ -21,7 +21,7 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-
+using Sparrow.Json.Parsing;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents.Handlers
@@ -315,6 +315,109 @@ namespace Raven.Server.Documents.Handlers
 
             return Task.CompletedTask;
 
+        }
+
+        [RavenAction("/databases/*/queries/test", "PATCH", AuthorizationStatus.ValidUser)]
+        public Task PatchTest()
+        {
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                var reader = context.Read(RequestBodyStream(), "queries/patch");
+                if (reader == null)
+                    throw new BadRequestException("Missing JSON content.");
+                if (reader.TryGet("Query", out BlittableJsonReaderObject queryJson) == false || queryJson == null)
+                    throw new BadRequestException("Missing 'Query' property.");
+
+                var query = IndexQueryServerSide.Create(queryJson, context, Database.QueryMetadataCache, QueryType.Update);
+
+                var patch = new PatchRequest(query.Metadata.GetUpdateBody(), PatchRequestType.Patch);
+
+                var whereValueToken = (query.Metadata?.Query?.Where?.Arguments[0] as QueryExpression)?.Value;
+                if (whereValueToken == null)
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                    return Task.CompletedTask;
+                }
+
+                var docId = QueryExpression.Extract(query.Metadata.QueryText, whereValueToken, stripQuotes: true);
+
+                PatchDocumentCommand command;
+                if (query.Metadata.IsDynamic == false)
+                {
+                    command = new PatchDocumentCommand(context, docId,
+                        expectedChangeVector: null,
+                        skipPatchIfChangeVectorMismatch: false,
+                        patch: (patch, query.QueryParameters),
+                        patchIfMissing: (null, null),
+                        database: context.DocumentDatabase,
+                        debugMode: true,
+                        isTest: true);
+                }
+                else
+                {
+                    command = new PatchDocumentCommand(context, docId, null, false, (patch, query.QueryParameters), (null, null),
+                        Database, true, true);
+                }
+
+                using (context.OpenWriteTransaction())
+                {
+                    command.Execute(context);
+                }
+
+                switch (command.PatchResult.Status)
+                {
+                    case PatchStatus.DocumentDoesNotExist:
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                        return Task.CompletedTask;
+                    case PatchStatus.Created:
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+                        break;
+                    case PatchStatus.Skipped:
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+                        return Task.CompletedTask;
+                    case PatchStatus.Patched:
+                    case PatchStatus.NotModified:
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+
+                WritePatchResultToResponse(context, command);
+
+                return Task.CompletedTask;
+            }
+        }
+
+        private void WritePatchResultToResponse(DocumentsOperationContext context, PatchDocumentCommand command)
+        {
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteStartObject();
+
+                writer.WritePropertyName(nameof(command.PatchResult.Status));
+                writer.WriteString(command.PatchResult.Status.ToString());
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(command.PatchResult.ModifiedDocument));
+                writer.WriteObject(command.PatchResult.ModifiedDocument);
+
+                writer.WriteComma();
+                writer.WritePropertyName(nameof(command.PatchResult.OriginalDocument));
+                writer.WriteObject(command.PatchResult.OriginalDocument);
+
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(command.PatchResult.Debug));
+
+                context.Write(writer, new DynamicJsonValue
+                {
+                    ["Info"] = new DynamicJsonArray(command.DebugOutput),
+                    ["Actions"] = command.DebugActions?.GetDebugActions()
+                });
+
+                writer.WriteEndObject();
+            }
         }
 
         [RavenAction("/databases/*/queries", "PATCH", AuthorizationStatus.ValidUser)]
