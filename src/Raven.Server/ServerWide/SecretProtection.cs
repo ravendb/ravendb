@@ -119,13 +119,19 @@ namespace Raven.Server.ServerWide
                                 Syscall.ThrowLastError(err, $"Failed to seek to beginning of {filepath}");
                             }
 
-                            var writeAmount = Syscall.write(fd, pBuf, KeySize);
-                            if (writeAmount != KeySize)
+                            var len = KeySize;
+                            while (len > 0)
                             {
-                                var err = Marshal.GetLastWin32Error();
-                                Syscall.ThrowLastError(err, $"Failed to write {buffer.Length} bytes into {filepath}, only wrote {writeAmount}");
+                                var writeAmount = Syscall.write(fd, pBuf, KeySize);
+                                if (writeAmount <= 0) // 0 will be considered as error here
+                                {
+                                    var err = Marshal.GetLastWin32Error();
+                                    Syscall.ThrowLastError(err, $"Failed to write {KeySize} bytes into {filepath}, only wrote {len}");
+                                }
+                               
+                                len -= (int)writeAmount;
                             }
-
+                            
                             if (Syscall.FSync(fd) != 0)
                             {
                                 var err = Marshal.GetLastWin32Error();
