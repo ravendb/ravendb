@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Exceptions.Documents;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -98,7 +99,15 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 references.Add(keySlice);
 
-                var document = _documentsStorage.Get(_documentsContext, keySlice);
+                Document document = null;
+                try
+                {
+                    document = _documentsStorage.Get(_documentsContext, keySlice);
+                }
+                catch (DocumentConflictException)
+                {
+                    // when there is conflict, we need to apply same behavior as if the document would not exist
+                }
 
                 if (document == null)
                 {
