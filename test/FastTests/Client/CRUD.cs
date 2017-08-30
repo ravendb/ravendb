@@ -1,5 +1,4 @@
-﻿using Raven.Client.Documents;
-using Raven.Client.Documents.Session;
+﻿using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -432,6 +431,78 @@ namespace FastTests.Client
                     Assert.Equal("w", change[1].FieldNewValue.ToString());
                 }
             }
+        }
+
+        [Fact]
+        public void CRUD_Can_Update_Property_To_Null()
+        {
+            //RavenDB-8345
+
+            using (var store = GetDocumentStore())
+            {
+                using (var newSession = store.OpenSession())
+                {
+                    newSession.Store(new User { Name = "user1" }, "users/1");
+                    newSession.SaveChanges();
+                }
+
+                using (var newSession = store.OpenSession())
+                {
+                    var user = newSession.Load<User>("users/1");
+                    user.Name = null;
+                    newSession.SaveChanges();
+                }
+
+                using (var newSession = store.OpenSession())
+                {
+                    var user = newSession.Load<User>("users/1");
+                    Assert.Null(user.Name);
+                }
+            }
+        }
+
+        [Fact]
+        public void CRUD_Can_Update_Property_From_Null_To_Object()
+        {
+            //RavenDB-8345
+
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Poc
+                    {
+                        Name = "aviv",
+                        Obj = null
+                    }, "pocs/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var poc = session.Load<Poc>("pocs/1");
+                    Assert.Null(poc.Obj);
+
+                    poc.Obj = new
+                    {
+                        a = 1,
+                        b = "2"
+                    };
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var poc = session.Load<Poc>("pocs/1");
+                    Assert.NotNull(poc.Obj);
+                }
+            }
+        }
+
+        class Poc
+        {
+            public string Name { get; set; }
+            public object Obj { get; set; }
         }
     }
 }
