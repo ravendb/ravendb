@@ -100,6 +100,12 @@ namespace Raven.Client.Json
                             DocumentsChanges.ChangeType.FieldChanged);
                         break;
                     case BlittableJsonToken.Null:
+                        if (oldProp.Value == null)
+                            break;
+                        if (changes == null)
+                            return true;
+                        NewChange(newProp.Name, null, oldProp.Value, docChanges,
+                            DocumentsChanges.ChangeType.FieldChanged);
                         break;
                     case BlittableJsonToken.StartArray:
                         var newArray = newProp.Value as BlittableJsonReaderArray;
@@ -117,13 +123,26 @@ namespace Raven.Client.Json
 
                         break;
                     case BlittableJsonToken.StartObject:
+                        if (oldProp.Value == null)
+                        {
+                            if (changes == null)
+                                return true;
+
+                            changed = true;
+                            NewChange(newProp.Name, newProp.Value, null, docChanges,
+                                DocumentsChanges.ChangeType.FieldChanged);
+                        }
+                        else
                         {
                             changed = CompareBlittable(id, oldProp.Value as BlittableJsonReaderObject,
                                 newProp.Value as BlittableJsonReaderObject, changes, docChanges);
-                            if ((changes == null) && (changed))
-                                return true;
-                            break;
                         }
+
+                        if ((changes == null) && (changed))
+                            return true;
+
+                        break;
+
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
