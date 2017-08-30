@@ -21,6 +21,7 @@ namespace Raven.Client.Documents.Smuggler
 
             Documents = new CountsWithSkippedCountAndLastEtag();
             RevisionDocuments = new CountsWithLastEtag();
+            Tombstones = new CountsWithLastEtag();
             Identities = new Counts();
             Indexes = new Counts();
         }
@@ -116,6 +117,8 @@ namespace Raven.Client.Documents.Smuggler
 
         public virtual CountsWithLastEtag RevisionDocuments { get; set; }
 
+        public virtual CountsWithLastEtag Tombstones { get; set; }
+
         public virtual Counts Identities { get; set; }
 
         public virtual Counts Indexes { get; set; }
@@ -126,6 +129,7 @@ namespace Raven.Client.Documents.Smuggler
             {
                 [nameof(Documents)] = Documents.ToJson(),
                 [nameof(RevisionDocuments)] = RevisionDocuments.ToJson(),
+                [nameof(Tombstones)] = Tombstones.ToJson(),
                 [nameof(Identities)] = Identities.ToJson(),
                 [nameof(Indexes)] = Indexes.ToJson(),
             };

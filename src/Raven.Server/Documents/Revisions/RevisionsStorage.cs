@@ -441,7 +441,7 @@ namespace Raven.Server.Documents.Revisions
             return deletedRevisionsCount;
         }
 
-        public void DeleteRevision(DocumentsOperationContext context, Slice key, string collection, LazyStringValue changeVector)
+        public void DeleteRevision(DocumentsOperationContext context, Slice key, string collection, string changeVector)
         {
             var collectionName = new CollectionName(collection);
             var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);

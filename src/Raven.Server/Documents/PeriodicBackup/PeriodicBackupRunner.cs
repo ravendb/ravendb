@@ -379,7 +379,11 @@ namespace Raven.Server.Documents.PeriodicBackup
                         configuration.BackupType == BackupType.Snapshot && isFullBackup == false)
                     {
                         // smuggler backup
-                        var result = CreateBackup(backupFilePath, startDocumentEtag, context);
+                        var options = new DatabaseSmugglerOptions();
+                        if (isFullBackup == false)
+                            options.OperateOnTypes |= DatabaseItemType.Tombstones;
+
+                        var result = CreateBackup(options, backupFilePath, startDocumentEtag, context);
                         lastEtag = result.GetLastEtag();
                     }
                     else
@@ -411,8 +415,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        private SmugglerResult CreateBackup(string backupFilePath,
-            long? startDocumentEtag, DocumentsOperationContext context)
+        private SmugglerResult CreateBackup(DatabaseSmugglerOptions options, string backupFilePath, long? startDocumentEtag, DocumentsOperationContext context)
         {
             // the last etag is already included in the last backup
             startDocumentEtag = startDocumentEtag == null ? 0 : ++startDocumentEtag;
@@ -426,7 +429,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                     smugglerSource,
                     smugglerDestination,
                     _database.Time,
-                    token: _cancellationToken.Token);
+                    token: _cancellationToken.Token, 
+                    options: options);
 
                 result = smuggler.Execute();
             }
