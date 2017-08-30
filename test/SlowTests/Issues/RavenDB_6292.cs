@@ -1,14 +1,19 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Replication;
+using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Extensions;
+using Raven.Client.ServerWide.Expiration;
+using Raven.Client.ServerWide.Operations;
+using Raven.Client.Util;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
@@ -64,7 +69,7 @@ namespace SlowTests.Issues
                         .First();
 
                     Assert.Equal("John", user.Name);
-                    
+
                     Assert.Throws<DocumentConflictException>(() => session.Load<Address>(user.AddressId));
 
                     using (var commands = store2.Commands())
@@ -91,8 +96,8 @@ namespace SlowTests.Issues
 
                     using (var commands = store2.Commands())
                     {
-                        var command = new GetDocumentCommand("users/1", includes: new [] {"AddressId" }, metadataOnly: false);
-                        
+                        var command = new GetDocumentCommand("users/1", includes: new[] { "AddressId" }, metadataOnly: false);
+
                         commands.RequestExecutor.Execute(command, commands.Context);
 
                         var address = (BlittableJsonReaderObject)command.Result.Includes["addresses/1"];
@@ -103,6 +108,94 @@ namespace SlowTests.Issues
                     }
                 }
             }
+        }
+
+        [Fact]
+        public async Task ExpirationShouldHandleConflicts()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                await SetupExpiration(store1);
+                await SetupExpiration(store2);
+
+                var expiry1 = SystemTime.UtcNow.AddMinutes(5);
+                var expiry2 = SystemTime.UtcNow.AddMinutes(15);
+                using (var session = store1.OpenAsyncSession())
+                {
+                    var company1 = new Company
+                    {
+                        Name = "Company Name 10"
+                    };
+
+                    await session.StoreAsync(company1, "companies/1");
+                    var metadata = session.Advanced.GetMetadataFor(company1);
+                    metadata[Constants.Documents.Expiration.ExpirationDate] = expiry1.ToString(Default.DateTimeOffsetFormatsToWrite);
+
+                    var company2 = new Company
+                    {
+                        Name = "Company Name 11"
+                    };
+
+                    await session.StoreAsync(company2, "companies/2");
+                    metadata = session.Advanced.GetMetadataFor(company2);
+                    metadata[Constants.Documents.Expiration.ExpirationDate] = expiry2.ToString(Default.DateTimeOffsetFormatsToWrite);
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store2.OpenAsyncSession())
+                {
+                    var company = new Company
+                    {
+                        Name = "Company Name 20"
+                    };
+
+                    await session.StoreAsync(company, "companies/1");
+                    var metadata = session.Advanced.GetMetadataFor(company);
+                    metadata[Constants.Documents.Expiration.ExpirationDate] = expiry1.ToString(Default.DateTimeOffsetFormatsToWrite);
+
+                    var company2 = new Company
+                    {
+                        Name = "Company Name 21"
+                    };
+
+                    await session.StoreAsync(company2, "companies/2");
+                    metadata = session.Advanced.GetMetadataFor(company2);
+                    metadata[Constants.Documents.Expiration.ExpirationDate] = expiry1.ToString(Default.DateTimeOffsetFormatsToWrite);
+
+                    await session.SaveChangesAsync();
+                }
+
+                await SetupReplicationAsync(store1, store2);
+
+                WaitForConflict(store2, "companies/1");
+                WaitForConflict(store2, "companies/2");
+
+                var database = await GetDocumentDatabaseInstanceFor(store2);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                var expiredDocumentsCleaner = database.ExpiredDocumentsCleaner;
+
+                await expiredDocumentsCleaner.CleanupExpiredDocs();
+
+                using (var session = store2.OpenAsyncSession())
+                {
+                    var company2 = await session.LoadAsync<Company>("companies/1");
+                    Assert.Null(company2);
+
+                    await Assert.ThrowsAsync<DocumentConflictException>(() => session.LoadAsync<Company>("companies/2"));
+                }
+            }
+        }
+
+        private static async Task SetupExpiration(DocumentStore store)
+        {
+            var config = new ExpirationConfiguration
+            {
+                Active = true,
+                DeleteFrequencyInSec = 100,
+            };
+            await store.Admin.Server.SendAsync(new ConfigureExpirationOperation(config, store.Database));
         }
 
         private static void WaitForConflict(IDocumentStore store, string id)

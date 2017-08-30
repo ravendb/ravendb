@@ -307,15 +307,8 @@ namespace Raven.Server.Documents.Replication
 
         private void DeleteDocumentFromDifferentCollectionIfNeeded(DocumentsOperationContext ctx, DocumentConflict conflict)
         {
-            Document oldVersion;
-            try
-            {
-                oldVersion = _database.DocumentsStorage.Get(ctx, conflict.LowerId);
-            }
-            catch (DocumentConflictException)
-            {
-                return; // if already conflicted, don't need to do anything
-            }
+            // if already conflicted, don't need to do anything
+            var oldVersion = _database.DocumentsStorage.Get(ctx, conflict.LowerId, throwOnConflict: false);
 
             if (oldVersion == null)
                 return;

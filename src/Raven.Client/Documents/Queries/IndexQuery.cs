@@ -26,7 +26,6 @@ namespace Raven.Client.Documents.Queries
                 hasher.Write(Query);
                 hasher.Write(WaitForNonStaleResults);
                 hasher.Write(WaitForNonStaleResultsAsOfNow);
-                hasher.Write(WaitForNonStaleResultsAsOfNow);
                 hasher.Write(SkipDuplicateChecking);
                 hasher.Write(ShowTimings);
                 hasher.Write(ExplainScores);
@@ -78,11 +77,6 @@ namespace Raven.Client.Documents.Queries
         /// Indicates if detailed timings should be calculated for various query parts (Lucene search, loading documents, transforming results). Default: false
         /// </summary>
         public bool ShowTimings { get; set; }
-
-        /// <summary>
-        /// Indicates if it's intersect query
-        /// </summary>
-        public bool IsIntersect { get; set; }
 
         /// <summary>
         /// Gets the custom query string variables.

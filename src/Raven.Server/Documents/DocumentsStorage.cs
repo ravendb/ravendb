@@ -201,7 +201,7 @@ namespace Raven.Server.Documents
                      : _documentDatabase.Configuration.Core.DataDirectory.FullPath));
             }
 
-            
+
             var options = GetStorageEnvironmentOptionsFromConfiguration(_documentDatabase.Configuration, _documentDatabase.IoChanges, _documentDatabase.CatastrophicFailureNotification);
 
             options.OnNonDurableFileSystemError += _documentDatabase.HandleNonDurableFileSystemError;
@@ -622,7 +622,7 @@ namespace Raven.Server.Documents
             };
         }
 
-        public Document Get(DocumentsOperationContext context, string id)
+        public Document Get(DocumentsOperationContext context, string id, bool throwOnConflict = true)
         {
             if (string.IsNullOrWhiteSpace(id))
                 throw new ArgumentException("Argument is null or whitespace", nameof(id));
@@ -631,13 +631,13 @@ namespace Raven.Server.Documents
 
             using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
             {
-                return Get(context, lowerId);
+                return Get(context, lowerId, throwOnConflict);
             }
         }
 
-        public Document Get(DocumentsOperationContext context, Slice lowerId)
+        public Document Get(DocumentsOperationContext context, Slice lowerId, bool throwOnConflict = true)
         {
-            if (GetTableValueReaderForDocument(context, lowerId, out TableValueReader tvr) == false)
+            if (GetTableValueReaderForDocument(context, lowerId, throwOnConflict, out TableValueReader tvr) == false)
                 return null;
 
             var doc = TableValueToDocument(context, ref tvr);
@@ -658,14 +658,15 @@ namespace Raven.Server.Documents
             }
         }
 
-        public bool GetTableValueReaderForDocument(DocumentsOperationContext context, Slice lowerId, out TableValueReader tvr)
+        public bool GetTableValueReaderForDocument(DocumentsOperationContext context, Slice lowerId, bool throwOnConflict, out TableValueReader tvr)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
             if (table.ReadByKey(lowerId, out tvr) == false)
             {
-                if (ConflictsStorage.ConflictsCount > 0)
+                if (throwOnConflict && ConflictsStorage.ConflictsCount > 0)
                     ConflictsStorage.ThrowOnDocumentConflict(context, lowerId);
+
                 return false;
             }
             return true;

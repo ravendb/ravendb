@@ -176,15 +176,8 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     {
                                         using (DocumentIdWorker.GetLower(databaseContext.Allocator, key.Content.Ptr, key.Size, out var loweredKey))
                                         {
-                                            Document doc = null;
-                                            try
-                                            {
-                                                doc = _documentsStorage.Get(databaseContext, loweredKey);
-                                            }
-                                            catch (DocumentConflictException)
-                                            {
-                                                // when there is conflict, we need to apply same behavior as if the document would not exist
-                                            }
+                                            // when there is conflict, we need to apply same behavior as if the document would not exist
+                                            var doc = _documentsStorage.Get(databaseContext, loweredKey, throwOnConflict: false);
 
                                             if (doc != null && doc.Etag <= lastIndexedEtag)
                                                 documents.Add(doc);
