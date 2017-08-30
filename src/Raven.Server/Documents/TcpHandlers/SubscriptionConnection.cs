@@ -587,14 +587,12 @@ namespace Raven.Server.Documents.TcpHandlers
 
                 var changeVector = subscription.ChangeVectorForNextBatchStartingPoint.ToChangeVector();
                 
-                var matchingCV = changeVector.FirstOrDefault(
-                    x => x.NodeTag == TcpConnection.DocumentDatabase.ServerStore.NodeTag.ParseNodeTag() &&
-                    x.DbId == TcpConnection.DocumentDatabase.DbBase64Id);
+                var cv = changeVector.FirstOrDefault(x => x.DbId == TcpConnection.DocumentDatabase.DbBase64Id);
 
-                if (matchingCV.DbId == "" && matchingCV.Etag ==0 && matchingCV.NodeTag == 0)
+                if (cv.DbId == "" && cv.Etag ==0 && cv.NodeTag == 0)
                     return startEtag;
 
-                return matchingCV.Etag;
+                return cv.Etag;
             }
         }
 
