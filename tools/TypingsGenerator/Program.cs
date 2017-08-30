@@ -131,7 +131,6 @@ namespace TypingsGenerator
             scripter.AddType(typeof(PagingPerformanceDetails));
 
             // subscriptions
-            scripter.AddType(typeof(SubscriptionCriteria));
             scripter.AddType(typeof(SubscriptionConnectionStats));
             scripter.AddType(typeof(SubscriptionConnectionOptions));
             scripter.AddType(typeof(SubscriptionTryout));
@@ -242,7 +241,6 @@ namespace TypingsGenerator
             scripter.AddType(typeof(DocumentWithException));
             scripter.AddType(typeof(SubscriptionStateWithNodeDetails));
             scripter.AddType(typeof(SubscriptionConnectionDetails));
-            scripter.AddType(typeof(SubscriptionCriteria));
             scripter.AddType(typeof(ChangeVectorEntry));
             scripter.AddType(typeof(SubscriptionCreationOptions));
             scripter.AddType(typeof(Constants.Documents.SubscriptionChangeVectorSpecialStates));
