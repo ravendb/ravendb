@@ -98,7 +98,7 @@ namespace Raven.Client
 
             public const string Prefix = "db/";
 
-            public const string IdentitiesPrefix = "db/identities/";
+            public const string IdentitiesPrefix = "identities/";
 
             public const string UrlPrefix = "databases";
 
