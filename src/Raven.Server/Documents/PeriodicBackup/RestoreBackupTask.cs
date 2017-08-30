@@ -15,6 +15,7 @@ using Raven.Client.ServerWide.PeriodicBackup;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -321,7 +322,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         {
                             case IndexType.AutoMap:
                             case IndexType.AutoMapReduce:
-                                var autoIndexDefinition = (IndexDefinitionBase)indexAndType.IndexDefinition;
+                                var autoIndexDefinition = (AutoIndexDefinitionBase)indexAndType.IndexDefinition;
                                 databaseRecord.AutoIndexes[autoIndexDefinition.Name] =
                                     PutAutoIndexCommand.GetAutoIndexDefinition(autoIndexDefinition, indexAndType.Type);
                                 break;

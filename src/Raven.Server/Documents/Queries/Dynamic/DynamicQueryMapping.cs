@@ -5,7 +5,6 @@ using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
-using Raven.Client.Extensions;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
@@ -26,20 +25,24 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         public List<Index> SupersededIndexes;
 
-        public IndexDefinitionBase CreateAutoIndexDefinition()
+        public AutoIndexDefinitionBase CreateAutoIndexDefinition()
         {
             if (IsGroupBy == false)
             {
                 return new AutoMapIndexDefinition(ForCollection, MapFields.Select(field =>
                     {
-                        var indexField = new IndexField
+                        var indexField = new AutoIndexField
                         {
                             Name = field.Name,
-                            Storage = FieldStorage.No
+                            Storage = FieldStorage.No,
+                            Indexing = AutoFieldIndexing.Default
                         };
 
                         if (field.IsFullTextSearch)
-                            indexField.Indexing = FieldIndexing.Search;
+                            indexField.Indexing |= AutoFieldIndexing.Search;
+
+                        if (field.IsExactSearch)
+                            indexField.Indexing |= AutoFieldIndexing.Exact;
 
                         return indexField;
                     }
@@ -51,44 +54,55 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             return new AutoMapReduceIndexDefinition(ForCollection, MapFields.Select(field =>
                 {
-                    var indexField = new IndexField
+                    var indexField = new AutoIndexField
                     {
                         Name = field.Name,
                         Storage = FieldStorage.No,
-                        Aggregation = field.AggregationOperation
+                        Aggregation = field.AggregationOperation,
+                        Indexing = AutoFieldIndexing.Default
                     };
 
                     if (field.IsFullTextSearch)
-                        indexField.Indexing = FieldIndexing.Search;
+                        indexField.Indexing |= AutoFieldIndexing.Search;
+
+                    if (field.IsExactSearch)
+                        indexField.Indexing |= AutoFieldIndexing.Exact;
 
                     return indexField;
                 }).ToArray(),
                 GroupByFields.Select(field =>
                 {
-                    var indexField = new IndexField
+                    var indexField = new AutoIndexField
                     {
                         Name = field.Name,
-                        Storage = FieldStorage.No
+                        Storage = FieldStorage.No,
+                        Indexing = AutoFieldIndexing.Default
                     };
 
                     if (field.IsFullTextSearch)
-                        indexField.Indexing = FieldIndexing.Search;
+                        indexField.Indexing |= AutoFieldIndexing.Search;
+
+                    if (field.IsExactSearch)
+                        indexField.Indexing |= AutoFieldIndexing.Exact;
 
                     return indexField;
                 }).ToArray());
         }
 
-        public void ExtendMappingBasedOn(IndexDefinitionBase definitionOfExistingIndex)
+        public void ExtendMappingBasedOn(AutoIndexDefinitionBase definitionOfExistingIndex)
         {
             Debug.Assert(definitionOfExistingIndex is AutoMapIndexDefinition || definitionOfExistingIndex is AutoMapReduceIndexDefinition, "Dynamic queries are handled only by auto indexes");
 
             var extendedMapFields = new List<DynamicQueryMappingItem>(MapFields);
 
-            foreach (var field in definitionOfExistingIndex.MapFields.Values)
+            foreach (var mapField in definitionOfExistingIndex.MapFields.Values)
             {
+                var field = mapField.As<AutoIndexField>();
+
                 if (extendedMapFields.Any(x => x.Name.Equals(field.Name, StringComparison.Ordinal)) == false)
                 {
-                    extendedMapFields.Add(DynamicQueryMappingItem.Create(field.Name, field.Aggregation, field.Indexing == FieldIndexing.Search));
+                    extendedMapFields.Add(DynamicQueryMappingItem.Create(field.Name, field.Aggregation, field.Indexing.HasFlag(AutoFieldIndexing.Search),
+                        field.Indexing.HasFlag(AutoFieldIndexing.Exact)));
                 }
             }
 

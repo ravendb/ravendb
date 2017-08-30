@@ -7,6 +7,7 @@ using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Config;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -320,7 +321,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                     map.SupersededIndexes.Add(currentIndex);
 
-                    map.ExtendMappingBasedOn(currentIndex.Definition);
+                    map.ExtendMappingBasedOn((AutoIndexDefinitionBase)currentIndex.Definition);
 
                     break;
             }

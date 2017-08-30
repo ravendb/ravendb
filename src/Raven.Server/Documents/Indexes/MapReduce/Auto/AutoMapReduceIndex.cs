@@ -7,7 +7,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
-using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
@@ -18,7 +17,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 {
-    public class AutoMapReduceIndex : MapReduceIndexBase<AutoMapReduceIndexDefinition>
+    public class AutoMapReduceIndex : MapReduceIndexBase<AutoMapReduceIndexDefinition, AutoIndexField>
     {
         private ReduceKeyProcessor _reduceKeyProcessor;
 
@@ -91,23 +90,25 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                 var document = ((Document[])mapResults)[0];
                 Debug.Assert(key == document.LowerId);
 
-                foreach (var indexField in Definition.MapFields.Values)
+                foreach (var field in Definition.MapFields.Values)
                 {
-                    switch (indexField.Aggregation)
+                    var autoIndexField = field.As<AutoIndexField>();
+
+                    switch (autoIndexField.Aggregation)
                     {
                         case AggregationOperation.Count:
-                            mappedResult[indexField.Name] = 1;
+                            mappedResult[autoIndexField.Name] = 1;
                             break;
                         case AggregationOperation.Sum:
                             object fieldValue;
-                            BlittableJsonTraverser.Default.TryRead(document.Data, indexField.Name, out fieldValue, out _);
+                            BlittableJsonTraverser.Default.TryRead(document.Data, autoIndexField.Name, out fieldValue, out _);
 
                             var arrayResult = fieldValue as IEnumerable<object>;
 
                             if (arrayResult == null)
                             {
                                 // explicitly adding this even if the value isn't there, as a null
-                                mappedResult[indexField.Name] = fieldValue;
+                                mappedResult[autoIndexField.Name] = fieldValue;
                                 continue;
                             }
 
@@ -129,15 +130,15 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                                 }
                             }
 
-                            mappedResult[indexField.Name] = total;
+                            mappedResult[autoIndexField.Name] = total;
 
                             break;
                         case AggregationOperation.None:
                             object result;
-                            BlittableJsonTraverser.Default.TryRead(document.Data, indexField.Name, out result, out _);
+                            BlittableJsonTraverser.Default.TryRead(document.Data, autoIndexField.Name, out result, out _);
 
                             // explicitly adding this even if the value isn't there, as a null
-                            mappedResult[indexField.Name] = result;
+                            mappedResult[autoIndexField.Name] = result;
                             break;
                         default:
                             throw new ArgumentOutOfRangeException();

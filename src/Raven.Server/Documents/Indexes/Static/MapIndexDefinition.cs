@@ -11,7 +11,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
-    public class MapIndexDefinition : IndexDefinitionBase
+    public class MapIndexDefinition : IndexDefinitionBase<IndexField>
     {
         private readonly bool _hasDynamicFields;
         public readonly IndexDefinition IndexDefinition;
@@ -52,6 +52,32 @@ namespace Raven.Server.Documents.Indexes.Static
                 writer.WritePropertyName(nameof(IndexDefinition));
                 writer.WriteObject(json);
             }
+        }
+
+        protected override void PersistMapFields(JsonOperationContext context, BlittableJsonTextWriter writer)
+        {
+            writer.WritePropertyName((nameof(MapFields)));
+            writer.WriteStartArray();
+            var first = true;
+            foreach (var field in MapFields.Values.Select(x => x.As<IndexField>()))
+            {
+                if (first == false)
+                    writer.WriteComma();
+
+                writer.WriteStartObject();
+
+                writer.WritePropertyName((nameof(field.Name)));
+                writer.WriteString((field.Name));
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(field.Indexing));
+                writer.WriteString(field.Indexing.ToString());
+
+                writer.WriteEndObject();
+
+                first = false;
+            }
+            writer.WriteEndArray();
         }
 
         protected internal override IndexDefinition GetOrCreateIndexDefinitionInternal()

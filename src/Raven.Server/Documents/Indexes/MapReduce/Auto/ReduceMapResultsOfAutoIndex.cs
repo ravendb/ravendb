@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
                     foreach (var propertyName in obj.GetPropertyNames())
                     {
-                        if (_indexDefinition.TryGetField(propertyName, out IndexField indexField))
+                        if (_indexDefinition.TryGetField(propertyName, out var indexField))
                         {
                             switch (indexField.Aggregation)
                             {

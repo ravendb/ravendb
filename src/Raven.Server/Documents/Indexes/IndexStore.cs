@@ -94,7 +94,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private void HandleAutoIndexChange(string name, long etag, IndexDefinitionBase definition)
+        private void HandleAutoIndexChange(string name, long etag, AutoIndexDefinitionBase definition)
         {
             var creationOptions = IndexCreationOptions.Create;
             var existingIndex = GetIndex(name);
@@ -145,14 +145,14 @@ namespace Raven.Server.Documents.Indexes
             CreateIndexInternal(index);
         }
 
-        private static IndexDefinitionBase CreateAutoDefinition(AutoIndexDefinition definition)
+        private static AutoIndexDefinitionBase CreateAutoDefinition(AutoIndexDefinition definition)
         {
             var mapFields = definition
                 .MapFields
                 .Select(x =>
                 {
-                    var field = IndexField.Create(x.Key, x.Value, allFields: null);
-                    field.Aggregation = x.Value.MapReduceOperation;
+                    var field = AutoIndexField.Create(x.Key, x.Value);
+                    field.Aggregation = x.Value.Aggregation;
 
                     return field;
                 })
@@ -177,8 +177,8 @@ namespace Raven.Server.Documents.Indexes
                     .GroupByFields
                     .Select(x =>
                     {
-                        var field = IndexField.Create(x.Key, x.Value, allFields: null);
-                        field.Aggregation = x.Value.MapReduceOperation;
+                        var field = AutoIndexField.Create(x.Key, x.Value);
+                        field.Aggregation = x.Value.Aggregation;
 
                         return field;
                     })
@@ -428,7 +428,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 ValidateIndexName(definition.Name);
 
-                var command = PutAutoIndexCommand.Create(definition, _documentDatabase.Name);
+                var command = PutAutoIndexCommand.Create((AutoIndexDefinitionBase)definition, _documentDatabase.Name);
 
                 var (etag, _) = await _serverStore.SendToLeaderAsync(command);
 

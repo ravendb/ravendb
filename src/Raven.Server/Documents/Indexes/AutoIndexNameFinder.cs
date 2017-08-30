@@ -11,29 +11,23 @@ namespace Raven.Server.Documents.Indexes
 {
     public class AutoIndexNameFinder
     {
-        public static string FindMapIndexName(string collection, IReadOnlyCollection<IndexField> fields)
+        public static string FindMapIndexName(string collection, IReadOnlyCollection<AutoIndexField> fields)
         {
             return FindName(collection, fields);
         }
 
-        public static string FindMapReduceIndexName(string collection, IReadOnlyCollection<IndexField> fields,
-            IReadOnlyCollection<IndexField> groupBy)
+        public static string FindMapReduceIndexName(string collection, IReadOnlyCollection<AutoIndexField> fields,
+            IReadOnlyCollection<AutoIndexField> groupBy)
         {
             if (groupBy == null)
                 throw new ArgumentNullException(nameof(groupBy));
 
-            var reducedByFields = string.Join("And", groupBy.Select(x =>
-            {
-                if (x.Indexing == FieldIndexing.Search)
-                    return CultureInfo.InvariantCulture.TextInfo.ToTitleCase(IndexField.GetSearchAutoIndexFieldName(x.Name));
-
-                return x.Name;
-            }).OrderBy(x => x));
+            var reducedByFields = string.Join("And", groupBy.Select(GetName).OrderBy(x => x));
 
             return $"{FindName(collection, fields)}ReducedBy{reducedByFields}";
         }
 
-        private static string FindName(string collection, IReadOnlyCollection<IndexField> fields)
+        private static string FindName(string collection, IReadOnlyCollection<AutoIndexField> fields)
         {
             if (string.IsNullOrWhiteSpace(collection))
                 throw new ArgumentNullException(nameof(collection));
@@ -48,13 +42,7 @@ namespace Raven.Server.Documents.Indexes
             if (fields.Count == 0)
                 return $"Auto/{collection}";
             
-            var combinedFields = string.Join("And", fields.Select(x =>
-            {
-                if (x.Indexing == FieldIndexing.Search)
-                    return CultureInfo.InvariantCulture.TextInfo.ToTitleCase(IndexField.GetSearchAutoIndexFieldName(x.Name));
-
-                return x.Name;
-            }).OrderBy(x => x));
+            var combinedFields = string.Join("And", fields.Select(GetName).OrderBy(x => x));
 
             string formattableString = $"Auto/{collection}/By{combinedFields}";
             if (formattableString.Length > 256)
@@ -65,6 +53,22 @@ namespace Raven.Server.Documents.Indexes
 
             }
             return formattableString;
+        }
+
+        private static string GetName(AutoIndexField x)
+        {
+            if (x.Indexing == AutoFieldIndexing.Default || x.Indexing == AutoFieldIndexing.No)
+                return x.Name;
+
+            var name = string.Empty;
+
+            if (x.Indexing.HasFlag(AutoFieldIndexing.Search))
+                name += CultureInfo.InvariantCulture.TextInfo.ToTitleCase(AutoIndexField.GetSearchAutoIndexFieldName(x.Name));
+
+            if (x.Indexing.HasFlag(AutoFieldIndexing.Exact))
+                name += CultureInfo.InvariantCulture.TextInfo.ToTitleCase(AutoIndexField.GetExactAutoIndexFieldName(x.Name));
+
+            return name;
         }
     }
 }

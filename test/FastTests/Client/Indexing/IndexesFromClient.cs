@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,6 +14,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Util;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
@@ -29,7 +31,7 @@ namespace FastTests.Client.Indexing
             {
                 var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
-                var indexId = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name1" } }));
+                var indexId = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Name1" } }));
                 var index = database.IndexStore.GetIndex(indexId);
 
                 var indexes = database.IndexStore.GetIndexesForCollection("Users").ToList();
@@ -49,7 +51,7 @@ namespace FastTests.Client.Indexing
             {
                 var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
-                var indexId = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name1" } }));
+                var indexId = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Name1" } }));
                 var index = database.IndexStore.GetIndex(indexId);
 
                 var indexes = database.IndexStore.GetIndexesForCollection("Users").ToList();
@@ -69,8 +71,8 @@ namespace FastTests.Client.Indexing
             {
                 var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
-                await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name1" } }));
-                await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name2" } }));
+                await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Name1" } }));
+                await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Name2" } }));
 
                 var status = await store.Admin.SendAsync(new GetIndexingStatusOperation());
 
@@ -471,23 +473,36 @@ namespace FastTests.Client.Indexing
                         .DatabasesLandlord
                         .TryGetOrCreateResourceStore(new StringSegment(store.Database));
 
-                    var indexId = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Posts", new[]
+                    var indexId = await database.IndexStore.CreateIndex(new MapIndexDefinition(new IndexDefinition()
                     {
-                        new IndexField
+                        Name = "Posts/ByTitleAndDesc",
+                        Maps = new HashSet<string>()
                         {
-                            Name = "Title",
-                            Analyzer = typeof(SimpleAnalyzer).FullName,
-                            Indexing = FieldIndexing.Search,
-                            Storage = FieldStorage.Yes
+                            "from p in docs.Posts select new { p.Title, p.Desc }"
                         },
-                        new IndexField
+                        Fields = new Dictionary<string, IndexFieldOptions>()
                         {
-                            Name = "Desc",
-                            Analyzer = typeof(SimpleAnalyzer).FullName,
-                            Indexing = FieldIndexing.Search,
-                            Storage = FieldStorage.Yes
+                            {
+                                "Title", new IndexFieldOptions()
+                                {
+                                    Analyzer = typeof(SimpleAnalyzer).FullName,
+                                    Indexing = FieldIndexing.Search,
+                                    Storage = FieldStorage.Yes
+                                }
+                            },
+                            {
+                                "Desc", new IndexFieldOptions()
+                                {
+                                    Analyzer = typeof(SimpleAnalyzer).FullName,
+                                    Indexing = FieldIndexing.Search,
+                                    Storage = FieldStorage.Yes
+                                }
+                            }
                         }
-                    }));
+                    }, new HashSet<string>()
+                    {
+                        "Posts"
+                    }, new[] {"Title", "Desc"}, false));
 
                     var index = database.IndexStore.GetIndex(indexId);
 

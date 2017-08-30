@@ -23,19 +23,19 @@ namespace SlowTests.Server.Documents.Indexing.Auto
             using (var db = CreateDocumentDatabase())
             using (var mri = AutoMapReduceIndex.CreateNew(1, new AutoMapReduceIndexDefinition("Users", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Count",
                     Aggregation = AggregationOperation.Count,
                     Storage = FieldStorage.Yes
                 },
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "TotalCount",
                     Aggregation = AggregationOperation.Count,
                     Storage = FieldStorage.Yes
                 },
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Age",
                     Aggregation = AggregationOperation.Sum,
@@ -43,7 +43,7 @@ namespace SlowTests.Server.Documents.Indexing.Auto
                 }
             }, new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Location",
                     Storage = FieldStorage.Yes

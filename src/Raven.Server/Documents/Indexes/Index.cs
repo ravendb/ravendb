@@ -58,8 +58,8 @@ using Voron.Impl.Compaction;
 
 namespace Raven.Server.Documents.Indexes
 {
-    public abstract class Index<TIndexDefinition> : Index
-        where TIndexDefinition : IndexDefinitionBase
+    public abstract class Index<TIndexDefinition, TField> : Index
+        where TIndexDefinition : IndexDefinitionBase<TField> where TField : IndexFieldBase
     {
         public new TIndexDefinition Definition => (TIndexDefinition)base.Definition;
 
@@ -2512,10 +2512,10 @@ namespace Raven.Server.Documents.Indexes
             return _spatialFields.GetOrAdd(name, n =>
             {
                 SpatialOptions spatialOptions;
-                if (Definition.MapFields.TryGetValue(name, out var field) == false || field.Spatial == null)
+                if (Definition.MapFields.TryGetValue(name, out var field) == false || field.As<IndexField>().Spatial == null)
                     spatialOptions = new SpatialOptions();
                 else
-                    spatialOptions = field.Spatial;
+                    spatialOptions = field.As<IndexField>().Spatial;
 
                 return new SpatialField(name, spatialOptions);
             });
