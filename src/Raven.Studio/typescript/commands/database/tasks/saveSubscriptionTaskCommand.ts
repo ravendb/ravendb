@@ -49,11 +49,7 @@ class saveSubscriptionTaskCommand extends commandBase {
         const subscriptionToSend: Raven.Client.Documents.Subscriptions.SubscriptionCreationOptions = {
             ChangeVector: this.subscriptionSettings.ChangeVector,
             Name: this.subscriptionSettings.TaskName,
-            Criteria: {
-                Collection: this.subscriptionSettings.Collection,
-                Script: this.subscriptionSettings.Script,
-                IncludeRevisions: this.subscriptionSettings.IncludeRevisions
-            }
+            Query: this.subscriptionSettings.Script
         };
 
         this.put(url, JSON.stringify(subscriptionToSend), this.db)

@@ -26,9 +26,7 @@ class testSubscriptionTaskCommand extends commandBase {
 
         const subscriptionToTest: Raven.Client.Documents.Subscriptions.SubscriptionTryout = {
             ChangeVector: this.subscriptionSettings.ChangeVector,
-            Collection: this.subscriptionSettings.Collection,
-            Script: this.subscriptionSettings.Script,
-            IncludeRevisions: this.subscriptionSettings.IncludeRevisions
+            Query: this.subscriptionSettings.Script
         };
 
         this.post(url, JSON.stringify(subscriptionToTest), this.db)
