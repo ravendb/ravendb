@@ -137,6 +137,8 @@ namespace Raven.Client
 
                 public const string ChangeVector = "@change-vector";
 
+                public const string Expires = "@expires";
+
                 public const string HasValue = "HasValue";
             }
 
@@ -226,11 +228,6 @@ namespace Raven.Client
                 public const string SnapshotExtension = ".ravendb-snapshot";
 
                 public const string IncrementalBackupExtension = ".ravendb-incremental-backup";
-            }
-
-            public class Expiration
-            {
-                public const string ExpirationDate = "Raven-Expiration-Date";
             }
         }
     }

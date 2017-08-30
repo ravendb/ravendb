@@ -148,41 +148,43 @@ namespace FastTests.Client.Indexing
                 var index = indexes[0];
                 WaitForIndexing(store);
 
-                var stats = store.Admin.Send(new GetIndexStatisticsOperation(index.Name));
-                try
+                IndexStats stats = null;
+                Assert.True(SpinWait.SpinUntil(() =>
                 {
+                    stats = store.Admin.Send(new GetIndexStatisticsOperation(index.Name));
 
-                    Assert.Equal(index.Etag, stats.Etag);
-                    Assert.Equal(index.Name, stats.Name);
-                    Assert.False(stats.IsInvalidIndex);
-                    Assert.False(stats.IsTestIndex);
-                    Assert.False(stats.IsStale);
-                    Assert.Equal(IndexType.AutoMap, stats.Type);
-                    Assert.Equal(2, stats.EntriesCount);
-                    Assert.Equal(2, stats.MapAttempts);
-                    Assert.Equal(0, stats.MapErrors);
-                    Assert.Equal(2, stats.MapSuccesses);
-                    Assert.Equal(1, stats.Collections.Count);
-                    Assert.Equal(2 + 1, stats.Collections.First().Value.LastProcessedDocumentEtag); // +1 because of HiLo
-                    Assert.Equal(0, stats.Collections.First().Value.LastProcessedTombstoneEtag);
-                    Assert.Equal(0, stats.Collections.First().Value.DocumentLag);
-                    Assert.Equal(0, stats.Collections.First().Value.TombstoneLag);
+                    if (stats.MapSuccesses == 2)
+                        return true;
 
-                    Assert.True(stats.Memory.DiskSize.SizeInBytes >= 0);
-                    Assert.True(stats.Memory.ThreadAllocations.SizeInBytes >= 0);
+                    return false;
+                }, TimeSpan.FromSeconds(5)));
 
-                    Assert.True(stats.LastBatchStats.AllocatedBytes.SizeInBytes > 0);
+                Assert.NotNull(stats);
+                Assert.Equal(index.Etag, stats.Etag);
+                Assert.Equal(index.Name, stats.Name);
+                Assert.False(stats.IsInvalidIndex);
+                Assert.False(stats.IsTestIndex);
+                Assert.False(stats.IsStale);
+                Assert.Equal(IndexType.AutoMap, stats.Type);
+                Assert.Equal(2, stats.EntriesCount);
+                Assert.Equal(2, stats.MapAttempts);
+                Assert.Equal(0, stats.MapErrors);
+                Assert.Equal(2, stats.MapSuccesses);
+                Assert.Equal(1, stats.Collections.Count);
+                Assert.Equal(2 + 1, stats.Collections.First().Value.LastProcessedDocumentEtag); // +1 because of HiLo
+                Assert.Equal(0, stats.Collections.First().Value.LastProcessedTombstoneEtag);
+                Assert.Equal(0, stats.Collections.First().Value.DocumentLag);
+                Assert.Equal(0, stats.Collections.First().Value.TombstoneLag);
 
-                    Assert.True(stats.LastIndexingTime.HasValue);
-                    Assert.True(stats.LastQueryingTime.HasValue);
-                    Assert.Equal(IndexLockMode.Unlock, stats.LockMode);
-                    Assert.Equal(IndexPriority.Normal, stats.Priority);
-                }
-                catch (Exception e)
-                {
-                    var s = JsonConvert.SerializeObject(stats, Formatting.Indented);
-                    throw new InvalidOperationException("Failed to get proper stats: " + s, e);
-                }
+                Assert.True(stats.Memory.DiskSize.SizeInBytes >= 0);
+                Assert.True(stats.Memory.ThreadAllocations.SizeInBytes >= 0);
+
+                Assert.True(stats.LastBatchStats.AllocatedBytes.SizeInBytes > 0);
+
+                Assert.True(stats.LastIndexingTime.HasValue);
+                Assert.True(stats.LastQueryingTime.HasValue);
+                Assert.Equal(IndexLockMode.Unlock, stats.LockMode);
+                Assert.Equal(IndexPriority.Normal, stats.Priority);
             }
         }
 

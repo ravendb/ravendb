@@ -88,7 +88,7 @@ namespace Raven.Server.Documents
         public bool Expired(DateTime currentDate)
         {
             if (Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false || 
-                metadata.TryGet(Constants.Documents.Expiration.ExpirationDate, out string expirationDate) == false)
+                metadata.TryGet(Constants.Documents.Metadata.Expires, out string expirationDate) == false)
                 return false;
 
             var expirationDateTime = DateTime.ParseExact(expirationDate, new[] {"o", "r"}, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);

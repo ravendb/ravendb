@@ -135,14 +135,14 @@ namespace FastTests.Client.BulkInsert
                         Name = "Jon Snow"
                     }, new MetadataAsDictionary
                     {
-                        [Constants.Documents.Expiration.ExpirationDate] = expirationDate
+                        [Constants.Documents.Metadata.Expires] = expirationDate
                     });
                 }
 
                 using (var session = store.OpenSession())
                 {
                     var entity = session.Load<FooBar>("FooBars/1-A");
-                    var metadataExpirationDate = session.Advanced.GetMetadataFor(entity)[Constants.Documents.Expiration.ExpirationDate];
+                    var metadataExpirationDate = session.Advanced.GetMetadataFor(entity)[Constants.Documents.Metadata.Expires];
 
                     Assert.Equal(expirationDate, metadataExpirationDate);
                 }

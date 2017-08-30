@@ -256,7 +256,7 @@ namespace Raven.Client.Documents.Session
 
         internal bool IsLoadedOrDeleted(string id)
         {
-            return (DocumentsById.TryGetValue(id, out DocumentInfo documentInfo) && documentInfo.Document != null) ||
+            return DocumentsById.TryGetValue(id, out DocumentInfo documentInfo) && documentInfo.Document != null ||
                 IsDeleted(id) ||
                 IncludedDocumentsById.ContainsKey(id);
         }
@@ -720,11 +720,12 @@ more responsive application.
             return result;
         }
 
-        private void UpdateMetadataModifications(DocumentInfo documentInfo)
+        private static void UpdateMetadataModifications(DocumentInfo documentInfo)
         {
-            if ((documentInfo.MetadataInstance == null) || !((MetadataAsDictionary)documentInfo.MetadataInstance).Changed)
+            if (documentInfo.MetadataInstance == null || ((MetadataAsDictionary)documentInfo.MetadataInstance).Changed == false)
                 return;
-            if ((documentInfo.Metadata.Modifications == null) || (documentInfo.Metadata.Modifications.Properties.Count == 0))
+
+            if (documentInfo.Metadata.Modifications == null || documentInfo.Metadata.Modifications.Properties.Count == 0)
             {
                 documentInfo.Metadata.Modifications = new DynamicJsonValue();
             }
@@ -816,8 +817,8 @@ more responsive application.
 
                 entity.Value.Document = document;
 
-                var changeVector = (UseOptimisticConcurrency &&
-                            entity.Value.ConcurrencyCheckMode != ConcurrencyCheckMode.Disabled) ||
+                var changeVector = UseOptimisticConcurrency &&
+                                   entity.Value.ConcurrencyCheckMode != ConcurrencyCheckMode.Disabled ||
                            entity.Value.ConcurrencyCheckMode == ConcurrencyCheckMode.Forced
                     ? entity.Value.ChangeVector
                     : null;

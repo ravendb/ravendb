@@ -198,7 +198,7 @@ namespace Raven.Server.Documents.Expiration
             // Validate that the expiration value in metadata is still the same.
             // We have to check this as the user can update this value.
             if (data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
-                metadata.TryGet(Constants.Documents.Expiration.ExpirationDate, out string expirationDate) == false)
+                metadata.TryGet(Constants.Documents.Metadata.Expires, out string expirationDate) == false)
                 return false;
 
             if (DateTime.TryParseExact(expirationDate, "O", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var date) == false)
@@ -214,7 +214,7 @@ namespace Raven.Server.Documents.Expiration
             Slice lowerId, BlittableJsonReaderObject document)
         {
             if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
-                metadata.TryGet(Constants.Documents.Expiration.ExpirationDate, out string expirationDate) == false)
+                metadata.TryGet(Constants.Documents.Metadata.Expires, out string expirationDate) == false)
                 return;
 
             if (DateTime.TryParseExact(expirationDate, "O", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime date) == false)

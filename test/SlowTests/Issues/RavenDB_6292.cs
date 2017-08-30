@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -130,7 +129,7 @@ namespace SlowTests.Issues
 
                     await session.StoreAsync(company1, "companies/1");
                     var metadata = session.Advanced.GetMetadataFor(company1);
-                    metadata[Constants.Documents.Expiration.ExpirationDate] = expiry1.ToString(Default.DateTimeOffsetFormatsToWrite);
+                    metadata[Constants.Documents.Metadata.Expires] = expiry1.ToString(Default.DateTimeOffsetFormatsToWrite);
 
                     var company2 = new Company
                     {
@@ -139,7 +138,7 @@ namespace SlowTests.Issues
 
                     await session.StoreAsync(company2, "companies/2");
                     metadata = session.Advanced.GetMetadataFor(company2);
-                    metadata[Constants.Documents.Expiration.ExpirationDate] = expiry2.ToString(Default.DateTimeOffsetFormatsToWrite);
+                    metadata[Constants.Documents.Metadata.Expires] = expiry2.ToString(Default.DateTimeOffsetFormatsToWrite);
 
                     await session.SaveChangesAsync();
                 }
@@ -153,7 +152,7 @@ namespace SlowTests.Issues
 
                     await session.StoreAsync(company, "companies/1");
                     var metadata = session.Advanced.GetMetadataFor(company);
-                    metadata[Constants.Documents.Expiration.ExpirationDate] = expiry1.ToString(Default.DateTimeOffsetFormatsToWrite);
+                    metadata[Constants.Documents.Metadata.Expires] = expiry1.ToString(Default.DateTimeOffsetFormatsToWrite);
 
                     var company2 = new Company
                     {
@@ -162,7 +161,7 @@ namespace SlowTests.Issues
 
                     await session.StoreAsync(company2, "companies/2");
                     metadata = session.Advanced.GetMetadataFor(company2);
-                    metadata[Constants.Documents.Expiration.ExpirationDate] = expiry1.ToString(Default.DateTimeOffsetFormatsToWrite);
+                    metadata[Constants.Documents.Metadata.Expires] = expiry1.ToString(Default.DateTimeOffsetFormatsToWrite);
 
                     await session.SaveChangesAsync();
                 }

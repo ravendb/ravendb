@@ -155,8 +155,8 @@ namespace SlowTests.Issues
                 session.Store(product2);
                 session.Store(product3);
 
-                session.Advanced.GetMetadataFor(product2)["Raven-Expiration-Date"] = past.GetDefaultRavenFormat(isUtc: true);
-                session.Advanced.GetMetadataFor(product3)["Raven-Expiration-Date"] = future.GetDefaultRavenFormat(isUtc: true);
+                session.Advanced.GetMetadataFor(product2)[Constants.Documents.Metadata.Expires] = past.GetDefaultRavenFormat(isUtc: true);
+                session.Advanced.GetMetadataFor(product3)[Constants.Documents.Metadata.Expires] = future.GetDefaultRavenFormat(isUtc: true);
 
                 session.SaveChanges();
             }
