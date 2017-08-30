@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 
 namespace Raven.Server.Documents.Queries.Dynamic
@@ -56,7 +57,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
         {
             var definitions = _indexStore.GetIndexesForCollection(query.ForCollection)
                 .Where(x => x.Type.IsAuto() && (query.IsGroupBy ? x.Type.IsMapReduce() : x.Type.IsMap()))
-                .Select(x => x.Definition)
+                .Select(x => x.Definition as AutoIndexDefinitionBase)
                 .ToList();
 
             if (definitions.Count == 0)
@@ -93,7 +94,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             return new DynamicQueryMatchResult(string.Empty, DynamicQueryMatchType.Failure);
         }
 
-        private DynamicQueryMatchResult ConsiderUsageOfIndex(DynamicQueryMapping query, IndexDefinitionBase definition, List<Explanation> explanations = null)
+        private DynamicQueryMatchResult ConsiderUsageOfIndex(DynamicQueryMapping query, AutoIndexDefinitionBase definition, List<Explanation> explanations = null)
         {
             var collection = query.ForCollection;
             var indexName = definition.Name;
@@ -133,7 +134,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 if (definition.TryGetField(field.Name, out var indexField))
                 {
-                    if (field.IsFullTextSearch && indexField.Indexing != FieldIndexing.Search)
+                    if (field.IsFullTextSearch && indexField.Indexing.HasFlag(AutoFieldIndexing.Search) == false)
                     {
                         explanations?.Add(new Explanation(indexName, $"The following field is not analyzed {indexField.Name}, while the query needs to perform full text search on it"));
                         return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Partial);
@@ -201,7 +202,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     if (groupByField.IsSpecifiedInWhere == false)
                         continue;
 
-                    if (groupByField.IsFullTextSearch && indexField.Indexing != FieldIndexing.Search)
+                    if (groupByField.IsFullTextSearch && indexField.Indexing.HasFlag(AutoFieldIndexing.Search) == false)
                     {
                         explanations?.Add(new Explanation(indexName,
                             $"The following group by field is not analyzed {indexField.Name}, while the query needs to perform full text search on it"));

@@ -11,8 +11,10 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Exceptions;
+using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.MoreLikeThis;
@@ -50,7 +52,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             try
             {
-                _analyzer = CreateAnalyzer(() => new LowerCaseKeywordAnalyzer(), index.Definition.MapFields, forQuerying: true);
+                _analyzer = CreateAnalyzer(() => new LowerCaseKeywordAnalyzer(), index.Definition.IndexFields, forQuerying: true);
             }
             catch (Exception e)
             {

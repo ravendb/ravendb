@@ -5,8 +5,6 @@ using System.IO;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Extensions;
-using Raven.Server.Documents.Indexes.Auto;
-using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.ServerWide.Context;
 
 using Sparrow.Json;
@@ -18,28 +16,139 @@ namespace Raven.Server.Documents.Indexes
 {
     public abstract class IndexDefinitionBase
     {
+        public string Name { get; protected set; }
+
+        public HashSet<string> Collections { get; protected set; }
+
+        public IndexLockMode LockMode { get; set; }
+
+        public IndexPriority Priority { get; set; }
+
+        public virtual bool HasDynamicFields => false;
+
+        public void Rename(string name, TransactionOperationContext context, StorageEnvironmentOptions options)
+        {
+            Name = name;
+
+            Persist(context, options);
+        }
+
+        public abstract void Persist(TransactionOperationContext context, StorageEnvironmentOptions options);
+
+        protected abstract void PersistMapFields(JsonOperationContext context, BlittableJsonTextWriter writer);
+
+        public static string GetIndexNameSafeForFileSystem(string name)
+        {
+            foreach (var invalidPathChar in Path.GetInvalidFileNameChars())
+            {
+                name = name.Replace(invalidPathChar, '_');
+            }
+
+            if (name.Length < 64)
+                return name;
+            // RavenDB-8220 To avoid giving the same path to indexes with the 
+            // same 64 chars prefix, we hash the full name. Note that this is
+            // a persistent value and should NOT be changed. 
+            return name.Substring(0, 64) + "." + Hashing.XXHash32.Calculate(name);
+        }
+
+        public IndexDefinition ConvertToIndexDefinition(Index index)
+        {
+            var indexDefinition = GetOrCreateIndexDefinitionInternal() ?? new IndexDefinition();
+            indexDefinition.Name = index.Name;
+            indexDefinition.Etag = index.Etag;
+            indexDefinition.Type = index.Type;
+            indexDefinition.LockMode = LockMode;
+            indexDefinition.Priority = Priority;
+
+            return indexDefinition;
+        }
+
+        public void Persist(JsonOperationContext context, BlittableJsonTextWriter writer)
+        {
+            writer.WriteStartObject();
+
+            writer.WritePropertyName(nameof(Name));
+            writer.WriteString(Name);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(Collections));
+            writer.WriteStartArray();
+            var isFirst = true;
+            foreach (var collection in Collections)
+            {
+                if (isFirst == false)
+                    writer.WriteComma();
+
+                isFirst = false;
+                writer.WriteString((collection));
+            }
+
+            writer.WriteEndArray();
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(LockMode));
+            writer.WriteInteger((int)LockMode);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(Priority));
+            writer.WriteInteger((int)Priority);
+            writer.WriteComma();
+
+            PersistFields(context, writer);
+
+            writer.WriteEndObject();
+        }
+
+        public bool ContainsField(string name)
+        {
+            return MapFields.ContainsKey(name);
+        }
+
+        protected abstract void PersistFields(JsonOperationContext context, BlittableJsonTextWriter writer);
+
+        protected internal abstract IndexDefinition GetOrCreateIndexDefinitionInternal();
+
+        public abstract IndexDefinitionCompareDifferences Compare(IndexDefinitionBase indexDefinition);
+
+        public abstract IndexDefinitionCompareDifferences Compare(IndexDefinition indexDefinition);
+
+        public Dictionary<string, IndexFieldBase> MapFields { get; protected set; }
+
+        public Dictionary<string, IndexField> IndexFields { get; protected set; }
+    }
+
+    public abstract class IndexDefinitionBase<T> : IndexDefinitionBase where T : IndexFieldBase 
+    {
         protected const string MetadataFileName = "metadata";
 
         protected static readonly Slice DefinitionSlice;
 
         private int? _cachedHashCode;
 
-        protected IndexDefinitionBase(string name, HashSet<string> collections, IndexLockMode lockMode, IndexPriority priority, IndexField[] mapFields)
+        protected IndexDefinitionBase(string name, HashSet<string> collections, IndexLockMode lockMode, IndexPriority priority, T[] mapFields)
         {
             Name = name;
             Collections = collections;
 
-            MapFields = mapFields.ToDictionary(x => x.Name, x =>
+            MapFields = new Dictionary<string, IndexFieldBase>(StringComparer.Ordinal);
+            IndexFields = new Dictionary<string, IndexField>(StringComparer.Ordinal);
+
+            foreach (var field in mapFields)
             {
-                if ((this is AutoMapIndexDefinition || this is AutoMapReduceIndexDefinition) && x.Indexing == FieldIndexing.Search)
+                MapFields.Add(field.Name, field);
+
+                if ((object)field is AutoIndexField autoField)
                 {
-                    x.OriginalName = x.Name;
-                    x.Name = IndexField.GetSearchAutoIndexFieldName(x.Name);
+                    foreach (var indexField in autoField.ToIndexFields())
+                    {
+                        IndexFields.Add(indexField.Name, indexField);
+                    }
                 }
-
-                return x;
-            }, StringComparer.Ordinal);
-
+                else if ((object)field is IndexField indexField)
+                    IndexFields.Add(indexField.Name, indexField);
+            }
+            
             LockMode = lockMode;
             Priority = priority;
         }
@@ -49,19 +158,7 @@ namespace Raven.Server.Documents.Indexes
             Slice.From(StorageEnvironment.LabelsContext, "Definition", ByteStringType.Immutable, out DefinitionSlice);
         }
 
-        public string Name { get; private set; }
-
-        public HashSet<string> Collections { get; }
-
-        public Dictionary<string, IndexField> MapFields { get; }
-
-        public IndexLockMode LockMode { get; set; }
-
-        public IndexPriority Priority { get; set; }
-
-        public virtual bool HasDynamicFields => false;
-
-        public void Persist(TransactionOperationContext context, StorageEnvironmentOptions options)
+        public override void Persist(TransactionOperationContext context, StorageEnvironmentOptions options)
         {
             var tree = context.Transaction.InnerTransaction.CreateTree("Definition");
             using (var stream = new MemoryStream())
@@ -172,113 +269,23 @@ namespace Raven.Server.Documents.Indexes
             stream.Position = 0;
         }
 
-        public void Persist(JsonOperationContext context, BlittableJsonTextWriter writer)
+        public virtual bool TryGetField(string field, out T value)
         {
-            writer.WriteStartObject();
-
-            writer.WritePropertyName(nameof(Name));
-            writer.WriteString(Name);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(Collections));
-            writer.WriteStartArray();
-            var isFirst = true;
-            foreach (var collection in Collections)
+            if (MapFields.TryGetValue(field, out var mapField))
             {
-                if (isFirst == false)
-                    writer.WriteComma();
+                value = mapField.As<T>();
 
-                isFirst = false;
-                writer.WriteString((collection));
+                return true;
             }
 
-            writer.WriteEndArray();
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(LockMode));
-            writer.WriteInteger((int)LockMode);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(Priority));
-            writer.WriteInteger((int)Priority);
-            writer.WriteComma();
-
-            PersistFields(context, writer);
-
-            writer.WriteEndObject();
+            value = null;
+            return false;
         }
 
-        protected abstract void PersistFields(JsonOperationContext context, BlittableJsonTextWriter writer);
-
-        protected void PersistMapFields(JsonOperationContext context, BlittableJsonTextWriter writer)
+        public virtual T GetField(string field)
         {
-            writer.WritePropertyName((nameof(MapFields)));
-            writer.WriteStartArray();
-            var first = true;
-            foreach (var field in MapFields.Values)
-            {
-                if (first == false)
-                    writer.WriteComma();
-
-                writer.WriteStartObject();
-
-                writer.WritePropertyName((nameof(field.Name)));
-                writer.WriteString((field.Name));
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(field.Indexing));
-                writer.WriteString(field.Indexing.ToString());
-                writer.WriteComma();
-
-                writer.WritePropertyName((nameof(field.Aggregation)));
-                writer.WriteInteger((int)(field.Aggregation));
-
-                writer.WriteEndObject();
-
-                first = false;
-            }
-            writer.WriteEndArray();
+            return MapFields[field].As<T>();
         }
-
-        public void Rename(string name, TransactionOperationContext context, StorageEnvironmentOptions options)
-        {
-            Name = name;
-
-            Persist(context, options);
-        }
-
-        public IndexDefinition ConvertToIndexDefinition(Index index)
-        {
-            var indexDefinition = GetOrCreateIndexDefinitionInternal() ?? new IndexDefinition();
-            indexDefinition.Name = index.Name;
-            indexDefinition.Etag = index.Etag;
-            indexDefinition.Type = index.Type;
-            indexDefinition.LockMode = LockMode;
-            indexDefinition.Priority = Priority;
-
-            return indexDefinition;
-        }
-
-        protected internal abstract IndexDefinition GetOrCreateIndexDefinitionInternal();
-
-        public bool ContainsField(string field)
-        {
-            return MapFields.ContainsKey(field);
-        }
-
-        public IndexField GetField(string field)
-        {
-            return MapFields[field];
-        }
-
-        public virtual bool TryGetField(string field, out IndexField value)
-        {
-            return MapFields.TryGetValue(field, out value);
-        }
-
-        public abstract IndexDefinitionCompareDifferences Compare(IndexDefinitionBase indexDefinition);
-
-        public abstract IndexDefinitionCompareDifferences Compare(IndexDefinition indexDefinition);
 
         public override int GetHashCode()
         {
@@ -347,21 +354,6 @@ namespace Raven.Server.Documents.Indexes
             return true;
         }
 
-        public static string GetIndexNameSafeForFileSystem(string name)
-        {
-            foreach (var invalidPathChar in Path.GetInvalidFileNameChars())
-            {
-                name = name.Replace(invalidPathChar, '_');
-            }
-
-            if (name.Length < 64)
-                return name;
-            // RavenDB-8220 To avoid giving the same path to indexes with the 
-            // same 64 chars prefix, we hash the full name. Note that this is
-            // a persistent value and should NOT be changed. 
-            return name.Substring(0, 64) + "." + Hashing.XXHash32.Calculate(name);
-        }
-
         protected static string ReadName(BlittableJsonReaderObject reader)
         {
             if (reader.TryGet(nameof(Name), out string name) == false || String.IsNullOrWhiteSpace(name))
@@ -396,39 +388,6 @@ namespace Raven.Server.Documents.Indexes
                 throw new InvalidOperationException("No persisted priority");
 
             return (IndexPriority)priorityAsInt;
-        }
-
-        protected static IndexField[] ReadMapFields(BlittableJsonReaderObject reader)
-        {
-            if (reader.TryGet(nameof(MapFields), out BlittableJsonReaderArray jsonArray) == false)
-                throw new InvalidOperationException("No persisted lock mode");
-
-            var fields = new IndexField[jsonArray.Length];
-            for (var i = 0; i < jsonArray.Length; i++)
-            {
-                var json = jsonArray.GetByIndex<BlittableJsonReaderObject>(i);
-
-                json.TryGet(nameof(IndexField.Name), out string name);
-                json.TryGet(nameof(IndexField.Indexing), out string indexing);
-
-                var field = new IndexField
-                {
-                    Name = name,
-                    Storage = FieldStorage.No,
-                    Indexing = (FieldIndexing)Enum.Parse(typeof(FieldIndexing), indexing)
-                };
-
-                fields[i] = field;
-            }
-
-            return fields;
-        }
-
-        protected Dictionary<string, IndexFieldOptions> ConvertFields(Dictionary<string, IndexField> fields)
-        {
-            return fields.ToDictionary(
-                x => x.Key,
-                x => x.Value.ToIndexFieldOptions());
         }
     }
 }

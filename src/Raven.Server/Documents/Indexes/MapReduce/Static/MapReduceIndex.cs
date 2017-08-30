@@ -19,7 +19,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.Static
 {
-    public class MapReduceIndex : MapReduceIndexBase<MapReduceIndexDefinition>
+    public class MapReduceIndex : MapReduceIndexBase<MapReduceIndexDefinition, IndexField>
     {
         private readonly HashSet<string> _referencedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 

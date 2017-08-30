@@ -38,7 +38,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         {
             var definition = new AutoMapReduceIndexDefinition("Users", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Count",
                     Storage = FieldStorage.Yes,
@@ -47,7 +47,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             },
             new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Location",
                     Storage = FieldStorage.Yes,
@@ -70,12 +70,12 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         {
             var definition = new AutoMapIndexDefinition("Users", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Count",
                     Storage = FieldStorage.Yes,
                 },
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Location",
                     Storage = FieldStorage.Yes,
@@ -96,7 +96,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         {
             var definition = new AutoMapReduceIndexDefinition("Users", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Count",
                     Storage = FieldStorage.Yes,
@@ -105,7 +105,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             },
             new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Location",
                     Storage = FieldStorage.Yes,
@@ -126,7 +126,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         {
             var definition = new AutoMapReduceIndexDefinition("Users", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Count",
                     Storage = FieldStorage.Yes,
@@ -135,7 +135,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             },
             new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Location",
                     Storage = FieldStorage.Yes,
@@ -158,7 +158,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             // missing nick name field to match
             var usersByCountReducedByAgeAndLocation = new AutoMapReduceIndexDefinition("Users", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Count",
                     Storage = FieldStorage.Yes,
@@ -167,12 +167,12 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             },
             new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Location",
                     Storage = FieldStorage.Yes,
                 },
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Age",
                     Storage = FieldStorage.Yes,
@@ -182,7 +182,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             // additional Age field to match
             var usersByCountReducedByLocationAndNickNameAndAge = new AutoMapReduceIndexDefinition("Users", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Count",
                     Storage = FieldStorage.Yes,
@@ -191,17 +191,17 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             },
             new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Location",
                     Storage = FieldStorage.Yes,
                 },
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "NickName",
                     Storage = FieldStorage.Yes,
                 },
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Age",
                     Storage = FieldStorage.Yes,
@@ -224,7 +224,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         {
             var usersByCountGroupedByLocation = new AutoMapReduceIndexDefinition("Users", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Count",
                     Storage = FieldStorage.Yes,
@@ -233,7 +233,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             },
             new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Location",
                     Storage = FieldStorage.Yes,
@@ -242,13 +242,13 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 
             var usersByCountAndTotalAgeGroupedByLocation = new AutoMapReduceIndexDefinition("Users", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Count",
                     Storage = FieldStorage.Yes,
                     Aggregation = AggregationOperation.Count,
                 },
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "TotalAge",
                     Storage = FieldStorage.Yes,
@@ -257,7 +257,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             },
             new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Location",
                     Storage = FieldStorage.Yes,
@@ -280,7 +280,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         {
             var definition = new AutoMapIndexDefinition("Users", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Name",
                     Storage = FieldStorage.No

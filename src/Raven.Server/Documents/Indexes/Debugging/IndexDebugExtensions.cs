@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
                 RavenTransaction tx;
                 scope.EnsureDispose(tx = indexContext.OpenReadTransaction());
 
-                var tree = tx.InnerTransaction.ReadTree(MapReduceIndexBase<MapReduceIndexDefinition>.MapPhaseTreeName);
+                var tree = tx.InnerTransaction.ReadTree(MapReduceIndexBase<MapReduceIndexDefinition, IndexField>.MapPhaseTreeName);
 
                 if (tree == null)
                 {
@@ -163,7 +163,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
                 RavenTransaction tx;
                 scope.EnsureDispose(tx = indexContext.OpenReadTransaction());
 
-                var mapPhaseTree = tx.InnerTransaction.ReadTree(MapReduceIndexBase<MapReduceIndexDefinition>.MapPhaseTreeName);
+                var mapPhaseTree = tx.InnerTransaction.ReadTree(MapReduceIndexBase<MapReduceIndexDefinition, IndexField>.MapPhaseTreeName);
 
                 if (mapPhaseTree == null)
                 {
@@ -171,7 +171,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
                     return scope;
                 }
 
-                var reducePhaseTree = tx.InnerTransaction.ReadTree(MapReduceIndexBase<MapReduceIndexDefinition>.ReducePhaseTreeName);
+                var reducePhaseTree = tx.InnerTransaction.ReadTree(MapReduceIndexBase<MapReduceIndexDefinition, IndexField>.ReducePhaseTreeName);
 
                 if (reducePhaseTree == null)
                 {
@@ -188,7 +188,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
                 }
 
                 FixedSizeTree typePerHash;
-                scope.EnsureDispose(typePerHash = reducePhaseTree.FixedTreeFor(MapReduceIndexBase<MapReduceIndexDefinition>.ResultsStoreTypesTreeName, sizeof(byte)));
+                scope.EnsureDispose(typePerHash = reducePhaseTree.FixedTreeFor(MapReduceIndexBase<MapReduceIndexDefinition, IndexField>.ResultsStoreTypesTreeName, sizeof(byte)));
 
                 trees = IterateTrees(self, mapEntries, reducePhaseTree, typePerHash, indexContext, scope);
 
@@ -203,7 +203,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
             var idToDocIdHash = new Dictionary<long, string>();
 
             foreach (var tree in mapEntries)
-                foreach (var mapEntry in MapReduceIndexBase<MapReduceIndexDefinition>.GetMapEntries(tree))
+                foreach (var mapEntry in MapReduceIndexBase<MapReduceIndexDefinition, IndexField>.GetMapEntries(tree))
                 {
                     reduceKeys.Add(mapEntry.ReduceKeyHash);
                     idToDocIdHash[mapEntry.Id] = tree.Name.ToString();
@@ -431,19 +431,9 @@ namespace Raven.Server.Documents.Indexes.Debugging
                 case IndexType.MapReduce:
                     return ((MapReduceIndex)self)._compiled.OutputFields;
                 case IndexType.AutoMap:
-                    return ((AutoMapIndex)self).Definition.MapFields.Keys.ToArray();
+                    return ((AutoMapIndex)self).Definition.IndexFields.Keys.ToArray();
                 case IndexType.AutoMapReduce:
-                    var mapReduceList = new List<string>();
-                    foreach (var mapping in ((AutoMapReduceIndex)self).Definition.MapFields)
-                    {
-                        mapReduceList.Add(mapping.Key);
-                    }
-                    foreach (var mapping in ((AutoMapReduceIndex)self).Definition.GroupByFields)
-                    {
-                        mapReduceList.Add(mapping.Key);
-                    }
-                    return mapReduceList.ToArray();
-
+                    return ((AutoMapReduceIndex)self).Definition.IndexFields.Keys.ToArray();
                 default:
                     throw new ArgumentException("Unknown index type");
             }

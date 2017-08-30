@@ -23,7 +23,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             Assert.Throws<ArgumentNullException>(() => new AutoMapReduceIndexDefinition("test", null, null));
             Assert.Throws<ArgumentNullException>(() => new AutoMapReduceIndexDefinition("test", new[]
             {
-                new IndexField()
+                new AutoIndexField()
                 {
                     Name = "test",
                     Storage = FieldStorage.Yes
@@ -32,14 +32,14 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 
             new AutoMapReduceIndexDefinition("test", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "test",
                     Storage = FieldStorage.Yes
                 },
             }, new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "location",
                     Storage = FieldStorage.Yes

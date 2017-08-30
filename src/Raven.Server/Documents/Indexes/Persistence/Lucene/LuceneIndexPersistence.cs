@@ -9,9 +9,11 @@ using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
 
@@ -54,31 +56,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _suggestionsDirectories = new Dictionary<string, LuceneVoronDirectory>();
             _suggestionsIndexSearcherHolders = new Dictionary<string, IndexSearcherHolder>();
 
-            var fields = new List<IndexField>(index.Definition.MapFields.Values);
+            var fields = index.Definition.IndexFields.Values;
 
             switch (_index.Type)
             {
                 case IndexType.AutoMap:
-
-                    foreach (var field in index.Definition.MapFields.Values)
-                    {
-                        if (field.Indexing == FieldIndexing.Search)
-                            AddDefaultIndexField(field);
-                    }
-
                     _converter = new LuceneDocumentConverter(fields);
                     break;
                 case IndexType.AutoMapReduce:
-                    var autoMapReduceIndexDefinition = (AutoMapReduceIndexDefinition)_index.Definition;
-
-                    foreach (var field in autoMapReduceIndexDefinition.GroupByFields.Values)
-                    {
-                        fields.Add(field);
-
-                        if (field.Indexing == FieldIndexing.Search)
-                            AddDefaultIndexField(field);
-                    }
-
                     _converter = new LuceneDocumentConverter(fields, reduceOutput: true);
                     break;
                 case IndexType.MapReduce:
@@ -104,21 +89,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 string fieldName = field.Key;
                 _suggestionsIndexSearcherHolders[fieldName] = new IndexSearcherHolder(state => new IndexSearcher(_suggestionsDirectories[fieldName], true, state), _index._indexStorage.DocumentDatabase);
-            }
-
-            void AddDefaultIndexField(IndexField field)
-            {
-                Debug.Assert(field.OriginalName != null);
-
-                fields.Add(new IndexField
-                {
-                    Name = field.OriginalName,
-                    Indexing = FieldIndexing.Default,
-                    Aggregation = field.Aggregation,
-                    HasSuggestions = field.HasSuggestions,
-                    Storage = field.Storage,
-                    TermVector = field.TermVector
-                });
             }
         }
 
@@ -214,8 +184,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             CheckDisposed();
             CheckInitialized();
-
-            return new IndexFacetedReadOperation(_index.Definition.Name, _index.Definition.MapFields, _directory, _indexSearcherHolder, readTransaction, _index._indexStorage.DocumentDatabase);
+            
+            return new IndexFacetedReadOperation(_index.Definition.Name, _index.Definition.IndexFields, _directory, _indexSearcherHolder, readTransaction, _index._indexStorage.DocumentDatabase);
         }
 
         public LuceneSuggestionIndexReader OpenSuggestionIndexReader(Transaction readTransaction, string field)

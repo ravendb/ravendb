@@ -39,7 +39,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         {
             var definition = new AutoMapIndexDefinition("Users", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Name",
                     Storage = FieldStorage.No
@@ -60,7 +60,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         {
             var definition = new AutoMapIndexDefinition("Users", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Name",
                     Storage = FieldStorage.No
@@ -82,7 +82,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         {
             var usersByName = new AutoMapIndexDefinition("Users", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Name",
                     Storage = FieldStorage.No
@@ -91,12 +91,12 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
             var usersByNameAndAge = new AutoMapIndexDefinition("Users", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Name",
                     Storage = FieldStorage.No
                 },
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Age",
                     Storage = FieldStorage.No,
@@ -119,7 +119,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         {
             var usersByName = new AutoMapIndexDefinition("Users", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Name",
                     Storage = FieldStorage.No
@@ -141,17 +141,17 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         {
             var definition = new AutoMapIndexDefinition("Users", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Name",
                     Storage = FieldStorage.No
                 },
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Address.Street",
                     Storage = FieldStorage.No
                 },
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Friends[].Name",
                     Storage = FieldStorage.No
@@ -173,7 +173,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         {
             var definition = new AutoMapIndexDefinition("Users", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Name",
                     Storage = FieldStorage.No
@@ -195,7 +195,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         {
             var definition = new AutoMapIndexDefinition("Users", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Address.ZipCode",
                     Storage = FieldStorage.No,
@@ -217,7 +217,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         {
             var definition = new AutoMapIndexDefinition("Users", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Name",
                     Storage = FieldStorage.No
@@ -239,7 +239,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         {
             var definition = new AutoMapIndexDefinition("Users", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Age",
                     Storage = FieldStorage.No,
@@ -268,7 +268,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         {
             var definition = new AutoMapIndexDefinition("Users", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Name",
                     Storage = FieldStorage.No

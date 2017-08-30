@@ -18,7 +18,7 @@ using Voron.Util;
 
 namespace Raven.Server.Documents.Indexes.MapReduce
 {
-    public abstract class MapReduceIndexBase<T> : Index<T> where T : IndexDefinitionBase
+    public abstract class MapReduceIndexBase<T, TField> : Index<T, TField> where T : IndexDefinitionBase<TField> where TField : IndexFieldBase
     {
         internal const string MapPhaseTreeName = "MapPhaseTree";
         internal const string ReducePhaseTreeName = "ReducePhaseTree";

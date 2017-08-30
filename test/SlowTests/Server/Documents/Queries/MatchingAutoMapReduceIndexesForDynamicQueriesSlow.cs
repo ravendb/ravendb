@@ -27,7 +27,7 @@ namespace SlowTests.Server.Documents.Queries
         {
             var definition = new AutoMapReduceIndexDefinition("Users", new[]
              {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Count",
                     Storage = FieldStorage.Yes,
@@ -36,7 +36,7 @@ namespace SlowTests.Server.Documents.Queries
             },
              new[]
              {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Location",
                     Storage = FieldStorage.Yes,

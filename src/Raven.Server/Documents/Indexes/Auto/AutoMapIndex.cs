@@ -7,7 +7,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Indexes.Auto
 {
-    public class AutoMapIndex : MapIndexBase<AutoMapIndexDefinition>
+    public class AutoMapIndex : MapIndexBase<AutoMapIndexDefinition, AutoIndexField>
     {
         private AutoMapIndex(long etag, AutoMapIndexDefinition definition)
             : base(etag, IndexType.AutoMap, definition)

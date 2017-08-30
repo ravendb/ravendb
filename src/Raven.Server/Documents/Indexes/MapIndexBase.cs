@@ -12,7 +12,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes
 {
-    public abstract class MapIndexBase<T> : Index<T> where T : IndexDefinitionBase
+    public abstract class MapIndexBase<T, TField> : Index<T, TField> where T : IndexDefinitionBase<TField> where TField : IndexFieldBase
     {
         private CollectionOfBloomFilters _filter;
         private IndexingStatsScope _statsInstance;

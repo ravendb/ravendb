@@ -7,6 +7,7 @@ using System.Text;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
+using Raven.Client.Util;
 using Raven.Server.Documents.Queries.Parser;
 using Sparrow;
 using Sparrow.Json;
@@ -81,25 +82,17 @@ namespace Raven.Server.Documents.Queries
 
         public string[] Includes;
 
-        private void AddSearchField(string fieldName)
-        {
-            var indexFieldName = GetIndexFieldName(fieldName);
-
-            IndexFieldNames.Add(indexFieldName);
-            WhereFields[indexFieldName] = new WhereField(true);
-        }
-
         private void AddExistField(string fieldName)
         {
             IndexFieldNames.Add(GetIndexFieldName(fieldName));
         }
 
-        private void AddWhereField(string fieldName)
+        private void AddWhereField(string fieldName, bool search = false, bool exact = false)
         {
             var indexFieldName = GetIndexFieldName(fieldName);
 
             IndexFieldNames.Add(indexFieldName);
-            WhereFields[indexFieldName] = new WhereField(isFullTextSearch: false);
+            WhereFields[indexFieldName] = new WhereField(isFullTextSearch: search, isExactSearch: exact);
         }
 
         private void Build(BlittableJsonReaderObject parameters)
@@ -676,6 +669,7 @@ namespace Raven.Server.Documents.Queries
         {
             private readonly QueryMetadata _metadata;
             private readonly string _fromAlias;
+            private int _insideExact;
 
             public FillWhereFieldsAndParametersVisitor(QueryMetadata metadata, string fromAlias, string queryText) : base(queryText)
             {
@@ -683,9 +677,16 @@ namespace Raven.Server.Documents.Queries
                 _fromAlias = fromAlias;
             }
 
+            private IDisposable Exact()
+            {
+                _insideExact++;
+
+                return new DisposableAction(() => _insideExact--);
+            }
+
             public override void VisitFieldToken(string fieldName, ValueToken value, BlittableJsonReaderObject parameters)
             {
-                _metadata.AddWhereField(fieldName);
+                _metadata.AddWhereField(fieldName, exact: _insideExact > 0);
             }
 
             public override void VisitFieldTokens(string fieldName, ValueToken firstValue, ValueToken secondValue, BlittableJsonReaderObject parameters)
@@ -699,7 +700,7 @@ namespace Raven.Server.Documents.Queries
                 if (QueryBuilder.AreValueTokenTypesValid(valueType1, valueType2) == false)
                     ThrowIncompatibleTypesOfParameters(fieldName, QueryText, parameters, firstValue, secondValue);
 
-                _metadata.AddWhereField(fieldName);
+                _metadata.AddWhereField(fieldName, exact: _insideExact > 0);
             }
 
             public override void VisitFieldTokens(string fieldName, List<ValueToken> values, BlittableJsonReaderObject parameters)
@@ -727,7 +728,7 @@ namespace Raven.Server.Documents.Queries
                         previousType = valueType;
                 }
 
-                _metadata.AddWhereField(fieldName);
+                _metadata.AddWhereField(fieldName, exact: _insideExact > 0);
             }
 
             public override void VisitMethodTokens(QueryExpression expression, BlittableJsonReaderObject parameters)
@@ -784,9 +785,9 @@ namespace Raven.Server.Documents.Queries
                             throw new InvalidQueryException($"Method {methodName}() expects value token as second argument, got {arguments[1]} type", QueryText, parameters);
 
                         if (methodType == MethodType.Search)
-                            _metadata.AddSearchField(fieldName);
+                            _metadata.AddWhereField(fieldName, search: true);
                         else
-                            _metadata.AddWhereField(fieldName);
+                            _metadata.AddWhereField(fieldName, exact: _insideExact > 0);
                         break;
                     case MethodType.Exists:
                         fieldName = ExtractFieldNameFromFirstArgument(arguments, methodName, parameters);
@@ -802,11 +803,20 @@ namespace Raven.Server.Documents.Queries
                         break;
                     case MethodType.Intersect:
                         _metadata.IsIntersect = true;
-                        goto case MethodType.Exact;
-                    case MethodType.Exact:
+
                         for (var i = 0; i < arguments.Count; i++)
                         {
                             var expressionArgument = arguments[i] as QueryExpression;
+                            Visit(expressionArgument, parameters);
+                        }
+                        return;
+                    case MethodType.Exact:
+                        if (arguments.Count != 1)
+                            throw new InvalidQueryException($"Method {methodName}() expects one argument, got " + arguments.Count, QueryText, parameters);
+
+                        using (Exact())
+                        {
+                            var expressionArgument = arguments[0] as QueryExpression;
                             Visit(expressionArgument, parameters);
                         }
                         return;
@@ -864,7 +874,7 @@ namespace Raven.Server.Documents.Queries
                         break;
                 }
 
-                _metadata.AddWhereField(fieldName);
+                _metadata.AddWhereField(fieldName, exact: _insideExact > 0);
             }
 
             private void HandleCount(string providedCountMethodName, FieldToken methodNameToken, List<object> arguments, BlittableJsonReaderObject parameters)

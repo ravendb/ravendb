@@ -16,7 +16,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         [Fact]
         public void SpecifyingInvalidParametersWillResultInException()
         {
-            var fields = new[] { new IndexField
+            var fields = new[] { new AutoIndexField
             {
                 Name = "test",
                 Storage = FieldStorage.No
@@ -26,7 +26,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             Assert.Throws<ArgumentNullException>(() => new AutoMapIndexDefinition("test", null));
             Assert.Throws<ArgumentNullException>(() => new AutoMapIndexDefinition(null, fields));
 
-            Assert.Throws<ArgumentException>(() => new AutoMapIndexDefinition("test", new IndexField[0]));
+            Assert.Throws<ArgumentException>(() => new AutoMapIndexDefinition("test", new AutoIndexField[0]));
 
             new AutoMapIndexDefinition("test", fields);
         }
@@ -144,7 +144,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             Assert.True(definition.ContainsField("Name"));
             Assert.True(definition.ContainsField("Age"));
             Assert.Equal("Auto/Users/ByAgeAndName", definition.Name);
-            var nameField = definition.GetField("Name");
+            var nameField = definition.MapFields["Name"];
         }
 
         [Fact]
