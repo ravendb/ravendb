@@ -31,32 +31,40 @@ namespace Raven.Server.Documents.TcpHandlers
             _remoteEndpoint = remoteEndpoint;
         }
 
-        public IEnumerable<(Document Doc, Exception Exception)> GetDataToSend(DocumentsOperationContext docsContext, SubscriptionState subscription, SubscriptionPatchDocument patch, long startEtag)
+        public IEnumerable<(Document Doc, Exception Exception)> GetDataToSend(
+            DocumentsOperationContext docsContext, 
+            string collection,
+            bool revisions,
+            SubscriptionState subscription, 
+            SubscriptionPatchDocument patch, 
+            long startEtag)
         {
-            if (string.IsNullOrEmpty(subscription.Criteria?.Collection))
+            if (string.IsNullOrEmpty(collection))
                 throw new ArgumentException("The collection name must be specified");
 
-            if (subscription.Criteria.IncludeRevisions)
+            if (revisions)
             {
                 if (_db.DocumentsStorage.RevisionsStorage.Configuration == null ||
-                    _db.DocumentsStorage.RevisionsStorage.GetRevisionsConfiguration(subscription.Criteria.Collection).Active == false)
+                    _db.DocumentsStorage.RevisionsStorage.GetRevisionsConfiguration(collection).Active == false)
                     throw new SubscriptionInvalidStateException($"Cannot use a revisions subscription, database {_db.Name} does not have revisions configuration.");
 
-                return GetRevisionsToSend(docsContext, subscription, startEtag, patch);
+                return GetRevisionsToSend(docsContext, collection, subscription, startEtag, patch);
             }
 
 
-            return GetDocumentsToSend(docsContext, subscription, startEtag, patch);
+            return GetDocumentsToSend(docsContext, collection, subscription, startEtag, patch);
         }
 
-        private IEnumerable<(Document Doc, Exception Exception)> GetDocumentsToSend(DocumentsOperationContext docsContext, SubscriptionState subscription,
+        private IEnumerable<(Document Doc, Exception Exception)> GetDocumentsToSend(DocumentsOperationContext docsContext, 
+            string collection,
+            SubscriptionState subscription,
             long startEtag, SubscriptionPatchDocument patch)
         {
-            using (_db.Scripts.GetScriptRunner(patch?.Key,true, out var run))
+            using (_db.Scripts.GetScriptRunner(patch,true, out var run))
             {
                 foreach (var doc in _db.DocumentsStorage.GetDocumentsFrom(
                     docsContext,
-                    subscription.Criteria.Collection,
+                    collection,
                     startEtag + 1,
                     0,
                     _maxBatchSize))
@@ -101,11 +109,15 @@ namespace Raven.Server.Documents.TcpHandlers
             }
         }
 
-        private IEnumerable<(Document Doc, Exception Exception)> GetRevisionsToSend(DocumentsOperationContext docsContext, SubscriptionState subscription,
-            long startEtag, SubscriptionPatchDocument patch)
+        private IEnumerable<(Document Doc, Exception Exception)> GetRevisionsToSend(
+            DocumentsOperationContext docsContext, 
+            string collection,
+            SubscriptionState subscription,
+            long startEtag, 
+            SubscriptionPatchDocument patch)
         {
-            var collectionName = new CollectionName(subscription.Criteria.Collection);
-            using (_db.Scripts.GetScriptRunner(patch?.Key, true, out var run))
+            var collectionName = new CollectionName(collection);
+            using (_db.Scripts.GetScriptRunner(patch, true, out var run))
             {
                 foreach (var revisionTuple in _db.DocumentsStorage.RevisionsStorage.GetRevisionsFrom(docsContext, collectionName, startEtag + 1, _maxBatchSize))
                 {
@@ -209,9 +221,6 @@ namespace Raven.Server.Documents.TcpHandlers
             if (conflictStatus == ConflictStatus.AlreadyMerged)
                 return false;
 
-            if (patch == null)
-                return true;
-
             revision.Current?.EnsureMetadata();
             revision.Previous?.EnsureMetadata();
 
@@ -221,14 +230,13 @@ namespace Raven.Server.Documents.TcpHandlers
                 ["Previous"] = revision.Previous?.Data
             }, item.Id);
 
+
+            if (patch == null)
+                return true;
+
             revision.Current?.ResetModifications();
             revision.Previous?.ResetModifications();
-
-
-            if (patch.FilterJavaScript == SubscriptionCreationOptions.DefaultRevisionsScript)
-            {
-                return true;
-            }
+         
             try
             {
                 return patch.MatchCriteria(run, dbContext, transformResult, ref transformResult);

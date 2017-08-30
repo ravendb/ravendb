@@ -81,7 +81,7 @@ namespace FastTests.Client.Subscriptions
 
         private (Task RunTask, Subscription<User> SubscriptionObject) OpenAndRunSubscription(IDocumentStore store, Action runAction)
         {
-            var subscriptionId = store.Subscriptions.Create<User>(new SubscriptionCreationOptions<User>());
+            var subscriptionId = store.Subscriptions.Create<User>();
 
             var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
 

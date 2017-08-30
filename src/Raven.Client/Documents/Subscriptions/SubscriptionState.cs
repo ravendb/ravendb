@@ -13,7 +13,7 @@ namespace Raven.Client.Documents.Subscriptions
 {
     public class SubscriptionState : IDatabaseTask
     {
-        public SubscriptionCriteria Criteria { get; set; }
+        public string Query { get; set; }
         public string ChangeVectorForNextBatchStartingPoint { get; set; }
         public long SubscriptionId { get; set; }
         public string SubscriptionName { get; set; }
@@ -30,12 +30,7 @@ namespace Raven.Client.Documents.Subscriptions
         {
             return new DynamicJsonValue
             {
-                [nameof(Criteria)] = new DynamicJsonValue
-                {
-                    [nameof(SubscriptionCriteria.Collection)] = Criteria.Collection,
-                    [nameof(SubscriptionCriteria.Script)] = Criteria.Script,
-                    [nameof(SubscriptionCriteria.IncludeRevisions)] = Criteria.IncludeRevisions
-                },
+                [nameof(Query)] = Query,
                 [nameof(ChangeVectorForNextBatchStartingPoint)] = ChangeVectorForNextBatchStartingPoint,
                 [nameof(SubscriptionId)] = SubscriptionId,
                 [nameof(SubscriptionName)] = SubscriptionName,

@@ -690,7 +690,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     return true;
                 default:
                     if (Value(out var val) == false)
-                        ThrowParseException($"parsing {type} expression, expected a value");
+                        ThrowParseException($"parsing {type} expression, expected a value (operators only work on scalar / parameters values)");
 
                     op = new QueryExpression
                     {

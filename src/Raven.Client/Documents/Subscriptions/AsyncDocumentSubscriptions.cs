@@ -7,7 +7,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
+using System.Reflection;
 using System.Threading.Tasks;
+using Lambda2Js;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations;
@@ -27,46 +30,71 @@ namespace Raven.Client.Documents.Subscriptions
             _store = store;
         }
 
+        public string Create<T>(Expression<Func<T, bool>> predicate = null,
+            SubscriptionCreationOptions options = null,
+            string database = null)
+        {
+            return Create(EnsureCriteria(options, predicate), database);
+        }
+
+        public Task<string> CreateAsync<T>(
+            Expression<Func<T, bool>> predicate = null,
+            SubscriptionCreationOptions options = null, 
+            string database = null)
+        {
+            return CreateAsync(EnsureCriteria(options, predicate), database);
+        }
+
+        private SubscriptionCreationOptions EnsureCriteria<T>(SubscriptionCreationOptions criteria, Expression<Func<T, bool>> predicate)
+        {
+            criteria = criteria ?? new SubscriptionCreationOptions();
+            var collectionName = _store.Conventions.GetCollectionName(typeof(T));
+            if (criteria.Query == null)
+            {
+                var tType = typeof(T);
+                var includeRevisions = tType.IsConstructedGenericType && tType.GetGenericTypeDefinition() == typeof(Revision<>);
+                if (includeRevisions)
+                {
+                    collectionName = _store.Conventions.GetCollectionName(tType.GenericTypeArguments[0]);
+                }
+                if(includeRevisions)
+                    criteria.Query = "from " + collectionName +" (Revisions = true)";
+                else
+                    criteria.Query = "from " + collectionName;
+            }
+            if (predicate != null)
+            {
+                var script = predicate.CompileToJavascript(
+                    new JavascriptCompilationOptions(
+                        JsCompilationFlags.BodyOnly,
+                        new JavascriptConversionExtensions.LinqMethodsSupport(),
+                        new JavascriptConversionExtensions.DatesAndConstantsSupport { Parameter = predicate.Parameters[0] }
+                    ));
+                criteria.Query = "declare function predicate () {\r\n\t return " + 
+                    script + "\r\n}\r\n" + criteria.Query + "\r\n" + 
+                    "where predicate.call(this)";
+            }
+            return criteria;
+        }
+
         public string Create(SubscriptionCreationOptions criteria, string database = null)
         {
             return AsyncHelpers.RunSync(() => CreateAsync(criteria, database));
         }
 
-        public string Create<T>(SubscriptionCreationOptions<T> criteria, string database = null)
+
+        public async Task<string> CreateAsync(SubscriptionCreationOptions options, string database = null)
         {
-            return AsyncHelpers.RunSync(() => CreateAsync(criteria, database));
-        }
+            if (options == null )
+                throw new InvalidOperationException("Cannot create a subscription if options is null");
 
-        public Task<string> CreateAsync<T>(SubscriptionCreationOptions<T> subscriptionCreationOptions, string database = null)
-        {
-            if (subscriptionCreationOptions == null)
-                throw new InvalidOperationException("Cannot create a subscription if criteria is null");
-
-            var subscriptionCreationDto = new SubscriptionCreationOptions
-            {
-                Name = subscriptionCreationOptions.Name,
-                Criteria =  subscriptionCreationOptions.CreateOptions(_store.GetRequestExecutor(database).Conventions),
-                ChangeVector = subscriptionCreationOptions.ChangeVector
-            };
-
-            return CreateAsync(subscriptionCreationDto, database);
-        }
-
-        public async Task<string> CreateAsync(SubscriptionCreationOptions subscriptionCreationOptions, string database = null)
-        {
-            if (subscriptionCreationOptions == null )
-                throw new InvalidOperationException("Cannot create a subscription if subscriptionCreationOptions is null");
-
-            if (subscriptionCreationOptions.Criteria == null)
-                throw new InvalidOperationException("Cannot create a subscription if criteria is null");
-
-            if (string.IsNullOrWhiteSpace(subscriptionCreationOptions.Criteria.Collection))
-                throw new InvalidOperationException("Cannot create a subscription if criteria's collection is not set");
+            if (options.Query == null)
+                throw new InvalidOperationException("Cannot create a subscription if the script is null");
 
             var requestExecutor = _store.GetRequestExecutor(database ?? _store.Database);
             requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context);
             
-            var command = new CreateSubscriptionCommand(subscriptionCreationOptions);
+            var command = new CreateSubscriptionCommand(options);
             await requestExecutor.ExecuteAsync(command, context).ConfigureAwait(false);
 
             return command.Result.Name;

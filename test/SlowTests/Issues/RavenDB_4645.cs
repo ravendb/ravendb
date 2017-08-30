@@ -36,7 +36,7 @@ namespace SlowTests.Issues
 
                 var subscriptionCreationParams = new SubscriptionCreationOptions
                 {
-                    Criteria = new SubscriptionCriteria("Companies")
+                    Query = "from Companies"
                 };
                 var id = store.Subscriptions.Create(subscriptionCreationParams);
 

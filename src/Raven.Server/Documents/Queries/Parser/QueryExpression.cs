@@ -93,6 +93,113 @@ namespace Raven.Server.Documents.Queries.Parser
             writer.WriteValue(tmp.ToString());
         }
 
+        public void ToJavaScript(string query, string alias, TextWriter writer)
+        {
+            switch (Type)
+            {
+                case OperatorType.Field:
+                    writer.Write(alias);
+                    writer.Write(".");
+                    writer.Write(Extract(query, Field.TokenStart, Field.TokenLength, Field.EscapeChars));
+                    break;
+                case OperatorType.Equal:
+                case OperatorType.NotEqual:
+                case OperatorType.LessThan:
+                case OperatorType.GreaterThan:
+                case OperatorType.LessThanEqual:
+                case OperatorType.GreaterThanEqual:
+                    writer.Write(alias);
+                    writer.Write(".");
+                    writer.Write(Extract(query, Field.TokenStart, Field.TokenLength, Field.EscapeChars));
+                    switch (Type)
+                    {
+                        case OperatorType.Equal:
+                            writer.Write(" == ");
+                            break;
+                        case OperatorType.NotEqual:
+                            writer.Write(" != ");
+                            break;
+                        case OperatorType.LessThan:
+                            writer.Write(" < ");
+                            break;
+                        case OperatorType.GreaterThan:
+                            writer.Write(" > ");
+                            break;
+                        case OperatorType.LessThanEqual:
+                            writer.Write(" <= ");
+                            break;
+                        case OperatorType.GreaterThanEqual:
+                            writer.Write(" >= ");
+                            break;
+                        default:
+                            ThrowInvalidType(Type);
+                            break;
+                    }
+                    writer.Write(Extract(query, Value));
+                    break;
+                case OperatorType.Between:
+                    throw new InvalidOperationException("Cannot translate between operation to JavaScript");
+                case OperatorType.In:
+                case OperatorType.AllIn:
+                    throw new InvalidOperationException("Cannot translate in operation to JavaScript");
+                case OperatorType.And:
+                case OperatorType.AndNot:
+                case OperatorType.Or:
+                case OperatorType.OrNot:
+                    writer.Write("(");
+                    Left.ToString(query, writer);
+                    switch (Type)
+                    {
+                        case OperatorType.And:
+                            writer.Write(" && ");
+                            break;
+                        case OperatorType.AndNot:
+                            writer.Write(" && !(");
+                            break;
+                        case OperatorType.Or:
+                            writer.Write(" OR ");
+                            break;
+                        case OperatorType.OrNot:
+                            writer.Write(" || !(");
+                            break;
+                    }
+                    Right.ToString(query, writer);
+                    if (Type == OperatorType.OrNot || Type == OperatorType.AndNot)
+                    {
+                        writer.Write(")");
+                    }
+                    writer.Write(")");
+                    break;
+                case OperatorType.Method:
+                    writer.Write(Extract(query, Field.TokenStart, Field.TokenLength, Field.EscapeChars));
+                    writer.Write("(");
+
+                    for (int i = 0; i < Arguments.Count; i++)
+                    {
+                        var arg = Arguments[i];
+                        if (i != 0)
+                            writer.Write(", ");
+                        if (arg is QueryExpression qe)
+                        {
+                            qe.ToString(query, writer);
+                        }
+                        else if (arg is FieldToken field)
+                        {
+                            writer.Write(Extract(query, field.TokenStart, field.TokenLength, field.EscapeChars));
+                        }
+                        else
+                        {
+                            var val = (ValueToken)arg;
+                            writer.Write(Extract(query, val));
+                        }
+                    }
+                    writer.Write(")");
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
+
         public void ToString(string query, TextWriter writer)
         {
             switch (Type)

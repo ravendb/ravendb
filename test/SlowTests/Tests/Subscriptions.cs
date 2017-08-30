@@ -25,7 +25,7 @@ namespace SlowTests.Tests
 
                 var subscriptionCreationParams = new SubscriptionCreationOptions
                 {
-                    Criteria = new SubscriptionCriteria("Things"),
+                    Query = "from Things",
                     ChangeVector = lastChangeVector
                 };
 

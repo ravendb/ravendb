@@ -52,7 +52,7 @@ namespace RachisTests
             string tag1, tag2, tag3;
             using (var store = new DocumentStore
             {
-                Urls = new[] {leader.WebUrl},
+                Urls = new[] { leader.WebUrl },
                 Database = defaultDatabase
             }.Initialize())
             {
@@ -105,14 +105,14 @@ namespace RachisTests
 
             using (var store = new DocumentStore
             {
-                Urls = new[] {leader.WebUrl},
+                Urls = new[] { leader.WebUrl },
                 Database = defaultDatabase
             }.Initialize())
             {
                 var usersCount = new List<User>();
                 var reachedMaxDocCountMre = new AsyncManualResetEvent();
 
-                var subscriptionId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>() { });
+                var subscriptionId = await store.Subscriptions.CreateAsync<User>();
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -126,7 +126,7 @@ namespace RachisTests
                 var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
 
                 subscription.AfterAcknowledgment += b => { reachedMaxDocCountMre.Set(); return Task.CompletedTask; };
-                
+
                 GC.KeepAlive(subscription.Run(x => { }));
 
                 await reachedMaxDocCountMre.WaitAsync();
@@ -137,7 +137,7 @@ namespace RachisTests
                     using (ravenServer.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (context.OpenReadTransaction())
                     {
-                        Assert.NotNull(ravenServer.ServerStore.Cluster.Read(context, SubscriptionState.GenerateSubscriptionItemKeyName(defaultDatabase,subscriptionId.ToString())));
+                        Assert.NotNull(ravenServer.ServerStore.Cluster.Read(context, SubscriptionState.GenerateSubscriptionItemKeyName(defaultDatabase, subscriptionId.ToString())));
                     }
                 }
 
@@ -173,7 +173,7 @@ namespace RachisTests
 
             using (var store = new DocumentStore
             {
-                Urls = new[] {leader.WebUrl},
+                Urls = new[] { leader.WebUrl },
                 Database = defaultDatabase
             }.Initialize())
             {
@@ -206,7 +206,7 @@ namespace RachisTests
 
             using (var store = new DocumentStore
             {
-                Urls = new[] {leader.WebUrl},
+                Urls = new[] { leader.WebUrl },
                 Database = defaultDatabase
             }.Initialize())
             {
@@ -222,7 +222,7 @@ namespace RachisTests
 
 
 
-                var subscriptionId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<Revision<User>>()).ConfigureAwait(false);
+                var subscriptionId = await store.Subscriptions.CreateAsync<Revision<User>>().ConfigureAwait(false);
 
                 var subscription = store.Subscriptions.Open<Revision<User>>(new SubscriptionConnectionOptions(subscriptionId)
                 {
@@ -365,7 +365,7 @@ namespace RachisTests
             IReadOnlyList<ServerNode> nodes;
             using (var store = new DocumentStore
             {
-                Urls = new[] {Servers[0].WebUrl},
+                Urls = new[] { Servers[0].WebUrl },
                 Database = defaultDatabase
             })
             {
@@ -374,7 +374,7 @@ namespace RachisTests
                     {
                         Url = store.Urls[0],
                         Database = defaultDatabase,
-                    },  Timeout.Infinite));
+                    }, Timeout.Infinite));
                 nodes = store.GetRequestExecutor().TopologyNodes;
             }
             var rnd = new Random(1);
@@ -385,7 +385,7 @@ namespace RachisTests
                 {
                     using (var curStore = new DocumentStore
                     {
-                        Urls = new[] {server.WebUrl},
+                        Urls = new[] { server.WebUrl },
                         Database = defaultDatabase,
                         Conventions = new DocumentConventions
                         {
@@ -433,8 +433,8 @@ namespace RachisTests
             {
                 MaxId = 0
             };
-            var subscriptionName = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>()).ConfigureAwait(false);
-            
+            var subscriptionName = await store.Subscriptions.CreateAsync<User>().ConfigureAwait(false);
+
             var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionName)
             {
                 TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(500),
@@ -443,7 +443,7 @@ namespace RachisTests
             var subscripitonState = await store.Subscriptions.GetSubscriptionStateAsync(store.Database, subscriptionName);
             var getDatabaseTopologyCommand = new GetDatabaseRecordOperation(defaultDatabase);
             var record = await store.Admin.Server.SendAsync(getDatabaseTopologyCommand).ConfigureAwait(false);
-            
+
             foreach (var server in Servers.Where(s => record.Topology.RelevantFor(s.ServerStore.NodeTag)))
             {
                 await server.ServerStore.Cluster.WaitForIndexNotification(subscripitonState.SubscriptionId).ConfigureAwait(false);
@@ -471,23 +471,23 @@ namespace RachisTests
                     }
                 }
             });
-            subscription.AfterAcknowledgment +=  b =>
-            {
+            subscription.AfterAcknowledgment += b =>
+           {
 
-                try
-                {
-                    if (usersCount.Count == 10)
-                    {
-                        reachedMaxDocCountMre.Set();
-                    }
-                }
-                catch (Exception)
-                {
+               try
+               {
+                   if (usersCount.Count == 10)
+                   {
+                       reachedMaxDocCountMre.Set();
+                   }
+               }
+               catch (Exception)
+               {
 
 
-                }
-                return Task.CompletedTask;
-            };
+               }
+               return Task.CompletedTask;
+           };
 
             await Task.WhenAny(task, Task.Delay(_reasonableWaitTime)).ConfigureAwait(false);
 
@@ -504,7 +504,7 @@ namespace RachisTests
                 var databaseRecord = someServer.ServerStore.Cluster.ReadDatabase(context, defaultDatabase);
                 var db = await someServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(defaultDatabase).ConfigureAwait(false);
                 var subscriptionState = db.SubscriptionStorage.GetSubscriptionFromServerStore(subscriptionName);
-                tag = databaseRecord.Topology.WhoseTaskIsIt(subscriptionState,Server.ServerStore.IsPassive());
+                tag = databaseRecord.Topology.WhoseTaskIsIt(subscriptionState, Server.ServerStore.IsPassive());
             }
             Servers.FirstOrDefault(x => x.ServerStore.NodeTag == tag).Dispose();
         }

@@ -58,12 +58,12 @@ namespace Raven.Client.ServerWide.Operations
             TaskType = OngoingTaskType.Subscription;
         }
 
-        public string Collection { get; set; }
+        public string Query { get; set; }
 
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
-            json[nameof(Collection)] = Collection;
+            json[nameof(Query)] = Query;
             return json;
         }
     }

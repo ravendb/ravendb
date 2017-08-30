@@ -99,7 +99,7 @@ namespace Raven.Server.Web.System
                     TaskName = subscriptionState.SubscriptionName,
                     TaskState = subscriptionState.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
                     TaskId = subscriptionState.SubscriptionId,
-                    Collection = subscriptionState.Criteria.Collection
+                    Query = subscriptionState.Query
                 };
             }
         }
@@ -408,7 +408,7 @@ namespace Raven.Server.Web.System
 
                             var subscriptionStateInfo = new SubscriptionStateWithNodeDetails
                             {
-                                Criteria = subscriptionState.Criteria,
+                                Query = subscriptionState.Query,
                                 ChangeVectorForNextBatchStartingPoint = subscriptionState.ChangeVectorForNextBatchStartingPoint,
                                 SubscriptionId = subscriptionState.SubscriptionId,
                                 SubscriptionName = subscriptionState.SubscriptionName,

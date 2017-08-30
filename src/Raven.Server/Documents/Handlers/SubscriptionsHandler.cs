@@ -30,13 +30,14 @@ namespace Raven.Server.Documents.Handlers
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), null);
                 var tryout = JsonDeserializationServer.SubscriptionTryout(json);
 
+                var (collection, (script, functions), revisions) = SubscriptionConnection.ParseSubscriptionQuery(tryout.Query);
                 SubscriptionPatchDocument patch = null;
-                if (string.IsNullOrEmpty(tryout.Script) == false)
+                if (string.IsNullOrEmpty(script) == false)
                 {
-                    patch = new SubscriptionPatchDocument(Database, tryout.Script);
+                    patch = new SubscriptionPatchDocument(script, functions);
                 }
 
-                if (tryout.Collection == null)
+                if (collection == null)
                     throw new ArgumentException("Collection must be specified");
 
                 var pageSize = GetIntValueQueryString("pageSize") ?? 1;
@@ -47,12 +48,7 @@ namespace Raven.Server.Documents.Handlers
                 var state = new SubscriptionState
                 {
                     ChangeVectorForNextBatchStartingPoint = tryout.ChangeVector,
-                    Criteria = new SubscriptionCriteria
-                    {
-                        Collection = tryout.Collection,
-                        IncludeRevisions = tryout.IncludeRevisions,
-                        Script = tryout.Script
-                    }
+                    Query = tryout.Query
                 };
 
                 if (Enum.TryParse(
@@ -66,7 +62,7 @@ namespace Raven.Server.Documents.Handlers
                             state.ChangeVectorForNextBatchStartingPoint = null;
                             break;
                         case Constants.Documents.SubscriptionChangeVectorSpecialStates.LastDocument:
-                            state.ChangeVectorForNextBatchStartingPoint = Database.DocumentsStorage.GetLastDocumentChangeVector(context, state.Criteria.Collection);
+                            state.ChangeVectorForNextBatchStartingPoint = Database.DocumentsStorage.GetLastDocumentChangeVector(context, collection);
                             break;
                     }
                 }
@@ -81,7 +77,7 @@ namespace Raven.Server.Documents.Handlers
                     {
                         var first = true;
 
-                        foreach (var itemDetails in fetcher.GetDataToSend(context, state, patch, 0))
+                        foreach (var itemDetails in fetcher.GetDataToSend(context, collection, revisions, state, patch, 0))
                         {
                             if (itemDetails.Doc.Data == null)
                                 continue;
@@ -121,10 +117,12 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), null);
                 var options = JsonDeserializationServer.SubscriptionCreationParams(json);
-                if (Constants.Documents.SubscriptionChangeVectorSpecialStates.TryParse(
+
+                var (collection, _, _) = SubscriptionConnection.ParseSubscriptionQuery(options.Query);
+
+                if (Enum.TryParse(
                     options.ChangeVector,
                     out Constants.Documents.SubscriptionChangeVectorSpecialStates changeVectorSpecialValue))
                 {
@@ -134,7 +132,7 @@ namespace Raven.Server.Documents.Handlers
                             options.ChangeVector = null;
                             break;
                         case Constants.Documents.SubscriptionChangeVectorSpecialStates.LastDocument:
-                            options.ChangeVector = Database.DocumentsStorage.GetLastDocumentChangeVector(context, options.Criteria.Collection);
+                            options.ChangeVector = Database.DocumentsStorage.GetLastDocumentChangeVector(context, collection);
                             break;
                     }
                 }
@@ -274,7 +272,7 @@ namespace Raven.Server.Documents.Handlers
                         x.SubscriptionId,
                         x.SubscriptionName,
                         LatestChangeVectorClientACKnowledged = x.ChangeVectorForNextBatchStartingPoint,
-                        x.Criteria,
+                        x.Query,
                         x.Connection?.SubscriptionState.LastTimeServerMadeProgressWithDocuments
                         ,
                         Connection = new
@@ -291,7 +289,7 @@ namespace Raven.Server.Documents.Handlers
                             State = new
                             {
                                 LatestChangeVectorClientACKnowledged = r.SubscriptionState.ChangeVectorForNextBatchStartingPoint,
-                                r.SubscriptionState.Criteria
+                                r.SubscriptionState.Query
                             },
                             Connection = new
                             {
@@ -308,7 +306,7 @@ namespace Raven.Server.Documents.Handlers
                             State = new
                             {
                                 LatestChangeVectorClientACKnowledged = r.SubscriptionState.ChangeVectorForNextBatchStartingPoint,
-                                r.SubscriptionState.Criteria
+                                r.SubscriptionState.Query
                             },
                             Connection = new
                             {

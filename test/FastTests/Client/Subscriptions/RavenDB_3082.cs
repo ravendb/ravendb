@@ -51,13 +51,8 @@ namespace FastTests.Client.Subscriptions
                     await session.SaveChangesAsync();
                 }
 
-                var subscriptionCreationParams = new SubscriptionCreationOptions<PersonWithAddress>()
-                {
-                    Criteria = new SubscriptionCriteria<PersonWithAddress>(p => p.Name == "James" && p.Address.ZipCode != 54321)
-                };
-
-
-                var id = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
+                var id = await store.Subscriptions.CreateAsync<PersonWithAddress>(
+                    p => p.Name == "James" && p.Address.ZipCode != 54321);
 
                 using (
                     var subscription =

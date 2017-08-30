@@ -55,9 +55,8 @@ namespace Raven.Server.Documents.Subscriptions
 
         public async Task<long> PutSubscription(SubscriptionCreationOptions options, long? subscriptionId = null, bool? disabled = false)
         {
-            var command = new PutSubscriptionCommand(_db.Name)
+            var command = new PutSubscriptionCommand(_db.Name, options.Query)
             {
-                Criteria = options.Criteria,
                 InitialChangeVector = options.ChangeVector,
                 SubscriptionName = options.Name,
                 SubscriptionId = subscriptionId,
@@ -314,7 +313,7 @@ namespace Raven.Server.Documents.Subscriptions
 
             public SubscriptionGeneralDataAndStats(SubscriptionState @base)
             {
-                Criteria = @base.Criteria;
+                Query = @base.Query;
                 ChangeVectorForNextBatchStartingPoint = @base.ChangeVectorForNextBatchStartingPoint;
                 SubscriptionId = @base.SubscriptionId;
                 LastTimeServerMadeProgressWithDocuments = @base.LastTimeServerMadeProgressWithDocuments;
@@ -401,9 +400,9 @@ namespace Raven.Server.Documents.Subscriptions
                         continue;
                     }
 
-                    if (subscriptionState.Criteria.Script != subscriptionStateKvp.Value.Connection.SubscriptionState.Criteria.Script)
+                    if (subscriptionState.Query != subscriptionStateKvp.Value.Connection.SubscriptionState.Query)
                     {
-                        DropSubscriptionConnection(subscriptionStateKvp.Key, new SubscriptionClosedException($"The subscription {subscriptionName} script has been modified, connection must be restarted"));
+                        DropSubscriptionConnection(subscriptionStateKvp.Key, new SubscriptionClosedException($"The subscription {subscriptionName} query has been modified, connection must be restarted"));
                     }
 
                     if (databaseRecord.Topology.WhoseTaskIsIt(subscriptionState, _serverStore.IsPassive()) != _serverStore.NodeTag)

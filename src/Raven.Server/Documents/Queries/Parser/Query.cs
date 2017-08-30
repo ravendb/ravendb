@@ -19,8 +19,8 @@ namespace Raven.Server.Documents.Queries.Parser
         public Dictionary<StringSegment, string> DeclaredFunctions;
 
         public string QueryText;
-        public ValueToken SelectFunctionBody { get; set; }
-        public ValueToken UpdateBody { get; set; }
+        public ValueToken SelectFunctionBody;
+        public ValueToken UpdateBody;
 
         public string ToJsonAst()
         {

@@ -55,30 +55,28 @@ namespace Raven.Server.Documents.Patch
                     // modify and return the document
                 case PatchRequestType.Patch:
                     return $@"
-function execute(doc, args){{ 
-    var actual = function(args) {{ 
-
+ function __actual_func(args) {{ 
 
 {Script}
 
+}};
 
-    }};
-    actual.call(doc, args);
+function execute(doc, args){{ 
+    __actual_func.call(doc, args);
     return doc;
 }}";
                     // get the document and return the result of the script
                     // and without arguments
                 case PatchRequestType.Subscription:
                     return $@"
-function execute(doc){{ 
-    var actual = function() {{ 
-
+function __actual_func() {{ 
 
 {Script}
 
+}};
 
-    }};
-    return actual.call(doc);
+function execute(doc){{ 
+    return __actual_func.call(doc);
 }}";
                 case PatchRequestType.Conflict:
                     return $@"

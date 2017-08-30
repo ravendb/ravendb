@@ -61,7 +61,7 @@ namespace Subscriptions.Benchmark
                 {
                     var subscriptionCreationParams = new SubscriptionCreationOptions
                     {
-                        Criteria = new SubscriptionCriteria(_collectionName)
+                        Query = "from " + _collectionName
                     };
                     _subscriptionName = await _store.Subscriptions.CreateAsync(subscriptionCreationParams).ConfigureAwait(false);
                 }

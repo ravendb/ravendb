@@ -28,17 +28,11 @@ namespace FastTests.Voron.Backups
             {
                 var context = DocumentsOperationContext.ShortTermSingleUse(database);
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, database.Name, false, 13);
-                var subscriptionCriteria = new SubscriptionCriteria("Users");
-                var obj = JObject.FromObject(subscriptionCriteria);
-                var objString = obj.ToString(Formatting.None);
-                var stream = new MemoryStream();
-                var streamWriter = new StreamWriter(stream);
-                streamWriter.Write(objString);
-                streamWriter.Flush();
-                stream.Position = 0;
-                var reader = context.Read(stream, "docs/1");
-                
-                await database.SubscriptionStorage.PutSubscription(JsonDeserializationServer.SubscriptionCreationParams(reader));
+               
+                await database.SubscriptionStorage.PutSubscription(new SubscriptionCreationOptions
+                {
+                    Query = "from Users",
+                });
 
                 await database.IndexStore.CreateIndex(new IndexDefinition()
                 {
@@ -110,16 +104,10 @@ namespace FastTests.Voron.Backups
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                 {
 
-                    var subscriptionCriteria = new SubscriptionCriteria("Users");
-                    var obj = JObject.FromObject(subscriptionCriteria);
-                    var objString = obj.ToString(Formatting.None);
-                    var stream = new MemoryStream();
-                    var streamWriter = new StreamWriter(stream);
-                    streamWriter.Write(objString);
-                    streamWriter.Flush();
-                    stream.Position = 0;
-                    var reader = context.Read(stream, "docs/1");
-                    await database.SubscriptionStorage.PutSubscription(JsonDeserializationServer.SubscriptionCreationParams(reader));
+                    await database.SubscriptionStorage.PutSubscription(new SubscriptionCreationOptions
+                    {
+                        Query = "from Users"
+                    });
 
                     await database.IndexStore.CreateIndex(new IndexDefinition()
                     {

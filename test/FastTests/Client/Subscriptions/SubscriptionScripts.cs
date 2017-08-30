@@ -49,16 +49,12 @@ namespace FastTests.Client.Subscriptions
 
                     await session.SaveChangesAsync();
                 }
+                
 
-                var subscriptionCreationParams = new SubscriptionCreationOptions<SupportCall>
-                {
-                    Criteria = new SubscriptionCriteria<SupportCall>(call => call.Name == "James" && call.Comments.Any(comment => comment.Contains("annoying")))
-                };
-
-                Assert.Equal("return this.Name===\"James\"&&this.Comments.some(function(comment){return comment.indexOf(\"annoying\")>=0;});",
-                        subscriptionCreationParams.Criteria.Script);
-
-                var id = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
+                
+                var id = await store.Subscriptions.CreateAsync<SupportCall>(
+                    call => call.Name == "James" && call.Comments.Any(comment => comment.Contains("annoying"))
+                    );
 
                 using (
                     var subscription =
@@ -124,15 +120,10 @@ namespace FastTests.Client.Subscriptions
                     await session.SaveChangesAsync();
                 }
 
-                var subscriptionCreationParams = new SubscriptionCreationOptions<SupportCall>
-                {
-                    Criteria = new SubscriptionCriteria<SupportCall>(call => call.Name == "James" && call.Comments.All(comment => comment.Contains("nice")))
-                };
-
-                Assert.Equal("return this.Name===\"James\"&&this.Comments.every(function(comment){return comment.indexOf(\"nice\")>=0;});",
-                    subscriptionCreationParams.Criteria.Script);
-
-                var id = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
+                
+                
+                var id = await store.Subscriptions.CreateAsync<SupportCall>(
+                    call => call.Name == "James" && call.Comments.All(comment => comment.Contains("nice")));
 
                 using (
                     var subscription =
@@ -197,17 +188,12 @@ namespace FastTests.Client.Subscriptions
 
                     await session.SaveChangesAsync();
                 }
+                
 
-                var subscriptionCreationParams = new SubscriptionCreationOptions<SupportCall>
-                {
-                    //all of the SupportCalls where all of the comments that contain the word "nice" also contain the word "very"
-                    Criteria = new SubscriptionCriteria<SupportCall>(call => call.Comments.Where(comment => comment.Contains("nice")).All(comment => comment.Contains("very")))
-                };
-
-                Assert.Equal("return this.Comments.filter(function(comment){return comment.indexOf(\"nice\")>=0;}).every(function(comment){return comment.indexOf(\"very\")>=0;});",
-                    subscriptionCreationParams.Criteria.Script);
-
-                var id = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
+                
+                var id = await store.Subscriptions.CreateAsync<SupportCall>(
+                    call => call.Comments.Where(comment => comment.Contains("nice")).All(comment => comment.Contains("very"))
+                    );
 
                 using (
                     var subscription =
@@ -312,16 +298,9 @@ namespace FastTests.Client.Subscriptions
                     await session.SaveChangesAsync();
                 }
 
-                var subscriptionCreationParams = new SubscriptionCreationOptions<SupportCall>
-                {
-                    //all of the SupportCalls where there is a contact named "Grisha" or "Danielle"
-                    Criteria = new SubscriptionCriteria<SupportCall>(call => call.Contacts.Select(contact => contact.Name).Any(name => name == "Grisha" || name == "Danielle"))
-                };
-
-                Assert.Equal("return this.Contacts.map(function(contact){return contact.Name;}).some(function(name){return name===\"Grisha\"||name===\"Danielle\";});",
-                    subscriptionCreationParams.Criteria.Script);
-
-                var id = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
+                var id = await store.Subscriptions.CreateAsync<SupportCall>(
+                    call => call.Contacts.Select(contact => contact.Name).Any(name => name == "Grisha" || name == "Danielle")
+                    );
 
                 using (
                     var subscription =
@@ -397,20 +376,10 @@ namespace FastTests.Client.Subscriptions
                     await session.SaveChangesAsync();
                 }
 
-                var options = new SubscriptionCreationOptions<SupportCall>
-                {
-                    Criteria = new SubscriptionCriteria<SupportCall>(
-                        call =>
-                            call.Comments.Count > 12 &&
-                            call.Votes > 10 &&
-                            call.Survey == false
-                    )
-                };
-
-                Assert.Equal("return this.Comments.length>12&&this.Votes>10&&this.Survey===false;",
-                    options.Criteria.Script);
-
-                var id = await store.Subscriptions.CreateAsync(options);
+                var id = await store.Subscriptions.CreateAsync<SupportCall>(call =>
+                    call.Comments.Count > 12 &&
+                    call.Votes > 10 &&
+                    call.Survey == false);
 
                 using (
                     var subscription =
@@ -481,20 +450,11 @@ namespace FastTests.Client.Subscriptions
 
                     await session.SaveChangesAsync();
                 }
-
-                var options = new SubscriptionCreationOptions<SupportCall>
-                {
-                    Criteria = new SubscriptionCriteria<SupportCall>(
-                        call =>
-                            call.Comments.Count > 3 &&
-                            call.Person.Count < 20
-                    )
-                };
-
-                Assert.Equal("return this.Comments.length>3&&this.Person.Count<20;",
-                    options.Criteria.Script);
-
-                var id = await store.Subscriptions.CreateAsync(options);
+                var id = await store.Subscriptions.CreateAsync<SupportCall>(
+                    call =>
+                        call.Comments.Count > 3 &&
+                        call.Person.Count < 20
+                        );
 
                 using (
                     var subscription =
@@ -544,17 +504,10 @@ namespace FastTests.Client.Subscriptions
 
                     await session.SaveChangesAsync();
                 }
-
-                var options = new SubscriptionCreationOptions<SupportCall>
-                {
-                    Criteria = new SubscriptionCriteria<SupportCall>(
-                        call => call.Started > DateTime.Today)
-                };
-
-                Assert.Equal("return Date.parse(this.Started)>new Date().setHours(0,0,0,0);",
-                    options.Criteria.Script);
-
-                var id = await store.Subscriptions.CreateAsync(options);
+                
+                var id = await store.Subscriptions.CreateAsync<SupportCall>(
+                    call => call.Started > DateTime.Today
+                    );
 
                 using (
                     var subscription =
@@ -604,17 +557,11 @@ namespace FastTests.Client.Subscriptions
 
                     await session.SaveChangesAsync();
                 }
+                
 
-                var options = new SubscriptionCreationOptions<SupportCall>
-                {
-                    Criteria = new SubscriptionCriteria<SupportCall>(
-                        call => call.Started < DateTime.Now)
-                };
-
-                Assert.Equal("return Date.parse(this.Started)<Date.now();",
-                    options.Criteria.Script);
-
-                var id = await store.Subscriptions.CreateAsync(options);
+                var id = await store.Subscriptions.CreateAsync<SupportCall>(
+                    call => call.Started < DateTime.Now
+                    );
 
                 using (
                     var subscription =
@@ -665,17 +612,10 @@ namespace FastTests.Client.Subscriptions
 
                     await session.SaveChangesAsync();
                 }
-
-                var options = new SubscriptionCreationOptions<SupportCall>
-                {
-                    Criteria = new SubscriptionCriteria<SupportCall>(
-                        call => call.Started > DateTime.UtcNow)
-                };
-
-                Assert.Equal(@"return Date.parse(this.Started)>(function (date) { return new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), date.getUTCHours(), date.getUTCMinutes(), date.getUTCSeconds(), date.getUTCMilliseconds());})(new Date()).getTime();",
-                    options.Criteria.Script);
-
-                var id = await store.Subscriptions.CreateAsync(options);
+                
+                var id = await store.Subscriptions.CreateAsync<SupportCall>(
+                    call => call.Started > DateTime.UtcNow
+                    );
 
                 using (
                     var subscription =
@@ -725,17 +665,10 @@ namespace FastTests.Client.Subscriptions
 
                     await session.SaveChangesAsync();
                 }
-
-                var options = new SubscriptionCreationOptions<SupportCall>
-                {
-                    Criteria = new SubscriptionCriteria<SupportCall>(
-                        call => call.Started < new DateTime(1990 , 1 , 1))
-                };
-
-                Assert.Equal("return Date.parse(this.Started)<new Date(1990, 0, 1);",
-                    options.Criteria.Script);
-
-                var id = await store.Subscriptions.CreateAsync(options);
+                
+                var id = await store.Subscriptions.CreateAsync<SupportCall>(
+                    call => call.Started < new DateTime(1990, 1, 1)
+                    );
 
                 using (
                     var subscription =
@@ -794,17 +727,10 @@ namespace FastTests.Client.Subscriptions
 
                     await session.SaveChangesAsync();
                 }
-
-                var options = new SubscriptionCreationOptions<SupportCall>
-                {
-                    Criteria = new SubscriptionCriteria<SupportCall>(
-                        call => call.Person.DateOfBirth < new DateTime(1984, 1, 1))
-                };
-
-                Assert.Equal("return Date.parse(this.Person.DateOfBirth)<new Date(1984, 0, 1);",
-                    options.Criteria.Script);
-
-                var id = await store.Subscriptions.CreateAsync(options);
+                
+                var id = await store.Subscriptions.CreateAsync<SupportCall>(
+                    call => call.Person.DateOfBirth < new DateTime(1984, 1, 1)
+                    );
 
                 using (
                     var subscription =

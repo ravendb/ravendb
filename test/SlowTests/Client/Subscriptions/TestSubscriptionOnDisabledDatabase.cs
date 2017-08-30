@@ -23,7 +23,7 @@ namespace SlowTests.Client.Subscriptions
 
             using (var store = GetDocumentStore())
             {
-                store.Subscriptions.Create(new SubscriptionCreationOptions<User>()
+                store.Subscriptions.Create<User>(options: new SubscriptionCreationOptions()
                 {
                     Name = "Subs1"
                 });

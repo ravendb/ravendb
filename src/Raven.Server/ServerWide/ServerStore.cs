@@ -1304,7 +1304,7 @@ namespace Raven.Server.ServerWide
                 }
                 catch
                 {
-                    reachedLeader.Value = command.ReachedLeader;
+                    reachedLeader.Value = command.HasReachLeader();
                     throw;
                 }
 
@@ -1315,8 +1315,9 @@ namespace Raven.Server.ServerWide
         private class PutRaftCommand : RavenCommand<PutRaftCommandResult>
         {
             private readonly BlittableJsonReaderObject _command;
+            private bool _reachedLeader;
             public override bool IsReadRequest => false;
-            public bool ReachedLeader;
+            public bool HasReachLeader() => _reachedLeader;
             public PutRaftCommand(BlittableJsonReaderObject command)
             {
                 _command = command;
@@ -1324,7 +1325,7 @@ namespace Raven.Server.ServerWide
 
             public override void OnResponseFailure(HttpResponseMessage response)
             {
-                ReachedLeader = response.Headers.GetValues("Reached-Leader").Contains("true");
+                _reachedLeader = response.Headers.GetValues("Reached-Leader").Contains("true");
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)

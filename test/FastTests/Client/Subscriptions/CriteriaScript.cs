@@ -43,10 +43,7 @@ namespace FastTests.Client.Subscriptions
 
                     var subscriptionCreationParams = new SubscriptionCreationOptions()
                     {
-                        Criteria = new SubscriptionCriteria("Things")
-                        {
-                            Script = " return this.Name == 'ThingNo3'"
-                        },
+                        Query = "from Things where Name = 'ThingNo3'",
                         ChangeVector = lastChangeVector
                     };
                     var subsId = subscriptionManager.Create(subscriptionCreationParams);
@@ -98,21 +95,23 @@ namespace FastTests.Client.Subscriptions
 
                     var subscriptionCreationParams = new SubscriptionCreationOptions()
                     {
-                        Criteria = new SubscriptionCriteria("Things")
-                        {
-                            Script =
-                                @"var namSuffix = parseInt(this.Name.replace('ThingNo', ''));  
-                    if (namSuffix <= 2){
-                        return false;
-                    }
-                    else if (namSuffix == 3){
-                        return null;
-                    }
-                    else if (namSuffix == 4){
-                    return this;
-                    }
-                    return {Name: 'foo', OtherDoc:load('things/6-A')}",
-                        },
+                        Query = @"
+declare function project(d) {
+    var namSuffix = parseInt(d.Name.replace('ThingNo', ''));  
+    if (namSuffix <= 2){
+        return false;
+    }
+    else if (namSuffix == 3){
+        return null;
+    }
+    else if (namSuffix == 4){
+        return d;
+    }
+    return {Name: 'foo', OtherDoc:load('things/6-A')}
+}
+from Things as d
+select project(d)
+",
                         ChangeVector = lastChangeVector
                     };
 

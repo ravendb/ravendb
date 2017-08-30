@@ -17,13 +17,12 @@ namespace FastTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var subscriptionCreationParams = new SubscriptionCreationOptions<User>
+                var subscriptionCreationParams = new SubscriptionCreationOptions
                 {
                     Name = "get-users",
-                    Criteria = new SubscriptionCriteria<User>()
                 };
 
-                var subscriptionId = store.Subscriptions.Create(subscriptionCreationParams);
+                var subscriptionId = store.Subscriptions.Create<User>(options: subscriptionCreationParams);
 
                 var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions("get-users"));
 
@@ -57,11 +56,7 @@ namespace FastTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var subscriptionCreationParams = new SubscriptionCreationOptions<User>
-                {
-                    Criteria = new SubscriptionCriteria<User>()
-                };
-                var subscriptionId = store.Subscriptions.Create(subscriptionCreationParams);
+                var subscriptionId = store.Subscriptions.Create<User>();
 
                 var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
 
@@ -135,11 +130,8 @@ namespace FastTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var subscriptionCreationParams = new SubscriptionCreationOptions<User>
-                {
-                    Criteria = new SubscriptionCriteria<User>()
-                };
-                var subscriptionId = store.Subscriptions.Create(subscriptionCreationParams);
+                
+                var subscriptionId = store.Subscriptions.Create<User>();
                 var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
 
                 var beforeAckMre = new ManualResetEvent(false);
@@ -174,11 +166,7 @@ namespace FastTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var subscriptionCreationParams = new SubscriptionCreationOptions<User>
-                {
-                    Criteria = new SubscriptionCriteria<User>()
-                };
-                var subscriptionId = store.Subscriptions.Create(subscriptionCreationParams);
+                var subscriptionId = store.Subscriptions.Create<User>();
                 var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
                 var users = new BlockingCollection<User>();
                 var subscriptionLifetimeTask = subscription.Run(u =>
@@ -213,7 +201,7 @@ namespace FastTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var subscriptionId = store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
+                var subscriptionId = store.Subscriptions.Create<User>();
                 var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
 
                 var task = subscription.Run(_ => throw new InvalidCastException());
