@@ -375,7 +375,7 @@ namespace Raven.Server.Documents.Handlers
 
                 var doc = context.ReadForDiskAsync(RequestBodyStream(), id).ConfigureAwait(false);
 
-                if (id[id.Length - 1] == '/')
+                if (id[id.Length - 1] == '|')
                 {
                     var (_, clusterId) = await ServerStore.GenerateClusterIdentityAsync(id, Database.Name);
                     id = clusterId;
