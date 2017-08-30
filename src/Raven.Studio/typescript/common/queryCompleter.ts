@@ -21,11 +21,11 @@ interface autoCompleteLastKeyword {
 }
 
 interface queryCompleterProviders {
-    terms: (indexName: string, field: string, pageSize: number, callback: (terms: Array<string>) => void) => void;
-    indexFields: (indexName: string, callback: (fields: Array<string>) => void) => void;
+    terms: (indexName: string, field: string, pageSize: number, callback: (terms: string[]) => void) => void;
+    indexFields: (indexName: string, callback: (fields: string[]) => void) => void;
     collectionFields: (collectionName: string, prefix: string, callback: (fields: dictionary<string>) => void) => void;
-    collections: (callback: (collectionNames: Array<string>) => void) => void;
-    indexNames: (callback: (indexNames: Array<string>) => void) => void;
+    collections: (callback: (collectionNames: string[]) => void) => void;
+    indexNames: (callback: (indexNames: string[]) => void) => void;
 }
 
 class queryCompleter {
@@ -456,9 +456,6 @@ class queryCompleter {
         callback(null,  keywords.map(keyword  => {
             const word = <autoCompleteWordList>keyword;
             word.caption = _.trim(keyword.value, "'");
-            if (keyword.value.includes(" ")){
-                keyword.value = "'" + keyword.value + "'"; // wrap collection name in 'collection name' if it has spaces. Also used for other values.
-            }
             if (keyword.meta === "function"){
                 keyword.value += "(";
             } else {
@@ -468,32 +465,40 @@ class queryCompleter {
         }))
     }
 
+    private isLetterOrDigit(str: string) {
+        // TODO: Add support for more letters in other lanuagse.
+        return /^[0-9a-zA-Z_@]+$/.test(str)
+    }
+
     private completeEmpty(callback: (errors: any[], wordList: autoCompleteWordList[]) => void) {
-        this.providers.collections(collections => {
-            const keywords = [
-                {value: "from", score: 2, meta: "keyword"},
-                {value: "declare", score: 1, meta: "keyword"},
-                {value: "select", score: 0, meta: "keyword"}
-            ];
-            this.completeWords(callback, keywords);
-        });
+        const keywords = [
+            {value: "from", score: 2, meta: "keyword"},
+            {value: "declare", score: 1, meta: "keyword"},
+            {value: "select", score: 0, meta: "keyword"}
+        ];
+        this.completeWords(callback, keywords);
     }
 
     private completeFrom(callback: (errors: any[], wordList: autoCompleteWordList[]) => void) {
         this.providers.collections(collections => {
-           const wordList = collections.map(name => ({
-               value: name,
-               score: 2,
-               meta: "collection"
-           })); 
-           
-           wordList.push(
-               {value: "index", score: 4, meta: "keyword"},
-               {value: "@all_docs", score: 3, meta: "collection"},
-               {value: "@system", score: 1, meta: "collection"}
-           );
-           
-           this.completeWords(callback,  wordList);
+            const wordList = collections.map(name => {
+                if (!this.isLetterOrDigit(name)) {
+                    name = "'" + name + "'";     // wrap collection name in 'collection name' if it has spaces.
+                }
+                return {
+                    value: name,
+                    score: 2,
+                    meta: "collection"
+                };
+            });
+
+            wordList.push(
+                {value: "index", score: 4, meta: "keyword"},
+                {value: "@all_docs", score: 3, meta: "collection"},
+                {value: "@system", score: 1, meta: "collection"}
+            );
+
+            this.completeWords(callback, wordList);
         });
     }
 
@@ -503,19 +508,20 @@ class queryCompleter {
         }
 
         const keywords = [
-            {value: "load", score: 7, meta: "keyword"},
+            {value: "(", score: 8, meta: "collection filter"}, // TODO RavenDB-8357: Add snippet here '(${1:collection_filter}) '
             {value: "where", score: 6, meta: "keyword"},
-            {value: "order", score: 9, meta: "keyword"},
-            {value: "include", score: 10, meta: "keyword"},
+            {value: "load", score: 4, meta: "keyword"},
+            {value: "order", score: 2, meta: "keyword"},
+            {value: "include", score: 1, meta: "keyword"},
         ];
         if (!isStaticIndex) {
             keywords.push({value: "group", score: 5, meta: "keyword"})
         }
         if (!lastKeyword.keywordModifier) {
-            keywords.push({value: "as", score: 4, meta: "keyword"})
+            keywords.push({value: "as", score: 7, meta: "keyword"})
         }
         if (!lastKeyword.keywordsBefore.find(keyword => keyword === "select")) {
-            keywords.push({value: "select", score: 8, meta: "keyword"})
+            keywords.push({value: "select", score: 3, meta: "keyword"})
         }
 
         this.completeWords(callback, keywords);

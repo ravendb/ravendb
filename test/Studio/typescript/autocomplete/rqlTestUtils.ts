@@ -42,22 +42,60 @@ class rqlTestUtils {
             terms: (indexName, field, pageSize, callback) => callback([]),
             collections: callback => callback([]),
             indexFields: (indexName, callback) => callback([]),
-            collectionFields: (collectionName, callback) => callback([]),
+            collectionFields: (collectionName, prefix, callback) => callback({}),
             indexNames: callback => callback([])
         });
         
         return () => completer;
     }
 
-    static northWindProvider() { //TODO: fill with real data
+    static northwindProvider() {
         const completer = new queryCompleter({
             terms: (indexName, field, pageSize, callback) => callback([]),
             collections: callback => {
-                callback(["Categories", "Companies", "Employees", "Orders", "Products", "Regions", "Shippers", "Suppliers"]);
+                callback([
+                    "Regions", 
+                    "Suppliers", 
+                    "Employees", 
+                    "Categories", 
+                    "Products", 
+                    "Shippers", 
+                    "Companies", 
+                    "Orders", 
+                    "Collection With Space",
+                    "Collection!"
+                    //TODO: "Collection With ' And \" in name"
+                ]);
             },
             indexFields: (indexName, callback) => callback([]),
-            collectionFields: (collectionName, callback) => callback([]),
-            indexNames: callback => callback([])
+            collectionFields: (collectionName, prefix, callback) => {
+                switch (collectionName){
+                    case "Orders":
+                        callback({
+                            "Company": "String",
+                            "Employee": "String",
+                            "OrderedAt": "String",
+                            "RequireAt": "String",
+                            "ShippedAt": "String",
+                            "ShipTo": "Object",
+                            "ShipVia": "String",
+                            "Freight": "Number",
+                            "Lines": "ArrayObject",
+                            "@metadata": "Object"
+                        });
+                        break;
+                    default:
+                        callback({});
+                        break;
+                }
+                
+            },
+            indexNames: callback => callback([
+                "Orders/ByCompany", 
+                "Product/Sales", 
+                "Orders/Totals", 
+                // TODO: "Index With ' And \" in name"
+                ])
         });
 
         return () => completer;
