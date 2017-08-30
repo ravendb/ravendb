@@ -56,7 +56,6 @@
     <Folder Include="Core\AdminConsole" />
     <Folder Include="Server\Basic" />
     <Folder Include="Server\Documents\Notifications" />
-    <Folder Include="Server\Documents\Patching" />
     <Folder Include="Server\Documents\Revisions" />
   </ItemGroup>
 </Project>

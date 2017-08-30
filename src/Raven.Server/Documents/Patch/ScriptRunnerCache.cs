@@ -70,7 +70,7 @@ namespace Raven.Server.Documents.Patch
 
             // we were the one who added it, need to check that we are there
             var count = Interlocked.Increment(ref _numberOfCachedScripts);
-            if (count > 2048)// TODO: Maxim make this configurable
+            if (count > _database.Configuration.Patching.MaxNumberOfCachedScripts)
             {
                 bool taken = false;
                 try
@@ -96,7 +96,7 @@ namespace Raven.Server.Documents.Patch
         private int CleanTheCache()
         {
             foreach (var pair in Enumerable.OrderBy(_cache, x => x.Value.Value.Runs)
-                .Take(512)
+                .Take(_database.Configuration.Patching.MaxNumberOfCachedScripts / 4)
             )
             {
                 _cache.TryRemove(pair.Key, out _);
