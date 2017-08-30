@@ -153,6 +153,11 @@ namespace Raven.Client.Http
             if (changeVector != null)
                 request.Headers.TryAddWithoutValidation("If-Match", $"\"{changeVector}\"");
         }
+
+        public virtual void OnResponseFailure(HttpResponseMessage response)
+        {
+            
+        }
     }
 
     public enum RavenCommandResponseType

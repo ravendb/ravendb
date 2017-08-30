@@ -839,6 +839,7 @@ namespace Raven.Client.Http
                     await HandleConflict(context, response).ConfigureAwait(false);
                     break;
                 default:
+                    command.OnResponseFailure(response);
                     await ExceptionDispatcher.Throw(context, response, AdditionalErrorInformation).ConfigureAwait(false);
                     break;
             }

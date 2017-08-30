@@ -117,7 +117,7 @@ namespace Raven.Server.ServerWide
         }
 
         public RavenServer RavenServer => _ravenServer;
-        
+
 
         public DatabaseInfoCache DatabaseInfoCache { get; set; }
 
@@ -1119,7 +1119,7 @@ namespace Raven.Server.ServerWide
                 }
             }
         }
-        
+
         public bool IsLeader()
         {
             return _engine.CurrentState == RachisConsensus.State.Leader;
@@ -1154,7 +1154,7 @@ namespace Raven.Server.ServerWide
                     $"Expected to get result from raft command that should generate a cluster-wide identity, but didn't. Leader is {LeaderTag}, Current node tag is {NodeTag}.");
             }
 
-            return (etag, id.Substring(0, id.Length -1) + '/' + result);
+            return (etag, id.Substring(0, id.Length - 1) + '/' + result);
         }
 
         public License LoadLicense()
@@ -1212,6 +1212,7 @@ namespace Raven.Server.ServerWide
             //I think it is reasonable to expect timeout twice of error retry
             var timeoutTask = TimeoutManager.WaitFor(Engine.OperationTimeout, _shutdownNotification.Token);
 
+            Exception requestException = null;
             while (true)
             {
                 ServerShutdown.ThrowIfCancellationRequested();
@@ -1227,6 +1228,7 @@ namespace Raven.Server.ServerWide
 
                 var logChange = _engine.WaitForHeartbeat();
 
+                var reachedLeader = new Reference<bool>();
                 var cachedLeaderTag = _engine.LeaderTag; // not actually working
                 try
                 {
@@ -1234,25 +1236,29 @@ namespace Raven.Server.ServerWide
                     {
                         await Task.WhenAny(logChange, timeoutTask);
                         if (logChange.IsCompleted == false)
-                            ThrowTimeoutException(cmd);
+                            ThrowTimeoutException(cmd, requestException);
 
                         continue;
                     }
 
-                    return await SendToNodeAsync(cachedLeaderTag, cmd);
+                    return await SendToNodeAsync(cachedLeaderTag, cmd, reachedLeader);
                 }
                 catch (Exception ex)
                 {
                     if (Logger.IsInfoEnabled)
                         Logger.Info("Tried to send message to leader, retrying", ex);
 
-                    if (_engine.LeaderTag == cachedLeaderTag)
-                        throw; // if the leader changed, let's try again                    
+                    if (reachedLeader.Value)
+                        throw;
+
+                    requestException = ex;
                 }
 
                 await Task.WhenAny(logChange, timeoutTask);
                 if (logChange.IsCompleted == false)
-                    ThrowTimeoutException(cmd);
+                {
+                    ThrowTimeoutException(cmd, requestException);
+                }
             }
         }
 
@@ -1262,12 +1268,13 @@ namespace Raven.Server.ServerWide
                                             "Passive nodes aren't members of a cluster and require admin action (such as creating a db) to indicate that this node should create its own cluster");
         }
 
-        private void ThrowTimeoutException(CommandBase cmd)
+        private void ThrowTimeoutException(CommandBase cmd, Exception requestException)
         {
-            throw new TimeoutException($"Could not send command {cmd.GetType().FullName} from {NodeTag} to leader because there is no leader, and we timed out waiting for one after {Engine.OperationTimeout}");
+            throw new TimeoutException($"Could not send command {cmd.GetType().FullName} from {NodeTag} to leader because there is no leader, and we timed out waiting for one after {Engine.OperationTimeout}",
+                requestException);
         }
 
-        private async Task<(long Etag, object Result)> SendToNodeAsync(string engineLeaderTag, CommandBase cmd)
+        private async Task<(long Etag, object Result)> SendToNodeAsync(string engineLeaderTag, CommandBase cmd, Reference<bool> reachedLeader)
         {
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
@@ -1291,7 +1298,15 @@ namespace Raven.Server.ServerWide
                     _clusterRequestExecutor.DefaultTimeout = Engine.OperationTimeout;
                 }
 
-                await _clusterRequestExecutor.ExecuteAsync(command, context, ServerShutdown);
+                try
+                {
+                    await _clusterRequestExecutor.ExecuteAsync(command, context, ServerShutdown);
+                }
+                catch
+                {
+                    reachedLeader.Value = command.ReachedLeader;
+                    throw;
+                }
 
                 return (command.Result.RaftCommandIndex, command.Result.Data);
             }
@@ -1301,10 +1316,15 @@ namespace Raven.Server.ServerWide
         {
             private readonly BlittableJsonReaderObject _command;
             public override bool IsReadRequest => false;
-
+            public bool ReachedLeader;
             public PutRaftCommand(BlittableJsonReaderObject command)
             {
                 _command = command;
+            }
+
+            public override void OnResponseFailure(HttpResponseMessage response)
+            {
+                ReachedLeader = response.Headers.GetValues("Reached-Leader").Contains("true");
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)

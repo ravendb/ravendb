@@ -27,24 +27,36 @@ namespace Raven.Server.Documents.Handlers.Admin
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var commandJson = await context.ReadForMemoryAsync(RequestBodyStream(), "external/rachis/command");
-
-                var command = CommandBase.CreateFrom(commandJson);
-
-                var isClusterAdmin = IsClusterAdmin();
-
-                command.VerifyCanExecuteCommand(ServerStore, context, isClusterAdmin);
-
-                var (etag, result) = await ServerStore.Engine.PutAsync(command);
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                try
                 {
-                    context.Write(writer, new DynamicJsonValue
+                    var commandJson = await context.ReadForMemoryAsync(RequestBodyStream(), "external/rachis/command");
+
+                    var command = CommandBase.CreateFrom(commandJson);
+
+                    var isClusterAdmin = IsClusterAdmin();
+
+                    command.VerifyCanExecuteCommand(ServerStore, context, isClusterAdmin);
+
+                    var (etag, result) = await ServerStore.Engine.PutAsync(command);
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
-                        [nameof(ServerStore.PutRaftCommandResult.RaftCommandIndex)] = etag,
-                        [nameof(ServerStore.PutRaftCommandResult.Data)] = result
-                    });
-                    writer.Flush();
+                        context.Write(writer, new DynamicJsonValue
+                        {
+                            [nameof(ServerStore.PutRaftCommandResult.RaftCommandIndex)] = etag,
+                            [nameof(ServerStore.PutRaftCommandResult.Data)] = result
+                        });
+                        writer.Flush();
+                    }
+                }
+                catch (NotLeadingException) 
+                {
+                    throw;
+                }
+                catch (Exception)
+                {
+                    HttpContext.Response.Headers["Reached-Leader"] = "true";
+                    throw;
                 }
             }
         }

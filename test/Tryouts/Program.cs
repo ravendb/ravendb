@@ -8,6 +8,7 @@ using FastTests.Voron.Storage;
 using SlowTests.Cluster;
 using Raven.Server.Documents.Replication;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Session;
 using SlowTests.Client.Subscriptions;
 using SlowTests.Queries;
 using SlowTests.Server.Documents.ETL.Raven;
@@ -20,12 +21,14 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            for (int i = 0; i < 1000; i++)
+            using (var store = new DocumentStore())
             {
-                Console.WriteLine(i);
-                using (var test = new ReplicationTombstoneTests())
+                using(store.AggressivelyCache())
+                using (var session = store.OpenSession())
                 {
-                    test.CreateConflictAndResolveItWithTombstone().Wait();
+                    QueryStatistics stats;
+                    session.Query<FullTextSearchOnAutoIndex.User>()
+                        .Statistics(out stats);
                 }
             }
         }
