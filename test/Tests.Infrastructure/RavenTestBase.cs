@@ -271,11 +271,11 @@ namespace FastTests
 
         protected virtual void ModifyStore(DocumentStore store)
         {
-            // This gives too much error details in most cases, we don't need this now
-            //store.RequestExecutorCreated += (sender, executor) =>
-            //{
-            //    executor.AdditionalErrorInformation += sb => sb.AppendLine().Append(GetLastStatesFromAllServersOrderedByTime());
-            //};
+            //This gives too much error details in most cases, we don't need this now
+            store.RequestExecutorCreated += (sender, executor) =>
+            {
+                executor.AdditionalErrorInformation += sb => sb.AppendLine().Append(GetLastStatesFromAllServersOrderedByTime());
+            };
         }
 
         public static void WaitForIndexing(IDocumentStore store, string dbName = null, TimeSpan? timeout = null)

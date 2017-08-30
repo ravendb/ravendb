@@ -189,7 +189,6 @@ namespace FastTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                Server.ServerStore.Observer.Suspended = true;
                 var subscriptionId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions
                 {
                     Query = @"

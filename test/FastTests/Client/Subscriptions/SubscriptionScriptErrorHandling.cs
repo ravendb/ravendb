@@ -82,7 +82,6 @@ select project(d)
         {
             using (var store = GetDocumentStore())
             {
-                Server.ServerStore.Observer.Suspended = true;
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
                     var configuration = new RevisionsConfiguration
