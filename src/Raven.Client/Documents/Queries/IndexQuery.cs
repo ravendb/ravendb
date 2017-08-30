@@ -79,11 +79,6 @@ namespace Raven.Client.Documents.Queries
         public bool ShowTimings { get; set; }
 
         /// <summary>
-        /// Indicates if it's intersect query
-        /// </summary>
-        public bool IsIntersect { get; set; }
-
-        /// <summary>
         /// Gets the custom query string variables.
         /// </summary>
         /// <returns></returns>

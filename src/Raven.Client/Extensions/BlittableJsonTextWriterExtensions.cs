@@ -252,13 +252,6 @@ namespace Raven.Client.Extensions
                 writer.WriteComma();
             }
 
-            if (query.IsIntersect)
-            {
-                writer.WritePropertyName(nameof(query.IsIntersect));
-                writer.WriteBool(true);
-                writer.WriteComma();
-            }
-
             writer.WritePropertyName(nameof(query.QueryParameters));
             if (query.QueryParameters != null)
                 writer.WriteObject(EntityToBlittable.ConvertEntityToBlittable(query.QueryParameters, conventions, context));

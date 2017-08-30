@@ -53,6 +53,8 @@ namespace Raven.Server.Documents.Queries
 
         public readonly bool IsGroupBy;
 
+        public bool IsIntersect { get; private set; }
+
         public readonly string CollectionName;
 
         public readonly string IndexName;
@@ -799,6 +801,8 @@ namespace Raven.Server.Documents.Queries
                         Visit(firstArg, parameters);
                         break;
                     case MethodType.Intersect:
+                        _metadata.IsIntersect = true;
+                        goto case MethodType.Exact;
                     case MethodType.Exact:
                         for (var i = 0; i < arguments.Count; i++)
                         {

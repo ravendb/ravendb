@@ -934,8 +934,7 @@ If you really want to do in memory filtering on the data returned from the query
                 QueryParameters = QueryParameters,
                 DisableCaching = DisableCaching,
                 ShowTimings = ShowQueryTimings,
-                ExplainScores = ShouldExplainScores,
-                IsIntersect = IsIntersect
+                ExplainScores = ShouldExplainScores
             };
 
             if (PageSize != null)
