@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests.Voron.FixedSize;
 using Sparrow.Collections;
 using Xunit;
 
@@ -629,7 +630,9 @@ namespace FastTests.Sparrow
             Assert.Equal(2, dict.Keys.Distinct().Count());
         }
 
-        public void RandomTest(int i)
+        [Theory]
+        [InlineDataWithRandomSeed]
+        public void Random(int i)
         {
             var rng = new Random(i);
 
@@ -698,15 +701,6 @@ namespace FastTests.Sparrow
             Assert.Equal(0, fdict.Count);
             Assert.Equal(0, fdict.Keys.Count);
             Assert.Equal(0, fdict.Values.Count);
-        }
-
-        [Fact]
-        public void Random()
-        {
-            for (int i = 0; i < 1000; i++)
-            {
-                RandomTest(i);
-            }
         }
 
     }
