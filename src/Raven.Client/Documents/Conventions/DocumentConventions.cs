@@ -506,12 +506,12 @@ namespace Raven.Client.Documents.Conventions
                     {
                         Etag = -1,
                         MaxNumberOfRequestsPerSession = MaxNumberOfRequestsPerSession,
-                        PrettifyGeneratedLinqExpressions = PrettifyGeneratedLinqExpressions,
+                        PretifyGeneratedLinqExpressions = PrettifyGeneratedLinqExpressions,
                         ReadBalanceBehavior = ReadBalanceBehavior
                     };
 
                 MaxNumberOfRequestsPerSession = configuration.MaxNumberOfRequestsPerSession ?? _originalConfiguration.MaxNumberOfRequestsPerSession.Value;
-                PrettifyGeneratedLinqExpressions = configuration.PrettifyGeneratedLinqExpressions ?? _originalConfiguration.PrettifyGeneratedLinqExpressions.Value;
+                PrettifyGeneratedLinqExpressions = configuration.PretifyGeneratedLinqExpressions ?? _originalConfiguration.PretifyGeneratedLinqExpressions.Value;
                 ReadBalanceBehavior = configuration.ReadBalanceBehavior ?? _originalConfiguration.ReadBalanceBehavior.Value;
             }
         }

@@ -108,7 +108,7 @@ namespace Raven.Server.Documents.Patch
                 {
                     options.LimitRecursion(64)
                         .SetReferencesResolver(new NullPropgationReferenceResolver())
-                        .MaxStatements(1000) // TODO: Maxim make this configurable
+                        .MaxStatements(database.Configuration.Patching.MaxStepsForScript) 
                         .Strict();
                 });
                 ScriptEngine.SetValue("output", new ClrFunctionInstance(ScriptEngine, OutputDebug));

@@ -7,10 +7,18 @@ namespace Raven.Server.Config.Categories
     {
         /// <summary>
         /// The maximum number of steps iterations to give a script before timing out.
-        /// Default: 1,000
+        /// Default: 10000
         /// </summary>
-        [DefaultValue(1_000)]
+        [DefaultValue(10_000)]
         [ConfigurationEntry("Patching.MaxStepsForScript")]
         public int MaxStepsForScript { get; set; }
+
+        /// <summary>
+        /// The maximum number of javascript scripts to be cached
+        /// Default: 2048
+        /// </summary>
+        [DefaultValue(2048)]
+        [ConfigurationEntry("Patching.MaxCachedScripts")]
+        public int MaxNumberOfCachedScripts { get; set; }
     }
 }
