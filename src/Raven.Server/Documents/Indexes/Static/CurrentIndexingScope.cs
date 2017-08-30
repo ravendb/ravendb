@@ -99,15 +99,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 references.Add(keySlice);
 
-                Document document = null;
-                try
-                {
-                    document = _documentsStorage.Get(_documentsContext, keySlice);
-                }
-                catch (DocumentConflictException)
-                {
-                    // when there is conflict, we need to apply same behavior as if the document would not exist
-                }
+                // when there is conflict, we need to apply same behavior as if the document would not exist
+                var document = _documentsStorage.Get(_documentsContext, keySlice, throwOnConflict: false);
 
                 if (document == null)
                 {
@@ -121,7 +114,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 return new DynamicBlittableJson(document);
             }
         }
-        
+
         public SpatialField GetOrCreateSpatialField(string name)
         {
             return _getSpatialField(name);

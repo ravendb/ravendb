@@ -259,7 +259,7 @@ namespace Raven.Server.Documents.Revisions
                         TableValueReader tvr;
                         try
                         {
-                            hasDoc = _documentsStorage.GetTableValueReaderForDocument(context, lowerId, out tvr);
+                            hasDoc = _documentsStorage.GetTableValueReaderForDocument(context, lowerId, throwOnConflict: true, tvr: out tvr);
                         }
                         catch (DocumentConflictException)
                         {
@@ -551,7 +551,7 @@ namespace Raven.Server.Documents.Revisions
                     TableValueReader tvr;
                     try
                     {
-                        var hasDoc = _documentsStorage.GetTableValueReaderForDocument(context, lowerId, out tvr);
+                        var hasDoc = _documentsStorage.GetTableValueReaderForDocument(context, lowerId, throwOnConflict: true, tvr: out tvr);
                         if (hasDoc == false)
                             return;
                     }
