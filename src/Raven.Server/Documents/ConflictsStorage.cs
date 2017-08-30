@@ -30,7 +30,7 @@ namespace Raven.Server.Documents
         public static readonly Slice AllConflictedDocsEtagsSlice;
         private static readonly Slice ConflictedCollectionSlice;
         public static readonly Slice ConflictsSlice;
-        private static readonly Slice IdSlice;
+        private static readonly Slice ConflictsIdSlice;
 
         public static readonly TableSchema ConflictsSchema = new TableSchema();
 
@@ -56,7 +56,7 @@ namespace Raven.Server.Documents
         static ConflictsStorage()
         {
             Slice.From(StorageEnvironment.LabelsContext, "ChangeVector", ByteStringType.Immutable, out ChangeVectorSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "Id", ByteStringType.Immutable, out IdSlice);
+            Slice.From(StorageEnvironment.LabelsContext, "ConflictsId", ByteStringType.Immutable, out ConflictsIdSlice);
             Slice.From(StorageEnvironment.LabelsContext, "IdAndChangeVector", ByteStringType.Immutable, out IdAndChangeVectorSlice);
             Slice.From(StorageEnvironment.LabelsContext, "AllConflictedDocsEtags", ByteStringType.Immutable, out AllConflictedDocsEtagsSlice);
             Slice.From(StorageEnvironment.LabelsContext, "ConflictedCollection", ByteStringType.Immutable, out ConflictedCollectionSlice);
@@ -94,7 +94,7 @@ namespace Raven.Server.Documents
                 StartIndex = (int)ConflictsTable.LowerId,
                 Count = 1,
                 IsGlobal = true,
-                Name = IdSlice
+                Name = ConflictsIdSlice
             });
             ConflictsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
             {
@@ -796,7 +796,7 @@ namespace Raven.Server.Documents
                 return 0;
 
             var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
-            return conflictsTable.GetTree(ConflictsSchema.Indexes[IdSlice]).State.NumberOfEntries;
+            return conflictsTable.GetTree(ConflictsSchema.Indexes[ConflictsIdSlice]).State.NumberOfEntries;
         }
     }
 }
