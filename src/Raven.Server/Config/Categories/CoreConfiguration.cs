@@ -52,6 +52,27 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("ThrowIfAnyIndexCannotBeOpened")]
         public bool ThrowIfAnyIndexCannotBeOpened { get; set; }
 
+        [Description("Disable Kestrel's minimum required data rate with grace time enforcement. If set to true this option overrides both MinDataRateBytesPerSecond and MinDataRateGracePeriod settings")]
+        [DefaultValue(false)]
+        [ConfigurationEntry("MinDataRateDisable")]
+        public bool MinDataRateDisable { get; set; }
+
+        [Description("Set Kestrel's minimum required data rate in bytes per second. This option should configured together with MinDataRateGracePeriod. If MinDataRateDisable set to true - this option will be ignored")]
+        [DefaultValue(0)]
+        [ConfigurationEntry("MinDataRateBytesPerSecond")]
+        public int MinDataRateBytesPerSecond { get; set; }
+
+        [Description("Set Kestrel's allowed request and reponse grace in second. This option should configured together with MinDataRateBytesPerSecond. If MinDataRateDisable set to true - this option will be ignored")]
+        [DefaultValue(0)]
+        [ConfigurationEntry("MinDataRateGracePeriod")]
+        public int MinDataRateGracePeriod { get; set; }
+
+        [Description("Set Kestrel's MaxRequestBufferSize. Value is in KB. If set to 0 - then Kestrel's defaults are applied (1MB)")]
+        [DefaultValue(0)]
+        [ConfigurationEntry("MaxRequestBufferSizeInKb")]
+        public int MaxRequestBufferSizeInKb { get; set; }
+
+
         public override void Initialize(IConfigurationRoot settings, IConfigurationRoot serverWideSettings, ResourceType type, string resourceName)
         {
             base.Initialize(settings, serverWideSettings, type, resourceName);
