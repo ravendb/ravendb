@@ -249,8 +249,22 @@
             bottom: 0;
             left: 0;
             right: 0;
+            display: flex;
+            flex-direction: column;
+            padding-bottom: @grid-gutter-width;
 
             & > li {
+
+                &.separator {
+                    flex-grow: 1;
+                    position: relative;
+
+                    h3 {
+                        position: absolute;
+                        bottom: 0;
+                    }
+                }
+
                 & > a {
                     padding: 15px 10px;
 
