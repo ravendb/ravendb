@@ -10,12 +10,12 @@ using Voron.Data.Tables;
 
 namespace Raven.Server.ServerWide.Commands.Subscriptions
 {
-    public class DeleteSubscriptionCommand:UpdateValueForDatabaseCommand
+    public class DeleteSubscriptionCommand : UpdateValueForDatabaseCommand
     {
         public string SubscriptionName;
 
         // for serialization
-        private DeleteSubscriptionCommand():base(null){}
+        private DeleteSubscriptionCommand() : base(null) { }
 
         public DeleteSubscriptionCommand(string databaseName, string subscriptionName) : base(databaseName)
         {
@@ -30,8 +30,14 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             throw new NotImplementedException();
         }
 
-        public override unsafe void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, bool isPassive)
+        protected override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue, bool isPassive)
         {
+            throw new NotImplementedException();
+        }
+
+        public override unsafe void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, bool isPassive, out object result)
+        {
+            result = null;
             var itemKey = SubscriptionState.GenerateSubscriptionItemKeyName(DatabaseName, SubscriptionName);
             using (Slice.From(context.Allocator, itemKey.ToLowerInvariant(), out Slice valueNameLowered))
             {
@@ -44,9 +50,9 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 var doc = new BlittableJsonReaderObject(ptr, size, context);
 
                 var subscriptionState = JsonDeserializationClient.SubscriptionState(doc);
-                
+
                 items.DeleteByKey(valueNameLowered);
-                
+
                 if (string.IsNullOrEmpty(subscriptionState.SubscriptionName) == false)
                 {
                     itemKey = SubscriptionState.GenerateSubscriptionItemKeyName(DatabaseName, subscriptionState.SubscriptionName);

@@ -6,7 +6,6 @@ using Raven.Client.ServerWide.ETL;
 using Raven.Client.ServerWide.Expiration;
 using Raven.Client.ServerWide.PeriodicBackup;
 using Raven.Client.ServerWide.Revisions;
-using Raven.Server.Commercial;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.ConnectionStrings;
@@ -24,8 +23,6 @@ namespace Raven.Server.ServerWide
 
         public static readonly Func<BlittableJsonReaderObject, IncrementClusterIdentityCommand> IncrementClusterIdentityCommand = GenerateJsonDeserializationRoutine<IncrementClusterIdentityCommand>();
 
-        public static readonly Func<BlittableJsonReaderObject, Dictionary<string, long>> Identities = GenerateJsonDeserializationRoutine<Dictionary<string, long>>();
-
         public static readonly Func<BlittableJsonReaderObject, SubscriptionState> SubscriptionState = GenerateJsonDeserializationRoutine<SubscriptionState>();
 
         public static readonly Func<BlittableJsonReaderObject, DeleteValueCommand> DeleteValueCommand = GenerateJsonDeserializationRoutine<DeleteValueCommand>();
@@ -41,7 +38,6 @@ namespace Raven.Server.ServerWide
         public static readonly Func<BlittableJsonReaderObject, ExpirationConfiguration> ExpirationConfiguration = GenerateJsonDeserializationRoutine<ExpirationConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, PeriodicBackupConfiguration> PeriodicBackupConfiguration = GenerateJsonDeserializationRoutine<PeriodicBackupConfiguration>();
-
 
         public static readonly Func<BlittableJsonReaderObject, RestoreBackupConfiguration> RestoreBackupConfiguration = GenerateJsonDeserializationRoutine<RestoreBackupConfiguration>();
 
@@ -62,7 +58,7 @@ namespace Raven.Server.ServerWide
         public static Dictionary<string, Func<BlittableJsonReaderObject, CommandBase>> Commands = new Dictionary<string, Func<BlittableJsonReaderObject, CommandBase>>
         {
             [nameof(CompareExchangeCommand)] = GenerateJsonDeserializationRoutine<CompareExchangeCommand>(),
-     		[nameof(DeleteCertificateFromClusterCommand)] = GenerateJsonDeserializationRoutine<DeleteCertificateFromClusterCommand>(),
+            [nameof(DeleteCertificateFromClusterCommand)] = GenerateJsonDeserializationRoutine<DeleteCertificateFromClusterCommand>(),
             [nameof(EditRevisionsConfigurationCommand)] = GenerateJsonDeserializationRoutine<EditRevisionsConfigurationCommand>(),
             [nameof(EditExpirationCommand)] = GenerateJsonDeserializationRoutine<EditExpirationCommand>(),
             [nameof(DeleteDatabaseCommand)] = GenerateJsonDeserializationRoutine<DeleteDatabaseCommand>(),

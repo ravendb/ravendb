@@ -1142,10 +1142,7 @@ namespace Raven.Server.ServerWide
 
         public async Task<(long ClusterEtag, string ClusterId)> GenerateClusterIdentityAsync(string id, string databaseName)
         {
-            var (etag, result) = await SendToLeaderAsync(new IncrementClusterIdentityCommand(databaseName)
-            {
-                Prefix = id.ToLower()
-            });
+            var (etag, result) = await SendToLeaderAsync(new IncrementClusterIdentityCommand(databaseName, id.ToLower()));
 
             if (result == null)
             {
