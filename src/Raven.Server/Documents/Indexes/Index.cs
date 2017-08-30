@@ -1723,7 +1723,7 @@ namespace Raven.Server.Documents.Indexes
 
                             var retriever = GetQueryResultRetriever(query, documentsContext, fieldsToFetch, includeDocumentsCommand);
 
-                            if (query.IsIntersect == false)
+                            if (query.Metadata.IsIntersect == false)
                             {
                                 documents = reader.Query(query, fieldsToFetch, totalResults, skippedResults,
                                     retriever, documentsContext, GetOrAddSpatialField, token.Token);
