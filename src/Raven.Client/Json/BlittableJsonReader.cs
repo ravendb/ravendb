@@ -62,7 +62,7 @@ namespace Raven.Client.Json
                 }
                 if (current.Object.Modifications != null && current.Object.Modifications.Properties.Count > 0)
                 {
-                    Tuple<string, object> property;
+                    (string Name, object Value) property;
                     if (CurrentState != State.Property)
                     {
                         property = current.Object.Modifications.Properties.Peek();

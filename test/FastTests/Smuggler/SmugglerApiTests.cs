@@ -172,7 +172,7 @@ namespace FastTests.Smuggler
                         var person1 = new Person { Name = "Name1" };
                         await session.StoreAsync(person1).ConfigureAwait(false);
                         var metadata = session.Advanced.GetMetadataFor(person1);
-                        metadata[Constants.Documents.Expiration.ExpirationDate] = database.Time.GetUtcNow().AddSeconds(10).ToString(Default.DateTimeOffsetFormatsToWrite);
+                        metadata[Constants.Documents.Metadata.Expires] = database.Time.GetUtcNow().AddSeconds(10).ToString(Default.DateTimeOffsetFormatsToWrite);
 
                         await session.SaveChangesAsync().ConfigureAwait(false);
                     }
