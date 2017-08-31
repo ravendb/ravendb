@@ -512,6 +512,12 @@ namespace Raven.Server.Web.System
                 }
 
                 var watcher = JsonDeserializationClient.ExternalReplication(watcherBlittable);
+                if (ServerStore.LicenseManager.CanAddExternalReplication(watcher, out var licenseLimit) == false)
+                {
+                    SetLicenseLimitResponse(licenseLimit);
+                    return;
+                }
+
                 var (index, _) = await ServerStore.UpdateExternalReplication(Database.Name, watcher);
                 await Database.RachisLogIndexNotifications.WaitForIndexNotification(index);
                 string responsibleNode;

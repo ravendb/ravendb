@@ -3,7 +3,6 @@
 import clusterTopology = require("models/database/cluster/clusterTopology");
 import getClusterTopologyCommand = require("commands/database/cluster/getClusterTopologyCommand");
 import changesContext = require("common/changesContext");
-import topology = require("../../viewmodels/manage/topology");
 
 class clusterTopologyManager {
 

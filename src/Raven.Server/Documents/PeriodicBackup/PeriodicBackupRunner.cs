@@ -185,7 +185,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (var tx = context.OpenReadTransaction())
                 {
-                    var backupToLocalFolder = CanBackupUsing(configuration.LocalSettings);
+                    var backupToLocalFolder = PeriodicBackupConfiguration.CanBackupUsing(configuration.LocalSettings);
                     var now = SystemTime.UtcNow.ToString(DateTimeFormat, CultureInfo.InvariantCulture);
 
                     if (status.LocalBackup == null)
@@ -539,7 +539,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             where S : BackupSettings
             where T : CloudUploadStatus
         {
-            if (CanBackupUsing(settings) == false)
+            if (PeriodicBackupConfiguration.CanBackupUsing(settings) == false)
                 return;
 
             if (uploadStatus == null)
@@ -576,13 +576,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                     }
                 }
             }));
-        }
-
-        private static bool CanBackupUsing(BackupSettings settings)
-        {
-            return settings != null &&
-                   settings.Disabled == false &&
-                   settings.HasSettings();
         }
 
         private async Task UploadToS3(
@@ -1003,11 +996,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             if (configuration.Disabled)
                 return TaskStatus.Disabled;
 
-            if (CanBackupUsing(configuration.LocalSettings) == false &&
-                CanBackupUsing(configuration.S3Settings) == false &&
-                CanBackupUsing(configuration.GlacierSettings) == false &&
-                CanBackupUsing(configuration.AzureSettings) == false &&
-                CanBackupUsing(configuration.FtpSettings) == false)
+            if (configuration.HasBackup() == false)
             {
                 if (skipErrorLog == false)
                 {

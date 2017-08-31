@@ -291,6 +291,9 @@ namespace Raven.Server.ServerWide.Maintenance
                         continue;
                     }
 
+                    if (_server.LicenseManager.CanDynamicallyDistributeNodes() == false)
+                        continue;
+
                     if (TryFindFitNode(promotable, dbName, topology, clusterTopology, current, out var node) == false)
                     {
                         if (topology.PromotablesStatus.TryGetValue(promotable, out var currentStatus) == false
@@ -344,14 +347,17 @@ namespace Raven.Server.ServerWide.Maintenance
                 switch (health)
                 {
                     case DatabaseHealth.Bad:
-                        if(topology.DynamicNodesDistribution == false)
+                        if (topology.DynamicNodesDistribution == false)
+                            continue;
+
+                        if (_server.LicenseManager.CanDynamicallyDistributeNodes() == false)
                             continue;
 
                         if (goodMembers < topology.ReplicationFactor &&
                             TryFindFitNode(rehab, dbName, topology, clusterTopology, current, out var node))
                         {
                             topology.Promotables.Add(node);
-                            topology.DemotionReasons[node] = $"Maintaine the replication factor and create new rplica instead of node {rehab}";
+                            topology.DemotionReasons[node] = $"Maintain the replication factor and create new replica instead of node {rehab}";
                             topology.PromotablesStatus[node] = DatabasePromotionStatus.WaitingForFirstPromotion;
                             return $"The rehab node {rehab} was too long in rehabilitation, create node {node} to replace it";
                         }

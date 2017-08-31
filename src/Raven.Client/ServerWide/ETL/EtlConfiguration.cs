@@ -101,5 +101,16 @@ namespace Raven.Client.ServerWide.ETL
 
             return result;
         }
+
+        public static EtlType GetEtlType(BlittableJsonReaderObject etlConfiguration)
+        {
+            if (etlConfiguration.TryGet(nameof(EtlConfiguration<ConnectionString>.EtlType), out string type) == false)
+                throw new InvalidOperationException($"ETL configuration must have {nameof(EtlConfiguration<ConnectionString>.EtlType)} field");
+
+            if (Enum.TryParse<EtlType>(type, true, out var etlType) == false)
+                throw new NotSupportedException($"Unknown ETL type: {etlType}");
+
+            return etlType;
+        }
     }
 }

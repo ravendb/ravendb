@@ -8,12 +8,14 @@ class clusterNode {
     serverUrl = ko.observable<string>();
     type = ko.observable<clusterNodeType>();
     connected = ko.observable<boolean>();
+    assignedCores = ko.observable<number>();
+    totalCores = ko.observable<number>();
     errorDetails = ko.observable<string>();
     errorDetailsShort = ko.pureComputed(() => {
         const longError = this.errorDetails();
         return generalUtils.trimMessage(longError);
     });
-
+    
     cssIcon = ko.pureComputed(() => {
         const type = this.type();
         switch (type) {
@@ -30,6 +32,7 @@ class clusterNode {
         this.tag(incoming.tag());
         this.type(incoming.type());
         this.connected(incoming.connected());
+        this.assignedCores(incoming.assignedCores());
         this.errorDetails(incoming.errorDetails());
     }
 

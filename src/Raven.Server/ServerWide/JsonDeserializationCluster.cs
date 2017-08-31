@@ -77,6 +77,7 @@ namespace Raven.Server.ServerWide
             [nameof(AddDatabaseCommand)] = GenerateJsonDeserializationRoutine<AddDatabaseCommand>(),
             [nameof(DeleteValueCommand)] = GenerateJsonDeserializationRoutine<DeleteValueCommand>(),
             [nameof(PutLicenseCommand)] = GenerateJsonDeserializationRoutine<PutLicenseCommand>(),
+            [nameof(PutLicenseLimitsCommand)] = GenerateJsonDeserializationRoutine<PutLicenseLimitsCommand>(),
             [nameof(DeactivateLicenseCommand)] = GenerateJsonDeserializationRoutine<DeactivateLicenseCommand>(),
             [nameof(DeleteCertificateFromClusterCommand)] = GenerateJsonDeserializationRoutine<DeleteCertificateFromClusterCommand>(),
             [nameof(PutCertificateCommand)] = GenerateJsonDeserializationRoutine<PutCertificateCommand>(),

@@ -9,12 +9,14 @@ using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
+using Raven.Server.Utils;
 using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -191,6 +193,9 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
+                    var loadLicenseLimits = ServerStore.LoadLicenseLimits();
+                    var assingedCoresByNode = loadLicenseLimits == null ? 
+                        null : TypeConverter.ToBlittableSupportedType(loadLicenseLimits.CoresByNode);
                     var json = new DynamicJsonValue
                     {
                         ["Topology"] = topology.ToSortedJson(),
@@ -198,6 +203,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         ["CurrentState"] = ServerStore.CurrentState,
                         ["NodeTag"] = nodeTag,
                         ["CurrentTerm"] = ServerStore.Engine.CurrentTerm,
+                        ["AssignedCoresByNode"] = assingedCoresByNode,
                         [nameof(ServerStore.Engine.LastStateChangeReason)] = ServerStore.LastStateChangeReason()
                     };
                     var clusterErrors = ServerStore.GetClusterErrors();
@@ -257,12 +263,23 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             var nodeUrl = GetStringQueryString("url").TrimEnd('/');
             var watcher = GetBoolValueQueryString("watcher", false);
+            var assignedCores = GetIntValueQueryString("assignedCores", false);
+            if (assignedCores <= 0)
+                throw new ArgumentException("Assigned cores must be greater than 0!");
+
+            ServerStore.LicenseManager.VerifyNewAssignedCoresValue(assignedCores);
 
             var remoteIsHttps = nodeUrl.StartsWith("https:", StringComparison.OrdinalIgnoreCase);
 
             if (HttpContext.Request.IsHttps != remoteIsHttps)
             {
                 throw new InvalidOperationException($"Cannot add node '{nodeUrl}' to cluster because it will create invalid mix of HTTPS & HTTP endpoints. A cluster must be only HTTPS or only HTTP.");
+            }
+
+            if (ServerStore.LicenseManager.CanAddNode(nodeUrl, out var licenseLimit) == false)
+            {
+                SetLicenseLimitResponse(licenseLimit);
+                return;
             }
 
             NodeInfo nodeInfo;
@@ -346,6 +363,15 @@ namespace Raven.Server.Documents.Handlers.Admin
                     }
                         
                     await ServerStore.AddNodeToClusterAsync(nodeUrl, nodeTag, validateNotInTopology:false, asWatcher:watcher?? false);
+
+                    using (ctx.OpenReadTransaction())
+                    {
+                        var clusterTopology = ServerStore.GetClusterTopology(ctx);
+                        var possibleNode = clusterTopology.TryGetNodeTagByUrl(nodeUrl);
+                        nodeTag = possibleNode.HasUrl ? possibleNode.NodeTag : null;
+                        await ServerStore.LicenseManager.RecalculateLicenseLimitsIfNeeded(nodeTag, assignedCores);
+                    }
+
                     NoContentStatus();
                     return;
                 }
@@ -363,6 +389,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             if (ServerStore.IsLeader())
             {
                 await ServerStore.RemoveFromClusterAsync(nodeTag);
+                await ServerStore.LicenseManager.RecalculateLicenseLimitsIfNeeded();
                 NoContentStatus();
                 return;
             }
@@ -473,7 +500,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
         private void RedirectToLeader()
         {
-            if(ServerStore.LeaderTag == null)
+            if (ServerStore.LeaderTag == null)
                 throw new NoLeaderException();
 
             ClusterTopology topology;

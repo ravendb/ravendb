@@ -2,18 +2,16 @@ namespace Raven.Server.Commercial
 {
     public enum LicenseType
     {
-        None,
+        Invalid = -1,
 
-        Trial,
+        None = 0,
 
-        Standard,
+        Free = 1,
 
-        Personal,
+        Trial = 2,
 
-        Floating,
+        Professional = 3,
 
-        Subscription, 
-
-        Free
+        Enterprise = 4
     }
 }
