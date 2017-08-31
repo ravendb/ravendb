@@ -51,8 +51,7 @@ class ongoingTaskSubscriptionModel extends ongoingTask {
             const emptyNodeId: Raven.Client.ServerWide.Operations.NodeId = { NodeTag: "", NodeUrl: "", ResponsibleNode: "" };
             
             const dtoListModel: Raven.Client.ServerWide.Operations.OngoingTaskSubscription = {
-               // Collection: dtoEditModel.Criteria.Collection,
-                Query: dto.Query,
+                Collection: dtoEditModel.Criteria.Collection,
                 ResponsibleNode: emptyNodeId,
                 TaskConnectionStatus: 'Active', // todo: this has to be reviewed...
                 TaskId: dtoEditModel.SubscriptionId,
@@ -62,7 +61,7 @@ class ongoingTaskSubscriptionModel extends ongoingTask {
             };
 
             super.update(dtoListModel);
-        //    this.collection(dtoListModel.Collection);
+            this.collection(dtoListModel.Collection);
         }
         // 2. List View flow
         else {
@@ -93,7 +92,7 @@ class ongoingTaskSubscriptionModel extends ongoingTask {
             .execute()
             .done((result: Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails) => {
 
-                //this.collection(result.Criteria.Collection);
+                this.collection(result.Criteria.Collection);
                 this.responsibleNode(result.ResponsibleNode);
                 this.taskState(result.Disabled ? 'Disabled' : 'Enabled');
                 this.lastTimeServerMadeProgressWithDocumnets(result.LastTimeServerMadeProgressWithDocuments);

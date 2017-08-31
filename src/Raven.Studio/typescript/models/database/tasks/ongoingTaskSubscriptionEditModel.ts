@@ -30,7 +30,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
     constructor(dto: Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails, isEdit: boolean) {        super(dto);
 
         this.isEdit = isEdit;
-        //dto.Criteria.Script = dto.Criteria.Script || ""; 
+        dto.Criteria.Script = dto.Criteria.Script || ""; 
         this.editViewUpdate(dto);
         this.editViewInitializeObservables(); 
         this.editViewInitValidation();
@@ -54,8 +54,8 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
     }
 
     editViewUpdate(dto: Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails) {
-        //this.script(dto.Criteria.Script);
-        //this.includeRevisions(dto.Criteria.IncludeRevisions);
+        this.script(dto.Criteria.Script);
+        this.includeRevisions(dto.Criteria.IncludeRevisions);
         this.changeVectorForNextBatchStartingPoint(dto.ChangeVectorForNextBatchStartingPoint);
         this.setStartingPoint(false);
     }
@@ -185,12 +185,11 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
         return new ongoingTaskSubscriptionEditModel(
             {
                 Disabled: false,
-                Query: '',
-                //Criteria: {
-                //     Collection: null,
-                //     Script: "",
-                //     IncludeRevisions: false
-                //},
+                Criteria: {
+                     Collection: null,
+                     Script: "",
+                     IncludeRevisions: false
+                },
                 ChangeVectorForNextBatchStartingPoint: null,
                 SubscriptionId: 0,
                 SubscriptionName: null,
