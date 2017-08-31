@@ -62,12 +62,14 @@ namespace Raven.Server.ServerWide
         private static readonly Slice EtagIndexName;
         private static readonly Slice Items;
         private static readonly Slice CmpXchg;
+        public static readonly Slice Identities;
 
         static ClusterStateMachine()
         {
             Slice.From(StorageEnvironment.LabelsContext, "Items", out Items);
             Slice.From(StorageEnvironment.LabelsContext, "CmpXchg", out CmpXchg);
             Slice.From(StorageEnvironment.LabelsContext, "EtagIndexName", out EtagIndexName);
+            Slice.From(StorageEnvironment.LabelsContext, "Identities", out Identities);
 
             ItemsSchema = new TableSchema();
 
@@ -353,13 +355,15 @@ namespace Raven.Server.ServerWide
             NotifyDatabaseChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand));
         }
 
-        private static void CleanupDatabaseRelatedValues(TransactionOperationContext context, Table items, string dbNameLowered)
+        private void CleanupDatabaseRelatedValues(TransactionOperationContext context, Table items, string databaseName)
         {
-            var dbValuesPrefix = Helpers.ClusterStateMachineValuesPrefix(dbNameLowered).ToLowerInvariant();
-            using (Slice.From(context.Allocator, dbValuesPrefix, out Slice loweredKey))
+            var dbValuesPrefix = Helpers.ClusterStateMachineValuesPrefix(databaseName).ToLowerInvariant();
+            using (Slice.From(context.Allocator, dbValuesPrefix, out var loweredKey))
             {
                 items.DeleteByPrimaryKeyPrefix(loweredKey);
             }
+
+            DeleteIdentities(context, databaseName);
         }
 
         internal static unsafe void UpdateValue(long index, Table items, Slice lowerKey, Slice key, BlittableJsonReaderObject updated)
@@ -635,7 +639,9 @@ namespace Raven.Server.ServerWide
 
         public override bool ShouldSnapshot(Slice slice, RootObjectType type)
         {
-            return slice.Content.Match(Items.Content) || slice.Content.Match(CmpXchg.Content);
+            return slice.Content.Match(Items.Content)
+                   || slice.Content.Match(CmpXchg.Content)
+                   || slice.Content.Match(Identities.Content);
         }
 
         public override void Initialize(RachisConsensus parent, TransactionOperationContext context)
@@ -644,6 +650,7 @@ namespace Raven.Server.ServerWide
             ItemsSchema.Create(context.Transaction.InnerTransaction, Items, 32);
             CmpXchgItemsSchema.Create(context.Transaction.InnerTransaction, CmpXchg, 32);
             context.Transaction.InnerTransaction.CreateTree(LocalNodeStateTreeName);
+            context.Transaction.InnerTransaction.CreateTree(Identities);
         }
 
         public unsafe void PutLocalState(TransactionOperationContext context, string key, BlittableJsonReaderObject value)
@@ -848,19 +855,72 @@ namespace Raven.Server.ServerWide
             return JsonDeserializationCluster.DatabaseRecord(doc);
         }
 
-        public Dictionary<string, long> ReadIdentities<T>(TransactionOperationContext<T> context, string name, out long etag)
+        public IEnumerable<(string Prefix, long Value)> ReadIdentities<T>(TransactionOperationContext<T> context, string databaseName, int start, int take)
             where T : RavenTransaction
         {
-            var identities = new Dictionary<string, long>();
+            var identities = context.Transaction.InnerTransaction.ReadTree(Identities);
 
-            var identitiesJson = Read(context, Constants.Documents.IdentitiesPrefix + name.ToLowerInvariant(), out etag);
-            if (identitiesJson != null)
+            var prefixString = IncrementClusterIdentityCommand.GetStorageKey(databaseName, null);
+            using (Slice.From(context.Allocator, prefixString, out var prefix))
             {
-                foreach (var propertyName in identitiesJson.GetPropertyNames())
-                    identities[propertyName] = (long)identitiesJson[propertyName];
-            }
+                using (var it = identities.Iterate(prefetch: false))
+                {
+                    it.SetRequiredPrefix(prefix);
 
-            return identities;
+                    if (it.Seek(prefix) == false || it.Skip(start) == false)
+                        yield break;
+
+                    do
+                    {
+                        if (take-- <= 0)
+                            break;
+
+                        var key = it.CurrentKey;
+                        var keyAsString = key.ToString();
+                        var value = it.CreateReaderForCurrent().ReadLittleEndianInt64();
+
+                        yield return (keyAsString.Substring(prefixString.Length), value);
+
+                    } while (it.MoveNext());
+                }
+            }
+        }
+
+        private static void DeleteIdentities<T>(TransactionOperationContext<T> context, string name)
+            where T : RavenTransaction
+        {
+            const int batchSize = 1024;
+            var identities = context.Transaction.InnerTransaction.ReadTree(Identities);
+
+            var prefixString = IncrementClusterIdentityCommand.GetStorageKey(name, null);
+            using (Slice.From(context.Allocator, prefixString, out var prefix))
+            {
+                var toRemove = new List<Slice>();
+                while (true)
+                {
+                    using (var it = identities.Iterate(prefetch: false))
+                    {
+                        it.SetRequiredPrefix(prefix);
+
+                        if (it.Seek(prefix) == false)
+                            return;
+
+                        do
+                        {
+                            toRemove.Add(it.CurrentKey.Clone(context.Allocator, ByteStringType.Immutable));
+
+                        } while (toRemove.Count < batchSize && it.MoveNext());
+                    }
+
+                    foreach (var key in toRemove)
+                        identities.Delete(key);
+
+                    if (toRemove.Count < batchSize)
+                        break;
+
+                    toRemove.Clear();
+                }
+            }
         }
 
         public BlittableJsonReaderObject Read<T>(TransactionOperationContext<T> context, string name)

@@ -154,12 +154,12 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public IEnumerable<KeyValuePair<string, long>> GetIdentities()
+        public IEnumerable<(string Prefix, long Value)> GetIdentities()
         {
             return InternalGetIdentities();
         }
 
-        private IEnumerable<KeyValuePair<string, long>> InternalGetIdentities()
+        private IEnumerable<(string Prefix, long Value)> InternalGetIdentities()
         {
             foreach (var reader in ReadArray())
             {
@@ -175,7 +175,7 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
                     }
 
-                    yield return new KeyValuePair<string, long>(identityKey, identityValue);
+                    yield return (identityKey, identityValue);
                 }
             }
         }

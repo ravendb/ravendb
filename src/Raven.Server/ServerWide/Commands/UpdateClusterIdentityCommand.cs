@@ -1,17 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
-using Raven.Client;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Voron;
+using Voron.Data.Tables;
 
 namespace Raven.Server.ServerWide.Commands
 {
     public class UpdateClusterIdentityCommand : UpdateValueForDatabaseCommand
     {
-        private string _itemId;
-
         public Dictionary<string, long> Identities { get; set; }
 
         public UpdateClusterIdentityCommand()
@@ -27,35 +27,28 @@ namespace Raven.Server.ServerWide.Commands
 
         public override string GetItemId()
         {
-            return _itemId ?? (_itemId = $"{Constants.Documents.IdentitiesPrefix}{DatabaseName.ToLowerInvariant()}");
+            throw new NotSupportedException();
         }
 
         protected override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue, bool isPassive)
         {
-            if (existingValue == null)
-            {
-                var djv = Identities.ToJson();
-                return context.ReadObject(djv, GetItemId());
-            }
+            throw new NotSupportedException();
+        }
 
-            if (existingValue.Modifications == null)
-                existingValue.Modifications = new DynamicJsonValue();
+        public override void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, bool isPassive, out object result)
+        {
+            result = null;
+            var identities = context.Transaction.InnerTransaction.ReadTree(ClusterStateMachine.Identities);
 
             foreach (var kvp in Identities)
             {
-                if (existingValue.TryGet(kvp.Key, out long value) == false || kvp.Value > value)
-                {
-                    if (existingValue.Modifications == null)
-                        existingValue.Modifications = new DynamicJsonValue();
+                var itemKey = IncrementClusterIdentityCommand.GetStorageKey(DatabaseName, kvp.Key);
 
-                    existingValue.Modifications[kvp.Key] = kvp.Value;
+                using (Slice.From(context.Allocator, itemKey, out var key))
+                {
+                    identities.AddMax(key, kvp.Value);
                 }
             }
-
-            if (existingValue.Modifications != null)
-                existingValue = context.ReadObject(existingValue, GetItemId());
-
-            return existingValue;
         }
 
         public override void FillJson(DynamicJsonValue json)

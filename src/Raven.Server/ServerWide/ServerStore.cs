@@ -1146,7 +1146,6 @@ namespace Raven.Server.ServerWide
 
             if (result == null)
             {
-
                 throw new InvalidOperationException(
                     $"Expected to get result from raft command that should generate a cluster-wide identity, but didn't. Leader is {LeaderTag}, Current node tag is {NodeTag}.");
             }
@@ -1195,12 +1194,14 @@ namespace Raven.Server.ServerWide
             await WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Etag);
         }
 
-        public Dictionary<string, long> LoadIdentities(string databaseName, out long etag)
+        public List<(string Prefix, long Value)> LoadIdentities(string databaseName)
         {
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                return Cluster.ReadIdentities(context, databaseName, out etag);
+                return Cluster
+                    .ReadIdentities(context, databaseName, 0, int.MaxValue)
+                    .ToList();
             }
         }
 

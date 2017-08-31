@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -28,7 +27,7 @@ namespace Raven.Server.Smuggler.Documents
         private CancellationToken _token;
 
         public Action<IndexDefinitionAndType> OnIndexAction;
-        public Action<KeyValuePair<string, long>> OnIdentityAction;
+        public Action<(string Prefix, long Value)> OnIdentityAction;
 
         public DatabaseSmuggler(DocumentDatabase database, ISmugglerSource source, ISmugglerDestination destination, SystemTime time, DatabaseSmugglerOptions options = null, SmugglerResult result = null, Action<IOperationProgress> onProgress = null, CancellationToken token = default(CancellationToken))
         {
@@ -177,7 +176,7 @@ namespace Raven.Server.Smuggler.Documents
                     _token.ThrowIfCancellationRequested();
                     result.Identities.ReadCount++;
 
-                    if (kvp.Equals(default(KeyValuePair<string, long>)))
+                    if (kvp.Equals(default(ValueTuple<string, long>)))
                     {
                         result.Identities.ErroredCount++;
                         continue;
@@ -191,12 +190,12 @@ namespace Raven.Server.Smuggler.Documents
 
                     try
                     {
-                        clusterIdentityActions.WriteIdentity(kvp.Key, kvp.Value);
+                        clusterIdentityActions.WriteIdentity(kvp.Prefix, kvp.Value);
                     }
                     catch (Exception e)
                     {
                         result.Identities.ErroredCount++;
-                        result.AddError($"Could not write identity '{kvp.Key}->{kvp.Value}': {e.Message}");
+                        result.AddError($"Could not write identity '{kvp.Prefix}->{kvp.Value}': {e.Message}");
                     }
                 }
             }

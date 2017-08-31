@@ -218,7 +218,14 @@ namespace Raven.Server.Smuggler.Documents
 
             public void WriteIdentity(string key, long value)
             {
+                const int batchSize = 1024;
+
                 _identities[key] = value;
+
+                if (_identities.Count < batchSize)
+                    return;
+
+                SendIdentities();
             }
 
             public void Dispose()
@@ -226,8 +233,15 @@ namespace Raven.Server.Smuggler.Documents
                 if (_identities.Count == 0)
                     return;
 
+                SendIdentities();
+            }
+
+            private void SendIdentities()
+            {
                 //fire and forget, do not hold-up smuggler operations waiting for Raft command
-                _database.ServerStore.SendToLeaderAsync(new UpdateClusterIdentityCommand(_database.Name, _identities)).Wait();
+                AsyncHelpers.RunSync(() => _database.ServerStore.SendToLeaderAsync(new UpdateClusterIdentityCommand(_database.Name, _identities)));
+
+                _identities.Clear();
             }
         }
 

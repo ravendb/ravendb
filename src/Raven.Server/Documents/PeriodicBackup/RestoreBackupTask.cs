@@ -19,6 +19,7 @@ using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
@@ -44,10 +45,10 @@ namespace Raven.Server.Documents.PeriodicBackup
         private List<string> _filesToRestore;
         private bool _hasEncryptionKey;
 
-        public RestoreBackupTask(ServerStore serverStore, 
-            RestoreBackupConfiguration restoreConfiguration, 
-            JsonOperationContext context, 
-            string nodeTag, 
+        public RestoreBackupTask(ServerStore serverStore,
+            RestoreBackupConfiguration restoreConfiguration,
+            JsonOperationContext context,
+            string nodeTag,
             CancellationToken cancellationToken)
         {
             _serverStore = serverStore;
@@ -79,10 +80,10 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (extension == Constants.Documents.PeriodicBackup.SnapshotExtension)
                 {
                     // restore the snapshot
-                    restoreSettings = SnapshotRestore(firstFile, 
-                        _restoreConfiguration.DataDirectory, 
-                        _restoreConfiguration.JournalsStoragePath, 
-                        onProgress, 
+                    restoreSettings = SnapshotRestore(firstFile,
+                        _restoreConfiguration.DataDirectory,
+                        _restoreConfiguration.JournalsStoragePath,
+                        onProgress,
                         restoreResult);
                     snapshotRestore = true;
                     // removing the snapshot from the list of files
@@ -118,7 +119,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (_hasEncryptionKey)
                 {
                     // save the encryption key so we'll be able to access the database
-                    _serverStore.PutSecretKey(_restoreConfiguration.EncryptionKey, 
+                    _serverStore.PutSecretKey(_restoreConfiguration.EncryptionKey,
                         databaseName, overwrite: false);
                 }
 
@@ -140,8 +141,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                     var options = InitializeOptions.SkipLoadingDatabaseRecord;
                     if (snapshotRestore)
                         options |= InitializeOptions.GenerateNewDatabaseId;
+
                     database.Initialize(options);
-                    SmugglerRestore(_restoreConfiguration.BackupLocation, database, databaseRecord, restoreSettings.Identities, onProgress, restoreResult);
+                    SmugglerRestore(_restoreConfiguration.BackupLocation, database, databaseRecord, async identity => await OnIdentityAction(databaseName, restoreSettings.Identities, identity), onProgress, restoreResult);
                 }
 
                 databaseRecord.Topology = new DatabaseTopology();
@@ -152,8 +154,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                 // TODO: _restoreConfiguration.ReplicationFactor ? 
                 // TODO: _restoreConfiguration.TopologyMembers ? 
 
-                var (newEtag, _) = await _serverStore.WriteDatabaseRecordAsync(
-                    databaseName, databaseRecord, null, restoreSettings.DatabaseValues, isRestore:  true);
+                await _serverStore.SendToLeaderAsync(new UpdateClusterIdentityCommand(databaseName, restoreSettings.Identities));
+                var (newEtag, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, restoreSettings.DatabaseValues, isRestore: true);
+
                 await _serverStore.Cluster.WaitForIndexNotification(newEtag);
 
                 return restoreResult;
@@ -180,6 +183,19 @@ namespace Raven.Server.Documents.PeriodicBackup
                 IOExtensions.DeleteDirectory(_restoreConfiguration.DataDirectory);
                 throw;
             }
+        }
+
+        private async Task OnIdentityAction(string databaseName, Dictionary<string, long> identities, (string Prefix, long Value) identity)
+        {
+            const int batchSize = 1024;
+
+            identities[identity.Prefix] = identity.Value;
+
+            if (identities.Count < batchSize)
+                return;
+
+            await _serverStore.SendToLeaderAsync(new UpdateClusterIdentityCommand(databaseName, identities));
+            identities.Clear();
         }
 
         private void ValidateArguments()
@@ -270,10 +286,10 @@ namespace Raven.Server.Documents.PeriodicBackup
         }
 
         private void SmugglerRestore(
-            string backupDirectory, 
-            DocumentDatabase database, 
+            string backupDirectory,
+            DocumentDatabase database,
             DatabaseRecord databaseRecord,
-            Dictionary<string, long> identities,
+            Action<(string Prefix, long Value)> onIdentityAction,
             Action<IOperationProgress> onProgress,
             RestoreResult restoreResult)
         {
@@ -338,16 +354,16 @@ namespace Raven.Server.Documents.PeriodicBackup
                                 throw new ArgumentOutOfRangeException();
                         }
                     },
-                    onIdentityAction: keyValuePair => identities[keyValuePair.Key] = keyValuePair.Value);
+                    onIdentityAction: onIdentityAction);
             }
         }
 
-        private void ImportSingleBackupFile(DocumentDatabase database, 
-            Action<IOperationProgress> onProgress, RestoreResult restoreResult, 
+        private void ImportSingleBackupFile(DocumentDatabase database,
+            Action<IOperationProgress> onProgress, RestoreResult restoreResult,
             string filePath, DocumentsOperationContext context,
             DatabaseDestination destination, DatabaseSmugglerOptions options,
             Action<IndexDefinitionAndType> onIndexAction = null,
-            Action<KeyValuePair<string, long>> onIdentityAction = null)
+            Action<(string Prefix, long Value)> onIdentityAction = null)
         {
             using (var fileStream = File.Open(filePath, FileMode.Open))
             using (var stream = new GZipStream(new BufferedStream(fileStream, 128 * Voron.Global.Constants.Size.Kilobyte), CompressionMode.Decompress))

@@ -1,13 +1,20 @@
-﻿using Raven.Client;
+﻿using System;
+using Raven.Client;
 using Raven.Client.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Voron;
+using Voron.Data.Tables;
 
 namespace Raven.Server.ServerWide.Commands
 {
     public class IncrementClusterIdentityCommand : UpdateValueForDatabaseCommand
     {
-        private long _identity;
+        public static string GetStorageKey(string databaseName, string prefix)
+        {
+            return $"{Constants.Documents.Prefix}{databaseName.ToLowerInvariant()}/identities/{prefix?.ToLowerInvariant()}";
+        }
 
         private string _itemId;
 
@@ -27,34 +34,23 @@ namespace Raven.Server.ServerWide.Commands
 
         public override string GetItemId()
         {
-            return _itemId ?? (_itemId = $"{Constants.Documents.IdentitiesPrefix}{DatabaseName.ToLowerInvariant()}");
+            return _itemId ?? (_itemId = GetStorageKey(DatabaseName, Prefix));
         }
 
         protected override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue, bool isPassive)
         {
-            if (existingValue == null)
-            {
-                var djv = new DynamicJsonValue
-                {
-                    [Prefix] = _identity = 1
-                };
-
-                return context.ReadObject(djv, GetItemId());
-            }
-
-            existingValue.TryGet(Prefix, out long value);
-
-            if (existingValue.Modifications == null)
-                existingValue.Modifications = new DynamicJsonValue();
-
-            existingValue.Modifications[Prefix] = _identity = value + 1;
-
-            return context.ReadObject(existingValue, GetItemId());
+            throw new NotImplementedException();
         }
 
-        public override object GetResult()
+        public override void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, bool isPassive, out object result)
         {
-            return _identity;
+            var identities = context.Transaction.InnerTransaction.ReadTree(ClusterStateMachine.Identities);
+            var itemKey = GetItemId();
+
+            using (Slice.From(context.Allocator, itemKey, out var key))
+            {
+                result = identities.Increment(key, 1);
+            }
         }
 
         public override void FillJson(DynamicJsonValue json)
