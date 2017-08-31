@@ -95,7 +95,7 @@ namespace Raven.Server.Documents.Patch
 
         private int CleanTheCache()
         {
-            foreach (var pair in Enumerable.OrderBy(_cache, x => x.Value.Value.Runs)
+            foreach (var pair in _cache.OrderBy(x => x.Value.Value.Runs)
                 .Take(_database.Configuration.Patching.MaxNumberOfCachedScripts / 4)
             )
             {

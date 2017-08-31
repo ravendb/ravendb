@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using Jint;
@@ -13,6 +14,7 @@ using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using JavaScriptException = Jint.Runtime.JavaScriptException;
 
@@ -72,7 +74,7 @@ namespace Raven.Server.Documents.Patch
             public List<string> DebugOutput;
             public bool PutOrDeleteCalled;
             public HashSet<string> Includes;
-
+            private HashSet<string> _documentIds;
             public bool ReadOnly;
 
             public class NullPropgationReferenceResolver : IReferenceResolver
@@ -108,13 +110,14 @@ namespace Raven.Server.Documents.Patch
                 {
                     options.LimitRecursion(64)
                         .SetReferencesResolver(new NullPropgationReferenceResolver())
-                        .MaxStatements(database.Configuration.Patching.MaxStepsForScript) 
+                        .MaxStatements(database.Configuration.Patching.MaxStepsForScript)
                         .Strict();
                 });
                 ScriptEngine.SetValue("output", new ClrFunctionInstance(ScriptEngine, OutputDebug));
 
                 ScriptEngine.SetValue("include", new ClrFunctionInstance(ScriptEngine, IncludeDoc));
                 ScriptEngine.SetValue("load", new ClrFunctionInstance(ScriptEngine, LoadDocument));
+                ScriptEngine.SetValue("loadPath", new ClrFunctionInstance(ScriptEngine, LoadDocumentByPath));
                 ScriptEngine.SetValue("del", new ClrFunctionInstance(ScriptEngine, DeleteDocument));
                 ScriptEngine.SetValue("put", new ClrFunctionInstance(ScriptEngine, PutDocument));
 
@@ -344,6 +347,42 @@ namespace Raven.Server.Documents.Patch
                 return JsValue.Null;
             }
 
+
+
+            private JsValue LoadDocumentByPath(JsValue self, JsValue[] args)
+            {
+                AssertValidDatabaseContext();
+
+
+                if (args.Length != 2 ||
+                    (args[0].IsNull() == false && args[0].IsUndefined() == false && args[0].IsObject() == false)
+                    || args[1].IsString() == false)
+                    throw new InvalidOperationException("loadPath(doc, path) must be called with a document and path");
+
+                if (args[0].IsNull() || args[1].IsUndefined())
+                    return args[0];
+
+                if (args[0].AsObject() is BlittableObjectInstance b)
+                {
+                    var path = args[1].AsString();
+                    if (_documentIds == null)
+                        _documentIds = new HashSet<string>();
+
+                    _documentIds.Clear();
+                    IncludeUtil.GetDocIdFromInclude(b.Blittable, path, _documentIds);
+                    if (path.IndexOf("[]", StringComparison.InvariantCulture) != -1) // array
+                        return JsValue.FromObject(ScriptEngine, _documentIds.Select(LoadDocumentInternal).ToList());
+                    if (_documentIds.Count == 0)
+                        return JsValue.Null;
+
+                    return LoadDocumentInternal(_documentIds.First());
+
+                }
+
+                throw new InvalidOperationException("loadPath(doc, path) must be called with a valid document instance, but got a JS object instead");
+            }
+
+
             private JsValue LoadDocument(JsValue self, JsValue[] args)
             {
                 AssertValidDatabaseContext();
@@ -351,8 +390,11 @@ namespace Raven.Server.Documents.Patch
                 if (args.Length != 1 || args[0].IsString() == false)
                     throw new InvalidOperationException("load(id) must be called with a single string argument");
 
-                var id = args[0].AsString();
+                return LoadDocumentInternal(args[0].AsString());
+            }
 
+            private JsValue LoadDocumentInternal(string id)
+            {
                 if (DebugMode)
                     DebugActions.LoadDocument.Add(id);
                 var document = _database.DocumentsStorage.Get(_context, id);
@@ -441,7 +483,7 @@ namespace Raven.Server.Documents.Patch
                     _disposables.Add(cloned);
                     return cloned;
                 }
-                if( o is Tuple<Document, Lucene.Net.Documents.Document, IState> t)
+                if (o is Tuple<Document, Lucene.Net.Documents.Document, IState> t)
                 {
                     var d = t.Item1;
                     return new BlittableObjectInstance(engine, null, Clone(d.Data), d.Id, d.LastModified)

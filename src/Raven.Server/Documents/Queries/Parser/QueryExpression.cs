@@ -98,8 +98,11 @@ namespace Raven.Server.Documents.Queries.Parser
             switch (Type)
             {
                 case OperatorType.Field:
-                    writer.Write(alias);
-                    writer.Write(".");
+                    if (alias != null)
+                    {
+                        writer.Write(alias);
+                        writer.Write(".");
+                    }
                     writer.Write(Extract(query, Field.TokenStart, Field.TokenLength, Field.EscapeChars));
                     break;
                 case OperatorType.Equal:
@@ -108,8 +111,11 @@ namespace Raven.Server.Documents.Queries.Parser
                 case OperatorType.GreaterThan:
                 case OperatorType.LessThanEqual:
                 case OperatorType.GreaterThanEqual:
-                    writer.Write(alias);
-                    writer.Write(".");
+                    if (alias != null)
+                    {
+                        writer.Write(alias);
+                        writer.Write(".");
+                    }
                     writer.Write(Extract(query, Field.TokenStart, Field.TokenLength, Field.EscapeChars));
                     switch (Type)
                     {

@@ -725,34 +725,42 @@ namespace Raven.Server.Documents.TcpHandlers
 
             if (q.From.Alias != null)
             {
-                writer.Write("\t var ");
+                writer.Write("var ");
                 writer.Write(QueryExpression.Extract(query, q.From.Alias));
                 writer.WriteLine(" = this;");
             }
             if (q.Load != null)
             {
+                if (q.From.Alias == null)
+                    throw new InvalidOperationException("Cannot specify a load clause without an alias on the from");
+
+                var fromAlias = QueryExpression.Extract(query, q.From.Alias);
                 foreach (var tuple in q.Load)
                 {
-                    writer.Write("\t var ");
-                    writer.Write(tuple.Alias);
+                    writer.Write("var ");
+                    writer.Write(QueryExpression.Extract(query, tuple.Alias));
                     writer.Write(" = loadPath(this,'");
-                    tuple.Expression.ToString(query, writer);
+                    var fullFieldPath = QueryExpression.Extract(query, tuple.Expression.Field);
+                    if (fullFieldPath.StartsWith(fromAlias) == false)
+                        throw new InvalidOperationException("Load clause can only load paths starting from the from alias: " + fromAlias);
+                    var indexOfDot = fullFieldPath.IndexOf('.', fromAlias.Length);
+                    fullFieldPath = fullFieldPath.Substring(indexOfDot+1);
+                    writer.Write(fullFieldPath.Trim());
                     writer.WriteLine("');");
                 }
             }
 
             if (q.Where != null)
             {
-                writer.Write("\t if (!(");    
-                q.Where.ToJavaScript(query, "this", writer);
-                writer.WriteLine(") )");
-                writer.WriteLine("\t\t return false; ");
-                writer.WriteLine();
+                writer.Write("if (");    
+                q.Where.ToJavaScript(query, q.From.Alias != null ? null : "this",  writer);
+                writer.WriteLine(" )");
+                writer.WriteLine("{");
             }
 
             if (q.SelectFunctionBody != null)
             {
-                writer.Write("\t return ");
+                writer.Write(" return ");
                 writer.Write(QueryExpression.Extract(query, q.SelectFunctionBody));
                 writer.WriteLine(";");
             }
@@ -760,14 +768,19 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 if (q.Select.Count != 1 || q.Select[0].Expression.Type != OperatorType.Method)
                     throw new NotSupportedException("Subscription select clause must specify an object literal");
-                writer.Write("\t return ");
-                q.Select[0].Expression.ToJavaScript(query, "this", writer);
+                writer.WriteLine();
+                writer.Write(" return ");
+                q.Select[0].Expression.ToJavaScript(query, q.From.Alias != null ? null : "this", writer);
                 writer.WriteLine(";");
             }
             else
             {
-                writer.WriteLine("\t return true;");
+                writer.WriteLine(" return true;");
             }
+            writer.WriteLine();
+
+            if (q.Where != null)
+                writer.WriteLine("}");
 
             var script = writer.GetStringBuilder().ToString();
 
