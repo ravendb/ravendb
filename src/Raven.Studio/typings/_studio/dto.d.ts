@@ -282,6 +282,7 @@ interface clusterTopologyDto {
     CurrentTerm: number;
     NodeTag: string;
     Status: { [key: string]: Raven.Client.Http.NodeStatus; };
+    AssignedCoresByNode: { [key: string]: number; };
 }
 
 type clusterNodeType = "Member" | "Promotable" | "Watcher";

@@ -42,6 +42,7 @@ namespace Raven.Server.ServerWide.Commands
         {
             if (isClusterAdmin)
                 return;
+
             throw new UnauthorizedAccessException("Attempted to " + GetType().Name + " but this is only available for cluster administrators");
         }
     }

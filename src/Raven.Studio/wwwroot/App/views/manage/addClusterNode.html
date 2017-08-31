@@ -17,8 +17,20 @@
                                     <input autocomplete="off" type="text" class="form-control" data-bind="textInput: serverUrl" id="url" placeholder="Enter server url"> 
                                 </div>
                                 <div class="toggle">
-                                    <input id="toggleWatcher" type="checkbox" data-bind="checked: addAsWatcher"/> 
+                                    <input id="toggleWatcher" type="checkbox" data-bind="checked: addAsWatcher" />
                                     <label for="toggleWatcher"><small>Add node as Watcher</small></label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="assigned-cores" class="control-label">Cores</label>
+                            <div class="flex-grow">
+                                <div data-bind="validationElement: assignedCores">
+                                    <input autocomplete="off" type="text" class="form-control" data-bind="numericInput: assignedCores, disable: autoAssign" id="assigned-cores" placeholder="Assigned cores for the new node">
+                                </div>
+                                <div class="toggle">
+                                    <input id="toggleAutoAssign" type="checkbox" data-bind="checked: autoAssign" />
+                                    <label for="toggleAutoAssign"><small>Auto assign cores</small></label>
                                 </div>
                             </div>
                         </div>

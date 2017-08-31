@@ -51,6 +51,25 @@ namespace Sparrow
             }
         }
 
+        public static double ConvertToBytes(double value, SizeUnit unit)
+        {
+            switch (unit)
+            {
+                case SizeUnit.Bytes:
+                    return value;
+                case SizeUnit.Kilobytes:
+                    return value * OneKb;
+                case SizeUnit.Megabytes:
+                    return value * OneMb;
+                case SizeUnit.Gigabytes:
+                    return value * OneGb;
+                case SizeUnit.Terabytes:
+                    return value * OneTb;
+                default:
+                    throw new NotSupportedException("Not supported size unit: " + unit);
+            }
+        }
+
         [Pure]
         public long GetValue(SizeUnit requestedUnit)
         {

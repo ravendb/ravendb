@@ -6,6 +6,7 @@ import appUrl = require("common/appUrl");
 import generalUtils = require("common/generalUtils");
 import addClusterNodeModel = require("models/database/cluster/addClusterNodeModel");
 import testClusterNodeConnectionCommand = require("commands/database/cluster/testClusterNodeConnectionCommand");
+import license = require("models/auth/license");
 
 class addClusterNode extends viewModelBase {
 
@@ -30,13 +31,13 @@ class addClusterNode extends viewModelBase {
         // discard test connection result when url has changed
         this.model.serverUrl.subscribe(() => this.testConnectionResult(null));
     }
-    
+
     private initObservables() {
         this.shortErrorText = ko.pureComputed(() => {
             const result = this.testConnectionResult();
             if (!result || result.Success) {
                 return "";
-            } 
+            }
             return generalUtils.trimMessage(result.Error);
         });
     }
@@ -47,7 +48,7 @@ class addClusterNode extends viewModelBase {
 
             this.spinners.save(true);
 
-            new addNodeToClusterCommand(this.model.serverUrl(), this.model.addAsWatcher())
+            new addNodeToClusterCommand(this.model.serverUrl(), this.model.addAsWatcher(), this.model.assignedCores())
                 .execute()
                 .done(() => this.goToClusterView())
                 .always(() => this.spinners.save(false));

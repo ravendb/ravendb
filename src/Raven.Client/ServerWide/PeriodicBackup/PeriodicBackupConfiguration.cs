@@ -74,5 +74,29 @@ namespace Raven.Client.ServerWide.PeriodicBackup
 
             return true;
         }
+
+        public bool HasBackup()
+        {
+            return CanBackupUsing(LocalSettings) ||
+                   CanBackupUsing(S3Settings) ||
+                   CanBackupUsing(GlacierSettings) ||
+                   CanBackupUsing(AzureSettings) ||
+                   CanBackupUsing(FtpSettings);
+        }
+
+        public bool HasCloudBackup()
+        {
+            return CanBackupUsing(S3Settings) ||
+                   CanBackupUsing(GlacierSettings) ||
+                   CanBackupUsing(AzureSettings) ||
+                   CanBackupUsing(FtpSettings);
+        }
+
+        public static bool CanBackupUsing(BackupSettings settings)
+        {
+            return settings != null &&
+                   settings.Disabled == false &&
+                   settings.HasSettings();
+        }
     }
 }

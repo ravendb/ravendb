@@ -47,6 +47,9 @@ namespace Sparrow.Platform.Posix
         public static extern int sysinfo(ref sysinfo_t info);
 
         [DllImport(LIBC_6, SetLastError = true)]
+        public static extern int sprintf(char* str, char* format);
+
+        [DllImport(LIBC_6, SetLastError = true)]
         public static extern int sysctl(int[] name, uint nameLen, void* oldP, int* oldLenP, void* newP, UIntPtr newLen);
 
         [DllImport(LIBC_6, SetLastError = true)]
