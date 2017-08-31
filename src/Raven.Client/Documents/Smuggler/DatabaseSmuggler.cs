@@ -112,8 +112,8 @@ namespace Raven.Client.Documents.Smuggler
         {
             options.OperateOnTypes |= DatabaseItemType.Tombstones;
 
-            // we import the indexes, transformers and identities from the last file only, 
-            // as the previous files can hold indexes, transformers and identities which were deleted and shouldn't be imported
+            // we import the indexes and identities from the last file only, 
+            // as the previous files can hold indexes and identities which were deleted and shouldn't be imported
             var oldOperateOnTypes = options.OperateOnTypes;
             options.OperateOnTypes = options.OperateOnTypes &
                                      ~(DatabaseItemType.Indexes |

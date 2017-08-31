@@ -84,8 +84,8 @@ namespace Raven.Server.Documents.Queries
                         case "waitForNonStaleResultsAsOfNow":
                             result.WaitForNonStaleResultsAsOfNow = bool.Parse(item.Value[0]);
                             break;
-                        case "waitForNonStaleResultsTimeout":
-                            result.WaitForNonStaleResultsTimeout = TimeSpan.Parse(item.Value[0]);
+                        case "waitForNonStaleResultsTimeoutInMs":
+                            result.WaitForNonStaleResultsTimeout = TimeSpan.FromMilliseconds(long.Parse(item.Value[0]));
                             break;
                         case "skipDuplicateChecking":
                             result.SkipDuplicateChecking = bool.Parse(item.Value[0]);
