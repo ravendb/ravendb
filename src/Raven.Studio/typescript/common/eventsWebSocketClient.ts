@@ -7,6 +7,8 @@ import abstractWebSocketClient = require("common/abstractWebSocketClient");
 abstract class eventsWebSocketClient<T> extends abstractWebSocketClient<T> {
 
     private static messageWasShownOnce: boolean = false;
+    inErrorState = ko.observable<boolean>(false);
+    ignoreWebSocketConnectionError = ko.observable<boolean>(false);
 
     private sentMessages: chagesApiConfigureRequestDto[] = [];
    
@@ -22,6 +24,9 @@ abstract class eventsWebSocketClient<T> extends abstractWebSocketClient<T> {
         //send changes connection args after reconnecting
         this.sentMessages.forEach(args => this.send(args.Command, args.Param, false));
 
+        this.inErrorState(false);
+        this.ignoreWebSocketConnectionError(false);
+        
         if (eventsWebSocketClient.messageWasShownOnce) {
             messagePublisher.reportSuccess("Successfully reconnected to changes stream!");
             eventsWebSocketClient.messageWasShownOnce = false;
@@ -29,7 +34,10 @@ abstract class eventsWebSocketClient<T> extends abstractWebSocketClient<T> {
     }
 
     protected onError(e: Event) {
-        if (eventsWebSocketClient.messageWasShownOnce === false && !this.disposed) {
+        this.inErrorState(true);
+        
+        if (!eventsWebSocketClient.messageWasShownOnce && !this.disposed) {
+            
             messagePublisher.reportError("Changes stream was disconnected!", "Retrying connection shortly.");
             eventsWebSocketClient.messageWasShownOnce = true;
         }

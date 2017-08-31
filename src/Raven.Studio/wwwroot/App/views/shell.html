@@ -317,12 +317,12 @@
         </div>
     </div>
 </footer>
-<div class="connection-lost">
+<div class="connection-lost" data-bind="css: { show: $root.showConnectionLost }">
     <div class="absolute-center">
         <h3>Connection lost</h3>
-        <img src="/studio/content/img/connection-lost.svg" width="260"/>
+        <img src="Content/img/connection-lost.svg" width="260" />
         <p class="small">Studio may not work correctly until reload</p>
-        <button class="btn"><i class="icon-warning"></i><span>Ignore</span></button>&nbsp;&nbsp;
+        <button class="btn" data-bind="click: ignoreWebSocketError"><i class="icon-warning"></i><span>Ignore</span></button>&nbsp;&nbsp;
         <button class="btn btn-primary" onclick="location.reload();"><i class="icon-refresh"></i>
             <span>Reload</span>
         </button>
