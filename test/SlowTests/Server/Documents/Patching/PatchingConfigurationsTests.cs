@@ -97,7 +97,7 @@ namespace SlowTests.Server.Documents.Patching
         [Fact]
         public async Task MaximumScriptSteps()
         {
-            using (var store = GetDocumentStore(modifyDatabaseRecord: x => x.Settings["Patching.MaxStepsForScript"] = "10"))
+            using (var store = GetDocumentStore(modifyDatabaseRecord: x => x.Settings["Patching.MaxStepsForScript"] = "8"))
             {
                 using (var session = store.OpenSession())
                 {
