@@ -4,16 +4,11 @@ import getRevisionsConfigurationCommand = require("commands/database/documents/g
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 
-// This model is used by the 'Edit Subscription Task View'
 class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
 
-    collections = collectionsTracker.default.collections;
     liveConnection = ko.observable<boolean>();
 
-    includeRevisions = ko.observable<boolean>(false);
-    areRevisionsDefinedForCollection = ko.observable<boolean>(true);
-
-    script = ko.observable<string>();
+    query = ko.observable<string>();
 
     startingPointType = ko.observable<subscriptionStartType>();
     startingChangeVector = ko.observable<string>();
@@ -27,10 +22,11 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
 
     activeDatabase = activeDatabaseTracker.default.database;
    
-    constructor(dto: Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails, isEdit: boolean) {        super(dto);
+    constructor(dto: Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails, isEdit: boolean) {        
+        super(dto);
 
         this.isEdit = isEdit;
-        dto.Criteria.Script = dto.Criteria.Script || ""; 
+        this.query(dto.Query);
         this.editViewUpdate(dto);
         this.editViewInitializeObservables(); 
         this.editViewInitValidation();
@@ -48,72 +44,45 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
         this.startingPointLatestDocument = ko.pureComputed(() => {
             return this.startingPointType() === "Latest Document";
         });
-
-        this.collection.throttle(250).subscribe(() => { this.getCollectionRevisionsSettings(); }); 
-        this.includeRevisions.throttle(250).subscribe(include => { if (include && this.collection()) { this.getCollectionRevisionsSettings(); } });
     }
 
     editViewUpdate(dto: Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails) {
-        this.script(dto.Criteria.Script);
-        this.includeRevisions(dto.Criteria.IncludeRevisions);
+        this.query(dto.Query);
         this.changeVectorForNextBatchStartingPoint(dto.ChangeVectorForNextBatchStartingPoint);
         this.setStartingPoint(false);
     }
 
     dataFromUI(): subscriptionDataFromUI {
-        const script = _.trim(this.script()) || null;
+        const query = _.trim(this.query()) || null;
         
         let changeVector: Raven.Client.Constants.Documents.SubscriptionChangeVectorSpecialStates | string = "DoNotChange";
 
         if (this.setStartingPoint()) {
             switch (this.startingPointType()) {
             case "Beginning of Time":
-                {
-                    changeVector = "BeginningOfTime";
-                };
+                changeVector = "BeginningOfTime";
                 break;
             case "Latest Document":
-                {
-                    changeVector = "LastDocument";
-                };
+                changeVector = "LastDocument";
                 break;
             case "Change Vector":
-                {
-                    changeVector = this.startingChangeVector();
-                };
+                changeVector = this.startingChangeVector();
                 break;
             }
         }
 
         return {
             TaskName: this.taskName(),
-            Collection: this.collection(),
-            Script: script,
-            IncludeRevisions: this.includeRevisions(),
+            Query: query,
             ChangeVector: changeVector
-    }
+        }
     }
 
     editViewInitValidation() {
 
-        this.collection.extend({
-            required: true
-        });
-        
-        this.script.extend({
+        this.query.extend({
+            required: true,
             aceValidation: true
-        });
-
-        this.includeRevisions.extend({
-            validation: [
-                {
-                    validator: () => this.collection(),
-                    message: "Collection is not selected"
-                },
-                {
-                    validator: () => !this.includeRevisions() || this.areRevisionsDefinedForCollection(),
-                    message: "Revisions are not set for this collection"
-                }]
         });
 
         this.startingChangeVector.extend({
@@ -130,54 +99,8 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
         });
 
         this.validationGroup = ko.validatedObservable({
-            collection: this.collection,
-            includeRevisions: this.includeRevisions,
-            script: this.script,
+            query: this.query,
             startingChangeVector: this.startingChangeVector
-        });
-    }
-
-    // Get the collections that have 'Revisons' set for them
-    getCollectionRevisionsSettings() {
-        return new getRevisionsConfigurationCommand(this.activeDatabase())
-            .execute()
-            .done((revisionsConfig: Raven.Client.ServerWide.Revisions.RevisionsConfiguration) => {
-                if (revisionsConfig) {
-                    let revisionIsSet: boolean = false;
-
-                    // 1. Check for Default configuration
-                    if (revisionsConfig.Default && revisionsConfig.Default.Active) {
-                        revisionIsSet = true;
-                    }
-
-                    // 2. Check for specific collections configuration
-                    for (var key in revisionsConfig.Collections) {
-                        if (revisionsConfig.Collections.hasOwnProperty(key)) {
-                            if (key === this.collection()) {
-                                revisionIsSet = revisionsConfig.Collections[key].Active;
-                                break;
-                            }
-                        }
-                    };
-
-                    this.areRevisionsDefinedForCollection(revisionIsSet);
-                }
-            });
-    }
-
-    createCollectionNameAutocompleter(item: ongoingTaskSubscriptionEditModel) {
-        return ko.pureComputed(() => {
-            const key = item.collection();
-
-            const options = this.collections()
-                .filter(x => !x.isAllDocuments && !x.isSystemDocuments && !x.name.startsWith("@"))
-                .map(x => x.name);
-
-            if (key) {
-                return options.filter(x => x.toLowerCase().includes(key.toLowerCase()));
-            } else {
-                return options;
-            }
         });
     }
 
@@ -185,11 +108,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
         return new ongoingTaskSubscriptionEditModel(
             {
                 Disabled: false,
-                Criteria: {
-                     Collection: null,
-                     Script: "",
-                     IncludeRevisions: false
-                },
+                Query: "",
                 ChangeVectorForNextBatchStartingPoint: null,
                 SubscriptionId: 0,
                 SubscriptionName: null,

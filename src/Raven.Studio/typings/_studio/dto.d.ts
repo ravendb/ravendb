@@ -245,8 +245,8 @@ interface IndexingPerformanceOperationWithParent extends Raven.Client.Documents.
 
 interface subscriptionResponseItemDto {
     SubscriptionId: number;
-    Criteria: Raven.Client.Documents.Subscriptions.SubscriptionCriteria;
     AckEtag: number;
+    Query: string;
     TimeOfReceivingLastAck: string;
     Connection: subscriptionConnectionInfoDto;
     RecentConnections: Array<subscriptionConnectionInfoDto>;
@@ -309,10 +309,8 @@ interface externalReplicationDataFromUI {
 
 interface subscriptionDataFromUI {
     TaskName: string;
-    Script: string;
-    Collection: string;
+    Query: string;
     ChangeVector: Raven.Client.Constants.Documents.SubscriptionChangeVectorSpecialStates | string;
-    IncludeRevisions: boolean;
 } 
 
 interface layoutable {

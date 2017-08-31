@@ -14,14 +14,13 @@ class ongoingTaskSubscriptionModel extends ongoingTask {
     activeDatabase = activeDatabaseTracker.default.database;
 
     // General stats
-    collection = ko.observable<string>();
-    lastTimeServerMadeProgressWithDocumnets = ko.observable<string>();
+    lastTimeServerMadeProgressWithDocuments = ko.observable<string>();
     lastClientConnectionTime = ko.observable<string>();
 
     // Live connection stats
     clientIP = ko.observable<string>();
     connectionStrategy = ko.observable<Raven.Client.Documents.Subscriptions.SubscriptionOpeningStrategy>();  
-    clientDetailsIssue = ko.observable<string>(); // null, ok | client is not connected | failed to get details.. 
+    clientDetailsIssue = ko.observable<string>();
     textClass = ko.observable<string>();
 
     validationGroup: KnockoutValidationGroup; 
@@ -51,17 +50,16 @@ class ongoingTaskSubscriptionModel extends ongoingTask {
             const emptyNodeId: Raven.Client.ServerWide.Operations.NodeId = { NodeTag: "", NodeUrl: "", ResponsibleNode: "" };
             
             const dtoListModel: Raven.Client.ServerWide.Operations.OngoingTaskSubscription = {
-                Collection: dtoEditModel.Criteria.Collection,
                 ResponsibleNode: emptyNodeId,
                 TaskConnectionStatus: 'Active', // todo: this has to be reviewed...
                 TaskId: dtoEditModel.SubscriptionId,
                 TaskName: dtoEditModel.SubscriptionName,
                 TaskState: state,
+                Query: dtoEditModel.Query,
                 TaskType: 'Subscription'
             };
 
             super.update(dtoListModel);
-            this.collection(dtoListModel.Collection);
         }
         // 2. List View flow
         else {
@@ -92,10 +90,9 @@ class ongoingTaskSubscriptionModel extends ongoingTask {
             .execute()
             .done((result: Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails) => {
 
-                this.collection(result.Criteria.Collection);
                 this.responsibleNode(result.ResponsibleNode);
                 this.taskState(result.Disabled ? 'Disabled' : 'Enabled');
-                this.lastTimeServerMadeProgressWithDocumnets(result.LastTimeServerMadeProgressWithDocuments);
+                this.lastTimeServerMadeProgressWithDocuments(result.LastTimeServerMadeProgressWithDocuments);
                 this.lastClientConnectionTime(result.LastClientConnectionTime);
 
                 // 2. Get connection details info

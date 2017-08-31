@@ -12,19 +12,15 @@ class saveSubscriptionTaskCommand extends commandBase {
         return this.updateSubscription()
             .fail((response: JQueryXHR) => {
                 if (this.taskId) {
-                    // update operation
                     this.reportError("Failed to update subscription task", response.responseText, response.statusText);
                 } else {
-                    // create operation
                     this.reportError("Failed to create subscription task: " + this.subscriptionSettings.TaskName, response.responseText, response.statusText); 
                 }
             })
             .done(() => {
                 if (this.taskId) {
-                    // update operation
                     this.reportSuccess(`Updated subscription task`);
                 } else {
-                    // create operation
                     this.reportSuccess(`Created subscription task ${this.subscriptionSettings.TaskName} from database ${this.db.name}`);
                 }
             });
@@ -49,11 +45,7 @@ class saveSubscriptionTaskCommand extends commandBase {
         const subscriptionToSend: Raven.Client.Documents.Subscriptions.SubscriptionCreationOptions = {
             ChangeVector: this.subscriptionSettings.ChangeVector,
             Name: this.subscriptionSettings.TaskName,
-            Criteria: {
-                Collection: this.subscriptionSettings.Collection,
-                Script: this.subscriptionSettings.Script,
-                IncludeRevisions: this.subscriptionSettings.IncludeRevisions
-            }
+            Query: this.subscriptionSettings.Query
         };
 
         this.put(url, JSON.stringify(subscriptionToSend), this.db)
