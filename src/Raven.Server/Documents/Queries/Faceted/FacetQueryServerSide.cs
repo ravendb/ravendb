@@ -35,8 +35,8 @@ namespace Raven.Server.Documents.Queries.Faceted
             if (httpContext.Request.Query.TryGetValue("waitForNonStaleResultsAsOfNow", out values))
                 result.WaitForNonStaleResultsAsOfNow = bool.Parse(values.First());
 
-            if (httpContext.Request.Query.TryGetValue("waitForNonStaleResultsTimeout", out values))
-                result.WaitForNonStaleResultsTimeout = TimeSpan.Parse(values.First());
+            if (httpContext.Request.Query.TryGetValue("waitForNonStaleResultsTimeoutInMs", out values))
+                result.WaitForNonStaleResultsTimeout = TimeSpan.FromMilliseconds(long.Parse(values.First()));
 
             long? facetsEtag = null;
             if (httpContext.Request.Query.TryGetValue("facets", out values) && values.Count > 0)
