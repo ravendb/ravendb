@@ -11,7 +11,7 @@ namespace Raven.Client.ServerWide
 
         public int? MaxNumberOfRequestsPerSession { get; set; }
 
-        public bool? PretifyGeneratedLinqExpressions { get; set; }
+        public bool? PrettifyGeneratedLinqExpressions { get; set; }
 
         public ReadBalanceBehavior? ReadBalanceBehavior { get; set; }
 
@@ -22,9 +22,8 @@ namespace Raven.Client.ServerWide
                 [nameof(Disabled)] = Disabled,
                 [nameof(Etag)] = Etag,
                 [nameof(MaxNumberOfRequestsPerSession)] = MaxNumberOfRequestsPerSession,
-                [nameof(PretifyGeneratedLinqExpressions)] = PretifyGeneratedLinqExpressions,
+                [nameof(PrettifyGeneratedLinqExpressions)] = PrettifyGeneratedLinqExpressions,
                 [nameof(ReadBalanceBehavior)] = ReadBalanceBehavior
-
             };
         }
     }
