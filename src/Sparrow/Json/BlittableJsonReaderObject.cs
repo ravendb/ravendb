@@ -298,14 +298,7 @@ namespace Sparrow.Json
                     else if (type == typeof(TimeSpan))
                     {
                         if (ChangeTypeToString(result, out string timeSpanString) == false)
-                        {
-                            if (result is long milliseconds)
-                            {
-                                obj = (T)(object)TimeSpan.FromMilliseconds(milliseconds);
-                                return;
-                            }
                             ThrowFormatException(result, result.GetType().FullName, "string");
-                        }
                         if (TimeSpan.TryParseExact(timeSpanString, "c", CultureInfo.InvariantCulture, out TimeSpan timeSpan) == false) // todo: format might be problematic here
                             ThrowFormatException(result, result.GetType().FullName, "TimeSpan");
                         obj = (T)(object)timeSpan;
