@@ -117,8 +117,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             var index = _indexStore.GetIndex(definition.Name);
             if(index == null)
-                return new DynamicQueryMatchResult(definition.Name, DynamicQueryMatchType.Failure)
-                    ;
+                return new DynamicQueryMatchResult(definition.Name, DynamicQueryMatchType.Failure);
+
             var state = index.State;
             var stats = index.GetStats();
 
@@ -130,13 +130,19 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             var currentBestState = DynamicQueryMatchType.Complete;
 
-            foreach (var field in query.MapFields)
+            foreach (var field in query.MapFields.Values)
             {
                 if (definition.TryGetField(field.Name, out var indexField))
                 {
                     if (field.IsFullTextSearch && indexField.Indexing.HasFlag(AutoFieldIndexing.Search) == false)
                     {
-                        explanations?.Add(new Explanation(indexName, $"The following field is not analyzed {indexField.Name}, while the query needs to perform full text search on it"));
+                        explanations?.Add(new Explanation(indexName, $"The following field is not searchable {indexField.Name}, while the query needs to search() on it"));
+                        return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Partial);
+                    }
+
+                    if (field.IsExactSearch && indexField.Indexing.HasFlag(AutoFieldIndexing.Exact) == false)
+                    {
+                        explanations?.Add(new Explanation(indexName, $"The following field is not exactable {indexField.Name}, while the query needs to perform exact() on it"));
                         return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Partial);
                     }
                 }
@@ -146,7 +152,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     currentBestState = DynamicQueryMatchType.Partial;
                 }
             }
-
+            
             if (currentBestState == DynamicQueryMatchType.Complete && state == IndexState.Idle)
             {
                 currentBestState = DynamicQueryMatchType.Partial;
@@ -176,7 +182,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
         {
             var indexName = definition.Name;
 
-            foreach (var mapField in query.MapFields)
+            foreach (var mapField in query.MapFields.Values)
             {
                 if (definition.ContainsField(mapField.Name) == false)
                 {
@@ -195,7 +201,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 }
             }
 
-            foreach (var groupByField in query.GroupByFields)
+            foreach (var groupByField in query.GroupByFields.Values)
             {
                 if (definition.GroupByFields.TryGetValue(groupByField.Name, out var indexField))
                 {
@@ -205,7 +211,15 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     if (groupByField.IsFullTextSearch && indexField.Indexing.HasFlag(AutoFieldIndexing.Search) == false)
                     {
                         explanations?.Add(new Explanation(indexName,
-                            $"The following group by field is not analyzed {indexField.Name}, while the query needs to perform full text search on it"));
+                            $"The following group by field is not searchable {indexField.Name}, while the query needs to perform search() on it"));
+
+                        return DynamicQueryMatchType.Partial;
+                    }
+
+                    if (groupByField.IsExactSearch && indexField.Indexing.HasFlag(AutoFieldIndexing.Exact) == false)
+                    {
+                        explanations?.Add(new Explanation(indexName,
+                            $"The following group by field is not exactable {indexField.Name}, while the query needs to perform exact() on it"));
 
                         return DynamicQueryMatchType.Partial;
                     }
@@ -214,7 +228,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 {
                     if (explanations != null)
                     {
-                        var missingFields = query.GroupByFields.Where(x => definition.GroupByFields.ContainsKey(x.Name) == false);
+                        var missingFields = query.GroupByFields.Where(x => definition.GroupByFields.ContainsKey(x.Value.Name) == false);
                         explanations.Add(new Explanation(indexName, $"The following group by fields are missing: {string.Join(", ", missingFields)}"));
                     }
 
@@ -223,11 +237,11 @@ namespace Raven.Server.Documents.Queries.Dynamic
             }
 
 
-            if (query.GroupByFields.Length != definition.GroupByFields.Count)
+            if (query.GroupByFields.Count != definition.GroupByFields.Count)
             {
                 if (explanations != null)
                 {
-                    var extraFields = definition.GroupByFields.Where(x => query.GroupByFields.Select(y => y.Name).Contains(x.Key) == false);
+                    var extraFields = definition.GroupByFields.Where(x => query.GroupByFields.Select(y => y.Value.Name).Contains(x.Key) == false);
                     explanations.Add(new Explanation(indexName, $"Index {indexName} has additional group by fields: {string.Join(", ", extraFields)}"));
                 }
 

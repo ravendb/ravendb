@@ -326,6 +326,27 @@ where search(Name, 'arek')"));
             }
         }
 
+        [Fact]
+        public void Partial_match_if_exact_is_required()
+        {
+            using (var db = CreateDocumentDatabase())
+            {
+                var mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"from Users
+where Name = 'arek'"));
+
+                db.IndexStore.CreateIndex(mapping.CreateAutoIndexDefinition()).Wait();
+
+                mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"from Users
+where exact(Name = 'arek')"));
+
+                var matcher = new DynamicQueryToIndexMatcher(db.IndexStore);
+
+                var result = matcher.Match(mapping);
+
+                Assert.Equal(DynamicQueryMatchType.Partial, result.MatchType);
+            }
+        }
+
         private void add_index(AutoMapIndexDefinition definition)
         {
             AsyncHelpers.RunSync(() => _documentDatabase.IndexStore.CreateIndex(definition));

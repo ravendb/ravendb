@@ -13,7 +13,7 @@ namespace Raven.Server.Documents.Indexes
 
         public T As<T>() where T : IndexFieldBase
         {
-            return (T)this;
+            return this as T;
         }
     }
 

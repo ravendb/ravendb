@@ -15,9 +15,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
     {
         public string ForCollection { get; private set; }
 
-        public DynamicQueryMappingItem[] MapFields { get; private set; } = new DynamicQueryMappingItem[0];
+        public Dictionary<string, DynamicQueryMappingItem> MapFields { get; private set; }
 
-        public DynamicQueryMappingItem[] GroupByFields { get; private set; } = new DynamicQueryMappingItem[0];
+        public Dictionary<string, DynamicQueryMappingItem> GroupByFields { get; private set; }
 
         public string[] HighlightedFields { get; private set; }
 
@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
         {
             if (IsGroupBy == false)
             {
-                return new AutoMapIndexDefinition(ForCollection, MapFields.Select(field =>
+                return new AutoMapIndexDefinition(ForCollection, MapFields.Values.Select(field =>
                     {
                         var indexField = new AutoIndexField
                         {
@@ -49,10 +49,10 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 ).ToArray());
             }
 
-            if (GroupByFields.Length == 0)
+            if (GroupByFields.Count == 0)
                 throw new InvalidOperationException("Invalid dynamic map-reduce query mapping. There is no group by field specified.");
 
-            return new AutoMapReduceIndexDefinition(ForCollection, MapFields.Select(field =>
+            return new AutoMapReduceIndexDefinition(ForCollection, MapFields.Values.Select(field =>
                 {
                     var indexField = new AutoIndexField
                     {
@@ -70,7 +70,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                     return indexField;
                 }).ToArray(),
-                GroupByFields.Select(field =>
+                GroupByFields.Values.Select(field =>
                 {
                     var indexField = new AutoIndexField
                     {
@@ -93,20 +93,37 @@ namespace Raven.Server.Documents.Queries.Dynamic
         {
             Debug.Assert(definitionOfExistingIndex is AutoMapIndexDefinition || definitionOfExistingIndex is AutoMapReduceIndexDefinition, "Dynamic queries are handled only by auto indexes");
 
-            var extendedMapFields = new List<DynamicQueryMappingItem>(MapFields);
-
-            foreach (var mapField in definitionOfExistingIndex.MapFields.Values)
+            switch (definitionOfExistingIndex)
             {
-                var field = mapField.As<AutoIndexField>();
-
-                if (extendedMapFields.Any(x => x.Name.Equals(field.Name, StringComparison.Ordinal)) == false)
-                {
-                    extendedMapFields.Add(DynamicQueryMappingItem.Create(field.Name, field.Aggregation, field.Indexing.HasFlag(AutoFieldIndexing.Search),
-                        field.Indexing.HasFlag(AutoFieldIndexing.Exact)));
-                }
+                case AutoMapIndexDefinition def:
+                    Update(MapFields, def.MapFields);
+                    break;
+                case AutoMapReduceIndexDefinition def:
+                    Update(MapFields, def.MapFields);
+                    Update(GroupByFields, def.GroupByFields);
+                    break;
             }
 
-            MapFields = extendedMapFields.ToArray();
+            void Update<T>(Dictionary<string, DynamicQueryMappingItem> mappingFields, Dictionary<string, T> indexFields) where T : IndexFieldBase
+            {
+                foreach (var f in indexFields.Values)
+                {
+                    var indexField = f.As<AutoIndexField>();
+
+                    if (mappingFields.TryGetValue(indexField.Name, out var queryField))
+                    {
+                        mappingFields[queryField.Name] = DynamicQueryMappingItem.Create(queryField.Name, queryField.AggregationOperation,
+                            isFullTextSearch: queryField.IsFullTextSearch || indexField.Indexing.HasFlag(AutoFieldIndexing.Search),
+                            isExactSearch: queryField.IsExactSearch || indexField.Indexing.HasFlag(AutoFieldIndexing.Exact));
+                    }
+                    else
+                    {
+                        mappingFields.Add(indexField.Name, DynamicQueryMappingItem.Create(indexField.Name, indexField.Aggregation,
+                            isFullTextSearch: indexField.Indexing.HasFlag(AutoFieldIndexing.Search),
+                            isExactSearch: indexField.Indexing.HasFlag(AutoFieldIndexing.Exact)));
+                    }
+                }
+            }
         }
 
         public static DynamicQueryMapping Create(IndexQueryServerSide query)
@@ -152,26 +169,23 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 result.IsGroupBy = true;
                 result.GroupByFields = CreateGroupByFields(query, mapFields);
-            }
 
-            result.MapFields = new DynamicQueryMappingItem[mapFields.Count];
-
-            int index = 0;
-            foreach (var field in mapFields)
-            {
-                if (result.IsGroupBy && field.Value.AggregationOperation == AggregationOperation.None)
+                foreach (var field in mapFields)
                 {
-                    throw new InvalidQueryException($"Field '{field.Key}' isn't neither an aggregation operation nor part of the group by key", query.Metadata.QueryText,
-                        query.QueryParameters);
+                    if (field.Value.AggregationOperation == AggregationOperation.None)
+                    {
+                        throw new InvalidQueryException($"Field '{field.Key}' isn't neither an aggregation operation nor part of the group by key", query.Metadata.QueryText,
+                            query.QueryParameters);
+                    }
                 }
-
-                result.MapFields[index++] = field.Value;
             }
+            
+            result.MapFields = mapFields;
 
             return result;
         }
 
-        private static DynamicQueryMappingItem[] CreateGroupByFields(IndexQueryServerSide query, Dictionary<string, DynamicQueryMappingItem> mapFields)
+        private static Dictionary<string, DynamicQueryMappingItem> CreateGroupByFields(IndexQueryServerSide query, Dictionary<string, DynamicQueryMappingItem> mapFields)
         {
             var groupByFields = query.Metadata.GroupBy;
 
@@ -206,13 +220,13 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 }
             }
 
-            var result = new DynamicQueryMappingItem[groupByFields.Length];
+            var result = new Dictionary<string, DynamicQueryMappingItem>(groupByFields.Length);
 
             for (int i = 0; i < groupByFields.Length; i++)
             {
                 var groupByField = groupByFields[i];
 
-                result[i] = DynamicQueryMappingItem.Create(groupByField, AggregationOperation.None, query.Metadata.WhereFields);
+                result[groupByField] = DynamicQueryMappingItem.Create(groupByField, AggregationOperation.None, query.Metadata.WhereFields);
 
                 mapFields.Remove(groupByField);  // ensure we don't have duplicated group by fields
             }
