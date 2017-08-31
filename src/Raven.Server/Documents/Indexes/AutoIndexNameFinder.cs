@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Text;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Extensions;
 using Sparrow;
 
 namespace Raven.Server.Documents.Indexes
@@ -63,10 +63,10 @@ namespace Raven.Server.Documents.Indexes
             var name = string.Empty;
 
             if (x.Indexing.HasFlag(AutoFieldIndexing.Search))
-                name += CultureInfo.InvariantCulture.TextInfo.ToTitleCase(AutoIndexField.GetSearchAutoIndexFieldName(x.Name));
+                name += AutoIndexField.GetSearchAutoIndexFieldName(x.Name).ToUpperFirstLetter();
 
             if (x.Indexing.HasFlag(AutoFieldIndexing.Exact))
-                name += CultureInfo.InvariantCulture.TextInfo.ToTitleCase(AutoIndexField.GetExactAutoIndexFieldName(x.Name));
+                name += AutoIndexField.GetExactAutoIndexFieldName(x.Name).ToUpperFirstLetter();
 
             return name;
         }
