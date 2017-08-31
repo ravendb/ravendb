@@ -13,6 +13,7 @@ using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Smuggler.Documents
 {
@@ -51,12 +52,17 @@ namespace Raven.Server.Smuggler.Documents
 
         public IDocumentActions Documents()
         {
-            return new StreamDocumentActions(_writer, _context, _source, isRevision: false);
+            return new StreamDocumentActions(_writer, _context, _source, "Docs");
         }
 
         public IDocumentActions RevisionDocuments()
         {
-            return new StreamDocumentActions(_writer, _context, _source, isRevision: true);
+            return new StreamDocumentActions(_writer, _context, _source, nameof(DatabaseItemType.RevisionDocuments));
+        }
+
+        public IDocumentActions Tombstones()
+        {
+            return new StreamDocumentActions(_writer, _context, _source, nameof(DatabaseItemType.Tombstones));
         }
 
         public IIdentityActions Identities()
@@ -123,8 +129,8 @@ namespace Raven.Server.Smuggler.Documents
             private readonly DatabaseSource _source;
             private HashSet<string> _attachmentStreamsAlreadyExported;
 
-            public StreamDocumentActions(BlittableJsonTextWriter writer, DocumentsOperationContext context, DatabaseSource source, bool isRevision)
-                : base(writer, isRevision ? "RevisionDocuments" : "Docs")
+            public StreamDocumentActions(BlittableJsonTextWriter writer, DocumentsOperationContext context, DatabaseSource source, string propertyName)
+                : base(writer, propertyName)
             {
                 _context = context;
                 _source = source;
@@ -147,6 +153,25 @@ namespace Raven.Server.Smuggler.Documents
                     document.EnsureMetadata();
                     _context.Write(Writer, document.Data);
                 }
+            }
+
+            public void WriteTombstone(DocumentTombstone tombstone, SmugglerProgressBase.CountsWithLastEtag progress)
+            {
+                if (First == false)
+                    Writer.WriteComma();
+                First = false;
+
+                _context.Write(Writer, new DynamicJsonValue
+                {
+                    ["Key"] = tombstone.LowerId,
+                    [nameof(DocumentTombstone.Type)] = tombstone.Type.ToString(),
+                    [nameof(DocumentTombstone.Collection)] = tombstone.Collection,
+                    [nameof(DocumentTombstone.Flags)] = tombstone.Flags.ToString(),
+                    [nameof(DocumentTombstone.ChangeVector)] = tombstone.ChangeVector,
+                    [nameof(DocumentTombstone.DeletedEtag)] = tombstone.DeletedEtag,
+                    [nameof(DocumentTombstone.Etag)] = tombstone.Etag,
+                    [nameof(DocumentTombstone.LastModified)] = tombstone.LastModified,
+                });
             }
 
             public Stream GetTempStream()

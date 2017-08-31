@@ -688,11 +688,7 @@ namespace Raven.Server.Documents
             return false;
         }
 
-        public IEnumerable<DocumentTombstone> GetTombstonesFrom(
-            DocumentsOperationContext context,
-            long etag,
-            int start,
-            int take)
+        public IEnumerable<DocumentTombstone> GetTombstonesFrom(DocumentsOperationContext context,  long etag, int start, int take)
         {
             var table = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
 
@@ -706,9 +702,24 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<ReplicationBatchItem> GetTombstonesFrom(
-            DocumentsOperationContext context,
-            long etag)
+        public IEnumerable<DocumentTombstone> GetTombstonesFrom(DocumentsOperationContext context, List<string> collections, long etag, int take)
+        {
+            foreach (var collection in collections)
+            {
+                if (take <= 0)
+                    yield break;
+
+                foreach (var tombstone in GetTombstonesFrom(context, collection, etag, 0, int.MaxValue))
+                {
+                    if (take-- <= 0)
+                        yield break;
+
+                    yield return tombstone;
+                }
+            }
+        }
+
+        public IEnumerable<ReplicationBatchItem> GetTombstonesFrom(DocumentsOperationContext context, long etag)
         {
             var table = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
 

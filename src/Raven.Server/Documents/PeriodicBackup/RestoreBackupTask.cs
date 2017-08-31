@@ -28,6 +28,7 @@ using Raven.Server.Web.System;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Voron.Impl.Backup;
+using DatabaseSmuggler = Raven.Client.Documents.Smuggler.DatabaseSmuggler;
 
 namespace Raven.Server.Documents.PeriodicBackup
 {
@@ -299,13 +300,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             // restore the smuggler backup
             var options = new DatabaseSmugglerOptions();
-
-            // we import the indexes, transformers and identities from the last file only, 
-            // as the previous files can hold indexes, transformers and identities which were deleted and shouldn't be imported
-            var oldOperateOnTypes = options.OperateOnTypes;
-            options.OperateOnTypes = options.OperateOnTypes &
-                                     ~(DatabaseItemType.Indexes |
-                                       DatabaseItemType.Identities);
+            var oldOperateOnTypes = DatabaseSmuggler.ConfigureOptionsForIncrementalImport(options);
 
             var destination = new DatabaseDestination(database);
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))

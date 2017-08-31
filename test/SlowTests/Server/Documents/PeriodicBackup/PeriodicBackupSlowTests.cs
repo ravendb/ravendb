@@ -264,6 +264,63 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [Fact(Skip = "RavenDB-7931 - Takes too long"), Trait("Category", "Smuggler")]
+        public async Task CanImportTombstonesFromIncrementalBackup()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "fitzchak" }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    IncrementalBackupFrequency = "* * * * *" //every minute
+                };
+
+                var result = await store.Admin.Server.SendAsync(new UpdatePeriodicBackupOperation(config, store.Database));
+                var periodicBackupTaskId = result.TaskId;
+
+                var operation = new GetPeriodicBackupStatusOperation(store.Database, periodicBackupTaskId);
+                SpinWait.SpinUntil(() =>
+                {
+                    var getPeriodicBackupResult = store.Admin.Server.Send(operation);
+                    return getPeriodicBackupResult.Status?.LastEtag > 0;
+                }, TimeSpan.FromMinutes(2));
+
+                var etagForBackups = store.Admin.Server.Send(operation).Status.LastEtag;
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Delete("users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                SpinWait.SpinUntil(() =>
+                {
+                    var newLastEtag = store.Admin.Server.Send(operation).Status.LastEtag;
+                    return newLastEtag != etagForBackups;
+                }, TimeSpan.FromMinutes(2));
+            }
+
+            using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
+            {
+                await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(),
+                    Directory.GetDirectories(backupPath).First());
+                using (var session = store.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>("users/1");
+                    Assert.Null(user);
+                }
+            }
+        }
+
+        [Fact(Skip = "RavenDB-7931 - Takes too long"), Trait("Category", "Smuggler")]
         public async Task can_restore_smuggler_correctly()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");

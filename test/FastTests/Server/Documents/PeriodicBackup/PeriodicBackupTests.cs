@@ -4,15 +4,10 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
-using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.PeriodicBackup;
-using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace FastTests.Server.Documents.PeriodicBackup
