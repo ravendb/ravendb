@@ -87,7 +87,7 @@ namespace Voron.Impl
                     tree.InitializeCompression();
 
                 _trees.Add(treeName, tree);
-                
+
                 return tree;
             }
 
@@ -142,7 +142,7 @@ namespace Voron.Impl
 
         public Table OpenTable(TableSchema schema, Slice name)
         {
-            if(_tables == null)
+            if (_tables == null)
                 _tables = new FastDictionary<Slice, Table, SliceStructComparer>(SliceStructComparer.Instance);
 
             Table value;
@@ -173,7 +173,7 @@ namespace Voron.Impl
                     var childTree = multiValueTree.Value;
 
                     byte* ptr;
-                    using (parentTree.DirectAdd(key, sizeof(TreeRootHeader), TreeNodeFlags.MultiValuePageRef,out ptr))
+                    using (parentTree.DirectAdd(key, sizeof(TreeRootHeader), TreeNodeFlags.MultiValuePageRef, out ptr))
                         childTree.State.CopyTo((TreeRootHeader*)ptr);
                 }
             }
@@ -187,7 +187,7 @@ namespace Voron.Impl
                 if (treeState.IsModified)
                 {
                     byte* ptr;
-                    using (_lowLevelTransaction.RootObjects.DirectAdd(tree.Name, sizeof(TreeRootHeader),out ptr))
+                    using (_lowLevelTransaction.RootObjects.DirectAdd(tree.Name, sizeof(TreeRootHeader), out ptr))
                         treeState.CopyTo((TreeRootHeader*)ptr);
                 }
             }
@@ -326,7 +326,7 @@ namespace Voron.Impl
 
             byte* ptr;
             using (_lowLevelTransaction.RootObjects.DirectAdd(toName, sizeof(TreeRootHeader), out ptr))
-                fromTree.State.CopyTo((TreeRootHeader*) ptr);
+                fromTree.State.CopyTo((TreeRootHeader*)ptr);
 
             fromTree.Rename(toName);
             fromTree.State.IsModified = true;
@@ -341,8 +341,7 @@ namespace Voron.Impl
         [MethodImpl(MethodImplOptions.NoInlining)]
         public Tree CreateTree(string name, RootObjectType type = RootObjectType.VariableSizeTree, TreeFlags flags = TreeFlags.None, bool isIndexTree = false, NewPageAllocator newPageAllocator = null)
         {
-            Slice treeNameSlice;
-            Slice.From(Allocator, name, ByteStringType.Immutable, out treeNameSlice);
+            Slice.From(Allocator, name, ByteStringType.Immutable, out var treeNameSlice);
             return CreateTree(treeNameSlice, type, flags, isIndexTree, newPageAllocator);
         }
 
@@ -360,7 +359,7 @@ namespace Voron.Impl
             tree.State.RootObjectType = type;
 
             byte* ptr;
-            using (_lowLevelTransaction.RootObjects.DirectAdd(name, sizeof(TreeRootHeader),out ptr))
+            using (_lowLevelTransaction.RootObjects.DirectAdd(name, sizeof(TreeRootHeader), out ptr))
                 tree.State.CopyTo((TreeRootHeader*)ptr);
 
             tree.State.IsModified = true;
