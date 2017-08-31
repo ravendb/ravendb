@@ -220,7 +220,7 @@ namespace Raven.Client.Extensions
             if (query.WaitForNonStaleResultsTimeout.HasValue)
             {
                 writer.WritePropertyName(nameof(query.WaitForNonStaleResultsTimeout));
-                writer.WriteString(query.WaitForNonStaleResultsTimeout.Value.ToInvariantString());
+                writer.WriteInteger((long)query.WaitForNonStaleResultsTimeout.Value.TotalMilliseconds);
                 writer.WriteComma();
             }
 
