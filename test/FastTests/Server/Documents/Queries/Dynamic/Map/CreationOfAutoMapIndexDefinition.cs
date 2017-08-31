@@ -247,6 +247,39 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             Assert.Equal("Auto/Users/ByAge", definition.Name);
         }
 
+        [Fact]
+        public void ExtendsIndexingOptionsOfTheSameField()
+        {
+            _sut = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE FirstName = 'a'"));
+
+            var existingDefinition = _sut.CreateAutoIndexDefinition();
+
+            _sut = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE search(FirstName, 'A')"));
+
+            _sut.ExtendMappingBasedOn(existingDefinition);
+
+            var definition = _sut.CreateAutoIndexDefinition();
+
+            Assert.Equal(1, definition.Collections.Count);
+            Assert.Equal("Users", definition.Collections.Single());
+            Assert.True(definition.ContainsField("FirstName"));
+            Assert.Equal(AutoFieldIndexing.Default | AutoFieldIndexing.Search, definition.MapFields["FirstName"].As<AutoIndexField>().Indexing);
+            Assert.Equal("Auto/Users/BySearch(FirstName)", definition.Name);
+
+
+            _sut = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE exact(FirstName = 'A')"));
+
+            _sut.ExtendMappingBasedOn(definition);
+
+            definition = _sut.CreateAutoIndexDefinition();
+
+            Assert.Equal(1, definition.Collections.Count);
+            Assert.Equal("Users", definition.Collections.Single());
+            Assert.True(definition.ContainsField("FirstName"));
+            Assert.Equal(AutoFieldIndexing.Default | AutoFieldIndexing.Search | AutoFieldIndexing.Exact, definition.MapFields["FirstName"].As<AutoIndexField>().Indexing);
+            Assert.Equal("Auto/Users/BySearch(FirstName)AndExact(FirstName)", definition.Name);
+        }
+
         private void create_dynamic_mapping(string query)
         {
             _sut = DynamicQueryMapping.Create(new IndexQueryServerSide(query));

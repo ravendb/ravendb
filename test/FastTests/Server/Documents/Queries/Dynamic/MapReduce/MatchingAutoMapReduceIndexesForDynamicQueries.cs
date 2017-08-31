@@ -324,6 +324,33 @@ select Name, count()"));
             }
         }
 
+        [Fact]
+        public void Partial_match_if_exact_is_required_on_group_by_field()
+        {
+            using (var db = CreateDocumentDatabase())
+            {
+                var mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"
+from Users
+group by Name
+where Name = 'arek'
+select Name, count()"));
+
+                db.IndexStore.CreateIndex(mapping.CreateAutoIndexDefinition()).Wait();
+
+                mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"
+from Users
+group by Name
+where exact(Name = 'arek')
+select Name, count()"));
+
+                var matcher = new DynamicQueryToIndexMatcher(db.IndexStore);
+
+                var result = matcher.Match(mapping);
+
+                Assert.Equal(DynamicQueryMatchType.Partial, result.MatchType);
+            }
+        }
+
         protected void add_index(IndexDefinitionBase definition)
         {
             AsyncHelpers.RunSync(() => _documentDatabase.IndexStore.CreateIndex(definition));

@@ -185,7 +185,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             var map = DynamicQueryMapping.Create(query);
 
-            if (map.MapFields.Length == 0 && map.GroupByFields.Length == 0)
+            if (map.MapFields.Count == 0 && (map.GroupByFields == null || map.GroupByFields.Count == 0))
                 return (null, collection); // use collection query
 
             if (TryMatchExistingIndexToQuery(map, out Index index) == false)

@@ -60,15 +60,15 @@ namespace Raven.Server.Documents.Indexes
             if (x.Indexing == AutoFieldIndexing.Default || x.Indexing == AutoFieldIndexing.No)
                 return x.Name;
 
-            var name = string.Empty;
+            var functions = new List<string>();
 
             if (x.Indexing.HasFlag(AutoFieldIndexing.Search))
-                name += AutoIndexField.GetSearchAutoIndexFieldName(x.Name).ToUpperFirstLetter();
+                functions.Add(AutoIndexField.GetSearchAutoIndexFieldName(x.Name).ToUpperFirstLetter());
 
             if (x.Indexing.HasFlag(AutoFieldIndexing.Exact))
-                name += AutoIndexField.GetExactAutoIndexFieldName(x.Name).ToUpperFirstLetter();
+                functions.Add(AutoIndexField.GetExactAutoIndexFieldName(x.Name).ToUpperFirstLetter());
 
-            return name;
+            return string.Join("And", functions);
         }
     }
 }

@@ -1,18 +1,16 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
+using Raven.Server.Config;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace FastTests.Server.Documents.Indexing
 {
     public class FullTextSearchOnAutoIndex : RavenTestBase
     {
-        public class User
-        {
-            public string Name;
-        }
-
         [Fact]
         public async Task CanUseFullTextSearchInAutoIndex()
         {
