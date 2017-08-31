@@ -13,9 +13,6 @@ namespace Raven.Server.Documents.Indexes.Auto
         {
             if (string.IsNullOrEmpty(collection))
                 throw new ArgumentNullException(nameof(collection));
-
-            if (fields.Length == 0)
-                throw new ArgumentException("You must specify at least one field.", nameof(fields));
         }
         
         protected abstract override void PersistFields(JsonOperationContext context, BlittableJsonTextWriter writer);
