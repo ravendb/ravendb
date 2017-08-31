@@ -216,6 +216,39 @@
     </div>
 </script>
 
+<script type="text/html" id="query-example">
+    <p>Simple collection query:</p>
+    <per><span class="token keyword">from</span> Orders
+<span class="token keyword">where</span> Lines.Count > 4
+<span class="token keyword">select</span> Lines[].ProductName as ProductNames, OrderedAt, ShipTo.City</per>
+
+    <p>Using JavaScript select:</p>
+    <pre><span class="token keyword">from</span> Orders <span class="token keyword">as</span> o
+<span class="token keyword">load</span> o.Company <span class="token keyword">as</span> c
+<span class="token keyword">select</span> {
+    Name: c.Name.toLowerCase(),
+    Country: c.Address.Country,
+    LinesCount: o.Lines.length
+}</pre>
+
+    <p>Group by:</p>
+    <pre><span class="token keyword">from</span> Orders
+<span class="token keyword">group by</span> Company
+<span class="token keyword">where</span> <span class="token function">count()</span> > 5
+<span class="token keyword">order by</span> <span class="token function">count()</span> <span class="token keyword">desc</span>
+<span class="token keyword">select</span> <span class="token function">count()</span> as Count, <span class="token function">key()</span> as Company
+<span class="token keyword">include</span> Company</pre>
+
+    <p>Querying an index:</p>
+    <pre><span class="token keyword">from index</span> <span class="token string">'Orders/Totals'</span> as i
+<span class="token keyword">where</span> i.Total > 10000
+<span class="token keyword">load</span> i.Company as c
+<span class="token keyword">where</span> {
+    Name: c.Name,
+    Region: c.Address.Region,
+    OrderedAt: i.OrderedAt
+}</pre>
+
 <!--
 <div>
 
