@@ -37,38 +37,12 @@
                             <input type="text" class="form-control" id="taskName" placeholder="Enter a descriptive name for the subscription task" title="Note: if no name is supplied then server will create one for you"
                                    data-bind="textInput: taskName, attr: { disabled: !$root.isAddingNewSubscriptionTask() }">
                         </div>
-                        <div class="form-group">
-                            <label class="control-label">Collection</label>
-                            <div class="flex-grow" data-bind="validationOptions: { insertMessages: false }, validationElement: collection">
-                                <div class="dropdown btn-block">
-                                    <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown" 
-                                           data-bind="textInput: collection, attr: { disabled: !$root.isAddingNewSubscriptionTask(), id: 'collectionNameInput' }"
-                                           placeholder="Select a collection">
-                                    <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
-                                    <ul class="dropdown-menu max-height" data-bind="foreach: createCollectionNameAutocompleter($data), autoComplete: '#' + 'collectionNameInput'">
-                                        <li data-bind="click: _.partial($root.useCollection, $data)">
-                                            <a href="#" data-bind="text: $data"></a>
-                                        </li>  
-                                    </ul>
-                                </div>
-                                <span class="help-block" data-bind="validationMessage: collection"></span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="panel padding">
-                        <div class="toggle" data-bind="validationOptions: { insertMessages: false }, validationElement: includeRevisions">
-                            <input id="include-revisions" type="checkbox" data-bind="checked: includeRevisions">
-                            <label for="include-revisions">Include Revisions</label>
-                        </div>
-                        <div class="help-block" data-bind="validationMessage: includeRevisions"></div>
-                    </div>
-                    <div class="panel padding">
-                        <label>Transform Script :&nbsp;&nbsp;<i class="icon-info text-info" id="scriptInfo"></i></label>
+                        <label>Subscription RQL Script :&nbsp;&nbsp;<i class="icon-info text-info" id="scriptInfo"></i></label>
                         <pre class="form-control margin-top" placeholder="Enter transform script" 
-                             data-bind="aceEditor: { code: script, lang:'ace/mode/javascript', completer: $root.completer }, validationOptions: { errorsAsTitle: false }, validationElement: script" style="height: 160px;">
+                             data-bind="aceEditor: { code: query, lang:'ace/mode/rql', completer: $root.queryCompleter.complete }, validationOptions: { errorsAsTitle: false }, validationElement: query" style="height: 160px;">
                         </pre>
-                        <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: script">
-                            <div class="help-block" data-bind="validationMessage: script"></div>
+                        <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: query">
+                            <div class="help-block" data-bind="validationMessage: query"></div>
                         </div>
                     </div>
                     <div class="panel padding flex-form">

@@ -15,13 +15,16 @@ import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import defaultAceCompleter = require("common/defaultAceCompleter");
+import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import subscriptionConnectionDetailsCommand = require("commands/database/tasks/getSubscriptionConnectionDetailsCommand");
+import database = require("models/resources/database");
+import queryCompleter = require("common/queryCompleter");
 
 type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<documentObject>>;
 
 class editSubscriptionTask extends viewModelBase {
 
-    completer = defaultAceCompleter.completer();
+    queryCompleter = queryCompleter.remoteCompleter(this.activeDatabase, ko.observableArray([])); // we intentionally pass empty indexes here as subscriptions works only on collections
     editedSubscription = ko.observable<ongoingTaskSubscriptionEdit>();
     isAddingNewSubscriptionTask = ko.observable<boolean>(true);
 
@@ -42,7 +45,7 @@ class editSubscriptionTask extends viewModelBase {
 
     constructor() {
         super();
-        this.bindToCurrentInstance("useCollection", "setStartingPointType");
+        this.bindToCurrentInstance("setStartingPointType");
         aceEditorBindingHandler.install();
     }
 
@@ -61,12 +64,7 @@ class editSubscriptionTask extends viewModelBase {
                 .done((result: Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails) => {
                     this.editedSubscription(new ongoingTaskSubscriptionEdit(result, true));
 
-                    if (this.editedSubscription().collection()) {
-                        this.editedSubscription().getCollectionRevisionsSettings()
-                            .done(() => deferred.resolve());
-                    } else {
-                        deferred.resolve();
-                    }
+                    deferred.resolve();
 
                     // 1.2 Check if connection is live
                     this.editedSubscription().liveConnection(false);
@@ -145,10 +143,6 @@ class editSubscriptionTask extends viewModelBase {
    
     cancelOperation() {
         this.goToOngoingTasksView();
-    }
-
-    useCollection(collectionToUse: string) {
-        this.editedSubscription().collection(collectionToUse);
     }
 
     setStartingPointType(startingPointType: subscriptionStartType) {

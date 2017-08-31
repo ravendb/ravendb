@@ -246,12 +246,11 @@
                                 <div class="padding padding-sm flex-horizontal">
                                     <div class="flex-grow">
                                         <ul class="properties">
-                                            <li><span>Collection:</span><strong data-bind="text: collection"></strong></li>
                                             <!-- ko if: !clientDetailsIssue() -->
                                             <li><span>Client IP:</span><strong data-bind="text: clientIP"></strong></li>
                                             <li><span>Connection Strategy:</span><strong data-bind="text: connectionStrategy"></strong></li>
                                             <!-- /ko -->
-                                            <li><span>Last Server Activity Time:</span><strong data-bind="text: lastTimeServerMadeProgressWithDocumnets"></strong></li>
+                                            <li><span>Last Server Activity Time:</span><strong data-bind="text: lastTimeServerMadeProgressWithDocuments"></strong></li>
                                             <li>
                                                 <span>Last Client Connection Time:</span><strong data-bind="text: lastClientConnectionTime"></strong>
                                                 <span data-bind="if: clientIP()">
