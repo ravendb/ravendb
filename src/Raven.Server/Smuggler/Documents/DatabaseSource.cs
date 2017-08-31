@@ -8,6 +8,7 @@ using Raven.Server.Documents;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Voron;
 
@@ -137,7 +138,18 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public IEnumerable<(string Prefix, long Value)> GetIdentities() => _database.ServerStore.LoadIdentities(_database.Name);
+        public IDisposable GetIdentities(out IEnumerable<(string Prefix, long Value)> identities)
+        {
+            using (var scope = new DisposableScope())
+            {
+                scope.EnsureDispose(_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context));
+                scope.EnsureDispose(context.OpenReadTransaction());
+
+                identities = _database.ServerStore.Cluster.ReadIdentities(context, _database.Name, 0, int.MaxValue);
+
+                return scope.Delay();
+            }
+        }
 
         public long SkipType(DatabaseItemType type)
         {

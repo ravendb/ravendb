@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,6 +9,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Http;
+using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
@@ -128,9 +130,13 @@ namespace SlowTests.Issues
 
             Assert.True(mre.Wait(TimeSpan.FromSeconds(10)));
 
-            Assert.Equal(0, Server.ServerStore.LoadIdentities(dbName1).Count);
-            Assert.Equal(0, Server.ServerStore.LoadIdentities(dbName2).Count);
-            Assert.Equal(0, Server.ServerStore.LoadIdentities(dbName3).Count);
+            using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                Assert.Equal(0, Server.ServerStore.Cluster.ReadIdentities(context, dbName1, 0, int.MaxValue).Count());
+                Assert.Equal(0, Server.ServerStore.Cluster.ReadIdentities(context, dbName2, 0, int.MaxValue).Count());
+                Assert.Equal(0, Server.ServerStore.Cluster.ReadIdentities(context, dbName3, 0, int.MaxValue).Count());
+            }
         }
 
         private static Dictionary<string, long> GetIdentities(IDocumentStore store, int start, int pageSize)

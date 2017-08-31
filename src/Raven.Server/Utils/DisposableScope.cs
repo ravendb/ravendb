@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Raven.Server.Utils
 {
-    public class DisposeableScope : IDisposable
+    public class DisposableScope : IDisposable
     {
         private readonly LinkedList<IDisposable> _disposables = new LinkedList<IDisposable>();
         private int _delayedDispose;

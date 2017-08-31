@@ -47,7 +47,7 @@ namespace Raven.Server.Smuggler.Documents
         public SmugglerResult Execute()
         {
             var result = _result ?? new SmugglerResult();
-            using(_patcher?.Initialize())
+            using (_patcher?.Initialize())
             using (_source.Initialize(_options, result, out long buildVersion))
             using (_destination.Initialize(_options, result, buildVersion))
             {
@@ -169,9 +169,10 @@ namespace Raven.Server.Smuggler.Documents
 
         private SmugglerProgressBase.Counts ProcessIdentities(SmugglerResult result)
         {
-            using (var clusterIdentityActions = _destination.Identities())
+            using (var actions = _destination.Identities())
+            using (_source.GetIdentities(out var identities))
             {
-                foreach (var kvp in _source.GetIdentities())
+                foreach (var kvp in identities)
                 {
                     _token.ThrowIfCancellationRequested();
                     result.Identities.ReadCount++;
@@ -190,7 +191,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     try
                     {
-                        clusterIdentityActions.WriteIdentity(kvp.Prefix, kvp.Value);
+                        actions.WriteIdentity(kvp.Prefix, kvp.Value);
                     }
                     catch (Exception e)
                     {

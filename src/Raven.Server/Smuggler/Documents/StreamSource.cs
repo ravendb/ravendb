@@ -154,9 +154,10 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public IEnumerable<(string Prefix, long Value)> GetIdentities()
+        public IDisposable GetIdentities(out IEnumerable<(string Prefix, long Value)> identities)
         {
-            return InternalGetIdentities();
+            identities = InternalGetIdentities();
+            return null;
         }
 
         private IEnumerable<(string Prefix, long Value)> InternalGetIdentities()
