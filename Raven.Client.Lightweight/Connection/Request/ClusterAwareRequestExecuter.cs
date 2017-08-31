@@ -17,6 +17,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Cluster;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
@@ -32,7 +33,7 @@ namespace Raven.Client.Connection.Request
 {
     public class ClusterAwareRequestExecuter : IRequestExecuter
     {
-        public TimeSpan WaitForLeaderTimeout { get; set; }= TimeSpan.FromSeconds(10);
+        public TimeSpan WaitForLeaderTimeout { get; set; } = TimeSpan.FromSeconds(10);
 
         public TimeSpan ReplicationDestinationsTopologyTimeout { get; set; } = TimeSpan.FromSeconds(2);
 
@@ -63,7 +64,7 @@ namespace Raven.Client.Connection.Request
         /// Sets the leader node to a known leader that is not null and sets the leader selected event
         /// </summary>
         /// <param name="newLeader"></param>
-        public void SetLeaderNodeToKnownLeader(OperationMetadata newLeader )
+        public void SetLeaderNodeToKnownLeader(OperationMetadata newLeader)
         {
             if (newLeader == null)
             {
@@ -91,15 +92,15 @@ namespace Raven.Client.Connection.Request
         public bool SetLeaderNodeToNullIfPrevIsTheSame(OperationMetadata prevValue)
         {
             var realPrevValue = Interlocked.CompareExchange(ref leaderNode, null, prevValue);
-            var res = realPrevValue == null || realPrevValue.Equals(prevValue) ;
+            var res = realPrevValue == null || realPrevValue.Equals(prevValue);
             if (res && realPrevValue != null)
             {
                 if (Log.IsDebugEnabled)
                 {
                     Log.Debug($"Leader node is changing from {realPrevValue} to null.");
-                }                
-				leaderNodeSelected.Reset();
-            }            
+                }
+                leaderNodeSelected.Reset();
+            }
             return res;
         }
 
@@ -110,7 +111,7 @@ namespace Raven.Client.Connection.Request
         /// <param name="newLeader">The new leader to be set.</param>
         /// <param name="isRealLeader">An indication if this is a real leader or just the primary, this will affect if we raise the leader selected event.</param>
         /// <returns>true if the leader node was changed from null to the given value, otherwise returns false</returns>
-        private bool SetLeaderNodeIfLeaderIsNull(OperationMetadata newLeader ,bool isRealLeader = true)
+        private bool SetLeaderNodeIfLeaderIsNull(OperationMetadata newLeader, bool isRealLeader = true)
         {
             var changed = (Interlocked.CompareExchange(ref leaderNode, newLeader, null) == null);
             if (changed && isRealLeader && newLeader != null)
@@ -172,12 +173,12 @@ namespace Raven.Client.Connection.Request
             if (force == false && updateRecently && localLeaderNode != null)
             {
                 if (Log.IsDebugEnabled)
-                    Log.Debug($"Will not update replication information because we have a leader:{localLeaderNode} and we recently updated the topology.");                
+                    Log.Debug($"Will not update replication information because we have a leader:{localLeaderNode} and we recently updated the topology.");
                 return new CompletedTask();
             }
             //This will prevent setting leader node to null if it was updated already.
             if (SetLeaderNodeToNullIfPrevIsTheSame(localLeaderNode) == false)
-                return new CompletedTask(); 
+                return new CompletedTask();
 
             return UpdateReplicationInformationForCluster(serverClient, new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null), operationMetadata =>
             {
@@ -210,17 +211,17 @@ namespace Raven.Client.Connection.Request
         private async Task<T> ExecuteWithinClusterInternalAsync<T>(AsyncServerClient serverClient, HttpMethod method, Func<OperationMetadata, IRequestTimeMetric, Task<T>> operation, CancellationToken token, int numberOfRetries = 3, bool withClusterFailoverHeader = false)
         {
             token.ThrowIfCancellationRequested();
-            
+            bool isFaultedNode = false;
             var node = LeaderNode;
             if (node == null)
             {
-                if(Log.IsDebugEnabled)
+                if (Log.IsDebugEnabled)
                 {
                     Log.Debug($"Fetching topology, {serverClient.Url}: Retries={numberOfRetries} When={DateTime.UtcNow}");
                 }
 #pragma warning disable 4014
                 //We always want to fetch a new topology if we don't know who the leader is.
-                UpdateReplicationInformationIfNeededAsync(serverClient, force:true);
+                UpdateReplicationInformationIfNeededAsync(serverClient, force: true);
 #pragma warning restore 4014
                 //there is no reason for us to throw cluster not reachable for a read operation when we can read from all nodes.
                 if (method == HttpMethod.Get &&
@@ -228,7 +229,7 @@ namespace Raven.Client.Connection.Request
                      serverClient.convention.FailoverBehavior == FailoverBehavior.ReadFromAllWriteToLeaderWithFailovers))
                 {
                     var primaryNode = new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null);
-                    node = GetNodeForReadOperation(primaryNode) ?? primaryNode;
+                    node = GetNodeForReadOperation(primaryNode, out isFaultedNode);
                 }
                 else
                 {
@@ -253,21 +254,22 @@ namespace Raven.Client.Connection.Request
                     node = LeaderNode;
                 }
             }
+
             switch (serverClient.convention.FailoverBehavior)
             {
                 case FailoverBehavior.ReadFromAllWriteToLeader:
                     if (method == HttpMethods.Get)
-                        node = GetNodeForReadOperation(node) ?? node;
+                        node = GetNodeForReadOperation(node, out isFaultedNode);
                     break;
                 case FailoverBehavior.ReadFromAllWriteToLeaderWithFailovers:
                     if (node == null)
                     {
-                        return await HandleWithFailovers(operation, token,withClusterFailoverHeader).ConfigureAwait(false);
-                        
+                        return await HandleWithFailovers(operation, token, withClusterFailoverHeader).ConfigureAwait(false);
+
                     }
 
                     if (method == HttpMethods.Get)
-                        node = GetNodeForReadOperation(node) ?? node;
+                        node = GetNodeForReadOperation(node, out isFaultedNode);
                     break;
                 case FailoverBehavior.ReadFromLeaderWriteToLeaderWithFailovers:
                     if (node == null)
@@ -283,8 +285,17 @@ namespace Raven.Client.Connection.Request
             {
                 return operationResult.Result;
             }
-            if(Log.IsDebugEnabled)
-                Log.Debug($"Faield executing operation on node {node.Url} number of remaining retries: {numberOfRetries}.");
+
+            if (isFaultedNode) //the node had more than one failure, but we tried it anyway.
+            {
+                if (Log.IsDebugEnabled)
+                    Log.Debug($"Failed executing operation on node {node.Url}. Connecting to this node has failed already at least once, but we tried again anyway and failed. Got the following result: {operationResult.Result}. (Timeout = {operationResult.WasTimeout})");
+                
+                throw operationResult.Error;
+            }
+
+            if (Log.IsDebugEnabled)
+                Log.Debug($"Failed executing operation on node {node.Url} number of remaining retries: {numberOfRetries}.");
 
             SetLeaderNodeToNullIfPrevIsTheSame(node);
             FailureCounters.IncrementFailureCount(node.Url);
@@ -297,29 +308,74 @@ namespace Raven.Client.Connection.Request
 
             if (numberOfRetries <= 0)
             {
-                throw new InvalidOperationException("Cluster is not reachable. Out of retries, aborting.", operationResult.Error );
+                throw new InvalidOperationException("Cluster is not reachable. Out of retries, aborting.", operationResult.Error);
             }
 
             return await ExecuteWithinClusterInternalAsync(serverClient, method, operation, token, numberOfRetries - 1, withClusterFailoverHeader).ConfigureAwait(false);
         }
 
-        private OperationMetadata GetNodeForReadOperation(OperationMetadata node)
+        private OperationMetadata GetNodeForReadOperation(OperationMetadata node, out bool isFaultedNode)
         {
             Debug.Assert(node != null);
 
             var nodes = new List<OperationMetadata>(NodeUrls);
-
+            isFaultedNode = false;
             if (readStripingBase == -1)
-                return LeaderNode;
+            {
+                var nodeForReadOperation = LeaderNode;
+                if (ShouldExecuteUsing(nodeForReadOperation))
+                    return nodeForReadOperation;
+
+                if (Log.IsDebugEnabled)
+                {
+                    Log.Debug($"The leader node = {nodeForReadOperation.Url} is faulted. (Trying the leader because we are in 'ForceReadFromMaster' scope. We will try anyway, maybe it was a transient error.");
+                }
+
+                isFaultedNode = true;
+                return nodeForReadOperation;
+            }
 
             if (nodes.Count == 0)
-                return null;
+            {
+                if (ShouldExecuteUsing(node))
+                    return node;
 
+                if (Log.IsDebugEnabled)
+                {
+                    Log.Debug($"The node {node.Url} is faulted. We will try anyway, maybe it was a transient error.");
+                }
+                isFaultedNode = true;
+                return node;
+            }
 
-            var nodeIndex = readStripingBase % nodes.Count;
+            var stripingBase = readStripingBase;
+            var nodeIndex = stripingBase % nodes.Count;
             var readNode = nodes[nodeIndex];
+
             if (ShouldExecuteUsing(readNode))
                 return readNode;
+
+            int faultedNodes = 0;
+            var foundAvailableNode = false;
+            do
+            {                                
+                nodeIndex = ++stripingBase % nodes.Count;
+                readNode = nodes[nodeIndex];
+                if (ShouldExecuteUsing(readNode))
+                {
+                    foundAvailableNode = true;
+                    break;
+                }
+                faultedNodes++;
+            } while(faultedNodes < nodes.Count - 1); //go over all nodes except the initial
+
+            if (foundAvailableNode == false)
+            {
+                if(Log.IsDebugEnabled)
+                    Log.Debug($"Cluster is not reachable. Executing operation on any of the cluster nodes failed, aborting. Tried the following nodes: {string.Join(" , ", nodes.Select(x => x.Url))}");
+
+                isFaultedNode = true;
+            }
 
             return node;
         }
@@ -340,11 +396,11 @@ namespace Raven.Client.Connection.Request
                 var result = await TryClusterOperationAsync(n, operation, hasMoreNodes, token).ConfigureAwait(false);
                 if (result.Success)
                     return result.Result;
-                if(Log.IsDebugEnabled)
+                if (Log.IsDebugEnabled)
                     Log.Debug($"Tried executing operation on failover server {n.Url} with no success.");
                 FailureCounters.IncrementFailureCount(n.Url);
             }
- 
+
             throw new InvalidOperationException("Cluster is not reachable. Executing operation on any of the nodes failed, aborting.");
         }
 
@@ -358,7 +414,7 @@ namespace Raven.Client.Connection.Request
         }
 
         private const int RedirectLimit = 2;
-        private async Task<AsyncOperationResult<T>> TryClusterOperationAsync<T>(OperationMetadata node, Func<OperationMetadata, IRequestTimeMetric, Task<T>> operation, bool avoidThrowing, CancellationToken token,int redirectLimit = RedirectLimit)
+        private async Task<AsyncOperationResult<T>> TryClusterOperationAsync<T>(OperationMetadata node, Func<OperationMetadata, IRequestTimeMetric, Task<T>> operation, bool avoidThrowing, CancellationToken token, int redirectLimit = RedirectLimit)
         {
             if (redirectLimit == 0)
             {
@@ -382,7 +438,7 @@ namespace Raven.Client.Connection.Request
                 {
                     shouldRetry = true;
                     operationResult.WasTimeout = wasTimeout;
-                    if(Log.IsDebugEnabled)
+                    if (Log.IsDebugEnabled)
                         Log.Debug($"Operation failed because server {node.Url} is down.");
                 }
                 else
@@ -405,11 +461,11 @@ namespace Raven.Client.Connection.Request
                                 throw new InvalidOperationException("Got 302 Redirect, but without Raven-Leader-Redirect: true header, maybe there is a proxy in the middle", e);
                             }
                             var redirectUrl = errorResponseException.Response.Headers.Location.ToString();
-                            var newLeaderNode = Nodes.FirstOrDefault(n => n.Url.Equals(redirectUrl))?? new OperationMetadata(redirectUrl, node.Credentials, node.ClusterInformation);
+                            var newLeaderNode = Nodes.FirstOrDefault(n => n.Url.Equals(redirectUrl)) ?? new OperationMetadata(redirectUrl, node.Credentials, node.ClusterInformation);
                             SetLeaderNodeToKnownLeader(newLeaderNode);
-                            if(Log.IsDebugEnabled)
+                            if (Log.IsDebugEnabled)
                                 Log.Debug($"Redirecting to {redirectUrl} because {node.Url} responded with 302-redirect.");
-                            return await TryClusterOperationAsync(newLeaderNode, operation, avoidThrowing, token, redirectLimit-1).ConfigureAwait(false);
+                            return await TryClusterOperationAsync(newLeaderNode, operation, avoidThrowing, token, redirectLimit - 1).ConfigureAwait(false);
                         }
 
                         if (errorResponseException.StatusCode == HttpStatusCode.ExpectationFailed)
@@ -465,7 +521,7 @@ namespace Raven.Client.Connection.Request
                         if (Log.IsDebugEnabled)
                         {
                             Log.Debug($"Fetched topology from cache, no leader found.\n Nodes:" + string.Join(",", Nodes.Select(n => n.Url)));
-                        } 
+                        }
                         SetLeaderNodeToNull();
                     }
                 }
@@ -474,7 +530,7 @@ namespace Raven.Client.Connection.Request
                 {
                     var tryFailoverServers = false;
                     var triedFailoverServers = FailoverServers == null || FailoverServers.Length == 0;
-                    for (;;)
+                    for (; ; )
                     {
                         //taking a snapshot so we could tell if the value changed while we fetch the topology
                         var prevLeader = LeaderNode;
@@ -514,7 +570,7 @@ namespace Raven.Client.Connection.Request
                         var tasksCompleted = Task.WaitAll(tasks, ReplicationDestinationsTopologyTimeout);
                         if (Log.IsDebugEnabled && tasksCompleted == false)
                         {
-                            Log.Debug($"During fetch topology {tasks.Count(t=>t.IsCompleted)} servers have responded out of {tasks.Length}");
+                            Log.Debug($"During fetch topology {tasks.Count(t => t.IsCompleted)} servers have responded out of {tasks.Length}");
                         }
                         replicationDocuments.ForEach(x =>
                         {
@@ -534,7 +590,7 @@ namespace Raven.Client.Connection.Request
 
                         var hasLeaderCount = replicationDocuments
                             .Count(x => x.Task.IsCompleted && x.Task.Result != null && x.Task.Result.HasLeader);
-                       
+
                         if (newestTopology == null && FailoverServers != null && FailoverServers.Length > 0 && tryFailoverServers == false)
                             tryFailoverServers = true;
 
@@ -549,8 +605,8 @@ namespace Raven.Client.Connection.Request
                             {
                                 return;
                             }
-                            
-                            if(Nodes.Count == 0)
+
+                            if (Nodes.Count == 0)
                                 Nodes = new List<OperationMetadata>
                                 {
                                     primaryNode
@@ -588,7 +644,7 @@ namespace Raven.Client.Connection.Request
         internal bool UpdateTopology(AsyncServerClient serverClient, OperationMetadata node, ReplicationDocumentWithClusterInformation replicationDocument, string serverHash, OperationMetadata prevLeader)
         {
             Nodes = GetNodes(node, replicationDocument);
-            var newLeader = Nodes.SingleOrDefault(x=>x.ClusterInformation.IsLeader);
+            var newLeader = Nodes.SingleOrDefault(x => x.ClusterInformation.IsLeader);
             var document = new JsonDocument
             {
                 DataAsJson = RavenJObject.FromObject(replicationDocument)
