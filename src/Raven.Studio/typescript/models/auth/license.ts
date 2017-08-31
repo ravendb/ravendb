@@ -19,8 +19,8 @@ class license {
 
     static licenseCssClass = ko.computed(() => {
         var status = license.licenseStatus();
-        if (status == null || status.Type !== "Commercial") {
-            return 'dev-only';
+        if (status == null) {
+            return 'no-license';
         }
         if (status.Status.includes("Expired")) {
             return 'expired';

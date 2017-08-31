@@ -58,7 +58,9 @@ namespace Raven.Server.ServerWide
 
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<ServerStore>(ResourceName);
 
-        public const string LicenseStoargeKey = "License/Stoarge/Key";
+        public const string LicenseStorageKey = "License/Key";
+
+        public const string LicenseLimitsStorageKey = "License/Limits/Key";
 
         private readonly CancellationTokenSource _shutdownNotification = new CancellationTokenSource();
 
@@ -79,12 +81,13 @@ namespace Raven.Server.ServerWide
         public readonly FeedbackSender FeedbackSender;
         public readonly SecretProtection Secrets;
 
-
         private readonly TimeSpan _frequencyToCheckForIdleDatabases;
 
         public long LastClientConfigurationIndex { get; private set; } = -2;
 
-        public long LastLicenseIndex { get; private set; }
+        public event EventHandler LicenseChanged;
+
+        public event EventHandler LicenseLimitsChanged;
 
         public Operations Operations { get; }
 
@@ -419,9 +422,6 @@ namespace Raven.Server.ServerWide
 
                 if (_engine.StateMachine.Read(context, Constants.Configuration.ClientId, out long clientConfigEtag) != null)
                     LastClientConfigurationIndex = clientConfigEtag;
-
-                if (_engine.StateMachine.Read(context, LicenseStoargeKey, out long licenseEtag) != null)
-                    LastLicenseIndex = licenseEtag;
             }
 
             Task.Run(ClusterMaintenanceSetupTask, ServerShutdown);
@@ -432,12 +432,16 @@ namespace Raven.Server.ServerWide
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                NotificationCenter.Add(ClusterTopologyChanged.Create(GetClusterTopology(context), LeaderTag, NodeTag, _engine.CurrentTerm, GetNodesStatuses()));
-                // If we are in passive state, we prevent from tasks to be performed by this node.
+                NotificationCenter.Add(ClusterTopologyChanged.Create(GetClusterTopology(context), 
+                    LeaderTag, NodeTag, _engine.CurrentTerm, GetNodesStatuses(), LoadLicenseLimits()?.CoresByNode));
+                
+                // if we are in passive state, we prevent from tasks to be performed by this node.
                 if (state.From == RachisConsensus.State.Passive || state.To == RachisConsensus.State.Passive)
                 {
                     RefreshOutgoingTasks();
+                    LicenseLimitsChanged?.Invoke(null, null);
                 }
+
                 if (state.To == RachisConsensus.State.LeaderElect)
                 {
                     _engine.CurrentLeader.OnNodeStatusChange += OnTopologyChanged;
@@ -508,7 +512,8 @@ namespace Raven.Server.ServerWide
 
         private void OnTopologyChanged(object sender, ClusterTopology topologyJson)
         {
-            NotificationCenter.Add(ClusterTopologyChanged.Create(topologyJson, LeaderTag, NodeTag, _engine.CurrentTerm, GetNodesStatuses()));
+            NotificationCenter.Add(ClusterTopologyChanged.Create(topologyJson, LeaderTag, 
+                NodeTag, _engine.CurrentTerm, GetNodesStatuses(), LoadLicenseLimits()?.CoresByNode));
         }
 
         private void OnDatabaseChanged(object sender, (string DatabaseName, long Index, string Type) t)
@@ -541,7 +546,10 @@ namespace Raven.Server.ServerWide
                     break;
                 case nameof(PutLicenseCommand):
                 case nameof(DeactivateLicenseCommand):
-                    LastLicenseIndex = t.Index;
+                    LicenseChanged?.Invoke(null, null);
+                    break;
+                case nameof(PutLicenseLimitsCommand):
+                    LicenseLimitsChanged?.Invoke(null, null);
                     break;
             }
         }
@@ -815,11 +823,12 @@ namespace Raven.Server.ServerWide
             return await SendToLeaderAsync(modifyPeriodicBackup);
         }
 
-        public async Task<(long, object)> AddEtl(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject etlConfiguration)
+        public async Task<(long, object)> AddEtl(TransactionOperationContext context, 
+            string databaseName, BlittableJsonReaderObject etlConfiguration)
         {
             UpdateDatabaseCommand command;
 
-            switch (GetEtlType(etlConfiguration))
+            switch (EtlConfiguration<ConnectionString>.GetEtlType(etlConfiguration))
             {
                 case EtlType.Raven:
                     command = new AddRavenEtlCommand(JsonDeserializationCluster.RavenEtlConfiguration(etlConfiguration), databaseName);
@@ -838,7 +847,7 @@ namespace Raven.Server.ServerWide
         {
             UpdateDatabaseCommand command;
 
-            switch (GetEtlType(etlConfiguration))
+            switch (EtlConfiguration<ConnectionString>.GetEtlType(etlConfiguration))
             {
                 case EtlType.Raven:
                     command = new UpdateRavenEtlCommand(id, JsonDeserializationCluster.RavenEtlConfiguration(etlConfiguration), databaseName);
@@ -851,17 +860,6 @@ namespace Raven.Server.ServerWide
             }
 
             return await SendToLeaderAsync(command);
-        }
-
-        private static EtlType GetEtlType(BlittableJsonReaderObject etlConfiguration)
-        {
-            if (etlConfiguration.TryGet(nameof(EtlConfiguration<ConnectionString>.EtlType), out string type) == false)
-                throw new InvalidOperationException($"ETL configuration must have {nameof(EtlConfiguration<ConnectionString>.EtlType)} field");
-
-            if (Enum.TryParse<EtlType>(type, true, out var etlType) == false)
-                throw new NotSupportedException($"Unknown ETL type: {etlType}");
-
-            return etlType;
         }
 
         public Task<(long, object)> ModifyDatabaseRevisions(JsonOperationContext context, string name, BlittableJsonReaderObject configurationJson)
@@ -1158,7 +1156,7 @@ namespace Raven.Server.ServerWide
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var licenseBlittable = Cluster.Read(context, LicenseStoargeKey);
+                var licenseBlittable = Cluster.Read(context, LicenseStorageKey);
                 if (licenseBlittable == null)
                     return null;
 
@@ -1166,24 +1164,47 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public async Task<long> PutLicense(License license)
+        public LicenseLimits LoadLicenseLimits()
         {
-            var command = new PutLicenseCommand(LicenseStoargeKey, license);
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var licenseLimitsBlittable = Cluster.Read(context, LicenseLimitsStorageKey);
+                if (licenseLimitsBlittable == null)
+                    return null;
+
+                return JsonDeserializationServer.LicenseLimits(licenseLimitsBlittable);
+            }
+        }
+
+        public async Task PutLicense(License license)
+        {
+            var command = new PutLicenseCommand(LicenseStorageKey, license);
 
             var result = await SendToLeaderAsync(command);
 
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Updating licnese id: {license.Id}");
 
+            await WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index);        }
+
+        public async Task PutLicenseLimits(LicenseLimits licenseLimits)
+        {
+            var command = new PutLicenseLimitsCommand(LicenseLimitsStorageKey, licenseLimits);
+
+            var result = await SendToLeaderAsync(command);
+
+            if (Logger.IsInfoEnabled)
+                Logger.Info("Updating licnese limits");
+
             await WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index);
-            return result.Index;
         }
 
         public async Task DeactivateLicense(License license)
         {
             var command = new DeactivateLicenseCommand
             {
-                Name = LicenseStoargeKey
+                Name = LicenseStorageKey
             };
 
             var result = await SendToLeaderAsync(command);
@@ -1454,14 +1475,6 @@ namespace Raven.Server.ServerWide
             };
             return json;
 
-        }
-
-        public bool HasLicenseChanged(long index)
-        {
-            if (index < 0)
-                return false;
-
-            return LastLicenseIndex > index;
         }
     }
 }

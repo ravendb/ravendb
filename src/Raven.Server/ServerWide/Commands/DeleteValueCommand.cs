@@ -20,7 +20,7 @@ namespace Raven.Server.ServerWide.Commands
 
         public override void VerifyCanExecuteCommand(ServerStore store, TransactionOperationContext context, bool isClusterAdmin)
         {
-            if(Name == ServerStore.LicenseStoargeKey || Name.StartsWith(Constants.Certificates.Prefix))
+            if (Name == ServerStore.LicenseStorageKey || Name.StartsWith(Constants.Certificates.Prefix))
                 throw new InvalidOperationException("Attempted to use DeleteValueCommand to delete a certificate or license, use dedicated commands for this.");
         }
     }

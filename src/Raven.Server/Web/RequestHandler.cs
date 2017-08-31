@@ -12,10 +12,15 @@ using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Primitives;
 using Raven.Client;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
+using Raven.Server.Commercial;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 
 namespace Raven.Server.Web
 {
@@ -492,5 +497,16 @@ namespace Raven.Server.Web
             HttpContext.Response.Headers.Add("Access-Control-Max-Age", "86400");
         }
 
+        protected void SetLicenseLimitResponse(LicenseLimit licenseLimit)
+        {
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                var blittable = EntityToBlittable.ConvertEntityToBlittable(licenseLimit, DocumentConventions.Default, context);
+                context.Write(writer, blittable);
+                writer.Flush();
+            }
+        }
     }
 }
