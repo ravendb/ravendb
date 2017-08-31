@@ -80,6 +80,19 @@ class shell extends viewModelBase {
     studioLoadingFakeRequest: requestExecution;
 
     private onBootstrapFinishedTask = $.Deferred<void>();
+    
+    showConnectionLost = ko.pureComputed(() => {
+        const serverWideWebSocket = changesContext.default.serverNotifications();
+        
+        if (!serverWideWebSocket) {
+            return false;
+        }
+        
+        const errorState = serverWideWebSocket.inErrorState();
+        const ignoreError = serverWideWebSocket.ignoreWebSocketConnectionError();
+        
+        return errorState && !ignoreError;
+    });
 
     constructor() {
         super();
@@ -335,6 +348,10 @@ class shell extends viewModelBase {
     static openFeedbackForm() {
         const dialog = new feedback(shell.clientVersion(), shell.serverBuildVersion().FullVersion);
         app.showBootstrapDialog(dialog);
+    }
+    
+    ignoreWebSocketError() {
+        changesContext.default.serverNotifications().ignoreWebSocketConnectionError(true);
     }
 }
 
