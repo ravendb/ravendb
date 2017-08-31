@@ -1,7 +1,9 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
+using Raven.Server.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -116,6 +118,21 @@ namespace FastTests.Server.Documents.Indexing
                     Assert.Equal("Auto/Users/ByCountReducedByExact(Name)", stats.IndexName);
                 }
             }
+        }
+
+        [Fact]
+        public void IndexNameFinderShouldPreservePascalCaseFieldNames()
+        {
+            var name = AutoIndexNameFinder.FindMapIndexName("Users", new[]
+            {
+                new AutoIndexField()
+                {
+                    Name = "LastName",
+                    Indexing = AutoFieldIndexing.Default | AutoFieldIndexing.Search
+                }
+            });
+
+            Assert.Equal("Auto/Users/BySearch(LastName)", name);
         }
     }
 }

@@ -29,5 +29,16 @@ namespace Raven.Server.Extensions
                 }
             }
         }
+        
+        public static string ToUpperFirstLetter(this string self)
+        {
+            if (string.IsNullOrEmpty(self))
+                return string.Empty;
+
+            var chars = self.ToCharArray();
+            chars[0] = char.ToUpper(chars[0]);
+
+            return new string(chars);
+        }
     }
 }
