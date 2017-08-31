@@ -1194,17 +1194,6 @@ namespace Raven.Server.ServerWide
             await WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Etag);
         }
 
-        public List<(string Prefix, long Value)> LoadIdentities(string databaseName)
-        {
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                return Cluster
-                    .ReadIdentities(context, databaseName, 0, int.MaxValue)
-                    .ToList();
-            }
-        }
-
         public DatabaseRecord LoadDatabaseRecord(string databaseName, out long etag)
         {
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))

@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
             if (self.Type.IsMapReduce() == false)
                 throw new NotSupportedException("Getting doc ids for map indexes is not supported");
 
-            using (var scope = new DisposeableScope())
+            using (var scope = new DisposableScope())
             {
                 scope.EnsureDispose(self._contextPool.AllocateOperationContext(out TransactionOperationContext indexContext));
 
@@ -156,7 +156,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
 
         public static IDisposable GetReduceTree(this Index self, string[] docIds, out IEnumerable<ReduceTree> trees)
         {
-            using (var scope = new DisposeableScope())
+            using (var scope = new DisposableScope())
             {
                 scope.EnsureDispose(self._contextPool.AllocateOperationContext(out TransactionOperationContext indexContext));
 
@@ -197,7 +197,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
         }
 
         private static IEnumerable<ReduceTree> IterateTrees(Index self, List<FixedSizeTree> mapEntries,
-            Tree reducePhaseTree, FixedSizeTree typePerHash, TransactionOperationContext indexContext, DisposeableScope scope)
+            Tree reducePhaseTree, FixedSizeTree typePerHash, TransactionOperationContext indexContext, DisposableScope scope)
         {
             var reduceKeys = new HashSet<ulong>();
             var idToDocIdHash = new Dictionary<long, string>();

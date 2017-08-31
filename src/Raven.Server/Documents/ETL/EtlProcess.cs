@@ -96,7 +96,7 @@ namespace Raven.Server.Documents.ETL
 
         public virtual IEnumerable<TExtracted> Extract(DocumentsOperationContext context, long fromEtag, EtlStatsScope stats)
         {
-            using (var scope = new DisposeableScope())
+            using (var scope = new DisposableScope())
             {
                 var enumerators = new List<(IEnumerator<Document> Docs, IEnumerator<DocumentTombstone> Tombstones, string Collection)>(Transformation.Collections.Count);
 

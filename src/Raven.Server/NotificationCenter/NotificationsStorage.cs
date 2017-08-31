@@ -126,7 +126,7 @@ namespace Raven.Server.NotificationCenter
 
         public IDisposable ReadActionsOrderedByCreationDate(out IEnumerable<NotificationTableValue> actions)
         {
-            using (var scope = new DisposeableScope())
+            using (var scope = new DisposableScope())
             {
                 scope.EnsureDispose(_contextPool.AllocateOperationContext(out TransactionOperationContext context));
                 scope.EnsureDispose(context.OpenReadTransaction());
@@ -139,7 +139,7 @@ namespace Raven.Server.NotificationCenter
 
         public IDisposable Read(string id, out NotificationTableValue value)
         {
-            using (var scope = new DisposeableScope())
+            using (var scope = new DisposableScope())
             {
                 RavenTransaction tx;
 
@@ -164,7 +164,7 @@ namespace Raven.Server.NotificationCenter
 
         public IDisposable ReadPostponedActions(out IEnumerable<NotificationTableValue> actions, DateTime cutoff)
         {
-            using (var scope = new DisposeableScope())
+            using (var scope = new DisposableScope())
             {
 
                 scope.EnsureDispose(_contextPool.AllocateOperationContext(out TransactionOperationContext context));
