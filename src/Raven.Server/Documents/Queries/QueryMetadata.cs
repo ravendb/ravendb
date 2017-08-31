@@ -9,6 +9,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
 using Raven.Client.Util;
 using Raven.Server.Documents.Queries.Parser;
+using Raven.Server.Json;
 using Sparrow;
 using Sparrow.Json;
 
@@ -109,7 +110,13 @@ namespace Raven.Server.Documents.Queries
                 GroupBy = new string[Query.GroupBy.Count];
 
                 for (var i = 0; i < Query.GroupBy.Count; i++)
-                    GroupBy[i] = QueryExpression.Extract(QueryText, Query.GroupBy[i]);
+                {
+                    var name = QueryExpression.Extract(QueryText, Query.GroupBy[i]);
+
+                    EnsureValidGroupByField(name, parameters);
+
+                    GroupBy[i] = name;
+                }
             }
 
             if (Query.Load != null)
@@ -665,6 +672,11 @@ namespace Raven.Server.Documents.Queries
             throw new InvalidQueryException($"Invalid type of operator in ORDER BY clause. Operator: {type}", queryText, parameters);
         }
 
+        private static void ThrowGroupByCollectionIsNotSupported(string queryText, BlittableJsonReaderObject parameters)
+        {
+            throw new InvalidQueryException("Grouping by collections in auto map reduce indexes is not supported", queryText, parameters);
+        }
+
         private class FillWhereFieldsAndParametersVisitor : WhereExpressionVisitor
         {
             private readonly QueryMetadata _metadata;
@@ -942,6 +954,23 @@ var {alias} = this;
 {updateBody}
 ";
 
+        }
+
+        private void EnsureValidGroupByField(string groupByFieldName, BlittableJsonReaderObject parameters)
+        {
+            var indexOfSeparatorStart = groupByFieldName.IndexOf(BlittableJsonTraverser.CollectionSeparator[0]);
+
+            if (indexOfSeparatorStart != -1)
+            {
+                if (groupByFieldName.Length > indexOfSeparatorStart + BlittableJsonTraverser.CollectionSeparator.Length)
+                {
+                    if (groupByFieldName[indexOfSeparatorStart + 1] == BlittableJsonTraverser.CollectionSeparator[1] &&
+                        groupByFieldName[indexOfSeparatorStart + 2] == BlittableJsonTraverser.CollectionSeparator[2])
+                    {
+                        ThrowGroupByCollectionIsNotSupported(QueryText, parameters);
+                    }
+                }
+            }
         }
     }
 }
