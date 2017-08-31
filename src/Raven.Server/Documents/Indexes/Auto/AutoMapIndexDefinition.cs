@@ -11,6 +11,8 @@ namespace Raven.Server.Documents.Indexes.Auto
         public AutoMapIndexDefinition(string collection, AutoIndexField[] fields)
             : base(AutoIndexNameFinder.FindMapIndexName(collection, fields), collection, fields)
         {
+            if (fields.Length == 0)
+                throw new ArgumentException("You must specify at least one field.", nameof(fields));
         }
 
         protected override void PersistFields(JsonOperationContext context, BlittableJsonTextWriter writer)
