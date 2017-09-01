@@ -376,15 +376,15 @@ namespace Raven.Server.Documents
         }
 
         private void PutRevisionAttachment(DocumentsOperationContext context, byte* lowerId, int lowerIdSize, Slice changeVector,
-            (LazyStringValue name, LazyStringValue contentType, Slice base64Hash) attachment)
+            (LazyStringValue Name, LazyStringValue ContentType, Slice Base64Hash) attachment)
         {
             var attachmentEtag = _documentsStorage.GenerateNextEtag();
 
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
 
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.name, out Slice lowerName, out Slice namePtr))
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.contentType, out Slice lowerContentType, out Slice contentTypePtr))
-            using (GetAttachmentKey(context, lowerId, lowerIdSize, lowerName.Content.Ptr, lowerName.Size, attachment.base64Hash,
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.Name, out Slice lowerName, out Slice namePtr))
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.ContentType, out Slice lowerContentType, out Slice contentTypePtr))
+            using (GetAttachmentKey(context, lowerId, lowerIdSize, lowerName.Content.Ptr, lowerName.Size, attachment.Base64Hash,
                 lowerContentType.Content.Ptr, lowerContentType.Size, AttachmentType.Revision, changeVector, out Slice keySlice))
             using (table.Allocate(out TableValueBuilder tvb))
             {
@@ -392,7 +392,7 @@ namespace Raven.Server.Documents
                 tvb.Add(Bits.SwapBytes(attachmentEtag));
                 tvb.Add(namePtr);
                 tvb.Add(contentTypePtr);
-                tvb.Add(attachment.base64Hash);
+                tvb.Add(attachment.Base64Hash);
                 tvb.Add(context.GetTransactionMarker());
                 tvb.Add(changeVector.Content.Ptr, changeVector.Size);
                 table.Set(tvb);
