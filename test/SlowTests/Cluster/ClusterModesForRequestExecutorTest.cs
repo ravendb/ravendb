@@ -256,7 +256,7 @@ namespace SlowTests.Cluster
                     session.Store(new User { Name = "FooBar" }, "marker");
                     session.SaveChanges();
 
-                    await WaitForDocumentInClusterAsync<User>(session as DocumentSession, "marker", x => true, leader.ServerStore.Configuration.Cluster.ClusterOperationTimeout.AsTimeSpan);
+                    await WaitForDocumentInClusterAsync<User>(session as DocumentSession, "marker", x => true, leader.ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan);
                 }
 
                 var usedUrls = new List<string>();
@@ -342,7 +342,7 @@ namespace SlowTests.Cluster
 
                     await WaitForDocumentInClusterAsync<User>(session as DocumentSession,
                         "marker", x => true,
-                        leader.ServerStore.Configuration.Cluster.ClusterOperationTimeout.AsTimeSpan);
+                        leader.ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan);
                 }
 
                 var requestExecutor = RequestExecutor.Create(follower1.Urls, databaseName, null, follower1.Conventions);
