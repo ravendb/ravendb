@@ -14,7 +14,7 @@ namespace Raven.Server.Web.Studio
     {
         private readonly HashSet<LazyStringValue> _excludeIds;
 
-        public StudioCollectionRunner(DocumentDatabase database, DocumentsOperationContext context, HashSet<LazyStringValue> excludeIds) : base(database, context)
+        public StudioCollectionRunner(DocumentDatabase database, DocumentsOperationContext context, HashSet<LazyStringValue> excludeIds) : base(database, context, null)
         {
             _excludeIds = excludeIds;
         }

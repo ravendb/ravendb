@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Util.RateLimiting;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -15,13 +17,18 @@ namespace Raven.Server.Documents
 {
     internal class CollectionRunner
     {
+        private readonly IndexQueryServerSide _collectionQuery;
+
         protected readonly DocumentsOperationContext Context;
         protected readonly DocumentDatabase Database;
 
-        public CollectionRunner(DocumentDatabase database, DocumentsOperationContext context)
+        public CollectionRunner(DocumentDatabase database, DocumentsOperationContext context, IndexQueryServerSide collectionQuery)
         {
+            Debug.Assert(collectionQuery == null || collectionQuery.Metadata.IsCollectionQuery);
+
             Database = database;
             Context = context;
+            _collectionQuery = collectionQuery;
         }
 
         public virtual Task<IOperationResult> ExecuteDelete(string collectionName, CollectionOperationOptions options, Action<IOperationProgress> onProgress, OperationCancelToken token)
@@ -131,6 +138,12 @@ namespace Raven.Server.Documents
 
         protected virtual IEnumerable<Document> GetDocuments(DocumentsOperationContext context, string collectionName, long startEtag, int batchSize, bool isAllDocs)
         {
+            if (_collectionQuery != null && _collectionQuery.Metadata.WhereFields.Count > 0)
+            {
+                return new CollectionQueryEnumerable(Database, Database.DocumentsStorage, new FieldsToFetch(_collectionQuery, null),
+                    collectionName, _collectionQuery, context, null);
+            }
+
             if (isAllDocs)
                 return Database.DocumentsStorage.GetDocumentsFrom(context, startEtag, 0, batchSize);
 
