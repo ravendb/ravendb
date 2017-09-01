@@ -264,8 +264,9 @@ namespace Raven.Server.Documents.Handlers.Admin
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(nodeUrl, Server.ClusterCertificateHolder.Certificate))
             {
-                var infoCmd = new GetNodeInfoCommand();
+                requestExecutor.DefaultTimeout = ServerStore.Engine.OperationTimeout;
 
+                var infoCmd = new GetNodeInfoCommand();
                 try
                 {
                     await requestExecutor.ExecuteAsync(infoCmd, ctx);
