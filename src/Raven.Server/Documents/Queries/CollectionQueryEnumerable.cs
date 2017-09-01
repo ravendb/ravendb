@@ -26,7 +26,8 @@ namespace Raven.Server.Documents.Queries
         private readonly IndexQueryServerSide _query;
         private readonly bool _isAllDocsCollection;
 
-        public CollectionQueryEnumerable(DocumentDatabase database, DocumentsStorage documents, FieldsToFetch fieldsToFetch, string collection, IndexQueryServerSide query, DocumentsOperationContext context, IncludeDocumentsCommand includeDocumentsCommand)
+        public CollectionQueryEnumerable(DocumentDatabase database, DocumentsStorage documents, FieldsToFetch fieldsToFetch, string collection,
+            IndexQueryServerSide query, DocumentsOperationContext context, IncludeDocumentsCommand includeDocumentsCommand)
         {
             _database = database;
             _documents = documents;
@@ -69,7 +70,8 @@ namespace Raven.Server.Documents.Queries
             private readonly Sort _sort;
             private readonly MapQueryResultRetriever _resultsRetriever;
 
-            public Enumerator(DocumentDatabase database, DocumentsStorage documents, FieldsToFetch fieldsToFetch, string collection, bool isAllDocsCollection, IndexQueryServerSide query, DocumentsOperationContext context, IncludeDocumentsCommand includeDocumentsCommand)
+            public Enumerator(DocumentDatabase database, DocumentsStorage documents, FieldsToFetch fieldsToFetch, string collection, bool isAllDocsCollection, 
+                IndexQueryServerSide query, DocumentsOperationContext context, IncludeDocumentsCommand includeDocumentsCommand)
             {
                 _documents = documents;
                 _fieldsToFetch = fieldsToFetch;
@@ -88,7 +90,7 @@ namespace Raven.Server.Documents.Queries
 
                 _sort = ExtractSortFromQuery(query);
 
-                _resultsRetriever = new MapQueryResultRetriever(database, query, documents, context, fieldsToFetch,includeDocumentsCommand);
+                _resultsRetriever = new MapQueryResultRetriever(database, query, documents, context, fieldsToFetch, includeDocumentsCommand);
             }
 
             private static Sort ExtractSortFromQuery(IndexQueryServerSide query)
@@ -347,21 +349,13 @@ namespace Raven.Server.Documents.Queries
                     switch (expression.Type)
                     {
                         case OperatorType.Equal:
-                        case OperatorType.LessThan:
-                        case OperatorType.GreaterThan:
-                        case OperatorType.LessThanEqual:
-                        case OperatorType.GreaterThanEqual:
                             VisitFieldToken(Constants.Documents.Indexing.Fields.DocumentIdFieldName, expression.Value, parameters);
                             break;
-                        case OperatorType.Between:
-                            VisitFieldTokens(Constants.Documents.Indexing.Fields.DocumentIdFieldName, expression.First, expression.Second, parameters);
-                            break;
                         case OperatorType.In:
-                        case OperatorType.AllIn:
                             VisitFieldTokens(Constants.Documents.Indexing.Fields.DocumentIdFieldName, expression.Values, parameters);
                             break;
                         default:
-                            throw new ArgumentOutOfRangeException();
+                            throw new ArgumentOutOfRangeException($"Operator {expression.Type} is not supported by collection query");
                     }
                 }
 

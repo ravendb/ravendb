@@ -44,6 +44,9 @@ namespace Raven.Server.Documents.Queries
             else
                 IndexName = QueryExpression.Extract(Query.QueryText, fromToken);
 
+            if (IsDynamic == false || IsGroupBy)
+                IsCollectionQuery = false;
+
             Build(parameters);
 
             CanCache = cacheKey != 0;
@@ -56,6 +59,8 @@ namespace Raven.Server.Documents.Queries
         public readonly bool IsGroupBy;
 
         public bool IsIntersect { get; private set; }
+
+        public bool IsCollectionQuery { get; private set; } = true;
 
         public readonly string CollectionName;
 
@@ -91,6 +96,9 @@ namespace Raven.Server.Documents.Queries
         private void AddWhereField(string fieldName, bool search = false, bool exact = false)
         {
             var indexFieldName = GetIndexFieldName(fieldName);
+
+            if (IsCollectionQuery && indexFieldName != Constants.Documents.Indexing.Fields.DocumentIdFieldName)
+                IsCollectionQuery = false;
 
             IndexFieldNames.Add(indexFieldName);
             WhereFields[indexFieldName] = new WhereField(isFullTextSearch: search, isExactSearch: exact);
@@ -150,6 +158,9 @@ namespace Raven.Server.Documents.Queries
                             ThrowInvalidOperatorTypeInOrderBy(order.Expression.Type, QueryText, parameters);
                             break;
                     }
+
+                    if (IsCollectionQuery && (OrderBy.Length > 1 || OrderBy[0].OrderingType != OrderByFieldType.Random))
+                        IsCollectionQuery = false;
                 }
             }
 
@@ -779,6 +790,9 @@ namespace Raven.Server.Documents.Queries
                             if (_fromAlias != idAliasTokenValue)
                                 throw new InvalidQueryException($"Alias passed to method 'id({idAliasTokenValue})' does not match specified document alias ('{_fromAlias}').", QueryText, parameters);
                         }
+
+                        if (_metadata.IsCollectionQuery && idExpression.Type != OperatorType.Equal && idExpression.Type != OperatorType.In)
+                            _metadata.IsCollectionQuery = false;
 
                         _metadata.AddWhereField(Constants.Documents.Indexing.Fields.DocumentIdFieldName);
                         break;
