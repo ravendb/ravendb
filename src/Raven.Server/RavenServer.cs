@@ -29,9 +29,7 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using System.Reflection;
 using System.Security.Claims;
-using System.Runtime.InteropServices;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Adapter.Internal;
@@ -43,14 +41,9 @@ using Raven.Client;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Tcp;
-using Raven.Client.Util;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils.Cli;
 using Sparrow;
-using Sparrow.Platform;
-using Sparrow.Platform.Posix;
-using Voron.Platform.Posix;
 
 namespace Raven.Server
 {
@@ -117,7 +110,7 @@ namespace Raven.Server
 
             try
             {
-                var  clusterCert = LoadCertificate(
+                var clusterCert = LoadCertificate(
                     Configuration.Security.ClusterCertificateExec,
                     Configuration.Security.ClusterCertificateExecArguments,
                     Configuration.Security.ClusterCertificatePath,
@@ -133,32 +126,18 @@ namespace Raven.Server
 
                 void ConfigureKestrel(KestrelServerOptions options)
                 {
-                    options.Limits.MaxRequestBodySize = null;
+                    options.Limits.MaxRequestBodySize = null;       // no limit!
+                    options.Limits.MinResponseDataRate = null;      // no limit!
+                    options.Limits.MinRequestBodyDataRate = null;   // no limit!
 
-                    if (Configuration.Core.MinDataRateDisable == false)
+                    if (Configuration.Http.MinDataRatePerSecond.HasValue && Configuration.Http.MinDataRateGracePeriod.HasValue)
                     {
-                        if (Configuration.Core.MinDataRateBytesPerSecond != 0 ||
-                            Configuration.Core.MinDataRateGracePeriod != 0
-                        ) // zero bytes and zero seconds - use kestrel defaults (which are 240 bytesPerSec with 5 seconds grace)
-                        {
-                            options.Limits.MinResponseDataRate =
-                                new MinDataRate(Configuration.Core.MinDataRateBytesPerSecond, TimeSpan.FromSeconds(Configuration.Core.MinDataRateGracePeriod));
-                            options.Limits.MinRequestBodyDataRate=
-                                new MinDataRate(Configuration.Core.MinDataRateBytesPerSecond, TimeSpan.FromSeconds(Configuration.Core.MinDataRateGracePeriod));
-                        }
-                    }
-                    else
-                    {
-                        Console.WriteLine("Kestrel minimum data rate is not enforced");
-                        options.Limits.MinResponseDataRate = null; // no limit!
-                        options.Limits.MinRequestBodyDataRate = null; // no limit!
+                        options.Limits.MinResponseDataRate = new MinDataRate(Configuration.Http.MinDataRatePerSecond.Value.GetValue(SizeUnit.Bytes), Configuration.Http.MinDataRateGracePeriod.Value.AsTimeSpan);
+                        options.Limits.MinRequestBodyDataRate = new MinDataRate(Configuration.Http.MinDataRatePerSecond.Value.GetValue(SizeUnit.Bytes), Configuration.Http.MinDataRateGracePeriod.Value.AsTimeSpan);
                     }
 
-                    if (Configuration.Core.MaxRequestBufferSizeInKb != 0)
-                    {
-                        options.Limits.MaxRequestBufferSize = Configuration.Core.MaxRequestBufferSizeInKb * 1024;
-                    }
-                
+                    if (Configuration.Http.MaxRequestBufferSize.HasValue)
+                        options.Limits.MaxRequestBufferSize = Configuration.Http.MaxRequestBufferSize.Value.GetValue(SizeUnit.Bytes);
 
                     var actualCert = httpsCert ?? clusterCert;
                     if (actualCert != null)
@@ -275,7 +254,7 @@ namespace Raven.Server
         private Task ListenToPipes()
         {
             return Task.WhenAll(
-                Pipes.ListenToLogStreamPipe(this, LogStreamPipe), 
+                Pipes.ListenToLogStreamPipe(this, LogStreamPipe),
                 Pipes.ListenToAdminConsolePipe(this, AdminConsolePipe));
         }
 
@@ -972,7 +951,7 @@ namespace Raven.Server
 
         public void OpenPipes()
         {
-            Pipes.CleanupOldPipeFiles(); 
+            Pipes.CleanupOldPipeFiles();
             LogStreamPipe = Pipes.OpenLogStreamPipe();
             AdminConsolePipe = Pipes.OpenAdminConsolePipe();
         }
