@@ -15,7 +15,7 @@ namespace SlowTests.Issues
 {
     public class RavenDB_4420 : RavenTestBase
     {
-        protected override void ModifyStore(DocumentStore store)
+        private static void ModifyStore(DocumentStore store)
         {
             store.Conventions.SaveEnumsAsIntegers = true;
         }
@@ -23,7 +23,10 @@ namespace SlowTests.Issues
         [Fact]
         public void CanQueryProperlyWhenSaveEnumAsIntegerIsSetToTrue()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = ModifyStore
+            }))
             {
                 // arrange
                 store.ExecuteIndex(new MyIndex());

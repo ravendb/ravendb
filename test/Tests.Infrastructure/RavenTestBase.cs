@@ -127,7 +127,15 @@ namespace FastTests
                         Database = name,
                         Certificate = options.ClientCertificate
                     };
-                    ModifyStore(store);
+
+                    options.ModifyDocumentStore?.Invoke(store);
+
+                    //This gives too much error details in most cases, we don't need this now
+                    store.RequestExecutorCreated += (sender, executor) =>
+                    {
+                        executor.AdditionalErrorInformation += sb => sb.AppendLine().Append(GetLastStatesFromAllServersOrderedByTime());
+                    };
+
                     store.Initialize();
 
                     if (options.CreateDatabase)
@@ -250,15 +258,6 @@ namespace FastTests
                 }
             }
             return string.Join(Environment.NewLine, states.OrderBy(x => x.transition.When).Select(x => $"State for {x.tag}-term{x.Item2.CurrentTerm}:{Environment.NewLine}{x.Item2.From}=>{x.Item2.To} at {x.Item2.When:o} {Environment.NewLine}because {x.Item2.Reason}"));
-        }
-
-        protected virtual void ModifyStore(DocumentStore store)
-        {
-            //This gives too much error details in most cases, we don't need this now
-            store.RequestExecutorCreated += (sender, executor) =>
-            {
-                executor.AdditionalErrorInformation += sb => sb.AppendLine().Append(GetLastStatesFromAllServersOrderedByTime());
-            };
         }
 
         public static void WaitForIndexing(IDocumentStore store, string dbName = null, TimeSpan? timeout = null)
@@ -528,6 +527,7 @@ namespace FastTests
         public class Options
         {
             private readonly bool _frozen;
+
             private X509Certificate2 _clientCertificate;
             private X509Certificate2 _adminCertificate;
             private bool _createDatabase;
@@ -535,6 +535,7 @@ namespace FastTests
             private RavenServer _server;
             private int _replicationFactor;
             private bool _ignoreDisabledDatabase;
+            private Action<DocumentStore> _modifyDocumentStore;
             private Action<DatabaseRecord> _modifyDatabaseRecord;
             private Func<string, string> _modifyDatabaseName;
             private string _path;
@@ -581,6 +582,16 @@ namespace FastTests
                 {
                     AssertNotFrozen();
                     _modifyDatabaseRecord = value;
+                }
+            }
+
+            public Action<DocumentStore> ModifyDocumentStore
+            {
+                get => _modifyDocumentStore;
+                set
+                {
+                    AssertNotFrozen();
+                    _modifyDocumentStore = value;
                 }
             }
 

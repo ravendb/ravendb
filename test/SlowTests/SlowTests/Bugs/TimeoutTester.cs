@@ -76,7 +76,7 @@ namespace SlowTests.SlowTests.Bugs
             }
         }
 
-        protected override void ModifyStore(DocumentStore store)
+        private static void ModifyStore(DocumentStore store)
         {
             store.Conventions.MaxNumberOfRequestsPerSession = 1000000; // 1 Million
         }
@@ -84,7 +84,10 @@ namespace SlowTests.SlowTests.Bugs
         [Fact]
         public void will_timeout_query_after_some_time()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = ModifyStore
+            }))
             {
                 new Answers_ByAnswerEntity().Execute(store);
                 var answerId = "";

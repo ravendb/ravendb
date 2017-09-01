@@ -163,7 +163,7 @@ namespace SlowTests.MailingList
             public DateTimeOffset Created { get; set; }
         }
 
-        protected override void ModifyStore(DocumentStore store)
+        private static void ModifyStore(DocumentStore store)
         {
             store.Conventions = new DocumentConventions
             {
@@ -174,7 +174,11 @@ namespace SlowTests.MailingList
 
         private DocumentStore CreateStore()
         {
-            _store = GetDocumentStore();
+            _store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = ModifyStore
+            });
+
             // Create the Index
             new Product_Search().Execute(_store);
 

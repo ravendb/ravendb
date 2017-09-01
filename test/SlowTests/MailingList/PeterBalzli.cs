@@ -16,7 +16,7 @@ namespace SlowTests.MailingList
 {
     public class PeterBalzli : RavenTestBase
     {
-        protected override void ModifyStore(DocumentStore store)
+        private static void ModifyStore(DocumentStore store)
         {
             store.Conventions.CustomizeJsonSerializer = serializers => serializers.Converters.Add(new CustomerNumberJsonConverter());
         }
@@ -24,7 +24,10 @@ namespace SlowTests.MailingList
         [Fact]
         public void Test()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = ModifyStore
+            }))
             {
                 store.ExecuteIndex(new Index());
 
