@@ -26,6 +26,8 @@ namespace Raven.Server.Config
 
         public CoreConfiguration Core { get; }
 
+        public HttpConfiguration Http { get; }
+
         public EtlConfiguration Etl { get; }
 
         public ReplicationConfiguration Replication { get; }
@@ -81,6 +83,7 @@ namespace Raven.Server.Config
 
             Core = new CoreConfiguration();
 
+            Http = new HttpConfiguration();
             Replication = new ReplicationConfiguration();
             Cluster = new ClusterConfiguration();
             Etl = new EtlConfiguration();
@@ -131,6 +134,7 @@ namespace Raven.Server.Config
 
         public RavenConfiguration Initialize()
         {
+            Http.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Testing.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Server.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Core.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
