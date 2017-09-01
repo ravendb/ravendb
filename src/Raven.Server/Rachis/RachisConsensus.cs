@@ -572,7 +572,7 @@ namespace Raven.Server.Rachis
             leader.Start();
         }
 
-        public async Task<(long Etag, object Result)> PutAsync(CommandBase cmd)
+        public async Task<(long Index, object Result)> PutAsync(CommandBase cmd)
         {
             var leader = _currentLeader;
             if (leader == null)

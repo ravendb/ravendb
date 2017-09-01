@@ -16,8 +16,6 @@ namespace Raven.Server.Documents
 
         public event Action<IndexChange> OnIndexChange;
 
-        public event Action<TransformerChange> OnTransformerChange;
-
         public event Action<OperationStatusChange> OnOperationStatusChange;
 
         public void RaiseNotifications(IndexChange indexChange)
@@ -26,14 +24,6 @@ namespace Raven.Server.Documents
 
             foreach (var connection in Connections)
                 connection.Value.SendIndexChanges(indexChange);
-        }
-
-        public void RaiseNotifications(TransformerChange transformerChange)
-        {
-            OnTransformerChange?.Invoke(transformerChange);
-
-            foreach (var connection in Connections)
-                connection.Value.SendTransformerChanges(transformerChange);
         }
 
         public void RaiseSystemNotifications(DocumentChange documentChange)

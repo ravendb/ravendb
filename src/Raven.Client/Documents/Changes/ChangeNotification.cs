@@ -118,15 +118,6 @@ namespace Raven.Client.Documents.Changes
         PriorityChanged = 16384
     }
 
-    public enum TransformerChangeTypes
-    {
-        None = 0,
-
-        TransformerAdded = 1,
-        TransformerRemoved = 2,
-        TransformerRenamed = 4
-    }
-
     public class IndexChange : DatabaseChange
     {
         /// <summary>
@@ -180,50 +171,6 @@ namespace Raven.Client.Documents.Changes
         /// The old index name
         /// </summary>
         public string OldIndexName { get; set; }
-    }
-
-    public class TransformerChange : DatabaseChange
-    {
-        /// <summary>
-        /// Type of change that occurred on transformer.
-        /// </summary>
-        public TransformerChangeTypes Type { get; set; }
-
-        /// <summary>
-        /// Name of transformer for which notification was created
-        /// </summary>
-        public string Name { get; set; }
-
-        public long Etag { get; set; }
-
-        public override string ToString()
-        {
-            return string.Format("{0} on {1}", Type, Name);
-        }
-
-        public DynamicJsonValue ToJson()
-        {
-            return new DynamicJsonValue
-            {
-                [nameof(Etag)] = Etag,
-                [nameof(Name)] = Name,
-                [nameof(Type)] = Type.ToString()
-            };
-        }
-
-        internal static TransformerChange FromJson(BlittableJsonReaderObject value)
-        {
-            value.TryGet(nameof(Etag), out long etag);
-            value.TryGet(nameof(Name), out string name);
-            value.TryGet(nameof(Type), out string type);
-
-            return new TransformerChange
-            {
-                Etag = etag,
-                Type = (TransformerChangeTypes)Enum.Parse(typeof(TransformerChangeTypes), type, ignoreCase: true),
-                Name = name
-            };
-        }
     }
 
     internal class TrafficWatchChange : DatabaseChange

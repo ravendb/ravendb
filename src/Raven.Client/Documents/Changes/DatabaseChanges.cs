@@ -163,20 +163,6 @@ namespace Raven.Client.Documents.Changes
             return taskedObservable;
         }
 
-        public IChangesObservable<TransformerChange> ForAllTransformers()
-        {
-            var counter = GetOrAddConnectionState("all-transformers", "watch-transformers", "unwatch-transformers", null);
-
-            var taskedObservable = new ChangesObservable<TransformerChange, DatabaseConnectionState>(
-                counter,
-                notification => true);
-
-            counter.OnTransformerChangeNotification += taskedObservable.Send;
-            counter.OnError += taskedObservable.Error;
-
-            return taskedObservable;
-        }
-
         public IChangesObservable<DocumentChange> ForDocumentsStartingWith(string docIdPrefix)
         {
             var counter = GetOrAddConnectionState("prefixes/" + docIdPrefix, "watch-prefix", "unwatch-prefix", docIdPrefix);
@@ -495,13 +481,6 @@ namespace Raven.Client.Documents.Changes
                     foreach (var state in states)
                     {
                         state.Send(indexChange);
-                    }
-                    break;
-                case nameof(TransformerChange):
-                    var transformerChange = TransformerChange.FromJson(value);
-                    foreach (var state in states)
-                    {
-                        state.Send(transformerChange);
                     }
                     break;
                 case nameof(OperationStatusChange):

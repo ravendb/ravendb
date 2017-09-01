@@ -337,7 +337,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         };
 
                         var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + certificate.Thumbprint, certificateDefinition));
-                        await ServerStore.Cluster.WaitForIndexNotification(res.Etag);
+                        await ServerStore.Cluster.WaitForIndexNotification(res.Index);
                     }
                         
                     await ServerStore.AddNodeToClusterAsync(nodeUrl, nodeTag, validateNotInTopology:false, asWatcher:watcher?? false);

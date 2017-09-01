@@ -15,8 +15,6 @@ namespace Raven.Client.Documents.Changes
 
         public event Action<IndexChange> OnIndexChangeNotification;
 
-        public event Action<TransformerChange> OnTransformerChangeNotification;
-
         public event Action<OperationStatusChange> OnOperationStatusChangeNotification;
 
         public void Send(DocumentChange documentChange)
@@ -27,11 +25,6 @@ namespace Raven.Client.Documents.Changes
         public void Send(IndexChange indexChange)
         {
             OnIndexChangeNotification?.Invoke(indexChange);
-        }
-
-        public void Send(TransformerChange transformerChange)
-        {
-            OnTransformerChangeNotification?.Invoke(transformerChange);
         }
 
         public void Send(OperationStatusChange operationStatusChange)

@@ -22,7 +22,7 @@ namespace Raven.Server.Web.System
 
                 var clientConfiguration = JsonDeserializationServer.ClientConfiguration(clientConfigurationJson);
                 var res = await ServerStore.PutValueInClusterAsync(new PutClientConfigurationCommand(clientConfiguration));
-                await ServerStore.Cluster.WaitForIndexNotification(res.Etag);
+                await ServerStore.Cluster.WaitForIndexNotification(res.Index);
 
                 NoContentStatus();
                 

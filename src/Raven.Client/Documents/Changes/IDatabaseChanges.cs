@@ -38,11 +38,6 @@ namespace Raven.Client.Documents.Changes
         IChangesObservable<IndexChange> ForAllIndexes();
 
         /// <summary>
-        /// Subscribe to changes for all transformers.
-        /// </summary>
-        IChangesObservable<TransformerChange> ForAllTransformers();
-
-        /// <summary>
         /// Subscribe to changes for all documents that Id starts with given prefix.
         /// </summary>
         IChangesObservable<DocumentChange> ForDocumentsStartingWith(string docIdPrefix);

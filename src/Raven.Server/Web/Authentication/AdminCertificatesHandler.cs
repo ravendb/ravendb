@@ -1,13 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client;
-using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Config;
 using Raven.Server.Json;
@@ -33,7 +30,7 @@ namespace Raven.Server.Web.Authentication
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {
                 var stream = TryGetRequestFormStream("Options") ?? RequestBodyStream();
-                
+
                 var certificateJson = ctx.ReadForDisk(stream, "certificate-generation");
 
                 var certificate = JsonDeserializationServer.CertificateDefinition(certificateJson);
@@ -55,7 +52,7 @@ namespace Raven.Server.Web.Authentication
 
                 // this creates a client certificate which is signed by the current server certificate
                 var selfSignedCertificate = CertificateUtils.CreateSelfSignedClientCertificate(certificate.Name, Server.ClusterCertificateHolder);
-                
+
                 var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + selfSignedCertificate.Thumbprint,
                     new CertificateDefinition
                     {
@@ -66,7 +63,7 @@ namespace Raven.Server.Web.Authentication
                         SecurityClearance = certificate.SecurityClearance,
                         Thumbprint = selfSignedCertificate.Thumbprint
                     }));
-                await ServerStore.Cluster.WaitForIndexNotification(res.Etag);
+                await ServerStore.Cluster.WaitForIndexNotification(res.Index);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
@@ -77,13 +74,13 @@ namespace Raven.Server.Web.Authentication
                 HttpContext.Response.Body.Write(pfx, 0, pfx.Length);
             }
         }
-        
+
         [RavenAction("/admin/certificates", "PUT", AuthorizationStatus.Operator)]
         public async Task Put()
         {
             // one of the first admin action is to create a certificate, so let
             // us also use that to indicate that we are the seed node
-            
+
             ServerStore.EnsureNotPassive();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (var certificateJson = ctx.ReadForDisk(RequestBodyStream(), "put-certificate"))
@@ -119,7 +116,7 @@ namespace Raven.Server.Web.Authentication
                 certificate.Thumbprint = x509Certificate.Thumbprint;
 
                 var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + x509Certificate.Thumbprint, certificate));
-                await ServerStore.Cluster.WaitForIndexNotification(res.Etag);
+                await ServerStore.Cluster.WaitForIndexNotification(res.Index);
 
                 NoContentStatus();
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
@@ -157,12 +154,12 @@ namespace Raven.Server.Web.Authentication
                 {
                     Name = Constants.Certificates.Prefix + thumbprint
                 });
-                await ServerStore.Cluster.WaitForIndexNotification(res.Etag);
+                await ServerStore.Cluster.WaitForIndexNotification(res.Index);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
             }
         }
-    
+
         [RavenAction("/admin/certificates", "GET", AuthorizationStatus.Operator)]
         public Task GetAll()
         {
@@ -259,7 +256,7 @@ namespace Raven.Server.Web.Authentication
                 {
                     Name = Constants.Certificates.Prefix + existingCertificate.Thumbprint
                 });
-                await ServerStore.Cluster.WaitForIndexNotification(deleteResult.Etag);
+                await ServerStore.Cluster.WaitForIndexNotification(deleteResult.Index);
 
                 var putResult = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + newPermissions.Thumbprint,
                     new CertificateDefinition
@@ -270,7 +267,7 @@ namespace Raven.Server.Web.Authentication
                         SecurityClearance = newPermissions.SecurityClearance,
                         Thumbprint = existingCertificate.Thumbprint
                     }));
-                await ServerStore.Cluster.WaitForIndexNotification(putResult.Etag);
+                await ServerStore.Cluster.WaitForIndexNotification(putResult.Index);
 
                 NoContentStatus();
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;

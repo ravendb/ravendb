@@ -566,9 +566,9 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public Task<(long Etag, object Result)> PutAsync(CommandBase cmd)
+        public Task<(long Index, object Result)> PutAsync(CommandBase cmd)
         {
-            Task<(long Etag, object Result)> task;
+            Task<(long Index, object Result)> task;
             using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenWriteTransaction()) // this line prevents concurrency issues on the PutAsync
             {
@@ -584,9 +584,9 @@ namespace Raven.Server.Rachis
             return task;
         }
 
-        public Task<(long Etag, object Result)> AddToEntries(long index)
+        public Task<(long Index, object Result)> AddToEntries(long index)
         {
-            var tcs = new TaskCompletionSource<(long Etag, object Result)>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var tcs = new TaskCompletionSource<(long Index, object Result)>(TaskCreationOptions.RunContinuationsAsynchronously);
             _entries[index] =
                 new
                     CommandState // we need to add entry inside write tx lock to omit a situation when command will be applied (and state set) before it is added to the entries list
@@ -804,7 +804,7 @@ namespace Raven.Server.Rachis
 
                 context.Transaction.Commit();
 
-                var tcs = new TaskCompletionSource<(long Etag, object Result)>(TaskCreationOptions.RunContinuationsAsynchronously);
+                var tcs = new TaskCompletionSource<(long Index, object Result)>(TaskCreationOptions.RunContinuationsAsynchronously);
                 _entries[index] = new CommandState
                 {
                     TaskCompletionSource = tcs,
@@ -842,7 +842,7 @@ namespace Raven.Server.Rachis
             return clusterTopology.LastNodeId.Substring(0, clusterTopology.LastNodeId.Length - 1) + lastChar;
         }
 
-        public void SetStateOf(long index, Action<TaskCompletionSource<(long Etag, object Result)>> onNotify)
+        public void SetStateOf(long index, Action<TaskCompletionSource<(long Index, object Result)>> onNotify)
         {
             if (_entries.TryGetValue(index, out CommandState value))
             {
