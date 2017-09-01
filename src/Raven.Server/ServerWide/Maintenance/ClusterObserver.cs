@@ -702,7 +702,7 @@ namespace Raven.Server.ServerWide.Maintenance
             return true;
         }
 
-        private Task<(long Etag, object Result)> UpdateTopology(UpdateTopologyCommand cmd)
+        private Task<(long Index, object Result)> UpdateTopology(UpdateTopologyCommand cmd)
         {
             if (_engine.LeaderTag != _server.NodeTag)
             {
@@ -712,7 +712,7 @@ namespace Raven.Server.ServerWide.Maintenance
             return _engine.PutAsync(cmd);
         }
 
-        private Task<(long Etag, object Result)> Delete(DeleteDatabaseCommand cmd)
+        private Task<(long Index, object Result)> Delete(DeleteDatabaseCommand cmd)
         {
             if (_engine.LeaderTag != _server.NodeTag)
             {

@@ -732,7 +732,7 @@ namespace Raven.Server.ServerWide
             tree.Delete(name);
         }
 
-        public Task<(long Etag, object Result)> DeleteDatabaseAsync(string db, bool hardDelete, string[] fromNodes)
+        public Task<(long Index, object Result)> DeleteDatabaseAsync(string db, bool hardDelete, string[] fromNodes)
         {
             var deleteCommand = new DeleteDatabaseCommand(db)
             {
@@ -742,7 +742,7 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(deleteCommand);
         }
 
-        public Task<(long Etag, object Result)> UpdateExternalReplication(string dbName, ExternalReplication watcher)
+        public Task<(long Index, object Result)> UpdateExternalReplication(string dbName, ExternalReplication watcher)
         {
             var addWatcherCommand = new UpdateExternalReplicationCommand(dbName)
             {
@@ -751,7 +751,7 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(addWatcherCommand);
         }
 
-        public Task<(long Etag, object Result)> DeleteOngoingTask(long taskId, string taskName, OngoingTaskType taskType, string dbName)
+        public Task<(long Index, object Result)> DeleteOngoingTask(long taskId, string taskName, OngoingTaskType taskType, string dbName)
         {
             var deleteTaskCommand =
                 taskType == OngoingTaskType.Subscription ?
@@ -761,7 +761,7 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(deleteTaskCommand);
         }
 
-        public Task<(long Etag, object Result)> ToggleTaskState(long taskId, string taskName, OngoingTaskType type, bool disable, string dbName)
+        public Task<(long Index, object Result)> ToggleTaskState(long taskId, string taskName, OngoingTaskType type, bool disable, string dbName)
         {
             var disableEnableCommand =
                 type == OngoingTaskType.Subscription ?
@@ -771,7 +771,7 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(disableEnableCommand);
         }
 
-        public Task<(long Etag, object Result)> PromoteDatabaseNode(string dbName, string nodeTag)
+        public Task<(long Index, object Result)> PromoteDatabaseNode(string dbName, string nodeTag)
         {
             var promoteDatabaseNodeCommand = new PromoteDatabaseNodeCommand(dbName)
             {
@@ -780,7 +780,7 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(promoteDatabaseNodeCommand);
         }
 
-        public Task<(long Etag, object Result)> ModifyConflictSolverAsync(string dbName, ConflictSolver solver)
+        public Task<(long Index, object Result)> ModifyConflictSolverAsync(string dbName, ConflictSolver solver)
         {
             var conflictResolverCommand = new ModifyConflictSolverCommand(dbName)
             {
@@ -789,12 +789,12 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(conflictResolverCommand);
         }
 
-        public Task<(long Etag, object Result)> PutValueInClusterAsync<T>(PutValueCommand<T> cmd)
+        public Task<(long Index, object Result)> PutValueInClusterAsync<T>(PutValueCommand<T> cmd)
         {
             return SendToLeaderAsync(cmd);
         }
 
-        public Task<(long Etag, object Result)> DeleteValueInClusterAsync(string key)
+        public Task<(long Index, object Result)> DeleteValueInClusterAsync(string key)
         {
             var deleteValueCommand = new DeleteValueCommand
             {
@@ -803,7 +803,7 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(deleteValueCommand);
         }
 
-        public Task<(long Etag, object Result)> ModifyDatabaseExpiration(TransactionOperationContext context, string name, BlittableJsonReaderObject configurationJson)
+        public Task<(long Index, object Result)> ModifyDatabaseExpiration(TransactionOperationContext context, string name, BlittableJsonReaderObject configurationJson)
         {
             var editExpiration = new EditExpirationCommand(JsonDeserializationCluster.ExpirationConfiguration(configurationJson), name);
             return SendToLeaderAsync(editExpiration);
@@ -1067,7 +1067,7 @@ namespace Raven.Server.ServerWide
             Engine.Bootstrap(NodeHttpServerUrl, forNewCluster: true);
         }
 
-        public Task<(long Etag, object Result)> WriteDatabaseRecordAsync(
+        public Task<(long Index, object Result)> WriteDatabaseRecordAsync(
             string databaseName, DatabaseRecord record, long? index,
             Dictionary<string, object> databaseValues = null, bool isRestore = false)
         {
@@ -1130,7 +1130,7 @@ namespace Raven.Server.ServerWide
             return _engine.CurrentState == RachisConsensus.State.Passive;
         }
 
-        public Task<(long Etag, object Result)> SendToLeaderAsync(CommandBase cmd)
+        public Task<(long Index, object Result)> SendToLeaderAsync(CommandBase cmd)
         {
             return SendToLeaderAsyncInternal(cmd);
         }
@@ -1175,8 +1175,8 @@ namespace Raven.Server.ServerWide
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Updating licnese id: {license.Id}");
 
-            await WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Etag);
-            return result.Etag;
+            await WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index);
+            return result.Index;
         }
 
         public async Task DeactivateLicense(License license)
@@ -1191,7 +1191,7 @@ namespace Raven.Server.ServerWide
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Deactivating licnese id: {license.Id}");
 
-            await WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Etag);
+            await WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index);
         }
 
         public DatabaseRecord LoadDatabaseRecord(string databaseName, out long etag)
@@ -1203,7 +1203,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private async Task<(long Etag, object Result)> SendToLeaderAsyncInternal(CommandBase cmd)
+        private async Task<(long Index, object Result)> SendToLeaderAsyncInternal(CommandBase cmd)
         {
             //I think it is reasonable to expect timeout twice of error retry
             var timeoutTask = TimeoutManager.WaitFor(Engine.OperationTimeout, _shutdownNotification.Token);
@@ -1270,7 +1270,7 @@ namespace Raven.Server.ServerWide
                 requestException);
         }
 
-        private async Task<(long Etag, object Result)> SendToNodeAsync(string engineLeaderTag, CommandBase cmd, Reference<bool> reachedLeader)
+        private async Task<(long Index, object Result)> SendToNodeAsync(string engineLeaderTag, CommandBase cmd, Reference<bool> reachedLeader)
         {
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
