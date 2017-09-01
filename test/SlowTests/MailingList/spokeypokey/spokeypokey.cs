@@ -36,20 +36,25 @@ namespace SlowTests.MailingList.spokeypokey
         [Fact]
         public void Can_use_barn_index2()
         {
-            using (var docStore = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
             {
-                docStore.Conventions.FindPropertyNameForIndex = (indexedType, indexedName, path, prop) =>
+                ModifyDocumentStore = s =>
                 {
-                    var result = path + prop;
-                    switch (result)
+                    s.Conventions.FindPropertyNameForIndex = (indexedType, indexedName, path, prop) =>
                     {
-                        case "Households[].Members[].Name":
-                            return "MembersName";
-                        default:
-                            return result;
-                    }
-                };
-                new BarnIndex().Execute(docStore);
+                        var result = path + prop;
+                        switch (result)
+                        {
+                            case "Households[].Members[].Name":
+                                return "MembersName";
+                            default:
+                                return result;
+                        }
+                    };
+                }
+            }))
+            {
+                new BarnIndex().Execute(store);
 
                 var barn1 = new Barn
                 {
@@ -63,13 +68,13 @@ namespace SlowTests.MailingList.spokeypokey
                                                             },
                                                     }
                 };
-                using (var session = docStore.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(barn1);
                     session.SaveChanges();
                 }
 
-                using (var session = docStore.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     QueryStatistics statistics;
 

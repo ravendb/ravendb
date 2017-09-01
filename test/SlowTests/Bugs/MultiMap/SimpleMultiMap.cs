@@ -14,9 +14,11 @@ namespace SlowTests.Bugs.MultiMap
         [Fact]
         public void CanCreateMultiMapIndex()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
             {
-                store.Conventions.PrettifyGeneratedLinqExpressions = false;
+                ModifyDocumentStore = s => s.Conventions.PrettifyGeneratedLinqExpressions = false
+            }))
+            {
                 new CatsAndDogs().Execute(store);
 
                 var indexDefinition = store.Admin.Send(new GetIndexOperation("CatsAndDogs"));
@@ -47,7 +49,7 @@ namespace SlowTests.Bugs.MultiMap
 
                 using (var session = store.OpenSession())
                 {
-                    var haveNames = session.Query<IHaveName,CatsAndDogs>()
+                    var haveNames = session.Query<IHaveName, CatsAndDogs>()
                         .Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(5)))
                         .OrderBy(x => x.Name)
                         .ToList();

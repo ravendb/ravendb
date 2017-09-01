@@ -60,9 +60,14 @@ namespace SlowTests.MailingList
         [Fact]
         public void GenerateCorrectIndex()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
             {
-                store.Conventions.FindIdentityProperty = info => info.Name == "id";
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.FindIdentityProperty = info => info.Name == "id";
+                }
+            }))
+            {
                 new Task_Index().Execute(store);
 
                 var indexDefinition = store.Admin.Send(new GetIndexOperation("Task/Index"));

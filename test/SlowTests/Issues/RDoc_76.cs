@@ -40,14 +40,18 @@ namespace SlowTests.Issues
         [Fact]
         public void RegisterIdConventionShouldWorkProperlyForDerivedTypesAsync()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
             {
-                store.Conventions.RegisterAsyncIdConvention<Bedroom>((dbName, r) => Task.FromResult("b/" + r.Sth));
-                store.Conventions.RegisterAsyncIdConvention<Guestroom>((dbName, r) => Task.FromResult("gr/" + r.Sth));
-                store.Conventions.RegisterAsyncIdConvention<Room>((dbName, r) => Task.FromResult("r/" + r.Sth));
-                store.Conventions.RegisterAsyncIdConvention<Kitchen>((dbName, r) => Task.FromResult("k/" + r.Sth));
-                store.Conventions.RegisterAsyncIdConvention<MasterBedroom>((dbName, r) => Task.FromResult("mb/" + r.Sth));
-
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.RegisterAsyncIdConvention<Bedroom>((dbName, r) => Task.FromResult("b/" + r.Sth));
+                    s.Conventions.RegisterAsyncIdConvention<Guestroom>((dbName, r) => Task.FromResult("gr/" + r.Sth));
+                    s.Conventions.RegisterAsyncIdConvention<Room>((dbName, r) => Task.FromResult("r/" + r.Sth));
+                    s.Conventions.RegisterAsyncIdConvention<Kitchen>((dbName, r) => Task.FromResult("k/" + r.Sth));
+                    s.Conventions.RegisterAsyncIdConvention<MasterBedroom>((dbName, r) => Task.FromResult("mb/" + r.Sth));
+                }
+            }))
+            {
                 using (var session = store.OpenSession())
                 {
                     session.Store(new MasterBedroom { Sth = "1" });
@@ -80,11 +84,15 @@ namespace SlowTests.Issues
         [Fact]
         public async Task RegisteringConventionForSameTypeShouldOverrideOldOneAsync()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
             {
-                store.Conventions.RegisterAsyncIdConvention<MasterBedroom>((dbName, r) => Task.FromResult("a/" + r.Sth));
-                store.Conventions.RegisterAsyncIdConvention<MasterBedroom>((dbName, r) => Task.FromResult("mb/" + r.Sth));
-
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.RegisterAsyncIdConvention<MasterBedroom>((dbName, r) => Task.FromResult("a/" + r.Sth));
+                    s.Conventions.RegisterAsyncIdConvention<MasterBedroom>((dbName, r) => Task.FromResult("mb/" + r.Sth));
+                }
+            }))
+            {
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new MasterBedroom { Sth = "1" });

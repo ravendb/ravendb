@@ -11,10 +11,14 @@ namespace SlowTests.MailingList
         [Fact]
         public void CanIndexAndQuery()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
             {
-                store.Conventions.FindIdentityProperty = q => q.Name == "id";
-
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.FindIdentityProperty = q => q.Name == "id";
+                }
+            }))
+            {
                 var index = new UserToResource_Index();
                 index.Execute(store);
 

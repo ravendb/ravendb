@@ -26,10 +26,11 @@ namespace SlowTests.Bugs.Async
         [Fact]
         public void GeneratedIdForDynamicTagNameAsync()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
             {
-                store.Conventions.FindCollectionNameForDynamic = (entity) => entity.EntityName;
-
+                ModifyDocumentStore = s => s.Conventions.FindCollectionNameForDynamic = (entity) => entity.EntityName
+            }))
+            {
                 using (var session = store.OpenAsyncSession())
                 {
                     dynamic client = new ExpandoObject();

@@ -50,10 +50,14 @@ namespace SlowTests.MailingList
         [Fact]
         public void CanQueryUsingBitwiseOperations()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
             {
-                store.Conventions.SaveEnumsAsIntegers = true;
-
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.SaveEnumsAsIntegers = true;
+                }
+            }))
+            {
                 new MyIndex().Execute(store);
 
                 using (var session = store.OpenSession())

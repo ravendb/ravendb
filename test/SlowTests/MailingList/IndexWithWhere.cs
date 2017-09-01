@@ -43,9 +43,14 @@ namespace SlowTests.MailingList
         [Fact]
         public void CanCreateIndex()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
             {
-                store.Conventions.PrettifyGeneratedLinqExpressions = false;
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.PrettifyGeneratedLinqExpressions = false;
+                }
+            }))
+            {
                 new Index_ByDescriptionAndTitle().Execute(store);
 
                 var indexDefinition = store.Admin.Send(new GetIndexOperation("Index/ByDescriptionAndTitle"));
@@ -59,9 +64,14 @@ namespace SlowTests.MailingList
         [Fact]
         public void CanCreateIndex2()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
             {
-                store.Conventions.PrettifyGeneratedLinqExpressions = false;
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.PrettifyGeneratedLinqExpressions = false;
+                }
+            }))
+            {
                 new Index_ByDescriptionAndTitle2().Execute(store);
 
                 var indexDefinition = store.Admin.Send(new GetIndexOperation("Index/ByDescriptionAndTitle2"));

@@ -53,10 +53,14 @@ namespace SlowTests.Tests.Linq
         [Fact]
         public void CanQueryUsingEnum()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
             {
-                store.Conventions.SaveEnumsAsIntegers = true;
-
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.SaveEnumsAsIntegers = true;
+                }
+            }))
+            {
                 new MyIndex().Execute(store);
 
                 using (var session = store.OpenSession())

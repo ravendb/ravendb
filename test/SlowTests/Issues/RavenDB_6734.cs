@@ -11,10 +11,14 @@ namespace SlowTests.Issues
         [Fact]
         public void ShouldThrow()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
             {
-                store.Conventions.ThrowIfQueryPageSizeIsNotSet = true;
-
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.ThrowIfQueryPageSizeIsNotSet = true;
+                }
+            }))
+            {
                 using (var session = store.OpenSession())
                 {
                     var e = Assert.Throws<InvalidOperationException>(() =>

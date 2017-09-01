@@ -138,10 +138,14 @@ namespace SlowTests.MailingList.spokeypokey
                 }
             };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
             {
-                store.Conventions.FindIdentityProperty = (x => x.Name == "InternalId");
-
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.FindIdentityProperty = (x => x.Name == "InternalId");
+                }
+            }))
+            {
                 using (var session = store.OpenSession())
                 {
                     session.Store(taxonomyCode1);
