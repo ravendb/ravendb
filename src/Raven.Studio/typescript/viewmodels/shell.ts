@@ -339,7 +339,7 @@ class shell extends viewModelBase {
             shell.serverMainVersion(Math.floor(currentBuildVersion / 10000));
         } 
 
-        const env = license.licenseStatus() && license.licenseStatus().Type === "Commercial" ? "prod" : "dev";
+        const env = license.licenseStatus() /*&& license.licenseStatus().Type === "Commercial"*/ ? "prod" : "dev";
         const version = buildVersionResult.FullVersion;
         eventsCollector.default.initialize(
             shell.serverMainVersion() + "." + shell.serverMinorVersion(), currentBuildVersion, env, version, shouldTrack);

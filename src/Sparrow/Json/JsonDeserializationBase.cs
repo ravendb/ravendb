@@ -58,7 +58,7 @@ namespace Sparrow.Json
                         continue;
 
                     if (fieldInfo.IsPublic && fieldInfo.IsInitOnly)
-                        throw new InvalidOperationException($"Cannot create deserialization routine for '{type.FullName}' because '{fieldInfo.Name}' is readonly field");
+                        ThrowDeserializationError(type, fieldInfo);
 
                     propInit.Add(Expression.Bind(fieldInfo, GetValue(fieldInfo.Name, fieldInfo.FieldType, json, vars)));
                 }
@@ -76,8 +76,18 @@ namespace Sparrow.Json
             }
             catch (Exception e)
             {
-                return o => throw new InvalidOperationException($"Could not build json parser for {typeof(T).FullName}", e);
+                return FailureBuildingJsonParser<T>(e);
             }
+        }
+
+        private static Func<BlittableJsonReaderObject, T> FailureBuildingJsonParser<T>(Exception e)
+        {
+            return o => throw new InvalidOperationException($"Could not build json parser for {typeof(T).FullName}", e);
+        }
+
+        private static void ThrowDeserializationError(Type type, FieldInfo fieldInfo)
+        {
+            throw new InvalidOperationException($"Cannot create deserialization routine for '{type.FullName}' because '{fieldInfo.Name}' is readonly field");
         }
 
         private static Expression GetValue(string propertyName, Type propertyType, ParameterExpression json, Dictionary<Type, ParameterExpression> vars)
@@ -313,11 +323,20 @@ namespace Sparrow.Json
                     }
                     else
                     {
-                        dictionary[key] = val;
+                        if (val is BlittableJsonReaderArray)
+                            ThrowNotSupportedBlittableArray(propertyName);
+
+                        obj.TryGet(propertyName, out TV value);
+                        dictionary[key] = value;
                     }
                 }
             }
             return dictionary;
+        }
+
+        private static void ThrowNotSupportedBlittableArray(string propertyName)
+        {
+            throw new ArgumentException($"Not supported BlittableJsonReaderArray, property name: {propertyName}");
         }
 
         private static Dictionary<string, TEnum> ToDictionaryOfEnum<TEnum>(BlittableJsonReaderObject json, string name)
@@ -502,9 +521,15 @@ namespace Sparrow.Json
 
         private static T GetPrimitiveProperty<T>(BlittableJsonReaderObject json, string prop)
         {
-            return !json.TryGet(prop, out T val) ?
-                throw new InvalidCastException($"Failed to fetch property name = {prop} of type {typeof(T).Name} from json with value : [{json}]") :
-                val;
+            if (json.TryGet(prop, out T val) == false)
+                ThrowInvalidPrimitiveCastException(prop, typeof(T).Name, json);
+
+            return val;
+        }
+
+        private static void ThrowInvalidPrimitiveCastException(string prop, string type, BlittableJsonReaderObject json)
+        {
+            throw new InvalidCastException($"Failed to fetch property name = {prop} of type {type} from json with value : [{json}]");
         }
 
         private static T ToObject<T>(BlittableJsonReaderObject json, string name, Func<BlittableJsonReaderObject, T> converter) where T : new()

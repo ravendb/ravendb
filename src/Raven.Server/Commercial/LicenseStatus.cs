@@ -62,32 +62,15 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public DateTime? Expiration
-        {
-            get
-            {
-                if (Attributes == null)
-                    return null;
-
-                if (Attributes.TryGetValue("expiration", out object expirationObject) &&
-                    expirationObject is DateTime)
-                {
-                    return (DateTime)expirationObject;
-                }
-
-                return null;
-            }
-        }
-
-        public string Type
+        public LicenseType Type
         {
             get
             {
                 if (Error)
-                    return "Invalid";
+                    return LicenseType.Invalid;
 
                 if (Attributes == null)
-                    return "None";
+                    return LicenseType.None;
 
                 if (Attributes != null &&
                     Attributes.TryGetValue("type", out object type) &&
@@ -95,14 +78,52 @@ namespace Raven.Server.Commercial
                 {
                     var typeAsInt = (int)type;
                     if (Enum.IsDefined(typeof(LicenseType), typeAsInt))
-                        return ((LicenseType)typeAsInt).ToString();
+                        return ((LicenseType)typeAsInt);
                 }
 
-                return "Unknown";
+                return LicenseType.Free;
             }
         }
 
         public DateTime FirstServerStartDate { get; set; }
+
+        private T GetValue<T>(string attributeName)
+        {
+            if (Attributes == null)
+                return default(T);
+
+            if (Attributes.TryGetValue(attributeName, out object value) == false)
+                return default(T);
+
+            if (value is T == false)
+                return default(T);
+
+            return (T)value;
+        }
+
+        public DateTime? Expiration => GetValue<DateTime?>("expiration");
+
+        public int MaxCores => GetValue<int?>("cores") ?? 4;
+
+        public int MaxRamInGb => GetValue<int?>("RAM") ?? 6;
+
+        public int MaxClusterSize => GetValue<int?>("maxClusterSize") ?? 3;
+
+        public bool HasGlobalCluster => GetValue<bool>("globalCluster");
+
+        public bool HasCloudBackups => GetValue<bool>("cloudBackup");
+
+        public bool HasSnapshotBackups => GetValue<bool>("snapshotBackup");
+
+        public bool HasDynamicNodesDistribution => GetValue<bool>("dynamicNodesDistribution");
+
+        public bool HasEncryption => GetValue<bool>("encryption");
+
+        public bool HasExternalReplication => GetValue<bool>("externalReplication");
+
+        public bool HasRavenEtl => GetValue<bool>("ravenEtl");
+
+        public bool HasSqlEtl => GetValue<bool>("sqlEtl");
 
         public DynamicJsonValue ToJson()
         {
@@ -114,7 +135,7 @@ namespace Raven.Server.Commercial
                 [nameof(Status)] = Status,
                 [nameof(ShortDescription)] = ShortDescription,
                 [nameof(FormattedExpiration)] = FormattedExpiration,
-                [nameof(Type)] = Type,
+                [nameof(Type)] = Type.ToString(),
                 [nameof(Attributes)] = TypeConverter.ToBlittableSupportedType(Attributes)
             };
         }

@@ -40,7 +40,13 @@
                             <div class="address">
                                 <h5>ADDRESS</h5>
                                 <a target="_blank" data-bind="attr: { href: serverUrl }"><small data-bind="text: serverUrl"></small></a>
-                            </div>                            
+                            </div>
+                            <div data-bind="if: assignedCores">
+                                <span>Assigned Cores: </span> <span data-bind="text: assignedCores"></span>
+                            </div>
+                            <div data-bind="if: totalCores">
+                                <span>Total Cores: </span> <span data-bind="text: totalCores"></span>
+                            </div>
                         </div>
                         <div class="flex-separator"></div>
                         <div class="actions-container">

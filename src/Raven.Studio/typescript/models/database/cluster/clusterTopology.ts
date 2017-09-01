@@ -2,7 +2,6 @@
 import clusterNode = require("models/database/cluster/clusterNode");
 
 class clusterTopology {
-
     leader = ko.observable<string>();
     nodeTag = ko.observable<string>();
     currentTerm = ko.observable<number>();
@@ -21,7 +20,9 @@ class clusterTopology {
         const watchers = this.mapNodes("Watcher", topologyDto.Watchers, dto.Status);
 
         this.nodes(_.concat<clusterNode>(members, promotables, watchers));
-        this.nodes(_.sortBy(this.nodes(), x => x.tag().toUpperCase()));        
+        this.nodes(_.sortBy(this.nodes(), x => x.tag().toUpperCase()));
+
+        this.updateAssignedCores(dto.AssignedCoresByNode);
     }
 
     private mapNodes(type: clusterNodeType, dict: System.Collections.Generic.Dictionary<string, string>,
@@ -60,9 +61,25 @@ class clusterTopology {
             }
         });
 
+        this.updateAssignedCores(incomingChanges.AssignedCoresByNode);
         this.nodeTag(incomingChanges.NodeTag);
         this.leader(incomingChanges.Leader);
         this.currentTerm(incomingChanges.CurrentTerm);
+    }
+
+    private updateAssignedCores(assignedCoresByNode: { [index: string]: number; }) {
+        for (let nodeTag in assignedCoresByNode) {
+            if (!assignedCoresByNode.hasOwnProperty(nodeTag)) {
+                continue;
+            }
+
+            const node = this.nodes().find(x => x.tag() === nodeTag);
+            if (!node) {
+                continue;
+            }
+
+            node.assignedCores(assignedCoresByNode[nodeTag]);
+        }
     }
 }
 

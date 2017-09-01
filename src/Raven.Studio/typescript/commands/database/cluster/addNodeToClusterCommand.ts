@@ -3,14 +3,15 @@ import endpoints = require("endpoints");
 
 class addNodeToClusterCommand extends commandBase {
 
-    constructor(private serverUrl: string, private addAsWatcher: boolean) {
+    constructor(private serverUrl: string, private addAsWatcher: boolean, private assignedCores?: number) {
         super();
     }
 
     execute(): JQueryPromise<void> {
         const args = {
             url: this.serverUrl,
-            watcher: this.addAsWatcher
+            watcher: this.addAsWatcher,
+            assignedCores: this.assignedCores
         };
         const url = endpoints.global.rachisAdmin.adminClusterNode + this.urlEncodeArgs(args);
 

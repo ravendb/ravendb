@@ -62,7 +62,7 @@ namespace Sparrow.LowMemory
             {
                 if (PlatformDetails.RunningOnPosix == false)
                 {
-                    // Windows
+                    // windows
                     var memoryStatus = new MemoryStatusEx
                     {
                         dwLength = (uint)sizeof(MemoryStatusEx)
@@ -91,7 +91,7 @@ namespace Sparrow.LowMemory
 
                 if (PlatformDetails.RunningOnMacOsx == false)
                 {
-                    // Linux
+                    // linux
                     var info = new sysinfo_t();
                     if (Syscall.sysinfo(ref info) != 0)
                     {
@@ -105,7 +105,7 @@ namespace Sparrow.LowMemory
                 }
                 else
                 {
-                    // MacOS
+                    // macOS
                     var mib = new[] {(int)TopLevelIdentifiersMacOs.CTL_HW, (int)CtkHwIdentifiersMacOs.HW_MEMSIZE};
                     ulong physicalMemory = 0;
                     var len = sizeof(ulong);

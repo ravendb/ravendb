@@ -14,7 +14,9 @@ namespace Raven.Server.Commercial
         private static readonly string[] Terms =
         {
             "type", "version", "expiration", "updatesExpiration",
-            "RAM", "cores", "ISV", "encryption", "fips", "monitoring"
+            "RAM", "cores", "ISV", "encryption", "fips", "monitoring",
+            "globalCluster", "maxClusterSize", "snapshotBackup", "cloudBackup",
+            "dynamicNodesDistribution", "ravenEtl", "sqlEtl"
         };
 
         private enum ValueType : byte
@@ -123,6 +125,7 @@ namespace Raven.Server.Commercial
             var keysByteArray = GetBytesFromBase64String(stringKey);
             var attributes = keysByteArray.Skip(128).Take(keysByteArray.Length - 128).ToArray();
             Array.Resize(ref keysByteArray, 128);
+
             return new Keys
             {
                 Signature = keysByteArray,

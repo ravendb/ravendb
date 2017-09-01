@@ -188,6 +188,9 @@ namespace Raven.Server.ServerWide
                     case nameof(PutLicenseCommand):
                         PutValue<License>(context, type, cmd, index, leader);
                         break;
+                    case nameof(PutLicenseLimitsCommand):
+                        PutValue<LicenseLimits>(context, type, cmd, index, leader);
+                        break;
                     case nameof(PutCertificateCommand):
                         PutValue<CertificateDefinition>(context, type, cmd, index, leader);
                         // Once the certificate is in the cluster, no need to keep it locally so we delete it.
@@ -806,7 +809,25 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private IEnumerable<DatabaseRecord> ReadAllDatabases(TransactionOperationContext context, int start = 0, int take = int.MaxValue)
+        public int GetClusterSize(TransactionOperationContext context)
+        {
+            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+
+            const string dbKey = "db/";
+            var count = 0;
+
+            using (Slice.From(context.Allocator, dbKey, out Slice loweredPrefix))
+            {
+                foreach (var _ in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, 0))
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        public IEnumerable<DatabaseRecord> ReadAllDatabases(TransactionOperationContext context, int start = 0, int take = int.MaxValue)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
@@ -817,9 +838,11 @@ namespace Raven.Server.ServerWide
                 {
                     if (take-- <= 0)
                         yield break;
+
                     var doc = Read(context, GetCurrentItemKey(result.Value));
                     if (doc == null)
                         continue;
+
                     yield return JsonDeserializationCluster.DatabaseRecord(doc);
                 }
             }
