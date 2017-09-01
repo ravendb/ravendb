@@ -183,10 +183,10 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     return (previousIndex, collection);
             }
 
-            var map = DynamicQueryMapping.Create(query);
+            if (query.Metadata.IsCollectionQuery)
+                return (null, collection);
 
-            if (map.MapFields.Count == 0 && (map.GroupByFields == null || map.GroupByFields.Count == 0))
-                return (null, collection); // use collection query
+            var map = DynamicQueryMapping.Create(query);
 
             if (TryMatchExistingIndexToQuery(map, out Index index) == false)
             {

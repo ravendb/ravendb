@@ -7,6 +7,7 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Raven.Client.Documents.Linq;
 
 namespace FastTests.Server.Documents.Queries.Dynamic.Map
 {
@@ -460,6 +461,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                 {
                     session.Store(new User { Name = "Fitzchak" }, "users/1");
                     session.Store(new User { Name = "Arek" }, "users/2");
+                    session.Store(new User { Name = "Joe" }, "users/3");
 
                     session.SaveChanges();
                 }
@@ -470,6 +472,16 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
                     Assert.Equal(1, users.Count);
                     Assert.Equal("Arek", users[0].Name);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var users = session.Query<User>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id.In("users/1", "users/3")).ToList();
+
+                    Assert.Equal(2, users.Count);
+
+                    Assert.True(users.Any(x => x.Name == "Fitzchak"));
+                    Assert.True(users.Any(x => x.Name == "Joe"));
                 }
             }
         }
