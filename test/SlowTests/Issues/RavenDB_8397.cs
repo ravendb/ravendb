@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Linq;
 using FastTests;
+using Orders;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -9,6 +12,20 @@ namespace SlowTests.Issues
 {
     public class RavenDB_8397 : RavenTestBase
     {
+        [Fact]
+        public void ShouldThrowOnAttemptToFilterByIdUsingBetweenOperator()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    var ex = Assert.Throws<InvalidQueryException>(() => session.Advanced.DocumentQuery<Order>().RawQuery("from Orders where id() between 'orders/1' and 'orders/100'").ToList());
+
+                    Assert.Contains("Collection query does not support filtering by id() using Between operator. Supported operators are: =, IN", ex.Message);
+                }
+            }
+        }
+
         [Fact]
         public void PathAndDeleteByQueryWithFilteringById()
         {
