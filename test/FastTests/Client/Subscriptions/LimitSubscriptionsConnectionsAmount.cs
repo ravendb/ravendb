@@ -9,6 +9,7 @@ using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Server.Config;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
@@ -24,7 +25,7 @@ namespace FastTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore(modifyDatabaseRecord: x =>
             {
-                x.Settings["Subscriptions.ConcurrentConnections"] = "4";
+                x.Settings[RavenConfiguration.GetKey(c => c.Subscriptions.MaxNumberOfConcurrentConnections)] = "4";
             }))
             {
                 var mres = new List<AsyncManualResetEvent>();

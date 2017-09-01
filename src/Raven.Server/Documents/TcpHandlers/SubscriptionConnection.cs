@@ -191,7 +191,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         if ((gotSemaphore = tcpConnectionOptions.DocumentDatabase.SubscriptionStorage.TryEnterSemaphore()) == false)
                         {
                             throw new SubscriptionClosedException(
-                                $"Cannot open new subscription connection, max amount of concurrent connections reached ({tcpConnectionOptions.DocumentDatabase.Configuration.Subscriptions.ConcurrentConnections})");
+                                $"Cannot open new subscription connection, max amount of concurrent connections reached ({tcpConnectionOptions.DocumentDatabase.Configuration.Subscriptions.MaxNumberOfConcurrentConnections})");
                         }
                         try
                         {

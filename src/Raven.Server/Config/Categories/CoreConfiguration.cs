@@ -49,8 +49,8 @@ namespace Raven.Server.Config.Categories
 
         [Description("Indicates if we should throw an exception if any index could not be opened")]
         [DefaultValue(false)]
-        [ConfigurationEntry("ThrowIfAnyIndexOrTransformerCouldNotBeOpened")]
-        public bool ThrowIfAnyIndexOrTransformerCouldNotBeOpened { get; set; }
+        [ConfigurationEntry("ThrowIfAnyIndexCannotBeOpened")]
+        public bool ThrowIfAnyIndexCannotBeOpened { get; set; }
 
         public override void Initialize(IConfigurationRoot settings, IConfigurationRoot serverWideSettings, ResourceType type, string resourceName)
         {

@@ -38,7 +38,7 @@ namespace SlowTests.Server.Documents.Notifications
                     [RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "1",
                     [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = false.ToString(),
                     [RavenConfiguration.GetKey(x => x.Core.DataDirectory)] = NewDataPath(name),
-                    [RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened)] = "true",
+                    [RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexCannotBeOpened)] = "true",
                     [RavenConfiguration.GetKey(x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)] = int.MaxValue.ToString()
                 }
             };
