@@ -21,7 +21,6 @@ namespace SlowTests.SlowTests.MailingList
             {
                 store.Conventions.CustomizeJsonSerializer = serializer =>
                                                             serializer.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
-                store.Conventions.AllowQueriesOnId = true;
 
                 new User_Entity().Execute(store);
 

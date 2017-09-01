@@ -31,7 +31,6 @@ namespace SlowTests.MailingList
             var id = string.Empty;
             using (var store = GetDocumentStore())
             {
-                store.Conventions.AllowQueriesOnId = true;
                 var defaultFindIdentityProperty = store.Conventions.FindIdentityProperty;
                 store.Conventions.FindIdentityProperty = property =>
                     typeof(IEntity).GetTypeInfo().IsAssignableFrom(property.DeclaringType)

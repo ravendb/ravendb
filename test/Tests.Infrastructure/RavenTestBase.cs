@@ -81,7 +81,7 @@ namespace FastTests
             throw new TimeoutException(message);
         }
 
-        protected virtual DocumentStore GetDocumentStore(
+        protected DocumentStore GetDocumentStore(
             [CallerMemberName] string caller = null,
             string dbSuffixIdentifier = null,
             string path = null,
