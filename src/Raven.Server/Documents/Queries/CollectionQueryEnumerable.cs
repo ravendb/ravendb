@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Linq;
 using Lucene.Net.Search;
 using Raven.Client;
+using Raven.Client.Exceptions;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Documents.Queries.Results;
@@ -355,7 +356,8 @@ namespace Raven.Server.Documents.Queries
                             VisitFieldTokens(Constants.Documents.Indexing.Fields.DocumentIdFieldName, expression.Values, parameters);
                             break;
                         default:
-                            throw new ArgumentOutOfRangeException($"Operator {expression.Type} is not supported by collection query");
+                            ThrowNotSupportedCollectionQueryOperator(expression.Type, parameters);
+                            break;
                     }
                 }
 
@@ -365,6 +367,13 @@ namespace Raven.Server.Documents.Queries
                     _allocator.ToLowerCase(ref key.Content);
 
                     Ids.Add(key);
+                }
+
+                private void ThrowNotSupportedCollectionQueryOperator(OperatorType @operator, BlittableJsonReaderObject parameters)
+                {
+                    throw new InvalidQueryException(
+                        $"Collection query does not support filtering by {Constants.Documents.Indexing.Fields.DocumentIdFieldName} using {@operator} operator. Supported operators are: =, IN",
+                        QueryText, parameters);
                 }
             }
         }

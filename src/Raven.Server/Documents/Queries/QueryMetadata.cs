@@ -791,9 +791,6 @@ namespace Raven.Server.Documents.Queries
                                 throw new InvalidQueryException($"Alias passed to method 'id({idAliasTokenValue})' does not match specified document alias ('{_fromAlias}').", QueryText, parameters);
                         }
 
-                        if (_metadata.IsCollectionQuery && idExpression.Type != OperatorType.Equal && idExpression.Type != OperatorType.In)
-                            _metadata.IsCollectionQuery = false;
-
                         _metadata.AddWhereField(Constants.Documents.Indexing.Fields.DocumentIdFieldName);
                         break;
                     case MethodType.StartsWith:
