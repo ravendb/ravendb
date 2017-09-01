@@ -17,13 +17,14 @@ namespace SlowTests.Bugs
         [Fact]
         public void CanCustomizeEntityName()
         {
-            using(var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
             {
-                store.Conventions.FindCollectionName = ReflectionUtil.GetFullNameWithoutVersionInformation;
-
-                using(var session = store.OpenSession())
+                ModifyDocumentStore = s => s.Conventions.FindCollectionName = ReflectionUtil.GetFullNameWithoutVersionInformation
+            }))
+            {
+                using (var session = store.OpenSession())
                 {
-                    session.Store(new Foo{Name = "Ayende"});
+                    session.Store(new Foo { Name = "Ayende" });
                     session.SaveChanges();
                 }
 

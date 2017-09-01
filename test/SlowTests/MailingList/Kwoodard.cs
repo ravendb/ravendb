@@ -8,10 +8,14 @@ namespace SlowTests.MailingList
         [Fact]
         public void CanSetUseOptimisticConcurrencyGlobally()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
             {
-                store.Conventions.UseOptimisticConcurrency = true;
-
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.UseOptimisticConcurrency = true;
+                }
+            }))
+            {
                 using (var session = store.OpenSession())
                 {
                     Assert.True(session.Advanced.UseOptimisticConcurrency);

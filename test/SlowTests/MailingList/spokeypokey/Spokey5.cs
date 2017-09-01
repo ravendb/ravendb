@@ -86,9 +86,14 @@ namespace SlowTests.MailingList.spokeypokey
         [Fact]
         public void CanReferenceChildDocumentsInIndex()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
             {
-                store.Conventions.FindIdentityProperty = (x => x.Name == "InternalId");
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.FindIdentityProperty = (x => x.Name == "InternalId");
+                }
+            }))
+            {
                 new ProviderAndTaxonomyCodeIndex1().Execute(store);
 
                 var taxonomyCode1 = new TaxonomyCode

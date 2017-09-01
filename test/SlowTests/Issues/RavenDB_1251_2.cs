@@ -20,12 +20,16 @@ namespace SlowTests.Issues
         [Fact]
         public void Duration_Can_Sort_By_Range_Value()
         {
-            using (var documentStore = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
             {
-                documentStore.Conventions.CustomizeJsonSerializer = s => s.Converters.Add(new DurationConverter());
-                documentStore.Conventions.RegisterQueryValueConverter<Duration>(DurationQueryValueConverter);
-
-                using (var session = documentStore.OpenSession())
+                ModifyDocumentStore = str =>
+                {
+                    str.Conventions.CustomizeJsonSerializer = s => s.Converters.Add(new DurationConverter());
+                    str.Conventions.RegisterQueryValueConverter<Duration>(DurationQueryValueConverter);
+                }
+            }))
+            {
+                using (var session = store.OpenSession())
                 {
                     session.Store(new Foo { Bar = new Duration(TimeSpan.FromHours(-2)) });
                     session.Store(new Foo { Bar = new Duration(TimeSpan.FromHours(-1)) });
@@ -36,7 +40,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                using (var session = documentStore.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     var d = new Duration(TimeSpan.FromHours(-1.5));
 

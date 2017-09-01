@@ -26,11 +26,15 @@ namespace SlowTests.Bugs
         public void AddEntity()
         {
             //SetUp
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
             {
-                store.Conventions.FindIdentityPropertyNameFromEntityName = (typeName) => "ID";
-                store.Conventions.FindIdentityProperty = prop => prop.Name == "ID";
-
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.FindIdentityPropertyNameFromEntityName = (typeName) => "ID";
+                    s.Conventions.FindIdentityProperty = prop => prop.Name == "ID";
+                }
+            }))
+            {
                 using (var session = store.OpenSession())
                 {
 
@@ -46,7 +50,7 @@ namespace SlowTests.Bugs
                     Assert.NotNull(article.ID);
 
                     var insertedArticle = session.Query<Article>().Where(
-                        a => a.ID.In(new string[] {article.ID}) && a.PublishDate > DateTime.UtcNow).FirstOrDefault();
+                        a => a.ID.In(new string[] { article.ID }) && a.PublishDate > DateTime.UtcNow).FirstOrDefault();
 
                     Assert.NotNull(insertedArticle);
                 }

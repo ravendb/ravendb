@@ -160,9 +160,14 @@ namespace SlowTests.MailingList
         [Fact]
         public void CanQueryOnFlagArrays()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
             {
-                store.Conventions.SaveEnumsAsIntegers = true;
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.SaveEnumsAsIntegers = true;
+                }
+            }))
+            {
                 store.ExecuteIndex(new SearchIndex());
 
                 PopulateData(store);
