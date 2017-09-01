@@ -220,7 +220,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 ms.Flush();
 
                 var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(url, certificate);
-                requestExecutor.DefaultTimeout = ServerStore.Configuration.Cluster.ClusterOperationTimeout.AsTimeSpan;
+                requestExecutor.DefaultTimeout = ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan;
 
                 var rawStreamCommand = new GetRawStreamResultCommand("admin/debug/remote-cluster-info-package", ms);
 

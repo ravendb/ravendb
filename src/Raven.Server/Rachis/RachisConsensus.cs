@@ -240,7 +240,7 @@ namespace Raven.Server.Rachis
             {
                 _persistentState = env;
 
-                OperationTimeout = configuration.Cluster.ClusterOperationTimeout.AsTimeSpan;
+                OperationTimeout = configuration.Cluster.OperationTimeout.AsTimeSpan;
                 ElectionTimeout = configuration.Cluster.ElectionTimeout.AsTimeSpan;
                 TcpConnectionTimeout = configuration.Cluster.TcpConnectionTimeout.AsTimeSpan;
                 
