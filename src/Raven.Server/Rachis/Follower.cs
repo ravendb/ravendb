@@ -370,7 +370,7 @@ namespace Raven.Server.Rachis
                         entries = reader.ReadInt64();
                         for (long i = 0; i < entries; i++)
                         {
-                            MaybeNotifyLeaderThatWeAreSillAlive(context, sp);
+                            MaybeNotifyLeaderThatWeAreStillAlive(context, sp);
 
                             size = reader.ReadInt32();
                             reader.ReadExactly(size);
@@ -419,13 +419,13 @@ namespace Raven.Server.Rachis
                                 break;
                             table.Delete(tvr.Id);
 
-                            MaybeNotifyLeaderThatWeAreSillAlive(context, sp);
+                            MaybeNotifyLeaderThatWeAreStillAlive(context, sp);
                         }
 
                         entries = reader.ReadInt64();
                         for (long i = 0; i < entries; i++)
                         {
-                            MaybeNotifyLeaderThatWeAreSillAlive(context, sp);
+                            MaybeNotifyLeaderThatWeAreStillAlive(context, sp);
 
                             size = reader.ReadInt32();
                             reader.ReadExactly(size);
@@ -466,7 +466,7 @@ namespace Raven.Server.Rachis
                         entries = reader.ReadInt64();
                         for (long i = 0; i < entries; i++)
                         {
-                            MaybeNotifyLeaderThatWeAreSillAlive(context, sp);
+                            MaybeNotifyLeaderThatWeAreStillAlive(context, sp);
 
                             size = reader.ReadInt32();
                             reader.ReadExactly(size);
@@ -482,7 +482,7 @@ namespace Raven.Server.Rachis
                         entries = reader.ReadInt64();
                         for (long i = 0; i < entries; i++)
                         {
-                            MaybeNotifyLeaderThatWeAreSillAlive(context, sp);
+                            MaybeNotifyLeaderThatWeAreStillAlive(context, sp);
 
                             size = reader.ReadInt32();
                             reader.ReadExactly(size);
@@ -494,7 +494,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private void MaybeNotifyLeaderThatWeAreSillAlive(TransactionOperationContext context, Stopwatch sp)
+        private void MaybeNotifyLeaderThatWeAreStillAlive(TransactionOperationContext context, Stopwatch sp)
         {
             if (sp.ElapsedMilliseconds <= _engine.ElectionTimeout.TotalMilliseconds / 4)
                 return;

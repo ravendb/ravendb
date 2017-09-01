@@ -1101,7 +1101,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 await ModifyDatabaseSettings(dbName, record =>
                 {
-                    record.Settings[RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened)] = "false";
+                    record.Settings[RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexCannotBeOpened)] = "false";
                 });
 
                 database = await GetDatabase(dbName);
@@ -1148,7 +1148,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 await ModifyDatabaseSettings(dbName, record =>
                 {
-                    record.Settings[RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened)] = "false";
+                    record.Settings[RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexCannotBeOpened)] = "false";
                 });
 
                 database = await GetDatabase(dbName);

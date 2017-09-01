@@ -144,20 +144,20 @@ namespace SlowTests.Core.AdminConsole
                 var database = await GetDocumentDatabaseInstanceFor(store);
                 var configuration = database.Configuration;
 
-                Assert.True(configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened);
+                Assert.True(configuration.Core.ThrowIfAnyIndexCannotBeOpened);
                 Assert.Null(configuration.Queries.MaxClauseCount);
                 Assert.Equal(10, configuration.Storage.MaxConcurrentFlushes);
 
                 new AdminJsConsole(Server, database).ApplyScript(new AdminJsScript
                 (
                   @"
-                                database.Configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened = false;
+                                database.Configuration.Core.ThrowIfAnyIndexCannotBeOpened = false;
                                 database.Configuration.Queries.MaxClauseCount = 2048;
                                 database.Configuration.Storage.MaxConcurrentFlushes = 40;
                              "
                 ));
 
-                Assert.False(configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened);
+                Assert.False(configuration.Core.ThrowIfAnyIndexCannotBeOpened);
                 Assert.Equal(2048, database.Configuration.Queries.MaxClauseCount);
                 Assert.Equal(40, database.Configuration.Storage.MaxConcurrentFlushes);
             }
@@ -185,19 +185,19 @@ namespace SlowTests.Core.AdminConsole
         {
             var configuration = Server.Configuration;
 
-            Assert.False(configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened);
+            Assert.False(configuration.Core.ThrowIfAnyIndexCannotBeOpened);
             Assert.Null(configuration.Queries.MaxClauseCount);
             Assert.Equal(10, configuration.Storage.MaxConcurrentFlushes);
 
             new AdminJsConsole(Server, null).ApplyScript(new AdminJsScript
             (@"
-                            server.Configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened = true;
+                            server.Configuration.Core.ThrowIfAnyIndexCannotBeOpened = true;
                             server.Configuration.Queries.MaxClauseCount = 2048;
                             server.Configuration.Storage.MaxConcurrentFlushes = 40;
                             "
             ));
 
-            Assert.True(configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened);
+            Assert.True(configuration.Core.ThrowIfAnyIndexCannotBeOpened);
             Assert.Equal(2048, configuration.Queries.MaxClauseCount);
             Assert.Equal(40, configuration.Storage.MaxConcurrentFlushes);            
         }

@@ -852,7 +852,7 @@ namespace Raven.Server.Documents.Indexes
                 _logger.Info("Starting to load indexes from record");
 
             List<Exception> exceptions = null;
-            if (_documentDatabase.Configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened)
+            if (_documentDatabase.Configuration.Core.ThrowIfAnyIndexCannotBeOpened)
                 exceptions = new List<Exception>();
 
             // delete all unrecognized index directories

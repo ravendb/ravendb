@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Subscriptions
         public static TimeSpan TwoMinutesTimespan = TimeSpan.FromMinutes(2);
         private readonly ConcurrentDictionary<long, SubscriptionConnectionState> _subscriptionConnectionStates = new ConcurrentDictionary<long, SubscriptionConnectionState>();
         private readonly Logger _logger;
-        private SemaphoreSlim _concurrentConnectionsSemiSemaphore;
+        private readonly SemaphoreSlim _concurrentConnectionsSemiSemaphore;
 
         public SubscriptionStorage(DocumentDatabase db, ServerStore serverStore)
         {
@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Subscriptions
             _serverStore = serverStore;
             _logger = LoggingSource.Instance.GetLogger<SubscriptionStorage>(db.Name);
 
-            _concurrentConnectionsSemiSemaphore = new SemaphoreSlim(db.Configuration.Subscriptions.ConcurrentConnections);
+            _concurrentConnectionsSemiSemaphore = new SemaphoreSlim(db.Configuration.Subscriptions.MaxNumberOfConcurrentConnections);
         }
 
         public void Dispose()
