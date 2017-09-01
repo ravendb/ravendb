@@ -35,7 +35,11 @@ namespace SlowTests.Authentication
 
             var clientCertificate = CertificateUtils.CreateSelfSignedExpiredClientCertificate("expired client cert", serverCertificateHolder);
 
-            using (var store = GetDocumentStore(adminCertificate: serverCertificate, userCertificate: serverCertificate))
+            using (var store = GetDocumentStore(new Options
+            {
+                AdminCertificate = serverCertificate,
+                ClientCertificate = serverCertificate
+            }))
             {
                 var requestExecutor = store.GetRequestExecutor();
                 using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -60,7 +64,12 @@ namespace SlowTests.Authentication
                 [dbName] = DatabaseAccess.ReadWrite
             });
 
-            using (var store = GetDocumentStore(adminCertificate: adminCert, userCertificate:userCert, modifyName: s => dbName))
+            using (var store = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = userCert,
+                ModifyDatabaseName = s => dbName
+            }))
             {
                 StoreSampleDoc(store, "test/1");
 
@@ -79,8 +88,13 @@ namespace SlowTests.Authentication
             var dbName = GetDatabaseName();
             var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.Operator);
             var userCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.Operator);
-            
-            using (var store = GetDocumentStore(adminCertificate: adminCert, userCertificate:userCert, modifyName:(s => dbName)))
+
+            using (var store = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = userCert,
+                ModifyDatabaseName = s => dbName
+            }))
             {
                 var doc = new DatabaseRecord("WhateverDB");
                 store.Admin.Server.Send(new CreateDatabaseOperation(doc)); // operator operation
@@ -98,7 +112,12 @@ namespace SlowTests.Authentication
                 [dbName] = DatabaseAccess.ReadWrite
             });
 
-            using (var store = GetDocumentStore(adminCertificate: adminCert, userCertificate: userCert, modifyName: (s => dbName)))
+            using (var store = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = userCert,
+                ModifyDatabaseName = s => dbName
+            }))
             {
                 var doc = new DatabaseRecord("WhateverDB");
                 Assert.Throws<AuthorizationException>(() =>
@@ -107,7 +126,7 @@ namespace SlowTests.Authentication
                 });
             }
         }
-        
+
         [Fact]
         public void CanReachDatabaseAdminEndpointWithDatabaseAdminPermission()
         {
@@ -119,7 +138,12 @@ namespace SlowTests.Authentication
                 [dbName] = DatabaseAccess.Admin
             });
 
-            using (var store = GetDocumentStore(adminCertificate: adminCert, userCertificate: userCert, modifyName: (s => dbName)))
+            using (var store = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = userCert,
+                ModifyDatabaseName = s => dbName
+            }))
             {
                 var ravenConnectionStr = new RavenConnectionString()
                 {
@@ -145,7 +169,12 @@ namespace SlowTests.Authentication
                 [dbName] = DatabaseAccess.ReadWrite
             });
 
-            using (var store = GetDocumentStore(adminCertificate: adminCert, userCertificate: userCert, modifyName: (s => dbName)))
+            using (var store = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = userCert,
+                ModifyDatabaseName = s => dbName
+            }))
             {
                 var ravenConnectionStr = new RavenConnectionString()
                 {
@@ -176,9 +205,24 @@ namespace SlowTests.Authentication
                 [dbName1] = DatabaseAccess.ReadWrite
             });
 
-            using (var store = GetDocumentStore(adminCertificate: adminCert, userCertificate: userCert, modifyName: (s => dbName)))
-            using (GetDocumentStore(adminCertificate: adminCert, userCertificate: userCert, modifyName: (s => dbName1))) // The databases are created inside GetDocumentStore
-            using (GetDocumentStore(adminCertificate: adminCert, userCertificate: userCert, modifyName: (s => dbName2)))
+            using (var store = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = userCert,
+                ModifyDatabaseName = s => dbName
+            }))
+            using (GetDocumentStore(new Options // The databases are created inside GetDocumentStore
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = userCert,
+                ModifyDatabaseName = s => dbName1
+            }))
+            using (GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = userCert,
+                ModifyDatabaseName = s => dbName2
+            }))
             {
                 var names = store.Admin.Server.Send(new GetDatabaseNamesOperation(0, 25));
                 Assert.True(names.Length == 2);
@@ -187,12 +231,12 @@ namespace SlowTests.Authentication
                 Assert.False(names.Contains(dbName2));
             }
         }
-        
+
         [Fact]
         public void CannotGetDocWithoutCertificate()
         {
             SetupServerAuthentication();
-            
+
             Assert.Throws<AuthorizationException>(() =>
             {
                 // No certificate provided
@@ -211,8 +255,13 @@ namespace SlowTests.Authentication
             {
                 [otherDbName] = DatabaseAccess.ReadWrite
             });
-            
-            using (var store = GetDocumentStore(adminCertificate: adminCert, userCertificate: userCert, modifyName: (s => dbName)))
+
+            using (var store = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = userCert,
+                ModifyDatabaseName = s => dbName
+            }))
             {
                 Assert.Throws<AuthorizationException>(() =>
                 {
@@ -236,7 +285,7 @@ namespace SlowTests.Authentication
         [Fact]
         public void CannotGetCertificateWithInvalidDbNamePermission()
         {
-            
+
             var serverCertPath = SetupServerAuthentication();
             var dbName = GetDatabaseName();
             var e = Assert.Throws<RavenException>(() =>
@@ -246,7 +295,7 @@ namespace SlowTests.Authentication
                     [dbName + "&*NOT__ALLOWED_NA$ %ME"] = DatabaseAccess.ReadWrite
                 });
             });
-            
+
             Assert.IsType<ArgumentException>(e.InnerException);
         }
 
@@ -260,8 +309,13 @@ namespace SlowTests.Authentication
             {
                 [dbName] = DatabaseAccess.ReadWrite
             });
-            
-            using (var store = GetDocumentStore(adminCertificate: adminCert, userCertificate: userCert, modifyName: s => dbName))
+
+            using (var store = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = userCert,
+                ModifyDatabaseName = s => dbName
+            }))
             {
                 Assert.Throws<AuthorizationException>(() =>
                 {
@@ -279,7 +333,7 @@ namespace SlowTests.Authentication
                                                   attr.RequiredAuthorization != AuthorizationStatus.DatabaseAdmin));
             Assert.Empty(routes);
         }
-        
+
         [Fact]
         public void AllAdminAuthorizationStatusHaveCorrectRoutes()
         {

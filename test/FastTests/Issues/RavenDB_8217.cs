@@ -1,5 +1,4 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
@@ -13,7 +12,10 @@ namespace FastTests.Issues
         [Fact]
         public async Task CanGetProperErrorForIndexCreationFailure()
         {
-            using (var store = GetDocumentStore(path: NewDataPath()))
+            using (var store = GetDocumentStore(new Options
+            {
+                Path = NewDataPath()
+            }))
             {
                 var db = await GetDatabase(store.Database);
 
@@ -21,7 +23,7 @@ namespace FastTests.Issues
                 Directory.CreateDirectory(indexPath);
                 using (File.Create(Path.Combine(indexPath, "Raven.Voron")))
                 {
-                    var e = await Assert.ThrowsAsync<RavenException>(async ()=> await store.Admin.SendAsync(new PutIndexesOperation(new IndexDefinition
+                    var e = await Assert.ThrowsAsync<RavenException>(async () => await store.Admin.SendAsync(new PutIndexesOperation(new IndexDefinition
                     {
                         Name = "abc",
                         Maps =

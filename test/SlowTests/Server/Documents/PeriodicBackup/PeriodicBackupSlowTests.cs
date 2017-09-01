@@ -47,7 +47,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 SpinWait.SpinUntil(() => store.Admin.Server.Send(getPeriodicBackupStatus).Status?.LastFullBackup != null, TimeSpan.FromSeconds(60));
             }
 
-            using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_2"
+            }))
             {
                 await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(),
                     Directory.GetDirectories(backupPath).First());
@@ -118,7 +121,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }, TimeSpan.FromMinutes(2));
             }
 
-            using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_2"
+            }))
             {
                 await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(),
                     Directory.GetDirectories(backupPath).First());
@@ -190,7 +196,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }, TimeSpan.FromMinutes(2));
             }
 
-            using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_2"
+            }))
             {
                 await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(),
                     Directory.GetDirectories(backupPath).First());
@@ -250,7 +259,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }, TimeSpan.FromMinutes(2));
             }
 
-            using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_2"
+            }))
             {
                 await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(),
                     Directory.GetDirectories(backupPath).First());
@@ -308,7 +320,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }, TimeSpan.FromMinutes(2));
             }
 
-            using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_2"
+            }))
             {
                 await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(),
                     Directory.GetDirectories(backupPath).First());
@@ -365,8 +380,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }, TimeSpan.FromMinutes(2));
             }
 
-            using (var store1 = GetDocumentStore(dbSuffixIdentifier: "2"))
-            using (var store2 = GetDocumentStore(dbSuffixIdentifier: "2"))
+            using (var store1 = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_2"
+            }))
+            using (var store2 = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_2"
+            }))
             {
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
 
@@ -452,7 +473,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 };
                 var restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
                 var restoreResult = store.Admin.Server.Send(restoreBackupTask);
-                var stateRequest = new GetOperationStateOperation(restoreResult.OperationId, isServerStoreOperation: true);
+                var stateRequest = new GetOperationStateOperation(restoreResult.OperationId, true);
 
                 SpinWait.SpinUntil(() =>
                 {
@@ -524,7 +545,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 };
                 var restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
                 var restoreResult = store.Admin.Server.Send(restoreBackupTask);
-                var stateRequest = new GetOperationStateOperation(restoreResult.OperationId, isServerStoreOperation: true);
+                var stateRequest = new GetOperationStateOperation(restoreResult.OperationId, true);
                 store.Admin.Server.Send(stateRequest);
 
                 SpinWait.SpinUntil(() =>
@@ -546,7 +567,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task restore_settings_tests()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_2"
+            }))
             {
                 var restoreConfiguration = new RestoreBackupConfiguration();
 

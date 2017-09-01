@@ -57,7 +57,11 @@ namespace RachisTests
         public async Task RequestExecutor_failover_to_database_topology_should_work()
         {
             var leader = await CreateRaftClusterAndGetLeader(3);
-            using (var store = GetDocumentStore(defaultServer: leader, replicationFactor: 2))
+            using (var store = GetDocumentStore(new Options
+            {
+                Server = leader,
+                ReplicationFactor = 2
+            }))
             {
                 using (var session = (DocumentSession)store.OpenSession())
                 {

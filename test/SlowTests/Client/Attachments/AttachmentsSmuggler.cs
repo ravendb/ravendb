@@ -22,7 +22,10 @@ namespace SlowTests.Client.Attachments
             var file = Path.GetTempFileName();
             try
             {
-                using (var store = GetDocumentStore(dbSuffixIdentifier: "store1"))
+                using (var store = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseName = s => $"{s}_store1"
+                }))
                 {
                     using (var session = store.OpenSession())
                     {
@@ -94,7 +97,10 @@ namespace SlowTests.Client.Attachments
             var file = Path.GetTempFileName();
             try
             {
-                using (var store = GetDocumentStore(dbSuffixIdentifier: "store1"))
+                using (var store = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseName = s => $"{s}_store1"
+                }))
                 {
                     using (var session = store.OpenSession())
                     {
@@ -153,7 +159,10 @@ namespace SlowTests.Client.Attachments
             var file = Path.GetTempFileName();
             try
             {
-                using (var store = GetDocumentStore(dbSuffixIdentifier: "store1"))
+                using (var store = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseName = s => $"{s}_store1"
+                }))
                 {
                     using (var session = store.OpenSession())
                     {
@@ -213,10 +222,13 @@ namespace SlowTests.Client.Attachments
                 var dbId2 = new Guid("99999999-48c4-421e-9466-999999999999");
                 var dbId = new Guid("00000000-48c4-421e-9466-000000000000");
 
-                using (var store1 = GetDocumentStore(dbSuffixIdentifier: "store1"))
+                using (var store1 = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseName = s => $"{s}_store1"
+                }))
                 {
                     await SetDatabaseId(store1, dbId);
-                    
+
                     await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database, false, 4);
                     using (var session = store1.OpenSession())
                     {
@@ -226,7 +238,7 @@ namespace SlowTests.Client.Attachments
                     using (var emptyStream = new MemoryStream(new byte[0]))
                     {
                         var result = store1.Operations.Send(new PutAttachmentOperation("users/1", "empty-file", emptyStream, "image/png"));
-                        Assert.Equal("A:3", result.ChangeVector.Substring(0,3));
+                        Assert.Equal("A:3", result.ChangeVector.Substring(0, 3));
                         Assert.Equal("empty-file", result.Name);
                         Assert.Equal("users/1", result.DocumentId);
                         Assert.Equal("image/png", result.ContentType);
@@ -243,10 +255,13 @@ namespace SlowTests.Client.Attachments
                     Assert.Equal(1, stats.CountOfUniqueAttachments);
                 }
 
-                using (var store2 = GetDocumentStore(dbSuffixIdentifier: "store2"))
+                using (var store2 = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseName = s => $"{s}_store2"
+                }))
                 {
                     await SetDatabaseId(store2, dbId2);
-                  
+
                     await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database);
 
                     await store2.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), file);
@@ -286,7 +301,10 @@ namespace SlowTests.Client.Attachments
             var file = Path.GetTempFileName();
             try
             {
-                using (var store1 = GetDocumentStore(dbSuffixIdentifier: "store1"))
+                using (var store1 = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseName = s => $"{s}_store1"
+                }))
                 {
                     await SetDatabaseId(store1, new Guid("00000000-48c4-421e-9466-000000000000"));
                     await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database, false, 4);
@@ -305,11 +323,14 @@ namespace SlowTests.Client.Attachments
                     Assert.Equal(4, stats.CountOfUniqueAttachments);
                 }
 
-                using (var store2 = GetDocumentStore(dbSuffixIdentifier: "store2"))
+                using (var store2 = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseName = s => $"{s}_store2"
+                }))
                 {
                     var dbId = new Guid("00000000-48c4-421e-9466-000000000000");
                     await SetDatabaseId(store2, dbId);
-                 
+
                     await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database);
 
                     for (var i = 0; i < 2; i++) // Make sure that we can import attachments twice and it will overwrite

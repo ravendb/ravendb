@@ -19,7 +19,10 @@ namespace SlowTests.Issues
         public void IndexingErrorsShouldSurviveDbRestart()
         {
             var dataDir = NewDataPath();
-            using (var store = GetDocumentStore(path: dataDir))
+            using (var store = GetDocumentStore(new Options
+            {
+                Path = dataDir
+            }))
             {
                 using (var session = store.OpenSession())
                 {

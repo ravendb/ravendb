@@ -7,7 +7,6 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Server.Documents;
-using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Tests.Infrastructure;
@@ -24,7 +23,11 @@ namespace SlowTests.Client.Attachments
             const string hash = "BfKA8g/BJuHOTHYJ+A6sOt9jmFSVEDzCM3EcLLKCRMU=";
             UseNewLocalServer();
             var leader = await CreateRaftClusterAndGetLeader(3);
-            using (var store = GetDocumentStore(defaultServer: leader, replicationFactor: 2))
+            using (var store = GetDocumentStore(new Options
+            {
+                Server = leader,
+                ReplicationFactor = 2
+            }))
             {
                 using (var session = (DocumentSession)store.OpenSession())
                 {
@@ -90,7 +93,11 @@ namespace SlowTests.Client.Attachments
             const int size = 512 * 1024;
             UseNewLocalServer();
             var leader = await CreateRaftClusterAndGetLeader(3);
-            using (var store = GetDocumentStore(defaultServer: leader, replicationFactor: 2))
+            using (var store = GetDocumentStore(new Options
+            {
+                Server = leader,
+                ReplicationFactor = 2
+            }))
             {
                 using (var session = (DocumentSession)store.OpenSession())
                 {

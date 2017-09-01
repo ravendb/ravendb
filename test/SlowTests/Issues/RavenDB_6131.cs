@@ -34,11 +34,15 @@ namespace SlowTests.Issues
             var path3 = NewDataPath();
             var path4 = NewDataPath();
 
-            using (var store = GetDocumentStore(path: path1, modifyDatabaseRecord: document =>
+            using (var store = GetDocumentStore(new Options
             {
-                document.Settings[RavenConfiguration.GetKey(x => x.Indexing.StoragePath)] = path2;
-                document.Settings[RavenConfiguration.GetKey(x => x.Indexing.TempPath)] = path3;
-                document.Settings[RavenConfiguration.GetKey(x => x.Indexing.JournalsStoragePath)] = path4;
+                Path = path1,
+                ModifyDatabaseRecord = document =>
+                {
+                    document.Settings[RavenConfiguration.GetKey(x => x.Indexing.StoragePath)] = path2;
+                    document.Settings[RavenConfiguration.GetKey(x => x.Indexing.TempPath)] = path3;
+                    document.Settings[RavenConfiguration.GetKey(x => x.Indexing.JournalsStoragePath)] = path4;
+                }
             }))
             {
                 var index = new SimpleIndex();
@@ -85,7 +89,10 @@ namespace SlowTests.Issues
 
             using (GetNewServer())
             {
-                using (var store = GetDocumentStore(path: path1))
+                using (var store = GetDocumentStore(new Options
+                {
+                    Path = path1
+                }))
                 {
                     var index = new SimpleIndex();
                     index.Execute(store);

@@ -39,7 +39,10 @@ namespace SlowTests.Issues
         public void ShouldSimplyCreateIndex()
         {
             var path = NewDataPath();
-            using (var store = GetDocumentStore(path: path))
+            using (var store = GetDocumentStore(new Options
+            {
+                Path = path
+            }))
             {
                 // since index dones't exists just it should simply create it instead of using side-by-side.
                 new TestIndex().Execute(store);
@@ -62,7 +65,10 @@ namespace SlowTests.Issues
         public void ReplaceOfNonStaleIndex()
         {
             var path = NewDataPath();
-            using (var store = GetDocumentStore(path: path))
+            using (var store = GetDocumentStore(new Options
+            {
+                Path = path
+            }))
             {
                 var oldIndexDef = new IndexDefinition
                 {
@@ -113,7 +119,10 @@ namespace SlowTests.Issues
         public async Task ReplaceOfNonStaleIndexAsync()
         {
             var path = NewDataPath();
-            using (var store = GetDocumentStore(path: path))
+            using (var store = GetDocumentStore(new Options
+            {
+                Path = path
+            }))
             {
                 var oldIndexDef = new IndexDefinition
                 {
@@ -164,7 +173,10 @@ namespace SlowTests.Issues
         public void SideBySideExecuteShouldNotCreateReplacementIndexIfIndexToReplaceIsIdentical()
         {
             var path = NewDataPath();
-            using (var store = GetDocumentStore(path: path))
+            using (var store = GetDocumentStore(new Options
+            {
+                Path = path
+            }))
             {
                 var indexName = new TestIndex().IndexName;
 

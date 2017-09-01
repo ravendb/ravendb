@@ -131,7 +131,10 @@ namespace FastTests.Server.Documents.Revisions
         {
             var path = NewDataPath();
             var company = new Company { Name = "Company Name" };
-            using (var store = GetDocumentStore(path: path))
+            using (var store = GetDocumentStore(new Options
+            {
+                Path = path
+            }))
             {
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
                 using (var session = store.OpenAsyncSession())

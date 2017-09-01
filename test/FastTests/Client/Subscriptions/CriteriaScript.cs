@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide.Operations.Certificates;
-using Raven.Server.Config;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Json;
 using Xunit;
@@ -32,7 +31,12 @@ namespace FastTests.Client.Subscriptions
                 });
             }
 
-            using (var store = GetDocumentStore(adminCertificate: adminCertificate, userCertificate: clientCertificate, modifyName: s => dbName))
+            using (var store = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCertificate,
+                ClientCertificate = clientCertificate,
+                ModifyDatabaseName = s => dbName
+            }))
             {
                 using (var subscriptionManager = new DocumentSubscriptions(store))
                 {
@@ -84,7 +88,12 @@ namespace FastTests.Client.Subscriptions
                 });
             }
 
-            using (var store = GetDocumentStore(adminCertificate: adminCertificate, userCertificate: clientCertificate, modifyName: s => dbName))
+            using (var store = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCertificate,
+                ClientCertificate = clientCertificate,
+                ModifyDatabaseName = s => dbName
+            }))
             {
                 using (var subscriptionManager = new DocumentSubscriptions(store))
                 {

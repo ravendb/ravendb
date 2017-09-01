@@ -31,7 +31,10 @@ namespace SlowTests.Bugs.Indexing
         [Fact]
         public void WillIndexAllWhenCreatingIndex()
         {
-            using (var store = GetDocumentStore(modifyDatabaseRecord: _modifyMapTimeout))
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = _modifyMapTimeout
+            }))
             {
                 using (var session = store.OpenSession())
                 {
@@ -61,7 +64,10 @@ namespace SlowTests.Bugs.Indexing
         [Fact]
         public void WillIndexAllAfterCreatingIndex()
         {
-            using (var store = GetDocumentStore(modifyDatabaseRecord: _modifyMapTimeout))
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = _modifyMapTimeout
+            }))
             {
                 store.Admin.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
