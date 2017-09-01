@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.CSharp.RuntimeBinder;
@@ -37,21 +38,11 @@ namespace Raven.Client.Documents.Conventions
 
         private readonly Dictionary<MemberInfo, CustomQueryTranslator> _customQueryTranslators = new Dictionary<MemberInfo, CustomQueryTranslator>();
 
-        private readonly List<(Type Type, TryConvertValueForQueryDelegate<object> Convert)> _listOfQueryValueConverters =
-            new List<(Type, TryConvertValueForQueryDelegate<object>)>();
+        private readonly List<(Type Type, TryConvertValueForQueryDelegate<object> Convert)> _listOfQueryValueConverters = new List<(Type, TryConvertValueForQueryDelegate<object>)>();
 
-        private readonly IList<Tuple<Type, Func<string, object, Task<string>>>> _listOfRegisteredIdConventionsAsync =
-            new List<Tuple<Type, Func<string, object, Task<string>>>>();
+        private readonly IList<Tuple<Type, Func<string, object, Task<string>>>> _listOfRegisteredIdConventionsAsync = new List<Tuple<Type, Func<string, object, Task<string>>>>();
 
         private readonly IList<Tuple<Type, Func<ValueType, string>>> _listOfRegisteredIdLoadConventions = new List<Tuple<Type, Func<ValueType, string>>>();
-        private ClientConfiguration _originalConfiguration;
-        public Func<Type, BlittableJsonReaderObject, object> DeserializeEntityFromBlittable;
-
-        protected Dictionary<Type, MemberInfo> IdPropertyCache = new Dictionary<Type, MemberInfo>();
-
-        public ReadBalanceBehavior ReadBalanceBehavior;
-
-        public Action<object, StreamWriter> SerializeEntityToJsonStream;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="DocumentConventions" /> class.
@@ -66,9 +57,7 @@ namespace Raven.Client.Documents.Conventions
 
             FindClrType = (id, doc) =>
             {
-                BlittableJsonReaderObject metadata;
-                string clrType;
-                if (doc.TryGet(Constants.Documents.Metadata.Key, out metadata) && metadata.TryGet(Constants.Documents.Metadata.RavenClrType, out clrType))
+                if (doc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) && metadata.TryGet(Constants.Documents.Metadata.RavenClrType, out string clrType))
                     return clrType;
 
                 return null;
@@ -97,24 +86,89 @@ namespace Raven.Client.Documents.Conventions
             DeserializeEntityFromBlittable = new JsonNetBlittableEntitySerializer(this).EntityFromJsonStream;
         }
 
+        private bool _frozen;
+        private ClientConfiguration _originalConfiguration;
+        private Dictionary<Type, MemberInfo> _idPropertyCache = new Dictionary<Type, MemberInfo>();
+
+        private bool _saveEnumsAsIntegers;
+        private string _identityPartsSeparator;
+        private bool _disableTopologyUpdates;
+        private Func<MemberInfo, bool> _findIdentityProperty;
+        private bool _prettifyGeneratedLinqExpressions;
+        private Func<string, string> _transformTypeCollectionNameToDocumentIdPrefix;
+        private Func<string, object, Task<string>> _asyncDocumentIdGenerator;
+        private Func<string, string> _findIdentityPropertyNameFromEntityName;
+        private Func<Type, string, string, string, string> _findPropertyNameForDynamicIndex;
+        private Func<Type, string, string, string, string> _findPropertyNameForIndex;
+        private Func<dynamic, string> _findCollectionNameForDynamic;
+        private Func<Type, string> _findCollectionName;
+        private IContractResolver _jsonContractResolver;
+        private Func<Type, string> _findClrTypeName;
+        private Func<string, BlittableJsonReaderObject, string> _findClrType;
+        private bool _useOptimisticConcurrency;
+        private bool _throwIfQueryPageSizeIsNotSet;
+        private int _maxNumberOfRequestsPerSession;
+        private Action<JsonSerializer> _customizeJsonSerializer;
+        private Action<object, StreamWriter> _serializeEntityToJsonStream;
+        private ReadBalanceBehavior _readBalanceBehavior;
+        private Func<Type, BlittableJsonReaderObject, object> _deserializeEntityFromBlittable;
+
+        public Func<Type, BlittableJsonReaderObject, object> DeserializeEntityFromBlittable
+        {
+            get => _deserializeEntityFromBlittable;
+            set
+            {
+                AssertNotFrozen();
+                _deserializeEntityFromBlittable = value;
+            }
+        }
+
+        public ReadBalanceBehavior ReadBalanceBehavior
+        {
+            get => _readBalanceBehavior;
+            set
+            {
+                AssertNotFrozen();
+                _readBalanceBehavior = value;
+            }
+        }
+
+        public Action<object, StreamWriter> SerializeEntityToJsonStream
+        {
+            get => _serializeEntityToJsonStream;
+            set
+            {
+                AssertNotFrozen();
+                _serializeEntityToJsonStream = value;
+            }
+        }
+
         /// <summary>
         ///     Register an action to customize the json serializer used by the <see cref="DocumentStore" />
         /// </summary>
-        public Action<JsonSerializer> CustomizeJsonSerializer { get; set; }
+        public Action<JsonSerializer> CustomizeJsonSerializer
+        {
+            get => _customizeJsonSerializer;
+            set
+            {
+                AssertNotFrozen();
+                _customizeJsonSerializer = value;
+            }
+        }
 
         /// <summary>
         ///     Gets or sets the max length of Url of GET requests.
         /// </summary>
         /// <value>The max number of requests per session.</value>
-        public int MaxNumberOfRequestsPerSession { get; set; }
-
-        /// <summary>
-        ///     Whether to allow queries on document id.
-        ///     By default, queries on id are disabled, because it is far more efficient
-        ///     to do a Load() than a Query() if you already know the id.
-        ///     This is NOT recommended and provided for backward compatibility purposes only.
-        /// </summary>
-        public bool AllowQueriesOnId { get; set; }
+        public int MaxNumberOfRequestsPerSession
+        {
+            get => _maxNumberOfRequestsPerSession;
+            set
+            {
+                AssertNotFrozen();
+                _maxNumberOfRequestsPerSession = value;
+            }
+        }
 
         /// <summary>
         ///     If set to 'true' then it will throw an exception when any query is performed (in session)
@@ -122,93 +176,231 @@ namespace Raven.Client.Documents.Conventions
         ///     This can be useful for development purposes to pinpoint all the possible performance bottlenecks
         ///     since from 4.0 there is no limitation for number of results returned from server.
         /// </summary>
-        public bool ThrowIfQueryPageSizeIsNotSet { get; set; }
+        public bool ThrowIfQueryPageSizeIsNotSet
+        {
+            get => _throwIfQueryPageSizeIsNotSet;
+            set
+            {
+                AssertNotFrozen();
+                _throwIfQueryPageSizeIsNotSet = value;
+            }
+        }
 
         /// <summary>
         ///     Whether UseOptimisticConcurrency is set to true by default for all opened sessions
         /// </summary>
-        public bool UseOptimisticConcurrency { get; set; }
+        public bool UseOptimisticConcurrency
+        {
+            get => _useOptimisticConcurrency;
+            set
+            {
+                AssertNotFrozen();
+                _useOptimisticConcurrency = value;
+            }
+        }
 
         /// <summary>
         ///     Gets or sets the function to find the clr type of a document.
         /// </summary>
-        public Func<string, BlittableJsonReaderObject, string> FindClrType { get; set; }
+        public Func<string, BlittableJsonReaderObject, string> FindClrType
+        {
+            get => _findClrType;
+            set
+            {
+                AssertNotFrozen();
+                _findClrType = value;
+            }
+        }
 
         /// <summary>
         ///     Gets or sets the function to find the clr type name from a clr type
         /// </summary>
-        public Func<Type, string> FindClrTypeName { get; set; }
+        public Func<Type, string> FindClrTypeName
+        {
+            get => _findClrTypeName;
+            set
+            {
+                AssertNotFrozen();
+                _findClrTypeName = value;
+            }
+        }
 
         /// <summary>
         ///     Gets or sets the json contract resolver.
         /// </summary>
         /// <value>The json contract resolver.</value>
-        public IContractResolver JsonContractResolver { get; set; }
+        public IContractResolver JsonContractResolver
+        {
+            get => _jsonContractResolver;
+            set
+            {
+                AssertNotFrozen();
+                _jsonContractResolver = value;
+            }
+        }
 
         /// <summary>
         ///     Gets or sets the function to find the collection name for given type.
         /// </summary>
-        public Func<Type, string> FindCollectionName { get; set; }
+        public Func<Type, string> FindCollectionName
+        {
+            get => _findCollectionName;
+            set
+            {
+                AssertNotFrozen();
+                _findCollectionName = value;
+            }
+        }
 
         /// <summary>
         ///     Gets or sets the function to find the collection name for dynamic type.
         /// </summary>
-        public Func<dynamic, string> FindCollectionNameForDynamic { get; set; }
+        public Func<dynamic, string> FindCollectionNameForDynamic
+        {
+            get => _findCollectionNameForDynamic;
+            set
+            {
+                AssertNotFrozen();
+                _findCollectionNameForDynamic = value;
+            }
+        }
 
         /// <summary>
         ///     Gets or sets the function to find the indexed property name
         ///     given the indexed document type, the index name, the current path and the property path.
         /// </summary>
-        public Func<Type, string, string, string, string> FindPropertyNameForIndex { get; set; }
+        public Func<Type, string, string, string, string> FindPropertyNameForIndex
+        {
+            get => _findPropertyNameForIndex;
+            set
+            {
+                AssertNotFrozen();
+                _findPropertyNameForIndex = value;
+            }
+        }
 
         /// <summary>
         ///     Gets or sets the function to find the indexed property name
         ///     given the indexed document type, the index name, the current path and the property path.
         /// </summary>
-        public Func<Type, string, string, string, string> FindPropertyNameForDynamicIndex { get; set; }
+        public Func<Type, string, string, string, string> FindPropertyNameForDynamicIndex
+        {
+            get => _findPropertyNameForDynamicIndex;
+            set
+            {
+                AssertNotFrozen();
+                _findPropertyNameForDynamicIndex = value;
+            }
+        }
 
         /// <summary>
         ///     Get or sets the function to get the identity property name from the entity name
         /// </summary>
-        public Func<string, string> FindIdentityPropertyNameFromEntityName { get; set; }
+        public Func<string, string> FindIdentityPropertyNameFromEntityName
+        {
+            get => _findIdentityPropertyNameFromEntityName;
+            set
+            {
+                AssertNotFrozen();
+                _findIdentityPropertyNameFromEntityName = value;
+            }
+        }
 
         /// <summary>
         ///     Gets or sets the document ID generator.
         /// </summary>
         /// <value>The document ID generator.</value>
-        public Func<string, object, Task<string>> AsyncDocumentIdGenerator { get; set; }
+        public Func<string, object, Task<string>> AsyncDocumentIdGenerator
+        {
+            get => _asyncDocumentIdGenerator;
+            set
+            {
+                AssertNotFrozen();
+                _asyncDocumentIdGenerator = value;
+            }
+        }
 
         /// <summary>
         ///     Translates the types collection name to the document id prefix
         /// </summary>
-        public Func<string, string> TransformTypeCollectionNameToDocumentIdPrefix { get; set; }
+        public Func<string, string> TransformTypeCollectionNameToDocumentIdPrefix
+        {
+            get => _transformTypeCollectionNameToDocumentIdPrefix;
+            set
+            {
+                AssertNotFrozen();
+                _transformTypeCollectionNameToDocumentIdPrefix = value;
+            }
+        }
 
         /// <summary>
         ///     Attempts to prettify the generated linq expressions for indexes and transformers
         /// </summary>
-        public bool PrettifyGeneratedLinqExpressions { get; set; }
+        public bool PrettifyGeneratedLinqExpressions
+        {
+            get => _prettifyGeneratedLinqExpressions;
+            set
+            {
+                AssertNotFrozen();
+                _prettifyGeneratedLinqExpressions = value;
+            }
+        }
 
         /// <summary>
         ///     Gets or sets the function to find the identity property.
         /// </summary>
         /// <value>The find identity property.</value>
-        public Func<MemberInfo, bool> FindIdentityProperty { get; set; }
+        public Func<MemberInfo, bool> FindIdentityProperty
+        {
+            get => _findIdentityProperty;
+            set
+            {
+                AssertNotFrozen();
+                _findIdentityProperty = value;
+            }
+        }
 
-        public bool DisableTopologyUpdates { get; set; }
+        public bool DisableTopologyUpdates
+        {
+            get => _disableTopologyUpdates;
+            set
+            {
+                AssertNotFrozen();
+                _disableTopologyUpdates = value;
+            }
+        }
 
         /// <summary>
         ///     Gets or sets the identity parts separator used by the HiLo generators
         /// </summary>
         /// <value>The identity parts separator.</value>
-        public string IdentityPartsSeparator { get; set; }
+        public string IdentityPartsSeparator
+        {
+            get => _identityPartsSeparator;
+            set
+            {
+                AssertNotFrozen();
+                _identityPartsSeparator = value;
+            }
+        }
 
         /// <summary>
         ///     Saves Enums as integers and instruct the Linq provider to query enums as integer values.
         /// </summary>
-        public bool SaveEnumsAsIntegers { get; set; }
+        public bool SaveEnumsAsIntegers
+        {
+            get => _saveEnumsAsIntegers;
+            set
+            {
+                AssertNotFrozen();
+                _saveEnumsAsIntegers = value;
+            }
+        }
 
         public void RegisterCustomQueryTranslator<T>(Expression<Func<T, object>> member, CustomQueryTranslator translator)
         {
+            AssertNotFrozen();
+
             var body = member.Body as UnaryExpression;
             if (body == null)
                 throw new NotSupportedException("A custom query translator can only be used to evaluate a simple member access or method call.");
@@ -224,8 +416,7 @@ namespace Raven.Client.Documents.Conventions
         /// </summary>
         public static string DefaultGetCollectionName(Type t)
         {
-            string result;
-            if (_cachedDefaultTypeCollectionNames.TryGetValue(t, out result))
+            if (_cachedDefaultTypeCollectionNames.TryGetValue(t, out var result))
                 return result;
 
             if (t.Name.Contains("<>"))
@@ -315,6 +506,8 @@ namespace Raven.Client.Documents.Conventions
         /// </summary>
         public DocumentConventions RegisterAsyncIdConvention<TEntity>(Func<string, TEntity, Task<string>> func)
         {
+            AssertNotFrozen();
+
             var type = typeof(TEntity);
             var entryToRemove = _listOfRegisteredIdConventionsAsync.FirstOrDefault(x => x.Item1 == type);
             if (entryToRemove != null)
@@ -341,6 +534,8 @@ namespace Raven.Client.Documents.Conventions
         /// </summary>
         public DocumentConventions RegisterIdLoadConvention<TEntity>(Func<ValueType, string> func)
         {
+            AssertNotFrozen();
+
             var type = typeof(TEntity);
             var entryToRemove = _listOfRegisteredIdLoadConventions.FirstOrDefault(x => x.Item1 == type);
             if (entryToRemove != null)
@@ -460,9 +655,8 @@ namespace Raven.Client.Documents.Conventions
         /// <returns></returns>
         public MemberInfo GetIdentityProperty(Type type)
         {
-            MemberInfo info;
-            var currentIdPropertyCache = IdPropertyCache;
-            if (currentIdPropertyCache.TryGetValue(type, out info))
+            var currentIdPropertyCache = _idPropertyCache;
+            if (currentIdPropertyCache.TryGetValue(type, out var info))
                 return info;
 
             var identityProperty = GetPropertiesForType(type).FirstOrDefault(FindIdentityProperty);
@@ -473,7 +667,7 @@ namespace Raven.Client.Documents.Conventions
                 identityProperty = propertyInfo ?? identityProperty;
             }
 
-            IdPropertyCache = new Dictionary<Type, MemberInfo>(currentIdPropertyCache)
+            _idPropertyCache = new Dictionary<Type, MemberInfo>(currentIdPropertyCache)
             {
                 {type, identityProperty}
             };
@@ -493,9 +687,9 @@ namespace Raven.Client.Documents.Conventions
 
                 if (configuration.Disabled && _originalConfiguration != null) // need to revert to original values
                 {
-                    MaxNumberOfRequestsPerSession = _originalConfiguration.MaxNumberOfRequestsPerSession.Value;
-
-                    ReadBalanceBehavior = _originalConfiguration.ReadBalanceBehavior.Value;
+                    _maxNumberOfRequestsPerSession = _originalConfiguration.MaxNumberOfRequestsPerSession.Value;
+                    _prettifyGeneratedLinqExpressions = _originalConfiguration.PrettifyGeneratedLinqExpressions.Value;
+                    _readBalanceBehavior = _originalConfiguration.ReadBalanceBehavior.Value;
 
                     _originalConfiguration = null;
                     return;
@@ -510,9 +704,9 @@ namespace Raven.Client.Documents.Conventions
                         ReadBalanceBehavior = ReadBalanceBehavior
                     };
 
-                MaxNumberOfRequestsPerSession = configuration.MaxNumberOfRequestsPerSession ?? _originalConfiguration.MaxNumberOfRequestsPerSession.Value;
-                PrettifyGeneratedLinqExpressions = configuration.PrettifyGeneratedLinqExpressions ?? _originalConfiguration.PrettifyGeneratedLinqExpressions.Value;
-                ReadBalanceBehavior = configuration.ReadBalanceBehavior ?? _originalConfiguration.ReadBalanceBehavior.Value;
+                _maxNumberOfRequestsPerSession = configuration.MaxNumberOfRequestsPerSession ?? _originalConfiguration.MaxNumberOfRequestsPerSession.Value;
+                _prettifyGeneratedLinqExpressions = configuration.PrettifyGeneratedLinqExpressions ?? _originalConfiguration.PrettifyGeneratedLinqExpressions.Value;
+                _readBalanceBehavior = configuration.ReadBalanceBehavior ?? _originalConfiguration.ReadBalanceBehavior.Value;
             }
         }
 
@@ -533,12 +727,14 @@ namespace Raven.Client.Documents.Conventions
                 yield return propertyInfo;
 
             foreach (var @interface in type.GetInterfaces())
-            foreach (var propertyInfo in GetPropertiesForType(@interface))
-                yield return propertyInfo;
+                foreach (var propertyInfo in GetPropertiesForType(@interface))
+                    yield return propertyInfo;
         }
 
         public void RegisterQueryValueConverter<T>(TryConvertValueForQueryDelegate<T> converter)
         {
+            AssertNotFrozen();
+
             int index;
             for (index = 0; index < _listOfQueryValueConverters.Count; index++)
             {
@@ -576,8 +772,7 @@ namespace Raven.Client.Documents.Conventions
         {
             var member = GetMemberInfoFromExpression(expression);
 
-            CustomQueryTranslator translator;
-            return _customQueryTranslators.TryGetValue(member, out translator) == false
+            return _customQueryTranslators.TryGetValue(member, out var translator) == false
                 ? null
                 : translator.Invoke(provider, expression);
         }
@@ -593,6 +788,18 @@ namespace Raven.Client.Documents.Conventions
                 return memberExpression.Member;
 
             throw new NotSupportedException("A custom query translator can only be used to evaluate a simple member access or method call.");
+        }
+
+        internal void Freeze()
+        {
+            _frozen = true;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void AssertNotFrozen()
+        {
+            if (_frozen)
+                throw new InvalidOperationException($"Conventions has frozen after '{nameof(DocumentStore)}.{nameof(DocumentStore.Initialize)}()' and no changes can be applied to them.");
         }
     }
 }

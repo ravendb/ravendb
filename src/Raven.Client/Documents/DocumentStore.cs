@@ -213,6 +213,7 @@ namespace Raven.Client.Documents
                     Conventions.AsyncDocumentIdGenerator = (dbName, entity) => generator.GenerateDocumentIdAsync(dbName, entity);
                 }
 
+                Conventions.Freeze();
                 Initialized = true;
             }
             catch (Exception)

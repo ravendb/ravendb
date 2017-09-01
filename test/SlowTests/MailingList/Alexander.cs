@@ -17,7 +17,6 @@ namespace SlowTests.MailingList
             using (var store = GetDocumentStore())
             {
                 store.Initialize();
-                store.Conventions.AllowQueriesOnId = true;
                 store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
                     Maps = { @"
