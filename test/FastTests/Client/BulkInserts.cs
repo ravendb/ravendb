@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
@@ -31,16 +30,21 @@ namespace FastTests.Client
                 });
             }
 
-            using (var store = GetDocumentStore(adminCertificate: adminCertificate, userCertificate: clientCertificate, modifyName: s => dbName))
+            using (var store = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCertificate,
+                ClientCertificate = clientCertificate,
+                ModifyDatabaseName = s => dbName
+            }))
             {
                 using (var bulkInsert = store.BulkInsert())
                 {
                     for (int i = 0; i < 1000; i++)
                     {
-                        await bulkInsert.StoreAsync(new FooBar() {Name = "foobar/" + i}, "FooBars/" + i);
+                        await bulkInsert.StoreAsync(new FooBar() { Name = "foobar/" + i }, "FooBars/" + i);
                     }
                 }
-                
+
                 using (var session = store.OpenSession())
                 {
                     var len = session.Advanced.LoadStartingWith<FooBar>("FooBars/", null, 0, 1000, null);
@@ -89,7 +93,7 @@ namespace FastTests.Client
                 Assert.NotNull(doc4);
 
                 object name;
-                ((BlittableJsonReaderObject) doc1).TryGetMember("Name", out name);
+                ((BlittableJsonReaderObject)doc1).TryGetMember("Name", out name);
                 Assert.Equal("John Doe", name.ToString());
                 ((BlittableJsonReaderObject)doc2).TryGetMember("Name", out name);
                 Assert.Equal("Jane Doe", name.ToString());
@@ -114,17 +118,22 @@ namespace FastTests.Client
 
             public bool Equals(FooBar other)
             {
-                if (ReferenceEquals(null, other)) return false;
-                if (ReferenceEquals(this, other)) return true;
+                if (ReferenceEquals(null, other))
+                    return false;
+                if (ReferenceEquals(this, other))
+                    return true;
                 return string.Equals(Name, other.Name);
             }
 
             public override bool Equals(object obj)
             {
-                if (ReferenceEquals(null, obj)) return false;
-                if (ReferenceEquals(this, obj)) return true;
-                if (obj.GetType() != this.GetType()) return false;
-                return Equals((FooBar) obj);
+                if (ReferenceEquals(null, obj))
+                    return false;
+                if (ReferenceEquals(this, obj))
+                    return true;
+                if (obj.GetType() != this.GetType())
+                    return false;
+                return Equals((FooBar)obj);
             }
 
             public override int GetHashCode()

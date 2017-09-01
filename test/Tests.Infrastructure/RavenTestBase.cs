@@ -81,40 +81,26 @@ namespace FastTests
             throw new TimeoutException(message);
         }
 
-        protected DocumentStore GetDocumentStore(
-            [CallerMemberName] string caller = null,
-            string dbSuffixIdentifier = null,
-            string path = null,
-            Action<DatabaseRecord> modifyDatabaseRecord = null,
-            Func<string, string> modifyName = null,
-            bool ignoreDisabledDatabase = false,
-            int replicationFactor = 1,
-            RavenServer defaultServer = null,
-            bool waitForDatabasesToBeCreated = false,
-            bool deleteDatabaseWhenDisposed = true,
-            bool createDatabase = true,
-            X509Certificate2 adminCertificate = null,
-            X509Certificate2 userCertificate = null)
+        protected DocumentStore GetDocumentStore(Options options = null, [CallerMemberName] string caller = null)
         {
             try
             {
-
                 lock (_getDocumentStoreSync)
                 {
-                    defaultServer = defaultServer ?? Server;
+                    options = options ?? Options.Default;
+                    var serverToUse = options.Server ?? Server;
+
                     var name = GetDatabaseName(caller);
 
-                    if (dbSuffixIdentifier != null)
-                        name = $"{name}_{dbSuffixIdentifier}";
-
-                    if (modifyName != null)
-                        name = modifyName(name) ?? name;
+                    if (options.ModifyDatabaseName != null)
+                        name = options.ModifyDatabaseName(name) ?? name;
 
                     var hardDelete = true;
                     var runInMemory = true;
 
-                    if (path == null)
-                        path = NewDataPath(name);
+                    var pathToUse = options.Path;
+                    if (pathToUse == null)
+                        pathToUse = NewDataPath(name);
                     else
                     {
                         hardDelete = false;
@@ -127,25 +113,24 @@ namespace FastTests
                         {
                             [RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "1",
                             [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = runInMemory.ToString(),
-                            [RavenConfiguration.GetKey(x => x.Core.DataDirectory)] = path,
+                            [RavenConfiguration.GetKey(x => x.Core.DataDirectory)] = pathToUse,
                             [RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexCannotBeOpened)] = "true",
                             [RavenConfiguration.GetKey(x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)] = int.MaxValue.ToString()
                         }
                     };
 
-                    modifyDatabaseRecord?.Invoke(doc);
-
+                    options.ModifyDatabaseRecord?.Invoke(doc);
 
                     var store = new DocumentStore
                     {
-                        Urls = UseFiddler(defaultServer.WebUrl),
+                        Urls = UseFiddler(serverToUse.WebUrl),
                         Database = name,
-                        Certificate = userCertificate
+                        Certificate = options.ClientCertificate
                     };
                     ModifyStore(store);
                     store.Initialize();
 
-                    if (createDatabase)
+                    if (options.CreateDatabase)
                     {
                         foreach (var server in Servers)
                         {
@@ -159,21 +144,21 @@ namespace FastTests
 
                         DatabasePutResult result;
 
-                        if (userCertificate != null)
+                        if (options.AdminCertificate != null)
                         {
                             using (var adminStore = new DocumentStore
                             {
-                                Urls = UseFiddler(defaultServer.WebUrl),
+                                Urls = UseFiddler(serverToUse.WebUrl),
                                 Database = name,
-                                Certificate = adminCertificate
+                                Certificate = options.AdminCertificate
                             }.Initialize())
                             {
-                                result = adminStore.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFactor));
+                                result = adminStore.Admin.Server.Send(new CreateDatabaseOperation(doc, options.ReplicationFactor));
                             }
                         }
                         else
                         {
-                            result = store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFactor));
+                            result = store.Admin.Server.Send(new CreateDatabaseOperation(doc, options.ReplicationFactor));
                         }
 
                         Assert.True(result.RaftCommandIndex > 0); //sanity check             
@@ -198,7 +183,7 @@ namespace FastTests
 
                             try
                             {
-                                var databaseTask = server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name, ignoreDisabledDatabase);
+                                var databaseTask = server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name, options.IgnoreDisabledDatabase);
                                 if (databaseTask != null && databaseTask.IsCompleted == false)
                                     // if we are disposing store before database had chance to load then we need to wait
                                     databaseTask.Wait();
@@ -208,19 +193,18 @@ namespace FastTests
                                 continue;
                             }
 
-                            if (deleteDatabaseWhenDisposed)
+                            if (options.DeleteDatabaseOnDispose)
                             {
                                 DeleteDatabaseResult result;
                                 try
                                 {
-
-                                    if (userCertificate != null)
+                                    if (options.AdminCertificate != null)
                                     {
                                         using (var adminStore = new DocumentStore
                                         {
-                                            Urls = UseFiddler(defaultServer.WebUrl),
+                                            Urls = UseFiddler(serverToUse.WebUrl),
                                             Database = name,
-                                            Certificate = adminCertificate
+                                            Certificate = options.AdminCertificate
                                         }.Initialize())
                                         {
                                             result = adminStore.Admin.Server.Send(new DeleteDatabaseOperation(name, hardDelete));
@@ -230,7 +214,6 @@ namespace FastTests
                                     {
                                         result = store.Admin.Server.Send(new DeleteDatabaseOperation(name, hardDelete));
                                     }
-
                                 }
                                 catch (DatabaseDoesNotExistException)
                                 {
@@ -476,11 +459,15 @@ namespace FastTests
             RavenServer.CertificateHolder serverCertificateHolder,
             Dictionary<string, DatabaseAccess> permissions,
             SecurityClearance clearance,
-            RavenServer defaultServer = null)
+            RavenServer server = null)
         {
             var clientCertificate = CertificateUtils.CreateSelfSignedClientCertificate("RavenTestsClient", serverCertificateHolder);
             var serverCertificate = new X509Certificate2(serverCertPath);
-            using (var store = GetDocumentStore(adminCertificate: serverCertificate, defaultServer: defaultServer))
+            using (var store = GetDocumentStore(new Options
+            {
+                AdminCertificate = serverCertificate,
+                Server = server
+            }))
             {
                 var requestExecutor = store.GetRequestExecutor();
                 using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -494,12 +481,17 @@ namespace FastTests
             return clientCertificate;
         }
 
-        protected X509Certificate2 AskServerForClientCertificate(string serverCertPath, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance = SecurityClearance.ValidUser, RavenServer defaultServer = null)
+        protected X509Certificate2 AskServerForClientCertificate(string serverCertPath, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance = SecurityClearance.ValidUser, RavenServer server = null)
         {
             var serverCertificate = new X509Certificate2(serverCertPath);
             X509Certificate2 clientCertificate;
 
-            using (var store = GetDocumentStore(adminCertificate: serverCertificate, userCertificate: serverCertificate, defaultServer: defaultServer))
+            using (var store = GetDocumentStore(new Options
+            {
+                Server = server,
+                ClientCertificate = serverCertificate,
+                AdminCertificate = serverCertificate
+            }))
             {
                 var requestExecutor = store.GetRequestExecutor();
                 using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -531,6 +523,142 @@ namespace FastTests
                 DoNotReuseServer(customSettings);
 
             return serverCertPath;
+        }
+
+        public class Options
+        {
+            private readonly bool _frozen;
+            private X509Certificate2 _clientCertificate;
+            private X509Certificate2 _adminCertificate;
+            private bool _createDatabase;
+            private bool _deleteDatabaseOnDispose;
+            private RavenServer _server;
+            private int _replicationFactor;
+            private bool _ignoreDisabledDatabase;
+            private Action<DatabaseRecord> _modifyDatabaseRecord;
+            private Func<string, string> _modifyDatabaseName;
+            private string _path;
+
+            public static readonly Options Default = new Options(true);
+
+            public Options() : this(false)
+            {
+            }
+
+            private Options(bool frozen)
+            {
+                DeleteDatabaseOnDispose = true;
+                CreateDatabase = true;
+                ReplicationFactor = 1;
+
+                _frozen = frozen;
+            }
+
+            public string Path
+            {
+                get => _path;
+                set
+                {
+                    AssertNotFrozen();
+                    _path = value;
+                }
+            }
+
+            public Func<string, string> ModifyDatabaseName
+            {
+                get => _modifyDatabaseName;
+                set
+                {
+                    AssertNotFrozen();
+                    _modifyDatabaseName = value;
+                }
+            }
+
+            public Action<DatabaseRecord> ModifyDatabaseRecord
+            {
+                get => _modifyDatabaseRecord;
+                set
+                {
+                    AssertNotFrozen();
+                    _modifyDatabaseRecord = value;
+                }
+            }
+
+            public bool IgnoreDisabledDatabase
+            {
+                get => _ignoreDisabledDatabase;
+                set
+                {
+                    AssertNotFrozen();
+                    _ignoreDisabledDatabase = value;
+                }
+            }
+
+            public int ReplicationFactor
+            {
+                get => _replicationFactor;
+                set
+                {
+                    AssertNotFrozen();
+                    _replicationFactor = value;
+                }
+            }
+
+            public RavenServer Server
+            {
+                get => _server;
+                set
+                {
+                    AssertNotFrozen();
+                    _server = value;
+                }
+            }
+
+            public bool DeleteDatabaseOnDispose
+            {
+                get => _deleteDatabaseOnDispose;
+                set
+                {
+                    AssertNotFrozen();
+                    _deleteDatabaseOnDispose = value;
+                }
+            }
+
+            public bool CreateDatabase
+            {
+                get => _createDatabase;
+                set
+                {
+                    AssertNotFrozen();
+                    _createDatabase = value;
+                }
+            }
+
+            public X509Certificate2 AdminCertificate
+            {
+                get => _adminCertificate;
+                set
+                {
+                    AssertNotFrozen();
+                    _adminCertificate = value;
+                }
+            }
+
+            public X509Certificate2 ClientCertificate
+            {
+                get => _clientCertificate;
+                set
+                {
+                    AssertNotFrozen();
+                    _clientCertificate = value;
+                }
+            }
+
+            private void AssertNotFrozen()
+            {
+                if (_frozen)
+                    throw new InvalidOperationException("Options are frozen and cannot be changed.");
+            }
         }
     }
 }

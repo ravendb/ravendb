@@ -27,7 +27,10 @@ namespace SlowTests.Issues
         public async Task CanCompact()
         {
             var path = NewDataPath();
-            using (var store = GetDocumentStore(path: path))
+            using (var store = GetDocumentStore(new Options
+            {
+                Path = path
+            }))
             {
                 new Users_ByName().Execute(store);
 

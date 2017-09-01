@@ -11,6 +11,7 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -19,11 +20,11 @@ namespace SlowTests.Issues
     public class RavenDB_2955 : RavenTestBase
     {
         [Fact]
-        public async Task ShouldDeleteAutoIndexSurpassedByAnotherAutoIndex()
+        public void ShouldDeleteAutoIndexSurpassedByAnotherAutoIndex()
         {
-            using (var store = GetDocumentStore(modifyDatabaseRecord: rec =>
+            using (var store = GetDocumentStore(new Options
             {
-                rec.Settings["Indexing.TimeBeforeDeletionOfSupersededAutoIndexInSec"] = "0";
+                ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.TimeBeforeDeletionOfSupersededAutoIndex)] = "0"
             }))
             {
                 using (var session = store.OpenSession())
@@ -141,9 +142,9 @@ namespace SlowTests.Issues
         [Fact]
         public void ShouldDeleteSmallerAutoIndexes()
         {
-            using (var store = GetDocumentStore(modifyDatabaseRecord: rec =>
+            using (var store = GetDocumentStore(new Options
             {
-                rec.Settings["Indexing.TimeBeforeDeletionOfSupersededAutoIndexInSec"] = "0";
+                ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.TimeBeforeDeletionOfSupersededAutoIndex)] = "0"
             }))
             {
                 using (var session = store.OpenSession())

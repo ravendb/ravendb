@@ -18,7 +18,7 @@ namespace Raven.Server.Config.Categories
         /// Default: 2048
         /// </summary>
         [DefaultValue(2048)]
-        [ConfigurationEntry("Patching.MaxCachedScripts")]
+        [ConfigurationEntry("Patching.MaxNumberOfCachedScripts")]
         public int MaxNumberOfCachedScripts { get; set; }
     }
 }

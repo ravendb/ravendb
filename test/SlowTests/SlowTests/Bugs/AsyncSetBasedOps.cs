@@ -9,7 +9,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
@@ -32,7 +31,10 @@ namespace SlowTests.SlowTests.Bugs
         [Fact]
         public async Task AwaitAsyncPatchByIndexShouldWork()
         {
-            using (var store = GetDocumentStore(modifyDatabaseRecord: document => document.Settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false"))
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false"
+            }))
             {
                 string lastUserId = null;
 
@@ -63,7 +65,7 @@ namespace SlowTests.SlowTests.Bugs
 
                 await (await store.Operations.SendAsync(new PatchByQueryOperation(
                     new IndexQuery { Query = $"FROM INDEX '{stats.IndexName}' UPDATE {{ this.FullName = this.FirstName + ' ' + this.LastName; }}" }
-                ),CancellationToken.None))
+                ), CancellationToken.None))
                 .WaitForCompletionAsync(TimeSpan.FromSeconds(60));
 
                 using (var db = store.OpenAsyncSession())

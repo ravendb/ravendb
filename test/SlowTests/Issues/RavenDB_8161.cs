@@ -14,7 +14,10 @@ namespace SlowTests.Issues
         public void Can_delete_all_entries_from_compressed_tree_in_map_reduce_index()
         {
             var path = NewDataPath();
-            using (var store = GetDocumentStore(path: path))
+            using (var store = GetDocumentStore(new Options
+            {
+                Path = path
+            }))
             {
                 store.Admin.Send(new CreateSampleDataOperation());
 

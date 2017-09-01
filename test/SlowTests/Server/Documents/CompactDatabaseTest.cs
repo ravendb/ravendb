@@ -19,7 +19,10 @@ namespace SlowTests.Server.Documents
         public async Task CanCompactDatabase()
         {
             var path = NewDataPath();
-            using (var store = GetDocumentStore(path: path))
+            using (var store = GetDocumentStore(new Options
+            {
+                Path = path
+            }))
             {
                 store.Admin.Send(new CreateSampleDataOperation());
 
@@ -61,7 +64,10 @@ namespace SlowTests.Server.Documents
         public async Task CanCompactDatabaseWithAttachment()
         {
             var path = NewDataPath();
-            using (var store = GetDocumentStore(path: path))
+            using (var store = GetDocumentStore(new Options
+            {
+                Path = path
+            }))
             {
                 var buffer = new byte[16 * 1024 * 1024];
                 new Random().NextBytes(buffer);

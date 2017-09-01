@@ -65,11 +65,11 @@ namespace RachisTests.DatabaseCluster
             if (useSsl)
             {
 
-                adminCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, defaultServer: leader);
+                adminCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader);
                 clientCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>
                 {
                     [databaseName] = DatabaseAccess.Admin
-                }, defaultServer: leader);
+                }, server: leader);
             }
 
             DatabasePutResult databaseResult;
@@ -137,7 +137,7 @@ namespace RachisTests.DatabaseCluster
             X509Certificate2 adminCertificate = null;
             if (useSsl)
             {
-                adminCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, defaultServer: leader);
+                adminCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader);
             }
 
 
@@ -368,7 +368,7 @@ namespace RachisTests.DatabaseCluster
             X509Certificate2 adminCertificate = null;
             if (useSsl)
             {
-                adminCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, defaultServer: leader);
+                adminCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader);
             }
 
             using (var store = new DocumentStore()
@@ -433,11 +433,11 @@ namespace RachisTests.DatabaseCluster
             if (useSsl)
             {
 
-                adminCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, defaultServer: leader);
+                adminCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader);
                 clientCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>
                 {
                     [databaseName] = DatabaseAccess.Admin
-                }, defaultServer: leader);
+                }, server: leader);
             }
             DatabaseTopology topology;
             var doc = new DatabaseRecord(databaseName);
@@ -520,8 +520,19 @@ namespace RachisTests.DatabaseCluster
                 [dbName] = DatabaseAccess.Admin
             });
 
-            using (var store1 = GetDocumentStore(adminCertificate: adminCert, userCertificate: userCert1, modifyName: s => dbName))
-            using (var store2 = GetDocumentStore(adminCertificate: adminCert, userCertificate: userCert2, modifyName: s => dbName, createDatabase: false))
+            using (var store1 = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = userCert1,
+                ModifyDatabaseName = s => dbName
+            }))
+            using (var store2 = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = userCert2,
+                ModifyDatabaseName = s => dbName,
+                CreateDatabase = false
+            }))
             {
                 var watcher2 = new ExternalReplication
                 {
@@ -556,9 +567,19 @@ namespace RachisTests.DatabaseCluster
                 [dbName + "otherstuff"] = DatabaseAccess.Admin
             });
 
-            using (var store1 = GetDocumentStore(adminCertificate: adminCert, userCertificate: userCert1, modifyName: s => dbName))
-            using (var store2 = GetDocumentStore(adminCertificate: adminCert, userCertificate: userCert2, modifyName: s => dbName,
-                createDatabase: false))
+            using (var store1 = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = userCert1,
+                ModifyDatabaseName = s => dbName
+            }))
+            using (var store2 = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = userCert2,
+                ModifyDatabaseName = s => dbName,
+                CreateDatabase = false
+            }))
             {
                 var watcher2 = new ExternalReplication
                 {

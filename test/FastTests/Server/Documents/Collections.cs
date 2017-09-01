@@ -12,7 +12,10 @@ namespace FastTests.Server.Documents
         public void CanSurviveRestart()
         {
             var path = NewDataPath();
-            using (var store = GetDocumentStore(path: path))
+            using (var store = GetDocumentStore(new Options
+            {
+                Path = path
+            }))
             {
                 using (var commands = store.Commands())
                 {
@@ -43,7 +46,10 @@ namespace FastTests.Server.Documents
                 }
             }
 
-            using (var store = GetDocumentStore(path: path))
+            using (var store = GetDocumentStore(new Options
+            {
+                Path = path
+            }))
             {
                 var collectionStats = store.Admin.Send(new GetCollectionStatisticsOperation());
 
@@ -55,6 +61,6 @@ namespace FastTests.Server.Documents
                 var people = collectionStats.Collections.First(x => x.Key == "People");
                 Assert.Equal(1, people.Value);
             }
-        }       
+        }
     }
 }

@@ -34,8 +34,14 @@ namespace FastTests.Smuggler
         [Fact]
         public async Task CanExportDirectlyToRemote()
         {
-            using (var store1 = GetDocumentStore(dbSuffixIdentifier: "store1"))
-            using (var store2 = GetDocumentStore(dbSuffixIdentifier: "store2"))
+            using (var store1 = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_1"
+            }))
+            using (var store2 = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_2"
+            }))
             {
                 using (var session = store1.OpenAsyncSession())
                 {
@@ -60,8 +66,14 @@ namespace FastTests.Smuggler
             var file = Path.GetTempFileName();
             try
             {
-                using (var store1 = GetDocumentStore(dbSuffixIdentifier: "store1"))
-                using (var store2 = GetDocumentStore(dbSuffixIdentifier: "store2"))
+                using (var store1 = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseName = s => $"{s}_1"
+                }))
+                using (var store2 = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseName = s => $"{s}_2"
+                }))
                 {
                     using (var session = store1.OpenSession())
                     {
@@ -106,8 +118,14 @@ namespace FastTests.Smuggler
             var file = Path.GetTempFileName();
             try
             {
-                using (var store1 = GetDocumentStore(dbSuffixIdentifier: "store1"))
-                using (var store2 = GetDocumentStore(dbSuffixIdentifier: "store2"))
+                using (var store1 = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseName = s => $"{s}_1"
+                }))
+                using (var store2 = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseName = s => $"{s}_2"
+                }))
                 {
                     using (var session = store1.OpenSession())
                     {
@@ -162,7 +180,10 @@ namespace FastTests.Smuggler
             var file = Path.GetTempFileName();
             try
             {
-                using (var exportStore = GetDocumentStore(dbSuffixIdentifier: "exportStore"))
+                using (var exportStore = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseName = s => $"{s}_exportStore"
+                }))
                 {
                     var database = await GetDocumentDatabaseInstanceFor(exportStore);
 
@@ -183,7 +204,10 @@ namespace FastTests.Smuggler
 
                 }
 
-                using (var importStore = GetDocumentStore(dbSuffixIdentifier: "importStore"))
+                using (var importStore = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseName = s => $"{s}_importStore"
+                }))
                 {
                     await importStore.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), file);
                     using (var session = importStore.OpenAsyncSession())
@@ -205,15 +229,18 @@ namespace FastTests.Smuggler
             var file = Path.GetTempFileName();
             try
             {
-                using (var store1 = GetDocumentStore(dbSuffixIdentifier: "store1"))
+                using (var store1 = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseName = s => $"{s}_store1"
+                }))
                 {
                     using (var session = store1.OpenAsyncSession())
                     {
                         await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database);
 
-                        await session.StoreAsync(new Person {Name = "Name1"});
-                        await session.StoreAsync(new Person {Name = "Name2"});
-                        await session.StoreAsync(new Company {Name = "Hibernating Rhinos "});
+                        await session.StoreAsync(new Person { Name = "Name1" });
+                        await session.StoreAsync(new Person { Name = "Name2" });
+                        await session.StoreAsync(new Company { Name = "Hibernating Rhinos " });
                         await session.SaveChangesAsync();
                     }
 
@@ -246,7 +273,10 @@ namespace FastTests.Smuggler
                     Assert.Equal(8, stats.CountOfRevisionDocuments);
                 }
 
-                using (var store2 = GetDocumentStore(dbSuffixIdentifier: "store2"))
+                using (var store2 = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseName = s => $"{s}_store2"
+                }))
                 {
                     await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database);
 
@@ -269,7 +299,10 @@ namespace FastTests.Smuggler
             var file = Path.GetTempFileName();
             try
             {
-                using (var store1 = GetDocumentStore(dbSuffixIdentifier: "store1"))
+                using (var store1 = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseName = s => $"{s}_store1"
+                }))
                 {
                     using (var session = store1.OpenAsyncSession())
                     {

@@ -68,7 +68,10 @@ namespace SlowTests.Issues
         public void CanUpdateSuggestions_AfterRestart()
         {
             var dataDir = NewDataPath();
-            using (var store = GetDocumentStore(path: dataDir))
+            using (var store = GetDocumentStore(new Options
+            {
+                Path = dataDir
+            }))
             {
                 using (var session = store.OpenSession())
                 {
@@ -99,7 +102,10 @@ namespace SlowTests.Issues
                 //Assert.NotEmpty(suggestionQueryResult.Suggestions);
             }
 
-            using (var store = GetDocumentStore(path: dataDir))
+            using (var store = GetDocumentStore(new Options
+            {
+                Path = dataDir
+            }))
             {
                 using (var session = store.OpenSession())
                 {

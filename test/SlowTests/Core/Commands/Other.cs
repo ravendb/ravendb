@@ -4,15 +4,12 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System.Linq;
 using System.Threading.Tasks;
 
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.ServerWide.Operations;
 using Xunit;
-
-using Company = SlowTests.Core.Utils.Entities.Company;
 
 namespace SlowTests.Core.Commands
 {
@@ -55,8 +52,14 @@ namespace SlowTests.Core.Commands
         [Fact]
         public void CanSwitchDatabases()
         {
-            using (var store1 = GetDocumentStore(dbSuffixIdentifier: "store1"))
-            using (var store2 = GetDocumentStore(dbSuffixIdentifier: "store2"))
+            using (var store1 = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_store1"
+            }))
+            using (var store2 = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_store2"
+            }))
             {
                 using (var commands1 = store1.Commands())
                 using (var commands2 = store2.Commands())

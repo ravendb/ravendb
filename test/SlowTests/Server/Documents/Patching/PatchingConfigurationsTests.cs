@@ -1,12 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using Orders;
 using Raven.Client.Documents.Operations;
+using Raven.Server.Config;
 using Raven.Server.Documents.Patch;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
@@ -14,18 +12,21 @@ using PatchRequest = Raven.Client.Documents.Operations.PatchRequest;
 
 namespace SlowTests.Server.Documents.Patching
 {
-    public class PatchingConfigurationsTests: RavenTestBase
+    public class PatchingConfigurationsTests : RavenTestBase
     {
         [Fact]
         public async Task CanReduceCacheSizeButKeepMostUsedScripts()
         {
-            using (var store = GetDocumentStore(modifyDatabaseRecord: x=> x.Settings["Patching.MaxCachedScripts"] = "20"))
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Patching.MaxNumberOfCachedScripts)] = "20"
+            }))
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User(){Name = "Jeroboam" },"users/1");
+                    session.Store(new User() { Name = "Jeroboam" }, "users/1");
                 }
-               
+
                 await store.Operations.SendAsync(new PatchOperation<User>("doc", null, new PatchRequest
                 {
                     Script = "this.Name = 'Jeroboam0'"
@@ -51,7 +52,7 @@ namespace SlowTests.Server.Documents.Patching
                 {
                     Script = "this.Name = 'Jeroboam" + 21 + "';"
                 }));
-                    
+
                 numberOfCachedScripts = numberOfCahcedScriptsField.GetValue(db.Scripts);
                 Assert.Equal(16, numberOfCachedScripts);
 
@@ -62,7 +63,7 @@ namespace SlowTests.Server.Documents.Patching
 
                 Assert.Equal(16, numberOfCachedScripts);
 
-                
+
             }
         }
 
@@ -70,13 +71,16 @@ namespace SlowTests.Server.Documents.Patching
         [Fact]
         public async Task CanReuseCachedItem()
         {
-            using (var store = GetDocumentStore(modifyDatabaseRecord: x => x.Settings["Patching.MaxCachedScripts"] = "20"))
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Patching.MaxNumberOfCachedScripts)] = "20"
+            }))
             {
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User() { Name = "Jeroboam" }, "users/1");
                 }
-                
+
                 for (int i = 0; i < 20; i++)
                 {
                     await store.Operations.SendAsync(new PatchOperation<User>("doc", null, new PatchRequest
@@ -97,11 +101,14 @@ namespace SlowTests.Server.Documents.Patching
         [Fact]
         public async Task MaximumScriptSteps()
         {
-            using (var store = GetDocumentStore(modifyDatabaseRecord: x => x.Settings["Patching.MaxStepsForScript"] = "8"))
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Patching.MaxStepsForScript)] = "8"
+            }))
             {
                 using (var session = store.OpenSession())
                 {
-                    var newEntity = new Order() { Lines= Enumerable.Repeat(new OrderLine(),3).ToList()};
+                    var newEntity = new Order() { Lines = Enumerable.Repeat(new OrderLine(), 3).ToList() };
                     session.Store(newEntity, "users/1");
                     session.SaveChanges();
                 }
@@ -117,7 +124,7 @@ namespace SlowTests.Server.Documents.Patching
                     session.SaveChanges();
                 }
 
-                await Assert.ThrowsAsync<Raven.Client.Exceptions.RavenException>(()=>store.Operations.SendAsync(new PatchOperation<User>("users/2", null, new PatchRequest
+                await Assert.ThrowsAsync<Raven.Client.Exceptions.RavenException>(() => store.Operations.SendAsync(new PatchOperation<User>("users/2", null, new PatchRequest
                 {
                     Script = @"for (var i=0; i< this.Lines.length; i++){}"
                 })));

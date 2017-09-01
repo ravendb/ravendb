@@ -17,9 +17,9 @@ namespace FastTests.Server.Documents.Indexing
         [Fact]
         public async Task CanUseExactInAutoIndex()
         {
-            using (var store = GetDocumentStore(modifyDatabaseRecord: rec =>
+            using (var store = GetDocumentStore(new Options
             {
-                rec.Settings[RavenConfiguration.GetKey(x => x.Indexing.TimeBeforeDeletionOfSupersededAutoIndex)] = "0";
+                ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.TimeBeforeDeletionOfSupersededAutoIndex)] = "0"
             }))
             {
                 using (var s = store.OpenAsyncSession())
@@ -40,7 +40,7 @@ namespace FastTests.Server.Documents.Indexing
                     // where exact(Name = 'Ayende')
                     var count = await s.Query<User>()
                         .Statistics(out stats)
-                        .Where(u => u.Name == "Ayende", exact: true)
+                        .Where(u => u.Name == "Ayende", true)
                         .CountAsync();
 
                     Assert.Equal(1, count);
@@ -60,7 +60,7 @@ namespace FastTests.Server.Documents.Indexing
 
                     count = await s.Query<User>()
                         .Statistics(out stats)
-                        .Where(u => u.Name == "Ayende", exact: true)
+                        .Where(u => u.Name == "Ayende", true)
                         .Search(u => u.LastName, "*en*")
                         .CountAsync();
 
@@ -110,7 +110,7 @@ namespace FastTests.Server.Documents.Indexing
                             Name = x.Key,
                             Count = x.Count(),
                         })
-                        .Where(x => x.Name == "Ayende Rahien", exact: true)
+                        .Where(x => x.Name == "Ayende Rahien", true)
                         .ToList();
 
                     Assert.Equal(1, results.Count);
@@ -146,9 +146,9 @@ namespace FastTests.Server.Documents.Indexing
         [Fact]
         public async Task ShouldExtendMappingOfTheSameField()
         {
-            using (var store = GetDocumentStore(modifyDatabaseRecord: rec =>
+            using (var store = GetDocumentStore(new Options
             {
-                rec.Settings[RavenConfiguration.GetKey(x => x.Indexing.TimeBeforeDeletionOfSupersededAutoIndex)] = "0";
+                ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.TimeBeforeDeletionOfSupersededAutoIndex)] = "0"
             }))
             {
                 using (var s = store.OpenAsyncSession())
@@ -167,7 +167,7 @@ namespace FastTests.Server.Documents.Indexing
 
                     var count = await s.Query<User>()
                         .Statistics(out stats)
-                        .Where(u => u.Name == "Ayende", exact: true)
+                        .Where(u => u.Name == "Ayende", true)
                         .CountAsync();
 
                     Assert.Equal(1, count);
@@ -197,9 +197,9 @@ namespace FastTests.Server.Documents.Indexing
         [Fact]
         public async Task CanUseExactAndSearchTogetherInAutoMapReduceIndex()
         {
-            using (var store = GetDocumentStore(modifyDatabaseRecord: rec =>
+            using (var store = GetDocumentStore(new Options
             {
-                rec.Settings[RavenConfiguration.GetKey(x => x.Indexing.TimeBeforeDeletionOfSupersededAutoIndex)] = "0";
+                ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.TimeBeforeDeletionOfSupersededAutoIndex)] = "0"
             }))
             {
                 using (var s = store.OpenAsyncSession())
@@ -245,14 +245,14 @@ namespace FastTests.Server.Documents.Indexing
                     results = s.Query<User>()
                         .Statistics(out stats)
                         .Customize(x => x.WaitForNonStaleResults())
-                        .GroupBy(x => new {x.Name, x.LastName})
+                        .GroupBy(x => new { x.Name, x.LastName })
                         .Select(x => new
                         {
                             Name = x.Key.Name,
                             LastName = x.Key.LastName,
                             Count = x.Count(),
                         })
-                        .Where(x => x.Name == "Ayende", exact: true)
+                        .Where(x => x.Name == "Ayende", true)
                         .ToList();
 
                     Assert.Equal(1, results.Count);
