@@ -7,6 +7,7 @@ import messagePublisher = require("common/messagePublisher");
 import collectionsStats = require("models/database/documents/collectionsStats"); 
 import datePickerBindingHandler = require("common/bindingHelpers/datePickerBindingHandler");
 import deleteDocumentsMatchingQueryConfirm = require("viewmodels/database/query/deleteDocumentsMatchingQueryConfirm");
+import querySyntax = require("viewmodels/database/query/querySyntax");
 import deleteDocsMatchingQueryCommand = require("commands/database/documents/deleteDocsMatchingQueryCommand");
 import notificationCenter = require("common/notifications/notificationCenter");
 
@@ -275,11 +276,6 @@ class query extends viewModelBase {
         this.createKeyboardShortcut("alt+r", () => this.runQuery(), query.containerSelector); // Using keyboard shortcut here, rather than HTML's accesskey, so that we don't steal focus from the editor.
         */
 
-        popoverUtils.longWithHover($(".query-title small"),
-            {
-                content: $("#query-example").html()
-            });
-       
         this.registerDisposableHandler($(window), "storage", () => this.loadRecentQueries());
     }
 
@@ -517,6 +513,11 @@ class query extends viewModelBase {
                         });
                 }
            });
+    }
+
+    syntaxHelp() {
+        const viewmodel = new querySyntax();
+        app.showBootstrapDialog(viewmodel);
     }
 
     private monitorDeleteOperation(db: database, operationId: number) {

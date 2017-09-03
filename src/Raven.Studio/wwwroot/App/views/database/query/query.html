@@ -2,7 +2,8 @@
     <div class="flex-window-head">
         <div class="row margin-bottom">
             <div class="col-sm-2">
-                <h2 class="query-title">Query <small><i class="icon-info text-info"></i></small></h2>
+                <h2 class="query-title">Query </h2>
+                <div><a href="#" data-bind="click: syntaxHelp"><small>Syntax help</small></a></div>
             </div>
             <div class="col-sm-10">
                 <div class="query-container">
@@ -214,40 +215,6 @@
             </div>
         </div>
     </div>
-</script>
-
-<script type="text/html" id="query-example">
-    <p>Simple collection query:</p>
-    <pre><span class="token keyword">from</span> Orders
-<span class="token keyword">where</span> Lines.Count > 4
-<span class="token keyword">select</span> Lines[].ProductName as ProductNames, OrderedAt, ShipTo.City</pre>
-
-    <p>Using JavaScript select:</p>
-    <pre><span class="token keyword">from</span> Orders <span class="token keyword">as</span> o
-<span class="token keyword">load</span> o.Company <span class="token keyword">as</span> c
-<span class="token keyword">select</span> {
-    Name: c.Name.toLowerCase(),
-    Country: c.Address.Country,
-    LinesCount: o.Lines.length
-}</pre>
-
-    <p>Group by:</p>
-    <pre><span class="token keyword">from</span> Orders
-<span class="token keyword">group by</span> Company
-<span class="token keyword">where</span> <span class="token function">count()</span> > 5
-<span class="token keyword">order by</span> <span class="token function">count()</span> <span class="token keyword">desc</span>
-<span class="token keyword">select</span> <span class="token function">count()</span> as Count, <span class="token function">key()</span> as Company
-<span class="token keyword">include</span> Company</pre>
-
-    <p>Querying an index:</p>
-    <pre><span class="token keyword">from index</span> <span class="token string">'Orders/Totals'</span> as i
-<span class="token keyword">where</span> i.Total > 10000
-<span class="token keyword">load</span> i.Company as c
-<span class="token keyword">select</span> {
-    Name: c.Name,
-    Region: c.Address.Region,
-    OrderedAt: i.OrderedAt
-}</pre>
 </script>
 
 <!--
