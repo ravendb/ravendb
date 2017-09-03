@@ -37,7 +37,7 @@
                             <input type="text" class="form-control" id="taskName" placeholder="Enter a descriptive name for the subscription task" title="Note: if no name is supplied then server will create one for you"
                                    data-bind="textInput: taskName, attr: { disabled: !$root.isAddingNewSubscriptionTask() }">
                         </div>
-                        <label>Subscription RQL Script :&nbsp;&nbsp;<i class="icon-info text-info" id="scriptInfo"></i></label>
+                        <label>Subscription RQL :&nbsp;&nbsp;<i class="icon-info text-info" id="scriptInfo"></i></label>
                         <pre class="form-control margin-top" placeholder="Enter transform script" 
                              data-bind="aceEditor: { code: query, lang:'ace/mode/rql', completer: $root.queryCompleter.complete }, validationOptions: { errorsAsTitle: false }, validationElement: query" style="height: 160px;">
                         </pre>
