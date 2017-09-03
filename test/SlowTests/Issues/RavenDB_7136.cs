@@ -27,7 +27,7 @@ namespace SlowTests.Issues
                                         select new
                                         {
                                             Company = o.Company,
-                                            Freight = o.Freight / (o.Freight - o.Freight)
+                                            Freight = o.Freight / (o.Company.Length - o.Company.Length)
                                         });
 
                 AddMap<Order>(orders => from o in orders
@@ -70,6 +70,7 @@ namespace SlowTests.Issues
                 var errors = store.Admin.Send(new GetIndexErrorsOperation());
                 
                 Assert.Equal(1, errors.Length);
+
                 Assert.Equal(1, errors[0].Errors.Length);
                 Assert.Contains(nameof(DivideByZeroException), errors[0].Errors[0].Error);
             }
