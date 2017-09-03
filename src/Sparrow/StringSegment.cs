@@ -203,13 +203,19 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int IndexOfAny(char[] charArray, int startIndex)
         {
-            Debug.Assert(startIndex >= 0 && startIndex < Length);
+            if (startIndex >= 0 && startIndex < Length)
+                ThrowOutOfRangeIndex(startIndex);
             //zero based index since we are in a segment
             var indexOfAny = Buffer.IndexOfAny(charArray, Offset + startIndex, Length - startIndex);
             if (indexOfAny == -1)
                 return -1;
 
             return indexOfAny - Offset;
+        }
+
+        private void ThrowOutOfRangeIndex(int startIndex)
+        {
+            throw new ArgumentOutOfRangeException(nameof(startIndex), $"startIndex has value of {startIndex} but the length of \'{this}\' is {Length}");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
