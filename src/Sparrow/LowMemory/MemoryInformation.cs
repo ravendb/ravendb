@@ -49,6 +49,60 @@ namespace Sparrow.LowMemory
             }
         }
 
+        public static long GetRssMemoryUsage(int procId)
+        {
+            // currently Process.GetCurrentProcess().WorkingSet64 doesn't give the real RSS number
+            // getting it from /proc/self/stat or statm can be also problematic because in some distros the number is in page size, in other pages, and position is not always guarenteed
+            // however /proc/self/status gives the real number in humenly format. We extract this here:
+            var path = $"/proc/{procId}/status";
+            var vmRssString = KernelVirtualFileSystemUtils.ReadLineFromFile(path, "VmRSS");
+            if (vmRssString == null)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Failed to read VmRSS from {path}");
+                return 0;
+            }
+
+            var parsedLine = vmRssString.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+            if (parsedLine.Length != 3) // format should be: VmRss: <num> kb
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Failed to read VmRSS from {path}. Line was {parsedLine}");
+                return 0;
+            }
+
+            if (parsedLine[0].Contains("VmRSS:") == false)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Failed to find VmRSS from {path}. Line was {parsedLine}");
+                return 0;
+            }
+
+            long result;
+            if (long.TryParse(parsedLine[1], out result) == false)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Failed to parse VmRSS from {path}. Line was {parsedLine}");
+                return 0;
+            }
+
+            switch (parsedLine[2].ToLowerInvariant())
+            {
+                case "kb":
+                    result *= 1024L;
+                    break;
+                case "mb":
+                    result *= 1024L * 1024;
+                    break;
+                case "gb":
+                    result *= 1024L * 1024 * 1024;
+                    break;
+            }
+
+            return result;
+        }
+
         public static unsafe MemoryInfoResult GetMemoryInfo()
         {
             if (_failedToGetAvailablePhysicalMemory)
