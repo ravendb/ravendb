@@ -168,6 +168,13 @@ namespace Raven.Database.Prefetching
             return UpdateCurrentlyUsedBatches(documents);
         }
 
+        public IDisposable DocumentBatchFrom(Etag etag, int take, out List<JsonDocument> documents)
+        {
+            LastTimeUsed = DateTime.UtcNow;
+            documents = GetDocumentsBatchFrom(etag, take);
+            return UpdateCurrentlyUsedBatches(documents);
+        }
+
         public List<JsonDocument> GetDocumentsBatchFrom(Etag etag, int? take = null)
         {
             Debug.Assert(ForEntityNames == null || ForEntityNames.Comparer.Equals(EqualityComparer<string>.Default) == false);

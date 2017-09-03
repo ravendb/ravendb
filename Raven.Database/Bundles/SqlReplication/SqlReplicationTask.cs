@@ -36,6 +36,11 @@ namespace Raven.Database.Bundles.SqlReplication
     {
         private const int MaxNumberOfDeletionsToReplicate = 1024;
 
+        private const int MaxNumberOfChangesToReplicate = 4096;
+        private const int MaxBatchSizeToReturnToNormal = 256;
+
+        private int changesBatchSize = MaxNumberOfChangesToReplicate;
+
         private volatile bool shouldPause;
 
         public bool IsRunning { get; private set; }
@@ -50,7 +55,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
         public const string RavenSqlReplicationStatus = "Raven/SqlReplication/Status";
 
-        private readonly static ILog Log = LogManager.GetCurrentClassLogger();
+        private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
         public event Action<int> AfterReplicationCompleted = delegate { };
         readonly Metrics sqlReplicationMetrics = new Metrics();
@@ -73,7 +78,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
         private readonly ConcurrentSet<PrefetchingBehavior> prefetchingBehaviors = new ConcurrentSet<PrefetchingBehavior>();
 
-        private ConcurrentDictionary<string, bool> resetRequested = new ConcurrentDictionary<string, bool>();
+        private readonly ConcurrentDictionary<string, bool> resetRequested = new ConcurrentDictionary<string, bool>();
 
         public void Execute(DocumentDatabase database)
         {
@@ -238,12 +243,12 @@ namespace Raven.Database.Bundles.SqlReplication
                     BackgroundTaskExecuter.Instance.ExecuteAll(Database.WorkContext, groupedConfigs, (sqlConfigGroup, i) =>
                     {
                         Database.WorkContext.CancellationToken.ThrowIfCancellationRequested();
-
+                        
                         var prefetchingBehavior = sqlConfigGroup.PrefetchingBehavior;
                         var configsToWorkOn = sqlConfigGroup.ConfigsToWorkOn;
 
                         List<JsonDocument> documents;
-                        using (prefetchingBehavior.DocumentBatchFrom(sqlConfigGroup.LastReplicatedEtag, out documents))
+                        using (prefetchingBehavior.DocumentBatchFrom(sqlConfigGroup.LastReplicatedEtag, changesBatchSize, out documents))
                         {
                             Etag latestEtag = null, lastBatchEtag = null;
                             if (documents.Count != 0)
@@ -261,14 +266,15 @@ namespace Raven.Database.Bundles.SqlReplication
 
                             foreach (var configToWorkOn in configsToWorkOn)
                             {
-                                var cfg = configToWorkOn;
+                                var cfg = configToWorkOn;   
+                                
                                 Database.TransactionalStorage.Batch(accessor =>
                                 {
                                     deletedDocsByConfig[cfg] = accessor.Lists.Read(GetSqlReplicationDeletionName(cfg),
-                                                                      cfg.LastReplicatedEtag,
-                                                                      latestEtag,
-                                                                      MaxNumberOfDeletionsToReplicate + 1)
-                                                          .ToList();
+                                            cfg.LastReplicatedEtag,
+                                            latestEtag,
+                                            MaxNumberOfDeletionsToReplicate + 1)
+                                        .ToList();
                                 });
                             }
 
@@ -314,7 +320,7 @@ namespace Raven.Database.Bundles.SqlReplication
                                         var spRepTime = new Stopwatch();
                                         spRepTime.Start();
                                         var lastReplicatedEtag = replicationConfig.LastReplicatedEtag;
-
+                                        
                                         var deletedDocs = deletedDocsByConfig[replicationConfig];
                                         var docsToReplicate = itemsToReplicate
                                             .Where(x => lastReplicatedEtag.CompareTo(x.Etag) < 0); // haven't replicate the etag yet
@@ -338,10 +344,20 @@ namespace Raven.Database.Bundles.SqlReplication
                                                     accessor.Lists.RemoveAllBefore(GetSqlReplicationDeletionName(replicationConfig), deletedDocs[deletedDocs.Count - 1].Etag));
                                             }
                                             successes.Enqueue(Tuple.Create(replicationConfig, currentLatestEtag));
+
+                                            changesBatchSize = Math.Min(changesBatchSize * 2, MaxBatchSizeToReturnToNormal);
+
+                                            //if we successfully replicated multiple times, return to normal batch size
+                                            if (changesBatchSize >= MaxBatchSizeToReturnToNormal)
+                                                changesBatchSize = MaxNumberOfChangesToReplicate;
+                                        }
+                                        else
+                                        {
+                                            changesBatchSize = 1; //failed replicating deletes or changes, so next time try small batch
                                         }
 
                                         spRepTime.Stop();
-                                        var elapsedMicroseconds = (long)(spRepTime.ElapsedTicks * SystemTime.MicroSecPerTick);
+                                        var elapsedMicroseconds = (long) (spRepTime.ElapsedTicks * SystemTime.MicroSecPerTick);
 
                                         var sqlReplicationMetricsCounters = GetSqlReplicationMetricsManager(replicationConfig);
                                         sqlReplicationMetricsCounters.SqlReplicationBatchSizeMeter.Mark(countOfReplicatedItems);
@@ -362,6 +378,7 @@ namespace Raven.Database.Bundles.SqlReplication
                                             Message = "Sql Replication could not replicate to " + replicationConfig.Name,
                                             UniqueKey = "Sql Replication could not replicate to " + replicationConfig.Name
                                         });
+                                        changesBatchSize = 1;
                                     }
                                 });
                             }
@@ -412,7 +429,7 @@ namespace Raven.Database.Bundles.SqlReplication
                     //We are done recording success for this batch so we can clear the reset dictionary
                     ResetRequested.Clear();
                     SaveNewReplicationStatus(localReplicationStatus);
-                }
+                }              
                 finally
                 {
                     AfterReplicationCompleted(successes.Count);
