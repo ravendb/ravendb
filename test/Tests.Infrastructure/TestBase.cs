@@ -200,22 +200,29 @@ namespace FastTests
 
         private void UnloadServer(AssemblyLoadContext obj)
         {
-            lock (ServerLocker)
+            try
             {
-                var copyGlobalServer = _globalServer;
-                _globalServer = null;
-                if (copyGlobalServer == null)
-                    return;
-                copyGlobalServer.Dispose();
+                lock (ServerLocker)
+                {
+                    var copyGlobalServer = _globalServer;
+                    _globalServer = null;
+                    if (copyGlobalServer == null)
+                        return;
+                    copyGlobalServer.Dispose();
 
-                GC.Collect(2);
-                GC.WaitForPendingFinalizers();
+                    GC.Collect(2);
+                    GC.WaitForPendingFinalizers();
 
-                var exceptionAggregator = new ExceptionAggregator("Failed to cleanup test databases");
+                    var exceptionAggregator = new ExceptionAggregator("Failed to cleanup test databases");
 
-                RavenTestHelper.DeletePaths(GlobalPathsToDelete, exceptionAggregator);
+                    RavenTestHelper.DeletePaths(GlobalPathsToDelete, exceptionAggregator);
 
-                exceptionAggregator.ThrowIfNeeded();
+                    exceptionAggregator.ThrowIfNeeded();
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
             }
         }
 
