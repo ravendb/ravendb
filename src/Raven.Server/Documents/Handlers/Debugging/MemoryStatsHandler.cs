@@ -37,7 +37,11 @@ namespace Raven.Server.Documents.Handlers.Debugging
         public static DynamicJsonValue MemoryStatsInternal()
         {
             var currentProcess = Process.GetCurrentProcess();
-            var workingSet = currentProcess.WorkingSet64;
+            long workingSet;
+            if (Sparrow.Platform.PlatformDetails.RunningOnPosix == false)
+                workingSet = currentProcess.WorkingSet64;
+            else
+                workingSet = Sparrow.LowMemory.MemoryInformation.GetRssMemoryUsage(currentProcess.Id);
             long totalUnmanagedAllocations = 0;
             long totalMapping = 0;
             var fileMappingByDir = new Dictionary<string, Dictionary<string, ConcurrentDictionary<IntPtr, long>>>();
