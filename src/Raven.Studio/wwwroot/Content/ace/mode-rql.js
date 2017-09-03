@@ -7,16 +7,16 @@ var TextHighlightRules = require("./text_highlight_rules").TextHighlightRules;
 var RqlHighlightRules = function() {
 
     var clausesKeywords = (
-        "declare|function|from|index|where|select|group|order|by|load|include"
+        "declare|function|from|index|where|select|group|order|by|load|include|update"
     );
     var insideClauseKeywords = (
-        "as|not|all"
+        "as|not|all|between"
     );
     var functions = (
         "count|sum|id|key"
     );
     var whereFunctions = (
-        "between|in|search|boost|startsWith|endsWith|lucene|exact|within|circle"
+        "in|search|boost|startsWith|endsWith|lucene|exact|within|circle"
     );
     var orderByFunctions = (
         "random|score"
