@@ -123,6 +123,10 @@ class appUrl {
         return "#admin/settings/cluster";
     }
 
+    static forClusterObserverLog(): string {
+        return "#admin/settings/clusterObserverLog";
+    }
+
     static forAddClusterNode(): string {
         return "#admin/settings/addClusterNode";
     }

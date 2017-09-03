@@ -62,15 +62,10 @@ namespace Raven.Server.ServerWide.Maintenance
 
         public bool Suspended = false; // don't really care about concurrency here
 
-        public static string FormatDecision(long iteration, string database, string message)
-        {
-            return $"{DateTime.UtcNow:o}, {iteration}, {database}, {message}";
-        }
-
-        private readonly BlockingCollection<string> _decisionsLog = new BlockingCollection<string>();
+        private readonly BlockingCollection<ClusterObserverLogEntry> _decisionsLog = new BlockingCollection<ClusterObserverLogEntry>();
         private long _iteration;
 
-        public (string[] List, long Iteration) ReadDecisionsForDatabase()
+        public (ClusterObserverLogEntry[] List, long Iteration) ReadDecisionsForDatabase()
         {
             return (_decisionsLog.ToArray(), _iteration);
         }
@@ -153,7 +148,13 @@ namespace Raven.Server.ServerWide.Maintenance
                             if (_decisionsLog.Count > 99)
                                 _decisionsLog.Take();
 
-                            _decisionsLog.Add(FormatDecision(_iteration, database, updateReason));
+                            _decisionsLog.Add(new ClusterObserverLogEntry
+                            {
+                                Database = database,
+                                Iteration = _iteration,
+                                Message = updateReason,
+                                Date = DateTime.UtcNow 
+                            });
 
                             var cmd = new UpdateTopologyCommand(database)
                             {

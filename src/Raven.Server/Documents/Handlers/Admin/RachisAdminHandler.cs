@@ -14,6 +14,7 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -106,11 +107,11 @@ namespace Raven.Server.Documents.Handlers.Admin
                 {
                     var res = ServerStore.Observer.ReadDecisionsForDatabase();
                     var json = new DynamicJsonValue{
-                        ["LeaderNode"] = Server.ServerStore.NodeTag,
-                        ["Term"] = Server.ServerStore.Engine.CurrentTerm,
-                        ["Suspended"] = Server.ServerStore.Observer.Suspended,
-                        ["Iteration"] = res.Iteration,
-                        ["ObserverLog"] = new DynamicJsonArray(res.List)
+                        [nameof(ClusterObserverDecisions.LeaderNode)] = Server.ServerStore.NodeTag,
+                        [nameof(ClusterObserverDecisions.Term)] = Server.ServerStore.Engine.CurrentTerm,
+                        [nameof(ClusterObserverDecisions.Suspended)] = Server.ServerStore.Observer.Suspended,
+                        [nameof(ClusterObserverDecisions.Iteration)] = res.Iteration,
+                        [nameof(ClusterObserverDecisions.ObserverLog)] = new DynamicJsonArray(res.List)
                     };
                     
                     context.Write(writer, json);
