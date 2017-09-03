@@ -927,7 +927,7 @@ namespace Raven.Server.Documents.Indexes
                                 // the case where we freed memory at the end of the batch, but didn't adjust the budget accordingly
                                 // so it will think that it can allocate more than it actually should
                                 _currentMaximumAllowedMemory = Size.Min(_currentMaximumAllowedMemory,
-                                    new Size(NativeMemory.ThreadAllocations.Value.Allocations, SizeUnit.Bytes));
+                                    new Size(NativeMemory.ThreadAllocations.Value.TotalAllocated, SizeUnit.Bytes));
                             }
 
                             if (_mre.Wait(timeToWaitForMemoryCleanup, _indexingProcessCancellationTokenSource.Token) == false)
@@ -1010,7 +1010,7 @@ namespace Raven.Server.Documents.Indexes
 
         private void ReduceMemoryUsage()
         {
-            var beforeFree = NativeMemory.ThreadAllocations.Value.Allocations;
+            var beforeFree = NativeMemory.ThreadAllocations.Value.TotalAllocated;
             if (_logger.IsInfoEnabled)
                 _logger.Info(
                     $"{beforeFree / 1024:#,#} kb is used by '{Name} ({Etag})', reducing memory utilization.");
@@ -1022,7 +1022,7 @@ namespace Raven.Server.Documents.Indexes
             _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
 
 
-            var afterFree = NativeMemory.ThreadAllocations.Value.Allocations;
+            var afterFree = NativeMemory.ThreadAllocations.Value.TotalAllocated;
             if (_logger.IsInfoEnabled)
                 _logger.Info($"After cleanup, using {afterFree / 1024:#,#} Kb by '{Name} ({Etag})'.");
         }
@@ -1590,7 +1590,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     if (indexingThread.ManagedThreadId == threadAllocationsValue.Id)
                     {
-                        stats.ThreadAllocations.SizeInBytes = threadAllocationsValue.Allocations;
+                        stats.ThreadAllocations.SizeInBytes = threadAllocationsValue.TotalAllocated;
                         if (stats.ThreadAllocations.SizeInBytes < 0)
                             stats.ThreadAllocations.SizeInBytes = 0;
                         stats.MemoryBudget.SizeInBytes = _currentMaximumAllowedMemory.GetValue(SizeUnit.Bytes);
@@ -2307,7 +2307,7 @@ namespace Raven.Server.Documents.Indexes
             DocumentsOperationContext documentsOperationContext,
             TransactionOperationContext indexingContext)
         {
-            stats.RecordMapAllocations(_threadAllocations.Allocations);
+            stats.RecordMapAllocations(_threadAllocations.TotalAllocated);
 
             if (stats.ErrorsCount >= IndexStorage.MaxNumberOfKeptErrors)
             {
@@ -2336,7 +2336,7 @@ namespace Raven.Server.Documents.Indexes
             }
 
             var currentBudget = _currentMaximumAllowedMemory.GetValue(SizeUnit.Bytes);
-            if (_threadAllocations.Allocations > currentBudget)
+            if (_threadAllocations.TotalAllocated > currentBudget)
             {
                 var canContinue = true;
 
