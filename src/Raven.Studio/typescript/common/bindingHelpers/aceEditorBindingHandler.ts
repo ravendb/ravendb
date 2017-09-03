@@ -36,6 +36,28 @@ class aceEditorBindingHandler {
         return null;
     }
 
+    static customizeCompletionPrefix(utils: any) {
+        const originalGetCompletionPrefix = utils.getCompletionPrefix;
+        utils.getCompletionPrefix = function (editor: AceAjax.Editor) {
+            const pos = editor.getCursorPosition();
+            const line = editor.session.getLine(pos.row);
+    
+            let prefix: string;
+    
+            const mode = editor.getSession().getMode();
+            if (mode.prefixRegexps) {
+                mode.prefixRegexps.forEach(function (prefixRegex: RegExp) {
+                    if (!prefix && prefixRegex)
+                        prefix = this.retrievePrecedingIdentifier(line, pos.column, prefixRegex);
+                }.bind(this));
+
+                return prefix;
+            }
+    
+            return originalGetCompletionPrefix(editor);
+        }
+    }
+
     static install() {
         if (!ko.bindingHandlers["aceEditor"]) {
             ko.bindingHandlers["aceEditor"] = new aceEditorBindingHandler();
@@ -54,6 +76,9 @@ class aceEditorBindingHandler {
                 }
             });
 
+            const util = ace.require("ace/autocomplete/util");
+            aceEditorBindingHandler.customizeCompletionPrefix(util);
+            
             const langTools = ace.require("ace/ext/language_tools");
 
             langTools.setCompleters([{

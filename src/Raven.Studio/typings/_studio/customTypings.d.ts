@@ -132,6 +132,19 @@ declare module AceAjax {
         start: number;
         type: string;
     }
+
+    interface TextMode {
+        prefixRegexps: RegExp[];
+    }
+
+    interface Selection {
+        lead: Anchor;
+    }
+
+    interface Anchor {
+        column: number;
+        row: number;
+    }
 }
 
 interface DurandalAppModule {
