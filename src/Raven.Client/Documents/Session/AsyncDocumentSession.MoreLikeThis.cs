@@ -46,7 +46,7 @@ namespace Raven.Client.Documents.Session
             var operation = new MoreLikeThisOperation(this, query);
 
             var command = operation.CreateRequest();
-            await RequestExecutor.ExecuteAsync(command, Context, sessionId: _clientSessionId).ConfigureAwait(false);
+            await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo).ConfigureAwait(false);
 
             var result = command.Result;
             operation.SetResult(result);

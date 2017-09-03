@@ -46,6 +46,7 @@ namespace Raven.Client.Documents.Session
         private static int _instancesCounter;
         private readonly int _hash = Interlocked.Increment(ref _instancesCounter);
         protected bool GenerateDocumentIdsOnStore = true;
+        protected ISessionInfo SessionInfo;
         private BatchOptions _saveChangesOptions;
         private bool _isDisposed;
 
@@ -189,6 +190,7 @@ namespace Raven.Client.Documents.Session
             MaxNumberOfRequestsPerSession = _requestExecutor.Conventions.MaxNumberOfRequestsPerSession;
             GenerateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions, GenerateId);
             EntityToBlittable = new EntityToBlittable(this);
+            SessionInfo = new SessionInfo(_clientSessionId , false);
         }
 
         /// <summary>
