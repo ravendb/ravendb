@@ -67,9 +67,8 @@ class clusterObserverLog extends viewModelBase {
         grid.init(fetcher, () =>
             [
                 new textColumn<Raven.Server.ServerWide.Maintenance.ClusterObserverLogEntry>(grid, x => clusterObserverLog.formatTimestampAsAgo(x.Date), "Date", "20%"),
-                new textColumn<Raven.Server.ServerWide.Maintenance.ClusterObserverLogEntry>(grid, x => x.Iteration, "Iteration", "10%"),
                 new textColumn<Raven.Server.ServerWide.Maintenance.ClusterObserverLogEntry>(grid, x => x.Database, "Database", "20%"),
-                new textColumn<Raven.Server.ServerWide.Maintenance.ClusterObserverLogEntry>(grid, x => x.Message, "Message", "50%")
+                new textColumn<Raven.Server.ServerWide.Maintenance.ClusterObserverLogEntry>(grid, x => x.Message, "Message", "60%")
             ]
         );
 
