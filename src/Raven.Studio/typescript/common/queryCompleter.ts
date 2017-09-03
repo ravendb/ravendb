@@ -150,6 +150,9 @@ class queryCompleter {
     }
     
     private getLastKeyword(session: AceAjax.IEditSession, pos: AceAjax.Position): autoCompleteLastKeyword {
+        const mode = session.getMode();
+        const rules = <AceAjax.RqlHighlightRules>mode.$highlightRules;
+        
         const result: autoCompleteLastKeyword = {
             keywordsBefore: undefined,
             keyword: undefined,
@@ -192,19 +195,17 @@ class queryCompleter {
             switch (token.type) {
                 case "keyword.clause":
                     const keyword = token.value.toLowerCase();
-                    if (result.keyword === "by") {
-                        result.keyword = keyword + " by";
-                    }
-                    else {
+                    if (_.includes(rules.clauseAppendKeywords, result.keyword)) {
+                        result.keyword = keyword + " " + result.keyword;
+                    } else {
                         result.keyword = keyword;
                     }
-
-                    if (result.keyword === "by") {
-                        continue;
-                    }
-
+                    
                     result.keywordsBefore = this.getKeywordsBefore(iterator);
                     return result;
+                case "keyword.clause.clauseAppend":
+                    result.keyword = token.value.toLowerCase();
+                    break;
                 case "keyword.insideClause":
                     if (result.identifiers.length > 0 || !result.keywordModifier) {
                         result.keywordModifier = token.value.toLowerCase();
@@ -225,8 +226,15 @@ class queryCompleter {
                     }
                     break;
                 case "string":
-                    const indexName = token.value.substr(1, token.value.length - 2);
-                    result.identifiers.push(indexName);
+                    const lastChar = token.value[token.value.length - 1];
+                    if (lastChar === "'" || 
+                        lastChar === '"') {
+                        const indexName = token.value.substr(1, token.value.length - 2);
+                        result.identifiers.push(indexName);
+                    } else {
+                        // const partialIndexName = token.value.substr(1);
+                        // do nothing with it as of now
+                    }
                     break;
                 case "paren.lparen":
                     result.parentheses++;
@@ -302,7 +310,7 @@ class queryCompleter {
                 this.completeFrom(callback);
                 break;
             }
-            case "index": {
+            case "from index": {
                 if (lastKeyword.identifiers.length > 0 && lastKeyword.text) { // index name already specified
                     this.completeFromAfter(callback, true, lastKeyword);
                     return;
@@ -329,7 +337,7 @@ class queryCompleter {
                     {value: "function", score: 0, meta: "keyword"}
                 ]);
                 break;
-            case "function":
+            case "declare function":
                 if (lastKeyword.parentheses === 0 && lastKeyword.identifiers.length > 0 && lastKeyword.text && !lastKeyword.text.trim()) {
                     this.completeEmpty(callback);
                 }

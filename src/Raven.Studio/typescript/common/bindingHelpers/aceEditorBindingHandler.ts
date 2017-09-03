@@ -43,8 +43,7 @@ class aceEditorBindingHandler {
             const line = editor.session.getLine(pos.row);
     
             let prefix: string;
-    
-            const mode = editor.getSession().getMode();
+            const mode = editor.session.getMode();
             if (mode.prefixRegexps) {
                 mode.prefixRegexps.forEach(function (prefixRegex: RegExp) {
                     if (!prefix && prefixRegex)
