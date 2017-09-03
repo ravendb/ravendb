@@ -77,21 +77,25 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
         }
 
-        [RavenAction("/admin/cluster/observer/suspend", "GET", AuthorizationStatus.ClusterAdmin)]
+        [RavenAction("/admin/cluster/observer/suspend", "POST", AuthorizationStatus.ClusterAdmin)]
         public Task SuspendObserver()
         {
             SetupCORSHeaders();
             
             if (ServerStore.IsLeader())
             {
-                var suspend = GetBoolValueQueryString("value"); // in seconds
+                var suspend = GetBoolValueQueryString("value");
                 if (suspend.HasValue)
                 {
                     Server.ServerStore.Observer.Suspended = suspend.Value;
                 }
+                
+                NoContentStatus();
                 return Task.CompletedTask;
             }
+            
             RedirectToLeader();
+            
             return Task.CompletedTask;
         }
 
