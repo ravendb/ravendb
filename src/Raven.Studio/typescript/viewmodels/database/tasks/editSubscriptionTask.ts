@@ -89,28 +89,9 @@ class editSubscriptionTask extends viewModelBase {
     attached() {
         super.attached();
 
-        const jsCode = Prism.highlight(
-            "if (this.Votes < 10)\r\n" +
-            "  return;\r\n" +
-            "var customer = LoadDocument(this.CustomerId);\r\n" +
-            "return {\r\n" +
-            "   Issue: this.Issue,\r\n" +
-            "   Votes: this.Votes,\r\n" +
-            "   Customer: {\r\n" +
-            "        Name: customer.Name,\r\n" +
-            "        Email: customer.Email\r\n" +
-            "   }\r\n" + 
-            "};",
-            (Prism.languages as any).javascript);
-
-        popoverUtils.longWithHover($("#scriptInfo"),
-            {
-                content: `<p>Subscription Scripts are written in JavaScript. <br />Example: <pre>${jsCode}</pre></p>`
-                + `<p>You can use following functions in your patch script:</p>`
-                + `<ul>`
-                + `<li><code>LoadDocument(documentIdToLoad)</code> - loads document by id`
-                + `</ul>`
-            });
+        popoverUtils.longWithHover($("#scriptInfo"), {
+            content: $("#query-example").html()
+        });
     }
 
     compositionComplete() {

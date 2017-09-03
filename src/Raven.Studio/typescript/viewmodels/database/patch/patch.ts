@@ -453,7 +453,6 @@ class patch extends viewModelBase {
             "});",
             (Prism.languages as any).javascript);
 
-        //TODO: don't use lucene syntax - use RQL
         popoverUtils.longWithHover($(".query-label small"), {
             content: $("#query-example").html()
         });
