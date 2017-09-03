@@ -94,14 +94,24 @@ describe("RQL Autocomplete", () => {
         }));
     });
 
+    const indexesList = [
+        {caption: "Orders/ByCompany", value: "'Orders/ByCompany' ", score: 1, meta: "index"},
+        {caption: "Product/Sales", value: "'Product/Sales' ", score: 1, meta: "index"},
+        {caption: "Orders/Totals", value: "'Orders/Totals' ", score: 1, meta: "index"},
+    ];
     it('from index should get index names', done => {
         rqlTestUtils.autoComplete("from index |", northwindProvider(),  ((errors, wordlist, prefix) => {
             assert.equal(prefix, "");
-            assert.deepEqual(wordlist, [
-                {caption: "Orders/ByCompany", value: "'Orders/ByCompany' ", score: 1, meta: "index"},
-                {caption: "Product/Sales", value: "'Product/Sales' ", score: 1, meta: "index"},
-                {caption: "Orders/Totals", value: "'Orders/Totals' ", score: 1, meta: "index"},
-            ]);
+            assert.deepEqual(wordlist, indexesList);
+
+            done();
+        }));
+    });
+
+    it('from index inside index name should complete with prefix', done => {
+        rqlTestUtils.autoComplete("from index 'Orders/Tot|", northwindProvider(),  ((errors, wordlist, prefix) => {
+            assert.equal(prefix, "'Orders/Tot");
+            assert.deepEqual(wordlist, indexesList);
 
             done();
         }));

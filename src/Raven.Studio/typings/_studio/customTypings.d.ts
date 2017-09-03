@@ -135,6 +135,7 @@ declare module AceAjax {
 
     interface TextMode {
         prefixRegexps: RegExp[];
+        $highlightRules: HighlightRules;
     }
 
     interface Selection {
@@ -144,6 +145,13 @@ declare module AceAjax {
     interface Anchor {
         column: number;
         row: number;
+    }
+
+    interface HighlightRules {
+    }
+
+    interface RqlHighlightRules extends HighlightRules {
+        clauseAppendKeywords: string[];
     }
 }
 

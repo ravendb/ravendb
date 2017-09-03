@@ -7,7 +7,10 @@ var TextHighlightRules = require("./text_highlight_rules").TextHighlightRules;
 var RqlHighlightRules = function() {
 
     var clausesKeywords = (
-        "declare|function|from|index|where|select|group|order|by|load|include|update"
+        "declare|from|where|select|group|order|load|include|update"
+    );
+    var clauseAppendKeywords = (
+        "function|index|by"
     );
     var insideClauseKeywords = (
         "as|not|all|between"
@@ -44,6 +47,7 @@ var RqlHighlightRules = function() {
 
     var keywordMapper = this.createKeywordMapper({
         "keyword.clause": clausesKeywords,
+        "keyword.clause.clauseAppend": clauseAppendKeywords,
         "keyword.insideClause": insideClauseKeywords,
         "keyword.orderByOptions": orderByOptions,
         "keyword.orderByAsOptions": orderByAsOptions,
@@ -94,6 +98,8 @@ var RqlHighlightRules = function() {
         } ]
     };
     this.normalizeRules();
+
+    this.clauseAppendKeywords = clauseAppendKeywords.split("|");
 };
 
 oop.inherits(RqlHighlightRules, TextHighlightRules);
