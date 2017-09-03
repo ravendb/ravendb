@@ -20,7 +20,7 @@ namespace Raven.Client.Documents.Session
             var operation = new GetRevisionOperation(this, id, start, pageSize);
 
             var command = operation.CreateRequest();
-            await RequestExecutor.ExecuteAsync(command, Context, sessionId: _clientSessionId).ConfigureAwait(false);
+            await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo).ConfigureAwait(false);
             operation.SetResult(command.Result);
             return operation.Complete<T>();
         }

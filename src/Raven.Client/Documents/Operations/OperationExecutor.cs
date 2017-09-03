@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Util;
 using Sparrow.Json;
@@ -28,33 +29,33 @@ namespace Raven.Client.Documents.Operations
             return new OperationExecutor(_store, databaseName);
         }
 
-        public void Send(IOperation operation, int? sessionId = null, bool isServerOperation = false)
+        public void Send(IOperation operation, ISessionInfo sessionInfo = null, bool isServerOperation = false)
         {
-            AsyncHelpers.RunSync(() => SendAsync(operation, sessionId: sessionId));
+            AsyncHelpers.RunSync(() => SendAsync(operation, sessionInfo : sessionInfo));
         }
 
-        public TResult Send<TResult>(IOperation<TResult> operation, int? sessionId = null, bool isServerOperation = false)
+        public TResult Send<TResult>(IOperation<TResult> operation, ISessionInfo sessionInfo = null, bool isServerOperation = false)
         {
-            return AsyncHelpers.RunSync(() => SendAsync(operation, sessionId: sessionId));
+            return AsyncHelpers.RunSync(() => SendAsync(operation, sessionInfo: sessionInfo));
         }
 
-        public Task SendAsync(IOperation operation, CancellationToken token = default(CancellationToken), int? sessionId = null, bool isServerOperation = false)
+        public Task SendAsync(IOperation operation, CancellationToken token = default(CancellationToken), ISessionInfo sessionInfo = null, bool isServerOperation = false)
         {
             using (GetContext(out JsonOperationContext context))
             {
                 var command = operation.GetCommand(_store, _requestExecutor.Conventions, context, _requestExecutor.Cache);
 
-                return _requestExecutor.ExecuteAsync(command, context, token, sessionId);
+                return _requestExecutor.ExecuteAsync(command, context, token, sessionInfo);
             }
         }
 
-        public async Task<TResult> SendAsync<TResult>(IOperation<TResult> operation, CancellationToken token = default(CancellationToken), int? sessionId = null, bool isServerOperation = false)
+        public async Task<TResult> SendAsync<TResult>(IOperation<TResult> operation, CancellationToken token = default(CancellationToken), ISessionInfo sessionInfo = null, bool isServerOperation = false)
         {
             using (GetContext(out JsonOperationContext context))
             {
                 var command = operation.GetCommand(_store, _requestExecutor.Conventions, context, _requestExecutor.Cache);
 
-                await _requestExecutor.ExecuteAsync(command, context, token, sessionId).ConfigureAwait(false);
+                await _requestExecutor.ExecuteAsync(command, context, token, sessionInfo).ConfigureAwait(false);
 
                 return command.Result;
             }

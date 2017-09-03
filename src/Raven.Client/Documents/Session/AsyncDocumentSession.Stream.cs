@@ -83,7 +83,7 @@ namespace Raven.Client.Documents.Session
 
             var streamOperation = new StreamOperation(this);
             var command = streamOperation.CreateRequest(indexQuery);
-            await RequestExecutor.ExecuteAsync(command, Context, token, sessionId: _clientSessionId).ConfigureAwait(false);
+            await RequestExecutor.ExecuteAsync(command, Context, token, SessionInfo).ConfigureAwait(false);
             var result = streamOperation.SetResultAsync(command.Result);
 
             var queryOperation = ((AsyncDocumentQuery<T>)query).InitializeQueryOperation();
@@ -103,7 +103,7 @@ namespace Raven.Client.Documents.Session
         {
             var streamOperation = new StreamOperation(this);
             var command = streamOperation.CreateRequest(startsWith, matches, start, pageSize, null, startAfter);
-            await RequestExecutor.ExecuteAsync(command, Context, token, sessionId: _clientSessionId).ConfigureAwait(false);
+            await RequestExecutor.ExecuteAsync(command, Context, token, SessionInfo).ConfigureAwait(false);
             var result = streamOperation.SetResultAsync(command.Result);
             return new YieldStream<T>(this, null, null, result, token);
         }
@@ -113,7 +113,7 @@ namespace Raven.Client.Documents.Session
             var streamOperation = new StreamOperation(this);
             var command = streamOperation.CreateRequest(query.GetIndexQuery());
 
-            await RequestExecutor.ExecuteAsync(command, Context, token, sessionId: _clientSessionId).ConfigureAwait(false);
+            await RequestExecutor.ExecuteAsync(command, Context, token, SessionInfo).ConfigureAwait(false);
 
             using (command.Result.Response)
             using (command.Result.Stream)
