@@ -203,7 +203,7 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int IndexOfAny(char[] charArray, int startIndex)
         {
-            if (startIndex >= 0 && startIndex < Length)
+            if (startIndex < 0 && startIndex >= Length)
                 ThrowOutOfRangeIndex(startIndex);
             //zero based index since we are in a segment
             var indexOfAny = Buffer.IndexOfAny(charArray, Offset + startIndex, Length - startIndex);
