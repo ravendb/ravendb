@@ -22,10 +22,10 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
 
     activeDatabase = activeDatabaseTracker.default.database;
    
-    constructor(dto: Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails, isEdit: boolean) {        
-        super(dto);
+    constructor(dto: Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails, isInListView: boolean) {
+        super(dto, isInListView);
 
-        this.isEdit = isEdit;
+        this.isInTasksListView = isInListView;
         this.query(dto.Query);
         this.editViewUpdate(dto);
         this.editViewInitializeObservables(); 
@@ -115,7 +115,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
                 ResponsibleNode: null,
                 LastClientConnectionTime: null,
                 LastTimeServerMadeProgressWithDocuments: null
-            }, true);
+            }, false);
     }
 }
 

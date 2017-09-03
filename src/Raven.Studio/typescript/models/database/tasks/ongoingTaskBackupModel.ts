@@ -11,10 +11,10 @@ class ongoingTaskBackupModel extends ongoingTask {
     lastFullBackup = ko.observable<string>();
     lastIncrementalBackup = ko.observable<string>();
 
-    constructor(dto: Raven.Client.ServerWide.Operations.OngoingTaskBackup) {
+    constructor(dto: Raven.Client.ServerWide.Operations.OngoingTaskBackup, isInListView: boolean) {
         super();
 
-        this.isEdit = false;
+        this.isInTasksListView = isInListView;
         this.update(dto);
         this.initializeObservables();
     }
@@ -59,13 +59,8 @@ class ongoingTaskBackupModel extends ongoingTask {
         router.navigate(this.editUrl());
     }
 
-    protected generateTaskName(dto: Raven.Client.ServerWide.Operations.OngoingTaskBackup): string {
-        const backupDestinations =
-            dto.BackupDestinations.length === 0
-                ? "No destinations"
-                : `${dto.BackupType} to ${dto.BackupDestinations.join(", ")}`;
-
-        return backupDestinations;
+    generateTaskName(dto: Raven.Client.ServerWide.Operations.OngoingTaskBackup): string {
+        return dto.BackupDestinations.length === 0 ? "No destinations" : `${dto.BackupType} to ${dto.BackupDestinations.join(", ")}`;
     }
 }
 

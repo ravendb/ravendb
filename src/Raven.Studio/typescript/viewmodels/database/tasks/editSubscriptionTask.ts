@@ -62,7 +62,7 @@ class editSubscriptionTask extends viewModelBase {
             new ongoingTaskInfoCommand(this.activeDatabase(), "Subscription", args.taskId, args.taskName)
                 .execute()
                 .done((result: Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails) => {
-                    this.editedSubscription(new ongoingTaskSubscriptionEdit(result, true));
+                    this.editedSubscription(new ongoingTaskSubscriptionEdit(result, false));
 
                     deferred.resolve();
 

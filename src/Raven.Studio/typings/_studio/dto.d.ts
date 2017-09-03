@@ -307,6 +307,13 @@ interface externalReplicationDataFromUI {
     DestinationURL: string;
 } 
 
+interface ravenEtlDataFromUI {
+    TaskName: string;
+    ConnectionStringName: string;
+    AllowEtlOnNonEncryptedChannel: boolean;
+    // list of scripts... // TODO..
+} 
+
 interface subscriptionDataFromUI {
     TaskName: string;
     Query: string;

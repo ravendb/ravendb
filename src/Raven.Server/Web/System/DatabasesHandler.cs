@@ -426,6 +426,7 @@ namespace Raven.Server.Web.System
                 TotalSize = size,
 
                 IsAdmin = true, //TODO: implement me!
+                IsEncrypted = dbRecord.Encrypted,
                 UpTime = online ? (TimeSpan?)GetUptime(db) : null,
                 BackupInfo = GetBackupInfo(db),
 

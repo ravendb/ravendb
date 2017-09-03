@@ -10,6 +10,7 @@ class database {
     isAdminCurrentTenant = ko.observable<boolean>(false);
     relevant = ko.observable<boolean>(true);
     hasRevisionsConfiguration = ko.observable<boolean>(false);
+    isEncrypted = ko.observable<boolean>(false);
 
     private clusterNodeTag: KnockoutObservable<string>;
 
@@ -32,6 +33,7 @@ class database {
     }
 
     updateUsing(incomingCopy: Raven.Client.ServerWide.Operations.DatabaseInfo) {
+        this.isEncrypted(incomingCopy.IsEncrypted);
         this.hasRevisionsConfiguration(incomingCopy.HasRevisionsConfiguration);
         this.isAdminCurrentTenant(incomingCopy.IsAdmin);
         this.name = incomingCopy.Name;
