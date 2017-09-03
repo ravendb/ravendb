@@ -21,10 +21,23 @@ class clusterObserverLog extends viewModelBase {
     columnsSelector = new columnsSelector<Raven.Server.ServerWide.Maintenance.ClusterObserverLogEntry>();
     private columnPreview = new columnPreviewPlugin<Raven.Server.ServerWide.Maintenance.ClusterObserverLogEntry>();
     
+    termChanged: KnockoutComputed<boolean>;
+    
     spinners = {
         refresh: ko.observable<boolean>(false),
         toggleObserver: ko.observable<boolean>(false)
     };
+    
+    constructor() {
+        super();
+        
+        this.termChanged = ko.pureComputed(() => {
+            const topologyTerm = this.topology().currentTerm();
+            const dataTerm = this.decisions().Term;
+            
+            return topologyTerm !== dataTerm;
+        })
+    }
     
     activate(args: any) {
         super.activate(args);

@@ -31,6 +31,11 @@
             
         </div>
         <div class="flex-window-scroll">
+            <div class="has-error results-error" data-bind="visible: termChanged()">
+                <div class="help-block">
+                    <i class="icon-danger"></i><span>Term has changed. Your results are stale. <a href="#" data-bind="click: refresh">Refresh.</a></span>
+                </div>
+            </div>
             <div class="scroll-stretch">
                 <div class="panel-body">
                     <virtual-grid class="resizable documents-grid" params="controller: gridController, emptyTemplate: 'empty-cluster-log-template'"></virtual-grid>
