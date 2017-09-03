@@ -116,15 +116,15 @@ namespace Raven.Server.Documents.Handlers.Debugging
             foreach (var stats in NativeMemory.ThreadAllocations.Values
                 .Where(x => x.ThreadInstance.IsAlive)
                 .GroupBy(x => x.Name)
-                .OrderByDescending(x => x.Sum(y => y.Allocations)))
+                .OrderByDescending(x => x.Sum(y => y.TotalAllocated)))
             {
-                var unmanagedAllocations = stats.Sum(x => x.Allocations);
+                var unmanagedAllocations = stats.Sum(x => x.TotalAllocated);
                 totalUnmanagedAllocations += unmanagedAllocations;
-                var ids = new DynamicJsonArray(stats.OrderByDescending(x => x.Allocations).Select(x => new DynamicJsonValue
+                var ids = new DynamicJsonArray(stats.OrderByDescending(x => x.TotalAllocated).Select(x => new DynamicJsonValue
                 {
                     ["Id"] = x.Id,
-                    ["Allocations"] = x.Allocations,
-                    ["HumaneAllocations"] = Size.Humane(x.Allocations)
+                    ["Allocations"] = x.TotalAllocated,
+                    ["HumaneAllocations"] = Size.Humane(x.TotalAllocated)
                 }));
                 var groupStats = new DynamicJsonValue
                 {

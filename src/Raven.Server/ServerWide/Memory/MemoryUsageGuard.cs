@@ -20,7 +20,7 @@ namespace Raven.Server.ServerWide.Memory
                 return false;
             }
 
-            var currentlyAllocated = new Size(threadStats.Allocations, SizeUnit.Bytes);
+            var currentlyAllocated = new Size(threadStats.TotalAllocated, SizeUnit.Bytes);
 
             //TODO: This has to be exposed via debug endpoint
 
