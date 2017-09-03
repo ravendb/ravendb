@@ -14,7 +14,18 @@
                     <div>Term: <span data-bind="text: topology().currentTerm"></span></div>
                     <div>Iteration: <span data-bind="text: decisions().Iteration"></span></div>
                     <div class="flex-separator"></div>
-                    <div><button class="btn btn-default">AAAA</button> </div>
+                    <div>
+                        <button class="btn btn-default" title="Cluster observer won't be making any decisions"
+                                data-bind="click: suspendObserver, visible: !$root.observerSuspended(), enable: !spinners.toggleObserver(), css: { 'btn-spinner': spinners.toggleObserver() }">
+                            <i class="icon-pause"></i>
+                            <span>Suspend cluster observer</span>
+                        </button>
+                        <button class="btn btn-success" title="Resume cluster observer"
+                                data-bind="click: resumeObserver, visible: $root.observerSuspended(), enable: !spinners.toggleObserver(), css: { 'btn-spinner': spinners.toggleObserver() }">
+                            <i class="icon-play"></i>
+                            <span>Resume cluster observer</span>
+                        </button> 
+                    </div>
                 </div>
             </div>
             
@@ -29,7 +40,7 @@
     </div>
 </div>
 <script type="text/html" id="empty-cluster-log-template">
-    Log contains no entries. 
+    No entries found. 
 </script>
 <div class="tooltip json-preview lg" style="opacity: 0">
     <pre><code class="white-space-pre"></code></pre>

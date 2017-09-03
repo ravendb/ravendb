@@ -2,22 +2,28 @@ import viewModelBase = require("viewmodels/viewModelBase");
 
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import columnsSelector = require("viewmodels/partial/columnsSelector");
-import getClusterObserverDecisionsCommand = require("commands/database/cluster/getClusterObserverDecisionsCommand");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
+
+import getClusterObserverDecisionsCommand = require("commands/database/cluster/getClusterObserverDecisionsCommand");
+import toggleClusterObserverCommand = require("commands/database/cluster/toggleClusterObserverCommand");
+
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
+import ThrottleSettings = _.ThrottleSettings;
 
 class clusterObserverLog extends viewModelBase {
 
     decisions = ko.observable<Raven.Server.ServerWide.Maintenance.ClusterObserverDecisions>();
     topology = clusterTopologyManager.default.topology;
+    observerSuspended = ko.observable<boolean>();
     
     private gridController = ko.observable<virtualGridController<Raven.Server.ServerWide.Maintenance.ClusterObserverLogEntry>>();
     columnsSelector = new columnsSelector<Raven.Server.ServerWide.Maintenance.ClusterObserverLogEntry>();
     private columnPreview = new columnPreviewPlugin<Raven.Server.ServerWide.Maintenance.ClusterObserverLogEntry>();
     
     spinners = {
-        refresh: ko.observable<boolean>(false)
+        refresh: ko.observable<boolean>(false),
+        toggleObserver: ko.observable<boolean>(false)
     };
     
     activate(args: any) {
@@ -71,6 +77,7 @@ class clusterObserverLog extends viewModelBase {
             .done(response => {
                 response.ObserverLog.reverse();
                 this.decisions(response);
+                this.observerSuspended(response.Suspended);
             });
     }
     
@@ -85,6 +92,36 @@ class clusterObserverLog extends viewModelBase {
         const dateMoment = moment.utc(time).local();
         const ago = dateMoment.diff(moment());
         return moment.duration(ago).humanize(true) + dateMoment.format(" (MM/DD/YY, h:mma)");
+    }
+
+    suspendObserver() {
+        this.confirmationMessage("Are you sure?", "Do you want to suspend cluster observer?", ["No", "Yes, suspend"])
+            .done(result => {
+                if (result.can) {
+                    this.spinners.toggleObserver(true);
+                    new toggleClusterObserverCommand(true)
+                        .execute()
+                        .always(() => {
+                            this.spinners.toggleObserver(false);
+                            this.refresh();
+                        });
+                }
+            });
+    }
+
+    resumeObserver() {
+        this.confirmationMessage("Are you sure?", "Do you want to resume cluster observer?", ["No", "Yes, resume"])
+            .done(result => {
+                if (result.can) {
+                    this.spinners.toggleObserver(true);
+                    new toggleClusterObserverCommand(false)
+                        .execute()
+                        .always(() => {
+                            this.spinners.toggleObserver(false);
+                            this.refresh();
+                        });
+                }
+            }); 
     }
     
 

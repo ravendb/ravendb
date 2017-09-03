@@ -10,7 +10,7 @@ class promoteClusterNodeCommand extends commandBase {
     execute(): JQueryPromise<void> {
         const args = {
             nodeTag: this.nodeTag
-        }
+        };
         const url = endpoints.global.rachisAdmin.adminClusterPromote + this.urlEncodeArgs(args);
 
         return this.post<void>(url, null, null, { dataType: undefined })
