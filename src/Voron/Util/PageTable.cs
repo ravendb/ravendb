@@ -69,6 +69,13 @@ namespace Voron.Util
                     unusedPages.Add(PagePositions[Start++]);
                 }
             }
+
+            public PagePosition GetLastPagePosition()
+            {
+                if (End == 0)
+                    return null;
+                return PagePositions[End - 1];
+            }
         }
 
         public bool IsEmpty => _values.Count == 0;
@@ -115,7 +122,7 @@ namespace Voron.Util
             foreach (var kvp in _values)
             {
                 var valueBuffer = kvp.Value;
-                var position = valueBuffer.PagePositions[valueBuffer.End - 1];
+                var position = valueBuffer.GetLastPagePosition();
                 if (position == null)
                     continue;
 
@@ -167,7 +174,7 @@ namespace Voron.Util
 
             foreach (var bufferHolder in _values.Values)
             {
-                var position = bufferHolder.PagePositions[bufferHolder.End - 1];
+                var position = bufferHolder.GetLastPagePosition();
                 if (position != null && maxTx < position.TransactionId)
                     maxTx = position.TransactionId;
             }
