@@ -60,8 +60,8 @@ class editRavenEtlTask extends viewModelBase {
         return new getConnectionStringsCommand(this.activeDatabase())
             .execute()
             .done((result: Raven.Client.ServerWide.Operations.ConnectionStrings.GetConnectionStringsResult) => {
-                this.ravenEtlConnectionStringsNames(Object.keys(result.RavenConnectionStrings));
-                this.ravenEtlConnectionStringsNames(_.sortBy(this.ravenEtlConnectionStringsNames(), x => x.toUpperCase()));
+                const connectionStringsNames = Object.keys(result.RavenConnectionStrings);
+                this.ravenEtlConnectionStringsNames(_.sortBy(connectionStringsNames, x => x.toUpperCase()));
             });
     }
 
