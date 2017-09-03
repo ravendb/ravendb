@@ -11,8 +11,8 @@ abstract class ongoingTaskModel {
     
     badgeText: KnockoutComputed<string>;
     badgeClass: KnockoutComputed<string>;
-
-    isEdit: boolean = false;
+   
+    isInTasksListView: boolean = true;
 
     protected initializeObservables() {
         
@@ -49,7 +49,7 @@ abstract class ongoingTaskModel {
     }
 
     protected update(dto: Raven.Client.ServerWide.Operations.OngoingTask) {
-        if (!this.isEdit) {
+        if (this.isInTasksListView) {
             this.updateTaskNameIfNeeded(dto);
         }
 
@@ -62,8 +62,8 @@ abstract class ongoingTaskModel {
     }
 
     private updateTaskNameIfNeeded(dto: Raven.Client.ServerWide.Operations.OngoingTask) {
-        dto.TaskName = dto.TaskName ? dto.TaskName.trim() : dto.TaskName;
-        if (dto.TaskName) {
+        dto.TaskName = dto.TaskName ? dto.TaskName.trim() : dto.TaskName; 
+        if (dto.TaskName) { 
             return;
         }
 

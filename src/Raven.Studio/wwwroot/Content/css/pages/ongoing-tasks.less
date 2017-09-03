@@ -1,15 +1,43 @@
 ﻿.manage-ongoing-tasks {
+
     .align-checkboxes {
         margin-left: 37px;
     }
 
     .node {
-        i+span {
+        i + span {
             margin-left: 0;
             font-weight: bold;
             font-size: 18px;
             position: relative;
-            top:1px;
+            top: 1px;
         }
+    }
+}
+
+.tasks-list-item {
+
+    &.external-replication {
+        color: @external-replication-color;
+    }
+
+    &.sql-etl {
+        color: @sql-etl-color;
+    }
+
+    &.subscription {
+        color: @subscription-color;
+    }
+
+    &.ravendb-etl {
+        color: @ravendb-etl-color;
+    }
+
+    &.periodic-backup {
+        color: @backup-color;
+    }
+
+    &.no-text-transform {
+        text-transform: none;
     }
 }

@@ -6,8 +6,8 @@ import databaseInfo = require("models/resources/info/databaseInfo");
 import ongoingTasksCommand = require("commands/database/tasks/getOngoingTasksCommand");
 import ongoingTaskReplication = require("models/database/tasks/ongoingTaskReplicationModel");
 import ongoingTaskBackup = require("models/database/tasks/ongoingTaskBackupModel");
-import ongoingTaskEtl = require("models/database/tasks/ongoingTaskETLModel");
-import ongoingTaskSql = require("models/database/tasks/ongoingTaskSQLModel");
+import ongoingTaskEtl = require("models/database/tasks/ongoingTaskRavenEtlModel");
+import ongoingTaskSql = require("models/database/tasks/ongoingTaskSqlEtlModel");
 import ongoingTaskSubscription = require("models/database/tasks/ongoingTaskSubscriptionModel");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import createOngoingTask = require("viewmodels/database/tasks/createOngoingTask");
@@ -124,23 +124,23 @@ class ongoingTasks extends viewModelBase {
 
             switch (task.TaskType) {
                 case 'Replication':
-                    this.replicationTasks.push(new ongoingTaskReplication(task as Raven.Client.ServerWide.Operations.OngoingTaskReplication, false));
+                    this.replicationTasks.push(new ongoingTaskReplication(task as Raven.Client.ServerWide.Operations.OngoingTaskReplication, true));
                     taskTypesSet.add("External Replication");
                     break;
                 case 'Backup':
-                    this.backupTasks.push(new ongoingTaskBackup(task as Raven.Client.ServerWide.Operations.OngoingTaskBackup));
+                    this.backupTasks.push(new ongoingTaskBackup(task as Raven.Client.ServerWide.Operations.OngoingTaskBackup, true));
                     taskTypesSet.add("Backup");
                     break;
                 case 'RavenEtl':
-                    this.etlTasks.push(new ongoingTaskEtl(task as Raven.Client.ServerWide.Operations.OngoingTaskRavenEtl));
+                    this.etlTasks.push(new ongoingTaskEtl(task as Raven.Client.ServerWide.Operations.OngoingTaskRavenEtl, true));
                     taskTypesSet.add("RavenDB ETL");
                     break;
                 case 'SqlEtl':
-                    this.sqlTasks.push(new ongoingTaskSql(task as Raven.Client.ServerWide.Operations.OngoingTaskSqlEtl));
+                    this.sqlTasks.push(new ongoingTaskSql(task as Raven.Client.ServerWide.Operations.OngoingTaskSqlEtl, true));
                     taskTypesSet.add("SQL ETL");
                     break;
                 case 'Subscription': 
-                    this.subscriptionTasks.push(new ongoingTaskSubscription(task as Raven.Client.ServerWide.Operations.OngoingTaskSubscription)); 
+                    this.subscriptionTasks.push(new ongoingTaskSubscription(task as Raven.Client.ServerWide.Operations.OngoingTaskSubscription, true)); 
                     taskTypesSet.add("Subscription");
                     break;
             };
