@@ -460,7 +460,7 @@ namespace Raven.Server.Documents
                 [nameof(DatabaseInfo.HasRevisionsConfiguration)] = DocumentsStorage.RevisionsStorage.Configuration != null,
                 [nameof(DatabaseInfo.HasExpirationConfiguration)] = ExpiredDocumentsCleaner != null,
                 [nameof(DatabaseInfo.IsAdmin)] = true, //TODO: implement me!
-                [nameof(DatabaseInfo.IsEncrypted)] = false, // TODO implement me! issue 8406
+                [nameof(DatabaseInfo.IsEncrypted)] = DocumentsStorage.Environment.Options.EncryptionEnabled,
                 [nameof(DatabaseInfo.Name)] = Name,
                 [nameof(DatabaseInfo.Disabled)] = false, //TODO: this value should be overwritten by the studio since it is cached
                 [nameof(DatabaseInfo.TotalSize)] = new DynamicJsonValue
