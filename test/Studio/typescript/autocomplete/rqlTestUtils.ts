@@ -1,7 +1,8 @@
 import queryCompleter = require("src/Raven.Studio/typescript/common/queryCompleter");
+import aceEditorBindingHandler = require("src/Raven.Studio/typescript/common/bindingHelpers/aceEditorBindingHandler");
 
 class rqlTestUtils {
-    static autoComplete(query: string, queryCompleterProvider: () => queryCompleter, callback: (errors: any[], worldlist: autoCompleteWordList[]) => void): void {
+    static autoComplete(query: string, queryCompleterProvider: () => queryCompleter, callback: (errors: any[], worldlist: autoCompleteWordList[], prefix: string) => void): void {
         const queryWoPosition = query.replace("|", "");
         const lines = query.split("\r\n");
 
@@ -15,6 +16,8 @@ class rqlTestUtils {
         const aceEditor: AceAjax.Editor = ace.edit(element);
 
         const langTools = ace.require("ace/ext/language_tools");
+        const util = ace.require("ace/autocomplete/util");
+        aceEditorBindingHandler.customizeCompletionPrefix(util);
 
         aceEditor.setOption("enableBasicAutocompletion", true);
         aceEditor.setOption("enableLiveAutocompletion", true);
@@ -25,9 +28,13 @@ class rqlTestUtils {
             const completer = queryCompleterProvider();
 
             const position = { row: lineWithCursor, column: rowWithCursor} as AceAjax.Position;
+            aceEditor.selection.lead.column = position.column;
+            aceEditor.selection.lead.row = position.row;
 
-            completer.complete(aceEditor, aceEditor.getSession(), position, "", (errors: any[], wordlist: autoCompleteWordList[]) =>  {
-                callback(errors, wordlist);
+            const prefix = util.getCompletionPrefix(aceEditor);
+            
+            completer.complete(aceEditor, aceEditor.getSession(), aceEditor.getCursorPosition(), prefix, (errors: any[], wordlist: autoCompleteWordList[]) =>  {
+                callback(errors, wordlist, prefix);
                 aceEditor.destroy();
             });
         });
