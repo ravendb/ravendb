@@ -91,6 +91,7 @@ namespace Raven.Server.Documents.Queries
         private void AddExistField(string fieldName)
         {
             IndexFieldNames.Add(GetIndexFieldName(fieldName));
+            IsCollectionQuery = false;
         }
 
         private void AddWhereField(string fieldName, bool search = false, bool exact = false)
