@@ -37,6 +37,7 @@ using Raven.Server.Web.System;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications.Server;
+using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
@@ -162,6 +163,7 @@ namespace TypingsGenerator
 
             // cluster 
             scripter.AddType(typeof(ClusterTopology));
+            scripter.AddType(typeof(ClusterObserverDecisions));
 
             // query 
             scripter.AddType(typeof(QueryResult<,>));
@@ -272,6 +274,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(AdminJsScript));
 
             scripter.AddType(typeof(NodeConnectionTestResult));
+            
 
             return scripter;
         }

@@ -8,7 +8,7 @@ export = getManageServerMenuItem;
 
 function getManageServerMenuItem() {
     let canReadOrWrite = settingsAccessAuthorizer.canReadOrWrite;
-    var items: menuItem[] = [
+    const items: menuItem[] = [
         new leafMenuItem({
             route: 'admin/settings/cluster',
             moduleId: "viewmodels/manage/cluster",
@@ -16,6 +16,15 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-cluster',
             dynamicHash: appUrl.forCluster,
+            enabled: canReadOrWrite
+        }),
+        new leafMenuItem({
+            route: 'admin/settings/clusterObserverLog',
+            moduleId: "viewmodels/manage/clusterObserverLog",
+            title: "Cluster Observer Log",
+            nav: true,
+            css: 'icon-cluster',
+            dynamicHash: appUrl.forClusterObserverLog,
             enabled: canReadOrWrite
         }),
         new leafMenuItem({

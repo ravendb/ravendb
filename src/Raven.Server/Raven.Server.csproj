@@ -89,7 +89,6 @@
     <Folder Include="ServerWide\Commands\ETL" />
     <Folder Include="ServerWide\Commands\PeriodicBackup" />
     <Folder Include="ServerWide\Commands\PeriodicBackup" />
-    <Folder Include="ServerWide\Maintenance" />
   </ItemGroup>
   <ItemGroup>
     <None Update="Properties\Settings\settings_posix.json">

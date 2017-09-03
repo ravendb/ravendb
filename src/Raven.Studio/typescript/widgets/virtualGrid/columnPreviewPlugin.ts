@@ -16,7 +16,7 @@ class columnPreviewPlugin<T> {
         // make sure it is in sync with virtual-grid.less: .json-preview pre style
         width: 500,
         height: 300
-    }
+    };
 
     install(containerSelector: string, tooltipSelector: string, previewContextProvider: (item: T, column: virtualColumn, event: JQueryEventObject, onValueProvided: (context: any) => void) => void) {
         const $grid = $(containerSelector + " .virtual-grid");
