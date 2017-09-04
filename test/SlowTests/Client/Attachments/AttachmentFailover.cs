@@ -81,7 +81,7 @@ namespace SlowTests.Client.Attachments
                     Assert.Equal("File", attachmentMetadata.GetString(nameof(AttachmentName.Name)));
                     Assert.Equal("application/pdf", attachmentMetadata.GetString(nameof(AttachmentName.ContentType)));
                     Assert.Equal(hash, attachmentMetadata.GetString(nameof(AttachmentName.Hash)));
-                    Assert.Equal(size, attachmentMetadata.GetNumber(nameof(AttachmentName.Size)));
+                    Assert.Equal(size, attachmentMetadata.GetLong(nameof(AttachmentName.Size)));
                 }
             }
         }
@@ -156,7 +156,7 @@ namespace SlowTests.Client.Attachments
                     Assert.Equal("File", attachmentMetadata.GetString(nameof(AttachmentName.Name)));
                     Assert.Equal("application/pdf", attachmentMetadata.GetString(nameof(AttachmentName.ContentType)));
                     Assert.Equal(hash, attachmentMetadata.GetString(nameof(AttachmentName.Hash)));
-                    Assert.Equal(size, attachmentMetadata.GetNumber(nameof(AttachmentName.Size)));
+                    Assert.Equal(size, attachmentMetadata.GetLong(nameof(AttachmentName.Size)));
                 }
             }
         }

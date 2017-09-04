@@ -58,17 +58,17 @@ namespace FastTests.Client.Attachments
                         if (i == 0)
                         {
                             Assert.Equal("igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=", hash);
-                            Assert.Equal(5, attachment.GetNumber(nameof(AttachmentName.Size)));
+                            Assert.Equal(5, attachment.GetLong(nameof(AttachmentName.Size)));
                         }
                         else if (i == 1)
                         {
                             Assert.Equal("Arg5SgIJzdjSTeY6LYtQHlyNiTPmvBLHbr/Cypggeco=", hash);
-                            Assert.Equal(5, attachment.GetNumber(nameof(AttachmentName.Size)));
+                            Assert.Equal(5, attachment.GetLong(nameof(AttachmentName.Size)));
                         }
                         else if (i == 2)
                         {
                             Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", hash);
-                            Assert.Equal(3, attachment.GetNumber(nameof(AttachmentName.Size)));
+                            Assert.Equal(3, attachment.GetLong(nameof(AttachmentName.Size)));
                         }
                     }
 

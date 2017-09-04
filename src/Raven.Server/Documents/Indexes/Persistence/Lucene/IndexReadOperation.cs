@@ -240,9 +240,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             if (sort == null && _indexHasBoostedFields == false && IsBoostedQuery(documentQuery) == false)
             {
-                if (pageSize == int.MaxValue || pageSize == _searcher.MaxDoc) // we want all docs, no sorting required
+                if (pageSize == int.MaxValue || pageSize >= _searcher.MaxDoc) // we want all docs, no sorting required
                 {
-                    var gatherAllCollector = new GatherAllCollector();
+                    var gatherAllCollector = new GatherAllCollector(Math.Min(pageSize, _searcher.MaxDoc));
                     _searcher.Search(documentQuery, gatherAllCollector, _state);
                     return gatherAllCollector.ToTopDocs();
                 }

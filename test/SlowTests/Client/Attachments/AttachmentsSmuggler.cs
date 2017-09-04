@@ -76,12 +76,12 @@ namespace SlowTests.Client.Attachments
                         Assert.Equal("file1", attachments[0].GetString(nameof(AttachmentName.Name)));
                         Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachments[0].GetString(nameof(AttachmentName.Hash)));
                         Assert.Equal("image/png", attachments[0].GetString(nameof(AttachmentName.ContentType)));
-                        Assert.Equal(3, attachments[0].GetNumber(nameof(AttachmentName.Size)));
+                        Assert.Equal(3, attachments[0].GetLong(nameof(AttachmentName.Size)));
 
                         Assert.Equal("file2", attachments[1].GetString(nameof(Attachment.Name)));
                         Assert.Equal("Arg5SgIJzdjSTeY6LYtQHlyNiTPmvBLHbr/Cypggeco=", attachments[1].GetString(nameof(AttachmentName.Hash)));
                         Assert.Equal("image/jpeg", attachments[1].GetString(nameof(AttachmentName.ContentType)));
-                        Assert.Equal(5, attachments[1].GetNumber(nameof(AttachmentName.Size)));
+                        Assert.Equal(5, attachments[1].GetLong(nameof(AttachmentName.Size)));
                     }
                 }
             }
@@ -143,7 +143,7 @@ namespace SlowTests.Client.Attachments
                         Assert.Equal("file1", attachment.GetString(nameof(AttachmentName.Name)));
                         Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachment.GetString(nameof(AttachmentName.Hash)));
                         Assert.Equal("image/png", attachment.GetString(nameof(AttachmentName.ContentType)));
-                        Assert.Equal(3, attachment.GetNumber(nameof(AttachmentName.Size)));
+                        Assert.Equal(3, attachment.GetLong(nameof(AttachmentName.Size)));
                     }
                 }
             }
@@ -203,7 +203,7 @@ namespace SlowTests.Client.Attachments
                         Assert.Equal("file2", attachment.GetString(nameof(Attachment.Name)));
                         Assert.Equal("Arg5SgIJzdjSTeY6LYtQHlyNiTPmvBLHbr/Cypggeco=", attachment.GetString(nameof(AttachmentName.Hash)));
                         Assert.Equal("image/jpeg", attachment.GetString(nameof(AttachmentName.ContentType)));
-                        Assert.Equal(5, attachment.GetNumber(nameof(AttachmentName.Size)));
+                        Assert.Equal(5, attachment.GetLong(nameof(AttachmentName.Size)));
                     }
                 }
             }
