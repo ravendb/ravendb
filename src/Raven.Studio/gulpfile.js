@@ -240,7 +240,6 @@ gulp.task('z_watch:test', ['test'], function () {
 });
 
 gulp.task('z_watch_test', ['compile', 'test'], function () {
-    gutil.log(`Watching: ${PATHS.watchDirectories}`);
     gulp.watch(PATHS.watchDirectories, ['z_compile:app-changed', 'test']);
     gulp.watch(PATHS.lessSourcesToWatch, ['less']);
 });
