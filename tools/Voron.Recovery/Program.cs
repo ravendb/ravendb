@@ -28,9 +28,6 @@ namespace Voron.Recovery
                 case VoronRecoveryConfiguration.VoronRecoveryArgsProcessStatus.InvalidPageSize:
                     Console.WriteLine($"Page size should be a positive number.{Environment.NewLine}");
                     goto default;
-                case VoronRecoveryConfiguration.VoronRecoveryArgsProcessStatus.InvalidTableValueCount:
-                    Console.WriteLine($"Table value count should be a positive number.{Environment.NewLine}");
-                    goto default;
                 case VoronRecoveryConfiguration.VoronRecoveryArgsProcessStatus.InvalidContextSize:
                     Console.WriteLine($"Context size should be a positive number.{Environment.NewLine}");
                     goto default;

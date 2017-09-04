@@ -17,6 +17,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Utils;
 using Voron;
+using Voron.Data.RawData;
 using Voron.Data.Tables;
 using Voron.Impl;
 using static Raven.Server.Documents.DocumentsStorage;
@@ -91,7 +92,11 @@ namespace Raven.Server.Documents.Revisions
             var deleteRevision = DocumentFlags.DeleteRevision;
             Slice.From(StorageEnvironment.LabelsContext, (byte*)&deleteRevision, sizeof(DocumentFlags), ByteStringType.Immutable, out DeleteRevisionSlice);
 
-            DocsSchema = new TableSchema();
+            DocsSchema = new TableSchema()
+            {
+                TableType = (byte)TableType.Revisions
+            };
+
             DocsSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
                 StartIndex = (int)Columns.ChangeVector,
@@ -800,6 +805,31 @@ namespace Raven.Server.Documents.Revisions
 
             var ptr = tvr.Read((int)Columns.Document, out size);
             result.Data = new BlittableJsonReaderObject(ptr, size, context);
+
+            return result;
+        }
+
+        public static Document ParseRawDataSectionRevisionWithValidation(JsonOperationContext context, ref TableValueReader tvr, int expectedSize)
+        {
+            var ptr = tvr.Read((int)Columns.Document, out var size);
+            if (size > expectedSize || size <= 0)
+                throw new ArgumentException("Data size is invalid, possible corruption when parsing BlittableJsonReaderObject", nameof(size));
+
+            var result = new Document
+            {
+                StorageId = tvr.Id,
+                LowerId = TableValueToString(context, (int)Columns.LowerId, ref tvr),
+                Id = TableValueToId(context, (int)Columns.Id, ref tvr),
+                Etag = TableValueToEtag((int)Columns.Etag, ref tvr),
+                Data = new BlittableJsonReaderObject(ptr, size, context),
+                LastModified = TableValueToDateTime((int)Columns.LastModified, ref tvr),
+                Flags = TableValueToFlags((int)Columns.Flags, ref tvr),
+                TransactionMarker = *(short*)tvr.Read((int)Columns.TransactionMarker, out size),
+                ChangeVector = TableValueToChangeVector(context, (int)Columns.ChangeVector, ref tvr)
+            };
+
+            if (size != sizeof(short))
+                throw new ArgumentException("TransactionMarker size is invalid, possible corruption when parsing BlittableJsonReaderObject", nameof(size));
 
             return result;
         }

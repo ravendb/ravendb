@@ -37,6 +37,8 @@ namespace Voron.Data.Tables
         private readonly Dictionary<Slice, FixedSizeSchemaIndexDef> _fixedSizeIndexes =
             new Dictionary<Slice, FixedSizeSchemaIndexDef>(SliceComparer.Instance);
 
+        public byte TableType { get; set; }
+
         static TableSchema()
         {
             Slice.From(StorageEnvironment.LabelsContext, "Active-Section", ByteStringType.Immutable,
@@ -373,7 +375,7 @@ namespace Voron.Data.Tables
                 return; // this was already created
 
             // Create raw data. This is where we will actually store the documents
-            using (var rawDataActiveSection = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, name, sizeInPages))
+            using (var rawDataActiveSection = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, name, TableType, sizeInPages))
             {
                 long val = rawDataActiveSection.PageNumber;
                 Slice pageNumber;
