@@ -1,9 +1,8 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
-
 import d3 = require("d3");
 import graphHelper = require("common/helpers/graph/graphHelper");
 import cola = require("cola");
-import viewHelpers = require("common/helpers/view/viewHelpers");
+import ongoingTaskModel = require("models/database/tasks/ongoingTaskModel");
 
 
 abstract class layoutable {
@@ -83,7 +82,7 @@ class taskNode extends layoutable {
         this.type = dto.TaskType;
         this.taskId = dto.TaskId;
         this.state = dto.TaskState;
-        this.name = dto.TaskName;
+        this.name = ongoingTaskModel.generateTaskNameIfNeeded(dto);
         this.responsibleNode = responsibleNode;
     }
 

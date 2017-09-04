@@ -73,10 +73,6 @@ class ongoingTaskReplicationModel extends ongoingTask {
             DestinationUrl: clusterTopologyManager.default.localNodeUrl()
         } as Raven.Client.ServerWide.Operations.OngoingTaskReplication, false);
     }
-
-    generateTaskName(dto: Raven.Client.ServerWide.Operations.OngoingTaskReplication): string {
-        return `External replication to ${dto.DestinationDatabase}@${dto.DestinationUrl}`;
-    }
 }
 
 export = ongoingTaskReplicationModel;

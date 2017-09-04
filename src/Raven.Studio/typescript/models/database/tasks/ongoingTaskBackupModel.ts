@@ -58,10 +58,6 @@ class ongoingTaskBackupModel extends ongoingTask {
     editTask() {
         router.navigate(this.editUrl());
     }
-
-    generateTaskName(dto: Raven.Client.ServerWide.Operations.OngoingTaskBackup): string {
-        return dto.BackupDestinations.length === 0 ? "No destinations" : `${dto.BackupType} to ${dto.BackupDestinations.join(", ")}`;
-    }
 }
 
 export = ongoingTaskBackupModel;

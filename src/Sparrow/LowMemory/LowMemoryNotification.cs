@@ -127,7 +127,7 @@ namespace Sparrow.LowMemory
                             if (stats.ThreadInstance.IsAlive == false)
                                 continue;
 
-                            totalUnmanagedAllocations += stats.Allocations;
+                            totalUnmanagedAllocations += stats.TotalAllocated;
                         }
 
                         var memInfo = MemoryInformation.GetMemoryInfo();

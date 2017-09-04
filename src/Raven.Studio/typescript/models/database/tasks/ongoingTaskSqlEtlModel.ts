@@ -31,10 +31,6 @@ class ongoingTaskSqlEtlModel extends ongoingTask {
     editTask() {
         // TODO...
     }
-
-    generateTaskName(dto: Raven.Client.ServerWide.Operations.OngoingTaskSqlEtl): string {
-        throw new Error("Method not implemented.");
-    }
 }
 
 export = ongoingTaskSqlEtlModel;

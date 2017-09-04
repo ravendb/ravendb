@@ -8,6 +8,23 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
     let activeDatabase = activeDatabaseTracker.default.database;
     var items: menuItem[] = [
         new leafMenuItem({
+            route: 'databases/status',
+            moduleId: 'viewmodels/database/status/statistics',
+            title: 'Stats',
+            nav: true,
+            css: 'icon-stats',
+            dynamicHash: appUrls.status
+        }),
+        new leafMenuItem({
+            route: 'databases/status/ioStats',
+            moduleId: 'viewmodels/database/status/ioStats',
+            title: 'IO Stats',
+            tooltip: "Displays IO metrics statatus",
+            nav: true,
+            css: 'icon-io-test',
+            dynamicHash: appUrls.ioStats
+        }),
+        new leafMenuItem({
             route: 'databases/status/storage/report',
             moduleId: 'viewmodels/database/status/storageReport',
             title: 'Storage Report',
@@ -15,6 +32,14 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-storage',
             dynamicHash: appUrls.statusStorageReport
+        }),
+        new leafMenuItem({
+            route: 'databases/status/replicationStats',
+            moduleId: 'viewmodels/database/status/replicationStats',
+            title: 'Replication Stats',
+            nav: true,
+            css: 'icon-revisions',
+            dynamicHash: appUrls.replicationStats
         }),
         /* TODO
         new intermediateMenuItem('Debug', [
@@ -123,15 +148,6 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
                 dynamicHash: appUrls.statusDebugExplainReplication
             })
         ], 'icon-plus'),*/
-        new leafMenuItem({
-            route: 'databases/status/ioStats',
-            moduleId: 'viewmodels/database/status/ioStats',
-            title: 'IO Stats',
-            tooltip: "Displays IO metrics statatus",
-            nav: true,
-            css: 'icon-io-test',
-            dynamicHash: appUrls.ioStats
-        }),
         /* TODO:
         new leafMenuItem({
             route: 'databases/status/requests',
@@ -149,14 +165,6 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             nav: accessHelper.canExposeConfigOverTheWire(),
             dynamicHash: appUrls.requestsTracing
         }),*/
-        new leafMenuItem({
-            route: 'databases/status',
-            moduleId: 'viewmodels/database/status/statistics',
-            title: 'Stats',
-            nav: true,
-            css: 'icon-stats',
-            dynamicHash: appUrls.status
-        }),
         /* TODO: 
         new leafMenuItem({
             route: 'databases/status/logs',
@@ -182,14 +190,6 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             dynamicHash: appUrls.alerts
         }),
         ,*/
-        new leafMenuItem({
-            route: 'databases/status/replicationStats',
-            moduleId: 'viewmodels/database/status/replicationStats',
-            title: 'Replication Stats',
-            nav: true,
-            css: 'icon-revisions',
-            dynamicHash: appUrls.replicationStats
-        }),
         /* TODO
         new leafMenuItem({
             route: 'databases/status/sqlReplicationPerfStats',

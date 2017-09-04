@@ -10,6 +10,7 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
@@ -141,7 +142,7 @@ namespace Raven.Server.Documents
             if (_collectionQuery != null && _collectionQuery.Metadata.WhereFields.Count > 0)
             {
                 return new CollectionQueryEnumerable(Database, Database.DocumentsStorage, new FieldsToFetch(_collectionQuery, null),
-                    collectionName, _collectionQuery, context, null);
+                    collectionName, _collectionQuery, context, null, new Reference<int>());
             }
 
             if (isAllDocs)
