@@ -1,10 +1,28 @@
-﻿using System.Text;
+﻿using System;
+using System.Text;
 using System.Collections.Generic;
+using System.Diagnostics;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Replication
 {
     public static class ChangeVectorExtensions
-    {              
+    {
+        /// <summary>
+        /// Generate DbId that is then can be put in the ChangeVectorEntry DbId field
+        /// </summary>
+        public static unsafe string AsChangeVectorDbId(this Guid DbId)
+        {
+            var dbIdAsString = new string(' ', 22);
+            fixed (char* dbIdPtr = dbIdAsString)
+            {
+                var res = Base64.ConvertToBase64ArrayUnpadded(dbIdPtr, (byte*)&DbId, 0, 16);
+                Debug.Assert(res == 22);
+            }
+
+            return dbIdAsString;
+        }
+
         public static string SerializeVector(this ChangeVectorEntry[] self)
         {
             if (self == null)
@@ -18,7 +36,8 @@ namespace Raven.Server.Documents.Replication
                 self[i].Append(sb);
             }
             return sb.ToString();
-        }
+        }        
+
         public static string SerializeVector(this List<ChangeVectorEntry> self)
         {
             if (self == null)
