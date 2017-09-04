@@ -55,10 +55,6 @@ class ongoingTaskRavenEtlModel extends ongoingTask {
         router.navigate(this.editUrl());
     }
 
-    generateTaskName(dto: Raven.Client.ServerWide.Operations.OngoingTaskRavenEtl): string {
-        return `ETL to ${dto.DestinationDatabase}@${dto.DestinationUrl}`;
-    }
-
     toDto(): ravenEtlDataFromUI {
         return {
             TaskName: this.taskName(),
