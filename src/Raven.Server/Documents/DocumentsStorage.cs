@@ -512,7 +512,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<Document> GetDocuments(DocumentsOperationContext context, List<Slice> ids, int start, int take)
+        public IEnumerable<Document> GetDocuments(DocumentsOperationContext context, List<Slice> ids, int start, int take, Reference<int> totalCount)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
@@ -522,13 +522,15 @@ namespace Raven.Server.Documents
                 if (table.ReadByKey(id, out TableValueReader reader) == false)
                     continue;
 
+                totalCount.Value++;
+
                 if (start > 0)
                 {
                     start--;
                     continue;
                 }
                 if (take-- <= 0)
-                    yield break;
+                    continue; // we need to calculate totalCount correctly
 
                 yield return TableValueToDocument(context, ref reader);
             }
