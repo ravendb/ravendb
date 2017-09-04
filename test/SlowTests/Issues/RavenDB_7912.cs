@@ -52,12 +52,12 @@ namespace SlowTests.Issues
                         deletePrevious: false,
                         partialPath: dataDir);
 
-                    WaitForDatabaseToBeDeleted(Servers[1], databaseName);
+                    WaitForDatabaseToBeDeleted(Servers[1], databaseName, TimeSpan.FromSeconds(30));
                 }
             }
         }
 
-        private static void WaitForDatabaseToBeDeleted(RavenServer server, string databaseName)
+        private static void WaitForDatabaseToBeDeleted(RavenServer server, string databaseName, TimeSpan timeout)
         {
             using (var store = new DocumentStore
             {
@@ -72,7 +72,7 @@ namespace SlowTests.Issues
                 store.Initialize();
 
                 var sw = Stopwatch.StartNew();
-                while (sw.Elapsed < TimeSpan.FromSeconds(10))
+                while (sw.Elapsed < timeout)
                 {
                     try
                     {
