@@ -23,6 +23,7 @@ var gulp = require('gulp'),
 var PATHS = require('./gulp/paths');
 
 var tsProject = plugins.typescript.createProject('tsconfig.json');
+var testTsProject = plugins.typescript.createProject('tsconfig.json');
 
 gulp.task('z_clean', ['z_clean:js'], function () {
     del.sync(PATHS.releaseTarget);
@@ -82,7 +83,7 @@ gulp.task('z_generate-typings', function (cb) {
 gulp.task('z_compile:test', ['z_generate-ts'], function() {
      return gulp.src([PATHS.test.tsSource])
         .pipe(plugins.sourcemaps.init())
-        .pipe(tsProject())
+        .pipe(testTsProject())
         .js
         .pipe(plugins.sourcemaps.write("."))
         .pipe(gulp.dest(PATHS.test.tsOutput));
@@ -236,6 +237,12 @@ gulp.task('test', [ 'z_compile:test' ], function (cb) {
 gulp.task('z_watch:test', ['test'], function () {
     gulp.watch(PATHS.tsSource, ['z_mochaTests']);
     gulp.watch(PATHS.test.tsSource, ['test']);
+});
+
+gulp.task('z_watch_test', ['compile', 'test'], function () {
+    gutil.log(`Watching: ${PATHS.watchDirectories}`);
+    gulp.watch(PATHS.watchDirectories, ['z_compile:app-changed', 'test']);
+    gulp.watch(PATHS.lessSourcesToWatch, ['less']);
 });
 
 gulp.task('compile', ['less', 'z_compile:app'], function() { });
