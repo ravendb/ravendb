@@ -34,7 +34,11 @@ class recentDocuments {
     }
 
     appendRecentDocument(db: database, docId: string): void {
-        var existingRecentDocumentsStore = recentDocuments.recentDocumentsInDatabases().find(x => x.databaseName === db.name);
+        if (!docId) {
+            return;
+        }
+        
+        const existingRecentDocumentsStore = recentDocuments.recentDocumentsInDatabases().find(x => x.databaseName === db.name);
         if (existingRecentDocumentsStore) {
             const recentDocs = existingRecentDocumentsStore.recentDocuments();
             _.pull(recentDocs, docId);
