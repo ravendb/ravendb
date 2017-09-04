@@ -53,7 +53,7 @@ class aceEditorBindingHandler {
                 return prefix;
             }
     
-            return originalGetCompletionPrefix(editor);
+            return originalGetCompletionPrefix.call(this, editor);
         }
     }
 
