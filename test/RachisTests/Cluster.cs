@@ -22,7 +22,7 @@ namespace RachisTests
             return res.Topology.Members.Count;
         }
 
-        [Fact]
+        [NightlyBuildFact]
         public async Task CanCreateAddAndDeleteDatabaseFromNodes()
         {
             var clusterSize = 3;

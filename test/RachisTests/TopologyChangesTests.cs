@@ -11,7 +11,7 @@ namespace RachisTests
 {
     public class TopologyChangesTests : RachisConsensusTestBase
     {
-        [Fact]
+        [NightlyBuildFact]
         public async Task CanEnforceTopologyOnOldLeader()
         {
             var leader = await CreateNetworkAndGetLeader(3);
@@ -30,7 +30,7 @@ namespace RachisTests
         /// We mimic a node been down by giving a url that doesn't exists.
         /// </summary>
         /// <returns></returns>
-        [Fact]
+        [NightlyBuildFact]
         public async Task New_node_can_be_added_even_if_it_is_down()
         {
             var leader = await CreateNetworkAndGetLeader(3);
@@ -46,7 +46,7 @@ namespace RachisTests
         /// <summary>
         /// This test creates two nodes that don't exists and then setup those two nodes and make sure they are been updated with the current log.
         /// </summary>
-        [Fact]
+        [NightlyBuildFact]
         public async Task Adding_additional_node_that_goes_offline_and_then_online_should_still_work()
         {
             var node4 = SetupServer(false, 53899);
@@ -68,7 +68,7 @@ namespace RachisTests
                 "#E server didn't get the commands in time");
         }
 
-        [Fact]
+        [NightlyBuildFact]
         public async Task Adding_already_existing_node_should_throw()
         {
             var leader = await CreateNetworkAndGetLeader(3);
@@ -79,7 +79,7 @@ namespace RachisTests
         }
 
 
-        [Fact]
+        [NightlyBuildFact]
         public async Task Removal_of_non_existing_node_should_throw()
         {
             var leader = await CreateNetworkAndGetLeader(3);
@@ -87,7 +87,7 @@ namespace RachisTests
                 () => leader.RemoveFromClusterAsync("http://not-a-real-url.com"));
         }
 
-        [Theory]
+        [NightlyBuildTheory]
         [InlineData(3)]
         [InlineData(5)]
         [InlineData(7)]
@@ -104,7 +104,7 @@ namespace RachisTests
             }
         }
 
-        [Fact]
+        [NightlyBuildFact]
         public async Task AddingRemovedNodeShouldWork()
         {
             var clusterSize = 3;

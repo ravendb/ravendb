@@ -6,29 +6,40 @@ namespace Tests.Infrastructure
 {
     public class NightlyBuildTheoryAttribute : TheoryAttribute
     {
-        private readonly bool _enable;
+        internal static bool Force = false; // set to true if you want to force the tests to run
 
-        public NightlyBuildTheoryAttribute()
+        internal static bool IsNightlyBuild = Force;
+
+        internal static string SkipMessage =
+            "Nightly build tests are only working between 21:00 and 6:00 UTC and when 'RAVEN_ENABLE_NIGHTLY_BUILD_TESTS' is set to 'true'.";
+
+        static NightlyBuildTheoryAttribute()
         {
-            var variable = Environment.GetEnvironmentVariable("RAVEN_ENABLE_NIGHTLY_BUILD_TESTS");
-            if (variable == null || bool.TryParse(variable, out _enable) == false)
+            if (IsNightlyBuild)
                 return;
 
-            if (_enable == false)
+            var variable = Environment.GetEnvironmentVariable("RAVEN_ENABLE_NIGHTLY_BUILD_TESTS");
+            if (variable == null || bool.TryParse(variable, out IsNightlyBuild) == false)
+            {
+                IsNightlyBuild = false;
+                return;
+            }
+
+            if (IsNightlyBuild == false)
                 return;
 
             var now = SystemTime.UtcNow;
-            _enable = now.Hour >= 21 || now.Hour <= 6;
+            IsNightlyBuild = now.Hour >= 21 || now.Hour <= 6;
         }
 
         public override string Skip
         {
             get
             {
-                if (_enable == false)
-                    return "Nightly build tests are only working between 21:00 and 6:00 UTC and when 'RAVEN_ENABLE_NIGHTLY_BUILD_TESTS' is set to 'true'.";
+                if (IsNightlyBuild)
+                    return null;
 
-                return null;
+                return SkipMessage;
             }
         }
     }

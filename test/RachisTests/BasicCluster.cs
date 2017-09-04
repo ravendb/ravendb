@@ -12,7 +12,7 @@ namespace RachisTests
 {
     public class BasicCluster : RachisConsensusTestBase
     {
-        [Fact]
+        [NightlyBuildFact]
         public async Task ClusterWithFiveNodesAndMultipleElections()
         {
             PredictableSeeds = true;
@@ -89,7 +89,7 @@ namespace RachisTests
             }
         }
 
-        [Fact]
+        [NightlyBuildFact]
         public async Task ClusterWithThreeNodesAndElections()
         {
             var a = SetupServer(true);
@@ -125,7 +125,7 @@ namespace RachisTests
             await Task.WhenAny(bLeader, cLeader);
         }
 
-        [Fact]
+        [NightlyBuildFact]
         public async Task ClusterWithLateJoiningNodeRequiringSnapshot()
         {
             var expected = 45;
@@ -162,7 +162,7 @@ namespace RachisTests
             }
         }
 
-        [Fact]
+        [NightlyBuildFact]
         public async Task ClusterWithTwoNodes()
         {
             var expected = 45;
@@ -200,7 +200,7 @@ namespace RachisTests
             }
         }
 
-        [Fact]
+        [NightlyBuildFact]
         public async Task CanSetupSingleNode()
         {
             var rachis = SetupServer(true);

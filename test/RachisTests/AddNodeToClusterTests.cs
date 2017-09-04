@@ -18,7 +18,7 @@ namespace RachisTests
 {
     public class AddNodeToClusterTests : ReplicationTestBase
     {
-        [Fact]
+        [NightlyBuildFact]
         public async Task FailOnAddingNonPassiveNode()
         {
             var raft1 = await CreateRaftClusterAndGetLeader(1);
@@ -30,7 +30,7 @@ namespace RachisTests
         }
 
 
-        [Fact]
+        [NightlyBuildFact]
         public async Task RemoveNodeWithDb()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;

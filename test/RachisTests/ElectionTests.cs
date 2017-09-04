@@ -10,7 +10,7 @@ namespace RachisTests
 {
     public class ElectionTests : RachisConsensusTestBase
     {
-        [Fact]
+        [NightlyBuildFact]
         public async Task Follower_as_a_single_node_becomes_leader_automatically()
         {
             var node = SetupServer(true);
@@ -31,7 +31,7 @@ namespace RachisTests
         /// </summary>
         /// <param name="numberOfNodes">The number of nodes in the cluster</param>
         /// <returns></returns>
-        [Theory]
+        [NightlyBuildTheory]
         [InlineData(3)]
         [InlineData(5)]
         [InlineData(7)]
