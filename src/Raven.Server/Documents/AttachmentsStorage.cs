@@ -841,11 +841,7 @@ namespace Raven.Server.Documents
         private static void DeleteTombstoneIfNeeded(DocumentsOperationContext context, Slice keySlice)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, AttachmentsTombstonesSlice);
-            var a = table.DeleteByKey(keySlice);
-            if (a)
-            {
-                Debug.Assert(false, "Delete this!!!, it is just to detect if we have such case in a test.");
-            }
+            table.DeleteByKey(keySlice);
         }
 
         private void CreateTombstone(DocumentsOperationContext context, Slice keySlice, long attachmentEtag, string changeVector)
