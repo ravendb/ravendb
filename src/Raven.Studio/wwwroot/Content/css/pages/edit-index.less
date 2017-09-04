@@ -34,6 +34,43 @@
         }
     }
 
+    .indexing-options {
+        border-top: 1px solid @gray-dark;
+        font-size: 10px;
+        text-transform: uppercase;
+        text-align: center;
+        color: @gray-dark;
+        padding-top: 4px;
+
+        .item {
+            color: @gray;
+
+            &:not(.active) {
+                .icon-check {
+                    display: none;
+                }
+            }
+
+            & + .item {
+                border-left: 1px solid @gray-dark;
+                margin-left: @grid-gutter-width/3;
+                padding-left: @grid-gutter-width/3;
+            }
+
+            &.active {
+                .icon-cancel {
+                    display: none;
+                }
+
+                color: @gray-light;
+
+                .icon-check {
+                    .text-success;
+                }
+            }
+        }
+    }
+
     .property {
         margin: 7px 15px;
         text-align: center;
