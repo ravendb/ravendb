@@ -465,8 +465,7 @@ class queryCompleter {
             case "order":
                 this.completeWords(callback, [{value: "by", score: 0, meta: "keyword"}]);
                 break;
-            default: 
-                debugger;
+            default:
                 break;
         }
     }

@@ -1,0 +1,24 @@
+<div class="modal-dialog modal-lg" role="document" id="patchSyntaxDialog">
+    
+<div>Filter out an array item:</div>
+<pre class="margin-bottom"><span class="token keyword">from</span><span class="token string"> Orders </span>
+<span class="token keyword">update</span><span class="token punctuation"> { </span>
+    this.Lines = this.Lines.filter(l => l.Product <span class="token operator">!=</span> <span class="token string">'products/1'</span>);
+<span class="token punctuation">}</span></pre>
+
+<div>Denormalize the company name:</div>
+<pre class="margin-bottom"><span class="token keyword">from</span> <span class="token string">Orders</span> <span class="token keyword">as</span> o
+<span class="token keyword">load</span> o.Company <span class="token keyword">as</span> c
+<span class="token keyword">update</span><span class="token punctuation"> { </span>
+    o.CompanyName = c.Name;
+<span class="token punctuation">}</span></pre>
+
+<div>Use JavaScript to patch:</div>
+    <pre class="margin-bottom"><span class="token keyword">from index</span><span class="token string"> 'Orders/Totals' </span><span class="token keyword">as</span> i
+<span class="token keyword">where</span> i.Total<span class="token operator"> > </span>10000
+<span class="token keyword">load</span> i.Company <span class="token keyword">as</span> c
+<span class="token keyword">update</span><span class="token punctuation"> { </span>
+    i.LowerName = c.Name.toLowerCase();
+<span class="token punctuation">}</span></pre>
+
+</div>

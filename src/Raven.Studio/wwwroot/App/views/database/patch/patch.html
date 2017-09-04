@@ -71,8 +71,7 @@
                 </div>
                  -->
                 <div class="row" data-bind="visible: isQueryMode">
-                    <label class="control-label col-sm-3 col-lg-2 query-label">Patch query <small><i class="icon-info text-info"></i></small></label>
-
+                    <label class="control-label col-sm-3 col-lg-2 query-label">Patch query<div><a href="#" data-bind="click: syntaxHelp"><small>Syntax help</small></a></div></label>
                     <div class="col-sm-9 col-lg-10 margin-bottom">
                         <div class="patch-container">
                             <div class="patch-main">
@@ -359,27 +358,3 @@
         </div>
     </div>
 </script>
-
-<script type="text/html" id="query-example">
-    <p>Filter out an array item:</p>
-    <pre><span class="token keyword">from</span> Orders
-<span class="token keyword">update</span> {
-    this.Lines = this.Lines.filter(l => l.Product != <span class="token string">'products/1'</span>);
-}</pre>
-
-    <p>Denormalize the company name:</p>
-    <pre><span class="token keyword">from</span> Orders <span class="token keyword">as</span> o
-<span class="token keyword">load</span> o.Company <span class="token keyword">as</span> c {
-<span class="token keyword">update</span> {
-    o.CompanyName = c.Name;
-}</pre>
-
-    <p>Use JavaScript to patch:</p>
-    <pre><span class="token keyword">from index</span> <span class="token string">'Orders/Totals'</span> as i
-<span class="token keyword">where</span> i.Total > 10000
-<span class="token keyword">load</span> i.Company as c
-<span class="token keyword">update</span> {
-    this.LowerName = c.Name.toLowerCase();
-}</pre>
-</script>
-

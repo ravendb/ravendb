@@ -37,7 +37,8 @@
                             <input type="text" class="form-control" id="taskName" placeholder="Enter a descriptive name for the subscription task" title="Note: if no name is supplied then server will create one for you"
                                    data-bind="textInput: taskName, attr: { disabled: !$root.isAddingNewSubscriptionTask() }">
                         </div>
-                        <label>Subscription RQL :&nbsp;&nbsp;<i class="icon-info text-info" id="scriptInfo"></i></label>
+                        <label>Subscription RQL :&nbsp;&nbsp;</label>
+                        <div class="pull-right"><a href="#" data-bind="click: $root.syntaxHelp"><small>Syntax help</small></a></div>
                         <pre class="form-control margin-top" placeholder="Enter transform script" 
                              data-bind="aceEditor: { code: query, lang:'ace/mode/rql', completer: $root.queryCompleter.complete }, validationOptions: { errorsAsTitle: false }, validationElement: query" style="height: 160px;">
                         </pre>
@@ -140,31 +141,3 @@
 <div class="tooltip json-preview lg" style="opacity: 0">
     <pre><code class="white-space-pre"></code></pre>
 </div>
-
-<script type="text/html" id="query-example">
-    <p>Simple collection query:</p>
-    <pre><span class="token keyword">from</span> Orders
-<span class="token keyword">where</span> Lines.Count > 4
-<span class="token keyword">select</span> Lines[].ProductName as ProductNames, OrderedAt, ShipTo.City</pre>
-
-    <p>Using JavaScript select:</p>
-    <pre><span class="token keyword">from</span> Orders <span class="token keyword">as</span> o
-<span class="token keyword">load</span> o.Company <span class="token keyword">as</span> c
-<span class="token keyword">select</span> {
-    Name: c.Name.toLowerCase(),
-    Country: c.Address.Country,
-    LinesCount: o.Lines.length
-}</pre>
-
-    <p>Querying an index:</p>
-    <pre><span class="token keyword">from index</span> <span class="token string">'Orders/Totals'</span> as i
-<span class="token keyword">where</span> i.Total > 10000
-<span class="token keyword">load</span> i.Company as c
-<span class="token keyword">select</span> {
-    Total: i.Total,
-	Company: {
-		Name: c.Name,
-		Region: c.Address.Region,
-	}
-}</pre>
-</script>
