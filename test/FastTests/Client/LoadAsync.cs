@@ -64,7 +64,7 @@ namespace FastTests.Client
                     await Assert.ThrowsAsync<InvalidOperationException>(
                         async () =>
                         {
-                            await Task.WhenAny(load1, load2, load3).Result;
+                            await Task.WhenAll(load1, load2, load3);
                         });                   
                 }
             }
