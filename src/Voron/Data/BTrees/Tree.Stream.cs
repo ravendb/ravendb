@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using Sparrow;
@@ -57,12 +58,13 @@ namespace Voron.Data.BTrees
             private int _numberOfPagesPerChunk;
             private long _totalSize;
             private Page _currentPage;
+            private Page _nextPage;
 
             private Tree _parent;
 
             private FixedSizeTree _tree;
             private int _version;
-            private Slice? _tag;
+            private Slice? _tag;            
 
             public void Init(Tree parent, Slice key, Slice? tag, int? initialNumberOfPagesPerChunk)
             {
@@ -79,8 +81,11 @@ namespace Voron.Data.BTrees
                 if (_localBuffer == null)
                     _localBuffer = new byte[4 * Constants.Storage.PageSize];
 
-                AllocateMorePages();
+                AllocateNextPage();
+                ConcatPageToStream();
 
+                ((StreamPageHeader*)_currentPage.Pointer)->StreamPageFlags |= StreamPageFlags.First;
+                
                 fixed (byte* pBuffer = _localBuffer)
                 {
                     while (true)
@@ -95,9 +100,11 @@ namespace Voron.Data.BTrees
                             toWrite += WriteBufferToPage(pBuffer + toWrite, read - toWrite);
                             if (toWrite == read)
                                 break;
+
                             // run out of room, need to allocate more
+                            AllocateNextPage();                            
                             FlushPage(_currentPage.PageNumber,  (int)(_writePos - _currentPage.DataPointer));
-                            AllocateMorePages();
+                            ConcatPageToStream();
                         }
                     }
 
@@ -112,7 +119,8 @@ namespace Voron.Data.BTrees
 
                     if (remaining < infoSize)
                     {
-                        AllocateMorePages();
+                        AllocateNextPage();
+                        ConcatPageToStream();
                         chunkSize = 0;
                         FlushPage(_currentPage.PageNumber, chunkSize);
                     }
@@ -163,10 +171,25 @@ namespace Voron.Data.BTrees
                     info->TagSize = 0;
             }
 
-            private void AllocateMorePages()
+            /// <summary>
+            /// Allocates next stream page ahead of time so we can flush the old page with its page number
+            /// </summary>
+            /// <returns></returns>
+            private void AllocateNextPage()
             {
                 var overflowSize = (_numberOfPagesPerChunk * Constants.Storage.PageSize) - PageHeader.SizeOf;
-                _currentPage = _parent._tx.LowLevelTransaction.AllocateOverflowRawPage(overflowSize, out _, zeroPage: false);
+                _nextPage = _parent._tx.LowLevelTransaction.AllocateOverflowRawPage(overflowSize, out _, zeroPage: false);
+                if (_currentPage.Pointer != default(byte*))
+                {
+                    var streamHeaderPtr = (StreamPageHeader*)_currentPage.Pointer;
+                    streamHeaderPtr->StreamNextPageNumber = _nextPage.PageNumber;
+                }
+            }
+
+            private void ConcatPageToStream()
+            {
+                _currentPage = _nextPage;
+                _currentPage.Flags |= PageFlags.Stream;                
                 _parent.State.OverflowPages += _numberOfPagesPerChunk;
                 _writePos = _currentPage.DataPointer;
                 _writePosEnd = _currentPage.Pointer + (_numberOfPagesPerChunk * Constants.Storage.PageSize);
@@ -363,5 +386,38 @@ namespace Voron.Data.BTrees
             using (Slice.From(_tx.Allocator, key, out Slice str))
                 return GetStreamTag(str);
         }
+    }
+
+    [StructLayout(LayoutKind.Explicit, Pack = 1, Size = PageHeader.SizeOf)]
+    public unsafe struct StreamPageHeader
+    {
+        public const int SizeOf = PageHeader.SizeOf;
+
+        static StreamPageHeader()
+        {
+            Debug.Assert(sizeof(StreamPageHeader) == SizeOf);
+        }
+
+        [FieldOffset(0)]
+        public long PageNumber;
+
+        [FieldOffset(12)]
+        public PageFlags Flags;
+
+        [FieldOffset(13)]
+        public StreamPageFlags StreamPageFlags;
+
+        //This field is for use of the DR tool only 
+        [FieldOffset(14)]
+        public long StreamNextPageNumber;
+    }
+
+    [Flags]
+    public enum StreamPageFlags : byte
+    {
+        None = 0,
+        First = 1,
+        Reserved1 = 2,
+        Reserved2 = 4
     }
 }
