@@ -10,6 +10,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Utils;
@@ -122,7 +123,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             var includeDocumentsCommand = new IncludeDocumentsCommand(_documents, _context, query.Metadata.Includes);
             var fieldsToFetch = new FieldsToFetch(query, null);
-            var documents = new CollectionQueryEnumerable(_database, _documents, fieldsToFetch, collection, query, _context, includeDocumentsCommand);
+            var totalResults = new Reference<int>();
+            var documents = new CollectionQueryEnumerable(_database, _documents, fieldsToFetch, collection, query, _context, includeDocumentsCommand, totalResults);
             var cancellationToken = _token.Token;
 
             try
@@ -145,6 +147,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             }
 
             includeDocumentsCommand.Fill(resultToFill.Includes);
+            resultToFill.TotalResults = totalResults.Value;
         }
 
         private unsafe void FillCountOfResultsAndIndexEtag(QueryResultServerSide resultToFill, string collection)
@@ -162,7 +165,6 @@ namespace Raven.Server.Documents.Queries.Dynamic
             else
             {
                 var collectionStats = _documents.GetCollection(collection, _context);
-                resultToFill.TotalResults = (int)collectionStats.Count;
 
                 buffer[0] = _documents.GetLastDocumentEtag(_context, collection);
                 buffer[1] = _documents.GetLastTombstoneEtag(_context, collection);

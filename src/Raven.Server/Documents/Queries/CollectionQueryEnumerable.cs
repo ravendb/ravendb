@@ -10,6 +10,7 @@ using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
 using Voron;
@@ -23,12 +24,13 @@ namespace Raven.Server.Documents.Queries
         private readonly FieldsToFetch _fieldsToFetch;
         private readonly DocumentsOperationContext _context;
         private readonly IncludeDocumentsCommand _includeDocumentsCommand;
+        private readonly Reference<int> _totalResults;
         private readonly string _collection;
         private readonly IndexQueryServerSide _query;
         private readonly bool _isAllDocsCollection;
 
         public CollectionQueryEnumerable(DocumentDatabase database, DocumentsStorage documents, FieldsToFetch fieldsToFetch, string collection,
-            IndexQueryServerSide query, DocumentsOperationContext context, IncludeDocumentsCommand includeDocumentsCommand)
+            IndexQueryServerSide query, DocumentsOperationContext context, IncludeDocumentsCommand includeDocumentsCommand, Reference<int> totalResults)
         {
             _database = database;
             _documents = documents;
@@ -38,11 +40,12 @@ namespace Raven.Server.Documents.Queries
             _query = query;
             _context = context;
             _includeDocumentsCommand = includeDocumentsCommand;
+            _totalResults = totalResults;
         }
 
         public IEnumerator<Document> GetEnumerator()
         {
-            return new Enumerator(_database, _documents, _fieldsToFetch, _collection, _isAllDocsCollection, _query, _context, _includeDocumentsCommand);
+            return new Enumerator(_database, _documents, _fieldsToFetch, _collection, _isAllDocsCollection, _query, _context, _includeDocumentsCommand, _totalResults);
         }
 
         IEnumerator IEnumerable.GetEnumerator()
@@ -55,6 +58,7 @@ namespace Raven.Server.Documents.Queries
             private readonly DocumentsStorage _documents;
             private readonly FieldsToFetch _fieldsToFetch;
             private readonly DocumentsOperationContext _context;
+            private readonly Reference<int> _totalResults;
             private readonly string _collection;
             private readonly bool _isAllDocsCollection;
             private readonly IndexQueryServerSide _query;
@@ -71,8 +75,8 @@ namespace Raven.Server.Documents.Queries
             private readonly Sort _sort;
             private readonly MapQueryResultRetriever _resultsRetriever;
 
-            public Enumerator(DocumentDatabase database, DocumentsStorage documents, FieldsToFetch fieldsToFetch, string collection, bool isAllDocsCollection, 
-                IndexQueryServerSide query, DocumentsOperationContext context, IncludeDocumentsCommand includeDocumentsCommand)
+            public Enumerator(DocumentDatabase database, DocumentsStorage documents, FieldsToFetch fieldsToFetch, string collection, bool isAllDocsCollection,
+                IndexQueryServerSide query, DocumentsOperationContext context, IncludeDocumentsCommand includeDocumentsCommand, Reference<int> totalResults)
             {
                 _documents = documents;
                 _fieldsToFetch = fieldsToFetch;
@@ -80,6 +84,8 @@ namespace Raven.Server.Documents.Queries
                 _isAllDocsCollection = isAllDocsCollection;
                 _query = query;
                 _context = context;
+                _totalResults = totalResults;
+                _totalResults.Value = 0;
 
                 if (_fieldsToFetch.IsDistinct)
                     _alreadySeenProjections = new HashSet<ulong>();
@@ -188,11 +194,17 @@ namespace Raven.Server.Documents.Queries
             {
                 IEnumerable<Document> documents;
                 if (_ids != null && _ids.Count > 0)
-                    documents = _documents.GetDocuments(_context, _ids, _start, _query.PageSize);
+                    documents = _documents.GetDocuments(_context, _ids, _start, _query.PageSize, _totalResults);
                 else if (_isAllDocsCollection)
+                {
                     documents = _documents.GetDocumentsFrom(_context, 0, _start, _query.PageSize);
+                    _totalResults.Value = (int)_documents.GetNumberOfDocuments(_context);
+                }
                 else
+                {
                     documents = _documents.GetDocumentsFrom(_context, _collection, 0, _start, _query.PageSize);
+                    _totalResults.Value = (int)_documents.GetCollection(_collection, _context).Count;
+                }
 
                 return ApplySorting(documents);
             }
