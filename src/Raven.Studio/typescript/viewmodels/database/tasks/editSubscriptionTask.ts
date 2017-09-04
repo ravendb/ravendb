@@ -1,3 +1,4 @@
+import app = require("durandal/app");
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import router = require("plugins/router");
@@ -6,7 +7,6 @@ import ongoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskI
 import saveSubscriptionTaskCommand = require("commands/database/tasks/saveSubscriptionTaskCommand");
 import testSubscriptionTaskCommand = require("commands/database/tasks/testSubscriptionTaskCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
-import popoverUtils = require("common/popoverUtils");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import documentBasedColumnsProvider = require("widgets/virtualGrid/columns/providers/documentBasedColumnsProvider");
 import columnsSelector = require("viewmodels/partial/columnsSelector");
@@ -14,11 +14,9 @@ import documentObject = require("models/database/documents/document");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
-import defaultAceCompleter = require("common/defaultAceCompleter");
-import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import subscriptionConnectionDetailsCommand = require("commands/database/tasks/getSubscriptionConnectionDetailsCommand");
-import database = require("models/resources/database");
 import queryCompleter = require("common/queryCompleter");
+import subscriptionRqlSyntax = require("viewmodels/database/tasks/SubscriptionRqlSyntax");
 
 type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<documentObject>>;
 
@@ -84,14 +82,6 @@ class editSubscriptionTask extends viewModelBase {
         }
         
         return deferred;
-    }
-
-    attached() {
-        super.attached();
-
-        popoverUtils.longWithHover($("#scriptInfo"), {
-            content: $("#query-example").html()
-        });
     }
 
     compositionComplete() {
@@ -221,6 +211,11 @@ class editSubscriptionTask extends viewModelBase {
             this.columnsSelector.reset();
         }
     }
+
+    syntaxHelp() {
+        const viewModel = new subscriptionRqlSyntax();
+            app.showBootstrapDialog(viewModel);
+        }
 }
 
 export = editSubscriptionTask;
