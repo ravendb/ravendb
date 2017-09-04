@@ -1406,10 +1406,17 @@ namespace Raven.Server.ServerWide
                 if (_nodeTcpServerUrl != null)
                     return _nodeTcpServerUrl;
 
-                Debug.Assert(_ravenServer.WebUrl != null);
+                var ravenServerWebUrl = _ravenServer.WebUrl;
+                if(ravenServerWebUrl == null)
+                    ThrowInvalidTcpUrlOnStartup();
                 var status = _ravenServer.GetTcpServerStatus();
-                return _nodeTcpServerUrl = Configuration.Core.GetNodeTcpServerUrl(_ravenServer.WebUrl, status.Port);
+                return _nodeTcpServerUrl = Configuration.Core.GetNodeTcpServerUrl(ravenServerWebUrl, status.Port);
             }
+        }
+
+        private static void ThrowInvalidTcpUrlOnStartup()
+        {
+            throw new InvalidOperationException("The server has yet to complete startup, cannot get NodeTcpServerUtl");
         }
 
         public DynamicJsonValue GetTcpInfoAndCertificates()
