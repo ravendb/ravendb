@@ -78,6 +78,11 @@ var paths = {
     ]
 };
 
+paths.watchDirectories = [
+    paths.tsSource,
+    paths.test.tsSource
+];
+
 paths.releaseTargetApp = path.join(paths.releaseTarget, 'App');
 paths.releaseTargetContent = path.join(paths.releaseTarget, 'Content');
 paths.releaseTargetContentCss = path.join(paths.releaseTargetContent, 'css');
