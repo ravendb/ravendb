@@ -35,7 +35,7 @@ namespace RachisTests
         }
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(60 * 10) : TimeSpan.FromSeconds(6);
 
-        [Theory]
+        [NightlyBuildTheory]
         [InlineData(1)]
         [InlineData(5)]
         [InlineData(10)]
@@ -93,7 +93,7 @@ namespace RachisTests
             }
         }
 
-        [Fact]
+        [NightlyBuildFact]
         public async Task SubscripitonDeletionFromCluster()
         {
             const int nodesAmount = 5;
@@ -191,7 +191,7 @@ namespace RachisTests
             }
         }
 
-        [Theory]
+        [NightlyBuildTheory]
         [InlineData(3)]
         [InlineData(5)]
         public async Task DistributedRevisionsSubscription(int nodesAmount)

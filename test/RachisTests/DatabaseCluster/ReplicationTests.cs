@@ -13,6 +13,7 @@ using Raven.Server.Documents.Replication;
 using Raven.Server.Utils;
 using Raven.Server.Web.System;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace RachisTests.DatabaseCluster
@@ -20,7 +21,7 @@ namespace RachisTests.DatabaseCluster
     public class ReplicationTests : ReplicationTestBase
     {
 
-        [Fact]
+        [NightlyBuildFact]
         public async Task WaitForCommandToApply()
         {
             var clusterSize = 5;
@@ -51,7 +52,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Theory]
+        [NightlyBuildTheory]
         [InlineData(false)]
         [InlineData(true)]
         public async Task EnsureDocumentsReplication(bool useSsl)
@@ -124,7 +125,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Theory]
+        [NightlyBuildTheory]
         [InlineData(false)]
         [InlineData(true)]
         public async Task EnsureReplicationToWatchers(bool useSsl)
@@ -214,7 +215,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [NightlyBuildFact]
         public async Task CanAddAndModifySingleWatcher()
         {
             var clusterSize = 3;
@@ -356,7 +357,7 @@ namespace RachisTests.DatabaseCluster
         }
 
 
-        [Theory]
+        [NightlyBuildTheory]
         [InlineData(false)]
         [InlineData(true)]
         public async Task DoNotReplicateBack(bool useSsl)
@@ -419,7 +420,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Theory]
+        [NightlyBuildTheory]
         [InlineData(false)]
         [InlineData(true)]
         public async Task AddGlobalChangeVectorToNewDocument(bool useSsl)
@@ -505,7 +506,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [NightlyBuildFact]
         public async Task ReplicateToWatcherWithAuth()
         {
             var serverCertPath = SetupServerAuthentication();
@@ -552,7 +553,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [NightlyBuildFact]
         public async Task ReplicateToWatcherWithInvalidAuth()
         {
             var serverCertPath = SetupServerAuthentication();

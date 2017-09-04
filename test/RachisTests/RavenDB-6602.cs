@@ -19,7 +19,7 @@ namespace RachisTests
             public string Name { get; set; }
         }
 
-        [Fact]
+        [NightlyBuildFact]
         public async Task RequestExecutor_failover_with_only_one_database_should_properly_fail()
         {
             var leader = await CreateRaftClusterAndGetLeader(1);
@@ -53,7 +53,7 @@ namespace RachisTests
             }
         }
 
-        [Fact]
+        [NightlyBuildFact]
         public async Task RequestExecutor_failover_to_database_topology_should_work()
         {
             var leader = await CreateRaftClusterAndGetLeader(3);

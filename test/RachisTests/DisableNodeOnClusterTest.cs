@@ -8,13 +8,14 @@ using Raven.Client.Documents;
 using Raven.Client.Http;
 using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace RachisTests
 {
     public class DisableNodeOnClusterTest : ReplicationTestBase
     {
-        [Fact]
+        [NightlyBuildFact]
         public async Task BackToFirstNodeAfterRevive()
         {
             var leader = await CreateRaftClusterAndGetLeader(3, shouldRunInMemory: false);
