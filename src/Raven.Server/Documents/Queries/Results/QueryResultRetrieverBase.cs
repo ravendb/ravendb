@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Queries.Results
                 if (doc == null)
                     return null;
 
-                return GetProjectionFromDocument(doc, input, score, FieldsToFetch, _context, state);
+                return GetProjectionFromDocument(doc, input, null, id, score, FieldsToFetch, _context, state);
             }
 
             var documentLoaded = false;
@@ -144,7 +144,7 @@ namespace Raven.Server.Documents.Queries.Results
             return ReturnProjection(result, doc, score, _context);
         }
 
-        public Document GetProjectionFromDocument(Document doc, Lucene.Net.Documents.Document luceneDoc, float score, FieldsToFetch fieldsToFetch, JsonOperationContext context, IState state)
+        public Document GetProjectionFromDocument(Document doc, Lucene.Net.Documents.Document luceneDoc, LazyStringValue lazyId, string id, float score, FieldsToFetch fieldsToFetch, JsonOperationContext context, IState state)
         {
             var result = new DynamicJsonValue();
 
@@ -169,7 +169,7 @@ namespace Raven.Server.Documents.Queries.Results
                 }
             }
 
-            AddIdIfNeeded(fieldsToFetch, doc.Id, null, result);
+            AddIdIfNeeded(fieldsToFetch, lazyId, id, result);
 
             return ReturnProjection(result, doc, score, context);
         }
@@ -252,8 +252,8 @@ namespace Raven.Server.Documents.Queries.Results
         {
             return new FieldType
             {
-                IsArray = indexDocument.GetField(field+ LuceneDocumentConverterBase.IsArrayFieldSuffix) != null,
-                IsJson = indexDocument.GetField(field+ LuceneDocumentConverterBase.ConvertToJsonSuffix) != null
+                IsArray = indexDocument.GetField(field + LuceneDocumentConverterBase.IsArrayFieldSuffix) != null,
+                IsJson = indexDocument.GetField(field + LuceneDocumentConverterBase.ConvertToJsonSuffix) != null
             };
         }
 
@@ -263,7 +263,7 @@ namespace Raven.Server.Documents.Queries.Results
             public bool IsJson;
         }
 
-        private static object ConvertType(JsonOperationContext context,IFieldable field, FieldType fieldType, IState state)
+        private static object ConvertType(JsonOperationContext context, IFieldable field, FieldType fieldType, IState state)
         {
             if (field.IsBinary)
                 ThrowBinaryValuesNotSupported();
@@ -344,13 +344,13 @@ namespace Raven.Server.Documents.Queries.Results
             _loadedDocumentIds.Clear();
 
             //_loadedDocuments.Clear(); - explicitly not clearing this, we want to cahce this for the duration of the query
-            
-            
-            _loadedDocuments[document.Id??string.Empty] = document;
+
+
+            _loadedDocuments[document.Id ?? string.Empty] = document;
             if (fieldToFetch.QueryField.SourceAlias != null)
                 IncludeUtil.GetDocIdFromInclude(document.Data, fieldToFetch.QueryField.SourceAlias, _loadedDocumentIds);
             else
-                _loadedDocumentIds.Add(document.Id??string.Empty); // null source alias is the root doc
+                _loadedDocumentIds.Add(document.Id ?? string.Empty); // null source alias is the root doc
 
             if (_loadedDocumentIds.Count == 0)
             {
