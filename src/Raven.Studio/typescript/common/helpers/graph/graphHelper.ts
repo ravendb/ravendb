@@ -30,6 +30,13 @@ class graphHelper {
     }
 
     static trimText(input: string, lengthProvider: (numberOfCharacters: number) => number, minWidth: number, maxWidth: number, extraPadding: number = 0): { text: string, containerWidth: number } {
+        if (!input) {
+            return {
+                containerWidth: minWidth,
+                text: ""
+            }
+        }
+
         const totalWidth = lengthProvider(input.length);
         if (totalWidth + extraPadding < minWidth) {
             return {
