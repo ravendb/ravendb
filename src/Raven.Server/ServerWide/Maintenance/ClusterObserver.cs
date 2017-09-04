@@ -107,6 +107,10 @@ namespace Raven.Server.ServerWide.Maintenance
             Dictionary<string, ClusterNodeStatusReport> prevStats
             )
         {
+            var currentLeader = _engine.CurrentLeader;
+            if (currentLeader == null)
+                return;
+
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var updateCommands = new List<(UpdateTopologyCommand Update, string Reason)>();
@@ -131,9 +135,9 @@ namespace Raven.Server.ServerWide.Maintenance
                             LeadersTicks = -1,
                             Term = -1
                         };
-                        var graceIfLeaderChanged = _engine.CurrentTerm > topologyStamp.Term && _engine.CurrentLeader.LeaderShipDuration < _stabilizationTime;
+                        var graceIfLeaderChanged = _engine.CurrentTerm > topologyStamp.Term && currentLeader.LeaderShipDuration < _stabilizationTime;
                         var letStatsBecomeStable = _engine.CurrentTerm == topologyStamp.Term &&
-                            (_engine.CurrentLeader.LeaderShipDuration - topologyStamp.LeadersTicks < _stabilizationTime);
+                            (currentLeader.LeaderShipDuration - topologyStamp.LeadersTicks < _stabilizationTime);
                         if (graceIfLeaderChanged || letStatsBecomeStable)
                         {
                             if (_logger.IsInfoEnabled)
