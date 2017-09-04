@@ -29,7 +29,8 @@ namespace Voron.Data.Tables
         private readonly FastDictionary<Slice, FastDictionary<Slice, FixedSizeTree, SliceStructComparer>, SliceStructComparer> _fixedSizeTreeCache = new FastDictionary<Slice, FastDictionary<Slice, FixedSizeTree, SliceStructComparer>, SliceStructComparer>(SliceStructComparer.Instance);
 
         public readonly Slice Name;
-
+        private readonly byte _tableType;
+        
         public long NumberOfEntries { get; private set; }
 
         private long _overflowPageCount;
@@ -74,12 +75,13 @@ namespace Voron.Data.Tables
         /// Using this constructor WILL NOT register the Table for commit in
         /// the Transaction, and hence changes WILL NOT be committed.
         /// </summary>
-        public Table(TableSchema schema, Slice name, Transaction tx, Tree tableTree, bool doSchemaValidation = false)
+        public Table(TableSchema schema, Slice name, Transaction tx, Tree tableTree, byte tableType, bool doSchemaValidation = false)
         {
             Name = name;
 
             _schema = schema;
             _tx = tx;
+            _tableType = tableType;
 
             _tableTree = tableTree;
             if (_tableTree == null)
@@ -112,6 +114,7 @@ namespace Voron.Data.Tables
             _schema = schema;
             _tx = tx;
             _forGlobalReadsOnly = true;
+            _tableType = 0;
         }
 
         public bool ReadByKey(Slice key, out TableValueReader reader)
@@ -412,6 +415,9 @@ namespace Voron.Data.Tables
                 page.Flags = PageFlags.Overflow | PageFlags.RawData;
                 page.OverflowSize = size;
 
+                ((RawDataOverflowPageHeader*)page.Pointer)->SectionOwnerHash = Hashing.XXHash64.Calculate(Name.Content.Ptr, (ulong)Name.Content.Length);
+                ((RawDataOverflowPageHeader*)page.Pointer)->TableType = _tableType;
+
                 pos = page.Pointer + PageHeader.SizeOf;
 
                 builder.CopyTo(pos);
@@ -516,6 +522,9 @@ namespace Voron.Data.Tables
 
                 page.Flags = PageFlags.Overflow | PageFlags.RawData;
                 page.OverflowSize = size;
+
+                ((RawDataOverflowPageHeader*)page.Pointer)->SectionOwnerHash = Hashing.XXHash64.Calculate(Name.Content.Ptr, (ulong)Name.Content.Length);
+                ((RawDataOverflowPageHeader*)page.Pointer)->TableType = _tableType;
 
                 pos = page.Pointer + PageHeader.SizeOf;
 
@@ -642,7 +651,7 @@ namespace Voron.Data.Tables
                 var newNumberOfPages = Math.Min(maxSectionSizeInPages,
                     (ushort)(ActiveDataSmallSection.NumberOfPages * 2));
 
-                _activeDataSmallSection = ActiveRawDataSmallSection.Create(_tx.LowLevelTransaction, Name, newNumberOfPages);
+                _activeDataSmallSection = ActiveRawDataSmallSection.Create(_tx.LowLevelTransaction, Name, _tableType, newNumberOfPages);
                 _activeDataSmallSection.DataMoved += OnDataMoved;
                 var val = _activeDataSmallSection.PageNumber;
                 using (Slice.External(_tx.Allocator, (byte*)&val, sizeof(long), out Slice pageNumber))

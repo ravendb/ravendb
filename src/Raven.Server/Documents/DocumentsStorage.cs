@@ -20,6 +20,7 @@ using Sparrow.Binary;
 using Sparrow.Collections;
 using Sparrow.Logging;
 using Voron.Data;
+using Voron.Data.RawData;
 using Voron.Exceptions;
 
 namespace Raven.Server.Documents
@@ -41,7 +42,11 @@ namespace Raven.Server.Documents
         private static readonly Slice TombstonesPrefix;
         private static readonly Slice DeletedEtagsSlice;
 
-        public static readonly TableSchema DocsSchema = new TableSchema();
+        public static readonly TableSchema DocsSchema = new TableSchema()
+        {
+            TableType = (byte)TableType.Documents
+        };
+
         public static readonly TableSchema TombstonesSchema = new TableSchema();
         private static readonly TableSchema CollectionsSchema = new TableSchema();
 
@@ -255,7 +260,7 @@ namespace Raven.Server.Documents
 
         public void Initialize(StorageEnvironmentOptions options)
         {
-            options.SchemaVersion = 7;
+            options.SchemaVersion = 8;
             try
             {
                 Environment = new StorageEnvironment(options);
@@ -857,7 +862,7 @@ namespace Raven.Server.Documents
             tx.InnerTransaction.LowLevelTransaction.OnDispose += state => reader.Dispose();
         }
 
-        public static Document ParseDocument(JsonOperationContext context, ref TableValueReader tvr)
+        private static Document ParseDocument(JsonOperationContext context, ref TableValueReader tvr)
         {
             var result = new Document
             {
@@ -871,6 +876,32 @@ namespace Raven.Server.Documents
                 Flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr),
                 TransactionMarker = *(short*)tvr.Read((int)DocumentsTable.TransactionMarker, out size)
             };
+
+            return result;
+        }
+
+        public static Document ParseRawDataSectionDocumentWithValidation(JsonOperationContext context, ref TableValueReader tvr, int expectedSize)
+        {
+            var mem = tvr.Read((int)DocumentsTable.Data, out int size);
+
+            if (size > expectedSize || size <= 0)
+                throw new ArgumentException("Data size is invalid, possible corruption when parsing BlittableJsonReaderObject", nameof(size));
+
+            var result = new Document
+            {
+                StorageId = tvr.Id,
+                LowerId = TableValueToString(context, (int)DocumentsTable.LowerId, ref tvr),
+                Id = TableValueToId(context, (int)DocumentsTable.Id, ref tvr),
+                Etag = TableValueToEtag((int)DocumentsTable.Etag, ref tvr),
+                Data = new BlittableJsonReaderObject(mem, size, context),
+                ChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref tvr),
+                LastModified = TableValueToDateTime((int)DocumentsTable.LastModified, ref tvr),
+                Flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr),
+                TransactionMarker = *(short*)tvr.Read((int)DocumentsTable.TransactionMarker, out size)
+            };
+
+            if (size != sizeof(short))
+                throw new ArgumentException("TransactionMarker size is invalid, possible corruption when parsing BlittableJsonReaderObject", nameof(size));
 
             return result;
         }
@@ -1531,5 +1562,13 @@ namespace Raven.Server.Documents
             var ptr = tvr.Read(index, out int size);
             return Slice.From(context.Allocator, ptr, size, ByteStringType.Immutable, out slice);
         }
+    }
+    
+    public enum TableType : byte
+    {
+        None = 0,
+        Documents = 1,
+        Revisions = 2,
+        Conflicts = 3
     }
 }

@@ -187,14 +187,14 @@ namespace Voron.Data.RawData
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public static ActiveRawDataSmallSection Create(LowLevelTransaction tx, string owner, ushort? sizeInPages = null)
+        public static ActiveRawDataSmallSection Create(LowLevelTransaction tx, string owner, byte tableType, ushort? sizeInPages = null)
         {
             Slice ownerSlice;
             Slice.From(tx.Allocator, owner, ByteStringType.Immutable, out ownerSlice);
-            return Create(tx, ownerSlice, sizeInPages);
+            return Create(tx, ownerSlice, tableType, sizeInPages);
         }
 
-        public static ActiveRawDataSmallSection Create(LowLevelTransaction tx, Slice owner, ushort? sizeInPages)
+        public static ActiveRawDataSmallSection Create(LowLevelTransaction tx, Slice owner, byte tableType, ushort? sizeInPages)
         {
             var dbPagesInSmallSection = GetNumberOfPagesInSmallSection(tx);
             var numberOfPagesInSmallSection = Math.Min(sizeInPages ?? dbPagesInSmallSection, dbPagesInSmallSection);
@@ -212,7 +212,8 @@ namespace Voron.Data.RawData
             sectionHeader->NumberOfPages = numberOfPagesInSmallSection;
             sectionHeader->LastUsedPage = 0;
             sectionHeader->SectionOwnerHash = Hashing.XXHash64.Calculate(owner.Content.Ptr, (ulong)owner.Content.Length);
-
+            sectionHeader->TableType = tableType;
+            
             var availablespace = (ushort*)((byte*)sectionHeader + ReservedHeaderSpace);
 
             for (ushort i = 0; i < numberOfPagesInSmallSection; i++)
@@ -224,6 +225,8 @@ namespace Voron.Data.RawData
                 pageHeader->RawDataFlags = RawDataPageFlags.Small;
                 pageHeader->Flags = PageFlags.RawData | PageFlags.Single;
                 pageHeader->NextAllocation = (ushort)sizeof(RawDataSmallPageHeader);
+                pageHeader->SectionOwnerHash = sectionHeader->SectionOwnerHash;
+                pageHeader->TableType = tableType;
                 availablespace[i] = (ushort)(Constants.Storage.PageSize - sizeof(RawDataSmallPageHeader));
             }
 

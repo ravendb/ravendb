@@ -17,6 +17,7 @@ using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Logging;
 using Sparrow.Utils;
+using Voron.Data.RawData;
 using Voron.Util;
 using static Raven.Server.Documents.DocumentsStorage;
 using ConcurrencyException = Voron.Exceptions.ConcurrencyException;
@@ -32,7 +33,10 @@ namespace Raven.Server.Documents
         public static readonly Slice ConflictsSlice;
         private static readonly Slice ConflictsIdSlice;
 
-        public static readonly TableSchema ConflictsSchema = new TableSchema();
+        public static readonly TableSchema ConflictsSchema = new TableSchema()
+        {
+            TableType = (byte)TableType.Conflicts
+        };
 
         private readonly DocumentDatabase _documentDatabase;
         private readonly DocumentsStorage _documentsStorage;
@@ -204,6 +208,28 @@ namespace Raven.Server.Documents
                 result.Doc = new BlittableJsonReaderObject(read, size, context);
                 DebugDisposeReaderAfterTransaction(context.Transaction, result.Doc);
             }
+
+            return result;
+        }
+
+        public static DocumentConflict ParseRawDataSectionConflictWithValidation(JsonOperationContext context, ref TableValueReader tvr, int expectedSize)
+        {
+            var read = tvr.Read((int)ConflictsTable.Data, out var size);
+            if (size > expectedSize || size <= 0)
+                throw new ArgumentException("Document size is invalid, possible corruption when parsing BlittableJsonReaderObject", nameof(size));
+
+            var result = new DocumentConflict
+            {
+                StorageId = tvr.Id,
+                LowerId = TableValueToString(context, (int)ConflictsTable.LowerId, ref tvr),
+                Id = TableValueToId(context, (int)ConflictsTable.Id, ref tvr),
+                ChangeVector = TableValueToChangeVector(context, (int)ConflictsTable.ChangeVector, ref tvr),
+                Etag = TableValueToEtag((int)ConflictsTable.Etag, ref tvr),
+                Doc = new BlittableJsonReaderObject(read, size, context),
+                Collection = TableValueToString(context, (int)ConflictsTable.Collection, ref tvr),
+                LastModified = TableValueToDateTime((int)ConflictsTable.LastModified, ref tvr),
+                Flags = TableValueToFlags((int)ConflictsTable.Flags, ref tvr)
+            };         
 
             return result;
         }
