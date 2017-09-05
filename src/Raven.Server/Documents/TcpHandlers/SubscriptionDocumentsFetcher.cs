@@ -60,6 +60,7 @@ namespace Raven.Server.Documents.TcpHandlers
             SubscriptionState subscription,
             long startEtag, SubscriptionPatchDocument patch)
         {
+            int size = 0;
             using (_db.Scripts.GetScriptRunner(patch,true, out var run))
             {
                 foreach (var doc in _db.DocumentsStorage.GetDocumentsFrom(
@@ -67,7 +68,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     collection,
                     startEtag + 1,
                     0,
-                    _maxBatchSize))
+                    int.MaxValue))
                 {
                     using (doc.Data)
                     {
@@ -76,6 +77,8 @@ namespace Raven.Server.Documents.TcpHandlers
                             if (exception != null)
                             {
                                 yield return (doc, exception);
+                                if (++size >= _maxBatchSize)
+                                    yield break;
                             }
                             else
                             {
@@ -91,18 +94,22 @@ namespace Raven.Server.Documents.TcpHandlers
                                 if (transformResult == null)
                                 {
                                     yield return (doc, null);
-                                    continue;
-                                }
 
-                                yield return (new Document
+                                }
+                                else
                                 {
-                                    Id = doc.Id,
-                                    Etag = doc.Etag,
-                                    Data = transformResult,
-                                    LowerId = doc.LowerId,
-                                    ChangeVector = doc.ChangeVector
-                                }, null);
+                                    yield return (new Document
+                                    {
+                                        Id = doc.Id,
+                                        Etag = doc.Etag,
+                                        Data = transformResult,
+                                        LowerId = doc.LowerId,
+                                        ChangeVector = doc.ChangeVector
+                                    }, null);
+                                }
                             }
+                            if (++size >= _maxBatchSize)
+                                yield break;
                         }
                     }
                 }
@@ -116,10 +123,12 @@ namespace Raven.Server.Documents.TcpHandlers
             long startEtag, 
             SubscriptionPatchDocument patch)
         {
+            int size = 0;
+            
             var collectionName = new CollectionName(collection);
             using (_db.Scripts.GetScriptRunner(patch, true, out var run))
             {
-                foreach (var revisionTuple in _db.DocumentsStorage.RevisionsStorage.GetRevisionsFrom(docsContext, collectionName, startEtag + 1, _maxBatchSize))
+                foreach (var revisionTuple in _db.DocumentsStorage.RevisionsStorage.GetRevisionsFrom(docsContext, collectionName, startEtag + 1, int.MaxValue))
                 {
                     var item = (revisionTuple.current ?? revisionTuple.previous);
                     Debug.Assert(item != null);
@@ -129,6 +138,8 @@ namespace Raven.Server.Documents.TcpHandlers
                         if (exception != null)
                         {
                             yield return (item, exception);
+                            if (++size >= _maxBatchSize)
+                                yield break;
                         }
                         else
                         {
@@ -148,17 +159,21 @@ namespace Raven.Server.Documents.TcpHandlers
                             if (transformResult == null)
                             {
                                 yield return (revisionTuple.current, null);
-                                continue;
                             }
 
-                            yield return (new Document
+                            else
                             {
-                                Id = item.Id,
-                                Etag = item.Etag,
-                                Data = transformResult,
-                                LowerId = item.LowerId,
-                                ChangeVector = item.ChangeVector
-                            }, null);
+                                yield return (new Document
+                                {
+                                    Id = item.Id,
+                                    Etag = item.Etag,
+                                    Data = transformResult,
+                                    LowerId = item.LowerId,
+                                    ChangeVector = item.ChangeVector
+                                }, null);
+                            }
+                            if (++size >= _maxBatchSize)
+                                yield break;
                         }
                     }
                 }

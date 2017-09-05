@@ -3,7 +3,6 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import patchDocument = require("models/database/patch/patchDocument");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
-import collection = require("models/database/documents/collection");
 import document = require("models/database/documents/document");
 import database = require("models/resources/database");
 import messagePublisher = require("common/messagePublisher");
@@ -12,7 +11,6 @@ import getDocumentWithMetadataCommand = require("commands/database/documents/get
 import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
 import savePatchCommand = require('commands/database/patch/savePatchCommand');
 import patchByQueryCommand = require("commands/database/patch/patchByQueryCommand");
-import queryUtil = require("common/queryUtil");
 import getPatchesCommand = require('commands/database/patch/getPatchesCommand');
 import eventsCollector = require("common/eventsCollector");
 import notificationCenter = require("common/notifications/notificationCenter");
@@ -26,16 +24,14 @@ import deleteDocumentsCommand = require("commands/database/documents/deleteDocum
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import columnsSelector = require("viewmodels/partial/columnsSelector");
 import documentPropertyProvider = require("common/helpers/database/documentPropertyProvider");
-import textColumn = require("widgets/virtualGrid/columns/textColumn");
-import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import patchDocumentCommand = require("commands/database/documents/patchDocumentCommand");
 import showDataDialog = require("viewmodels/common/showDataDialog");
 import verifyDocumentsIDsCommand = require("commands/database/documents/verifyDocumentsIDsCommand");
 import generalUtils = require("common/generalUtils");
-import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import getDocumentsPreviewCommand = require("commands/database/documents/getDocumentsPreviewCommand");
 import defaultAceCompleter = require("common/defaultAceCompleter");
 import queryCompleter = require("common/queryCompleter");
+import patchSyntax = require("viewmodels/database/patch/patchSyntax");
 
 type fetcherType = (skip: number, take: number, previewCols: string[], fullCols: string[]) => JQueryPromise<pagedResult<document>>;
 
@@ -453,10 +449,6 @@ class patch extends viewModelBase {
             "});",
             (Prism.languages as any).javascript);
 
-        popoverUtils.longWithHover($(".query-label small"), {
-            content: $("#query-example").html()
-        });
-
         popoverUtils.longWithHover($(".patch-title small"),
             {
                 content: `<p>Patch Scripts are written in JavaScript. <br />Examples: <pre>${jsCode}</pre></p>`
@@ -744,6 +736,11 @@ class patch extends viewModelBase {
         }
 
         this.test.enterTestMode(documentIdToUse);
+    }
+
+    syntaxHelp() {
+        const viewModel = new patchSyntax();
+        app.showBootstrapDialog(viewModel);
     }
 }
 

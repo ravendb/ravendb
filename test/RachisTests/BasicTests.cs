@@ -9,7 +9,7 @@ namespace RachisTests
 {
     public class BasicTests : RachisConsensusTestBase
     {
-        [Theory]
+        [NightlyBuildTheory]
         [InlineData(2)]
         [InlineData(3)]
         [InlineData(4)]

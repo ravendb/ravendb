@@ -16,14 +16,28 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors
     public class GatherAllCollector : Collector
     {
         private int _docBase;
+        private readonly List<ScoreDoc> _docs;
+
+        private Scorer _scorer;
+        private float _maxScore;
+
+        public GatherAllCollector(int numberOfDocsToCollect)
+        {
+            _docs = new List<ScoreDoc>(numberOfDocsToCollect);
+        }
 
         public override void SetScorer(Scorer scorer)
         {
+            _scorer = scorer;
         }
 
         public override void Collect(int doc, IState state)
         {
-            Documents.Add(doc + _docBase);
+            var score = _scorer?.Score(state) ?? 0;
+            if (score > _maxScore)
+                _maxScore = score;
+
+            _docs.Add(new ScoreDoc(doc + _docBase, score));
         }
 
         public override void SetNextReader(IndexReader reader, int docBase, IState state)
@@ -33,11 +47,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors
 
         public override bool AcceptsDocsOutOfOrder => true;
 
-        public List<int> Documents { get; } = new List<int>();
-
         public TopDocs ToTopDocs()
         {
-            return new TopDocs(Documents.Count, Documents.Select(i => new ScoreDoc(i, 0)).ToArray(), 0);
+            return new TopDocs(_docs.Count, _docs.ToArray(), _maxScore);
         }
     }
 }

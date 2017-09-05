@@ -2,9 +2,11 @@
 using System.Collections.Generic;
 using System.Text;
 using FastTests.Voron.FixedSize;
+using Raven.Server.Documents;
 using Sparrow;
 using Xunit;
 using Voron.Data.RawData;
+using Voron.Impl;
 
 namespace FastTests.Voron.RawData
 {
@@ -16,7 +18,7 @@ namespace FastTests.Voron.RawData
             long pageNumber;
             using (var tx = Env.WriteTransaction())
             {
-                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, "test");
+                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, "test", (byte)TableType.None);
                 pageNumber = section.PageNumber;
                 tx.Commit();
             }
@@ -47,7 +49,7 @@ namespace FastTests.Voron.RawData
             long pageNumber;
             using (var tx = Env.WriteTransaction())
             {
-                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, "test");
+                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, "test", (byte)TableType.None);
                 pageNumber = section.PageNumber;
                 tx.Commit();
             }
@@ -87,7 +89,7 @@ namespace FastTests.Voron.RawData
             long pageNumber;
             using (var tx = Env.WriteTransaction())
             {
-                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, "test");
+                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, "test", (byte)TableType.None);
                 pageNumber = section.PageNumber;
                 tx.Commit();
             }
@@ -123,7 +125,7 @@ namespace FastTests.Voron.RawData
             long pageNumber;
             using (var tx = Env.WriteTransaction())
             {
-                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, "test");
+                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, "test", (byte)TableType.None);
                 pageNumber = section.PageNumber;
                 tx.Commit();
             }
@@ -143,7 +145,7 @@ namespace FastTests.Voron.RawData
             Env.Options.ManualFlushing = true;
             using (var tx = Env.WriteTransaction())
             {
-                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, "test");
+                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, "test", (byte)TableType.None);
 
                 long id;
             
@@ -167,7 +169,7 @@ namespace FastTests.Voron.RawData
             long id;
             using (var tx = Env.WriteTransaction())
             {
-                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, "test");
+                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, "test", (byte)TableType.None);
                 pageNumber = section.PageNumber;
           
                 //var section = new RawDataSmallSection(tx.LowLevelTransaction, pageNumber);
@@ -191,7 +193,7 @@ namespace FastTests.Voron.RawData
             long pageNumber;
             using (var tx = Env.WriteTransaction())
             {
-                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, "test");
+                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, "test", (byte)TableType.None);
                 pageNumber = section.PageNumber;
                 tx.Commit();
             }
@@ -226,7 +228,7 @@ namespace FastTests.Voron.RawData
             long pageNumber;
             using (var tx = Env.WriteTransaction())
             {
-                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, "test");
+                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, "test", (byte)TableType.None);
                 pageNumber = section.PageNumber;
                 tx.Commit();
             }

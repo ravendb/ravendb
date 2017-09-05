@@ -1,10 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Includes;
+using Raven.Server.Documents.Revisions;
 using Sparrow.Json;
 using Sparrow.LowMemory;
 using Sparrow.Threading;
@@ -12,6 +15,7 @@ using Voron.Data;
 using Voron.Data.RawData;
 using Voron.Data.Tables;
 using Voron.Global;
+using Voron.Impl;
 using Voron.Impl.Paging;
 
 namespace Voron.Recovery
@@ -23,10 +27,9 @@ namespace Voron.Recovery
             _datafile = config.PathToDataFile;
             _output = config.OutputFileName;
             _pageSize = config.PageSizeInKb * Constants.Size.Kilobyte;
-            _numberOfFieldsInDocumentTable = config.NumberOfFieldsInDocumentTable;
             _initialContextSize = config.InitialContextSizeInMB * Constants.Size.Megabyte;
             _initialContextLongLivedSize = config.InitialContextLongLivedSizeInKB * Constants.Size.Kilobyte;
-            _option = StorageEnvironmentOptions.ForPath(config.DataFileDirectory);
+            _option = StorageEnvironmentOptions.ForPath(config.DataFileDirectory, null, Path.Combine(config.DataFileDirectory, "Journal"), null, null);
             _copyOnWrite = !config.DisableCopyOnWriteMode;
             // by default CopyOnWriteMode will be true
             _option.CopyOnWriteMode = _copyOnWrite;
@@ -73,13 +76,23 @@ namespace Voron.Recovery
             //making sure eof is page aligned
             var eof = mem + (fileSize / _pageSize) * _pageSize;
             DateTime lastProgressReport = DateTime.MinValue;
-            using (var destinationStream = File.OpenWrite(_output))
+
+            using (var destinationStreamDocuments = File.OpenWrite(Path.Combine(Path.GetDirectoryName(_output), Path.GetFileNameWithoutExtension(_output) + "-2-Documents" + Path.GetExtension(_output))))
+            using (var destinationStreamRevisions = File.OpenWrite(Path.Combine(Path.GetDirectoryName(_output), Path.GetFileNameWithoutExtension(_output) + "-3-Revisions" + Path.GetExtension(_output))))
+            using (var destinationStreamConflicts = File.OpenWrite(Path.Combine(Path.GetDirectoryName(_output), Path.GetFileNameWithoutExtension(_output) + "-4-Conflicts" + Path.GetExtension(_output))))
             using (var logFile = File.CreateText(Path.Combine(Path.GetDirectoryName(_output), LogFileName)))
-            using (var gZipStream = new GZipStream(destinationStream, CompressionMode.Compress, true))
+            using (var gZipStreamDocuments = new GZipStream(destinationStreamDocuments, CompressionMode.Compress, true))
+            using (var gZipStreamRevisions = new GZipStream(destinationStreamRevisions, CompressionMode.Compress, true))
+            using (var gZipStreamConflicts = new GZipStream(destinationStreamConflicts, CompressionMode.Compress, true))
             using (var context = new JsonOperationContext(_initialContextSize, _initialContextLongLivedSize, SharedMultipleUseFlag.None))
-            using (var writer = new BlittableJsonTextWriter(context, gZipStream))
+            using (var documentsWriter = new BlittableJsonTextWriter(context, gZipStreamDocuments))
+            using (var revisionsWriter = new BlittableJsonTextWriter(context, gZipStreamRevisions))
+            using (var conflictsWriter = new BlittableJsonTextWriter(context, gZipStreamConflicts))
             {
-                WriteSmugglerHeader(writer);
+                WriteSmugglerHeader(documentsWriter, 40018, "Docs");
+                WriteSmugglerHeader(revisionsWriter, 40018, "RevisionDocuments");
+                WriteSmugglerHeader(conflictsWriter, 40018, "ConflictDocuments");
+
                 while (mem < eof)
                 {
                     try
@@ -105,13 +118,16 @@ namespace Voron.Recovery
                             Console.WriteLine(
                                 $"{now:hh:MM:ss}: Recovering page at position {currPos:#,#;;0}/{eofPos:#,#;;0} ({(double)currPos / eofPos:p}) - Last recovered doc is {_lastRecoveredDocumentKey}");
                         }
+
                         var pageHeader = (PageHeader*)mem;
+                        
                         //this page is not raw data section move on
                         if ((pageHeader->Flags).HasFlag(PageFlags.RawData) == false)
                         {
                             mem += _pageSize;
                             continue;
                         }
+
                         if (pageHeader->Flags.HasFlag(PageFlags.Single) &&
                             pageHeader->Flags.HasFlag(PageFlags.Overflow))
                         {
@@ -121,10 +137,10 @@ namespace Voron.Recovery
                             continue;
                         }
                         //overflow page
+                        ulong checksum;
                         if (pageHeader->Flags.HasFlag(PageFlags.Overflow))
                         {
-
-                            var endOfOverflow = pageHeader + VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(pageHeader->OverflowSize) * _pageSize;
+                            var endOfOverflow = (byte*)pageHeader + VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(pageHeader->OverflowSize) * _pageSize;
                             // the endOfOeverFlow can be equal to eof if the last page is overflow
                             if (endOfOverflow > eof)
                             {
@@ -134,7 +150,7 @@ namespace Voron.Recovery
                                 mem = PrintErrorAndAdvanceMem(message, mem, logFile);
                                 continue;
                             }
-                            //Should we increase the check size to page size (0=>_pageSize)?
+
                             if (pageHeader->OverflowSize <= 0)
                             {
                                 var message =
@@ -143,20 +159,45 @@ namespace Voron.Recovery
                                 mem = PrintErrorAndAdvanceMem(message, mem, logFile);
                                 continue;
                             }
-                            if (WriteDocument((byte*)pageHeader + PageHeader.SizeOf, pageHeader->OverflowSize, writer, logFile, context, startOffset))
+                            // this can only be here if we know that the overflow size is valid
+                            checksum = StorageEnvironment.CalculatePageChecksum((byte*)pageHeader, pageHeader->PageNumber, pageHeader->Flags, pageHeader->OverflowSize);
+
+                            if (checksum != pageHeader->Checksum)
+                            {
+                                var message =
+                                    $"Invalid checksum for overflow page {pageHeader->PageNumber}, expected hash to be {pageHeader->Checksum} but was {checksum}";
+                                mem = PrintErrorAndAdvanceMem(message, mem, logFile);
+                                continue;
+                            }
+
+
+                            if (Write((byte*)pageHeader + PageHeader.SizeOf, pageHeader->OverflowSize, documentsWriter, revisionsWriter, 
+                                conflictsWriter, logFile, context, startOffset, ((RawDataOverflowPageHeader*)mem)->TableType))
                             {
                                 var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(pageHeader->OverflowSize);
                                 mem += numberOfPages * _pageSize;
                             }
-                            else
-                            //write document failed 
+                            else //write document failed 
                             {
                                 mem += _pageSize;
                             }
                             continue;
                         }
-                        // small raw data section
+                        
+                        checksum = StorageEnvironment.CalculatePageChecksum((byte*)pageHeader, pageHeader->PageNumber, pageHeader->Flags, 0);
+
+                        if (checksum != pageHeader->Checksum)
+                        {
+                            var message =
+                                $"Invalid checksum for page {pageHeader->PageNumber}, expected hash to be {pageHeader->Checksum} but was {checksum}";
+                            mem = PrintErrorAndAdvanceMem(message, mem, logFile);
+                            continue;
+                        }
+
+                        // small raw data section 
                         var rawHeader = (RawDataSmallPageHeader*)mem;
+
+                        // small raw data section header
                         if (rawHeader->RawDataFlags.HasFlag(RawDataPageFlags.Header))
                         {
                             mem += _pageSize;
@@ -172,7 +213,6 @@ namespace Voron.Recovery
 
                         for (var pos = PageHeader.SizeOf; pos < rawHeader->NextAllocation;)
                         {
-                            var debug = GetFilePosition(startOffset, mem);
                             var currMem = mem + pos;
                             var entry = (RawDataSection.RawDataEntrySizes*)currMem;
                             //this indicates that the current entry is invalid because it is outside the size of a page
@@ -207,9 +247,9 @@ namespace Voron.Recovery
                             pos += entry->AllocatedSize + sizeof(RawDataSection.RawDataEntrySizes);
                             if (entry->AllocatedSize == 0 || entry->UsedSize == -1)
                                 continue;
-                            if (
-                                WriteDocument(currMem + sizeof(RawDataSection.RawDataEntrySizes), entry->UsedSize,
-                                    writer, logFile, context, startOffset) == false)
+
+                            if (Write(currMem + sizeof(RawDataSection.RawDataEntrySizes), entry->UsedSize, documentsWriter, revisionsWriter, 
+                                conflictsWriter, logFile, context, startOffset, ((RawDataSmallPageHeader*)mem)->TableType) == false)
                                 break;
                         }
                         mem += _pageSize;
@@ -221,8 +261,13 @@ namespace Voron.Recovery
                         mem = PrintErrorAndAdvanceMem(message, mem, logFile);
                     }
                 }
-                writer.WriteEndArray();
-                writer.WriteEndObject();
+                documentsWriter.WriteEndArray();
+                conflictsWriter.WriteEndArray();
+                revisionsWriter.WriteEndArray();
+                documentsWriter.WriteEndObject();
+                conflictsWriter.WriteEndObject();
+                revisionsWriter.WriteEndObject();
+
                 logFile.WriteLine(
                     $"Discovered a total of {_numberOfDocumentsRetrieved:#,#;00} documents within {sw.Elapsed.TotalSeconds::#,#.#;;00} seconds.");
                 logFile.WriteLine($"Discovered a total of {_numberOfFaultedPages::#,#;00} faulted pages.");
@@ -232,14 +277,32 @@ namespace Voron.Recovery
             return RecoveryStatus.Success;
         }
 
-        private void WriteSmugglerHeader(BlittableJsonTextWriter writer)
+        private void WriteSmugglerHeader(BlittableJsonTextWriter writer, int version,string docType)
         {
             writer.WriteStartObject();
             writer.WritePropertyName(("BuildVersion"));
-            writer.WriteInteger(40000);
+            writer.WriteInteger(version);
             writer.WriteComma();
-            writer.WritePropertyName(("Docs"));
+            writer.WritePropertyName(docType);
             writer.WriteStartArray();
+        }
+
+        private bool Write(byte* mem, int sizeInBytes, BlittableJsonTextWriter documentsWriter, BlittableJsonTextWriter revisionsWriter, 
+            BlittableJsonTextWriter conflictsWritet, StreamWriter logWriter, JsonOperationContext context, long startOffest, byte tableType)
+        {
+            switch ((TableType)tableType)
+            {
+                case TableType.None:
+                    return false;
+                case TableType.Documents:
+                    return WriteDocument(mem, sizeInBytes, documentsWriter, logWriter, context, startOffest);
+                case TableType.Revisions:
+                    return WriteRevision(mem, sizeInBytes, revisionsWriter, logWriter, context, startOffest);
+                case TableType.Conflicts:
+                    return WriteConflict(mem, sizeInBytes, conflictsWritet, logWriter, context, startOffest);
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(tableType), tableType, null);
+            }
         }
 
         private bool WriteDocument(byte* mem, int sizeInBytes, BlittableJsonTextWriter writer, StreamWriter logWriter, JsonOperationContext context, long startOffest)
@@ -247,30 +310,19 @@ namespace Voron.Recovery
             try
             {
                 var tvr = new TableValueReader(mem, sizeInBytes);
-                if (tvr.Count != _numberOfFieldsInDocumentTable)
-                {
-                    var message =
-                        $"Failed to read document at position {GetFilePosition(startOffest, mem)} because the TableValueReader number of entries" +
-                        $" doesn't match {nameof(VoronRecoveryConfiguration.NumberOfFieldsInDocumentTable)} expected={_numberOfFieldsInDocumentTable} actual={tvr.Count}";
-                    //we actually not advancing the memory here because we might write a small data section entry
-                    //here i don't issue an error because we do have rawdatasections that are used for other things than documents so i'll assume 
-                    //this is the case, anyway i'll log this in the log file incase it is a problem.
-                    logWriter.WriteLine(message);
-                    return false;
-                }
 
-                if (_firstDoc == false)
+                if (_documentWritten)
                     writer.WriteComma();
 
-                _firstDoc = false;
+                _documentWritten = false;
+
                 Document document = null;
                 try
                 {
-                    document = DocumentsStorage.ParseDocument(context, ref tvr);
+                    document = DocumentsStorage.ParseRawDataSectionDocumentWithValidation(context, ref tvr, sizeInBytes);
                     if (document == null)
                     {
-                        logWriter.WriteLine(
-                            $"Failed to convert table value to document at position {GetFilePosition(startOffest, mem)}");
+                        logWriter.WriteLine($"Failed to convert table value to document at position {GetFilePosition(startOffest, mem)}");
                         return false;
                     }
                     document.EnsureMetadata();
@@ -282,15 +334,107 @@ namespace Voron.Recovery
                         $"Found invalid blittable document at pos={GetFilePosition(startOffest, mem)} with key={document?.Id ?? "null"}{Environment.NewLine}{e}");
                     return false;
                 }
+
                 context.Write(writer, document.Data);
+
+                _documentWritten = true;
                 _numberOfDocumentsRetrieved++;
-                logWriter.WriteLine($"Found Document with key={document.Id}");
+                logWriter.WriteLine($"Found document with key={document.Id}");
                 _lastRecoveredDocumentKey = document.Id;
                 return true;
             }
             catch (Exception e)
             {
                 logWriter.WriteLine($"Unexpected exception while writing document at position {GetFilePosition(startOffest, mem)}: {e}");
+                return false;
+            }
+        }
+
+        private bool WriteRevision(byte* mem, int sizeInBytes, BlittableJsonTextWriter writer, StreamWriter logWriter, JsonOperationContext context, long startOffest)
+        {
+            try
+            {
+                var tvr = new TableValueReader(mem, sizeInBytes);
+
+                if (_revisionWritten)
+                    writer.WriteComma();
+
+                _revisionWritten = false;
+
+                Document revision = null;
+                try
+                {
+                    revision = RevisionsStorage.ParseRawDataSectionRevisionWithValidation(context, ref tvr, sizeInBytes);
+                    if (revision == null)
+                    {
+                        logWriter.WriteLine($"Failed to convert table value to revision document at position {GetFilePosition(startOffest, mem)}");
+                        return false;
+                    }
+                    revision.EnsureMetadata();
+                    revision.Data.BlittableValidation();
+                }
+                catch (Exception e)
+                {
+                    logWriter.WriteLine(
+                        $"Found invalid blittable revision document at pos={GetFilePosition(startOffest, mem)} with key={revision?.Id ?? "null"}{Environment.NewLine}{e}");
+                    return false;
+                }
+
+                context.Write(writer, revision.Data);
+
+                _revisionWritten = true;
+                _numberOfDocumentsRetrieved++;
+                logWriter.WriteLine($"Found revision document with key={revision.Id}");
+                _lastRecoveredDocumentKey = revision.Id;
+                return true;
+            }
+            catch (Exception e)
+            {
+                logWriter.WriteLine($"Unexpected exception while writing revision document at position {GetFilePosition(startOffest, mem)}: {e}");
+                return false;
+            }
+        }
+
+        private bool WriteConflict(byte* mem, int sizeInBytes, BlittableJsonTextWriter writer, StreamWriter logWriter, JsonOperationContext context, long startOffest)
+        {
+            try
+            {
+                var tvr = new TableValueReader(mem, sizeInBytes);
+
+                if (_conflictWritten)
+                    writer.WriteComma();
+
+                _conflictWritten = false;
+
+                DocumentConflict conflict = null;
+                try
+                {
+                    conflict = ConflictsStorage.ParseRawDataSectionConflictWithValidation(context, ref tvr, sizeInBytes);
+                    if (conflict == null)
+                    {
+                        logWriter.WriteLine($"Failed to convert table value to conflict document at position {GetFilePosition(startOffest, mem)}");
+                        return false;
+                    }
+                    conflict.Doc.BlittableValidation();
+                }
+                catch (Exception e)
+                {
+                    logWriter.WriteLine(
+                        $"Found invalid blittable conflict document at pos={GetFilePosition(startOffest, mem)} with key={conflict?.Id ?? "null"}{Environment.NewLine}{e}");
+                    return false;
+                }
+
+                context.Write(writer, conflict.Doc);
+
+                _conflictWritten = true;
+                _numberOfDocumentsRetrieved++;
+                logWriter.WriteLine($"Found conflict document with key={conflict.Id}");
+                _lastRecoveredDocumentKey = conflict.Id;
+                return true;
+            }
+            catch (Exception e)
+            {
+                logWriter.WriteLine($"Unexpected exception while writing conflict document at position {GetFilePosition(startOffest, mem)}: {e}");
                 return false;
             }
         }
@@ -309,17 +453,18 @@ namespace Voron.Recovery
         private const string LogFileName = "recovery.log";
         private long _numberOfFaultedPages;
         private long _numberOfDocumentsRetrieved;
-        private readonly int _numberOfFieldsInDocumentTable;
         private readonly int _initialContextSize;
         private readonly int _initialContextLongLivedSize;
-        private bool _firstDoc = true;
+        private bool _documentWritten;
+        private bool _revisionWritten;
+        private bool _conflictWritten;
         private StorageEnvironmentOptions _option;
         private readonly int _progressIntervalInSec;
         private bool _cancellationRequested;
         private string _lastRecoveredDocumentKey = "No documents recovered yet";
         private readonly string _datafile;
         private readonly bool _copyOnWrite;
-
+        
         public enum RecoveryStatus
         {
             Success,

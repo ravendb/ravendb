@@ -11,6 +11,9 @@ class rqlTestUtils {
             throw new Error("Unable to find | in input query");
         }
         const rowWithCursor = lines[lineWithCursor].indexOf("|");
+        if (rowWithCursor < 0) {
+            throw "RQL test must include the position"
+        }
 
         const element = $("<div></div>").html(queryWoPosition)[0];
         const aceEditor: AceAjax.Editor = ace.edit(element);
@@ -74,7 +77,20 @@ class rqlTestUtils {
                     //TODO: "Collection With ' And \" in name"
                 ]);
             },
-            indexFields: (indexName, callback) => callback([]),
+            indexFields: (indexName, callback) => {
+                switch (indexName){
+                    case "Orders/Totals":
+                        callback([
+                            "Employee",
+                            "Company",
+                            "Total"
+                        ]);
+                        break;
+                    default:
+                        callback([]);
+                        break;
+                }
+            },
             collectionFields: (collectionName, prefix, callback) => {
                 switch (collectionName){
                     case "Orders":

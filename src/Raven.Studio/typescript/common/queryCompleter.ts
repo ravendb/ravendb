@@ -17,6 +17,7 @@ interface autoCompleteLastKeyword {
     readonly getFieldPrefix: string,
     identifiers: string[],
     text: string,
+    spaceCount: number,
     parentheses: number
 }
 
@@ -52,6 +53,10 @@ class queryCompleter {
                         keyword = token.value.toLowerCase();
                         break;
                     }
+                    case "keyword.clause.clauseAppend": {
+                        keyword += " " + token.value.toLowerCase();
+                        break;
+                    }
                     case "string": {
                         const indexName = token.value.substr(1, token.value.length - 2);
                         if (keyword === "from") {
@@ -60,7 +65,7 @@ class queryCompleter {
                                 name: indexName
                             }
                         }
-                        if (keyword === "index") {
+                        if (keyword === "from index") {
                             return {
                                 type: "index",
                                 name: indexName
@@ -76,7 +81,7 @@ class queryCompleter {
                                 name: indexName
                             }
                         }
-                        if (keyword === "index") {
+                        if (keyword === "from index") {
                             return {
                                 type: "index",
                                 name: indexName
@@ -164,6 +169,7 @@ class queryCompleter {
             },
             identifiers: [],
             text: undefined,
+            spaceCount: 0,
             parentheses: 0
         };
             
@@ -253,13 +259,18 @@ class queryCompleter {
                     }
                     
                     if (result.identifiers.length > 0 && result.text !== ",") {
-                        if (token.value.trim() === ",") {
+                        if (text === ",") {
                             result.text = ",";
                         }
                         else {
                             result.text = token.value;
                         }
                     }
+                    
+                    if (!text) {
+                        result.spaceCount++;
+                    }
+                    
                     break;
             }
         } while (iterator.stepBackward());
@@ -296,7 +307,7 @@ class queryCompleter {
         
         switch (lastKeyword.keyword) {
             case "from": {
-                if (lastKeyword.identifiers.length > 0 && lastKeyword.text) {
+                if (lastKeyword.identifiers.length > 0 && lastKeyword.spaceCount >= 2) {
                     if (lastKeyword.parentheses > 0) {
                         // from (Collection, {show fields here})
                         this.completeFields(session, lastKeyword.getFieldPrefix, callback);
@@ -311,7 +322,7 @@ class queryCompleter {
                 break;
             }
             case "from index": {
-                if (lastKeyword.identifiers.length > 0 && lastKeyword.text) { // index name already specified
+                if (lastKeyword.identifiers.length > 0 && lastKeyword.spaceCount >= 3) { // index name already specified
                     this.completeFromAfter(callback, true, lastKeyword);
                     return;
                 }
@@ -454,8 +465,7 @@ class queryCompleter {
             case "order":
                 this.completeWords(callback, [{value: "by", score: 0, meta: "keyword"}]);
                 break;
-            default: 
-                debugger;
+            default:
                 break;
         }
     }
@@ -516,7 +526,6 @@ class queryCompleter {
         }
 
         const keywords = [
-            {value: "(", score: 8, meta: "collection filter"}, // TODO RavenDB-8357: Add snippet here '(${1:collection_filter}) '
             {value: "where", score: 6, meta: "keyword"},
             {value: "load", score: 4, meta: "keyword"},
             {value: "order", score: 2, meta: "keyword"},

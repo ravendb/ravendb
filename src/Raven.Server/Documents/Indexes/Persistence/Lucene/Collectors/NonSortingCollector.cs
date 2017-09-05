@@ -11,7 +11,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors
         private readonly int _numberOfDocsToCollect;
         private readonly List<ScoreDoc> _docs;
         private int _totalHits;
+        private int _docBase;
 
+        private Scorer _scorer;
+        private float _maxScore;
 
         public NonSortingCollector(int numberOfDocsToCollect)
         {
@@ -19,17 +22,20 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors
             _docs = new List<ScoreDoc>(_numberOfDocsToCollect);
         }
 
-        private int _docBase;
-
         public override void SetScorer(Scorer scorer)
         {
+            _scorer = scorer;
         }
 
         public override void Collect(int doc, IState state)
         {
             if (_docs.Count < _numberOfDocsToCollect)
             {
-                _docs.Add(new ScoreDoc(doc + _docBase, 0));
+                var score = _scorer?.Score(state) ?? 0;
+                if (score > _maxScore)
+                    _maxScore = score;
+
+                _docs.Add(new ScoreDoc(doc + _docBase, score));
             }
 
             _totalHits++;
@@ -44,7 +50,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors
 
         public TopDocs ToTopDocs()
         {
-            return new TopDocs(_totalHits, _docs.ToArray(), 0);
+            return new TopDocs(_totalHits, _docs.ToArray(), _maxScore);
         }
     }
 }
