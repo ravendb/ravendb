@@ -309,7 +309,7 @@ namespace Raven.Server.Web.System
                                 break;
                             }
 
-                            tag = dbTopology.WhoseTaskIsIt(watcher, ServerStore.IsPassive());
+                            tag = dbTopology?.WhoseTaskIsIt(watcher, ServerStore.IsPassive());
 
                             var replicationTaskInfo = new OngoingTaskReplication
                             {
@@ -331,28 +331,33 @@ namespace Raven.Server.Web.System
 
                         case OngoingTaskType.Backup:
 
-                            var backup = record?.PeriodicBackups?.Find(x => x.TaskId == key);
-                            if (backup == null)
+                            var backupConfiguration = record?.PeriodicBackups?.Find(x => x.TaskId == key);
+                            if (backupConfiguration == null)
                             {
                                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                                 break;
                             }
 
-                            tag = dbTopology?.WhoseTaskIsIt(backup, ServerStore.IsPassive());
-                            var backupDestinations = GetBackupDestinations(backup);
+                            tag = dbTopology?.WhoseTaskIsIt(backupConfiguration, ServerStore.IsPassive());
+                            var backupDestinations = GetBackupDestinations(backupConfiguration);
+                            var backupStatus = Database.PeriodicBackupRunner.GetBackupStatus(key);
+                            var nextBackup = Database.PeriodicBackupRunner.GetNextBackupDetails(record, backupConfiguration, backupStatus);
 
                             var backupTaskInfo = new OngoingTaskBackup
                             {
-                                TaskId = backup.TaskId,
-                                BackupType = backup.BackupType,
-                                TaskName = backup.Name,
-                                TaskState = backup.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
+                                TaskId = backupConfiguration.TaskId,
+                                BackupType = backupConfiguration.BackupType,
+                                TaskName = backupConfiguration.Name,
+                                TaskState = backupConfiguration.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
                                 ResponsibleNode = new NodeId
                                 {
                                     NodeTag = tag,
                                     NodeUrl = clusterTopology.GetUrlFromTag(tag)
                                 },
-                                BackupDestinations = backupDestinations
+                                BackupDestinations = backupDestinations,
+                                LastFullBackup = backupStatus.LastFullBackup,
+                                LastIncrementalBackup = backupStatus.LastIncrementalBackup,
+                                NextBackup = nextBackup
                             };
 
                             WriteResult(context, backupTaskInfo);
