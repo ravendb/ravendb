@@ -168,7 +168,7 @@ namespace Raven.Server.Documents.Queries
                     _innerCount++;
 
                     var doc = _fieldsToFetch.IsProjection
-                        ? _resultsRetriever.GetProjectionFromDocument(_inner.Current, null, _inner.Current.Id, null, 0f, _fieldsToFetch, _context, null)
+                        ? _resultsRetriever.GetProjectionFromDocument(_inner.Current, null, 0f, _fieldsToFetch, _context, null)
                         : _inner.Current;
 
                     if (_query.SkipDuplicateChecking || _fieldsToFetch.IsDistinct == false)
@@ -240,7 +240,7 @@ namespace Raven.Server.Documents.Queries
                         count++;
 
                         var doc = _fieldsToFetch.IsProjection
-                            ? _resultsRetriever.GetProjectionFromDocument(document, null, document.Id, null, 0f, _fieldsToFetch, _context, null)
+                            ? _resultsRetriever.GetProjectionFromDocument(document, null, 0f, _fieldsToFetch, _context, null)
                             : _inner.Current;
 
                         if (doc.Data.Count <= 0)

@@ -1,6 +1,7 @@
 ﻿using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Extensions;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
@@ -33,7 +34,8 @@ select upper(c) as CompanyName, o.Employee",
                     });
 
                     var json = (BlittableJsonReaderObject)qr.Results[0];
-                    Assert.True(json.TryGet(Constants.Documents.Metadata.Id, out string id));
+                    var metadata = json.GetMetadata();
+                    Assert.True(metadata.TryGet(Constants.Documents.Metadata.Id, out string id));
                     Assert.False(string.IsNullOrEmpty(id));
 
                     qr = commands.Query(new IndexQuery
@@ -52,7 +54,8 @@ select {
                     });
 
                     json = (BlittableJsonReaderObject)qr.Results[0];
-                    Assert.True(json.TryGet(Constants.Documents.Metadata.Id, out id));
+                    metadata = json.GetMetadata();
+                    Assert.True(metadata.TryGet(Constants.Documents.Metadata.Id, out id));
                     Assert.False(string.IsNullOrEmpty(id));
                 }
             }

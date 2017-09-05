@@ -8,7 +8,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Json;
 using System.IO;
-using System.Runtime.CompilerServices;
 using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Server.Documents.Includes;
@@ -54,24 +53,22 @@ namespace Raven.Server.Documents.Queries.Results
 
         protected abstract Document LoadDocument(string id);
 
-        protected Document GetProjection(Lucene.Net.Documents.Document input, float score, string id, IState state)
+        protected Document GetProjection(Lucene.Net.Documents.Document input, float score, string lowerId, IState state)
         {
             Document doc = null;
             if (FieldsToFetch.AnyExtractableFromIndex == false)
             {
-                doc = DirectGet(input, id, state);
+                doc = DirectGet(input, lowerId, state);
 
                 if (doc == null)
                     return null;
 
-                return GetProjectionFromDocument(doc, input, null, id, score, FieldsToFetch, _context, state);
+                return GetProjectionFromDocument(doc, input, score, FieldsToFetch, _context, state);
             }
 
             var documentLoaded = false;
 
             var result = new DynamicJsonValue();
-
-            AddIdIfNeeded(FieldsToFetch, null, id, result);
 
             Dictionary<string, FieldsToFetch.FieldToFetch> fields = null;
             if (FieldsToFetch.ExtractAllFromIndex)
@@ -108,7 +105,7 @@ namespace Raven.Server.Documents.Queries.Results
 
                 if (documentLoaded == false)
                 {
-                    doc = DirectGet(input, id, state);
+                    doc = DirectGet(input, lowerId, state);
 
                     documentLoaded = true;
                 }
@@ -137,14 +134,14 @@ namespace Raven.Server.Documents.Queries.Results
             {
                 doc = new Document
                 {
-                    Id = _context.GetLazyString(id)
+                    Id = _context.GetLazyString(lowerId)
                 };
             }
 
             return ReturnProjection(result, doc, score, _context);
         }
 
-        public Document GetProjectionFromDocument(Document doc, Lucene.Net.Documents.Document luceneDoc, LazyStringValue lazyId, string id, float score, FieldsToFetch fieldsToFetch, JsonOperationContext context, IState state)
+        public Document GetProjectionFromDocument(Document doc, Lucene.Net.Documents.Document luceneDoc, float score, FieldsToFetch fieldsToFetch, JsonOperationContext context, IState state)
         {
             var result = new DynamicJsonValue();
 
@@ -169,21 +166,7 @@ namespace Raven.Server.Documents.Queries.Results
                 }
             }
 
-            AddIdIfNeeded(fieldsToFetch, lazyId, id, result);
-
             return ReturnProjection(result, doc, score, context);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void AddIdIfNeeded(FieldsToFetch fieldsToFetch, LazyStringValue lazyId, string id, DynamicJsonValue result)
-        {
-            if (fieldsToFetch.IsDistinct)
-                return;
-
-            if (lazyId != null)
-                result[Constants.Documents.Metadata.Id] = lazyId;
-            else if (string.IsNullOrEmpty(id) == false)
-                result[Constants.Documents.Metadata.Id] = id;
         }
 
         private static void ThrowInvalidQueryBodyResponse(object fieldVal)
@@ -309,7 +292,6 @@ namespace Raven.Server.Documents.Queries.Results
                 args[args.Length - 1] = _query.QueryParameters;
 
                 value = InvokeFunction(
-                    document.Id,
                     fieldToFetch.QueryField.Name,
                     _query.Metadata.Query,
                     args);
@@ -455,9 +437,8 @@ namespace Raven.Server.Documents.Queries.Results
             }
         }
 
-        private object InvokeFunction(LazyStringValue id, string methodName, Query query, object[] args)
+        private object InvokeFunction(string methodName, Query query, object[] args)
         {
-            var modifier = new QueryResultModifier(id);
             var key = new QueryKey(query.DeclaredFunctions);
             using (_database.Scripts.GetScriptRunner(key, readOnly: true, patchRun: out var run))
             using (var result = run.Run(_context as DocumentsOperationContext, methodName, args))
@@ -467,10 +448,9 @@ namespace Raven.Server.Documents.Queries.Results
                 if (result.IsNull)
                     return null;
 
-                return run.Translate(result, _context, modifier);
+                return run.Translate(result, _context);
             }
         }
-
 
         private bool TryGetFieldValueFromDocument(Document document, FieldsToFetch.FieldToFetch field, out object value)
         {
@@ -516,25 +496,6 @@ namespace Raven.Server.Documents.Queries.Results
             public int GetHashCode(IFieldable obj)
             {
                 return obj.Name.GetHashCode();
-            }
-        }
-
-        private class QueryResultModifier : JsBlittableBridge.IResultModifier
-        {
-            private readonly LazyStringValue _id;
-
-            public QueryResultModifier(LazyStringValue id)
-            {
-                _id = id;
-            }
-
-            public void Modify(ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> writer)
-            {
-                if (_id == null)
-                    return;
-
-                writer.WritePropertyName(Constants.Documents.Metadata.Id);
-                writer.WriteValue(_id);
             }
         }
     }
