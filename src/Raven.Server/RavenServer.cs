@@ -90,6 +90,7 @@ namespace Raven.Server
         public void Initialize()
         {
             var sp = Stopwatch.StartNew();
+            var clusterCert = InitializeClusterCertificate(out var httpsCert);
             try
             {
                 ServerStore.Initialize();
@@ -110,20 +111,6 @@ namespace Raven.Server
 
             try
             {
-                var clusterCert = LoadCertificate(
-                    Configuration.Security.ClusterCertificateExec,
-                    Configuration.Security.ClusterCertificateExecArguments,
-                    Configuration.Security.ClusterCertificatePath,
-                    Configuration.Security.ClusterCertificatePassword);
-
-                var httpsCert = LoadCertificate(
-                    Configuration.Security.CertificateExec,
-                    Configuration.Security.CertificateExecArguments,
-                    Configuration.Security.CertificatePath,
-                    Configuration.Security.CertificatePassword);
-
-                ClusterCertificateHolder = clusterCert ?? httpsCert ?? new CertificateHolder();
-
                 void ConfigureKestrel(KestrelServerOptions options)
                 {
                     options.Limits.MaxRequestBodySize = null;       // no limit!
@@ -219,6 +206,24 @@ namespace Raven.Server
                     Logger.Operations("Could not start server", e);
                 throw;
             }
+        }
+
+        private CertificateHolder InitializeClusterCertificate(out CertificateHolder httpsCert)
+        {
+            var clusterCert = LoadCertificate(
+                Configuration.Security.ClusterCertificateExec,
+                Configuration.Security.ClusterCertificateExecArguments,
+                Configuration.Security.ClusterCertificatePath,
+                Configuration.Security.ClusterCertificatePassword);
+
+            httpsCert = LoadCertificate(
+                Configuration.Security.CertificateExec,
+                Configuration.Security.CertificateExecArguments,
+                Configuration.Security.CertificatePath,
+                Configuration.Security.CertificatePassword);
+
+            ClusterCertificateHolder = clusterCert ?? httpsCert ?? new CertificateHolder();
+            return clusterCert;
         }
 
         private string GetWebUrl(string kestrelUrl)
