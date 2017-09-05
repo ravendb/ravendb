@@ -24,5 +24,10 @@ namespace Raven.Server.Config.Categories
         [SizeUnit(SizeUnit.Kilobytes)]
         [ConfigurationEntry("Http.MaxRequestBufferSizeInKb")]
         public Size? MaxRequestBufferSize { get; set; }
+
+        [Description("Whether Raven's HTTP server should GZip encode its responses")]
+        [DefaultValue(true)]
+        [ConfigurationEntry("Http.AllowResponseCompression")]
+        public bool AllowResponseCompression { get; set; }
     }
 }
