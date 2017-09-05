@@ -19,7 +19,8 @@ namespace Raven.Server.Documents.Queries.Parser
         public List<ValueToken> Values; // in 
         public List<object> Arguments; // method
 
-        [ThreadStatic] private static StringBuilder _tempBuffer;
+        [ThreadStatic]
+        private static StringBuilder _tempBuffer;
 
         internal static string Extract(string q, ValueToken val, bool stripQuotes = false)
         {
@@ -111,37 +112,8 @@ namespace Raven.Server.Documents.Queries.Parser
                 case OperatorType.GreaterThan:
                 case OperatorType.LessThanEqual:
                 case OperatorType.GreaterThanEqual:
-                    if (alias != null)
-                    {
-                        writer.Write(alias);
-                        writer.Write(".");
-                    }
-                    writer.Write(Extract(query, Field.TokenStart, Field.TokenLength, Field.EscapeChars));
-                    switch (Type)
-                    {
-                        case OperatorType.Equal:
-                            writer.Write(" == ");
-                            break;
-                        case OperatorType.NotEqual:
-                            writer.Write(" != ");
-                            break;
-                        case OperatorType.LessThan:
-                            writer.Write(" < ");
-                            break;
-                        case OperatorType.GreaterThan:
-                            writer.Write(" > ");
-                            break;
-                        case OperatorType.LessThanEqual:
-                            writer.Write(" <= ");
-                            break;
-                        case OperatorType.GreaterThanEqual:
-                            writer.Write(" >= ");
-                            break;
-                        default:
-                            ThrowInvalidType(Type);
-                            break;
-                    }
-                    writer.Write(Extract(query, Value));
+                    var fieldName = Extract(query, Field.TokenStart, Field.TokenLength, Field.EscapeChars);
+                    WriteEqual(query, writer, fieldName, alias, Type, Value, isNestedObjectField: false);
                     break;
                 case OperatorType.Between:
                     throw new InvalidOperationException("Cannot translate between operation to JavaScript");
@@ -153,7 +125,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 case OperatorType.Or:
                 case OperatorType.OrNot:
                     writer.Write("(");
-                    Left.ToString(query, writer);
+                    Left.ToJavaScript(query, alias, writer);
                     switch (Type)
                     {
                         case OperatorType.And:
@@ -163,13 +135,13 @@ namespace Raven.Server.Documents.Queries.Parser
                             writer.Write(" && !(");
                             break;
                         case OperatorType.Or:
-                            writer.Write(" OR ");
+                            writer.Write(" || ");
                             break;
                         case OperatorType.OrNot:
                             writer.Write(" || !(");
                             break;
                     }
-                    Right.ToString(query, writer);
+                    Right.ToJavaScript(query, alias, writer);
                     if (Type == OperatorType.OrNot || Type == OperatorType.AndNot)
                     {
                         writer.Write(")");
@@ -177,7 +149,16 @@ namespace Raven.Server.Documents.Queries.Parser
                     writer.Write(")");
                     break;
                 case OperatorType.Method:
-                    writer.Write(Extract(query, Field.TokenStart, Field.TokenLength, Field.EscapeChars));
+                    var method = Extract(query, Field.TokenStart, Field.TokenLength, Field.EscapeChars);
+                    var methodType = QueryMethod.GetMethodType(method);
+                    if (methodType == MethodType.Id)
+                    {
+                        var qe = (QueryExpression)Arguments[0];
+                        WriteEqual(query, writer, $"id({alias})", null, qe.Type, qe.Value, isNestedObjectField: true);
+                        break;
+                    }
+
+                    writer.Write(method);
                     writer.Write("(");
 
                     for (int i = 0; i < Arguments.Count; i++)
@@ -187,7 +168,7 @@ namespace Raven.Server.Documents.Queries.Parser
                             writer.Write(", ");
                         if (arg is QueryExpression qe)
                         {
-                            qe.ToString(query, writer);
+                            qe.ToJavaScript(query, alias, writer);
                         }
                         else if (arg is FieldToken field)
                         {
@@ -204,6 +185,43 @@ namespace Raven.Server.Documents.Queries.Parser
                 default:
                     throw new ArgumentOutOfRangeException();
             }
+        }
+
+        private static void WriteEqual(string query, TextWriter writer, string fieldName, string alias, OperatorType type, ValueToken value, bool isNestedObjectField)
+        {
+            if (alias != null)
+            {
+                writer.Write(alias);
+
+                if (isNestedObjectField == false)
+                    writer.Write(".");
+            }
+            writer.Write(fieldName);
+            switch (type)
+            {
+                case OperatorType.Equal:
+                    writer.Write(" == ");
+                    break;
+                case OperatorType.NotEqual:
+                    writer.Write(" != ");
+                    break;
+                case OperatorType.LessThan:
+                    writer.Write(" < ");
+                    break;
+                case OperatorType.GreaterThan:
+                    writer.Write(" > ");
+                    break;
+                case OperatorType.LessThanEqual:
+                    writer.Write(" <= ");
+                    break;
+                case OperatorType.GreaterThanEqual:
+                    writer.Write(" >= ");
+                    break;
+                default:
+                    ThrowInvalidType(type);
+                    break;
+            }
+            writer.Write(Extract(query, value));
         }
 
         public void ToString(string query, TextWriter writer)
