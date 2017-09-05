@@ -44,7 +44,8 @@ namespace Raven.Server.ServerWide
                     Method = route.Method,
                     Url = route.Path,
                     MatchLength = route.Path.Length
-                }
+                },
+                AllowResponseCompression = false
             };
 
             if (parameters != null && parameters.Count > 0)

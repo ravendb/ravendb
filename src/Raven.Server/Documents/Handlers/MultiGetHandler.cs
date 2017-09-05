@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Handlers
                     var headersProperty = context.GetLazyStringForFieldWithCaching(nameof(GetResponse.Headers));
 
                     var features = new FeatureCollection(HttpContext.Features);
-                    var responseStream = new MultiGetHttpResponseStream(HttpContext.Response.Body);
+                    var responseStream = new MultiGetHttpResponseStream(ResponseBodyStream());
                     features.Set<IHttpResponseFeature>(new MultiGetHttpResponseFeature(responseStream));
                     var httpContext = new DefaultHttpContext(features);
 
