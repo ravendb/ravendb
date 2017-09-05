@@ -1261,13 +1261,14 @@ namespace Raven.Server.ServerWide
         private static void ThrowInvalidEngineState(CommandBase cmd)
         {
             throw new NotSupportedException("Cannot send command " + cmd.GetType().FullName + " to the cluster because this node is passive." + Environment.NewLine +
-                                            "Passive nodes aren't members of a cluster and require admin action (such as creating a db) to indicate that this node should create its own cluster");
+                                            "Passive nodes aren't members of a cluster and require admin action (such as creating a db) " +
+                                            "to indicate that this node should create its own cluster");
         }
 
         private void ThrowTimeoutException(CommandBase cmd, Exception requestException)
         {
-            throw new TimeoutException($"Could not send command {cmd.GetType().FullName} from {NodeTag} to leader because there is no leader, and we timed out waiting for one after {Engine.OperationTimeout}",
-                requestException);
+            throw new TimeoutException($"Could not send command {cmd.GetType().FullName} from {NodeTag} to leader because there is no leader, " +
+                                       $"and we timed out waiting for one after {Engine.OperationTimeout}", requestException);
         }
 
         private async Task<(long Index, object Result)> SendToNodeAsync(string engineLeaderTag, CommandBase cmd, Reference<bool> reachedLeader)
