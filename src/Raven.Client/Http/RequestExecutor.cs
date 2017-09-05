@@ -538,7 +538,8 @@ namespace Raven.Client.Http
                     request.Headers.TryAddWithoutValidation("If-None-Match", $"\"{cachedChangeVector}\"");
                 }
 
-                VerifySingleAsyncCommandInSession(command.GetType().Name, sessionInfo);
+                if (sessionInfo?.AsyncCommandRunning ?? false)
+                    ThrowInvalidConcurrentSessionUsage(command.GetType().Name, sessionInfo);
 
                 if (_disableClientConfigurationUpdates == false)
                     request.Headers.TryAddWithoutValidation(Constants.Headers.ClientConfigurationEtag, $"\"{ClientConfigurationEtag}\"");
@@ -590,7 +591,10 @@ namespace Raven.Client.Http
                                         sessionInfo.AsyncCommandRunning = false;
                                     }
 
-                                    await HandleServerDownAndThrowIfNeeded(url, chosenNode, nodeIndex, context, command, request, response, e, sessionInfo, timeoutException).ConfigureAwait(false);
+                                    if (await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, e, sessionInfo).ConfigureAwait(false) == false)
+                                    {
+                                        ThrowFailedToContactAllNodes(command, request, e, timeoutException);
+                                    }
 
                                     return;
                                 }
@@ -620,7 +624,10 @@ namespace Raven.Client.Http
                         sessionInfo.AsyncCommandRunning = false;
                     }
 
-                    await HandleServerDownAndThrowIfNeeded(url, chosenNode, nodeIndex, context, command, request, response, e, sessionInfo).ConfigureAwait(false);
+                    if (await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, e, sessionInfo).ConfigureAwait(false) == false)
+                    {
+                        ThrowFailedToContactAllNodes(command, request, e, null);
+                    }
 
                     return;
                 }
@@ -706,20 +713,16 @@ namespace Raven.Client.Http
             }
         }
 
-        private async Task HandleServerDownAndThrowIfNeeded<TResult>(string url, ServerNode chosenNode, int? nodeIndex, JsonOperationContext context, RavenCommand<TResult> command, HttpRequestMessage request, HttpResponseMessage response, Exception e, SessionInfo sessionInfo, Exception timeoutException = null)
+        private void ThrowFailedToContactAllNodes<TResult>(RavenCommand<TResult> command, HttpRequestMessage request, Exception e, Exception timeoutException)
         {
-            if (await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, e, sessionInfo).ConfigureAwait(false) == false)
-            {
-                throw new AllTopologyNodesDownException(
-                    $"Tried to send '{command.GetType().Name}' request via `{request.Method} {request.RequestUri.PathAndQuery}` to all configured nodes in the topology, all of them seem to be down or not responding. I've tried to access the following nodes: " +
-                    string.Join(",", _nodeSelector?.Topology.Nodes.Select(x => x.Url) ?? new string[0]), _nodeSelector?.Topology, timeoutException ?? e);
-            }
+            throw new AllTopologyNodesDownException(
+                $"Tried to send '{command.GetType().Name}' request via `{request.Method} {request.RequestUri.PathAndQuery}` to all configured nodes in the topology, all of them seem to be down or not responding. I've tried to access the following nodes: " +
+                string.Join(",", _nodeSelector?.Topology.Nodes.Select(x => x.Url) ?? new string[0]), _nodeSelector?.Topology, timeoutException ?? e);
         }
 
-        private static void VerifySingleAsyncCommandInSession(string command, SessionInfo sessionInfo)
+        private static void ThrowInvalidConcurrentSessionUsage(string command, SessionInfo sessionInfo)
         {
-            if (sessionInfo?.AsyncCommandRunning ?? false)
-                throw new InvalidOperationException($"Cannot execute async command {command} while another async command is running in the same session {sessionInfo.SessionId}");
+            throw new InvalidOperationException($"Cannot execute async command {command} while another async command is running in the same session {sessionInfo.SessionId}");
         }
 
         public bool InSpeedTestPhase => _nodeSelector?.InSpeedTestPhase ?? false;
