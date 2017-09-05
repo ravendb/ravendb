@@ -8,12 +8,12 @@ namespace Raven.Server.Config.Categories
     {
         [DefaultValue(30)]
         [TimeUnit(TimeUnit.Seconds)]
-        [ConfigurationEntry("Server.MaxTimeForTaskToWaitForDatabaseToLoadInSec", isServerWideOnly: true)]
+        [ConfigurationEntry("Server.MaxTimeForTaskToWaitForDatabaseToLoadInSec", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting MaxTimeForTaskToWaitForDatabaseToLoad { get; set; }
 
         [Description("The server name")]
         [DefaultValue(null)]
-        [ConfigurationEntry("Server.Name", isServerWideOnly: true)]
+        [ConfigurationEntry("Server.Name", ConfigurationEntryScope.ServerWideOnly)]
         public string Name { get; set; }
     }
 }

@@ -10,30 +10,30 @@ namespace Raven.Server.Config.Categories
         [Description("Threshold under which an incoming replication connection is considered active. If an incoming connection receives messages within this time-span, new connection coming from the same source would be rejected (as the existing connection is considered active)")]
         [DefaultValue(30)]
         [TimeUnit(TimeUnit.Seconds)]
-        [ConfigurationEntry("Replication.ActiveConnectionTimeoutInSec")]
+        [ConfigurationEntry("Replication.ActiveConnectionTimeoutInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting ActiveConnectionTimeout { get; set; }
         
         [Description("Minimal time in milliseconds before sending another heartbeat")]
         [DefaultValue(15)]
         [TimeUnit(TimeUnit.Seconds)]
-        [ConfigurationEntry("Replication.ReplicationMinimalHeartbeatInSec")]
+        [ConfigurationEntry("Replication.ReplicationMinimalHeartbeatInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting ReplicationMinimalHeartbeat { get; set; }
 
         [Description("If the replication failed, we try to replicate again after the specified time elapsed.")]
         [DefaultValue(15)]
         [TimeUnit(TimeUnit.Seconds)]
-        [ConfigurationEntry("Replication.RetryReplicateAfterInSec")]
+        [ConfigurationEntry("Replication.RetryReplicateAfterInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting RetryReplicateAfter { get; set; }
 
         [Description("Maximum number of items replication will send in single batch, null means we will not cut the batch by number of items")]
         [DefaultValue(16*1024)]
-        [ConfigurationEntry("Replication.MaxItemsCount")]
+        [ConfigurationEntry("Replication.MaxItemsCount", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public int? MaxItemsCount { get; set; }
 
         [Description("Maximum number of data size replication will send in single batch, null means we will not cut the batch by the size")]
         [DefaultValue(64)]
         [SizeUnit(SizeUnit.Megabytes)]
-        [ConfigurationEntry("Replication.MaxSizeToSendInMb")]
+        [ConfigurationEntry("Replication.MaxSizeToSendInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public Size? MaxSizeToSend { get; set; }
     }
 }

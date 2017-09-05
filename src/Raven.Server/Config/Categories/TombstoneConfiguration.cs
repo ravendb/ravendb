@@ -9,7 +9,7 @@ namespace Raven.Server.Config.Categories
     {
         [DefaultValue(5)]
         [TimeUnit(TimeUnit.Minutes)]
-        [ConfigurationEntry("Tombstones.CleanupIntervalInMin")]
+        [ConfigurationEntry("Tombstones.CleanupIntervalInMin", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         [Description("Time (in minutes) between tombstone cleanups.")]
         public TimeSetting CleanupInterval { get; set; }
     }

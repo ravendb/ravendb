@@ -7,7 +7,7 @@ namespace Raven.Server.Config.Categories
     {
         [Description("Watch the parent process id and exit when it exited as well")]
         [DefaultValue(null)]
-        [ConfigurationEntry("Testing.ParentProcessId", isServerWideOnly: true)]
+        [ConfigurationEntry("Testing.ParentProcessId", ConfigurationEntryScope.ServerWideOnly)]
         public int? ParentProcessId { get; set; }
     }
 }
