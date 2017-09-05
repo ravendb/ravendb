@@ -23,7 +23,7 @@ namespace Raven.Server.Config.Categories
 
         [Description("Whether the indexes should run purely in memory. When running in memory, nothing is written to disk and if the server is restarted all data will be lost. This is mostly useful for testing.")]
         [IndexUpdateType(IndexUpdateType.Reset)]
-        [ConfigurationEntry("Indexing.RunInMemory", setDefaultValueIfNeeded: false)]
+        [ConfigurationEntry("Indexing.RunInMemory", ConfigurationEntryScope.ServerWideOrPerDatabase, setDefaultValueIfNeeded: false)]
         public virtual bool RunInMemory
         {
             get
@@ -39,13 +39,13 @@ namespace Raven.Server.Config.Categories
 
         [DefaultValue(false)]
         [IndexUpdateType(IndexUpdateType.None)]
-        [ConfigurationEntry("Indexing.Disable")]
+        [ConfigurationEntry("Indexing.Disable", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public virtual bool Disabled { get; protected set; }
 
         [Description("Default path for the indexes on disk. Useful if you want to store the indexes on another HDD for performance reasons.\r\nDefault: ~\\Databases\\[database-name]\\Indexes.")]
         [DefaultValue(null)]
         [IndexUpdateType(IndexUpdateType.Reset)]
-        [ConfigurationEntry("Indexing.StoragePath")]
+        [ConfigurationEntry("Indexing.StoragePath", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         [LegacyConfigurationEntry("Raven/IndexStoragePath")]
         public virtual PathSetting StoragePath
         {
@@ -66,12 +66,12 @@ namespace Raven.Server.Config.Categories
 
         [DefaultValue(null)]
         [IndexUpdateType(IndexUpdateType.Reset)]
-        [ConfigurationEntry("Indexing.TempPath")]
+        [ConfigurationEntry("Indexing.TempPath", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public virtual PathSetting TempPath { get; protected set; }
 
         [DefaultValue(null)]
         [IndexUpdateType(IndexUpdateType.Reset)]
-        [ConfigurationEntry("Indexing.JournalsStoragePath")]
+        [ConfigurationEntry("Indexing.JournalsStoragePath", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public virtual PathSetting JournalsStoragePath { get; protected set; }
 
 
@@ -79,48 +79,48 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(15)]
         [TimeUnit(TimeUnit.Seconds)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
-        [ConfigurationEntry("Indexing.MaxTimeForDocumentTransactionToRemainOpenInSec")]
+        [ConfigurationEntry("Indexing.MaxTimeForDocumentTransactionToRemainOpenInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting MaxTimeForDocumentTransactionToRemainOpen { get; protected set; }
 
         [Description("How long should we keep a superseded auto index?")]
         [DefaultValue(15)]
         [TimeUnit(TimeUnit.Seconds)]
         [IndexUpdateType(IndexUpdateType.None)]
-        [ConfigurationEntry("Indexing.TimeBeforeDeletionOfSupersededAutoIndexInSec")]
+        [ConfigurationEntry("Indexing.TimeBeforeDeletionOfSupersededAutoIndexInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting TimeBeforeDeletionOfSupersededAutoIndex { get; protected set; }
 
         [Description("How long the database should wait before marking an auto index with the idle flag")]
         [DefaultValue(30)]
         [TimeUnit(TimeUnit.Minutes)]
         [IndexUpdateType(IndexUpdateType.None)]
-        [ConfigurationEntry("Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdleInMin")]
+        [ConfigurationEntry("Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdleInMin", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting TimeToWaitBeforeMarkingAutoIndexAsIdle { get; protected set; }
 
         [Description("How long the database should wait before deleting an auto index with the idle flag")]
         [DefaultValue(72)]
         [TimeUnit(TimeUnit.Hours)]
         [IndexUpdateType(IndexUpdateType.None)]
-        [ConfigurationEntry("Indexing.TimeToWaitBeforeDeletingAutoIndexMarkedAsIdleInHrs")]
+        [ConfigurationEntry("Indexing.TimeToWaitBeforeDeletingAutoIndexMarkedAsIdleInHrs", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle { get; protected set; }
 
         [Description("EXPERT ONLY")]
         [DefaultValue(512)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
-        [ConfigurationEntry("Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory")]
+        [ConfigurationEntry("Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public int MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory { get; protected set; }
 
         [Description("Number of seconds after which mapping will end even if there is more to map. By default we will map everything we can in single batch.")]
         [DefaultValue(-1)]
         [TimeUnit(TimeUnit.Seconds)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
-        [ConfigurationEntry("Indexing.MapTimeoutInSec")]
+        [ConfigurationEntry("Indexing.MapTimeoutInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting MapTimeout { get; protected set; }
 
         [Description("Number of minutes after which mapping will end even if there is more to map. This will only be applied if we pass the last etag in collection that we saw when batch was started.")]
         [DefaultValue(15)]
         [TimeUnit(TimeUnit.Minutes)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
-        [ConfigurationEntry("Indexing.MapTimeoutAfterEtagReachedInMin")]
+        [ConfigurationEntry("Indexing.MapTimeoutAfterEtagReachedInMin", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting MapTimeoutAfterEtagReached { get; protected set; }
 
         protected override void ValidateProperty(PropertyInfo property)

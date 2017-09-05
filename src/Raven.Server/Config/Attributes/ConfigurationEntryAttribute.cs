@@ -12,20 +12,26 @@ namespace Raven.Server.Config.Attributes
     [AttributeUsage(AttributeTargets.Property)]
     public class ConfigurationEntryAttribute : Attribute
     {
-        public string Key { get; set; }
-
-        public ConfigurationEntryAttribute(string key, [CallerLineNumber]int order = 0, bool setDefaultValueIfNeeded = true, bool isServerWideOnly = false) // the default order is the order of declaration in a configuration class
+        public ConfigurationEntryAttribute(string key, ConfigurationEntryScope scope, [CallerLineNumber]int order = 0, bool setDefaultValueIfNeeded = true) // the default order is the order of declaration in a configuration class
         {
             Key = key;
             Order = order;
             SetDefaultValueIfNeeded = setDefaultValueIfNeeded;
-            IsServerWideOnly = isServerWideOnly;
+            Scope = scope;
         }
 
-        public int Order { get; private set; }
+        public readonly string Key;
 
-        public bool SetDefaultValueIfNeeded { get; private set; }
+        public readonly int Order;
 
-        public bool IsServerWideOnly { get; private set; }
+        public readonly bool SetDefaultValueIfNeeded;
+
+        public readonly ConfigurationEntryScope Scope;
+    }
+
+    public enum ConfigurationEntryScope
+    {
+        ServerWideOnly,
+        ServerWideOrPerDatabase
     }
 }

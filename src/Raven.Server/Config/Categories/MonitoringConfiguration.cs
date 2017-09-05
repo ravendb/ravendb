@@ -24,15 +24,15 @@ namespace Raven.Server.Config.Categories
         public class SnmpConfiguration : ConfigurationCategory
         {
             [DefaultValue(false)]
-            [ConfigurationEntry("Monitoring.Snmp.Enabled", isServerWideOnly: true)]
+            [ConfigurationEntry("Monitoring.Snmp.Enabled", ConfigurationEntryScope.ServerWideOnly)]
             public bool Enabled { get; set; }
 
             [DefaultValue(161)]
-            [ConfigurationEntry("Monitoring.Snmp.Port", isServerWideOnly: true)]
+            [ConfigurationEntry("Monitoring.Snmp.Port", ConfigurationEntryScope.ServerWideOnly)]
             public int Port { get; set; }
 
             [DefaultValue("ravendb")]
-            [ConfigurationEntry("Monitoring.Snmp.Community", isServerWideOnly: true)]
+            [ConfigurationEntry("Monitoring.Snmp.Community", ConfigurationEntryScope.ServerWideOnly)]
             public string Community { get; set; }
         }
     }

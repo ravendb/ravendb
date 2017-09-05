@@ -10,7 +10,7 @@ namespace Raven.Server.Config.Categories
         /// Default: 10000
         /// </summary>
         [DefaultValue(10_000)]
-        [ConfigurationEntry("Patching.MaxStepsForScript")]
+        [ConfigurationEntry("Patching.MaxStepsForScript", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public int MaxStepsForScript { get; set; }
 
         /// <summary>
@@ -18,7 +18,7 @@ namespace Raven.Server.Config.Categories
         /// Default: 2048
         /// </summary>
         [DefaultValue(2048)]
-        [ConfigurationEntry("Patching.MaxNumberOfCachedScripts")]
+        [ConfigurationEntry("Patching.MaxNumberOfCachedScripts", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public int MaxNumberOfCachedScripts { get; set; }
     }
 }

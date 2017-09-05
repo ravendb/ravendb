@@ -13,37 +13,37 @@ namespace Raven.Server.Config.Categories
     {
         [Description("The URLs which the server should listen to. By default we listen to localhost:8080")]
         [DefaultValue("http://localhost:8080")]
-        [ConfigurationEntry("ServerUrl", isServerWideOnly: true)]
+        [ConfigurationEntry("ServerUrl", ConfigurationEntryScope.ServerWideOnly)]
         public string ServerUrl { get; set; }
 
         [Description("If not specified, will use the server url host and random port. If it just a number specify, will use that port. Otherwise, will bind to the host & port specified")]
         [DefaultValue(null)]
-        [ConfigurationEntry("ServerUrl.Tcp", isServerWideOnly: true)]
+        [ConfigurationEntry("ServerUrl.Tcp", ConfigurationEntryScope.ServerWideOnly)]
         public string TcpServerUrl { get; set; }
 
         [Description("The URL under which server is publicly available, used for inter-node communication and access from behind a firewall, proxy etc.")]
         [DefaultValue(null)]
-        [ConfigurationEntry("PublicServerUrl", isServerWideOnly: true)]
+        [ConfigurationEntry("PublicServerUrl", ConfigurationEntryScope.ServerWideOnly)]
         public UriSetting? PublicServerUrl { get; set; }
 
         [Description("Public TCP address")]
         [DefaultValue(null)]
-        [ConfigurationEntry("PublicServerUrl.Tcp", isServerWideOnly: true)]
+        [ConfigurationEntry("PublicServerUrl.Tcp", ConfigurationEntryScope.ServerWideOnly)]
         public UriSetting? PublicTcpServerUrl { get; set; }
 
         [Description("Whether the database should run purely in memory. When running in memory, nothing is written to disk and if the server is restarted all data will be lost. This is mostly useful for testing.")]
         [DefaultValue(false)]
-        [ConfigurationEntry("RunInMemory")]
+        [ConfigurationEntry("RunInMemory", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public bool RunInMemory { get; set; }
 
         [Description("The directory for the RavenDB resource. You can use the ~/ prefix to refer to RavenDB's base directory.")]
         [DefaultValue(@"~/Databases/{name}")]
-        [ConfigurationEntry("DataDir")]
+        [ConfigurationEntry("DataDir", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public PathSetting DataDirectory { get; set; }
 
         [Description("Indicates if we should throw an exception if any index could not be opened")]
         [DefaultValue(false)]
-        [ConfigurationEntry("ThrowIfAnyIndexCannotBeOpened")]
+        [ConfigurationEntry("ThrowIfAnyIndexCannotBeOpened", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public bool ThrowIfAnyIndexCannotBeOpened { get; set; }
 
         public override void Initialize(IConfigurationRoot settings, IConfigurationRoot serverWideSettings, ResourceType type, string resourceName)
@@ -101,12 +101,12 @@ namespace Raven.Server.Config.Categories
         internal void ValidateServerUrls()
         {
             if (ServerUrl != null)
-                ValidateServerUrl(ServerUrl, new [] { "http", "https" }, RavenConfiguration.GetKey(x => x.Core.ServerUrl));
-                
-            if (TcpServerUrl != null 
+                ValidateServerUrl(ServerUrl, new[] { "http", "https" }, RavenConfiguration.GetKey(x => x.Core.ServerUrl));
+
+            if (TcpServerUrl != null
                 && ushort.TryParse(TcpServerUrl, out var _) == false)
-                ValidateServerUrl(TcpServerUrl, new [] { "tcp" }, RavenConfiguration.GetKey(x => x.Core.TcpServerUrl));
-            
+                ValidateServerUrl(TcpServerUrl, new[] { "tcp" }, RavenConfiguration.GetKey(x => x.Core.TcpServerUrl));
+
         }
 
         internal void ValidatePublicUrls()
@@ -122,7 +122,7 @@ namespace Raven.Server.Config.Categories
         {
             if (Uri.TryCreate(url, UriKind.Absolute, out var parsedUri) == false)
                 throw new ArgumentException($"'{url}' is an invalid URI.");
-            
+
             if (expectedSchemes.Any(x => x == parsedUri.Scheme) == false)
                 throw new ArgumentException($"URI scheme '{ parsedUri.Scheme }' is invalid for '{confKey}' configuration setting, it must be one of the following: { string.Join(", ", expectedSchemes) }.");
         }
