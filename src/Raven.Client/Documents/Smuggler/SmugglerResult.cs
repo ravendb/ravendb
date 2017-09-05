@@ -87,6 +87,7 @@ namespace Raven.Client.Documents.Smuggler
 
             public override CountsWithSkippedCountAndLastEtag Documents => _result.Documents;
             public override CountsWithLastEtag RevisionDocuments => _result.RevisionDocuments;
+            public override CountsWithLastEtag Tombstones => _result.Tombstones;
             public override Counts Identities => _result.Identities;
             public override Counts Indexes => _result.Indexes;
 
