@@ -153,67 +153,7 @@
 </script>
 
 <script type="text/html" id="create-db-encryption">
-    <h3>Encryption configuration</h3>
-    <div class="margin-bottom" data-bind="validationElement: databaseModel.encryption.key">
-        <label class="control-label">
-            Key <small class="text-muted">(Base64 Encoding)</small>
-        </label>
-        <div class="input-group">
-            <input type="text" class="form-control" placeholder="Key" autocomplete="off"
-                   data-bind="textInput: databaseModel.encryption.key">
-            <span class="input-group-btn">
-                <button class="btn btn-default" type="button" data-bind="click: generateEncryptionKey">
-                    <i class="icon-reset"></i>
-                </button>
-            </span>
-        </div>
-    </div>
-
-    <p>QR Code:</p>
-    <div class="text-center">
-        <div id="encryption_qrcode">
-        </div>
-    </div>
-       
-    <div class="text-center" id="savingKeyData">
-        <span  class="has-disable-reason" data-bind="attr: { 'data-original-title': disableSavingKeyData() ? 'Validate database name & key !' : '' }">
-            <button type="button" class="btn btn-default btn-sm" data-bind="click: copyEncryptionKeyToClipboard, attr: { disabled: disableSavingKeyData }">
-                <i class="icon-copy"></i> <span>Copy to clipboard</span>
-            </button>            
-        </span>
-        
-        <span class="has-disable-reason" data-bind="attr: { 'data-original-title': disableSavingKeyData() ? 'Validate database name & key !' : '' }">
-            <button type="button" class="btn btn-default btn-sm" data-bind="click: downloadEncryptionKey, attr: { disabled: disableSavingKeyData }">
-                <i class="icon-export"></i> <span>Download encryption key</span>
-            </button>
-        </span>
-
-        <span class="has-disable-reason" data-bind="attr: { 'data-original-title': disableSavingKeyData() ? 'Validate database name & key !' : '' }">
-            <button type="button" class="btn btn-default btn-sm" data-bind="click: printEncryptionKey, attr: { disabled: disableSavingKeyData() }">
-                <i class="icon-print"></i><span>Print encryption key</span>
-            </button>
-        </span>
-    </div>   
-
-    <div class="row">
-        <div class="col-sm-12">
-            <div class="checkbox" data-bind="validationOptions: { insertMessages: false }">
-                <input class="styled" type="checkbox" id="saved_key_confirm" data-bind="checked: databaseModel.encryption.confirmation">
-                <label for="saved_key_confirm">I have saved the encryption key.</label>
-            </div>
-
-            <div data-bind="validationElement: databaseModel.encryption.confirmation">
-                <div class="help-block" data-bind="validationMessage: databaseModel.encryption.confirmation"></div>
-            </div>
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-sm-12">
-            <p class="bg-info padding padding-sm small">
-                <i class="icon-warning"></i> 
-                Save this key in a safe place as it will Not be available again!<br/>
-                If you lose this key you could lose access to your data.
-            </p>
-        </div>
+    <div data-bind="with: encryptionSection">
+        <div data-bind="compose: 'resources/setupEncryptionKey.html'"></div>
     </div>
 </script>
