@@ -78,12 +78,6 @@ class databaseCreationModel {
         selectedRestorePoint: this.selectedRestorePoint
     });
 
-    // validation group to know if we can download/print/copy to clipboard the key
-    saveKeyValidationGroup = ko.validatedObservable({
-        name: this.name,
-        key: this.encryption.key
-    });
-
     backupDirectoryValidationGroup = ko.validatedObservable({
         backupDirectory: this.backupDirectory
     });
