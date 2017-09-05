@@ -415,7 +415,7 @@ namespace Voron.Data.Tables
                 page.Flags = PageFlags.Overflow | PageFlags.RawData;
                 page.OverflowSize = size;
 
-                ((RawDataOverflowPageHeader*)page.Pointer)->SectionOwnerHash = Hashing.XXHash64.Calculate(Name.Content.Ptr, (ulong)Name.Content.Length);
+                ((RawDataOverflowPageHeader*)page.Pointer)->SectionOwnerHash = ActiveDataSmallSection.SectionOwnerHash;
                 ((RawDataOverflowPageHeader*)page.Pointer)->TableType = _tableType;
 
                 pos = page.Pointer + PageHeader.SizeOf;
@@ -523,7 +523,7 @@ namespace Voron.Data.Tables
                 page.Flags = PageFlags.Overflow | PageFlags.RawData;
                 page.OverflowSize = size;
 
-                ((RawDataOverflowPageHeader*)page.Pointer)->SectionOwnerHash = Hashing.XXHash64.Calculate(Name.Content.Ptr, (ulong)Name.Content.Length);
+                ((RawDataOverflowPageHeader*)page.Pointer)->SectionOwnerHash = ActiveDataSmallSection.SectionOwnerHash;
                 ((RawDataOverflowPageHeader*)page.Pointer)->TableType = _tableType;
 
                 pos = page.Pointer + PageHeader.SizeOf;
