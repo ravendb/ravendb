@@ -110,7 +110,7 @@ namespace SlowTests.MailingList
                             ToList();
                     var scores = from result in results
                                  select session.Advanced.GetMetadataFor(result).GetLong(Constants.Documents.Metadata.IndexScore);
-                    Assert.Equal(0, scores.Single());
+                    Assert.True(scores.Single() > 0);
                 }
             }
         }

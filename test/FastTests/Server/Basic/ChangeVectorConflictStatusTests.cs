@@ -1,15 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Org.BouncyCastle.Asn1;
 using Raven.Server.Documents.Replication;
-using Raven.Server.Rachis;
 using Raven.Server.Utils;
 using Xunit;
 
 namespace FastTests.Server.Basic
 {
-    public class ChangeVectorConflictStatusTests
+    public class ChangeVectorConflictStatusTests : NoDisposalNeeded
     {
         [Fact]
         public void Two_empty_ChangeVectors()
@@ -290,7 +288,7 @@ namespace FastTests.Server.Basic
             var remoteVectorData = new List<(Guid, long, int)>();
             var localVectorData = new List<(Guid, long, int)>();
 
-            for (int i = 0, j = length - 1; i < length; i++,j--)            
+            for (int i = 0, j = length - 1; i < length; i++, j--)
             {
                 remoteVectorData.Add((dbIds[i], 10, tags[i]));
                 localVectorData.Add((dbIds[j], 1, tags[j]));
@@ -379,7 +377,7 @@ namespace FastTests.Server.Basic
             var localVectorData = new List<(Guid, long, int)>();
 
             for (int i = 0, j = length - 1; i < length; i++, j--)
-            {                
+            {
                 remoteVectorData.Add((dbIds[i], i % 2 == 0 ? 11 : 1, tags[i]));
 
                 if (j >= 10)
@@ -584,7 +582,7 @@ namespace FastTests.Server.Basic
             var local = ChangeVector(localVectorData.ToArray());
 
             Assert.Equal(ConflictStatus.Conflict, ChangeVectorUtils.GetConflictStatus(remote, local));
-        }     
+        }
 
         [Theory]
         [InlineData(15)]
@@ -687,9 +685,9 @@ namespace FastTests.Server.Basic
             var changeVectorAsString = changeVector.SerializeVector();
             var parsedChangeVector = changeVectorAsString.ToChangeVector();
 
-            for(int i = 0; i < parsedChangeVector.Length;i++)
+            for (int i = 0; i < parsedChangeVector.Length; i++)
             {
-                Assert.Equal(parsedChangeVector[i],changeVector[i]);
+                Assert.Equal(parsedChangeVector[i], changeVector[i]);
             }
         }
 
@@ -701,8 +699,8 @@ namespace FastTests.Server.Basic
         }
 
         public static string DbId() //not strictly needed -> it is a shortcut
-        {            
-            var dbId = Guid.NewGuid();           
+        {
+            var dbId = Guid.NewGuid();
             return dbId.AsChangeVectorDbId();
         }
     }

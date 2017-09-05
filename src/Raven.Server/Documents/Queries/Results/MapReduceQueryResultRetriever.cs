@@ -18,12 +18,11 @@ namespace Raven.Server.Documents.Queries.Results
 
         protected override Document LoadDocument(string id)
         {
-            if(DocumentsStorage != null && 
+            if (DocumentsStorage != null &&
                 _context is DocumentsOperationContext ctx)
                 return DocumentsStorage.Get(ctx, id);
             // can happen during some debug endpoints that should never load a document
-            return null; 
-
+            return null;
         }
 
         protected override unsafe Document DirectGet(Lucene.Net.Documents.Document input, string id, IState state)
