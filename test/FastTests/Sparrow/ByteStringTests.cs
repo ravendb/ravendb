@@ -161,7 +161,7 @@ namespace FastTests.Sparrow
         [Fact]
         public void ValidationKeyAfterAllocateAndReleaseReuseShouldBeDifferent()
         {
-            using (var context = new ByteStringContext<ByteStringDirectAllocator>(LowMemoryFlag.None, ByteStringContext.MinBlockSizeInBytes))
+            using (var context = new ByteStringContext<ByteStringDirectAllocator>(SharedMultipleUseFlag.None, ByteStringContext.MinBlockSizeInBytes))
             {
                 context.Allocate(ByteStringContext.MinBlockSizeInBytes / 2 - sizeof(ByteStringStorage), out var first);
                 context.Release(ref first);
@@ -176,8 +176,8 @@ namespace FastTests.Sparrow
         [Fact]
         public void FailValidationTryingToReleaseInAnotherContext()
         {
-            using (var context = new ByteStringContext<ByteStringDirectAllocator>(LowMemoryFlag.None, ByteStringContext.MinBlockSizeInBytes))
-            using (var otherContext = new ByteStringContext<ByteStringDirectAllocator>(LowMemoryFlag.None, ByteStringContext.MinBlockSizeInBytes))
+            using (var context = new ByteStringContext<ByteStringDirectAllocator>(SharedMultipleUseFlag.None, ByteStringContext.MinBlockSizeInBytes))
+            using (var otherContext = new ByteStringContext<ByteStringDirectAllocator>(SharedMultipleUseFlag.None, ByteStringContext.MinBlockSizeInBytes))
             {
                 context.Allocate(1, out var first);
                 Assert.Throws<ByteStringValidationException>(() => otherContext.Release(ref first));
@@ -187,7 +187,7 @@ namespace FastTests.Sparrow
         [Fact]
         public void FailValidationReleasingAnAliasAfterReleasingOriginal()
         {
-            using (var context = new ByteStringContext<ByteStringDirectAllocator>(LowMemoryFlag.None, ByteStringContext.MinBlockSizeInBytes))
+            using (var context = new ByteStringContext<ByteStringDirectAllocator>(SharedMultipleUseFlag.None, ByteStringContext.MinBlockSizeInBytes))
             {
                 context.Allocate(1, out var first);
                 var firstAlias = first;
@@ -200,7 +200,7 @@ namespace FastTests.Sparrow
         [Fact]
         public void DetectImmutableChangeOnValidation()
         {
-            using (var context = new ByteStringContext<ByteStringDirectAllocator>(LowMemoryFlag.None, ByteStringContext.MinBlockSizeInBytes))
+            using (var context = new ByteStringContext<ByteStringDirectAllocator>(SharedMultipleUseFlag.None, ByteStringContext.MinBlockSizeInBytes))
             {
                 ByteString value;
 
@@ -219,7 +219,7 @@ namespace FastTests.Sparrow
         {
             Assert.Throws<ByteStringValidationException>(() =>
             {
-                using (var context = new ByteStringContext<ByteStringDirectAllocator>(LowMemoryFlag.None, ByteStringContext.MinBlockSizeInBytes))
+                using (var context = new ByteStringContext<ByteStringDirectAllocator>(SharedMultipleUseFlag.None, ByteStringContext.MinBlockSizeInBytes))
                 {
                     ByteString value;
                     using (context.From("string", ByteStringType.Immutable, out value))
