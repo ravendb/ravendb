@@ -13,12 +13,12 @@ namespace Raven.Server.Config.Categories
     {
         [Description("The URLs which the server should listen to. By default we listen to localhost:8080")]
         [DefaultValue("http://localhost:8080")]
-        [ConfigurationEntry("ServerUrl")]
+        [ConfigurationEntry("ServerUrl", isServerWideOnly: true)]
         public string ServerUrl { get; set; }
 
         [Description("If not specified, will use the server url host and random port. If it just a number specify, will use that port. Otherwise, will bind to the host & port specified")]
         [DefaultValue(null)]
-        [ConfigurationEntry("ServerUrl.Tcp")]
+        [ConfigurationEntry("ServerUrl.Tcp", isServerWideOnly: true)]
         public string TcpServerUrl { get; set; }
 
         [Description("The URL under which server is publicly available, used for inter-node communication and access from behind a firewall, proxy etc.")]
@@ -40,12 +40,6 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(@"~/Databases/{name}")]
         [ConfigurationEntry("DataDir")]
         public PathSetting DataDirectory { get; set; }
-
-        [Description("The time to wait before canceling a database operation such as load (many) or query")]
-        [DefaultValue(5)]
-        [TimeUnit(TimeUnit.Minutes)]
-        [ConfigurationEntry("DatabaseOperationTimeoutInMin")]
-        public TimeSetting DatabaseOperationTimeout { get; set; }
 
         [Description("Indicates if we should throw an exception if any index could not be opened")]
         [DefaultValue(false)]

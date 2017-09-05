@@ -37,7 +37,7 @@ namespace Raven.Server.Documents
 
         protected OperationCancelToken CreateTimeLimitedOperationToken()
         {
-            return new OperationCancelToken(Database.Configuration.Core.DatabaseOperationTimeout.AsTimeSpan, Database.DatabaseShutdown);
+            return new OperationCancelToken(Database.Configuration.Databases.OperationTimeout.AsTimeSpan, Database.DatabaseShutdown);
         }
 
         protected OperationCancelToken CreateOperationToken()

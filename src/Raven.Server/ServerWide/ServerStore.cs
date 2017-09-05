@@ -230,8 +230,8 @@ namespace Raven.Server.ServerWide
         public void Initialize()
         {
             LowMemoryNotification.Initialize(ServerShutdown,
-                Configuration.Memory.LowMemoryDetection.GetValue(SizeUnit.Bytes),
-                Configuration.Memory.PhysicalRatioForLowMemDetection);
+                Configuration.Memory.LowMemoryLimit.GetValue(SizeUnit.Bytes),
+                Configuration.Memory.PhysicalRatioForLowMemoryDetection);
 
             if (Logger.IsInfoEnabled)
                 Logger.Info("Starting to open server store for " + (Configuration.Core.RunInMemory ? "<memory>" : Configuration.Core.DataDirectory.FullPath));

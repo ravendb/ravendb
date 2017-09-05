@@ -1452,6 +1452,8 @@ namespace Raven.Server.Documents
             }
 
             var collections = context.Transaction.InnerTransaction.OpenTable(CollectionsSchema, CollectionsSlice);
+            if (collections == null)
+                throw new InvalidOperationException("Should never happen!");
 
             name = new CollectionName(collectionName);
             using (Slice.From(context.Allocator, collectionName, out Slice collectionSlice))
