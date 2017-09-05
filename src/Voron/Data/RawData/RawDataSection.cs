@@ -41,6 +41,8 @@ namespace Voron.Data.RawData
 
         public int AllocatedSize => _sectionHeader->AllocatedSize;
 
+        public ulong SectionOwnerHash => _sectionHeader->SectionOwnerHash;
+
         public int Size => _sectionHeader->NumberOfPages * Constants.Storage.PageSize;
 
         public int NumberOfPages => _sectionHeader->NumberOfPages;

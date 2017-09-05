@@ -23,7 +23,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             css: 'icon-plus',
             dynamicHash: appUrls.quotas
         }),*/
-        
+        /* TODO - bring this back for RTM - issue 8429
         new leafMenuItem({
             route: 'databases/settings/connectionStrings',
             moduleId: "viewmodels/database/settings/connectionStrings",
@@ -32,7 +32,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             css: 'icon-manage-connection-strings',
             dynamicHash: appUrls.connectionStrings,
             enabled: accessHelper.isGlobalAdmin
-        }),
+        }),*/
         new leafMenuItem({
             route: 'databases/settings/revisions',
             moduleId: 'viewmodels/database/settings/revisions',
@@ -57,7 +57,6 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             css: 'icon-topology',
             dynamicHash: appUrls.manageDatabaseGroup
         }),
-        
         /*TODO
         new leafMenuItem({
             route: 'databases/settings/databaseStudioConfig',

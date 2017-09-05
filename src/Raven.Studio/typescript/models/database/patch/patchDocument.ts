@@ -4,20 +4,14 @@ import document = require("models/database/documents/document");
 
 class patchDocument extends document {
 
-    static readonly allPatchOptions: Array<patchOption> = ["Document", "Query"];
-
-    patchOnOption = ko.observable<patchOption>();
     selectedItem = ko.observable<string>();
     query = ko.observable<string>();
-    script = ko.observable<string>();
 
     patchAll = ko.observable<boolean>(true);
 
     constructor(dto: patchDto) {
         super(dto);
-        this.patchOnOption(dto.PatchOnOption);
         this.query(dto.Query);
-        this.script(dto.Script);
         this.selectedItem(dto.SelectedItem);
     }
 
@@ -26,9 +20,7 @@ class patchDocument extends document {
         meta['@collection'] = 'PatchDocuments';
         return new patchDocument({
             '@metadata': meta,
-            PatchOnOption: "Query",
             Query: "",
-            Script: "",
             SelectedItem: "",
             Values: []
         });
@@ -38,9 +30,7 @@ class patchDocument extends document {
         const meta = this.__metadata.toDto();
         return {
             '@metadata': meta,
-            PatchOnOption: this.patchOnOption(),
             Query: this.query(),
-            Script: this.script(),
             SelectedItem: this.selectedItem()
         };
     }
@@ -54,11 +44,9 @@ class patchDocument extends document {
     }
 
     copyFrom(incoming: patchDocument) {
-        this.patchOnOption(incoming.patchOnOption());
         this.selectedItem(incoming.selectedItem());
         this.__metadata = incoming.__metadata;
         this.query(incoming.query());
-        this.script(incoming.script());
         this.patchAll(true);
         this.__metadata.changeVector(undefined);
     }
