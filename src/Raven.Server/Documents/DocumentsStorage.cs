@@ -880,7 +880,7 @@ namespace Raven.Server.Documents
             return result;
         }
 
-        public static Document ParseRawDataSectionDocumentWithValidation(JsonOperationContext context, ref TableValueReader tvr, int expectedSize)
+        public static Document ParseRawDataSectionDocumentWithValidation(JsonOperationContext context, ref TableValueReader tvr, int expectedSize, out long etag)
         {
             var mem = tvr.Read((int)DocumentsTable.Data, out int size);
 
@@ -892,7 +892,7 @@ namespace Raven.Server.Documents
                 StorageId = tvr.Id,
                 LowerId = TableValueToString(context, (int)DocumentsTable.LowerId, ref tvr),
                 Id = TableValueToId(context, (int)DocumentsTable.Id, ref tvr),
-                Etag = TableValueToEtag((int)DocumentsTable.Etag, ref tvr),
+                Etag = etag = TableValueToEtag((int)DocumentsTable.Etag, ref tvr),
                 Data = new BlittableJsonReaderObject(mem, size, context),
                 ChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref tvr),
                 LastModified = TableValueToDateTime((int)DocumentsTable.LastModified, ref tvr),
