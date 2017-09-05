@@ -11,7 +11,7 @@ class distributeSecretCommand extends commandBase {
         const args = {
             name: this.name,
             node: this.nodeTags
-        }
+        };
         const url = endpoints.global.secretKey.adminSecretsDistribute + this.urlEncodeArgs(args);
         
         return this.post<void>(url, this.secret, null, { dataType: 'text' })

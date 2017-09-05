@@ -11,6 +11,7 @@ import databaseGroupGraph = require("models/database/dbGroup/databaseGroupGraph"
 import ongoingTasksCommand = require("commands/database/tasks/getOngoingTasksCommand");
 import toggleDynamicNodeAssignmentCommand = require("commands/database/dbGroup/toggleDynamicNodeAssignmentCommand");
 import showDataDialog = require("viewmodels/common/showDataDialog");
+import defineNodeEncryptionKey = require("viewmodels/resources/defineNodeEncryptionKey");
 
 class manageDatabaseGroup extends viewModelBase {
 
@@ -109,8 +110,21 @@ class manageDatabaseGroup extends viewModelBase {
     }
 
     addNode() {
-        //TODO: handle case when encryption is enabled on this db
-
+        if (this.currentDatabaseInfo().isEncrypted()) {
+            const addKeyView = new defineNodeEncryptionKey(this.activeDatabase().name, this.selectedClusterNode());
+            
+            app.showBootstrapDialog(addKeyView)
+                .done(result => {
+                    if (result) {
+                        this.addNodeInternal();
+                    }
+                });
+        } else {
+            this.addNodeInternal();
+        }
+    }
+    
+    addNodeInternal() {
         this.spinners.addNode(true);
 
         new addNodeToDatabaseGroupCommand(this.activeDatabase().name, this.selectedClusterNode())
