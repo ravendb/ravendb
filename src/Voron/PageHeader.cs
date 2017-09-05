@@ -30,10 +30,7 @@ namespace Voron.Data
         public PageFlags Flags;
 
         [FieldOffset(22)]
-        public fixed byte Reserved1[8];
-
-        [FieldOffset(30)]
-        public fixed byte Reserved2[1];
+        public fixed byte Reserved1[9];
 
         [FieldOffset(32)]
         public ulong Checksum;
@@ -42,7 +39,7 @@ namespace Voron.Data
         public ulong Nonce;
 
         [FieldOffset(40)]
-        public fixed byte Reserved3[8];
+        public fixed byte Reserved2[8];
 
         [FieldOffset(48)]
         public fixed byte Mac[16];
