@@ -21,7 +21,7 @@ class ongoingTaskSubscriptionModel extends ongoingTask {
     clientIP = ko.observable<string>();
     connectionStrategy = ko.observable<Raven.Client.Documents.Subscriptions.SubscriptionOpeningStrategy>();  
     clientDetailsIssue = ko.observable<string>(); // null (ok) | client is not connected | failed to get details.. 
-    textClass = ko.observable<string>();
+    textClass = ko.observable<string>("text-details");
 
     validationGroup: KnockoutValidationGroup; 
     showSubscriptionDetails = ko.observable(false);
@@ -88,8 +88,12 @@ class ongoingTaskSubscriptionModel extends ongoingTask {
 
                 this.responsibleNode(result.ResponsibleNode);
                 this.taskState(result.Disabled ? 'Disabled' : 'Enabled');
-                this.lastTimeServerMadeProgressWithDocuments(result.LastTimeServerMadeProgressWithDocuments);
-                this.lastClientConnectionTime(result.LastClientConnectionTime);
+                
+                const dateFormat = "YYYY MMMM Do, h:mm A";
+                const lastServerTime = moment.utc(result.LastTimeServerMadeProgressWithDocuments).local().format(dateFormat);
+                this.lastTimeServerMadeProgressWithDocuments(lastServerTime);
+                const lastClientTime = moment.utc(result.LastClientConnectionTime).local().format(dateFormat);
+                this.lastClientConnectionTime(lastClientTime);
 
                 // 2. Get connection details info
                 this.clientDetailsIssue(null);
@@ -102,12 +106,12 @@ class ongoingTaskSubscriptionModel extends ongoingTask {
 
                         if (!this.clientIP()) { 
                             this.clientDetailsIssue("No client is connected");
-                            this.textClass("warning");
+                            this.textClass("text-warning");
                         }
                     })
                     .fail(() => {
                         this.clientDetailsIssue("Failed to get client connection details");
-                        this.textClass("danger");
+                        this.textClass("text-danger");
                     });
             });
     }
