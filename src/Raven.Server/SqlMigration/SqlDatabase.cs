@@ -1,199 +1,168 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data.SqlClient;
+using System.Data;
+using Raven.Server.Documents;
+using Sparrow.Json;
 
 namespace Raven.Server.SqlMigration
 {
-    public class SqlDatabase
+    public partial class SqlDatabase
     {
-        public string Name;
-        public readonly SqlConnection Connection;
-        public List<SqlTable> Tables;
+        public readonly DocumentDatabase DocumentDatabase;
+        public readonly List<SqlTable> Tables;
+        public readonly IDbConnection Connection;
+        public readonly RavenDocumentFactory Factory;
 
-        public SqlDatabase(SqlConnection con)
+        private readonly Validator _validator;
+
+        public SqlDatabase(string connectionString, DocumentDatabase documentDatabase, RavenDocumentFactory factory, BlittableJsonReaderArray tablesToWrite)
         {
-            Connection = con;
-            Name = Connection.Database;
-            Tables = new List<SqlTable>();
+            Connection = ConnectionFactory.OpenConnection(connectionString);
+            DocumentDatabase = documentDatabase;
+            SetTablesFromBlittableArray(tablesToWrite, ref Tables);
 
-            SetTables();
-            SetKeysRelations();
+            Factory = factory;
+            _validator = new Validator(this, Factory);
+
             SetPrimaryKeys();
-            SetUnsuppoertedColumns();
+            SetForeignKeys();
         }
 
-        private void SetUnsuppoertedColumns()
+        private void SetTablesFromBlittableArray(BlittableJsonReaderArray tablesToWrite, ref List<SqlTable> tables, SqlTable parentTable = null)
         {
-            var query = @"select TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME from INFORMATION_SCHEMA.COLUMNS where DATA_TYPE = 'hierarchyid' or DATA_TYPE = 'geography'";
+            if (tablesToWrite == null)
+                return;
 
-            using (var cmd = new SqlCommand(query, Connection))
+            if (tables == null)
+                tables = new List<SqlTable>();
+
+            foreach (BlittableJsonReaderObject item in tablesToWrite.Items)
             {
-                using (var reader = SqlHelper.ExecuteReader(cmd))
-                {
-                    while (reader.Read())
-                        GetTableByName(GetTableNameWithSchema(reader["TABLE_SCHEMA"].ToString(), reader["TABLE_NAME"].ToString())).UnsupportedColumns.Add(reader["COLUMN_NAME"].ToString());
-                }
+                item.TryGet("Name", out string name);
+                item.TryGet("Query", out string childQuery);
+                item.TryGet("Patch", out string patchScript);
+                item.TryGet("Property", out string propertyName);
+
+                var table = new SqlTable(name, childQuery, patchScript, Connection);
+                parentTable?.Embed(table, propertyName);
+
+                if (item.TryGet("Embedded", out BlittableJsonReaderArray childEmbeddedTables))
+                    SetTablesFromBlittableArray(childEmbeddedTables, ref tables, table);
+
+                tables.Add(table);
             }
         }
 
-        public void Embed(string parentTableName, string propertyName, string childTableName)
+        public bool IsValid()
         {
-            SqlTable parentTable;
-            SqlTable childTable;
-
-            if (!TryGetTableByName(parentTableName, out parentTable))
-                throw new InvalidOperationException($"The table '{parentTableName}' does not exists.");
-
-            if (!TryGetTableByName(childTableName, out childTable))
-                throw new InvalidOperationException($"The table '{childTableName}' does not exists.");
-
-            foreach (var reference in childTable.References)
-                if (reference.Value.Item1 == parentTableName)
-                {
-                    childTable.IsEmbedded = true;
-                    parentTable.AddEmbeddedTable(propertyName, childTableName);
-                    return;
-                }
-
-            throw new InvalidOperationException($"The table '{parentTableName}' cannot embed the table '{childTableName}'");
+            return _validator.IsValid;
         }
 
-        public void SetKeysRelations()
+        public void Validate(out List<string> errors)
+        {
+            _validator.Validate(out var validationErrors);
+
+            errors = validationErrors;
+        }
+
+        private static string GetTableNameFromReader(SqlReader reader)
+        {
+            var tableName = reader["TABLE_NAME"].ToString();
+            var schemaName = reader["TABLE_SCHEMA"].ToString();
+
+            return $"{schemaName}.{tableName}";
+        }
+
+        public static List<string> GetAllTablesNamesFromDatabase(IDbConnection connection)
+        {
+            var lst = new List<string>();
+
+            using (var reader = new SqlReader(connection, Queries.SelectAllTables))
+            {
+                reader.AddParameter("tableType", "BASE TABLE");
+
+                while (reader.Read())
+                    lst.Add(GetTableNameFromReader(reader));
+            }
+
+            return lst;
+        }
+
+        private void SetForeignKeys()
         {
             var referentialConstraints = new Dictionary<string, string>();
 
-            var _query = "select CONSTRAINT_NAME, UNIQUE_CONSTRAINT_NAME from information_schema.REFERENTIAL_CONSTRAINTS";
-
-            using (var cmd = new SqlCommand(_query, Connection))
+            using (var reader = new SqlReader(Connection, Queries.SelectReferantialConstraints))
             {
-                using (var reader = SqlHelper.ExecuteReader(cmd))
-                {
-                    while (reader.Read())
-                        referentialConstraints.Add(reader["CONSTRAINT_NAME"].ToString(), reader["UNIQUE_CONSTRAINT_NAME"].ToString());
-                }
+                while (reader.Read())
+                    referentialConstraints.Add(reader["CONSTRAINT_NAME"].ToString(), reader["UNIQUE_CONSTRAINT_NAME"].ToString());
             }
 
             foreach (var kvp in referentialConstraints)
             {
                 string parentTableName;
-                string parentColumnName;
-                string childTableName;
-                string childColumnName;
+                var parentColumnName = new List<string>();
+                var childTableName = new List<string>();
 
-                var query = "select TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME from information_schema.KEY_COLUMN_USAGE where CONSTRAINT_NAME = @constraintName";
-                using (var cmd = new SqlCommand(query, Connection))
+                using (var reader = new SqlReader(Connection, Queries.SelectKeyColumnUsageWhereConstraintName))
                 {
-                    cmd.Parameters.AddWithValue("constraintName", kvp.Key);
-                    using (var reader = SqlHelper.ExecuteReader(cmd))
+                    reader.AddParameter("constraintName", kvp.Key);
+
+                    if (!reader.Read())
+                        continue;
+
+                    do
                     {
-                        if (reader.Read())
-                        {
-                            parentTableName = GetTableNameWithSchema(reader["TABLE_SCHEMA"].ToString(), reader["TABLE_NAME"].ToString());
-                            parentColumnName = reader["COLUMN_NAME"].ToString();
-                        }
-                        else
-                            continue;
+                        parentTableName = GetTableNameFromReader(reader);
+                        parentColumnName.Add(reader["COLUMN_NAME"].ToString());
                     }
+                    while (reader.Read());
                 }
 
-                query = "select TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME from information_schema.KEY_COLUMN_USAGE where CONSTRAINT_NAME = @constraintName";
-                using (var cmd = new SqlCommand(query, Connection))
+                using (var reader = new SqlReader(Connection, Queries.SelectKeyColumnUsageWhereConstraintName))
                 {
-                    cmd.Parameters.AddWithValue("constraintName", kvp.Value);
-                    using (var reader = cmd.ExecuteReader())
-                    {
-                        if (reader.Read())
-                        {
-                            childTableName = GetTableNameWithSchema(reader["TABLE_SCHEMA"].ToString(), reader["TABLE_NAME"].ToString());
-                            childColumnName = reader["COLUMN_NAME"].ToString();
-                        }
-                        else
-                            continue;
-                    }
+                    reader.AddParameter("constraintName", kvp.Value);
+
+                    if (!reader.Read())
+                        continue;
+
+                    do
+                        childTableName.Add(GetTableNameFromReader(reader));
+                    while (reader.Read());
                 }
 
-                
-                var table = GetTableByName(parentTableName);
-                var childTable = GetTableByName(childTableName);
-                childTable.IsReferenced = true;
-                table.References.Add(parentColumnName, new Tuple<string, string>(childTableName, childColumnName));
+                var temp = GetAllTablesByName(parentTableName);
+
+                foreach (var table in temp)
+                    for (var i = 0; i < parentColumnName.Count; i++)
+                        if (!table.ForeignKeys.TryAdd(parentColumnName[i], childTableName[i]))
+                            throw new InvalidOperationException($"Column '{parentColumnName}' cannot reference multiple tables.");
             }
         }
 
         private void SetPrimaryKeys()
         {
-            var query = @"SELECT tc.TABLE_SCHEMA, tc.TABLE_NAME, COLUMN_NAME
-                            FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS TC
-                            INNER JOIN
-                            INFORMATION_SCHEMA.KEY_COLUMN_USAGE AS KU
-                            ON TC.CONSTRAINT_TYPE = 'PRIMARY KEY' AND
-                            TC.CONSTRAINT_NAME = KU.CONSTRAINT_NAME";
-
-            using (var cmd = new SqlCommand(query, Connection))
+            using (var reader = new SqlReader(Connection, Queries.SelectPrimaryKeys))
             {
-                using (var reader = SqlHelper.ExecuteReader(cmd))
+                while (reader.Read())
                 {
-                    while (reader.Read())
-                        GetTableByName(GetTableNameWithSchema(reader["TABLE_SCHEMA"].ToString(), reader["TABLE_NAME"].ToString())).PrimaryKeys.Add(reader["COLUMN_NAME"].ToString());
+                    var lst = GetAllTablesByName(GetTableNameFromReader(reader));
+
+                    foreach (var table in lst)
+                        table.PrimaryKeys.Add(reader["COLUMN_NAME"].ToString());
                 }
             }
-        }     
-
-        private void SetTables()
-        {
-            var query = "select TABLE_SCHEMA, TABLE_NAME from INFORMATION_SCHEMA.TABLES where TABLE_TYPE = @tableType";
-
-            var lst = new List<string>();
-
-            using (var cmd = new SqlCommand(query, Connection))
-            {
-                cmd.Parameters.AddWithValue("tableType", "BASE TABLE");
-                using (var reader = SqlHelper.ExecuteReader(cmd))
-                {
-                    while (reader.Read())
-                        lst.Add(GetTableNameWithSchema(reader["TABLE_SCHEMA"].ToString(), reader["TABLE_NAME"].ToString()));
-                }
-            }
-            foreach (var item in lst)
-                Tables.Add(new SqlTable(item));
         }
 
-        private string GetTableNameWithSchema(string schemaName, string tableName)
+        private List<SqlTable> GetAllTablesByName(string tableName)
         {
-            return $"{schemaName}.{tableName}";
-        }
+            var lst = new List<SqlTable>();
 
-        public bool TryGetTableByName(string name, out SqlTable table)
-        {
-            foreach (var tbl in Tables)
-                if (tbl.Name == name)
-                {
-                    table = tbl;
-                    return true;
-                }
-
-            table = null;
-            return false;
-        }
-
-        public SqlTable GetTableByName(string tableName)
-        {
             foreach (var table in Tables)
                 if (table.Name == tableName)
-                    return table;
+                    lst.Add(table);
 
-            return null;
-        }
-
-
-        public string TableQuote(string q)
-        {
-            q = $"[{q}]";
-            
-            q = q.Insert(q.IndexOf('.'), "]");
-            q = q.Insert(q.IndexOf('.') + 1, "[");
-
-            return q;
+            return lst;
         }
     }
 }
