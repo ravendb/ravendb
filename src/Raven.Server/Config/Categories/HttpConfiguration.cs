@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using System.IO.Compression;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
 using Sparrow;
@@ -31,9 +32,29 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Http.MaxRequestLineSizeInKb", ConfigurationEntryScope.ServerWideOnly)]
         public Size MaxRequestLineSize { get; set; }
 
-        [Description("Whether Raven's HTTP server should GZip encode its responses")]
+        [Description("Whether Raven's HTTP server should compress its responses")]
         [DefaultValue(true)]
-        [ConfigurationEntry("Http.AllowResponseCompression", ConfigurationEntryScope.ServerWideOnly)]
-        public bool AllowResponseCompression { get; set; }
+        [ConfigurationEntry("Http.UseResponseCompression", ConfigurationEntryScope.ServerWideOnly)]
+        public bool UseResponseCompression { get; set; }
+
+        [Description("Whether Raven's HTTP server should allow response compression to happen when HTTPS is enabled. Please see http://breachattack.com/ before enabling this")]
+        [DefaultValue(false)]
+        [ConfigurationEntry("Http.AllowResponseCompressionOverHttps", ConfigurationEntryScope.ServerWideOnly)]
+        public bool AllowResponseCompressionOverHttps { get; set; }
+
+        [Description("Compression level to be used when compressing HTTP responses with GZip")]
+        [DefaultValue(CompressionLevel.Fastest)]
+        [ConfigurationEntry("Http.GzipResponseCompressionLevel", ConfigurationEntryScope.ServerWideOnly)]
+        public CompressionLevel GzipResponseCompressionLevel { get; set; }
+
+        [Description("Compression level to be used when compressing HTTP responses with Deflate")]
+        [DefaultValue(CompressionLevel.Fastest)]
+        [ConfigurationEntry("Http.DeflateResponseCompressionLevel", ConfigurationEntryScope.ServerWideOnly)]
+        public CompressionLevel DeflateResponseCompressionLevel { get; set; }
+
+        [Description("Compression level to be used when compressing static files")]
+        [DefaultValue(CompressionLevel.Optimal)]
+        [ConfigurationEntry("Http.StaticFilesResponseCompressionLevel", ConfigurationEntryScope.ServerWideOnly)]
+        public CompressionLevel StaticFilesResponseCompressionLevel { get; set; }
     }
 }

@@ -41,6 +41,11 @@ namespace Raven.Client
             public const string RefreshClientConfiguration = "Refresh-Client-Configuration";
 
             public const string Etag = "ETag";
+
+            public const string IfNoneMatch = "If-None-Match";
+            public const string TransferEncoding = "Transfer-Encoding";
+            public const string ContentEncoding = "Content-Encoding";
+            public const string ContentLength = "Content-Length";
         }
 
         public class Platform
