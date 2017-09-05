@@ -23,7 +23,7 @@ namespace SlowTests.Client.Subscriptions
 
             using (var store = GetDocumentStore())
             {
-                store.Subscriptions.Create(new SubscriptionCreationOptions<User>()
+                store.Subscriptions.Create<User>(options: new SubscriptionCreationOptions()
                 {
                     Name = "Subs1"
                 });
@@ -74,9 +74,7 @@ namespace SlowTests.Client.Subscriptions
                     return Task.CompletedTask;
                 };
 
-#pragma warning disable 4014
-                subscription.Run(x =>
-#pragma warning restore 4014
+                var t = subscription.Run(x =>
                 {
                     foreach (var item in x.Items)
                     {
@@ -90,7 +88,16 @@ namespace SlowTests.Client.Subscriptions
                         session.Store(new User { Name = i.ToString() });
                     session.SaveChanges();
                 }
-                Assert.True(mre.WaitOne(_reasonableWaitTime));
+                try
+                {
+                    Assert.True(mre.WaitOne(_reasonableWaitTime));
+                }
+                catch (Exception e)
+                {
+                    if (t.Exception == null)
+                        throw;
+                    throw new AggregateException(new[] {t.Exception, e});
+                }
             }
         }
     }

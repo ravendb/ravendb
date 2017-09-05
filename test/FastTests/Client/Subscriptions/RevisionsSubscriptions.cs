@@ -22,8 +22,7 @@ namespace FastTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-
-                var subscriptionId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<Revision<User>>());
+                var subscriptionId = await store.Subscriptions.CreateAsync<Revision<User>>();
 
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
@@ -102,7 +101,7 @@ namespace FastTests.Client.Subscriptions
             using (var store = GetDocumentStore())
             {
 
-                var subscriptionId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<Revision<User>>());
+                var subscriptionId = await store.Subscriptions.CreateAsync<Revision<User>>();
 
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
@@ -190,20 +189,16 @@ namespace FastTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-
-                var subscriptionId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>
+                var subscriptionId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions
                 {
-                    Criteria = new SubscriptionCriteria<User>
-                    {
-                        Script = @"
-                        if(!!this.Current && !!this.Previous && this.Current.Age > this.Previous.Age)
-                        {
-                            return { Id: this.Current[""@metadata""][""@id""], Age: this.Current.Age }
-                        }
-                        else return false;
-                        ",
-                        IncludeRevisions = true
-                    }
+                    Query = @"
+declare function match(d){
+    return d.Current.Age > d.Previous.Age;
+}
+from Users (Revisions = true) as d
+where match(d)
+select { Id: id(d.Current), Age: d.Current.Age }
+"
                 });
 
                 using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -283,20 +278,16 @@ namespace FastTests.Client.Subscriptions
             using (var store = GetDocumentStore())
             {
 
-                var subscriptionId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>
+                var subscriptionId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions
                 {
-                    Criteria = new SubscriptionCriteria<User>
-                    {
-                        Script = @"
-                        if(!!this.Current && !!this.Previous && this.Current.Age > this.Previous.Age)
-                        {
-                            return { Id: this.Current[""@metadata""][""@id""], Age: this.Current.Age }
-                        }
-                        else return false;
-                        ",
-                        IncludeRevisions = true
-
-                    }
+                    Query = @"
+declare function match(d){
+    return d.Current.Age > d.Previous.Age;
+}
+from Users (Revisions = true) as d
+where match(d)
+select { Id: id(d.Current), Age: d.Current.Age }
+"
                 });
 
                 using (var context = JsonOperationContext.ShortTermSingleUse())

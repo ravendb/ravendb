@@ -31,7 +31,7 @@ namespace FastTests.Server.Documents.Indexing.Static
             {
                 var index = AutoMapReduceIndex.CreateNew(1, new AutoMapReduceIndexDefinition("Users", new[]
                 {
-                    new IndexField
+                    new AutoIndexField
                     {
                         Name = "Count",
                         Aggregation = AggregationOperation.Count,
@@ -39,7 +39,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                     }
                 }, new[]
                 {
-                    new IndexField
+                    new AutoIndexField
                     {
                         Name = "Location",
                         Storage = FieldStorage.Yes
@@ -85,7 +85,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                 using (var contextPool = new TransactionContextPool(database.DocumentsStorage.Environment))
                 {
                     var indexStorage = new IndexStorage(index, contextPool, database);
-                    var reducer = new ReduceMapResultsOfStaticIndex(index,index.Compiled.Reduce, index.Definition, indexStorage, new MetricsCountersManager(), mapReduceContext);
+                    var reducer = new ReduceMapResultsOfStaticIndex(index,index._compiled.Reduce, index.Definition, indexStorage, new MetricsCountersManager(), mapReduceContext);
 
                     await ActualTest(numberOfUsers, locations, index, mapReduceContext, reducer, database);
                 }
@@ -102,8 +102,8 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                 using (var tx = indexContext.OpenWriteTransaction())
                 {
-                    mapReduceContext.MapPhaseTree = tx.InnerTransaction.CreateTree(MapReduceIndexBase<MapIndexDefinition>.MapPhaseTreeName);
-                    mapReduceContext.ReducePhaseTree = tx.InnerTransaction.CreateTree(MapReduceIndexBase<MapIndexDefinition>.ReducePhaseTreeName);
+                    mapReduceContext.MapPhaseTree = tx.InnerTransaction.CreateTree(MapReduceIndexBase<MapIndexDefinition, IndexField>.MapPhaseTreeName);
+                    mapReduceContext.ReducePhaseTree = tx.InnerTransaction.CreateTree(MapReduceIndexBase<MapIndexDefinition, IndexField>.ReducePhaseTreeName);
 
                     var store = new MapReduceResultsStore(hashOfReduceKey, MapResultsStorageType.Tree, indexContext, mapReduceContext, true);
 
@@ -163,8 +163,8 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                 using (var tx = indexContext.OpenWriteTransaction())
                 {
-                    mapReduceContext.MapPhaseTree = tx.InnerTransaction.CreateTree(MapReduceIndexBase<MapIndexDefinition>.MapPhaseTreeName);
-                    mapReduceContext.ReducePhaseTree = tx.InnerTransaction.CreateTree(MapReduceIndexBase<MapIndexDefinition>.ReducePhaseTreeName);
+                    mapReduceContext.MapPhaseTree = tx.InnerTransaction.CreateTree(MapReduceIndexBase<MapIndexDefinition, IndexField>.MapPhaseTreeName);
+                    mapReduceContext.ReducePhaseTree = tx.InnerTransaction.CreateTree(MapReduceIndexBase<MapIndexDefinition, IndexField>.ReducePhaseTreeName);
 
                     var store = new MapReduceResultsStore(hashOfReduceKey, MapResultsStorageType.Tree, indexContext, mapReduceContext, true);
 
@@ -222,8 +222,8 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                 using (var tx = indexContext.OpenWriteTransaction())
                 {
-                    mapReduceContext.MapPhaseTree = tx.InnerTransaction.CreateTree(MapReduceIndexBase<MapIndexDefinition>.MapPhaseTreeName);
-                    mapReduceContext.ReducePhaseTree = tx.InnerTransaction.CreateTree(MapReduceIndexBase<MapIndexDefinition>.ReducePhaseTreeName);
+                    mapReduceContext.MapPhaseTree = tx.InnerTransaction.CreateTree(MapReduceIndexBase<MapIndexDefinition, IndexField>.MapPhaseTreeName);
+                    mapReduceContext.ReducePhaseTree = tx.InnerTransaction.CreateTree(MapReduceIndexBase<MapIndexDefinition, IndexField>.ReducePhaseTreeName);
 
                     var store = new MapReduceResultsStore(hashOfReduceKey, MapResultsStorageType.Tree, indexContext, mapReduceContext, true);
 

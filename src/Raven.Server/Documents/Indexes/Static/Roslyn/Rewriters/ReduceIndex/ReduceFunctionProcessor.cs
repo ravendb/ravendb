@@ -25,7 +25,10 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
                 _setResultsVariable,
                 _getGroupByFields,
                 DynamicLambdaExpressionsRewriter.Instance,
-                _selectManyRewriter
+
+                _selectManyRewriter,
+                SpatialFieldRewriter.Instance,
+                CoalesceRewriter.Instance
             })
             {
                 node = rewriter.Visit(node);

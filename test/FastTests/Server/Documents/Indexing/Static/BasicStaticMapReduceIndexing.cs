@@ -247,7 +247,7 @@ select new
 }",
                     Fields =
                     {
-                        { "Product", new IndexFieldOptions { Indexing = FieldIndexing.Analyzed} }
+                        { "Product", new IndexFieldOptions { Indexing = FieldIndexing.Search} }
                     },
                     LockMode = IndexLockMode.LockedError
                 };
@@ -308,7 +308,7 @@ select new
                 Assert.Equal("Orders", indexes[1].Definition.Collections.Single());
                 Assert.Equal(3, indexes[1].Definition.MapFields.Count);
                 Assert.Contains("Product", indexes[1].Definition.MapFields.Keys);
-                Assert.Equal(FieldIndexing.Analyzed, indexes[1].Definition.MapFields["Product"].Indexing);
+                Assert.Equal(FieldIndexing.Search, indexes[1].Definition.MapFields["Product"].As<IndexField>().Indexing);
                 Assert.Contains("Count", indexes[1].Definition.MapFields.Keys);
                 Assert.Contains("Total", indexes[1].Definition.MapFields.Keys);
                 Assert.Equal(IndexLockMode.LockedError, indexes[1].Definition.LockMode);

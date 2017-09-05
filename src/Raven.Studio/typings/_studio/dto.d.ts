@@ -128,10 +128,6 @@ interface saveDocumentResponseDto {
     Results: Array<changedOnlyMetadataFieldsDto>;
 }
 
-interface transformerParamInfo {
-    name: string;
-    hasDefault: boolean;
-}
 interface operationIdDto {
     OperationId: number;
 }
@@ -195,19 +191,8 @@ interface workTimeUnit {
     endTime: number;
 }
 
-interface transformerQueryDto {
-    transformerName: string;
-    queryParams: Array<transformerParamDto>;
-}
-
-interface transformerParamDto {
-    name: string;
-    value: string;
-}
-
 interface queryDto {
     queryText: string;
-    transformerQuery: transformerQueryDto;
     showFields: boolean;
     indexEntries: boolean;
 }
@@ -260,8 +245,8 @@ interface IndexingPerformanceOperationWithParent extends Raven.Client.Documents.
 
 interface subscriptionResponseItemDto {
     SubscriptionId: number;
-    Criteria: Raven.Client.Documents.Subscriptions.SubscriptionCriteria;
     AckEtag: number;
+    Query: string;
     TimeOfReceivingLastAck: string;
     Connection: subscriptionConnectionInfoDto;
     RecentConnections: Array<subscriptionConnectionInfoDto>;
@@ -322,14 +307,18 @@ interface externalReplicationDataFromUI {
     DestinationURL: string;
 } 
 
-interface subscriptionDataFromUI {
+interface ravenEtlDataFromUI {
     TaskName: string;
-    Script: string;
-    Collection: string;
-    ChangeVectorEntry: string;
-    IncludeRevisions: boolean;
+    ConnectionStringName: string;
+    AllowEtlOnNonEncryptedChannel: boolean;
+    // list of scripts... // TODO..
 } 
 
+interface subscriptionDataFromUI {
+    TaskName: string;
+    Query: string;
+    ChangeVector: Raven.Client.Constants.Documents.SubscriptionChangeVectorSpecialStates | string;
+} 
 
 interface layoutable {
     x: number;
@@ -345,3 +334,5 @@ interface autoCompleteWordList {
 }
 
 type autoCompleteCompleter = (editor: AceAjax.Editor, session: AceAjax.IEditSession, pos: AceAjax.Position, prefix: string, callback: (errors: any[], wordlist: autoCompleteWordList[]) => void) => void;
+type certificateMode = "generate" | "upload" | "editExisting";
+    

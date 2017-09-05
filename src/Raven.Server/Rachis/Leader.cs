@@ -14,6 +14,8 @@ using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
 using Sparrow.Collections.LockFree;
+using Sparrow.Threading;
+using Voron.Impl;
 using Voron.Impl.Extensions;
 
 namespace Raven.Server.Rachis
@@ -41,7 +43,7 @@ namespace Raven.Server.Rachis
             public Action<TaskCompletionSource<(long, object)>> OnNotify;
         }
 
-        private int _hasNewTopology;
+        private MultipleUseFlag _hasNewTopology = new MultipleUseFlag();
         private readonly ManualResetEvent _newEntry = new ManualResetEvent(false);
         private readonly ManualResetEvent _voterResponded = new ManualResetEvent(false);
         private readonly ManualResetEvent _promotableUpdated = new ManualResetEvent(false);
@@ -70,15 +72,12 @@ namespace Raven.Server.Rachis
             _engine = engine;
         }
 
-        public bool Running
-        {
-            get { return Volatile.Read(ref _running); }
-            private set { Volatile.Write(ref _running, value); }
-        }
+        private MultipleUseFlag _running = new MultipleUseFlag();
+        public bool Running => _running.IsRaised();
 
         public void Start()
         {
-            Running = true;
+            _running.Raise();
             ClusterTopology clusterTopology;
             using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
@@ -123,7 +122,7 @@ namespace Raven.Server.Rachis
                 {
                     var status = new NodeStatus
                     {
-                        Connected = kvp.Value.Status.StartsWith("Connected"),
+                        Connected = kvp.Value.Status == AmbassadorStatus.Connected,
                         LastMatchingIndex = kvp.Value.FollowerMatchIndex,
                         LastReply = kvp.Value.LastReplyFromFollower,
                         LastSent = kvp.Value.LastSendToFollower,
@@ -132,7 +131,7 @@ namespace Raven.Server.Rachis
 
                     if (status.Connected == false)
                     {
-                        status.ErrorDetails = kvp.Value.Status;
+                        status.ErrorDetails = kvp.Value.StatusMessage;
                     }
 
                     dict[kvp.Key] = status;
@@ -363,7 +362,7 @@ namespace Raven.Server.Rachis
                 var sinceLastSend = (long)(now - followerAmbassador.LastSendToFollower).TotalMilliseconds;
                 var lastMsg = followerAmbassador.LastSendMsg;
                 sb.AppendLine(
-                    $"{followerAmbassador.Tag}: Got last reply {sinceLastReply:#,#;;0} ms ago and sent {sinceLastSend:#,#;;0} ms ({lastMsg}) - {followerAmbassador.Status} - {followerAmbassador.ThreadStatus}");
+                    $"{followerAmbassador.Tag}: Got last reply {sinceLastReply:#,#;;0} ms ago and sent {sinceLastSend:#,#;;0} ms ({lastMsg}) - {followerAmbassador.StatusMessage} - {followerAmbassador.ThreadStatus}");
             }
 
 
@@ -384,7 +383,7 @@ namespace Raven.Server.Rachis
         private void OnVoterConfirmation()
         {
             TransactionOperationContext context;
-            if (Interlocked.CompareExchange(ref _hasNewTopology, 0, 1) != 0)
+            if (_hasNewTopology.Lower())
             {
                 ClusterTopology clusterTopology;
                 using (_engine.ContextPool.AllocateOperationContext(out context))
@@ -488,7 +487,6 @@ namespace Raven.Server.Rachis
         /// </summary>
         private readonly SortedList<long, int> _nodesPerIndex = new SortedList<long, int>();
 
-        private bool _running;
         private readonly Stopwatch _leadership = Stopwatch.StartNew();
         private int VotersMajority => _voters.Count / 2 + 1;
 
@@ -568,26 +566,34 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public Task<(long Etag, object Result)> PutAsync(CommandBase cmd)
+        public Task<(long Index, object Result)> PutAsync(CommandBase cmd)
         {
-            var tcs = new TaskCompletionSource<(long Etag, object Result)>(TaskCreationOptions.RunContinuationsAsynchronously);
+            Task<(long Index, object Result)> task;
             using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenWriteTransaction())
+            using (context.OpenWriteTransaction()) // this line prevents concurrency issues on the PutAsync
             {
                 var djv = cmd.ToJson(context);
                 var cmdJson = context.ReadObject(djv, "raft/command");
 
                 var index = _engine.InsertToLeaderLog(context, cmdJson, RachisEntryFlags.StateMachineCommand);
                 context.Transaction.Commit();
-
-                _entries[index] = new CommandState // we need to add entry inside write tx lock to omit a situation when command will be applied (and state set) before it is added to the entries list
-                {
-                    CommandIndex = index,
-                    TaskCompletionSource = tcs
-                };
+                task = AddToEntries(index);
             }
 
             _newEntry.Set();
+            return task;
+        }
+
+        public Task<(long Index, object Result)> AddToEntries(long index)
+        {
+            var tcs = new TaskCompletionSource<(long Index, object Result)>(TaskCreationOptions.RunContinuationsAsynchronously);
+            _entries[index] =
+                new
+                    CommandState // we need to add entry inside write tx lock to omit a situation when command will be applied (and state set) before it is added to the entries list
+                    {
+                        CommandIndex = index,
+                        TaskCompletionSource = tcs
+                    };
             return tcs.Task;
         }
 
@@ -596,7 +602,7 @@ namespace Raven.Server.Rachis
         public void NotifyAboutException(FollowerAmbassador node, Exception e)
         {
             var alert = AlertRaised.Create($"Node {node.Tag} encountered an error",
-                node.Status,
+                node.StatusMessage,
                 AlertType.ClusterTopologyWarning,
                 NotificationSeverity.Warning,
                 details: new ExceptionDetails(e));
@@ -647,7 +653,7 @@ namespace Raven.Server.Rachis
                         throw new TimeoutException(message);
                     }
                 }
-                Running = false;
+                _running.Lower();
                 _shutdownRequested.Set();
                 TaskExecutor.Execute(_ =>
                 {
@@ -720,7 +726,7 @@ namespace Raven.Server.Rachis
             Remove
         }
 
-        public bool TryModifyTopology(string nodeTag, string nodeUrl, TopologyModification modification, out Task task, bool validateNotInTopology = false)
+        public bool TryModifyTopology(string nodeTag, string nodeUrl, TopologyModification modification, out Task task, bool validateNotInTopology = false, Action<TransactionOperationContext> beforeCommit = null)
         {
             using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenWriteTransaction())
@@ -789,47 +795,35 @@ namespace Raven.Server.Rachis
                 );
 
                 var topologyJson = _engine.SetTopology(context, clusterTopology);
-                
                 var index = _engine.InsertToLeaderLog(context, topologyJson, RachisEntryFlags.Topology);
-                var tcs = new TaskCompletionSource<(long Etag, object Result)>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+                if (modification == TopologyModification.Remove)
+                {
+                    _engine.GetStateMachine().EnsureNodeRemovalOnDeletion(context,nodeTag);
+                }
+
+                context.Transaction.Commit();
+
+                var tcs = new TaskCompletionSource<(long Index, object Result)>(TaskCreationOptions.RunContinuationsAsynchronously);
                 _entries[index] = new CommandState
                 {
                     TaskCompletionSource = tcs,
                     CommandIndex = index
                 };
+
                 _topologyModification = task = tcs.Task.ContinueWith(_ =>
                 {
                     Interlocked.Exchange(ref _topologyModification, null);
                 });
-
-                if (modification == TopologyModification.Remove)
-                {
-                    EnsureNodeRemovalOnDeletion(nodeTag, context);
-                }
-                context.Transaction.Commit();
             }
-            Interlocked.Exchange(ref _hasNewTopology, 1);
+            _hasNewTopology.Raise();
             _voterResponded.Set();
             _newEntry.Set();
 
             return true;
         }
 
-        private void EnsureNodeRemovalOnDeletion(string nodeTag, TransactionOperationContext context)
-        {
-            var remove = new RemoveNodeFromClusterCommand
-            {
-                RemovedNode = nodeTag
-            };
-            var blittableCmd = context.ReadObject(remove.ToJson(context), "read/remove-node-command");
-            var removeIndex = _engine.InsertToLeaderLog(context, blittableCmd, RachisEntryFlags.StateMachineCommand);
-            var removeTcs = new TaskCompletionSource<(long Etag, object Result)>(TaskCreationOptions.RunContinuationsAsynchronously);
-            _entries[removeIndex] = new CommandState
-            {
-                TaskCompletionSource = removeTcs,
-                CommandIndex = removeIndex
-            };
-        }
+       
 
         private static string GenerateNodeTag(ClusterTopology clusterTopology)
         {
@@ -848,7 +842,7 @@ namespace Raven.Server.Rachis
             return clusterTopology.LastNodeId.Substring(0, clusterTopology.LastNodeId.Length - 1) + lastChar;
         }
 
-        public void SetStateOf(long index, Action<TaskCompletionSource<(long Etag, object Result)>> onNotify)
+        public void SetStateOf(long index, Action<TaskCompletionSource<(long Index, object Result)>> onNotify)
         {
             if (_entries.TryGetValue(index, out CommandState value))
             {

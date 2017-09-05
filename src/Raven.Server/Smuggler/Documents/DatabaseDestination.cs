@@ -8,7 +8,6 @@ using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
-using Raven.Client.Documents.Transformers;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
@@ -52,7 +51,12 @@ namespace Raven.Server.Smuggler.Documents
         {
             return new DatabaseDocumentActions(_database, _buildType, isRevision: true, log: _log);
         }
-     
+
+        public IDocumentActions Tombstones()
+        {
+            return new DatabaseDocumentActions(_database, _buildType, isRevision: false, log: _log);
+        }
+
         public IIdentityActions Identities()
         {
             return new DatabaseIdentityActions(_database);
@@ -61,30 +65,6 @@ namespace Raven.Server.Smuggler.Documents
         public IIndexActions Indexes()
         {
             return new DatabaseIndexActions(_database);
-        }
-
-        public ITransformerActions Transformers()
-        {
-            return new DatabaseTransformerActions(_database);
-        }
-
-        private class DatabaseTransformerActions : ITransformerActions
-        {
-            private readonly DocumentDatabase _database;
-
-            public DatabaseTransformerActions(DocumentDatabase database)
-            {
-                _database = database;
-            }
-
-            public void WriteTransformer(TransformerDefinition transformerDefinition)
-            {
-                AsyncHelpers.RunSync(() => _database.TransformerStore.CreateTransformer(transformerDefinition));
-            }
-
-            public void Dispose()
-            {
-            }
         }
 
         private class DatabaseIndexActions : IIndexActions
@@ -144,6 +124,15 @@ namespace Raven.Server.Smuggler.Documents
                 if (item.Attachments != null)
                     progress.Attachments.ReadCount += item.Attachments.Count;
                 _command.Add(item);
+                HandleBatchOfDocumentsIfNecessary();
+            }
+
+            public void WriteTombstone(DocumentTombstone tombstone, SmugglerProgressBase.CountsWithLastEtag progress)
+            {
+                _command.Add(new DocumentItem
+                {
+                    Tombstone = tombstone
+                });
                 HandleBatchOfDocumentsIfNecessary();
             }
 
@@ -229,7 +218,14 @@ namespace Raven.Server.Smuggler.Documents
 
             public void WriteIdentity(string key, long value)
             {
+                const int batchSize = 1024;
+
                 _identities[key] = value;
+
+                if (_identities.Count < batchSize)
+                    return;
+
+                SendIdentities();
             }
 
             public void Dispose()
@@ -237,8 +233,15 @@ namespace Raven.Server.Smuggler.Documents
                 if (_identities.Count == 0)
                     return;
 
+                SendIdentities();
+            }
+
+            private void SendIdentities()
+            {
                 //fire and forget, do not hold-up smuggler operations waiting for Raft command
-                _database.ServerStore.SendToLeaderAsync(new UpdateClusterIdentityCommand(_database.Name, _identities)).Wait();
+                AsyncHelpers.RunSync(() => _database.ServerStore.SendToLeaderAsync(new UpdateClusterIdentityCommand(_database.Name, _identities)));
+
+                _identities.Clear();
             }
         }
 
@@ -278,6 +281,30 @@ namespace Raven.Server.Smuggler.Documents
 
                 foreach (var documentType in Documents)
                 {
+                    var tombstone = documentType.Tombstone;
+                    if (tombstone != null)
+                    {
+                        using (Slice.External(context.Allocator, tombstone.LowerId, out Slice key))
+                        {
+                            var newEtag = _database.DocumentsStorage.GenerateNextEtag();
+                            var changeVector = _database.DocumentsStorage.GetNewChangeVector(context, newEtag);
+                            switch (tombstone.Type)
+                            {
+                                case DocumentTombstone.TombstoneType.Document:
+                                    _database.DocumentsStorage.Delete(context, key, tombstone.LowerId, null, null, changeVector, new CollectionName(tombstone.Collection));
+                                    break;
+                                case DocumentTombstone.TombstoneType.Attachment:
+                                    _database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, key, false, "$fromReplication", null, changeVector);
+                                    break;
+                                case DocumentTombstone.TombstoneType.Revision:
+                                    _database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, key, tombstone.Collection, changeVector);
+                                    break;
+                            }
+                        }
+
+                        continue;
+                    }
+
                     if (documentType.Attachments != null)
                     {
                         foreach (var attachment in documentType.Attachments)

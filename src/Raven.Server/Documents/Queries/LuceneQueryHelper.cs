@@ -53,6 +53,33 @@ namespace Raven.Server.Documents.Queries
             return CreateRange(fieldName, value, true, value, true);
         }
 
+        public static Query NotEqual(string fieldName, LuceneTermType termType, string value, bool exact)
+        {
+            return new BooleanQuery
+            {
+                { Term(fieldName, Asterisk, LuceneTermType.WildCard), Occur.MUST },
+                { Term(fieldName, value, termType, exact: exact), Occur.MUST_NOT }
+            };
+        }
+
+        public static Query NotEqual(string fieldName, LuceneTermType termType, long value)
+        {
+            return new BooleanQuery
+            {
+                { Term(fieldName, Asterisk, LuceneTermType.WildCard), Occur.MUST },
+                { CreateRange(fieldName, value, true, value, true), Occur.MUST_NOT }
+            };
+        }
+
+        public static Query NotEqual(string fieldName, LuceneTermType termType, double value)
+        {
+            return new BooleanQuery
+            {
+                { Term(fieldName, Asterisk, LuceneTermType.WildCard), Occur.MUST },
+                { CreateRange(fieldName, value, true, value, true), Occur.MUST_NOT }
+            };
+        }
+
         public static Query LessThan(string fieldName, LuceneTermType termType, string value, bool exact)
         {
             return CreateRange(fieldName, Asterisk, LuceneTermType.WildCard, false, value, termType, false, exact);

@@ -73,7 +73,6 @@ body {
         overflow-x: hidden;
     }
 
-
     .top-alert {
         .padding.padding-xs;
         display: block;
@@ -846,4 +845,47 @@ body {
     position: absolute;
     right: 0;
     transform: translateY(-100%);
+}
+
+.btn-link {
+    background: none !important;
+    color: inherit;
+    border: none;
+    padding: 0 !important;
+    margin: 0;
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+
+    &:hover {
+        color:@brand-primary;
+    }
+}
+
+.connection-lost {
+    .backdrop;
+    opacity: 1;
+    background-color: fadeout(@gray-base, 20%);
+    text-align: center;
+    display: none;
+
+    .absolute-center {
+        .panel;
+        padding: @grid-gutter-width;
+    }
+
+    h3 {
+        color: @brand-danger;
+        margin-bottom: @grid-gutter-width/2;
+        font-weight: bold;
+        text-transform: uppercase;
+    }
+
+    p {
+        margin-bottom: @grid-gutter-width/2;
+    }
+
+    img {
+        margin-bottom: @grid-gutter-width/2;
+    }
 }

@@ -18,14 +18,14 @@ namespace Raven.Client.Documents.Session
         public async Task<bool> AttachmentExistsAsync(string documentId, string name)
         {
             var command = new HeadAttachmentCommand(documentId, name, null);
-            await RequestExecutor.ExecuteAsync(command, Context, sessionId: _clientSessionId).ConfigureAwait(false);
+            await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo).ConfigureAwait(false);
             return command.Result != null;
         }
 
         public async Task<AttachmentResult> GetAttachmentAsync(string documentId, string name)
         {
             var operation = new GetAttachmentOperation(documentId, name, AttachmentType.Document, null);
-            return await DocumentStore.Operations.SendAsync(operation, sessionId: _clientSessionId).ConfigureAwait(false);
+            return await DocumentStore.Operations.SendAsync(operation, sessionInfo: SessionInfo).ConfigureAwait(false);
         }
 
         public async Task<AttachmentResult> GetAttachmentAsync(object entity, string name)
@@ -34,13 +34,13 @@ namespace Raven.Client.Documents.Session
                 ThrowEntityNotInSession(entity);
 
             var operation = new GetAttachmentOperation(document.Id, name, AttachmentType.Document, null);
-            return await DocumentStore.Operations.SendAsync(operation, sessionId: _clientSessionId).ConfigureAwait(false);
+            return await DocumentStore.Operations.SendAsync(operation, sessionInfo: SessionInfo).ConfigureAwait(false);
         }
 
         public async Task<AttachmentResult> GetRevisionAttachmentAsync(string documentId, string name, string changeVector)
         {
             var operation = new GetAttachmentOperation(documentId, name, AttachmentType.Revision, changeVector);
-            return await DocumentStore.Operations.SendAsync(operation, sessionId: _clientSessionId).ConfigureAwait(false);
+            return await DocumentStore.Operations.SendAsync(operation, sessionInfo: SessionInfo).ConfigureAwait(false);
         }
     }
 }

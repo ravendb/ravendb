@@ -37,7 +37,7 @@ namespace SlowTests.MailingList
                                   };
 
                 Analyzers.Add(x => x.Friends, "Lucene.Net.Analysis.SimpleAnalyzer, Lucene.Net");
-                Indexes.Add(x => x.Friends, FieldIndexing.Analyzed);
+                Indexes.Add(x => x.Friends, FieldIndexing.Search);
             }
         }
 

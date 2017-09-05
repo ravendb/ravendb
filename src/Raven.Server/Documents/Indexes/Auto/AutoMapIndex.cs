@@ -1,12 +1,13 @@
 ﻿using System.Collections.Generic;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config.Categories;
+using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.ServerWide.Context;
 using Voron;
 
 namespace Raven.Server.Documents.Indexes.Auto
 {
-    public class AutoMapIndex : MapIndexBase<AutoMapIndexDefinition>
+    public class AutoMapIndex : MapIndexBase<AutoMapIndexDefinition, AutoIndexField>
     {
         private AutoMapIndex(long etag, AutoMapIndexDefinition definition)
             : base(etag, IndexType.AutoMap, definition)

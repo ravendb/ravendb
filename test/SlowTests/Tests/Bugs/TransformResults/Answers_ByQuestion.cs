@@ -1,6 +1,5 @@
 using System.Linq;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Transformers;
 
 namespace SlowTests.Tests.Bugs.TransformResults
 {
@@ -31,27 +30,6 @@ namespace SlowTests.Tests.Bugs.TransformResults
                                    DecimalTotal = g.Sum(x => x.DecimalTotal)
                                };
 
-        }
-    }
-
-    public class Answers_ByQuestionTransformer : AbstractTransformerCreationTask<AnswerViewItem>
-    {
-        public Answers_ByQuestionTransformer()
-        {
-            TransformResults = results =>
-                from result in results
-                let answer = LoadDocument<Answer>(result.AnswerId)
-                let user = LoadDocument<User>(answer.UserId)
-                select new
-                {
-                    QuestionId = result.QuestionId,
-                    AnswerId = result.AnswerId,
-                    Content = answer.Content,
-                    UserId = answer.UserId,
-                    UserDisplayName = user.DisplayName,
-                    VoteTotal = result.VoteTotal,
-                    result.DecimalTotal
-                };
         }
     }
 }

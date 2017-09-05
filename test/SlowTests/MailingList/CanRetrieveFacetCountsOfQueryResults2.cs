@@ -4,7 +4,6 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
-using SlowTests.Utils;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -20,7 +19,7 @@ namespace SlowTests.MailingList
 
         private class AccItem
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
             public double? Lat { get; set; }
             public double? Lon { get; set; }
             public string Name { get; set; }
@@ -41,7 +40,7 @@ namespace SlowTests.MailingList
                     select new
                     {
                         i,
-                        __distance = SpatialGenerate((double)i.Lat, (double)i.Lon),
+                        Distance = CreateSpatialField((double)i.Lat, (double)i.Lon),
                         i.Name,
                         i.Bedrooms,
                         i.Attributes
@@ -62,7 +61,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact(Skip = "Missing feature: Spatial")]
+        [Fact]
         public void CanRetrieveFacetCounts()
         {
             using (var store = GetDocumentStore())
@@ -107,8 +106,8 @@ namespace SlowTests.MailingList
                                        .Where(x => x.Bedrooms == 2);
                      */
                     var query = session.Query<AccItem, AccItems_Spatial>()
-                                       .Customize(customization => customization.WaitForNonStaleResults())
-                                       .Customize(x => x.WithinRadiusOf(radius: 100, latitude: 52.156161, longitude: 1.602483));
+                        .Customize(customization => customization.WaitForNonStaleResults())
+                        .Spatial("Distance", x => x.WithinRadius(100, 52.156161, 1.602483));
                     var partialFacetResults = query
                         .ToFacets("facets/AttributeFacets");
                     var fullFacetResults = session.Query<AccItem, AccItems_Attributes>()

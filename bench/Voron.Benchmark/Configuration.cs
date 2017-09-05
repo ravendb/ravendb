@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.LowMemory;
+using Sparrow.Threading;
 
 namespace Voron.Benchmark
 {
@@ -25,7 +26,7 @@ namespace Voron.Benchmark
         /// </summary>
         static Configuration()
         {
-            Allocator = new ByteStringContext(LowMemoryFlag.None);
+            Allocator = new ByteStringContext(SharedMultipleUseFlag.None);
         }
     }
 }

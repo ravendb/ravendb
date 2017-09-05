@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using Sparrow;
 using Sparrow.LowMemory;
+using Sparrow.Threading;
 using Voron.Impl;
 
 namespace Micro.Benchmark.PageLocatorImpl
@@ -13,7 +14,7 @@ namespace Micro.Benchmark.PageLocatorImpl
     {
         private const ushort Invalid = 0;
 
-        private readonly ByteStringContext _allocator = new ByteStringContext(LowMemoryFlag.None);
+        private readonly ByteStringContext _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
         private readonly LowLevelTransaction _tx;
 
         private readonly int _cacheSize;

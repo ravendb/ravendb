@@ -5,9 +5,15 @@ using Sparrow;
 
 namespace Raven.Server.Documents.Queries.Parser
 {
+    public enum QueryType
+    {
+        Select,
+        Update
+    }
+
     public class QueryParser
     {
-        private static readonly string[] OperatorStartMatches = { ">=", "<=", "<", ">", "=", "==", "BETWEEN", "IN", "ALL IN", "(" };
+        private static readonly string[] OperatorStartMatches = { ">=", "<=", "<", ">", "=", "==", "!=", "BETWEEN", "IN", "ALL IN", "(" };
         private static readonly string[] BinaryOperators = { "OR", "AND" };
         private static readonly string[] StaticValues = { "true", "false", "null" };
         private static readonly string[] OrderByOptions = { "ASC", "DESC", "ASCENDING", "DESCENDING" };
@@ -27,7 +33,7 @@ namespace Raven.Server.Documents.Queries.Parser
             Scanner.Init(q);
         }
 
-        public Query Parse()
+        public Query Parse(QueryType queryType = QueryType.Select)
         {
             var q = new Query
             {
@@ -37,20 +43,12 @@ namespace Raven.Server.Documents.Queries.Parser
             while (Scanner.TryScan("DECLARE"))
             {
                 var (name, func) = DeclaredFunction();
-                if (q.DeclaredFunctions == null)
-                    q.DeclaredFunctions = new Dictionary<StringSegment, ValueToken>(CaseInsensitiveStringSegmentEqualityComparer.Instance);
 
-                if (q.DeclaredFunctions.TryAdd(name, func) == false)
+                if (q.TryAddFunction(name, QueryExpression.Extract(Scanner.Input, func)) == false)
                     ThrowParseException(name + " function was declared multiple times");
             }
 
-            if (Scanner.TryScan("SELECT"))
-                q.Select = SelectOrWithClause("SELECT", out q.IsDistinct);
-
             q.From = FromClause();
-
-            if (Scanner.TryScan("WITH"))
-                q.With = SelectOrWithClause("WITH", out _);
 
             if (Scanner.TryScan("GROUP BY"))
                 q.GroupBy = GroupBy();
@@ -58,21 +56,79 @@ namespace Raven.Server.Documents.Queries.Parser
             if (Scanner.TryScan("WHERE") && Expression(out q.Where) == false)
                 ThrowParseException("Unable to parse WHERE clause");
 
-            if (Scanner.TryScan("SELECT"))
-            {
-                if(q.Select!= null)
-                    ThrowParseException("Only a single SELECT clause is allowed, but got two");
-
-                q.Select = SelectOrWithClause("SELECT", out q.IsDistinct);
-            }
-
             if (Scanner.TryScan("ORDER BY"))
                 q.OrderBy = OrderBy();
 
-            if (Scanner.NextToken())
+            if (Scanner.TryScan("LOAD"))
+                q.Load = SelectClauseExpressions("LOAD", false);
+
+            switch (queryType)
+            {
+                case QueryType.Select:
+                    if (Scanner.TryScan("SELECT"))
+                        q.Select = SelectClause("SELECT", q);
+                    if (Scanner.TryScan("INCLUDE"))
+                        q.Include = IncludeClause();
+                    break;
+                case QueryType.Update:
+                    if (Scanner.TryScan("UPDATE") == false)
+                        ThrowParseException("Update operations must end with UPDATE clause");
+
+                    var functionStart = Scanner.Position;
+                    if (Scanner.FunctionBody() == false)
+                        ThrowParseException("Update clause must have a single function body");
+
+                    q.UpdateBody = new ValueToken
+                    {
+                        Type = ValueTokenType.String,
+                        TokenStart = functionStart,
+                        TokenLength = Scanner.Position - functionStart
+                    };
+                    break;
+                default:
+                    ThrowUnknownQueryType(queryType);
+                    break;
+            }
+
+            if (Scanner.AtEndOfInput() == false)
                 ThrowParseException("Expected end of query");
 
             return q;
+        }
+
+        private static void ThrowUnknownQueryType(QueryType queryType)
+        {
+            throw new ArgumentOutOfRangeException(nameof(queryType), queryType, "Unknown query type");
+        }
+
+        private List<QueryExpression> IncludeClause()
+        {
+            List<QueryExpression> includes = new List<QueryExpression>();
+
+            do
+            {
+                if (Value(out var val))
+                {
+                    includes.Add(new QueryExpression
+                    {
+                        Type = OperatorType.Value,
+                        Value = val
+                    });
+                }
+                else if (Field(out var field))
+                {
+                    includes.Add(new QueryExpression
+                    {
+                        Type = OperatorType.Field,
+                        Field = field
+                    });
+                }
+                else
+                {
+                    ThrowParseException("Unable to understand include clause expression");
+                }
+            } while (Scanner.TryScan(","));
+            return includes;
         }
 
         private (StringSegment Name, ValueToken FunctionText) DeclaredFunction()
@@ -103,7 +159,7 @@ namespace Raven.Server.Documents.Queries.Parser
             if (Method(null, out _) == false)
                 ThrowParseException("Unable to parse function " + name + " signature");
 
-            if(Scanner.FunctionBody() == false)
+            if (Scanner.FunctionBody() == false)
                 ThrowParseException("Unable to get function body for " + name);
 
             return (name, new ValueToken
@@ -190,13 +246,31 @@ namespace Raven.Server.Documents.Queries.Parser
             return orderBy;
         }
 
-        private List<(QueryExpression, FieldToken)> SelectOrWithClause(string clause, out bool isDistinct)
+        private List<(QueryExpression, FieldToken)> SelectClause(string clause, Query query)
         {
-            isDistinct = Scanner.TryScan("DISTINCT");
+            query.IsDistinct = Scanner.TryScan("DISTINCT");
 
             if (Scanner.TryScan("*"))
                 return null;
 
+            var functionStart = Scanner.Position;
+            if (Scanner.FunctionBody())
+            {
+                query.SelectFunctionBody = new ValueToken
+                {
+                    Type = ValueTokenType.String,
+                    TokenStart = functionStart,
+                    TokenLength = Scanner.Position - functionStart
+                };
+
+                return new List<(QueryExpression, FieldToken)>();
+            }
+
+            return SelectClauseExpressions(clause, true);
+        }
+
+        private List<(QueryExpression, FieldToken)> SelectClauseExpressions(string clause, bool aliasAsRequired)
+        {
             var select = new List<(QueryExpression Expr, FieldToken Id)>();
 
             do
@@ -229,10 +303,10 @@ namespace Raven.Server.Documents.Queries.Parser
                 else
                 {
                     ThrowParseException("Unable to get field for " + clause);
-                    return null;// never callsed
+                    return null; // never callsed
                 }
 
-                if (Alias(out var alias) == false && expr.Type == OperatorType.Value)
+                if (Alias(aliasAsRequired, out var alias) == false && expr.Type == OperatorType.Value)
                 {
                     alias = new FieldToken
                     {
@@ -243,13 +317,15 @@ namespace Raven.Server.Documents.Queries.Parser
                     };
                 }
 
-                select.Add((expr, alias));
+                @select.Add((expr, alias));
 
                 if (Scanner.TryScan(",") == false)
                     break;
             } while (true);
-            return select;
+            return @select;
         }
+
+
 
         private (FieldToken From, FieldToken Alias, QueryExpression Filter, bool Index) FromClause()
         {
@@ -260,30 +336,7 @@ namespace Raven.Server.Documents.Queries.Parser
             QueryExpression filter = null;
             bool index = false;
             bool isQuoted;
-            if (Scanner.TryScan('(')) // FROM ( Collection, filter )
-            {
-                isQuoted = false;
-                if (!Scanner.Identifier() && !(isQuoted = Scanner.String()))
-                    ThrowParseException("Expected FROM source");
-
-                field = new FieldToken
-                {
-                    TokenLength = Scanner.TokenLength,
-                    TokenStart = Scanner.TokenStart,
-                    EscapeChars = Scanner.EscapeChars,
-                    IsQuoted = isQuoted
-                };
-
-                if (Scanner.TryScan(',') == false)
-                    ThrowParseException("Expected COMMA in filtered FORM clause after source");
-
-                if (Expression(out filter) == false)
-                    ThrowParseException("Expected filter in filtered FORM clause");
-
-                if (Scanner.TryScan(')') == false)
-                    ThrowParseException("Expected closing parenthesis in filtered FORM clause after filter");
-            }
-            else if (Scanner.TryScan("INDEX"))
+            if (Scanner.TryScan("INDEX"))
             {
                 isQuoted = false;
                 if (!Scanner.Identifier() && !(isQuoted = Scanner.String()))
@@ -312,45 +365,70 @@ namespace Raven.Server.Documents.Queries.Parser
                     EscapeChars = Scanner.EscapeChars,
                     IsQuoted = isQuoted
                 };
-            }
 
-            FieldToken alias = null;
-            if (Scanner.TryScan("AS"))
-            {
-                isQuoted = false;
-                if (!Scanner.Identifier() && !(isQuoted = Scanner.String()))
-                    ThrowParseException("Expected ALIAS after AS in FROM");
-
-                alias = new FieldToken
+                if (Scanner.TryScan('(')) // FROM  Collection ( filter )
                 {
-                    TokenLength = Scanner.TokenLength,
-                    TokenStart = Scanner.TokenStart,
-                    EscapeChars = Scanner.EscapeChars,
-                    IsQuoted = isQuoted
-                };
+                    if (Expression(out filter) == false)
+                        ThrowParseException("Expected filter in filtered FORM clause");
+
+                    if (Scanner.TryScan(')') == false)
+                        ThrowParseException("Expected closing parenthesis in filtered FORM clause after filter");
+                }
+
 
             }
+
+
+            Alias(false, out var alias);
 
             return (field, alias, filter, index);
         }
 
-        private bool Alias(out FieldToken alias)
+        private static readonly string[] AliasKeywords =
         {
-            if (Scanner.TryScan("AS") == false)
+            "AS",
+            "SELECT",
+            "WHERE",
+            "LOAD",
+            "GROUP",
+            "ORDER",
+            "INCLUDE",
+            "UPDATE"
+        };
+
+        private bool Alias(bool aliasAsRequired, out FieldToken alias)
+        {
+            bool required = false;
+            if (Scanner.TryScan(AliasKeywords, out var match))
+            {
+                required = true;
+                if (match != "AS")
+                {
+                    // found a keyword
+                    Scanner.GoBack(match.Length);
+                    alias = null;
+                    return false;
+                }
+            }
+            if (aliasAsRequired && required == false)
             {
                 alias = null;
                 return false;
             }
 
-            if (Field(out alias) == false)
+            if (Field(out alias))
+                return true;
+
+            if (required)
                 ThrowParseException("Expected field alias after AS in SELECT");
 
-            return true;
+            return false;
+            ;
         }
 
         internal bool Parameter(out int tokenStart, out int tokenLength)
         {
-            if (Scanner.TryScan(':') == false)
+            if (Scanner.TryScan('$') == false)
             {
                 tokenStart = 0;
                 tokenLength = 0;
@@ -515,6 +593,9 @@ namespace Raven.Server.Documents.Queries.Parser
                     case "==":
                         type = OperatorType.Equal;
                         break;
+                    case "!=":
+                        type = OperatorType.NotEqual;
+                        break;
                     case "BETWEEN":
                         type = OperatorType.Between;
                         break;
@@ -609,7 +690,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     return true;
                 default:
                     if (Value(out var val) == false)
-                        ThrowParseException($"parsing {type} expression, expected a value");
+                        ThrowParseException($"parsing {type} expression, expected a value (operators only work on scalar / parameters values)");
 
                     op = new QueryExpression
                     {
@@ -672,9 +753,9 @@ namespace Raven.Server.Documents.Queries.Parser
         private void ThrowParseException(string msg)
         {
             var sb = new StringBuilder()
-                .Append(Scanner.Column)
-                .Append(":")
                 .Append(Scanner.Line)
+                .Append(":")
+                .Append(Scanner.Column)
                 .Append(" ")
                 .Append(msg)
                 .Append(" but got");
@@ -785,6 +866,16 @@ namespace Raven.Server.Documents.Queries.Parser
                     }
                     else
                     {
+                        token = null;
+                        return false;
+                    }
+                }
+                if (part == 1 && isQuoted == false)
+                {
+                    // need to ensure that this isn't a keyword
+                    if (Scanner.CurrentTokenMatchesAnyOf(AliasKeywords))
+                    {
+                        Scanner.GoBack(Scanner.TokenLength);
                         token = null;
                         return false;
                     }

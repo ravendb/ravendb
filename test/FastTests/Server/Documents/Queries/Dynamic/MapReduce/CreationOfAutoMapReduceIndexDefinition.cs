@@ -23,7 +23,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             Assert.Throws<ArgumentNullException>(() => new AutoMapReduceIndexDefinition("test", null, null));
             Assert.Throws<ArgumentNullException>(() => new AutoMapReduceIndexDefinition("test", new[]
             {
-                new IndexField()
+                new AutoIndexField()
                 {
                     Name = "test",
                     Storage = FieldStorage.Yes
@@ -32,14 +32,14 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 
             new AutoMapReduceIndexDefinition("test", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "test",
                     Storage = FieldStorage.Yes
                 },
             }, new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "location",
                     Storage = FieldStorage.Yes
@@ -50,7 +50,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         [Fact]
         public void Map_all_fields()
         {
-            _sut = DynamicQueryMapping.Create(new IndexQueryServerSide("SELECT Location, count() FROM Users GROUP BY Location"));
+            _sut = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users GROUP BY Location SELECT Location, count() "));
 
             var definition = _sut.CreateAutoIndexDefinition();
 
@@ -63,7 +63,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         [Fact]
         public void Error_when_no_group_by_field()
         {
-            var ex = Assert.Throws<QueryParser.ParseException>(() => new IndexQueryServerSide("SELECT count() FROM Users GROUP BY"));
+            var ex = Assert.Throws<QueryParser.ParseException>(() => new IndexQueryServerSide("FROM Users GROUP BY SELECT count() "));
 
             Assert.Contains("Unable to get field for GROUP BY", ex.Message);
         }
@@ -78,12 +78,12 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         public void Extends_mapping_based_on_existing_definition_if_group_by_fields_match()
         {
             _sut = DynamicQueryMapping.Create(
-                new IndexQueryServerSide("SELECT Location, count() FROM Users GROUP BY Location WHERE StartsWith(Location, 'A') ORDER BY Count"));
+                new IndexQueryServerSide("FROM Users GROUP BY Location WHERE StartsWith(Location, 'A') ORDER BY Count SELECT Location, count() "));
 
             var existingDefinition = _sut.CreateAutoIndexDefinition();
 
             _sut = DynamicQueryMapping.Create(new IndexQueryServerSide(
-                "SELECT Location, count(), sum(Age) FROM Users GROUP BY Location WHERE StartsWith(Location, 'A') ORDER BY Age as long"));
+                "FROM Users GROUP BY Location WHERE StartsWith(Location, 'A') ORDER BY Age as long SELECT Location, count(), sum(Age) "));
 
             _sut.ExtendMappingBasedOn(existingDefinition);
 

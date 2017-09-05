@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Raven.Client.ServerWide.Operations;
 
@@ -14,28 +15,34 @@ namespace Raven.Client.Documents.Subscriptions
     public interface IReliableSubscriptions : IDisposable
     {
         /// <summary>
-        /// It creates a data subscription in a database. The subscription will expose all documents that match the specified subscription criteria for a given type.
+        /// It creates a data subscription in a database. The subscription will expose all documents that match the specified subscription options for a given type.
         /// </summary>
         /// <returns>Created subscription name.</returns>
-        string Create<T>(SubscriptionCreationOptions<T> criteria, string database = null);
-
+        string Create<T>(
+            Expression<Func<T, bool>> predicate = null,
+            SubscriptionCreationOptions options = null,
+            string database = null);
+     
         /// <summary>
-        /// It creates a data subscription in a database. The subscription will expose all documents that match the specified subscription criteria.
+        /// It creates a data subscription in a database. The subscription will expose all documents that match the specified subscription options.
         /// </summary>
         /// <returns>Created subscription name.</returns>
         string Create(SubscriptionCreationOptions criteria, string database = null);
 
         /// <summary>
-        /// It creates a data subscription in a database. The subscription will expose all documents that match the specified subscription criteria for a given type.
+        /// It creates a data subscription in a database. The subscription will expose all documents that match the specified subscription options for a given type.
         /// </summary>
         /// <returns>Created subscription name.</returns>
-        Task<string> CreateAsync<T>(SubscriptionCreationOptions<T> subscriptionCreationOptions, string database = null);
+        Task<string> CreateAsync<T>(
+            Expression<Func<T, bool>> predicate = null,
+            SubscriptionCreationOptions options = null,
+            string database = null);
 
         /// <summary>
-        /// It creates a data subscription in a database. The subscription will expose all documents that match the specified subscription criteria.
+        /// It creates a data subscription in a database. The subscription will expose all documents that match the specified subscription options.
         /// </summary>
         /// <returns>Created subscription name.</returns>
-        Task<string> CreateAsync(SubscriptionCreationOptions subscriptionCreationOptions, string database = null);
+        Task<string> CreateAsync(SubscriptionCreationOptions options, string database = null);
 
         /// <summary>
         /// It opens a subscription and starts pulling documents since a last processed document for that subscription (in document's long? order).

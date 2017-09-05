@@ -8,11 +8,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
-using System;
-using System.Threading;
 
 namespace SlowTests.Issues
 {
@@ -56,7 +55,7 @@ namespace SlowTests.Issues
                 using (var session = store.OpenAsyncSession())
                 {
                     var enumerator = await session.Advanced
-                        .StreamAsync(session.Query<User, Users_ByActive>().Customize(x => x.AddOrder(Constants.Documents.Indexing.Fields.DocumentIdFieldName)));
+                        .StreamAsync(session.Query<User, Users_ByActive>().OrderBy(Constants.Documents.Indexing.Fields.DocumentIdFieldName));
 
                     var count = 0;
                     while (await enumerator.MoveNextAsync())
@@ -163,7 +162,7 @@ namespace SlowTests.Issues
                 using (var session = store.OpenAsyncSession())
                 {
                     var enumerator = await session.Advanced
-                        .StreamAsync(session.Query<User, Users_ByActive>().Customize(x => x.AddOrder(Constants.Documents.Indexing.Fields.DocumentIdFieldName)));
+                        .StreamAsync(session.Query<User, Users_ByActive>().OrderBy(Constants.Documents.Indexing.Fields.DocumentIdFieldName));
                     var count = 0;
                     while (await enumerator.MoveNextAsync())
                     {

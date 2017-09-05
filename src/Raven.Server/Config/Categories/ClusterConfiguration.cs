@@ -39,8 +39,8 @@ namespace Raven.Server.Config.Categories
         [Description("As a cluster node, how long it takes to timeout operation between two cluster nodes.")]
         [DefaultValue(15)]
         [TimeUnit(TimeUnit.Seconds)]
-        [ConfigurationEntry("Cluster.ClusterOperationTimeoutInSec")]
-        public TimeSetting ClusterOperationTimeout { get; set; }
+        [ConfigurationEntry("Cluster.OperationTimeoutInSec")]
+        public TimeSetting OperationTimeout { get; set; }
 
         [Description("The time we give to the cluster stats to stabilize after a database topology change.")]
         [DefaultValue(5)]

@@ -17,7 +17,7 @@ using Xunit;
 
 namespace FastTests.Server.Documents.Revisions
 {
-    public class RevisionsReplication : ReplicationTestsBase, IDocumentTombstoneAware
+    public class RevisionsReplication : ReplicationTestBase, IDocumentTombstoneAware
     {
         private void WaitForMarker(DocumentStore store1, DocumentStore store2)
         {

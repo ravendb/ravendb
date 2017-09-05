@@ -37,15 +37,12 @@ class appUrl {
         indexes: ko.pureComputed(() => appUrl.forIndexes(appUrl.currentDatabase())),
         megeSuggestions: ko.pureComputed(() => appUrl.forMegeSuggestions(appUrl.currentDatabase())),
         upgrade: ko.pureComputed(() => appUrl.forUpgrade(appUrl.currentDatabase())),
-        transformers: ko.pureComputed(() => appUrl.forTransformers(appUrl.currentDatabase())),
         newIndex: ko.pureComputed(() => appUrl.forNewIndex(appUrl.currentDatabase())),
         editIndex: (indexName?: string) => ko.pureComputed(() => appUrl.forEditIndex(indexName, appUrl.currentDatabase())),
         editExternalReplication: (taskId?: number) => ko.pureComputed(() => appUrl.forEditExternalReplication(appUrl.currentDatabase(), taskId)),
         editPeriodicBackupTask: (taskId?: number) => ko.pureComputed(() => appUrl.forEditPeriodicBackupTask(appUrl.currentDatabase(), taskId)),
         editSubscription: (taskId?: number, taskName?: string) => ko.pureComputed(() => appUrl.forEditSubscription(appUrl.currentDatabase(), taskId, taskName)),
         editRavenEtl: (taskId?: number, taskName?: string) => ko.pureComputed(() => appUrl.forEditRavenEtl(appUrl.currentDatabase(), taskId, taskName)),
-        newTransformer: ko.pureComputed(() => appUrl.forNewTransformer(appUrl.currentDatabase())),
-        editTransformer: (transformerName?: string) => ko.pureComputed(() => appUrl.forEditTransformer(transformerName, appUrl.currentDatabase())),
         query: (indexName?: string) => ko.pureComputed(() => appUrl.forQuery(appUrl.currentDatabase(), indexName)),
         terms: (indexName?: string) => ko.pureComputed(() => appUrl.forTerms(indexName, appUrl.currentDatabase())),
         reporting: ko.pureComputed(() => appUrl.forReporting(appUrl.currentDatabase())),
@@ -89,7 +86,6 @@ class appUrl {
         statusDebugConfig: ko.pureComputed(() => appUrl.forStatusDebugConfig(appUrl.currentDatabase())),
         statusDebugDocrefs: ko.pureComputed(() => appUrl.forStatusDebugDocrefs(appUrl.currentDatabase())),
         statusDebugCurrentlyIndexing: ko.pureComputed(() => appUrl.forStatusDebugCurrentlyIndexing(appUrl.currentDatabase())),
-        customFunctionsEditor: ko.pureComputed(() => appUrl.forCustomFunctionsEditor(appUrl.currentDatabase())),
         statusDebugQueries: ko.pureComputed(() => appUrl.forStatusDebugQueries(appUrl.currentDatabase())),
         statusDebugTasks: ko.pureComputed(() => appUrl.forStatusDebugTasks(appUrl.currentDatabase())),
 
@@ -125,6 +121,10 @@ class appUrl {
 
     static forCluster(): string {
         return "#admin/settings/cluster";
+    }
+
+    static forClusterObserverLog(): string {
+        return "#admin/settings/clusterObserverLog";
     }
 
     static forAddClusterNode(): string {
@@ -169,6 +169,10 @@ class appUrl {
     
     static forGlobalClientConfiguration(): string {
         return "#admin/settings/clientConfiguration";
+    }
+    
+    static forCertificates(): string {
+        return "#admin/settings/certificates";
     }
 
     static forStudioConfig(): string {
@@ -429,21 +433,6 @@ class appUrl {
         return "#databases/indexes/edit/" + encodeURIComponent(indexName) + "?" + databasePart;
     }
 
-    static forNewTransformer(db: database | databaseInfo): string {
-        const databasePart = appUrl.getEncodedDbPart(db);
-        return "#databases/transformers/edit?" + databasePart;
-    }
-
-    static forEditTransformer(transformerName: string, db: database | databaseInfo): string {
-        const databasePart = appUrl.getEncodedDbPart(db);
-        return "#databases/transformers/edit/" + encodeURIComponent(transformerName) + "?" + databasePart;
-    }
-
-    static forTransformers(db: database | databaseInfo): string {
-        const databasePart = appUrl.getEncodedDbPart(db);
-        return "#databases/transformers?" + databasePart;
-    }
-
     static forQuery(db: database | databaseInfo, indexNameOrHashToQuery?: string | number): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         let indexToQueryComponent = indexNameOrHashToQuery as string;
@@ -514,10 +503,6 @@ class appUrl {
         return appUrl.forDatabaseQuery(db) + "/streams/query/Raven/DocumentsByEntityName" + appUrl.urlEncodeArgs(args);
     }
 
-    static forCustomFunctionsEditor(db: database | databaseInfo): string {
-        return "#databases/settings/customFunctionsEditor?" + appUrl.getEncodedDbPart(db);
-    }
-
     static forOngoingTasks(db: database | databaseInfo): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/tasks/ongoingTasks?" + databasePart;
@@ -573,10 +558,6 @@ class appUrl {
 
     static forReportingRawData(db: database | databaseInfo, indexName: string) {
         return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/facets/" + indexName;
-    }
-
-    static forTransformersRawData(db: database | databaseInfo): string {
-        return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/transformers";
     }
 
     static forDatabasesRawData(): string {

@@ -14,15 +14,15 @@ namespace RachisTests
     {
         private static async Task<int> GetMembersCount(IDocumentStore store, string databaseName)
         {
-            var res = await store.Admin.Server.SendAsync(new GetDatabaseTopologyOperation(databaseName));
+            var res = await store.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
             if (res == null)
             {
                 return -1;
             }
-            return res.Members.Count;
+            return res.Topology.Members.Count;
         }
 
-        [Fact]
+        [NightlyBuildFact]
         public async Task CanCreateAddAndDeleteDatabaseFromNodes()
         {
             var clusterSize = 3;
@@ -31,7 +31,7 @@ namespace RachisTests
             var databaseName = "test";
             using (var store = new DocumentStore()
             {
-                Urls = leader.WebUrls,
+                Urls = new[] {leader.WebUrl},
                 Database = databaseName
             }.Initialize())
             {
@@ -49,13 +49,13 @@ namespace RachisTests
                 {
                     var val = await WaitForValueAsync(async () => await GetMembersCount(store, databaseName), replicationFactor);
                     Assert.Equal(replicationFactor, val);
-                    var res = await store.Admin.Server.SendAsync(new GetDatabaseTopologyOperation(databaseName));
+                    var res = await store.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
 
-                    var serverTagToBeDeleted = res.Members[0];
+                    var serverTagToBeDeleted = res.Topology.Members[0];
                     replicationFactor--;
-                    deleteResult = store.Admin.Server.Send(new DeleteDatabaseOperation(databaseName, hardDelete: true, fromNode: serverTagToBeDeleted));
-                    //The +1 is for NotifyLeaderAboutRemoval
-                    await AssertNumberOfNodesContainingDatabase(deleteResult.RaftCommandIndex + 1, databaseName, numberOfInstances, replicationFactor);
+                    deleteResult = store.Admin.Server.Send(new DeleteDatabaseOperation(databaseName, hardDelete: true, fromNode: serverTagToBeDeleted,timeInSec:30));
+                    Assert.Empty(deleteResult.PendingDeletes);
+                    await AssertNumberOfNodesContainingDatabase(deleteResult.RaftCommandIndex, databaseName, numberOfInstances, replicationFactor);
                 }
                 TransactionOperationContext context;
                 using (leader.ServerStore.ContextPool.AllocateOperationContext(out context))

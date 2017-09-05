@@ -20,7 +20,7 @@ class createDatabase extends dialogViewModelBase {
 
     spinners = {
         create: ko.observable<boolean>(false)
-    }
+    };
 
     databaseModel = new databaseCreationModel();
     clusterNodes = [] as clusterNode[];
@@ -42,7 +42,7 @@ class createDatabase extends dialogViewModelBase {
         encryption: ko.pureComputed(() => this.currentAdvancedSection() === "Encryption"),
         replication: ko.pureComputed(() => this.currentAdvancedSection() === "Replication"),
         path: ko.pureComputed(() => this.currentAdvancedSection() === "Path")
-    }
+    };
 
     // currently displayed QR Code
     private qrCode: any;

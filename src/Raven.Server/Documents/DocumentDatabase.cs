@@ -16,12 +16,12 @@ using Raven.Server.Config;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
-using Raven.Server.Documents.Transformers;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
@@ -53,7 +53,6 @@ namespace Raven.Server.Documents
         /// </summary>
         private readonly SemaphoreSlim _indexAndTransformerLocker = new SemaphoreSlim(1, 1);
         private Task _indexStoreTask;
-        private Task _transformerStoreTask;
         private long _usages;
         private readonly ManualResetEventSlim _waitForUsagesOnDisposal = new ManualResetEventSlim(false);
         private long _lastIdleTicks = DateTime.UtcNow.Ticks;
@@ -86,6 +85,7 @@ namespace Raven.Server.Documents
 
         public DocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore)
         {
+            Scripts = new ScriptRunnerCache(this);
             _logger = LoggingSource.Instance.GetLogger<DocumentDatabase>(Name);
             _serverStore = serverStore;
             StartTime = SystemTime.UtcNow;
@@ -116,12 +116,10 @@ namespace Raven.Server.Documents
                 DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);
                 DocumentsStorage = new DocumentsStorage(this);
                 IndexStore = new IndexStore(this, serverStore, _indexAndTransformerLocker);
-                TransformerStore = new TransformerStore(this, serverStore, _indexAndTransformerLocker);
                 EtlLoader = new EtlLoader(this, serverStore);
                 ReplicationLoader = new ReplicationLoader(this, serverStore);
                 SubscriptionStorage = new SubscriptionStorage(this, serverStore);
                 Metrics = new MetricsCountersManager();
-                Patcher = new DocumentPatcher(this);
                 TxMerger = new TransactionOperationsMerger(this, DatabaseShutdown);
                 HugeDocuments = new HugeDocuments(configuration.PerformanceHints.HugeDocumentsCollectionSize,
                     configuration.PerformanceHints.HugeDocumentSize.GetValue(SizeUnit.Bytes));
@@ -150,7 +148,7 @@ namespace Raven.Server.Documents
 
         public readonly SystemTime Time = new SystemTime();
 
-        public DocumentPatcher Patcher { get; private set; }
+        public ScriptRunnerCache Scripts;
 
         public readonly TransactionOperationsMerger TxMerger;
 
@@ -159,6 +157,8 @@ namespace Raven.Server.Documents
         public string Name { get; }
 
         public Guid DbId => DocumentsStorage.Environment?.DbId ?? Guid.Empty;
+
+        public string DbBase64Id => DocumentsStorage.Environment?.Base64Id ?? "";
 
         public RavenConfiguration Configuration { get; }
 
@@ -189,8 +189,6 @@ namespace Raven.Server.Documents
         public MetricsCountersManager Metrics { get; }
 
         public IndexStore IndexStore { get; private set; }
-
-        public TransformerStore TransformerStore { get; }
 
         public ConfigurationStorage ConfigurationStorage { get; }
 
@@ -237,10 +235,8 @@ namespace Raven.Server.Documents
                 PeriodicBackupRunner = new PeriodicBackupRunner(this, _serverStore);
 
                 _indexStoreTask = IndexStore.InitializeAsync(record);
-                _transformerStoreTask = TransformerStore.InitializeAsync(record);
                 ReplicationLoader?.Initialize(record);
                 EtlLoader.Initialize(record);
-                Patcher.Initialize(record);
 
                 DocumentTombstoneCleaner.Start();
 
@@ -251,15 +247,6 @@ namespace Raven.Server.Documents
                 finally
                 {
                     _indexStoreTask = null;
-                }
-
-                try
-                {
-                    _transformerStoreTask.Wait(DatabaseShutdown);
-                }
-                finally
-                {
-                    _transformerStoreTask = null;
                 }
 
                 SubscriptionStorage.Initialize();
@@ -370,26 +357,12 @@ namespace Raven.Server.Documents
                     TxMerger?.Dispose();
                 });
 
-                exceptionAggregator.Execute(() =>
-                {
-                    TransformerStore.Dispose();
-                });
-
                 if (_indexStoreTask != null)
                 {
                     exceptionAggregator.Execute(() =>
                     {
                         _indexStoreTask.Wait(DatabaseShutdown);
                         _indexStoreTask = null;
-                    });
-                }
-
-                if (_transformerStoreTask != null)
-                {
-                    exceptionAggregator.Execute(() =>
-                    {
-                        _transformerStoreTask.Wait(DatabaseShutdown);
-                        _transformerStoreTask = null;
                     });
                 }
 
@@ -440,13 +413,7 @@ namespace Raven.Server.Documents
                     NotificationCenter?.Dispose();
                     NotificationCenter = null;
                 });
-
-                exceptionAggregator.Execute(() =>
-                {
-                    Patcher?.Dispose();
-                    Patcher = null;
-                });
-
+                
                 exceptionAggregator.Execute(() =>
                 {
                     SubscriptionStorage?.Dispose();
@@ -493,6 +460,7 @@ namespace Raven.Server.Documents
                 [nameof(DatabaseInfo.HasRevisionsConfiguration)] = DocumentsStorage.RevisionsStorage.Configuration != null,
                 [nameof(DatabaseInfo.HasExpirationConfiguration)] = ExpiredDocumentsCleaner != null,
                 [nameof(DatabaseInfo.IsAdmin)] = true, //TODO: implement me!
+                [nameof(DatabaseInfo.IsEncrypted)] = DocumentsStorage.Environment.Options.EncryptionEnabled,
                 [nameof(DatabaseInfo.Name)] = Name,
                 [nameof(DatabaseInfo.Disabled)] = false, //TODO: this value should be overwritten by the studio since it is cached
                 [nameof(DatabaseInfo.TotalSize)] = new DynamicJsonValue
@@ -735,7 +703,6 @@ namespace Raven.Server.Documents
                     LastDatabaseRecordIndex = index;
 
                     IndexStore.HandleDatabaseRecordChange(record, index);
-                    TransformerStore.HandleDatabaseRecordChange(record);
                     ReplicationLoader?.HandleDatabaseRecordChange(record);
                     EtlLoader?.HandleDatabaseRecordChange(record);
                     OnDatabaseRecordChanged(record);

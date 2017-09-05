@@ -40,6 +40,11 @@ namespace Raven.Server.Rachis
 
         public TStateMachine StateMachine;
 
+        internal override RachisStateMachine GetStateMachine()
+        {
+            return StateMachine;
+        }
+
         protected override void InitializeState(TransactionOperationContext context)
         {
             StateMachine = new TStateMachine();
@@ -58,7 +63,12 @@ namespace Raven.Server.Rachis
             StateMachine.Apply(context, uptoInclusive, leader, _serverStore);
         }
 
-        public override X509Certificate2 ClusterCertificate => _serverStore.RavenServer.ServerCertificateHolder.Certificate;
+        public void EnsureNodeRemovalOnDeletion(TransactionOperationContext context, string nodeTag)
+        {
+            StateMachine.EnsureNodeRemovalOnDeletion(context, nodeTag);
+        }
+
+        public override X509Certificate2 ClusterCertificate => _serverStore.RavenServer.ClusterCertificateHolder.Certificate;
 
         public override bool ShouldSnapshot(Slice slice, RootObjectType type)
         {
@@ -112,6 +122,8 @@ namespace Raven.Server.Rachis
             LeaderElect,
             Leader
         }
+
+        internal abstract RachisStateMachine GetStateMachine();
 
         public const string InitialTag = "?";
 
@@ -228,7 +240,7 @@ namespace Raven.Server.Rachis
             {
                 _persistentState = env;
 
-                OperationTimeout = configuration.Cluster.ClusterOperationTimeout.AsTimeSpan;
+                OperationTimeout = configuration.Cluster.OperationTimeout.AsTimeSpan;
                 ElectionTimeout = configuration.Cluster.ElectionTimeout.AsTimeSpan;
                 TcpConnectionTimeout = configuration.Cluster.TcpConnectionTimeout.AsTimeSpan;
                 
@@ -560,7 +572,7 @@ namespace Raven.Server.Rachis
             leader.Start();
         }
 
-        public async Task<(long Etag, object Result)> PutAsync(CommandBase cmd)
+        public async Task<(long Index, object Result)> PutAsync(CommandBase cmd)
         {
             var leader = _currentLeader;
             if (leader == null)
@@ -1357,6 +1369,7 @@ namespace Raven.Server.Rachis
                 await task;
 
             await task;
+          
         }
 
         private volatile string _leaderTag;
@@ -1396,18 +1409,18 @@ namespace Raven.Server.Rachis
         public abstract void SnapshotInstalled(TransactionOperationContext context, long lastIncludedIndex);
 
         private readonly AsyncManualResetEvent _leadershipTimeChanged = new AsyncManualResetEvent();
-        private int _hasTimers;
+        private int _heartbeatWaitersCounter;
 
         public async Task WaitForHeartbeat()
         {
-            Interlocked.Increment(ref _hasTimers);
+            Interlocked.Increment(ref _heartbeatWaitersCounter);
             try
             {
                 await _leadershipTimeChanged.WaitAsync();
             }
             finally
             {
-                Interlocked.Decrement(ref _hasTimers);
+                Interlocked.Decrement(ref _heartbeatWaitersCounter);
             }
         }
 
@@ -1420,7 +1433,7 @@ namespace Raven.Server.Rachis
         {
             Interlocked.Exchange(ref _leaderTime, leaderTime);
 
-            if (_hasTimers == 0)
+            if (_heartbeatWaitersCounter == 0)
                 return;
 
             _leadershipTimeChanged.Set();

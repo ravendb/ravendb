@@ -5,6 +5,7 @@
 @icon-info: "\e92e";
 @icon-warning: "\e93f";
 @icon-danger: "\e925";
+@icon-connection-lost: "\e9da";
 
 @font-face {
     font-family: 'icomoon';
@@ -67,6 +68,26 @@
         display: inline-block;
         font-size: 58px;
     }
+}
+
+.icon-connection-lost:before {
+    content: "\e9da";
+}
+
+.icon-json:before {
+    content: "\e9d9";
+}
+
+.icon-vector:before {
+    content: "\e9d8";
+}
+
+.icon-certificate:before {
+    content: "\e9d6";
+}
+
+.icon-clearance:before {
+    content: "\e9d7";
 }
 
 .icon-node-leader:before {
@@ -263,10 +284,6 @@
 
 .icon-feedback:before {
     content: "\e96e";
-}
-
-.icon-transformer:before {
-    content: "\e9ad";
 }
 
 .icon-icons_support:before {
@@ -1025,10 +1042,6 @@
         color: @brand-database-color;
     }
 
-    .icon-database-settings:before {
-        color: #ea1e63;
-    }
-
     .icon-replication:before {
         color: #9c28b1;
     }
@@ -1036,9 +1049,26 @@
     .icon-sql-replication:before {
         color: #673bb7;
     }
-
+    //SETTINGS
+    //Database Record
+    .icon-database-settings:before {
+        color: #1f8fff;
+    }
+    //Connection Strings
+    .icon-manage-connection-strings:before {
+        color: #5f57ff;
+    }
+    //Document Revisions
     .icon-revisions:before {
-        color: #ff6ac2;
+        color: #a766cc;
+    }
+    //Client Configuration
+    .icon-client-configuration:before {
+        color: #ff4d8e;
+    }
+    //Manage database group
+    .icon-topology:before {
+        color: #ff756b;
     }
 
     .icon-custom-functions:before {

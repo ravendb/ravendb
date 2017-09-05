@@ -5,9 +5,11 @@ using Lucene.Net.Index;
 using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
 using Sparrow.Json;
@@ -19,7 +21,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
     public class IndexWriteOperation : IndexOperationBase
     {
         private readonly Term _documentId = new Term(Constants.Documents.Indexing.Fields.DocumentIdFieldName, "Dummy");
-        private readonly Term _reduceKeyHash = new Term(Constants.Documents.Indexing.Fields.ReduceKeyFieldName, "Dummy");
+        private readonly Term _reduceKeyHash = new Term(Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName, "Dummy");
 
         protected readonly LuceneIndexWriter _writer;
         protected readonly Dictionary<string, LuceneSuggestionIndexWriter> _suggestionsWriters;
@@ -44,13 +46,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             try
             {
-                var definitionFields = index.Definition.MapFields;
-
-                if (index.Definition is AutoMapReduceIndexDefinition autoMapReduceDef)
-                    definitionFields = autoMapReduceDef.MapAndGroupByFields;
-
-
-                _analyzer = CreateAnalyzer(() => new LowerCaseKeywordAnalyzer(), definitionFields);
+                _analyzer = CreateAnalyzer(() => new LowerCaseKeywordAnalyzer(), index.Definition.IndexFields);
             }
             catch (Exception e)
             {

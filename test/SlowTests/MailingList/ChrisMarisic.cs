@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Transformers;
 using Raven.Client.Json;
 using Sparrow.Json;
 using Xunit;
@@ -52,8 +50,7 @@ namespace SlowTests.MailingList
                 documentStore.Initialize();
 
                 new CarIndex().Execute(documentStore);
-                new CarTransformer().Execute(documentStore);
-
+                
                 using (var session = documentStore.OpenSession())
                 {
                     foreach (CarLot doc in Docs)
@@ -168,24 +165,6 @@ namespace SlowTests.MailingList
                 public string LotName { get; set; }
                 public string Make { get; set; }
                 public string Model { get; set; }
-            }
-        }
-
-        private class CarTransformer : AbstractTransformerCreationTask<CarIndex.IndexResult>
-        {
-            public CarTransformer()
-            {
-                TransformResults = results =>
-                                   from result in results
-                                   select new
-                                   {
-                                       result.Id,
-                                       result.LotName,
-                                       result.Make,
-                                       result.Model,
-                                       Foo = "bar",
-                                       Bar = "foo",
-                                   };
             }
         }
     }

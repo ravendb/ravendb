@@ -19,7 +19,10 @@ namespace SlowTests.Server.Documents
         public async Task CanCompactDatabase()
         {
             var path = NewDataPath();
-            using (var store = GetDocumentStore(path: path))
+            using (var store = GetDocumentStore(new Options
+            {
+                Path = path
+            }))
             {
                 store.Admin.Send(new CreateSampleDataOperation());
 
@@ -27,10 +30,7 @@ namespace SlowTests.Server.Documents
                 {
                     await store.Operations.Send(new PatchByQueryOperation(new IndexQuery
                     {
-                        Query = "FROM Orders"
-                    }, new PatchRequest()
-                    {
-                        Script = @"PutDocument(""orders/"", this);"
+                        Query = @"FROM Orders UPDATE { put(""orders/"", this); } "
                     })).WaitForCompletionAsync(TimeSpan.FromSeconds(30));
                 }
 
@@ -64,7 +64,10 @@ namespace SlowTests.Server.Documents
         public async Task CanCompactDatabaseWithAttachment()
         {
             var path = NewDataPath();
-            using (var store = GetDocumentStore(path: path))
+            using (var store = GetDocumentStore(new Options
+            {
+                Path = path
+            }))
             {
                 var buffer = new byte[16 * 1024 * 1024];
                 new Random().NextBytes(buffer);

@@ -34,8 +34,14 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             throw new NotImplementedException();
         }
 
-        public override unsafe void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, bool isPassive)
+        protected override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue, bool isPassive)
         {
+            throw new NotImplementedException();
+        }
+
+        public override unsafe void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, bool isPassive, out object result)
+        {
+            result = null;
             var itemKey = SubscriptionState.GenerateSubscriptionItemKeyName(DatabaseName, SubscriptionName);
             using (Slice.From(context.Allocator, itemKey.ToLowerInvariant(), out Slice valueNameLowered))
             using (Slice.From(context.Allocator, itemKey, out Slice valueName))

@@ -5,6 +5,7 @@ import saveExternalReplicationTaskCommand = require("commands/database/tasks/sav
 import ongoingTaskReplication = require("models/database/tasks/ongoingTaskReplicationModel");
 import ongoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskInfoCommand");
 import eventsCollector = require("common/eventsCollector");
+import generalUtils = require("common/generalUtils");
 import testClusterNodeConnectionCommand = require("commands/database/cluster/testClusterNodeConnectionCommand");
 
 class editExternalReplicationTask extends viewModelBase {
@@ -14,7 +15,13 @@ class editExternalReplicationTask extends viewModelBase {
     private taskId: number = null;
 
     testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
-    spinners = { test: ko.observable<boolean>(false) };
+    spinners = { 
+        test: ko.observable<boolean>(false) 
+    };
+
+    fullErrorDetailsVisible = ko.observable<boolean>(false);
+
+    shortErrorText: KnockoutObservable<string>;
 
     constructor() {
         super();
@@ -33,7 +40,7 @@ class editExternalReplicationTask extends viewModelBase {
             new ongoingTaskInfoCommand(this.activeDatabase(), "Replication", this.taskId)
                 .execute()
                 .done((result: Raven.Client.ServerWide.Operations.OngoingTaskReplication) => { 
-                    this.editedExternalReplication(new ongoingTaskReplication(result, true));
+                    this.editedExternalReplication(new ongoingTaskReplication(result, false));
                     deferred.resolve();
                 })
                 .fail(() => router.navigate(appUrl.forOngoingTasks(this.activeDatabase())));
@@ -52,6 +59,14 @@ class editExternalReplicationTask extends viewModelBase {
     private initObservables() {
         // Discard test connection result when url has changed
         this.editedExternalReplication().destinationURL.subscribe(() => this.testConnectionResult(null));
+
+        this.shortErrorText = ko.pureComputed(() => {
+            const result = this.testConnectionResult();
+            if (!result || result.Success) {
+                return "";
+            }
+            return generalUtils.trimMessage(result.Error);
+        });
     }
 
     compositionComplete() {

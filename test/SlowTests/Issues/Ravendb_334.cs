@@ -7,7 +7,6 @@ using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Transformers;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -36,23 +35,12 @@ namespace SlowTests.Issues
             }
         }
 
-        private class FooTransformer : AbstractTransformerCreationTask<Foo>
-        {
-            public FooTransformer()
-            {
-
-                TransformResults = foos =>
-                                    from f in foos select new { f.DateTime };
-            }
-        }
-
         [Fact]
         public void CanGetUtcFromDate()
         {
             using (var documentStore = GetDocumentStore())
             {
                 new FooIndex().Execute(documentStore);
-                new FooTransformer().Execute(documentStore);
 
                 using (var session = documentStore.OpenSession())
                 {
@@ -69,7 +57,6 @@ namespace SlowTests.Issues
 
                     var indexedFoo = session.Query<Foo, FooIndex>()
                         .Customize(c => c.WaitForNonStaleResults())
-                        .TransformWith<FooTransformer, FooIndex.IndexedFoo>()
                         .Single(f => f.Id == "foos/1");
                     Assert.Equal(foo.DateTime.Kind, indexedFoo.DateTime.Kind);
                     Assert.Equal(foo.DateTime, indexedFoo.DateTime);

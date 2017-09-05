@@ -7,7 +7,6 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Server.Documents;
-using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Tests.Infrastructure;
@@ -22,8 +21,13 @@ namespace SlowTests.Client.Attachments
         {
             const int size = 512 * 1024;
             const string hash = "BfKA8g/BJuHOTHYJ+A6sOt9jmFSVEDzCM3EcLLKCRMU=";
+            UseNewLocalServer();
             var leader = await CreateRaftClusterAndGetLeader(3);
-            using (var store = GetDocumentStore(defaultServer: leader, replicationFactor: 2))
+            using (var store = GetDocumentStore(new Options
+            {
+                Server = leader,
+                ReplicationFactor = 2
+            }))
             {
                 using (var session = (DocumentSession)store.OpenSession())
                 {
@@ -77,7 +81,7 @@ namespace SlowTests.Client.Attachments
                     Assert.Equal("File", attachmentMetadata.GetString(nameof(AttachmentName.Name)));
                     Assert.Equal("application/pdf", attachmentMetadata.GetString(nameof(AttachmentName.ContentType)));
                     Assert.Equal(hash, attachmentMetadata.GetString(nameof(AttachmentName.Hash)));
-                    Assert.Equal(size, attachmentMetadata.GetNumber(nameof(AttachmentName.Size)));
+                    Assert.Equal(size, attachmentMetadata.GetLong(nameof(AttachmentName.Size)));
                 }
             }
         }
@@ -87,8 +91,13 @@ namespace SlowTests.Client.Attachments
         {
             const string hash = "BfKA8g/BJuHOTHYJ+A6sOt9jmFSVEDzCM3EcLLKCRMU=";
             const int size = 512 * 1024;
+            UseNewLocalServer();
             var leader = await CreateRaftClusterAndGetLeader(3);
-            using (var store = GetDocumentStore(defaultServer: leader, replicationFactor: 2))
+            using (var store = GetDocumentStore(new Options
+            {
+                Server = leader,
+                ReplicationFactor = 2
+            }))
             {
                 using (var session = (DocumentSession)store.OpenSession())
                 {
@@ -147,7 +156,7 @@ namespace SlowTests.Client.Attachments
                     Assert.Equal("File", attachmentMetadata.GetString(nameof(AttachmentName.Name)));
                     Assert.Equal("application/pdf", attachmentMetadata.GetString(nameof(AttachmentName.ContentType)));
                     Assert.Equal(hash, attachmentMetadata.GetString(nameof(AttachmentName.Hash)));
-                    Assert.Equal(size, attachmentMetadata.GetNumber(nameof(AttachmentName.Size)));
+                    Assert.Equal(size, attachmentMetadata.GetLong(nameof(AttachmentName.Size)));
                 }
             }
         }

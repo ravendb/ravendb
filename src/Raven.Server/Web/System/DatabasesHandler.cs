@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using NCrontab.Advanced;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
@@ -18,6 +19,7 @@ using Raven.Server.Documents;
 using Raven.Server.Extensions;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -117,7 +119,7 @@ namespace Raven.Server.Web.System
                                 {
                                     [nameof(ServerNode.Url)] = GetUrl(x, clusterTopology),
                                     [nameof(ServerNode.ClusterTag)] = x,
-                                    [nameof(ServerNode.FailoverOnly)] = false,
+                                    [nameof(ServerNode.ServerRole)] = ServerNode.Role.Member,
                                     [nameof(ServerNode.Database)] = dbRecord.DatabaseName
                                 })
                                 .Concat(dbRecord.Topology.Rehabs.Select(x => new DynamicJsonValue
@@ -125,7 +127,7 @@ namespace Raven.Server.Web.System
                                     [nameof(ServerNode.Url)] = GetUrl(x, clusterTopology),
                                     [nameof(ServerNode.ClusterTag)] = x,
                                     [nameof(ServerNode.Database)] = dbRecord.DatabaseName,
-                                    [nameof(ServerNode.FailoverOnly)] = false
+                                    [nameof(ServerNode.ServerRole)] = ServerNode.Role.Rehab
                                 })
                                 )
                             ),
@@ -191,6 +193,50 @@ namespace Raven.Server.Web.System
             }
 
             return Task.CompletedTask;
+        }
+
+        [RavenAction("/cluster/cmpxchg", "GET", AuthorizationStatus.ClusterAdmin)]
+        public Task GetCmpXchgValue()
+        {
+            var key = GetStringQueryString("key");
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var res = ServerStore.Cluster.GetCmpXchg(context, key);
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        [nameof(RawClusterValueResult.Index)] = res.Index,
+                        [nameof(RawClusterValueResult.Value)] = res.Value
+                    });
+                    writer.Flush();
+                }
+                return Task.CompletedTask;
+            }
+        }
+
+        [RavenAction("/cluster/cmpxchg", "PUT", AuthorizationStatus.ClusterAdmin)]
+        public async Task PutCmpXchgValue()
+        {
+            var key = GetStringQueryString("key");
+            // ReSharper disable once PossibleInvalidOperationException
+            var index = GetLongQueryString("index",true).Value;
+
+            ServerStore.EnsureNotPassive();
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var updateJson = await context.ReadForMemoryAsync(RequestBodyStream(), "read-unique-value");
+                var command = new CompareExchangeCommand(key, updateJson, index);
+
+                var (raftIndex, _) = await ServerStore.SendToLeaderAsync(command);
+                await ServerStore.Cluster.WaitForIndexNotification(raftIndex);
+
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+            }
         }
 
         [RavenAction("/periodic-backup/status", "GET", AuthorizationStatus.ValidUser)]
@@ -380,6 +426,7 @@ namespace Raven.Server.Web.System
                 TotalSize = size,
 
                 IsAdmin = true, //TODO: implement me!
+                IsEncrypted = dbRecord.Encrypted,
                 UpTime = online ? (TimeSpan?)GetUptime(db) : null,
                 BackupInfo = GetBackupInfo(db),
 

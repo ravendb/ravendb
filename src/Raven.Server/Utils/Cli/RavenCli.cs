@@ -494,7 +494,7 @@ namespace Raven.Server.Utils.Cli
                     // this does not include the private key, that is only for the client
                     Certificate = Convert.ToBase64String(cert.Export(X509ContentType.Cert)),
                     Permissions = null,
-                    ServerAdmin = true,
+                    SecurityClearance = SecurityClearance.ClusterAdmin,
                     Thumbprint = cert.Thumbprint
                 }.ToJson();
 
@@ -518,7 +518,6 @@ namespace Raven.Server.Utils.Cli
                 return false;
             }
 
-            bool isServerScript = false;
             DocumentDatabase database = null;
             switch (args[0].ToLower())
             {
@@ -536,7 +535,6 @@ namespace Raven.Server.Utils.Cli
                     }
                     break;
                 case "server":
-                    isServerScript = true;
                     break;
                 default:
                     WriteError($"Invalid arguments '{args[0]}' passed to script", cli);
@@ -552,20 +550,13 @@ namespace Raven.Server.Utils.Cli
 
             using (cli._server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var adminJsScript = new AdminJsScript { Script = jsCli.Script };
-                var result = isServerScript ? jsCli.AdminConsole.ApplyServerScript(adminJsScript) : jsCli.AdminConsole.ApplyScript(adminJsScript);
-
-                string str;
-                if (result == null || result is DynamicJsonValue)
-                    str = ConvertResultToString(context, result);
-                else
-                    str = result.ToString();
-                str += Environment.NewLine;
+                var adminJsScript = new AdminJsScript(jsCli.Script);
+                var result = jsCli.AdminConsole.ApplyScript(adminJsScript);
 
                 if (cli._consoleColoring)
                     Console.ForegroundColor = ConsoleColor.Magenta;
 
-                WriteText(str, TextColor, cli);
+                WriteText(result, TextColor, cli);
 
                 if (cli._consoleColoring)
                     Console.ResetColor();
@@ -573,23 +564,31 @@ namespace Raven.Server.Utils.Cli
             return true;
         }
 
-        public static string ConvertResultToString(JsonOperationContext context, object result)
+        public static string ConvertResultToString(ScriptRunnerResult result)
         {
             var ms = new MemoryStream();
-            using (var writer = new BlittableJsonTextWriter(context, ms))
+            using(var ctx = JsonOperationContext.ShortTermSingleUse())
+            using (var writer = new BlittableJsonTextWriter(ctx, ms))
             {
                 writer.WriteStartObject();
 
-                writer.WritePropertyName(nameof(AdminJsScriptResult.Result));
+                writer.WritePropertyName("Result");
 
-                if (result != null)
+                if (result.IsNull)
                 {
-                    var djv = result as DynamicJsonValue;
-                    context.Write(writer, djv);
+                    writer.WriteNull();
+                }
+                else if (result.RawJsValue.IsBoolean())
+                {
+                    writer.WriteBool(result.RawJsValue.AsBoolean());
+                }
+                else if (result.RawJsValue.IsString())
+                {
+                    writer.WriteString(result.RawJsValue.AsString());
                 }
                 else
                 {
-                    writer.WriteNull();
+                    writer.WriteObject(result.TranslateToObject(ctx));
                 }
 
                 writer.WriteEndObject();
@@ -629,10 +628,9 @@ namespace Raven.Server.Utils.Cli
         private static bool CommandImportDir(List<string> args, RavenCli cli)
         {
             // ImportDir <databaseName> <path-to-dir>
-            var serverUrl = cli._server.WebUrls[0];
-            WriteText($"ImportDir for database {args[0]} from dir `{args[1]}` to {serverUrl}", ConsoleColor.Yellow, cli);
+            WriteText($"ImportDir for database {args[0]} from dir `{args[1]}` to {cli._server.WebUrl}", ConsoleColor.Yellow, cli);
 
-            var url = $"{serverUrl}/databases/{args[0]}/smuggler/import-dir?dir={args[1]}";
+            var url = $"{cli._server.WebUrl}/databases/{args[0]}/smuggler/import-dir?dir={args[1]}";
             using (var client = new HttpClient())
             {
                 WriteText("Sending at " + DateTime.UtcNow, TextColor, cli);
@@ -648,8 +646,7 @@ namespace Raven.Server.Utils.Cli
             // CreateDb <databaseName> <DataDir>
             WriteText($"Create database {args[0]} with DataDir `{args[1]}`", ConsoleColor.Yellow, cli);
 
-            var serverUrl = cli._server.WebUrls[0];
-            var port = new Uri(serverUrl).Port;
+            var port = new Uri(cli._server.WebUrl).Port;
 
             using (var store = new DocumentStore
             {
@@ -759,7 +756,7 @@ namespace Raven.Server.Utils.Cli
             [Command.Print] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandPrint, Experimental = true } // test cli
         };
 
-        public bool Start(RavenServer server, TextWriter textWriter, TextReader textReader, bool consoleColoring, ManualResetEvent consoleMre)
+        public bool Start(RavenServer server, TextWriter textWriter, TextReader textReader, bool consoleColoring)
         {
             _server = server;
             _writer = textWriter;
@@ -790,7 +787,7 @@ namespace Raven.Server.Utils.Cli
 
             try
             {
-                return StartCli(consoleMre);
+                return StartCli();
             }
             catch (Exception ex)
             {
@@ -828,7 +825,7 @@ namespace Raven.Server.Utils.Cli
             }
         }
 
-        private bool StartCli(ManualResetEvent consoleMre)
+        private bool StartCli()
         {
             var ctrlCPressed = false;
             if (_consoleColoring)
@@ -846,12 +843,6 @@ namespace Raven.Server.Utils.Cli
             }
             while (true)
             {
-                if (consoleMre != null && _consoleColoring)
-                {
-                    // wait for "Tcp listening on" to printed before prompt
-                    consoleMre.WaitOne(2000);
-                }
-
                 PrintCliHeader(this);
                 var line = ReadLine(this);
                 _writer.Flush();

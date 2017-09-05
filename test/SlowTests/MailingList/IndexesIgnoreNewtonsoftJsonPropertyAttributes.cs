@@ -65,9 +65,14 @@ namespace SlowTests.MailingList
         [Fact]
         public void WillIgnoreAttribute()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
             {
-                store.Conventions.PrettifyGeneratedLinqExpressions = false;
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.PrettifyGeneratedLinqExpressions = false;
+                }
+            }))
+            {
                 new StudentDtos_ByEmailDomain().Execute(store);
 
                 var definition = store.Admin.Send(new GetIndexOperation(new StudentDtos_ByEmailDomain().IndexName));

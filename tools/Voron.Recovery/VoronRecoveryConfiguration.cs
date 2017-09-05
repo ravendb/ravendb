@@ -7,8 +7,7 @@ namespace Voron.Recovery
         public string PathToDataFile { get; set; }
         public string DataFileDirectory { get; set; }
         public string OutputFileName { get; set; }
-        public int PageSizeInKb { get; set; } = 4;
-        public int NumberOfFieldsInDocumentTable { get; set; } = 5;
+        public int PageSizeInKb { get; set; } = 8;
         public int InitialContextSizeInMB { get; set; } = 1;
         public int InitialContextLongLivedSizeInKB { get; set; } = 16;
         public int ProgressIntervalInSec { get; set; } = 5;
@@ -56,12 +55,6 @@ namespace Voron.Recovery
                             return VoronRecoveryArgsProcessStatus.InvalidPageSize;
                         config.PageSizeInKb = pageSize;
                         break;
-                    case "-TableValueEntries":
-                        int tvrCount;
-                        if (int.TryParse(args[i + 1], out tvrCount) == false || tvrCount < 1)
-                            return VoronRecoveryArgsProcessStatus.InvalidTableValueCount;
-                        config.NumberOfFieldsInDocumentTable = tvrCount;
-                        break;
                     case "-InitialContextSizeInMB":
                         int contextSize;
                         if (int.TryParse(args[i + 1], out contextSize) == false || contextSize < 1)
@@ -103,7 +96,6 @@ namespace Voron.Recovery
             CantWriteToOutputDirectory,
             WrongNumberOfArgs,
             InvalidPageSize,
-            InvalidTableValueCount,
             InvalidContextSize,
             InvalidLongLivedContextSize,
             InvalidRefreshRate,

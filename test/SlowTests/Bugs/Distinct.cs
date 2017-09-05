@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
@@ -174,7 +175,7 @@ namespace SlowTests.Bugs
                         .Distinct()
                         .SelectFields<Customer>("CustomerId")
                         .Take(20)
-                        .Include("__document_id")
+                        .Include(Constants.Documents.Indexing.Fields.DocumentIdFieldName)
                         .ToList();
                     var cust = session.Load<Customer>("Customers/2");
                     Assert.Equal(1, session.Advanced.NumberOfRequests);

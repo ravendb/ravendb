@@ -1,14 +1,16 @@
 FROM microsoft/dotnet:runtime-nanoserver
 
-ENV DataDir=APPDRIVE:/databases CustomConfigFilename='' PublicServerUrl='' PublicTcpServerUrl='' UnsecuredAccessAllowed=''
+HEALTHCHECK --start-period=60s CMD c:\healthcheck.ps1
+
+ENV DataDir=APPDRIVE:/databases CustomConfigFilename='' PublicServerUrl='' PublicTcpServerUrl='' UnsecuredAccessAllowed='' LogsMode=''
 
 VOLUME c:/databases c:/raven-config
 EXPOSE 8080 38888
 
-COPY RavenDB-4.0.*-*-*-windows-x64.zip c:/RavenDB.zip
+COPY RavenDB.zip install-raven.ps1 run-raven.ps1 healthcheck.ps1 c:/
 
-RUN powershell -c 'mkdir c:/ravendb; expand-archive c:/ravendb.zip -DestinationPath c:/ravendb; rm c:\ravendb.zip'
+RUN powershell -c 'c:\install-raven.ps1'
+WORKDIR C:/ravendb/Server
+
 ADD https://ravendb-docker.s3.amazonaws.com/vcruntime140.dll c:/ravendb/server
-COPY run-raven.ps1 c:/run-raven.ps1
-
 CMD powershell -c 'c:\run-raven.ps1'

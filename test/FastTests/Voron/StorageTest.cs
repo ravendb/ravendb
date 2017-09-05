@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using Sparrow.Threading;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Impl;
@@ -19,7 +20,7 @@ namespace FastTests.Voron
         protected StorageEnvironmentOptions _options;
         protected readonly string DataDir = GenerateDataDir();
 
-        private ByteStringContext _allocator = new ByteStringContext(LowMemoryFlag.None);
+        private ByteStringContext _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
 
         public static string GenerateDataDir()
         {

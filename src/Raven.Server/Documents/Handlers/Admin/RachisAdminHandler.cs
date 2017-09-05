@@ -4,6 +4,7 @@ using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Commands;
@@ -13,6 +14,7 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -21,25 +23,41 @@ namespace Raven.Server.Documents.Handlers.Admin
 {
     public class RachisAdminHandler : RequestHandler
     {
-        [RavenAction("/admin/rachis/send", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/rachis/send", "POST", AuthorizationStatus.Operator)]
         public async Task ApplyCommand()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var commandJson = await context.ReadForMemoryAsync(RequestBodyStream(), "external/rachis/command");
-
-                var command = CommandBase.CreateFrom(commandJson);
-
-                var (etag, result) = await ServerStore.PutCommandAsync(command);
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                try
                 {
-                    context.Write(writer, new DynamicJsonValue
+                    var commandJson = await context.ReadForMemoryAsync(RequestBodyStream(), "external/rachis/command");
+
+                    var command = CommandBase.CreateFrom(commandJson);
+
+                    var isClusterAdmin = IsClusterAdmin();
+
+                    command.VerifyCanExecuteCommand(ServerStore, context, isClusterAdmin);
+
+                    var (etag, result) = await ServerStore.Engine.PutAsync(command);
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
-                        [nameof(ServerStore.PutRaftCommandResult.RaftCommandIndex)] = etag,
-                        [nameof(ServerStore.PutRaftCommandResult.Data)] = result
-                    });
-                    writer.Flush();
+                        context.Write(writer, new DynamicJsonValue
+                        {
+                            [nameof(ServerStore.PutRaftCommandResult.RaftCommandIndex)] = etag,
+                            [nameof(ServerStore.PutRaftCommandResult.Data)] = result
+                        });
+                        writer.Flush();
+                    }
+                }
+                catch (NotLeadingException) 
+                {
+                    throw;
+                }
+                catch (Exception)
+                {
+                    HttpContext.Response.Headers["Reached-Leader"] = "true";
+                    throw;
                 }
             }
         }
@@ -59,25 +77,29 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
         }
 
-        [RavenAction("/admin/cluster/observer/suspend", "GET", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/cluster/observer/suspend", "POST", AuthorizationStatus.ClusterAdmin)]
         public Task SuspendObserver()
         {
             SetupCORSHeaders();
             
             if (ServerStore.IsLeader())
             {
-                var suspend = GetBoolValueQueryString("value"); // in seconds
+                var suspend = GetBoolValueQueryString("value");
                 if (suspend.HasValue)
                 {
                     Server.ServerStore.Observer.Suspended = suspend.Value;
                 }
+                
+                NoContentStatus();
                 return Task.CompletedTask;
             }
+            
             RedirectToLeader();
+            
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/cluster/observer/decisions", "GET", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/cluster/observer/decisions", "GET", AuthorizationStatus.Operator)]
         public Task GetObserverDecisions()
         {
             SetupCORSHeaders();
@@ -89,11 +111,11 @@ namespace Raven.Server.Documents.Handlers.Admin
                 {
                     var res = ServerStore.Observer.ReadDecisionsForDatabase();
                     var json = new DynamicJsonValue{
-                        ["LeaderNode"] = Server.ServerStore.NodeTag,
-                        ["Term"] = Server.ServerStore.Engine.CurrentTerm,
-                        ["Suspended"] = Server.ServerStore.Observer.Suspended,
-                        ["Iteration"] = res.Iteration,
-                        ["ObserverLog"] = new DynamicJsonArray(res.List)
+                        [nameof(ClusterObserverDecisions.LeaderNode)] = Server.ServerStore.NodeTag,
+                        [nameof(ClusterObserverDecisions.Term)] = Server.ServerStore.Engine.CurrentTerm,
+                        [nameof(ClusterObserverDecisions.Suspended)] = Server.ServerStore.Observer.Suspended,
+                        [nameof(ClusterObserverDecisions.Iteration)] = res.Iteration,
+                        [nameof(ClusterObserverDecisions.ObserverLog)] = new DynamicJsonArray(res.List)
                     };
                     
                     context.Write(writer, json);
@@ -105,7 +127,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/cluster/log", "GET",AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/cluster/log", "GET",AuthorizationStatus.Operator)]
         public Task GetLogs()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -129,7 +151,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 {
                     json[nameof(NodeInfo.NodeTag)] = ServerStore.NodeTag;
                     json[nameof(NodeInfo.TopologyId)] = ServerStore.GetClusterTopology(context).TopologyId;
-                    json[nameof(NodeInfo.Certificate)] = ServerStore.RavenServer.ServerCertificateHolder.CertificateForClients;
+                    json[nameof(NodeInfo.Certificate)] = ServerStore.RavenServer.ClusterCertificateHolder.CertificateForClients;
                     json[nameof(ServerStore.Engine.LastStateChangeReason)] = ServerStore.LastStateChangeReason();
                 }
                 context.Write(writer, json);
@@ -193,7 +215,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/cluster/maintenance-stats", "GET", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/cluster/maintenance-stats", "GET", AuthorizationStatus.Operator)]
         public Task ClusterMaintenanceStats()
         {
             if (ServerStore.LeaderTag == null)
@@ -214,23 +236,13 @@ namespace Raven.Server.Documents.Handlers.Admin
             return Task.CompletedTask;
         }
 
-        private void SetupCORSHeaders()
-        {
-            // TODO: handle this properly when using https
-            // https://developer.mozilla.org/en-US/docs/Web/HTTP/Access_control_CORS
-            HttpContext.Response.Headers.Add("Access-Control-Allow-Origin", HttpContext.Request.Headers["Origin"]);
-            HttpContext.Response.Headers.Add("Access-Control-Allow-Methods", "PUT, POST, GET, OPTIONS, DELETE");
-            HttpContext.Response.Headers.Add("Access-Control-Allow-Headers", HttpContext.Request.Headers["Access-Control-Request-Headers"]);
-            HttpContext.Response.Headers.Add("Access-Control-Max-Age", "86400");
-        }
-
-        [RavenAction("/admin/cluster/node", "OPTIONS", AuthorizationStatus.ServerAdmin)]
-        [RavenAction("/admin/cluster/reelect", "OPTIONS", AuthorizationStatus.ServerAdmin)]
-        [RavenAction("/admin/cluster/timeout", "OPTIONS", AuthorizationStatus.ServerAdmin)]
-        [RavenAction("/admin/cluster/promote", "OPTIONS", AuthorizationStatus.ServerAdmin)]
-        [RavenAction("/admin/cluster/demote", "OPTIONS", AuthorizationStatus.ServerAdmin)]
-        [RavenAction("/admin/cluster/observer/suspend", "OPTIONS", AuthorizationStatus.ServerAdmin)]
-        [RavenAction("/admin/cluster/observer/decisions", "OPTIONS", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/cluster/node", "OPTIONS", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/cluster/reelect", "OPTIONS", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/cluster/timeout", "OPTIONS", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/cluster/promote", "OPTIONS", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/cluster/demote", "OPTIONS", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/cluster/observer/suspend", "OPTIONS", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/cluster/observer/decisions", "OPTIONS", AuthorizationStatus.Operator)]
         public Task AllowPreflightRequest()
         {
             SetupCORSHeaders();
@@ -238,12 +250,12 @@ namespace Raven.Server.Documents.Handlers.Admin
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/cluster/node", "PUT", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/cluster/node", "PUT", AuthorizationStatus.ClusterAdmin)]
         public async Task AddNode()
         {
             SetupCORSHeaders();
 
-            var nodeUrl = GetStringQueryString("url");
+            var nodeUrl = GetStringQueryString("url").TrimEnd('/');
             var watcher = GetBoolValueQueryString("watcher", false);
 
             var remoteIsHttps = nodeUrl.StartsWith("https:", StringComparison.OrdinalIgnoreCase);
@@ -255,10 +267,20 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             NodeInfo nodeInfo;
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(nodeUrl, Server.ServerCertificateHolder.Certificate))
+            using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(nodeUrl, Server.ClusterCertificateHolder.Certificate))
             {
+                requestExecutor.DefaultTimeout = ServerStore.Engine.OperationTimeout;
+
                 var infoCmd = new GetNodeInfoCommand();
-                await requestExecutor.ExecuteAsync(infoCmd, ctx);
+                try
+                {
+                    await requestExecutor.ExecuteAsync(infoCmd, ctx);
+                }
+                catch (AllTopologyNodesDownException e)
+                {
+                    throw new InvalidOperationException($"Couldn't contact node at {nodeUrl}", e);
+                }
+
                 nodeInfo = infoCmd.Result;
 
                 if (ServerStore.IsPassive() && nodeInfo.TopologyId != null)
@@ -320,7 +342,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         };
 
                         var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + certificate.Thumbprint, certificateDefinition));
-                        await ServerStore.Cluster.WaitForIndexNotification(res.Etag);
+                        await ServerStore.Cluster.WaitForIndexNotification(res.Index);
                     }
                         
                     await ServerStore.AddNodeToClusterAsync(nodeUrl, nodeTag, validateNotInTopology:false, asWatcher:watcher?? false);
@@ -331,7 +353,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             RedirectToLeader();
         }
 
-        [RavenAction("/admin/cluster/node", "DELETE", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/cluster/node", "DELETE", AuthorizationStatus.ClusterAdmin)]
         public async Task DeleteNode()
         {
             SetupCORSHeaders();
@@ -347,7 +369,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             RedirectToLeader();
         }
         
-        [RavenAction("/admin/cluster/timeout", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/cluster/timeout", "POST", AuthorizationStatus.ClusterAdmin)]
         public Task TimeoutNow()
         {
             SetupCORSHeaders();
@@ -358,7 +380,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         }
 
 
-        [RavenAction("/admin/cluster/reelect", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/cluster/reelect", "POST", AuthorizationStatus.ClusterAdmin)]
         public Task EnforceReelection()
         {
             SetupCORSHeaders();
@@ -374,7 +396,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         }
 
         /* Promote a non-voter to a promotable */
-        [RavenAction("/admin/cluster/promote", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/cluster/promote", "POST", AuthorizationStatus.ClusterAdmin)]
         public async Task PromoteNode()
         {
             if (ServerStore.LeaderTag == null)
@@ -409,7 +431,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         }
 
         /* Demote a voter (member/promotable) node to a non-voter  */
-        [RavenAction("/admin/cluster/demote", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/cluster/demote", "POST", AuthorizationStatus.ClusterAdmin)]
         public async Task DemoteNode()
         {
             if (ServerStore.LeaderTag == null)

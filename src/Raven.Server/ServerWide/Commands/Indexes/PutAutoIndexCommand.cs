@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Esprima.Ast;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Indexes;
@@ -39,7 +40,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             json[nameof(Definition)] = TypeConverter.ToBlittableSupportedType(Definition);
         }
 
-        public static PutAutoIndexCommand Create(IndexDefinitionBase definition, string databaseName)
+        public static PutAutoIndexCommand Create(AutoIndexDefinitionBase definition, string databaseName)
         {
             var indexType = IndexType.None;
             var map = definition as AutoMapIndexDefinition;
@@ -56,7 +57,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             return new PutAutoIndexCommand(GetAutoIndexDefinition(definition, indexType), databaseName);
         }
 
-        public static AutoIndexDefinition GetAutoIndexDefinition(IndexDefinitionBase definition, IndexType indexType)
+        public static AutoIndexDefinition GetAutoIndexDefinition(AutoIndexDefinitionBase definition, IndexType indexType)
         {
             Debug.Assert(indexType == IndexType.AutoMap || indexType == IndexType.AutoMapReduce);
 
@@ -64,7 +65,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             {
                 Collection = definition.Collections.First(),
                 Etag = 0,
-                MapFields = CreateFields(definition.MapFields),
+                MapFields = CreateFields(definition.MapFields.ToDictionary(x => x.Key, x => x.Value.As<AutoIndexField>())),
                 GroupByFields = indexType == IndexType.AutoMap ? null : CreateFields(((AutoMapReduceIndexDefinition)definition).GroupByFields),
                 LockMode = definition.LockMode,
                 Priority = definition.Priority,
@@ -73,23 +74,22 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             };
         }
 
-        private static Dictionary<string, AutoIndexDefinition.AutoIndexFieldOptions> CreateFields(Dictionary<string, IndexField> fields)
+        private static Dictionary<string, AutoIndexDefinition.AutoIndexFieldOptions> CreateFields(Dictionary<string, AutoIndexField> fields)
         {
             if (fields == null)
                 return null;
 
             var result = new Dictionary<string, AutoIndexDefinition.AutoIndexFieldOptions>();
+
             foreach (var kvp in fields)
             {
+                var autoField = kvp.Value;
+
                 result[kvp.Key] = new AutoIndexDefinition.AutoIndexFieldOptions
                 {
-                    TermVector = kvp.Value.TermVector,
-                    Storage = kvp.Value.Storage,
-                    Indexing = kvp.Value.Indexing,
-                    Analyzer = kvp.Value.Analyzer,
-                    Spatial = null,
-                    Suggestions = null,
-                    MapReduceOperation = kvp.Value.Aggregation
+                    Storage = autoField.Storage,
+                    Indexing = autoField.Indexing,
+                    Aggregation = autoField.Aggregation
                 };
             }
 

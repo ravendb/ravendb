@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using Raven.Client.Documents.Session;
 using Sparrow.Json;
@@ -18,9 +19,9 @@ namespace Raven.Client.Json
             _source = metadata;
         }
 
-        public MetadataAsDictionary():this(new Dictionary<string, object>())
+        public MetadataAsDictionary() : this(new Dictionary<string, object>())
         {
-            
+
         }
 
         public MetadataAsDictionary(Dictionary<string, object> metadata)
@@ -40,7 +41,7 @@ namespace Raven.Client.Json
             }
         }
 
-        private object ConvertValue(object value)
+        private static object ConvertValue(object value)
         {
             if (value == null)
                 return null;
@@ -82,8 +83,7 @@ namespace Raven.Client.Json
             {
                 if (_metadata != null)
                     return _metadata[key];
-                object value;
-                if (_source.TryGetMember(key, out value))
+                if (_source.TryGetMember(key, out var value))
                     return ConvertValue(value);
 
                 throw new KeyNotFoundException(key + " is not in the metadata");
@@ -153,8 +153,7 @@ namespace Raven.Client.Json
             if (_metadata != null)
                 return _metadata.Contains(item);
 
-            object value;
-            return _source.TryGetMember(item.Key, out value) && (value.ToString().Equals(item.Value));
+            return _source.TryGetMember(item.Key, out var value) && value.ToString().Equals(item.Value);
         }
 
         public bool ContainsKey(string key)
@@ -202,8 +201,7 @@ namespace Raven.Client.Json
             if (_metadata != null)
                 return _metadata.TryGetValue(key, out value);
 
-            object val;
-            if (_source.TryGetMember(key, out val))
+            if (_source.TryGetMember(key, out var val))
             {
                 value = ConvertValue(val);
                 return true;
@@ -214,8 +212,7 @@ namespace Raven.Client.Json
 
         public bool TryGetValue(string key, out string value)
         {
-            object obj;
-            var result = TryGetValue(key, out obj);
+            var result = TryGetValue(key, out object obj);
             value = (string)obj;
             return result;
         }
@@ -223,25 +220,25 @@ namespace Raven.Client.Json
         public string GetString(string key)
         {
             var obj = this[key];
-            return (string)obj;
+            return Convert.ToString(obj, CultureInfo.InvariantCulture);
         }
 
-        public long GetNumber(string key)
+        public long GetLong(string key)
         {
             var obj = this[key];
-            return (long)obj;
+            return Convert.ToInt64(obj, CultureInfo.InvariantCulture);
         }
 
         public bool GetBoolean(string key)
         {
             var obj = this[key];
-            return (bool)obj;
+            return Convert.ToBoolean(obj, CultureInfo.InvariantCulture);
         }
 
         public double GetDouble(string key)
         {
             var obj = this[key];
-            return (double)obj;
+            return Convert.ToDouble(obj, CultureInfo.InvariantCulture);
         }
 
         public IMetadataDictionary GetObject(string key)

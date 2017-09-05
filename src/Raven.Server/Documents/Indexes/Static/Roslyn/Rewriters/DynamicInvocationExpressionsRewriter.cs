@@ -4,9 +4,9 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 {
-    public class DynamicInvocationExpressionsRewriter : CSharpSyntaxRewriter
+    public sealed class DynamicInvocationExpressionsRewriter : CSharpSyntaxRewriter
     {
-        public static DynamicInvocationExpressionsRewriter Instance = new DynamicInvocationExpressionsRewriter();
+        public static readonly DynamicInvocationExpressionsRewriter Instance = new DynamicInvocationExpressionsRewriter();
 
         private DynamicInvocationExpressionsRewriter()
         {

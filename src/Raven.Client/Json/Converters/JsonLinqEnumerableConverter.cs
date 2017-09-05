@@ -10,9 +10,9 @@ namespace Raven.Client.Json.Converters
     /// This converter is used when a property is a Linq-To-Entities query, enumerating and 
     /// then serializing it as a json array.
     /// </summary>
-    public class JsonLinqEnumerableConverter : JsonConverter
+    public sealed class JsonLinqEnumerableConverter : JsonConverter
     {
-        public static JsonLinqEnumerableConverter Instance = new JsonLinqEnumerableConverter();
+        public static readonly JsonLinqEnumerableConverter Instance = new JsonLinqEnumerableConverter();
 
         private JsonLinqEnumerableConverter()
         {

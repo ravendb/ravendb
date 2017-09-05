@@ -7,7 +7,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Session;
@@ -17,7 +17,7 @@ namespace SlowTests.MailingList
 {
     public class BoundingBox : RavenTestBase
     {
-        [Fact(Skip = "Missing feature: Spatial")]
+        [Fact]
         public void ShouldGetRightResults()
         {
             // verify using http://arthur-e.github.io/Wicket/sandbox-gmaps3.html
@@ -37,9 +37,10 @@ namespace SlowTests.MailingList
                 WaitForIndexing(documentStore);
                 using (IDocumentSession db = documentStore.OpenSession())
                 {
-                    List<Shape> results = db.Query<Shape, Shapes_SpatialIndex>()
-                                            .Customize(x => x.RelatesToShape("Bbox", outer, SpatialRelation.Within))
-                                            .ToList(); // hangs
+                    List<Shape> results = db.Query<Shapes_SpatialIndex.Result, Shapes_SpatialIndex>()
+                        .Spatial(x => x.Bbox, x => x.RelatesToShape(outer, SpatialRelation.Within))
+                        .OfType<Shape>()
+                        .ToList(); // hangs
 
                     Assert.Equal(1, results.Count);
                 }
@@ -48,19 +49,30 @@ namespace SlowTests.MailingList
 
         private class Shape
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
             public string Wkt { get; set; }
         }
 
         private class Shapes_SpatialIndex : AbstractIndexCreationTask<Shape>
         {
+            public class Result
+            {
+                public string Bbox { get; set; }
+            }
+
             public Shapes_SpatialIndex()
             {
                 Map = shapes => from s in shapes
                                 select new
                                 {
-                                    __ = SpatialGenerate("Bbox", s.Wkt, SpatialSearchStrategy.GeohashPrefixTree, 6)
+                                    Bbox = CreateSpatialField(s.Wkt)
                                 };
+
+                SpatialIndexesStrings.Add("Bbox", new SpatialOptions
+                {
+                    MaxTreeLevel = 6,
+                    Strategy = SpatialSearchStrategy.GeohashPrefixTree
+                });
             }
         }
     }

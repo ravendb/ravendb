@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.IO;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Smuggler;
-using Raven.Client.Documents.Transformers;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Voron;
 
@@ -30,8 +30,8 @@ namespace Raven.Server.Smuggler.Documents
         {
             DatabaseItemType.Documents,
             DatabaseItemType.RevisionDocuments,
+            DatabaseItemType.Tombstones,
             DatabaseItemType.Indexes,
-            DatabaseItemType.Transformers,
             DatabaseItemType.Identities,
             DatabaseItemType.None
         };
@@ -100,6 +100,18 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
+        public IEnumerable<DocumentTombstone> GetTombstones(List<string> collectionsToExport, INewDocumentActions actions)
+        {
+            var tombstones = collectionsToExport.Count != 0
+                ? _database.DocumentsStorage.GetTombstonesFrom(_context, collectionsToExport, _startDocumentEtag, int.MaxValue)
+                : _database.DocumentsStorage.GetTombstonesFrom(_context, _startDocumentEtag, 0, int.MaxValue);
+
+            foreach (var tombstone in tombstones)
+            {
+                yield return tombstone;
+            }
+        }
+
         public IEnumerable<IndexDefinitionAndType> GetIndexes()
         {
             foreach (var index in _database.IndexStore.GetIndexes())
@@ -126,20 +138,18 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public IEnumerable<TransformerDefinition> GetTransformers()
+        public IDisposable GetIdentities(out IEnumerable<(string Prefix, long Value)> identities)
         {
-            foreach (var transformer in _database.TransformerStore.GetTransformers())
+            using (var scope = new DisposableScope())
             {
-                yield return transformer.Definition;
+                scope.EnsureDispose(_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context));
+                scope.EnsureDispose(context.OpenReadTransaction());
+
+                identities = _database.ServerStore.Cluster.ReadIdentities(context, _database.Name, 0, int.MaxValue);
+
+                return scope.Delay();
             }
         }
-
-        public IEnumerable<KeyValuePair<string, long>> GetIdentities()
-        {
-            var dr = _database.ServerStore.LoadDatabaseRecord(_database.Name, out long _);
-            return dr.Identities;
-        }
-
 
         public long SkipType(DatabaseItemType type)
         {

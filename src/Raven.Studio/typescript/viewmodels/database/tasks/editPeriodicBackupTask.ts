@@ -11,6 +11,7 @@ import backupSettings = require("models/database/tasks/periodicBackup/backupSett
 class editPeriodicBackupTask extends viewModelBase {
 
     configuration = ko.observable<periodicBackupConfiguration>();
+    isAddingNewBackupTask = ko.observable<boolean>(true);
 
     constructor() {
         super();
@@ -20,11 +21,13 @@ class editPeriodicBackupTask extends viewModelBase {
 
     activate(args: any) { 
         super.activate(args);
-        
+
         const deferred = $.Deferred<void>();
         
         if (args.taskId) {
-            // editing an existing task
+            // 1. Editing an existing task
+            this.isAddingNewBackupTask(false);
+
             new getPeriodicBackupConfigurationCommand(this.activeDatabase(), args.taskId)
                 .execute()
                 .done((configuration: Raven.Client.ServerWide.PeriodicBackup.PeriodicBackupConfiguration) => {
@@ -37,7 +40,9 @@ class editPeriodicBackupTask extends viewModelBase {
                 });
         }
         else {
-            // creating a new task
+            // 2. Creating a new task
+            this.isAddingNewBackupTask(true);
+
             this.configuration(periodicBackupConfiguration.empty());
             deferred.resolve();
         }
@@ -60,7 +65,7 @@ class editPeriodicBackupTask extends viewModelBase {
                     "<ul>" +
                         "<li>Data" +
                             "<ul>" +
-                                "<li>Backup includes documents, indexes, transformers and identities <br> " +
+                                "<li>Backup includes documents, indexes and identities <br> " +
                                     "but doesn't include index data, indexes will be rebuilt after restore based on exported definitions</li>" +
                                 "<li>Snapshot contains the raw data including the indexes - definitions and data</li>" +
                             "</ul>" +
@@ -156,8 +161,13 @@ class editPeriodicBackupTask extends viewModelBase {
         }
 
         bs.isTestingCredentials(true);
+        bs.testConnectionResult(null);
+        
         new testPeriodicBackupCredentialsCommand(this.activeDatabase(), bs.connectionType, bs.toDto())
             .execute()
+            .done((result: Raven.Server.Web.System.NodeConnectionTestResult) => {
+                bs.testConnectionResult(result);        
+            })
             .always(() => bs.isTestingCredentials(false));
     }
 

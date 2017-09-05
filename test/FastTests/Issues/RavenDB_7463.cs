@@ -27,7 +27,7 @@ namespace FastTests.Issues
 
             using (var store = new DocumentStore
             {
-                Urls = Server.WebUrls,
+                Urls = new[]{ Server.WebUrl },
                 Database = databaseName,
             })
             {

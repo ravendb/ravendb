@@ -32,10 +32,10 @@ namespace SlowTests.Core.Querying
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexesOperation(new [] {new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
                     Maps = { "from post in docs.Posts select new { post.Title }" },
-                    Fields = { { "Title", new IndexFieldOptions { Indexing = FieldIndexing.Analyzed } } },
+                    Fields = { { "Title", new IndexFieldOptions { Indexing = FieldIndexing.Search } } },
                     Name = "Posts/ByTitle"
                 }}));
 
@@ -92,8 +92,8 @@ namespace SlowTests.Core.Querying
                     Maps = { "from post in docs.Posts select new { post.Title, post.Desc }" },
                     Fields =
                     {
-                        { "Title", new IndexFieldOptions { Indexing = FieldIndexing.Analyzed} },
-                        { "Desc", new IndexFieldOptions { Indexing = FieldIndexing.Analyzed} }
+                        { "Title", new IndexFieldOptions { Indexing = FieldIndexing.Search} },
+                        { "Desc", new IndexFieldOptions { Indexing = FieldIndexing.Search} }
                     },
                     Name = "Posts/ByTitleAndDescription"
                 }}));
@@ -153,7 +153,7 @@ namespace SlowTests.Core.Querying
             }
         }
 
-        [Fact(Skip = "Missing feature: Spatial")]
+        [Fact]
         public void CanDoSpatialSearch()
         {
             using (var store = GetDocumentStore())
@@ -221,13 +221,10 @@ namespace SlowTests.Core.Querying
                     WaitForIndexing(store);
 
 
-                    var events = session.Query<Event, Events_SpatialIndex>()
-                        .Customize(x => x.WithinRadiusOf(
-                            fieldName: "Coordinates",
-                            radius: 1243.0, //km
-                            latitude: 10.1230,
-                            longitude: 10.1230))
+                    var events = session.Query<Events_SpatialIndex.Result, Events_SpatialIndex>()
+                        .Spatial(x => x.Coordinates, x => x.WithinRadius(1243.0, 10.1230, 10.1230))
                         .OrderBy(x => x.Name)
+                        .OfType<Event>()
                         .ToArray();
 
                     Assert.Equal(5, events.Length);
@@ -270,7 +267,7 @@ namespace SlowTests.Core.Querying
                     var users = session.Query<User, Users_ByName>()
                         .Where(x => x.Name == "Bob" || x.LastName == "Bob")
                         .ToArray();
-                    
+
                     Assert.Equal(2, users.Length);
                     Assert.Equal("Name", users[0].Name);
                     Assert.Equal("Bob", users[1].Name);

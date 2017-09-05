@@ -1,6 +1,6 @@
 /// <reference path="../../typescript/common/constants.ts"/>
 
-interface collectionInfoDto extends Raven.Client.Documents.Queries.QueryResult<Array<documentDto>> {
+interface collectionInfoDto extends Raven.Client.Documents.Queries.QueryResult<Array<documentDto>, any> {
 }
 
 interface logNotificationDto {
@@ -143,7 +143,6 @@ interface statusDebugChangesDto {
 interface statusDebugChangesDocumentStoreDto {
     WatchAllDocuments: boolean;
     WatchAllIndexes: boolean;
-    WatchAllTransformers: boolean;
     WatchAllReplicationConflicts: boolean;
     WatchedIndexes: Array<string>;
     WatchedDocuments: Array<string>;

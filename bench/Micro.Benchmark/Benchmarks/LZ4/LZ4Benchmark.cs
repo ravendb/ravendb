@@ -11,6 +11,7 @@ using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Validators;
 using Sparrow;
 using Sparrow.LowMemory;
+using Sparrow.Threading;
 using Platform = BenchmarkDotNet.Environments.Platform;
 
 namespace Micro.Benchmark.Benchmarks.LZ4
@@ -106,7 +107,7 @@ namespace Micro.Benchmark.Benchmarks.LZ4
         public void Setup()
         {
             var generator = new Random(RandomSeed);
-            _allocator = new ByteStringContext(LowMemoryFlag.None);
+            _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
             _buffers = new List<Tuple<ByteString, int>>();
 
             // Generate the precomputed sequences to be used when generating data.

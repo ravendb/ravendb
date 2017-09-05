@@ -42,17 +42,17 @@ namespace Raven.Server.Documents
             _logger = LoggingSource.Instance.GetLogger<DatabasesLandlord>("Raven/Server");
         }
 
-        public void ClusterOnDatabaseChanged(object sender, (string dbName, long index, string type) t)
+        public void ClusterOnDatabaseChanged(object sender, (string DatabaseName, long Index, string Type) t)
         {
             HandleClusterDatabaseChanged(t, ClusterDatabaseChangeType.RecordChanged);
         }
 
-        public void ClusterOnDatabaseValueChanged(object sender, (string dbName, long index, string type) t)
+        public void ClusterOnDatabaseValueChanged(object sender, (string DatabaseName, long Index, string Type) t)
         {
             HandleClusterDatabaseChanged(t, ClusterDatabaseChangeType.ValueChanged);
         }
 
-        private void HandleClusterDatabaseChanged((string dbName, long index, string type) t, ClusterDatabaseChangeType changeType)
+        private void HandleClusterDatabaseChanged((string DatabaseName, long Index, string Type) t, ClusterDatabaseChangeType changeType)
         {
             _disposing.EnterReadLock();
             try
@@ -63,11 +63,11 @@ namespace Raven.Server.Documents
                 // response to changed database.
                 // if disabled, unload
 
-                var record = _serverStore.LoadDatabaseRecord(t.dbName, out long _);
+                var record = _serverStore.LoadDatabaseRecord(t.DatabaseName, out long _);
                 if (record == null)
                 {
                     // was removed, need to make sure that it isn't loaded 
-                    UnloadDatabase(t.dbName);
+                    UnloadDatabase(t.DatabaseName);
                     return;
                 }
 
@@ -75,14 +75,14 @@ namespace Raven.Server.Documents
                     record.DeletionInProgress.TryGetValue(_serverStore.NodeTag, out DeletionInProgressStatus deletionInProgress) &&
                     deletionInProgress != DeletionInProgressStatus.No)
                 {
-                    UnloadDatabase(t.dbName);
+                    UnloadDatabase(t.DatabaseName);
 
                     if (deletionInProgress == DeletionInProgressStatus.HardDelete)
                     {
                         RavenConfiguration configuration;
                         try
                         {
-                            configuration = CreateDatabaseConfiguration(t.dbName, ignoreDisabledDatabase: true, ignoreBeenDeleted: true, databaseRecord: record);
+                            configuration = CreateDatabaseConfiguration(t.DatabaseName, ignoreDisabledDatabase: true, ignoreBeenDeleted: true, databaseRecord: record);
                         }
                         catch (Exception ex)
                         {
@@ -103,13 +103,13 @@ namespace Raven.Server.Documents
                             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                             using (var tx = context.OpenWriteTransaction())
                             {
-                                _serverStore.DeleteSecretKey(context, t.dbName);
+                                _serverStore.DeleteSecretKey(context, t.DatabaseName);
                                 tx.Commit();
                             }
                         }
                     }
 
-                    NotifyLeaderAboutRemoval(t.dbName);
+                    NotifyLeaderAboutRemoval(t.DatabaseName);
 
                     return;
                 }
@@ -119,17 +119,17 @@ namespace Raven.Server.Documents
 
                 if (record.Disabled)
                 {
-                    UnloadDatabase(t.dbName);
+                    UnloadDatabase(t.DatabaseName);
                     return;
                 }
 
-                if (DatabasesCache.TryGetValue(t.dbName, out var task) == false)
+                if (DatabasesCache.TryGetValue(t.DatabaseName, out var task) == false)
                 {
                     // if the database isn't loaded, but it is relevant for this node, we need to create
                     // it. This is important so things like replication will start pumping, and that 
                     // configuration changes such as running periodic backup will get a chance to run, which
                     // they wouldn't unless the database is loaded / will have a request on it.          
-                    task = TryGetOrCreateResourceStore(t.dbName);
+                    task = TryGetOrCreateResourceStore(t.DatabaseName);
                 }
 
                 if (task.IsCanceled || task.IsFaulted)
@@ -140,24 +140,24 @@ namespace Raven.Server.Documents
                     case ClusterDatabaseChangeType.RecordChanged:
                         if (task.IsCompleted)
                         {
-                            NotifyDatabaseAboutStateChange(t.dbName, task, t.index);
+                            NotifyDatabaseAboutStateChange(t.DatabaseName, task, t.Index);
                             return;
                         }
                         task.ContinueWith(done =>
                         {
-                            NotifyDatabaseAboutStateChange(t.dbName, done, t.index);
+                            NotifyDatabaseAboutStateChange(t.DatabaseName, done, t.Index);
                         });
                         break;
                     case ClusterDatabaseChangeType.ValueChanged:
                         if (task.IsCompleted)
                         {
-                            NotifyDatabaseAboutValueChange(t.dbName, task, t.index);
+                            NotifyDatabaseAboutValueChange(t.DatabaseName, task, t.Index);
                             return;
                         }
 
                         task.ContinueWith(done =>
                         {
-                            NotifyDatabaseAboutValueChange(t.dbName, done, t.index);
+                            NotifyDatabaseAboutValueChange(t.DatabaseName, done, t.Index);
                         });
                         break;
                     default:
@@ -170,7 +170,7 @@ namespace Raven.Server.Documents
             catch (Exception e)
             {
                 if (_logger.IsInfoEnabled)
-                    _logger.Info($"Could not react to a cluster database change of type {changeType} for db {t.dbName}", e);
+                    _logger.Info($"Could not react to a cluster database change of type {changeType} for db {t.DatabaseName}", e);
             }
             finally
             {
@@ -483,14 +483,10 @@ namespace Raven.Server.Documents
 
                 if (databaseRecord.Encrypted)
                 {
-                    if (_serverStore.RavenServer.WebUrls != null && _serverStore.RavenServer.WebUrls.Length > 0)
+                    if (_serverStore.RavenServer.WebUrl?.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)
                     {
-                        var ravenServerWebUrl = _serverStore.RavenServer.WebUrls[0];
-                        if (ravenServerWebUrl?.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)
-                        {
-                            throw new DatabaseDisabledException(
-                                $"The database {databaseName.Value} is encrypted, and must be accessed only via HTTPS, but the web url used is {ravenServerWebUrl}");
-                        }
+                        throw new DatabaseDisabledException(
+                            $"The database {databaseName.Value} is encrypted, and must be accessed only via HTTPS, but the web url used is {_serverStore.RavenServer.WebUrl}");
                     }
                 }
 

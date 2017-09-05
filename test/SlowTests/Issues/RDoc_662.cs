@@ -33,7 +33,7 @@ namespace SlowTests.Issues
                         }
                     };
 
-                Index("Query", FieldIndexing.Analyzed);
+                Index("Query", FieldIndexing.Search);
             }
         }
 

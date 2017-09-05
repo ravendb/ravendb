@@ -11,8 +11,8 @@ abstract class ongoingTaskModel {
     
     badgeText: KnockoutComputed<string>;
     badgeClass: KnockoutComputed<string>;
-
-    isEdit: boolean = false;
+   
+    isInTasksListView: boolean = true;
 
     protected initializeObservables() {
         
@@ -49,8 +49,8 @@ abstract class ongoingTaskModel {
     }
 
     protected update(dto: Raven.Client.ServerWide.Operations.OngoingTask) {
-        if (!this.isEdit) {
-            this.updateTaskNameIfNeeded(dto);
+        if (this.isInTasksListView) {
+            dto.TaskName = ongoingTaskModel.generateTaskNameIfNeeded(dto);
         }
 
         this.taskId = dto.TaskId;
@@ -61,16 +61,39 @@ abstract class ongoingTaskModel {
         this.taskConnectionStatus(dto.TaskConnectionStatus);
     }
 
-    private updateTaskNameIfNeeded(dto: Raven.Client.ServerWide.Operations.OngoingTask) {
+    static generateTaskNameIfNeeded(dto: Raven.Client.ServerWide.Operations.OngoingTask): string {
         dto.TaskName = dto.TaskName ? dto.TaskName.trim() : dto.TaskName;
-        if (dto.TaskName) {
-            return;
-        }
-
-        dto.TaskName = this.generateTaskName(dto);
+        return dto.TaskName || ongoingTaskModel.generateTaskName(dto);
     }
 
-    protected abstract generateTaskName(dto: Raven.Client.ServerWide.Operations.OngoingTask): string;
+    static generateTaskName(dto: Raven.Client.ServerWide.Operations.OngoingTask): string {
+        // Note: This is static because it is also being called from other places (i.e. databaseGroupGraph.ts) which don't have the tasks models objects..
+        let taskName: string = "";
+
+        switch (dto.TaskType) { 
+            case "Replication":
+                const dtoReplication = dto as Raven.Client.ServerWide.Operations.OngoingTaskReplication;
+                taskName = `External replication to ${dtoReplication.DestinationDatabase}@${dtoReplication.DestinationUrl}`;
+                break;
+            case "Backup":
+                const dtoBackup = dto as Raven.Client.ServerWide.Operations.OngoingTaskBackup;
+                taskName = dtoBackup.BackupDestinations.length === 0 ? "No destinations" : `${dtoBackup.BackupType} to ${dtoBackup.BackupDestinations.join(", ")}`;
+                break;
+            case "RavenEtl":
+                const dtoRavenEtl = dto as Raven.Client.ServerWide.Operations.OngoingTaskRavenEtl;
+                taskName = `ETL to ${dtoRavenEtl.DestinationDatabase}@${dtoRavenEtl.DestinationUrl}`;
+                break;
+            case "SqlEtl":
+                const dtoSqlEtl = dto as Raven.Client.ServerWide.Operations.OngoingTaskSqlEtl;
+                taskName = ""; // Todo...
+                break;
+            case "Subscription":
+                taskName = dto.TaskName;
+                break;
+        }
+
+        return taskName;
+    } 
 }
 
 export = ongoingTaskModel;

@@ -17,6 +17,7 @@ using Lucene.Net.Store;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
+using Raven.Server.Documents.Indexes.Static.Spatial;
 using Sparrow.Json;
 using Sparrow.LowMemory;
 
@@ -53,7 +54,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _searcher = _currentStateHolder.GetIndexSearcher(_state);
         }
 
-        public Dictionary<string, FacetResult> FacetedQuery(FacetQueryServerSide query, JsonOperationContext context, CancellationToken token)
+        public Dictionary<string, FacetResult> FacetedQuery(FacetQueryServerSide query, JsonOperationContext context, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
             var results = FacetedQueryParser.Parse(query.Facets, out Dictionary<string, Facet> defaultFacets, out Dictionary<string, List<FacetedQueryParser.ParsedRange>> rangeFacets);
 
@@ -63,7 +64,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (query.Metadata.IsDistinct)
                 fieldsHash = CalculateQueryFieldsHash(query);
 
-            var baseQuery = GetLuceneQuery(context, query.Metadata, query.QueryParameters, _analyzer);
+            var baseQuery = GetLuceneQuery(context, query.Metadata, query.QueryParameters, _analyzer, getSpatialField);
             var returnedReaders = GetQueryMatchingDocuments(_searcher, baseQuery, _state);
 
             foreach (var facet in defaultFacets.Values)
@@ -469,7 +470,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        private class IntArraysPool : ILowMemoryHandler
+        private sealed class IntArraysPool : ILowMemoryHandler
         {
             public static readonly IntArraysPool Instance = new IntArraysPool();
 

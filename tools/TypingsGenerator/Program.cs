@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
@@ -11,16 +12,15 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
-using Raven.Client.Documents.Transformers;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.ETL;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Operations.ConnectionStrings;
 using Raven.Client.ServerWide.PeriodicBackup;
 using Raven.Client.ServerWide.Revisions;
 using Raven.Server.Commercial;
-using Raven.Server.Documents;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.Handlers;
@@ -32,10 +32,12 @@ using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Studio;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Web.System;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications.Server;
+using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
@@ -130,7 +132,6 @@ namespace TypingsGenerator
             scripter.AddType(typeof(PagingPerformanceDetails));
 
             // subscriptions
-            scripter.AddType(typeof(SubscriptionCriteria));
             scripter.AddType(typeof(SubscriptionConnectionStats));
             scripter.AddType(typeof(SubscriptionConnectionOptions));
             scripter.AddType(typeof(SubscriptionTryout));
@@ -146,7 +147,6 @@ namespace TypingsGenerator
             scripter.AddType(typeof(OperationExceptionResult));
             scripter.AddType(typeof(DocumentChange));
             scripter.AddType(typeof(IndexChange));
-            scripter.AddType(typeof(TransformerChange));
             scripter.AddType(typeof(Operations.Operation));
             scripter.AddType(typeof(NewVersionAvailableDetails));
             scripter.AddType(typeof(MessageDetails));
@@ -163,13 +163,11 @@ namespace TypingsGenerator
 
             // cluster 
             scripter.AddType(typeof(ClusterTopology));
+            scripter.AddType(typeof(ClusterObserverDecisions));
 
             // query 
-            scripter.AddType(typeof(QueryResult<>));
+            scripter.AddType(typeof(QueryResult<,>));
             scripter.AddType(typeof(PutResult));
-
-            // transformers
-            scripter.AddType(typeof(TransformerDefinition));
 
             // patch
             scripter.AddType(typeof(PatchRequest));
@@ -184,9 +182,6 @@ namespace TypingsGenerator
 
             // revisions
             scripter.AddType(typeof(RevisionsConfiguration));
-
-            // custom functions
-            scripter.AddType(typeof(CustomFunctions));
 
             // storage report
             scripter.AddType(typeof(StorageReport));
@@ -246,10 +241,12 @@ namespace TypingsGenerator
             scripter.AddType(typeof(OngoingTaskSubscription));
             scripter.AddType(typeof(SubscriptionTryout));
             scripter.AddType(typeof(DocumentWithException));
-            scripter.AddType(typeof(SubscriptionState));
-            scripter.AddType(typeof(SubscriptionCriteria));
+            scripter.AddType(typeof(SubscriptionStateWithNodeDetails));
+            scripter.AddType(typeof(SubscriptionConnectionDetails));
             scripter.AddType(typeof(ChangeVectorEntry));
             scripter.AddType(typeof(SubscriptionCreationOptions));
+            scripter.AddType(typeof(Constants.Documents.SubscriptionChangeVectorSpecialStates));
+            scripter.AddType(typeof(SubscriptionOpeningStrategy));
 
             // ongoing tasks - ravenDB ETL
             scripter.AddType(typeof(OngoingTaskRavenEtl));
@@ -264,17 +261,20 @@ namespace TypingsGenerator
             scripter.AddType(typeof(SqlEtlTable));
 
             // connection strings
-            scripter.AddType(typeof(ConnectionString)); 
-            scripter.AddType(typeof(RavenConnectionString)); 
-            scripter.AddType(typeof(SqlConnectionString)); 
-            scripter.AddType(typeof(ConnectionStringType)); 
-            scripter.AddType(typeof(GetConnectionStringsResult)); 
+            scripter.AddType(typeof(ConnectionString));
+            scripter.AddType(typeof(RavenConnectionString));
+            scripter.AddType(typeof(SqlConnectionString));
+            scripter.AddType(typeof(ConnectionStringType));
+            scripter.AddType(typeof(GetConnectionStringsResult));
+
+            // certificates
+            scripter.AddType(typeof(CertificateDefinition));
 
             // adminJs console
             scripter.AddType(typeof(AdminJsScript));
-            scripter.AddType(typeof(AdminJsScriptResult));
 
             scripter.AddType(typeof(NodeConnectionTestResult));
+            
 
             return scripter;
         }

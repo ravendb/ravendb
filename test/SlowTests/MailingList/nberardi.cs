@@ -7,7 +7,7 @@ namespace SlowTests.MailingList
 {
     public class Nberardi : RavenTestBase
     {
-        [Fact(Skip = "Missing feature: Spatial")]
+        [Fact]
         public void Spatial_Search_Should_Integrate_Distance_As_A_Boost_Factor()
         {
             using (var store = GetDocumentStore())
@@ -39,7 +39,8 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.DocumentQuery<SpatialEntity>("SpatialIndex")
-                        .WithinRadiusOf(500, 45.50955, -73.569133)
+                        .WithinRadiusOf("Coordinates", 500, 45.50955, -73.569133)
+                        .OrderByDistance("Coordinates", 45.50955, -73.569133)
                         .ToList();
 
                     Assert.Equal(results[0].Id, "se/2");
@@ -47,6 +48,17 @@ namespace SlowTests.MailingList
                     Assert.Equal(results[2].Id, "se/1");
                 }
 
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Advanced.DocumentQuery<SpatialEntity>("SpatialIndex")
+                        .WithinRadiusOf("Coordinates", 500, 45.50955, -73.569133)
+                        .OrderByDistance("Coordinates", "POINT (-73.569133 45.50955)")
+                        .ToList();
+
+                    Assert.Equal(results[0].Id, "se/2");
+                    Assert.Equal(results[1].Id, "se/3");
+                    Assert.Equal(results[2].Id, "se/1");
+                }
             }
         }
 
@@ -59,7 +71,7 @@ namespace SlowTests.MailingList
                     from e in entities
                     select new
                     {
-                        _ = SpatialGenerate(e.Latitude, e.Longitude)
+                        Coordinates = CreateSpatialField(e.Latitude, e.Longitude)
                     };
             }
         }

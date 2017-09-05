@@ -206,5 +206,29 @@ namespace Sparrow.Platform.Posix
                 return new HashSet<string>();
             }
         }
+
+        public static string ReadLineFromFile(string path, string filter)
+        {
+            try
+            {
+                string result = null;
+                var txt = File.ReadAllLines(path);
+                var cnt = 0;
+                foreach (var line in txt)
+                {
+                    if (line.Contains(filter))
+                    {
+                        result = line;
+                        if (++cnt > 1)
+                            return null;
+                    }
+                }
+                return result;
+            }
+            catch (Exception e)
+            {
+                return null;
+            }
+        }
     }
 }

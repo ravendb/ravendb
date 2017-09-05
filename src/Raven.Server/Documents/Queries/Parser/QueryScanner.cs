@@ -31,6 +31,13 @@ namespace Raven.Server.Documents.Queries.Parser
             TokenLength = 0;
         }
 
+        public bool AtEndOfInput()
+        {
+            if (SkipWhitespace() == false)
+                return true;
+            return _pos == _q.Length;
+        }
+
         public bool NextToken()
         {
             if (SkipWhitespace() == false)
@@ -111,15 +118,30 @@ namespace Raven.Server.Documents.Queries.Parser
                         Line++;
                         Column = 1;
                         break;
-                    case '-': // -- comment to end of line / input
+                    case '/': // comment to end of line / input, /* */ for multi line
                     {
-                        if (_pos + 1 >= _q.Length || _q[_pos + 1] != '-')
+                        if (_pos + 1 >= _q.Length || _q[_pos + 1] != '/' && _q[_pos + 1] != '*')
                             return true;
                         _pos += 2;
+                        if (_q[_pos - 1] == '/')
+                        {
+                            for (; _pos < _q.Length; _pos++)
+                                if (_q[_pos] == '\n')
+                                    goto case '\n';
+                            return false; // end of input
+                        }
+                        // multi line comment
                         for (; _pos < _q.Length; _pos++)
+                        {
                             if (_q[_pos] == '\n')
-                                goto case '\n';
-                        return false; // end of input
+                                Line++;
+                            if (_q[_pos] == '*' && _pos + 1 <= _q.Length && _q[_pos + 1] == '/')
+                            {
+                                _pos++;
+                                break;
+                            }
+                        }
+                        break;// now search for more whitespace / done / eof
                     }
                     default:
                         return true;
@@ -203,6 +225,22 @@ namespace Raven.Server.Documents.Queries.Parser
             return false;
         }
 
+        public bool CurrentTokenMatchesAnyOf(string[] options)
+        {
+            foreach (var match in options)
+            {
+                if (match.Length != TokenLength)
+                    continue;
+
+                if (string.Compare(_q, TokenStart, match, 0, match.Length, StringComparison.OrdinalIgnoreCase) != 0)
+                    continue;
+              
+                return true;
+            }
+
+            return false;
+        }
+
         public bool String()
         {
             EscapeChars = 0;
@@ -252,15 +290,17 @@ namespace Raven.Server.Documents.Queries.Parser
             // matching } that are in quotes. 
 
             int nested = 1;
-            var i = _pos;
-            for (; i < _q.Length; i++)
+            for (; _pos < _q.Length; _pos++)
             {
-                switch (_q[i])
+                switch (_q[_pos])
                 {
                     case '"':
                     case '\'':
                         if (String() == false)
                             goto Failed;
+                        // we are now positioned at the _next_character, but we'll increment it
+                        // need to go back to stay in the same place :-)
+                        _pos--;
                         break;
                     case '{':
                         nested++;
@@ -268,7 +308,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     case '}':
                         if (--nested == 0)
                         {
-                            _pos = i + 1;
+                            _pos += 1;
                             TokenStart = original;
                             TokenLength = _pos - original;
                             return true;
@@ -279,6 +319,13 @@ namespace Raven.Server.Documents.Queries.Parser
             Failed:
             _pos = original;
             return false;
+
+        }
+
+        public void GoBack(int matchLength)
+        {
+            _pos -= matchLength;
+            Column -= matchLength;
 
         }
     }

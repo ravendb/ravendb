@@ -114,7 +114,7 @@ namespace SlowTests.MailingList
                                                            }
                                     };
 
-                Indexes.Add(x => x.Query, FieldIndexing.Analyzed);
+                Indexes.Add(x => x.Query, FieldIndexing.Search);
                 Store(x => x.Query, FieldStorage.No);
             }
 

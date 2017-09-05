@@ -1,5 +1,6 @@
 import database = require("models/resources/database");
 import document = require("models/database/documents/document");
+import getCollectionFieldsCommand = require("commands/database/documents/getCollectionFieldsCommand");
 import getDocumentsPreviewCommand = require("commands/database/documents/getDocumentsPreviewCommand");
 import generalUtils = require("common/generalUtils");
 
@@ -55,13 +56,15 @@ class collection {
     }
 
     fetchDocuments(skip: number, take: number, previewColumns?: string[], fullColumns?: string[]): JQueryPromise<pagedResultWithAvailableColumns<document>> {
-        if (this.isAllDocuments) {
-            return new getDocumentsPreviewCommand(this.db, skip, take, undefined, previewColumns, fullColumns)
-                .execute();
-        } else {
-            return new getDocumentsPreviewCommand(this.db, skip, take, this.name, previewColumns, fullColumns)
-                .execute();
-        }
+        const collection = this.isAllDocuments ? undefined : this.name;
+        return new getDocumentsPreviewCommand(this.db, skip, take, collection, previewColumns, fullColumns)
+            .execute();
+    }
+
+    fetchFields(prefix: string): JQueryPromise<dictionary<string>> {
+        const collection = this.isAllDocuments ? undefined : this.name;
+        return new getCollectionFieldsCommand(this.db, collection, prefix)
+            .execute();
     }
 
     static createAllDocumentsCollection(ownerDatabase: database, documentsCount: number): collection {

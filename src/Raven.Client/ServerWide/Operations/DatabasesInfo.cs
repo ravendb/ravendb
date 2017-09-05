@@ -35,6 +35,7 @@ namespace Raven.Client.ServerWide.Operations
         public Size TotalSize { get; set; }
 
         public bool IsAdmin { get; set; }
+        public bool IsEncrypted { get; set; }
         public TimeSpan? UpTime { get; set; }
         public BackupInfo BackupInfo { get; set; }
 
@@ -66,6 +67,7 @@ namespace Raven.Client.ServerWide.Operations
                 },
 
                 [nameof(IsAdmin)] = IsAdmin,
+                [nameof(IsEncrypted)] = IsEncrypted,
                 [nameof(UpTime)] = UpTime?.ToString(),
                 [nameof(BackupInfo)] = BackupInfo?.ToJson(),
 

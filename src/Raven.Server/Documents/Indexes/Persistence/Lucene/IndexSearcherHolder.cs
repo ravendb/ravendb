@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using Sparrow.Logging;
@@ -10,6 +11,7 @@ using Lucene.Net.Store;
 using Raven.Server.Documents.Queries;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Threading;
 using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
@@ -112,9 +114,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             private readonly Logger _logger;
             private readonly ConcurrentDictionary<Tuple<int, uint>, StringCollectionValue> _docsCache = new ConcurrentDictionary<Tuple<int, uint>, StringCollectionValue>();
 
-            private IndexSearcher _indexSearcher;
+            private IState _indexSearcherInitializationState;
+            private readonly Lazy<IndexSearcher> _lazyIndexSearcher;
 
-            public volatile bool ShouldDispose;
+            public SingleUseFlag ShouldDispose = new SingleUseFlag();
             public int Usage;
             public readonly long AsOfTxId;
 
@@ -123,34 +126,30 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 _recreateSearcher = recreateSearcher;
                 _logger = LoggingSource.Instance.GetLogger<IndexSearcherHolder>(dbName);
                 AsOfTxId = tx.LowLevelTransaction.Id;
+                _lazyIndexSearcher = new Lazy<IndexSearcher>(() =>
+                {
+                    Debug.Assert(_indexSearcherInitializationState != null);
+                    return _recreateSearcher(_indexSearcherInitializationState);
+                });
             }
 
             public IndexSearcher GetIndexSearcher(IState state)
             {
-                if (_indexSearcher != null)
-                    return _indexSearcher;
-
-                lock (this)
-                {
-                    if (_indexSearcher != null)
-                        return _indexSearcher;
-
-                    _indexSearcher = _recreateSearcher(state);
-                    return _indexSearcher;
-                }
+                _indexSearcherInitializationState = state;
+                return _lazyIndexSearcher.Value;
             }
 
             ~IndexSearcherHoldingState()
             {
                 if (_logger.IsInfoEnabled)
-                    _logger.Info($"IndexSearcherHoldingState wasn't properly disposed. Usage count: {Usage}, tx id: {AsOfTxId}, should dispose: {ShouldDispose}");
+                    _logger.Info($"IndexSearcherHoldingState wasn't properly disposed. Usage count: {Usage}, tx id: {AsOfTxId}, should dispose: {ShouldDispose.IsRaised()}");
 
                 Dispose();
             }
 
             public void MarkForDisposal()
             {
-                ShouldDispose = true;
+                ShouldDispose.Raise();
             }
 
             public void Dispose()
@@ -161,10 +160,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 if (ShouldDispose == false)
                     return;
 
-                if (_indexSearcher != null)
+                if (_lazyIndexSearcher.IsValueCreated)
                 {
-                    using (_indexSearcher)
-                    using (_indexSearcher.IndexReader)
+                    using (_lazyIndexSearcher.Value)
+                    using (_lazyIndexSearcher.Value.IndexReader)
                     { }
                 }
 
@@ -180,7 +179,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 return _docsCache.GetOrAdd(key, _ =>
                 {
-                    var doc = _indexSearcher.Doc(docId, state);
+                    var doc = _lazyIndexSearcher.Value.Doc(docId, state);
                     return new StringCollectionValue((from field in fields
                                                       from fld in doc.GetFields(field.Name)
                                                       where fld.StringValue(state) != null

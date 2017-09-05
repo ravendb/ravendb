@@ -16,8 +16,9 @@ namespace FastTests.Client.Queries
                 session.Store(new Foo { Bar = "Shalom" });
                 session.Store(new Foo { Bar = "Salam" });
                 session.SaveChanges();
-                WaitForIndexing(store);
-                var res = session.Query<Foo, FooBarIndex>().Single(x => x.Bar.StartsWith("Sh"));
+                var res = session.Query<Foo, FooBarIndex>()
+                    .Customize(x => x.WaitForNonStaleResults())
+                    .Single(x => x.Bar.StartsWith("Sh"));
                 Assert.Equal(res.Bar, "Shalom");
             }
         }

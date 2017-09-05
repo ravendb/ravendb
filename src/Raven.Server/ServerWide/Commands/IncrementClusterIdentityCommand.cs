@@ -1,34 +1,61 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using Raven.Client;
 using Raven.Client.ServerWide;
+using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Voron;
+using Voron.Data.Tables;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class IncrementClusterIdentityCommand : UpdateDatabaseCommand
+    public class IncrementClusterIdentityCommand : UpdateValueForDatabaseCommand
     {
+        public static string GetStorageKey(string databaseName, string prefix)
+        {
+            return $"{Constants.Documents.Prefix}{databaseName.ToLowerInvariant()}/identities/{prefix?.ToLowerInvariant()}";
+        }
+
+        private string _itemId;
+
         public string Prefix { get; set; }
 
-        public IncrementClusterIdentityCommand() : base(null)
+        public IncrementClusterIdentityCommand()
+            : base(null)
         {
+            // for deserialization
         }
 
-        public IncrementClusterIdentityCommand(string databaseName) : base(databaseName)
+        public IncrementClusterIdentityCommand(string databaseName, string prefix)
+            : base(databaseName)
         {
+            Prefix = prefix;
         }
 
-        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override string GetItemId()
         {
-            if (record.Identities == null)
-                record.Identities = new Dictionary<string, long>();
+            return _itemId ?? (_itemId = GetStorageKey(DatabaseName, Prefix));
+        }
 
-            record.Identities.TryGetValue(Prefix, out var prev);
-            record.Identities[Prefix] = prev + 1;
+        protected override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue, bool isPassive)
+        {
+            throw new NotImplementedException();
+        }
 
-            return null;
+        public override void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, bool isPassive, out object result)
+        {
+            var identities = context.Transaction.InnerTransaction.ReadTree(ClusterStateMachine.Identities);
+            var itemKey = GetItemId();
+
+            using (Slice.From(context.Allocator, itemKey, out var key))
+            {
+                result = identities.Increment(key, 1);
+            }
         }
 
         public override void FillJson(DynamicJsonValue json)
         {
+            json[nameof(DatabaseName)] = DatabaseName;
             json[nameof(Prefix)] = Prefix;
         }
     }

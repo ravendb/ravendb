@@ -35,14 +35,14 @@ namespace Raven.Server.Documents.Indexes.Debugging
             if (self.Type.IsMapReduce() == false)
                 throw new NotSupportedException("Getting doc ids for map indexes is not supported");
 
-            using (var scope = new DisposeableScope())
+            using (var scope = new DisposableScope())
             {
                 scope.EnsureDispose(self._contextPool.AllocateOperationContext(out TransactionOperationContext indexContext));
 
                 RavenTransaction tx;
                 scope.EnsureDispose(tx = indexContext.OpenReadTransaction());
 
-                var tree = tx.InnerTransaction.ReadTree(MapReduceIndexBase<MapReduceIndexDefinition>.MapPhaseTreeName);
+                var tree = tx.InnerTransaction.ReadTree(MapReduceIndexBase<MapReduceIndexDefinition, IndexField>.MapPhaseTreeName);
 
                 if (tree == null)
                 {
@@ -156,14 +156,14 @@ namespace Raven.Server.Documents.Indexes.Debugging
 
         public static IDisposable GetReduceTree(this Index self, string[] docIds, out IEnumerable<ReduceTree> trees)
         {
-            using (var scope = new DisposeableScope())
+            using (var scope = new DisposableScope())
             {
                 scope.EnsureDispose(self._contextPool.AllocateOperationContext(out TransactionOperationContext indexContext));
 
                 RavenTransaction tx;
                 scope.EnsureDispose(tx = indexContext.OpenReadTransaction());
 
-                var mapPhaseTree = tx.InnerTransaction.ReadTree(MapReduceIndexBase<MapReduceIndexDefinition>.MapPhaseTreeName);
+                var mapPhaseTree = tx.InnerTransaction.ReadTree(MapReduceIndexBase<MapReduceIndexDefinition, IndexField>.MapPhaseTreeName);
 
                 if (mapPhaseTree == null)
                 {
@@ -171,7 +171,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
                     return scope;
                 }
 
-                var reducePhaseTree = tx.InnerTransaction.ReadTree(MapReduceIndexBase<MapReduceIndexDefinition>.ReducePhaseTreeName);
+                var reducePhaseTree = tx.InnerTransaction.ReadTree(MapReduceIndexBase<MapReduceIndexDefinition, IndexField>.ReducePhaseTreeName);
 
                 if (reducePhaseTree == null)
                 {
@@ -188,7 +188,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
                 }
 
                 FixedSizeTree typePerHash;
-                scope.EnsureDispose(typePerHash = reducePhaseTree.FixedTreeFor(MapReduceIndexBase<MapReduceIndexDefinition>.ResultsStoreTypesTreeName, sizeof(byte)));
+                scope.EnsureDispose(typePerHash = reducePhaseTree.FixedTreeFor(MapReduceIndexBase<MapReduceIndexDefinition, IndexField>.ResultsStoreTypesTreeName, sizeof(byte)));
 
                 trees = IterateTrees(self, mapEntries, reducePhaseTree, typePerHash, indexContext, scope);
 
@@ -197,13 +197,13 @@ namespace Raven.Server.Documents.Indexes.Debugging
         }
 
         private static IEnumerable<ReduceTree> IterateTrees(Index self, List<FixedSizeTree> mapEntries,
-            Tree reducePhaseTree, FixedSizeTree typePerHash, TransactionOperationContext indexContext, DisposeableScope scope)
+            Tree reducePhaseTree, FixedSizeTree typePerHash, TransactionOperationContext indexContext, DisposableScope scope)
         {
             var reduceKeys = new HashSet<ulong>();
             var idToDocIdHash = new Dictionary<long, string>();
 
             foreach (var tree in mapEntries)
-                foreach (var mapEntry in MapReduceIndexBase<MapReduceIndexDefinition>.GetMapEntries(tree))
+                foreach (var mapEntry in MapReduceIndexBase<MapReduceIndexDefinition, IndexField>.GetMapEntries(tree))
                 {
                     reduceKeys.Add(mapEntry.ReduceKeyHash);
                     idToDocIdHash[mapEntry.Id] = tree.Name.ToString();
@@ -406,13 +406,13 @@ namespace Raven.Server.Documents.Indexes.Debugging
                 {
                     ["p0"] = reduceKeyHash.ToString()
                 }, "query/parameters");
-                var query = new IndexQueryServerSide($"FROM INDEX '{index.Name}' WHERE {Constants.Documents.Indexing.Fields.ReduceKeyFieldName} = :p0", queryParameters);
+                var query = new IndexQueryServerSide($"FROM INDEX '{index.Name}' WHERE '{Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName}' = $p0", queryParameters);
 
-                var fieldsToFetch = new FieldsToFetch(query, index.Definition, null);
+                var fieldsToFetch = new FieldsToFetch(query, index.Definition);
 
-                var retriever = new MapReduceQueryResultRetriever(null, null,context, fieldsToFetch);
+                var retriever = new MapReduceQueryResultRetriever(null, null, null, context, fieldsToFetch, null);
                 var result = reader
-                    .Query(query, fieldsToFetch, new Reference<int>(), new Reference<int>(), retriever, context, CancellationToken.None)
+                     .Query(query, fieldsToFetch, new Reference<int>(), new Reference<int>(), retriever, context, null, CancellationToken.None)
                     .ToList();
 
                 if (result.Count != 1)
@@ -429,21 +429,11 @@ namespace Raven.Server.Documents.Indexes.Debugging
                 case IndexType.Map:
                     return ((MapIndex)self)._compiled.OutputFields;
                 case IndexType.MapReduce:
-                    return ((MapReduceIndex)self).Compiled.OutputFields;
+                    return ((MapReduceIndex)self)._compiled.OutputFields;
                 case IndexType.AutoMap:
-                    return ((AutoMapIndex)self).Definition.MapFields.Keys.ToArray();
+                    return ((AutoMapIndex)self).Definition.IndexFields.Keys.ToArray();
                 case IndexType.AutoMapReduce:
-                    var mapReduceList = new List<string>();
-                    foreach (var mapping in ((AutoMapReduceIndex)self).Definition.MapFields)
-                    {
-                        mapReduceList.Add(mapping.Key);
-                    }
-                    foreach (var mapping in ((AutoMapReduceIndex)self).Definition.GroupByFields)
-                    {
-                        mapReduceList.Add(mapping.Key);
-                    }
-                    return mapReduceList.ToArray();
-
+                    return ((AutoMapReduceIndex)self).Definition.IndexFields.Keys.ToArray();
                 default:
                     throw new ArgumentException("Unknown index type");
             }

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using Raven.Client.Exceptions.Documents;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.ServerWide.Context;
@@ -175,7 +176,9 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     {
                                         using (DocumentIdWorker.GetLower(databaseContext.Allocator, key.Content.Ptr, key.Size, out var loweredKey))
                                         {
-                                            var doc = _documentsStorage.Get(databaseContext, loweredKey);
+                                            // when there is conflict, we need to apply same behavior as if the document would not exist
+                                            var doc = _documentsStorage.Get(databaseContext, loweredKey, throwOnConflict: false);
+
                                             if (doc != null && doc.Etag <= lastIndexedEtag)
                                                 documents.Add(doc);
                                         }
@@ -183,7 +186,6 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                     using (var docsEnumerator = _index.GetMapEnumerator(documents, collection, indexContext, collectionStats))
                                     {
-
                                         while (docsEnumerator.MoveNext(out IEnumerable mapResults))
                                         {
                                             token.ThrowIfCancellationRequested();

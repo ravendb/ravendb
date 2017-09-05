@@ -96,10 +96,7 @@ namespace Raven.Client.Documents.Smuggler
             if (files.Length == 0)
                 return;
 
-            // When we do incremental import, we import the indexes and transformers from the last file only, 
-            // as the previous files can hold indexes and transformers which were deleted and shouldn't be imported.
-            var oldOperateOnTypes = options.OperateOnTypes;
-            options.OperateOnTypes = options.OperateOnTypes & ~(DatabaseItemType.Indexes | DatabaseItemType.Transformers);
+            var oldOperateOnTypes = ConfigureOptionsForIncrementalImport(options);
             for (var i = 0; i < files.Length - 1; i++)
             {
                 var filePath = Path.Combine(fromDirectory, files[i]);
@@ -109,6 +106,19 @@ namespace Raven.Client.Documents.Smuggler
 
             var lastFilePath = Path.Combine(fromDirectory, files.Last());
             await ImportAsync(options, lastFilePath, cancellationToken).ConfigureAwait(false);
+        }
+
+        public static DatabaseItemType ConfigureOptionsForIncrementalImport(DatabaseSmugglerOptions options)
+        {
+            options.OperateOnTypes |= DatabaseItemType.Tombstones;
+
+            // we import the indexes and identities from the last file only, 
+            // as the previous files can hold indexes and identities which were deleted and shouldn't be imported
+            var oldOperateOnTypes = options.OperateOnTypes;
+            options.OperateOnTypes = options.OperateOnTypes &
+                                     ~(DatabaseItemType.Indexes |
+                                       DatabaseItemType.Identities);
+            return oldOperateOnTypes;
         }
 
         public async Task<Operation> ImportAsync(DatabaseSmugglerOptions options, string fromFile, CancellationToken cancellationToken = default(CancellationToken))

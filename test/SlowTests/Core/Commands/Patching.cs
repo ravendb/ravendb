@@ -30,7 +30,7 @@ namespace SlowTests.Core.Commands
                     store.Operations.Send(new PatchOperation("posts/1", null,
                         new PatchRequest
                         {
-                            Script = @"this.Comments.push(comment1)",
+                            Script = @"this.Comments.push(args.comment1)",
                             Values = { { "comment1", comment } }
                         }));
 
@@ -48,7 +48,10 @@ namespace SlowTests.Core.Commands
                     store.Operations.Send(new PatchOperation("posts/2", null,
                         new PatchRequest
                         {
-                            Script = @"_.pull(this.AttachmentIds, tagToRemove)",
+                            Script = @"
+this.AttachmentIds = this.AttachmentIds.filter(function (t) { 
+    return t != args.tagToRemove
+})",
                             Values = { { "tagToRemove", "id2" } }
                         }));
 
@@ -61,9 +64,9 @@ namespace SlowTests.Core.Commands
                         new PatchRequest
                         {
                             Script = @"
-                            _.remove(this.Comments,function(comment) {
-                                return comment.Title === 'comment 1';
-                            });",
+this.Comments = this.Comments.filter(function (c) { 
+    return c.Title !== 'comment 1'
+});",
                         }));
 
                     result = commands.Get("posts/1");
@@ -122,7 +125,7 @@ namespace SlowTests.Core.Commands
                         new PatchRequest
                         {
                             Script = @"
-                            var loaded = LoadDocument(this.AttachmentIds[0]);
+                            var loaded = load(this.AttachmentIds[0]);
                             this.Title = loaded.Title;
                         "
                         }));
@@ -138,7 +141,7 @@ namespace SlowTests.Core.Commands
                         new PatchRequest
                         {
                             Script = @"
-                            var loaded = LoadDocument(this.AttachmentIds[0]);
+                            var loaded = load(this.AttachmentIds[0]);
                             this.Title = loaded.Title;
                             output(this.Title); 
                         "
@@ -159,7 +162,7 @@ namespace SlowTests.Core.Commands
                        new PatchRequest
                        {
                            Script = @"
-                            PutDocument('posts/4',
+                            put('posts/4',
                                 { 'Title' : 'new title' }
                             );"
                        }));
@@ -192,7 +195,7 @@ namespace SlowTests.Core.Commands
                         new PatchRequest
                         {
                             Script = @"
-                            var postId = PutDocument('posts/',
+                            var postId = put('posts/',
                                 { 'Title' : 'unknown post id' }
                             );
                             this.Title = postId;
@@ -223,7 +226,7 @@ namespace SlowTests.Core.Commands
                         new PatchRequest
                         {
                             Script = @"
-                            var postId = PutDocument(null,
+                            var postId = put(null,
                                 { 'Title' : 'unknown post id' }
                             );
                             this.Title = postId;
@@ -307,7 +310,7 @@ namespace SlowTests.Core.Commands
                         new PatchRequest
                         {
                             Script = @"
-                            var postId = PutDocument('posts/',
+                            var postId = put('posts/',
                                 { 'Title' : 'unknown post id' }
                             );
                             this.Title = postId;

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -18,7 +19,9 @@ using Sparrow.Logging;
 using Raven.Server.Utils;
 using Sparrow.Utils;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Documents.Replication;
+using QueryParser = Raven.Server.Documents.Queries.Parser.QueryParser;
 
 namespace Raven.Server.Documents.TcpHandlers
 {
@@ -27,7 +30,6 @@ namespace Raven.Server.Documents.TcpHandlers
         private static readonly StringSegment DataSegment = new StringSegment("Data");
         private static readonly StringSegment ExceptionSegment = new StringSegment("Exception");
         private static readonly StringSegment TypeSegment = new StringSegment("Type");
-
 
         public readonly TcpConnectionOptions TcpConnection;
         public readonly string ClientUri;
@@ -50,6 +52,10 @@ namespace Raven.Server.Documents.TcpHandlers
         private SubscriptionConnectionState _connectionState;
         private bool _isDisposed;
         public SubscriptionState SubscriptionState;
+
+        public string Collection, Script;
+        public string[] Functions;
+        public bool Revisions;
 
         public long SubscriptionId { get; set; }
         public SubscriptionOpeningStrategy Strategy => _options.Strategy;
@@ -96,8 +102,6 @@ namespace Raven.Server.Documents.TcpHandlers
             }
         }
 
-        
-
         public async Task InitAsync()
         {
             await ParseSubscriptionOptionsAsync();
@@ -111,6 +115,8 @@ namespace Raven.Server.Documents.TcpHandlers
             
             _options.SubscriptionName = _options.SubscriptionName ?? SubscriptionId.ToString();
             SubscriptionState = await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionIdIsApplicable(SubscriptionId,_options.SubscriptionName, TimeSpan.FromSeconds(15));
+
+            (Collection, (Script,Functions), Revisions) = ParseSubscriptionQuery(SubscriptionState.Query);
 
             _connectionState = TcpConnection.DocumentDatabase.SubscriptionStorage.OpenSubscription(this);
             var timeout = TimeSpan.FromMilliseconds(16);
@@ -128,6 +134,8 @@ namespace Raven.Server.Documents.TcpHandlers
                     });
 
                     Stats.ConnectedAt = DateTime.UtcNow;
+                    await TcpConnection.DocumentDatabase.SubscriptionStorage.UpdateClientConnectionTime(SubscriptionState.SubscriptionId,
+                        SubscriptionState.SubscriptionName);
                     return;
                 }
                 catch (TimeoutException)
@@ -167,8 +175,6 @@ namespace Raven.Server.Documents.TcpHandlers
             _buffer.SetLength(0);
         }
 
-        
-
         public static void SendSubscriptionDocuments(TcpConnectionOptions tcpConnectionOptions)
         {
             var remoteEndPoint = tcpConnectionOptions.TcpClient.Client.RemoteEndPoint;
@@ -185,7 +191,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         if ((gotSemaphore = tcpConnectionOptions.DocumentDatabase.SubscriptionStorage.TryEnterSemaphore()) == false)
                         {
                             throw new SubscriptionClosedException(
-                                $"Cannot open new subscription connection, max amount of concurrent connections reached ({tcpConnectionOptions.DocumentDatabase.Configuration.Subscriptions.ConcurrentConnections})");
+                                $"Cannot open new subscription connection, max amount of concurrent connections reached ({tcpConnectionOptions.DocumentDatabase.Configuration.Subscriptions.MaxNumberOfConcurrentConnections})");
                         }
                         try
                         {
@@ -307,11 +313,11 @@ namespace Raven.Server.Documents.TcpHandlers
             }
         }
 
-        private IDisposable RegisterForNotificationOnNewDocuments(SubscriptionCriteria criteria)
+        private IDisposable RegisterForNotificationOnNewDocuments()
         {
             void RegisterNotification(DocumentChange notification)
             {
-                if (notification.CollectionName == criteria.Collection)
+                if (notification.CollectionName == Collection)
                 {
                     try
                     {
@@ -331,7 +337,6 @@ namespace Raven.Server.Documents.TcpHandlers
                         }
                     }
                 }
-                    
             }
 
             TcpConnection.DocumentDatabase.Changes.OnDocumentChange += RegisterNotification;
@@ -388,14 +393,14 @@ namespace Raven.Server.Documents.TcpHandlers
 
             using (DisposeOnDisconnect)
             using (TcpConnection.DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext docsContext))
-            using (RegisterForNotificationOnNewDocuments(SubscriptionState.Criteria))
+            using (RegisterForNotificationOnNewDocuments())
             {
                 var replyFromClientTask = GetReplyFromClientAsync();
                 var startEtag = GetStartEtagForSubscription(docsContext, SubscriptionState);
 
                 string lastChangeVector = null;
 
-                var patch = SetupFilterScript(SubscriptionState.Criteria);
+                var patch = SetupFilterScript();
                 var fetcher = new SubscriptionDocumentsFetcher(TcpConnection.DocumentDatabase,_options.MaxDocsPerBatch, SubscriptionId, TcpConnection.TcpClient.Client.RemoteEndPoint);
                 while (CancellationTokenSource.IsCancellationRequested == false)
                 {
@@ -414,12 +419,12 @@ namespace Raven.Server.Documents.TcpHandlers
 
                         using (docsContext.OpenReadTransaction())
                         {
-                            foreach (var result in fetcher.GetDataToSend(docsContext, SubscriptionState, patch, startEtag))
+                            foreach (var result in fetcher.GetDataToSend(docsContext, Collection, Revisions, SubscriptionState, patch, startEtag))
                             {
                                 startEtag = result.Doc.Etag;
-                                lastChangeVector = string.IsNullOrEmpty(SubscriptionState.ChangeVector)
+                                lastChangeVector = string.IsNullOrEmpty(SubscriptionState.ChangeVectorForNextBatchStartingPoint)
                                     ? result.Doc.ChangeVector
-                                    : ChangeVectorUtils.MergeVectors(result.Doc.ChangeVector, SubscriptionState.ChangeVector);
+                                    : ChangeVectorUtils.MergeVectors(result.Doc.ChangeVector, SubscriptionState.ChangeVectorForNextBatchStartingPoint);
 
                                 if (result.Doc.Data == null)
                                 {
@@ -443,10 +448,11 @@ namespace Raven.Server.Documents.TcpHandlers
 
                                 if (result.Exception != null)
                                 {
+                                    var metadata = result.Doc.Data[Client.Constants.Documents.Metadata.Key];
                                     writer.WriteValue(BlittableJsonToken.StartObject,
                                         docsContext.ReadObject(new DynamicJsonValue
                                         {
-                                            [Client.Constants.Documents.Metadata.Key] = result.Doc.Data[Client.Constants.Documents.Metadata.Key]
+                                            [Client.Constants.Documents.Metadata.Key] = metadata
                                         }, result.Doc.Id)
                                     );
                                     writer.WriteComma();
@@ -455,8 +461,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                 }
                                 else
                                 {
-                                    writer.WriteDocument(docsContext, result.Doc);
-                                    result.Doc.Data.Dispose();
+                                    writer.WriteDocument(docsContext, result.Doc, metadataOnly: false);
                                 }
 
                                 writer.WriteEndObject();
@@ -487,11 +492,21 @@ namespace Raven.Server.Documents.TcpHandlers
                             });
 
                             await FlushDocsToClient(writer, docsToFlush, true);
+                            if (_logger.IsInfoEnabled)
+                            {
+                                _logger.Info(
+                                    $"Finished sending a batch with {docsToFlush} documents for subscription {Options.SubscriptionName}");
+                            }
                         }
                     }
 
                     if (anyDocumentsSentInCurrentIteration == false)
-                    {                            
+                    {
+                        if (_logger.IsInfoEnabled)
+                        {
+                            _logger.Info(
+                                $"Finished sending a batch with {docsToFlush} documents for subscription {Options.SubscriptionName}");
+                        }
                         await TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(SubscriptionId,Options.SubscriptionName, startEtag, lastChangeVector);
 
                         if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
@@ -499,7 +514,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                         using (docsContext.OpenReadTransaction())
                         {
-                            long globalEtag = TcpConnection.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(docsContext, SubscriptionState.Criteria.Collection);
+                            long globalEtag = TcpConnection.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(docsContext, Collection);
 
                             if (globalEtag > startEtag)
                                 continue;
@@ -529,7 +544,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         }
                         await SendHeartBeat();
                     }
-                        
+
                     CancellationTokenSource.Token.ThrowIfCancellationRequested();
 
                     switch (clientReply.Type)
@@ -557,7 +572,6 @@ namespace Raven.Server.Documents.TcpHandlers
                             throw new ArgumentException("Unknown message type from client " +
                                                         clientReply.Type);
                     }
-                    
                 }
             }
         }
@@ -568,25 +582,29 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 long startEtag = 0;
 
-                if (string.IsNullOrEmpty(subscription.ChangeVector))
+                if (string.IsNullOrEmpty(subscription.ChangeVectorForNextBatchStartingPoint))
                     return startEtag;
 
-                var changeVector = subscription.ChangeVector.ToChangeVector();
+                var changeVector = subscription.ChangeVectorForNextBatchStartingPoint.ToChangeVector();
                 
-                var matchingCV = changeVector.FirstOrDefault(
-                    x => x.NodeTag == TcpConnection.DocumentDatabase.ServerStore.NodeTag.ParseNodeTag() &&
-                    x.DbId == TcpConnection.DocumentDatabase.DbId);
+                var cv = changeVector.FirstOrDefault(x => x.DbId == TcpConnection.DocumentDatabase.DbBase64Id);
 
-                if (matchingCV.DbId == Guid.Empty && matchingCV.Etag ==0 && matchingCV.NodeTag == 0)
+                if (cv.DbId == "" && cv.Etag ==0 && cv.NodeTag == 0)
                     return startEtag;
 
-                return matchingCV.Etag;
+                return cv.Etag;
             }
         }
 
         private async Task SendHeartBeat()
         {
-            await TcpConnection.Stream.WriteAsync(Heartbeat, 0, Heartbeat.Length);
+            // Todo: this is temporary, we should try using TcpConnection's receive and send timeout properties
+            var writeAsync = TcpConnection.Stream.WriteAsync(Heartbeat, 0, Heartbeat.Length);
+            if (writeAsync != await Task.WhenAny(writeAsync, TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(3000))).ConfigureAwait(false))
+            {
+                throw new SubscriptionClosedException($"Cannot contact client anymore, closing subscription ({Options?.SubscriptionName})");
+            }
+            
             TcpConnection.RegisterBytesSent(Heartbeat.Length);
         }
 
@@ -632,13 +650,13 @@ namespace Raven.Server.Documents.TcpHandlers
             return false;
         }
 
-        private SubscriptionPatchDocument SetupFilterScript(SubscriptionCriteria criteria)
+        private SubscriptionPatchDocument SetupFilterScript()
         {
             SubscriptionPatchDocument patch = null;
 
-            if (string.IsNullOrWhiteSpace(criteria.Script) == false)
+            if (string.IsNullOrWhiteSpace(Script) == false)
             {
-                patch = new SubscriptionPatchDocument(TcpConnection.DocumentDatabase, criteria.Script);
+                patch = new SubscriptionPatchDocument(Script, Functions);
             }
             return patch;
         }
@@ -658,6 +676,133 @@ namespace Raven.Server.Documents.TcpHandlers
                 // ignored
             }
             CancellationTokenSource.Dispose();
+        }
+
+        public static (string Collection, (string Script, string[] Functions), bool Revisions) ParseSubscriptionQuery(string query)
+        {
+            var queryParser = new QueryParser();
+            queryParser.Init(query);
+            var q = queryParser.Parse();
+
+            if(q.IsDistinct)
+                throw new NotSupportedException("Subscription does not support distinct queries");
+            if (q.From.Index)
+                throw new NotSupportedException("Subscription must specify a collection to use");
+           if(q.GroupBy!=null)
+                throw new NotSupportedException("Subscription cannot specify a group by clause");
+            if(q.OrderBy != null)
+                throw new NotSupportedException("Subscription cannot specify an order by clause");
+            if (q.Include != null)
+                throw new NotSupportedException("Subscription cannot specify an include clause");
+            if(q.UpdateBody != null)
+                throw new NotSupportedException("Subscription cannot specify an update clause");
+
+            bool revisions = false;
+            if (q.From.Filter != null)
+            {
+                switch (q.From.Filter.Type)
+                {
+                    case OperatorType.Equal:
+                    case OperatorType.NotEqual:
+                        var field = QueryExpression.Extract(query, q.From.Filter.Field);
+                        if (string.Equals(field, "Revisions", StringComparison.OrdinalIgnoreCase) == false)
+                            throw new NotSupportedException("Subscription collection filter can only specify 'Revisions = true'");
+                        if(q.From.Filter.Value.Type != ValueTokenType.True)
+                            throw new NotSupportedException("Subscription collection filter can only specify 'Revisions = true'");
+                        revisions = q.From.Filter.Type == OperatorType.Equal;
+                        break;
+                    default:
+                        throw new NotSupportedException("Subscription must not specify a collection filter (move it to the where clause)");
+                }
+                
+            }
+
+            var collectionName = QueryExpression.Extract(query, q.From.From);
+            if (q.Where == null && q.Select == null && q.SelectFunctionBody == null)
+                return (collectionName, (null, null), revisions);
+
+            var writer = new StringWriter();
+
+            if (q.From.Alias != null)
+            {
+                writer.Write("var ");
+                writer.Write(QueryExpression.Extract(query, q.From.Alias));
+                writer.WriteLine(" = this;");
+            }
+            if (q.Load != null)
+            {
+                if (q.From.Alias == null)
+                    throw new InvalidOperationException("Cannot specify a load clause without an alias on the from");
+
+                var fromAlias = QueryExpression.Extract(query, q.From.Alias);
+                foreach (var tuple in q.Load)
+                {
+                    writer.Write("var ");
+                    writer.Write(QueryExpression.Extract(query, tuple.Alias));
+                    writer.Write(" = loadPath(this,'");
+                    var fullFieldPath = QueryExpression.Extract(query, tuple.Expression.Field);
+                    if (fullFieldPath.StartsWith(fromAlias) == false)
+                        throw new InvalidOperationException("Load clause can only load paths starting from the from alias: " + fromAlias);
+                    var indexOfDot = fullFieldPath.IndexOf('.', fromAlias.Length);
+                    fullFieldPath = fullFieldPath.Substring(indexOfDot+1);
+                    writer.Write(fullFieldPath.Trim());
+                    writer.WriteLine("');");
+                }
+            }
+
+            if (q.Where != null)
+            {
+                writer.Write("if (");    
+                q.Where.ToJavaScript(query, q.From.Alias != null ? null : "this",  writer);
+                writer.WriteLine(" )");
+                writer.WriteLine("{");
+            }
+
+            if (q.SelectFunctionBody != null)
+            {
+                writer.Write(" return ");
+                writer.Write(QueryExpression.Extract(query, q.SelectFunctionBody));
+                writer.WriteLine(";");
+            }
+            else if (q.Select != null)
+            {
+                if (q.Select.Count != 1 || q.Select[0].Expression.Type != OperatorType.Method)
+                    throw new NotSupportedException("Subscription select clause must specify an object literal");
+                writer.WriteLine();
+                writer.Write(" return ");
+                q.Select[0].Expression.ToJavaScript(query, q.From.Alias != null ? null : "this", writer);
+                writer.WriteLine(";");
+            }
+            else
+            {
+                writer.WriteLine(" return true;");
+            }
+            writer.WriteLine();
+
+            if (q.Where != null)
+                writer.WriteLine("}");
+
+            var script = writer.GetStringBuilder().ToString();
+
+            // verify that the JS code parses
+            new Esprima.JavaScriptParser(script).ParseProgram();
+
+            return (collectionName, (script,q.DeclaredFunctions?.Values?.ToArray() ?? Array.Empty<string>()), revisions);
+        }
+    }
+
+    public class SubscriptionConnectionDetails
+    {
+        public string ClientUri { get; set; }
+        public SubscriptionOpeningStrategy? Strategy { get; set; }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(ClientUri)] = ClientUri,
+                [nameof(Strategy)] = Strategy
+            };
         }
     }
 }

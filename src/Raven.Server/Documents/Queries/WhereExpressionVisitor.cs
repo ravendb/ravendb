@@ -32,6 +32,7 @@ namespace Raven.Server.Documents.Queries
             switch (expression.Type)
             {
                 case OperatorType.Equal:
+                case OperatorType.NotEqual:
                 case OperatorType.LessThan:
                 case OperatorType.GreaterThan:
                 case OperatorType.LessThanEqual:

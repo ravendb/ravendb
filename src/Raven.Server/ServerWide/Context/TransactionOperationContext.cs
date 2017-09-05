@@ -3,6 +3,7 @@ using Sparrow.Json;
 using Voron;
 using Sparrow;
 using Sparrow.LowMemory;
+using Sparrow.Threading;
 
 namespace Raven.Server.ServerWide.Context
 {
@@ -10,7 +11,7 @@ namespace Raven.Server.ServerWide.Context
     {
         private readonly StorageEnvironment _environment;
 
-        public TransactionOperationContext(StorageEnvironment environment, int initialSize, int longLivedSize, LowMemoryFlag lowMemoryFlag) :
+        public TransactionOperationContext(StorageEnvironment environment, int initialSize, int longLivedSize, SharedMultipleUseFlag lowMemoryFlag) :
             base(initialSize, longLivedSize, lowMemoryFlag)
         {
             _environment = environment;
@@ -36,7 +37,7 @@ namespace Raven.Server.ServerWide.Context
         public TTransaction Transaction;
         public TransactionPersistentContext PersistentContext = new TransactionPersistentContext();
 
-        protected TransactionOperationContext(int initialSize, int longLivedSize, LowMemoryFlag lowMemoryFlag):
+        protected TransactionOperationContext(int initialSize, int longLivedSize, SharedMultipleUseFlag lowMemoryFlag):
             base(initialSize, longLivedSize, lowMemoryFlag)
         {
             Allocator = new ByteStringContext(lowMemoryFlag);

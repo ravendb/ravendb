@@ -132,13 +132,8 @@ namespace SlowTests.MailingList
                 //I use this patch to update the consultant name to "Subha" in the Proficiencies collection.
                 store.Operations.Send(new PatchByQueryOperation(new IndexQuery
                     {
-                        Query = "FROM INDEX 'Proficiencies/ConsultantId' WHERE Consultant_Id = 'consultants/1-A'"
-                    },
-                    new PatchRequest
-                    {
-                        Script = "this.Consultant.Name = 'Subhashini';"
-                    },
-                    options: null)).WaitForCompletion(TimeSpan.FromSeconds(15));
+                        Query = "FROM INDEX 'Proficiencies/ConsultantId' WHERE Consultant_Id = 'consultants/1-A' UPDATE { this.Consultant.Name = 'Subhashini'; }"
+                })).WaitForCompletion(TimeSpan.FromSeconds(15));
 
                 //Here, I again list the name of the consultant in the Proficiencies collection and expect it to be "Subhashini".
                 using (var session = store.OpenSession())

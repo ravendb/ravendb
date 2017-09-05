@@ -4,9 +4,9 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 {
-    public class RecurseRewriter : CSharpSyntaxRewriter
+    public sealed class RecurseRewriter : CSharpSyntaxRewriter
     {
-        public static RecurseRewriter Instance = new RecurseRewriter();
+        public static readonly RecurseRewriter Instance = new RecurseRewriter();
 
         private RecurseRewriter()
         {

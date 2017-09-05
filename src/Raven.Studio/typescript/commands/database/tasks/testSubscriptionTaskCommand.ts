@@ -25,10 +25,8 @@ class testSubscriptionTaskCommand extends commandBase {
         const testTask = $.Deferred<pagedResult<document>>();
 
         const subscriptionToTest: Raven.Client.Documents.Subscriptions.SubscriptionTryout = {
-            ChangeVector: this.subscriptionSettings.ChangeVectorEntry,
-            Collection: this.subscriptionSettings.Collection,
-            Script: this.subscriptionSettings.Script,
-            IncludeRevisions: this.subscriptionSettings.IncludeRevisions
+            ChangeVector: this.subscriptionSettings.ChangeVector,
+            Query: this.subscriptionSettings.Query
         };
 
         this.post(url, JSON.stringify(subscriptionToTest), this.db)

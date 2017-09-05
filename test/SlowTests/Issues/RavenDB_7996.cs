@@ -36,9 +36,10 @@ namespace SlowTests.Issues
 
                 using (var commands = store.Commands())
                 {
-                    var query = @"select count(), Address.Country
+                    var query = @"
                         from Companies
-                        group by Address.Country";
+                        group by Address.Country
+                        select count(), Address.Country";
 
                     var results = commands.Query(new IndexQuery { Query = query }).Results;
 
@@ -58,7 +59,7 @@ namespace SlowTests.Issues
                     Assert.True(item.TryGet("Count", out long count));
                     Assert.Equal(5, count);
 
-                    Assert.True(item.TryGet(Constants.Documents.Indexing.Fields.ReduceKeyFieldName, out object _));
+                    Assert.True(item.TryGet(Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName, out object _));
                 }
             }
         }

@@ -1,13 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Transformers;
+using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Json;
 using Raven.Server.Web;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Queries
 {
@@ -33,7 +30,11 @@ namespace Raven.Server.Documents.Queries
             Metadata = new QueryMetadata(Query, queryParameters, 0);
         }
 
-        public static IndexQueryServerSide Create(BlittableJsonReaderObject json, JsonOperationContext context, QueryMetadataCache cache)
+        public static IndexQueryServerSide Create(
+            BlittableJsonReaderObject json, 
+            JsonOperationContext context, 
+            QueryMetadataCache cache,
+            QueryType queryType = QueryType.Select)
         {
             var result = JsonDeserializationServer.IndexQuery(json);
 
@@ -43,10 +44,13 @@ namespace Raven.Server.Documents.Queries
             if (string.IsNullOrWhiteSpace(result.Query))
                 throw new InvalidOperationException($"Index query does not contain '{nameof(Query)}' field.");
 
-            result.Metadata = cache.TryGetMetadata(result, context, out var metadataHash, out var metadata)
-                ? metadata
-                : new QueryMetadata(result.Query, result.QueryParameters, metadataHash);
+            if (cache.TryGetMetadata(result, context, out var metadataHash, out var metadata))
+            {
+                result.Metadata = metadata;
+                return result;
+            }
 
+            result.Metadata = new QueryMetadata(result.Query, result.QueryParameters, metadataHash, queryType);
             return result;
         }
 
@@ -63,7 +67,6 @@ namespace Raven.Server.Documents.Queries
                 PageSize = pageSize
             };
 
-            DynamicJsonValue transformerParameters = null;
             foreach (var item in httpContext.Request.Query)
             {
                 try
@@ -81,26 +84,11 @@ namespace Raven.Server.Documents.Queries
                         case "waitForNonStaleResultsAsOfNow":
                             result.WaitForNonStaleResultsAsOfNow = bool.Parse(item.Value[0]);
                             break;
-                        case "waitForNonStaleResultsTimeout":
-                            result.WaitForNonStaleResultsTimeout = TimeSpan.Parse(item.Value[0]);
-                            break;
-                        case "transformer":
-                            result.Transformer = item.Value[0];
+                        case "waitForNonStaleResultsTimeoutInMs":
+                            result.WaitForNonStaleResultsTimeout = TimeSpan.FromMilliseconds(long.Parse(item.Value[0]));
                             break;
                         case "skipDuplicateChecking":
                             result.SkipDuplicateChecking = bool.Parse(item.Value[0]);
-                            break;
-                        case "allowMultipleIndexEntriesForSameDocumentToResultTransformer":
-                            result.AllowMultipleIndexEntriesForSameDocumentToResultTransformer = bool.Parse(item.Value[0]);
-                            break;
-                        default:
-                            if (item.Key.StartsWith(TransformerParameter.Prefix, StringComparison.OrdinalIgnoreCase))
-                            {
-                                if (transformerParameters == null)
-                                    transformerParameters = new DynamicJsonValue();
-
-                                transformerParameters[item.Key.Substring(TransformerParameter.Prefix.Length)] = item.Value[0];
-                            }
                             break;
                             // TODO: HighlightedFields, HighlighterPreTags, HighlighterPostTags, HighlighterKeyName, ExplainScores
                             // TODO: ShowTimings and spatial stuff
@@ -112,9 +100,6 @@ namespace Raven.Server.Documents.Queries
                     throw new ArgumentException($"Could not handle query string parameter '{item.Key}' (value: {item.Value})", e);
                 }
             }
-
-            if (transformerParameters != null)
-                result.TransformerParameters = context.ReadObject(transformerParameters, "transformer/parameters");
 
             result.Metadata = new QueryMetadata(result.Query, null, 0);
             return result;

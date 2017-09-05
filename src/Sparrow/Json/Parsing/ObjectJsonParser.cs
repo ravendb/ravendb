@@ -21,7 +21,7 @@ namespace Sparrow.Json.Parsing
         public int SourceIndex = -1;
         public int[] SourceProperties;
 
-        public readonly Queue<Tuple<string, object>> Properties = new Queue<Tuple<string, object>>();
+        public readonly Queue<(string Name, object Value)> Properties = new Queue<(string Name, object Value)>();
         public HashSet<int> Removals;
         public int AlreadySeenBy = -1;
         internal readonly BlittableJsonReaderObject _source;
@@ -70,7 +70,7 @@ namespace Sparrow.Json.Parsing
             {
                 if (_source != null)
                     Remove(name);
-                Properties.Enqueue(Tuple.Create(name, value));
+                Properties.Enqueue((name, value));
             }
             get
             {
@@ -140,6 +140,11 @@ namespace Sparrow.Json.Parsing
         IEnumerator IEnumerable.GetEnumerator()
         {
             return GetEnumerator();
+        }
+
+        public void Clear()
+        {
+            Items.Clear();
         }
     }
 
@@ -256,19 +261,10 @@ namespace Sparrow.Json.Parsing
                     continue;
                 }
 
-                var tuple = current as Tuple<string, object>;
-                if (tuple != null)
+                if (current is ValueTuple<string, object> vt)
                 {
-                    _elements.Push(tuple.Item2);
-                    current = tuple.Item1;
-                    continue;
-                }
-
-                var prop = current as Tuple<LazyStringValue, object>;
-                if (prop != null)
-                {
-                    _elements.Push(prop.Item2);
-                    current = prop.Item1;
+                    _elements.Push(vt.Item2);
+                    current = vt.Item1;
                     continue;
                 }
 

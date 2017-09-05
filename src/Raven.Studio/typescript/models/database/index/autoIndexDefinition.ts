@@ -4,13 +4,26 @@ import indexDefinition = require("models/database/index/indexDefinition");
 
 class autoIndexField {
     fieldName = ko.observable<string>();
+    hasSearch = ko.observable<boolean>();
+    hasExact = ko.observable<boolean>();
     operation = ko.observable<string>();
 
     // fieldStr has form: <Name:Count,Operation:Count>
-    constructor(fieldStr: string) {
+    constructor(fieldStr: string, fields: Array<string>) {
         
         const parsedString = this.parse(fieldStr);
-        this.fieldName(parsedString['Name']);
+        const fieldName = parsedString['Name'];
+        this.fieldName(fieldName);
+        this.hasSearch(_.includes(fields, autoIndexField.searchFieldName(fieldName)));
+        this.hasExact(_.includes(fields, autoIndexField.exactFieldName(fieldName)));
+    }
+    
+    static searchFieldName(fieldName: string) {
+        return "search(" + fieldName + ")";
+    }
+    
+    static exactFieldName(fieldName: string) {
+        return "exact(" + fieldName + ")";
     }
 
     protected parse(str: string): dictionary<string> {
@@ -46,8 +59,8 @@ class autoIndexField {
 
 class autoIndexMapField extends autoIndexField {
 
-    constructor(fieldStr: string) {
-        super(fieldStr);
+    constructor(fieldStr: string, fields: Array<string>) {
+        super(fieldStr, fields);
 
         const parsedString = this.parse(fieldStr);
         this.operation(parsedString['Operation']);
@@ -61,13 +74,15 @@ class autoIndexDefinition extends indexDefinition {
 
     constructor(dto: Raven.Client.Documents.Indexes.IndexDefinition) {
         super(dto);
-        this.parseMapFields(dto.Maps[0]);
+        
+        const fields = Object.keys(dto.Fields);
+        this.parseMapFields(dto.Maps[0], fields);
         if (this.hasReduce()) {
-            this.parseReduceFields(dto.Reduce);
+            this.parseReduceFields(dto.Reduce, fields);
         }
     }
 
-    private parseMapFields(mapStr: string) {
+    private parseMapFields(mapStr: string, fieldNames: Array<string>) {
         const firstColonIdx = mapStr.indexOf(":");
         const collection = mapStr.substr(0, firstColonIdx);
         let fields = mapStr.substring(firstColonIdx + 1);
@@ -77,17 +92,17 @@ class autoIndexDefinition extends indexDefinition {
         fields = fields.substring(1, fields.length - 1);
         const fieldsList = fields.split(";");
         
-        this.mapFields(fieldsList.map(x => new autoIndexMapField(x)));
+        this.mapFields(fieldsList.map(x => new autoIndexMapField(x, fieldNames)));
     }
 
-    private parseReduceFields(reduceStr: string) {
+    private parseReduceFields(reduceStr: string, fieldNames: Array<string>) {
         const firstColonIdx = reduceStr.indexOf(":");
         let fields = reduceStr.substring(firstColonIdx + 1);
         // trim [ and ]
         fields = fields.substring(1, fields.length - 1);
         const fieldsList = fields.split(";");
 
-        this.reduceFields(fieldsList.map(x => new autoIndexField(x)));
+        this.reduceFields(fieldsList.map(x => new autoIndexField(x, fieldNames)));
     }
 }
 

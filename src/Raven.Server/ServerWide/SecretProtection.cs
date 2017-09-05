@@ -119,13 +119,19 @@ namespace Raven.Server.ServerWide
                                 Syscall.ThrowLastError(err, $"Failed to seek to beginning of {filepath}");
                             }
 
-                            var writeAmount = Syscall.write(fd, pBuf, KeySize);
-                            if (writeAmount != KeySize)
+                            var len = KeySize;
+                            while (len > 0)
                             {
-                                var err = Marshal.GetLastWin32Error();
-                                Syscall.ThrowLastError(err, $"Failed to write {buffer.Length} bytes into {filepath}, only wrote {writeAmount}");
+                                var writeAmount = Syscall.write(fd, pBuf, KeySize);
+                                if (writeAmount <= 0) // 0 will be considered as error here
+                                {
+                                    var err = Marshal.GetLastWin32Error();
+                                    Syscall.ThrowLastError(err, $"Failed to write {KeySize} bytes into {filepath}, only wrote {len}");
+                                }
+                               
+                                len -= (int)writeAmount;
                             }
-
+                            
                             if (Syscall.FSync(fd) != 0)
                             {
                                 var err = Marshal.GetLastWin32Error();
@@ -228,14 +234,14 @@ namespace Raven.Server.ServerWide
             return unprotectedData;
         }
 
-        public RavenServer.CertificateHolder LoadCertificateWithExecutable()
+        public RavenServer.CertificateHolder LoadCertificateWithExecutable(string executable, string args)
         {
             var process = new Process
             {
                 StartInfo = new ProcessStartInfo
                 {
-                    FileName = _config.CertificateExec,
-                    Arguments = _config.CertificateExecArguments,
+                    FileName = executable,
+                    Arguments = args,
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
@@ -251,7 +257,7 @@ namespace Raven.Server.ServerWide
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException($"Unable to get certificate by executing {_config.CertificateExec} {_config.CertificateExecArguments}. Failed to start process.", e);
+                throw new InvalidOperationException($"Unable to get certificate by executing {executable} {args}. Failed to start process.", e);
             }
 
             var ms = new MemoryStream();
@@ -273,7 +279,7 @@ namespace Raven.Server.ServerWide
             if (process.WaitForExit(_config.CertificateExecTimeout) == false)
             {
                 process.Kill();
-                throw new InvalidOperationException($"Unable to get certificate by executing {_config.CertificateExec} {_config.CertificateExecArguments}, waited for {_config.CertificateExecTimeout} ms but the process didn't exit. Stderr: {GetStdError()}");
+                throw new InvalidOperationException($"Unable to get certificate by executing {executable} {args}, waited for {_config.CertificateExecTimeout} ms but the process didn't exit. Stderr: {GetStdError()}");
             }
             try
             {
@@ -283,7 +289,7 @@ namespace Raven.Server.ServerWide
             catch (Exception e)
             {
                 throw new InvalidOperationException(
-                    $"Unable to get certificate by executing {_config.CertificateExec} {_config.CertificateExecArguments}, waited for {_config.CertificateExecTimeout} ms but the process didn't exit. Stderr: {GetStdError()}",
+                    $"Unable to get certificate by executing {executable} {args}, waited for {_config.CertificateExecTimeout} ms but the process didn't exit. Stderr: {GetStdError()}",
                     e);
 
             }
@@ -291,15 +297,15 @@ namespace Raven.Server.ServerWide
             if (Logger.IsOperationsEnabled)
             {
                 var errors = GetStdError();
-                Logger.Operations(string.Format($"Executing {_config.CertificateExec} {_config.CertificateExecArguments} took {sw.ElapsedMilliseconds:#,#;;0} ms"));
+                Logger.Operations(string.Format($"Executing {executable} {args} took {sw.ElapsedMilliseconds:#,#;;0} ms"));
                 if (!string.IsNullOrWhiteSpace(errors))
-                    Logger.Operations(string.Format($"Executing {_config.CertificateExec} {_config.CertificateExecArguments} finished with exit code: {process.ExitCode}. Errors: {errors}"));
+                    Logger.Operations(string.Format($"Executing {executable} {args} finished with exit code: {process.ExitCode}. Errors: {errors}"));
             }
 
             if (process.ExitCode != 0)
             {
                 throw new InvalidOperationException(
-                    $"Unable to get certificate by executing {_config.CertificateExec} {_config.CertificateExecArguments}, the exit code was {process.ExitCode}. Stderr: {GetStdError()}");
+                    $"Unable to get certificate by executing {executable} {args}, the exit code was {process.ExitCode}. Stderr: {GetStdError()}");
             }
 
             var rawData = ms.ToArray();
@@ -308,14 +314,14 @@ namespace Raven.Server.ServerWide
             try
             {
                 loadedCertificate = new X509Certificate2(rawData);
-                ValidateExpiration(_config.CertificateExec, loadedCertificate);
-                ValidatePrivateKey(_config.CertificateExec, null, rawData, out  privateKey);
-                ValidateKeyUsages(_config.CertificateExec, loadedCertificate);
+                ValidateExpiration(executable, loadedCertificate);
+                ValidatePrivateKey(executable, null, rawData, out  privateKey);
+                ValidateKeyUsages(executable, loadedCertificate);
 
             }
             catch (Exception e)
             {         
-                throw new InvalidOperationException($"Got invalid certificate via {_config.CertificateExec} {_config.CertificateExecArguments}", e);
+                throw new InvalidOperationException($"Got invalid certificate via {executable} {args}", e);
             }
         
             return new RavenServer.CertificateHolder
@@ -409,10 +415,8 @@ namespace Raven.Server.ServerWide
             return rawData;
         }
 
-        public RavenServer.CertificateHolder LoadCertificateFromPath(string certificatePath = null, string certificatePassword = null)
+        public RavenServer.CertificateHolder LoadCertificateFromPath(string path, string password)
         {
-            var path = certificatePath ?? _config.CertificatePath;
-            var password = certificatePassword ?? _config.CertificatePassword;
             try
             {
                 var rawData = File.ReadAllBytes(path);

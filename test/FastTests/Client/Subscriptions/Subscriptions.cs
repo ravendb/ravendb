@@ -19,7 +19,7 @@ namespace FastTests.Client.Subscriptions
             {
                 var subscriptionCreationParams = new SubscriptionCreationOptions
                 {
-                    Criteria = new SubscriptionCriteria("People")
+                    Query = "from People"
                 };  
                 var subsName = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
 
@@ -27,9 +27,8 @@ namespace FastTests.Client.Subscriptions
                 var subscripitonState = await store.Subscriptions.GetSubscriptionStateAsync(subsName);
                 
                 Assert.Equal(1, subscriptionsConfig.Count);
-                Assert.Equal(subscriptionCreationParams.Criteria.Collection, subscriptionsConfig[0].Criteria.Collection);
-                Assert.Equal(subscriptionCreationParams.Criteria.Script, subscriptionsConfig[0].Criteria.Script);
-                Assert.Null(subscriptionsConfig[0].ChangeVector);
+                Assert.Equal(subscriptionCreationParams.Query, subscriptionsConfig[0].Query);
+                Assert.Null(subscriptionsConfig[0].ChangeVectorForNextBatchStartingPoint);
                 Assert.Equal(subsName, subscriptionsConfig[0].SubscriptionName);
                 Assert.Equal(subscripitonState.SubscriptionId, subscriptionsConfig[0].SubscriptionId);
             }
@@ -47,7 +46,7 @@ namespace FastTests.Client.Subscriptions
 
                 var subscriptionCreationParams = new SubscriptionCreationOptions()
                 {
-                    Criteria = new SubscriptionCriteria("Things"),
+                    Query = "from Things",
                     ChangeVector = lastChangeVector
                 };
                 var subsId = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
@@ -83,7 +82,7 @@ namespace FastTests.Client.Subscriptions
 
                 var subscriptionCreationParams = new SubscriptionCreationOptions()
                 {
-                    Criteria = new SubscriptionCriteria("Things"),
+                    Query = "from Things",
                     ChangeVector = lastChangeVector
                 };
                 var subsId = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
@@ -149,7 +148,7 @@ namespace FastTests.Client.Subscriptions
 
                 var subscriptionCreationParams = new SubscriptionCreationOptions()
                 {
-                    Criteria = new SubscriptionCriteria("Things"),
+                    Query = "from Things",
                     ChangeVector = lastChangeVector
                 };
 
@@ -234,7 +233,7 @@ namespace FastTests.Client.Subscriptions
 
                 var subscriptionCreationParams = new SubscriptionCreationOptions()
                 {
-                    Criteria = new SubscriptionCriteria("Things"),
+                    Query = "from Things",
                     ChangeVector = lastChangeVector
                 };
 

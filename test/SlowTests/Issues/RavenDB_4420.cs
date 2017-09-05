@@ -15,7 +15,7 @@ namespace SlowTests.Issues
 {
     public class RavenDB_4420 : RavenTestBase
     {
-        protected override void ModifyStore(DocumentStore store)
+        private static void ModifyStore(DocumentStore store)
         {
             store.Conventions.SaveEnumsAsIntegers = true;
         }
@@ -23,7 +23,10 @@ namespace SlowTests.Issues
         [Fact]
         public void CanQueryProperlyWhenSaveEnumAsIntegerIsSetToTrue()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = ModifyStore
+            }))
             {
                 // arrange
                 store.ExecuteIndex(new MyIndex());
@@ -57,12 +60,12 @@ namespace SlowTests.Issues
                         .ToList();
 
                     // assert
-                    Assert.Equal("FROM INDEX 'MyIndex' WHERE MyProperty IN (:p0)", whereInRawQuery.Query);
+                    Assert.Equal("FROM INDEX 'MyIndex' WHERE MyProperty IN ($p0)", whereInRawQuery.Query);
                     Assert.Contains(MyEnum.Value1, (object[])whereInRawQuery.QueryParameters["p0"]);
                     Assert.Contains(MyEnum.Value2, (object[])whereInRawQuery.QueryParameters["p0"]);
                     Assert.Equal(2, whereInQuery.Count);
 
-                    Assert.Equal("FROM INDEX 'MyIndex' WHERE MyProperty = :p0", whereRawQuery.Query);
+                    Assert.Equal("FROM INDEX 'MyIndex' WHERE MyProperty = $p0", whereRawQuery.Query);
                     Assert.Equal(MyEnum.Value1, whereRawQuery.QueryParameters["p0"]);
                     Assert.Equal(1, whereQuery.Count);
                 }

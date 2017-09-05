@@ -11,7 +11,7 @@ namespace RachisTests
 {
     public class CommandsTests : RachisConsensusTestBase
     {
-        [Fact]
+        [NightlyBuildFact]
         public async Task When_command_committed_CompletionTaskSource_is_notified()
         {
             const int commandCount = 10;
@@ -37,7 +37,7 @@ namespace RachisTests
             Assert.True(await Task.WhenAny(waitForNotificationsOnTasks, Task.Delay(LongWaitTime)) == waitForNotificationsOnTasks, "Some commands didn't complete");
         }
 
-        [Fact]
+        [NightlyBuildFact]
         public async Task Command_not_committed_after_timeout_CompletionTaskSource_is_notified()
         {
             const int commandCount = 3;

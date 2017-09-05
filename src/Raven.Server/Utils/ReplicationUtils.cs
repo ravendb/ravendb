@@ -32,7 +32,7 @@ namespace Raven.Server.Utils
             using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(url, certificate))
             using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {                
-                var getTcpInfoCommand = new GetTcpInfoCommand(tag + "/" + databaseName);
+                var getTcpInfoCommand = new GetTcpInfoCommand(tag ,databaseName);
                 await requestExecutor.ExecuteAsync(getTcpInfoCommand, context);
 
                 var tcpConnectionInfo = getTcpInfoCommand.Result;

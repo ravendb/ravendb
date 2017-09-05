@@ -4,17 +4,17 @@ using Lucene.Net.Documents;
 using Sparrow.Json.Parsing;
 using Sparrow.Json;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Globalization;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Json;
 using System.IO;
-using Jint;
+using System.Runtime.CompilerServices;
 using Lucene.Net.Store;
 using Raven.Client;
+using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries.Parser;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 
@@ -22,22 +22,25 @@ namespace Raven.Server.Documents.Queries.Results
 {
     public abstract class QueryResultRetrieverBase : IQueryResultRetriever
     {
+        private readonly DocumentDatabase _database;
         private readonly IndexQueryServerSide _query;
         private readonly JsonOperationContext _context;
+        private readonly IncludeDocumentsCommand _includeDocumentsCommand;
         private readonly BlittableJsonTraverser _blittableTraverser;
         private Dictionary<string, Document> _loadedDocuments;
-        private List<object> _buffer;
         private HashSet<string> _loadedDocumentIds;
 
-        protected readonly DocumentsStorage _documentsStorage;
+        protected readonly DocumentsStorage DocumentsStorage;
 
         protected readonly FieldsToFetch FieldsToFetch;
 
-        protected QueryResultRetrieverBase(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, DocumentsStorage documentsStorage, JsonOperationContext context, bool reduceResults)
+        protected QueryResultRetrieverBase(DocumentDatabase database, IndexQueryServerSide query, FieldsToFetch fieldsToFetch, DocumentsStorage documentsStorage, JsonOperationContext context, bool reduceResults, IncludeDocumentsCommand includeDocumentsCommand)
         {
+            _database = database;
             _query = query;
             _context = context;
-            _documentsStorage = documentsStorage;
+            _includeDocumentsCommand = includeDocumentsCommand;
+            DocumentsStorage = documentsStorage;
 
             FieldsToFetch = fieldsToFetch;
             _blittableTraverser = reduceResults ? BlittableJsonTraverser.FlatMapReduceResults : BlittableJsonTraverser.Default;
@@ -61,48 +64,27 @@ namespace Raven.Server.Documents.Queries.Results
                 if (doc == null)
                     return null;
 
-                return GetProjectionFromDocument(doc, score, FieldsToFetch, _context);
+                return GetProjectionFromDocument(doc, input, null, id, score, FieldsToFetch, _context, state);
             }
 
             var documentLoaded = false;
 
             var result = new DynamicJsonValue();
 
-            if (FieldsToFetch.IsDistinct == false && string.IsNullOrEmpty(id) == false)
-                result[Constants.Documents.Indexing.Fields.DocumentIdFieldName] = id;
+            AddIdIfNeeded(FieldsToFetch, null, id, result);
 
             Dictionary<string, FieldsToFetch.FieldToFetch> fields = null;
-            if (FieldsToFetch.ExtractAllFromIndex || FieldsToFetch.ExtractAllFromDocument)
+            if (FieldsToFetch.ExtractAllFromIndex)
             {
                 if (FieldsToFetch.ExtractAllFromIndex)
                 {
                     fields = input.GetFields()
                         .Where(x => x.Name != Constants.Documents.Indexing.Fields.DocumentIdFieldName
-                                    && x.Name != Constants.Documents.Indexing.Fields.ReduceKeyFieldName
-                                    && x.Name != Constants.Documents.Indexing.Fields.ReduceValueFieldName
+                                    && x.Name != Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName
+                                    && x.Name != Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName
                                     && FieldUtil.GetRangeTypeFromFieldName(x.Name) == RangeType.None)
                         .Distinct(UniqueFieldNames.Instance)
                         .ToDictionary(x => x.Name, x => new FieldsToFetch.FieldToFetch(x.Name, null, null, x.IsStored, isDocumentId: false));
-                }
-
-                if (FieldsToFetch.ExtractAllFromDocument)
-                {
-                    if (fields == null)
-                        fields = new Dictionary<string, FieldsToFetch.FieldToFetch>();
-
-                    doc = DirectGet(input, id, state);
-                    documentLoaded = true;
-
-                    if (doc != null)
-                    {
-                        foreach (var name in doc.Data.GetPropertyNames())
-                        {
-                            if (fields.ContainsKey(name))
-                                continue;
-
-                            fields[name] = new FieldsToFetch.FieldToFetch(name, null, null, canExtractFromIndex: false, isDocumentId: false);
-                        }
-                    }
                 }
             }
 
@@ -118,7 +100,7 @@ namespace Raven.Server.Documents.Queries.Results
                     fields[kvp.Key] = kvp.Value;
                 }
             }
-            
+
             foreach (var fieldToFetch in fields.Values)
             {
                 if (TryExtractValueFromIndex(fieldToFetch, input, result, state))
@@ -127,13 +109,28 @@ namespace Raven.Server.Documents.Queries.Results
                 if (documentLoaded == false)
                 {
                     doc = DirectGet(input, id, state);
+
                     documentLoaded = true;
                 }
 
                 if (doc == null)
                     continue;
 
-                MaybeExtractValueFromDocument(fieldToFetch, doc, result);
+                if (TryGetValue(fieldToFetch, doc, input, state, out var fieldVal))
+                {
+                    if (FieldsToFetch.SingleBodyOrMethodWithNoAlias)
+                    {
+                        if (fieldVal is BlittableJsonReaderObject nested)
+                            doc.Data = nested;
+                        else
+                            ThrowInvalidQueryBodyResponse(fieldVal);
+                        doc.IndexScore = score;
+                        return doc;
+                    }
+                    if (fieldVal is List<object> list)
+                        fieldVal = new DynamicJsonArray(list);
+                    result[fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value] = fieldVal;
+                }
             }
 
             if (doc == null)
@@ -147,17 +144,51 @@ namespace Raven.Server.Documents.Queries.Results
             return ReturnProjection(result, doc, score, _context);
         }
 
-        public Document GetProjectionFromDocument(Document doc, float score, FieldsToFetch fieldsToFetch, JsonOperationContext context)
+        public Document GetProjectionFromDocument(Document doc, Lucene.Net.Documents.Document luceneDoc, LazyStringValue lazyId, string id, float score, FieldsToFetch fieldsToFetch, JsonOperationContext context, IState state)
         {
             var result = new DynamicJsonValue();
 
-            if (fieldsToFetch.IsDistinct == false && doc.Id != null)
-                result[Constants.Documents.Indexing.Fields.DocumentIdFieldName] = doc.Id;
-
             foreach (var fieldToFetch in fieldsToFetch.Fields.Values)
-                MaybeExtractValueFromDocument(fieldToFetch, doc, result);
+            {
+                if (TryGetValue(fieldToFetch, doc, luceneDoc, state, out var fieldVal))
+                {
+                    if (fieldsToFetch.SingleBodyOrMethodWithNoAlias)
+                    {
+                        if (fieldVal is BlittableJsonReaderObject nested)
+                            doc.Data = nested;
+                        else
+                            ThrowInvalidQueryBodyResponse(fieldVal);
+
+                        doc.IndexScore = score;
+                        return doc;
+                    }
+                    if (fieldVal is List<object> list)
+                        fieldVal = new DynamicJsonArray(list);
+                    var key = fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value;
+                    result[key] = fieldVal;
+                }
+            }
+
+            AddIdIfNeeded(fieldsToFetch, lazyId, id, result);
 
             return ReturnProjection(result, doc, score, context);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void AddIdIfNeeded(FieldsToFetch fieldsToFetch, LazyStringValue lazyId, string id, DynamicJsonValue result)
+        {
+            if (fieldsToFetch.IsDistinct)
+                return;
+
+            if (lazyId != null)
+                result[Constants.Documents.Metadata.Id] = lazyId;
+            else if (string.IsNullOrEmpty(id) == false)
+                result[Constants.Documents.Metadata.Id] = id;
+        }
+
+        private static void ThrowInvalidQueryBodyResponse(object fieldVal)
+        {
+            throw new InvalidOperationException("Query returning a single function call result must return an object, but got: " + (fieldVal ?? "null"));
         }
 
         private static Document ReturnProjection(DynamicJsonValue result, Document doc, float score, JsonOperationContext context)
@@ -193,9 +224,9 @@ namespace Raven.Server.Documents.Queries.Results
             foreach (var field in indexDocument.GetFields(fieldToFetch.Name))
             {
                 if (fieldType == null)
-                    fieldType = GetFieldType(field, indexDocument);
+                    fieldType = GetFieldType(field.Name, indexDocument);
 
-                var fieldValue = ConvertType(field, fieldType, state);
+                var fieldValue = ConvertType(_context, field, fieldType, state);
 
                 if (fieldType.IsArray)
                 {
@@ -217,22 +248,22 @@ namespace Raven.Server.Documents.Queries.Results
             return anyExtracted;
         }
 
-        private static FieldType GetFieldType(IFieldable field, Lucene.Net.Documents.Document indexDocument)
+        internal static FieldType GetFieldType(string field, Lucene.Net.Documents.Document indexDocument)
         {
             return new FieldType
             {
-                IsArray = indexDocument.GetField(field.Name + LuceneDocumentConverterBase.IsArrayFieldSuffix) != null,
-                IsJson = indexDocument.GetField(field.Name + LuceneDocumentConverterBase.ConvertToJsonSuffix) != null
+                IsArray = indexDocument.GetField(field + LuceneDocumentConverterBase.IsArrayFieldSuffix) != null,
+                IsJson = indexDocument.GetField(field + LuceneDocumentConverterBase.ConvertToJsonSuffix) != null
             };
         }
 
-        private class FieldType
+        internal class FieldType
         {
             public bool IsArray;
             public bool IsJson;
         }
 
-        private object ConvertType(IFieldable field, FieldType fieldType, IState state)
+        private static object ConvertType(JsonOperationContext context, IFieldable field, FieldType fieldType, IState state)
         {
             if (field.IsBinary)
                 ThrowBinaryValuesNotSupported();
@@ -248,7 +279,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             var bytes = Encodings.Utf8.GetBytes(stringValue);
             var ms = new MemoryStream(bytes);
-            return _context.ReadForMemory(ms, field.Name);
+            return context.ReadForMemory(ms, field.Name);
         }
 
         private static void ThrowBinaryValuesNotSupported()
@@ -256,7 +287,7 @@ namespace Raven.Server.Documents.Queries.Results
             throw new NotSupportedException("Cannot convert binary values");
         }
 
-        bool TryGetValue(FieldsToFetch.FieldToFetch fieldToFetch, Document document, out object value)
+        private bool TryGetValue(FieldsToFetch.FieldToFetch fieldToFetch, Document document, Lucene.Net.Documents.Document luceneDoc, IState state, out object value)
         {
             if (fieldToFetch.QueryField == null)
             {
@@ -265,12 +296,20 @@ namespace Raven.Server.Documents.Queries.Results
 
             if (fieldToFetch.QueryField.Function != null)
             {
-                var args = new object[fieldToFetch.QueryField.FunctionArgs.Length];
+                var args = new object[fieldToFetch.QueryField.FunctionArgs.Length + 1];
                 for (int i = 0; i < fieldToFetch.FunctionArgs.Length; i++)
                 {
-                    TryGetValue(fieldToFetch.FunctionArgs[i], document, out args[i]);
+                    TryGetValue(fieldToFetch.FunctionArgs[i], document, luceneDoc, state, out args[i]);
+                    if (ReferenceEquals(args[i], document))
+                    {
+                        args[i] = Tuple.Create(document, luceneDoc, state);
+                    }
                 }
+
+                args[args.Length - 1] = _query.QueryParameters;
+
                 value = InvokeFunction(
+                    document.Id,
                     fieldToFetch.QueryField.Name,
                     _query.Metadata.Query,
                     args);
@@ -293,7 +332,7 @@ namespace Raven.Server.Documents.Queries.Results
                 return true;
             }
 
-            if (fieldToFetch.QueryField.SourceAlias == null)
+            if (fieldToFetch.QueryField.HasSourceAlias == false)
             {
                 return TryGetFieldValueFromDocument(document, fieldToFetch, out value);
             }
@@ -301,12 +340,17 @@ namespace Raven.Server.Documents.Queries.Results
             {
                 _loadedDocumentIds = new HashSet<string>();
                 _loadedDocuments = new Dictionary<string, Document>();
-                _buffer = new List<object>();
             }
             _loadedDocumentIds.Clear();
-            _buffer.Clear();
+
             //_loadedDocuments.Clear(); - explicitly not clearing this, we want to cahce this for the duration of the query
-            IncludeUtil.GetDocIdFromInclude(document.Data, fieldToFetch.QueryField.SourceAlias, _loadedDocumentIds);
+
+
+            _loadedDocuments[document.Id ?? string.Empty] = document;
+            if (fieldToFetch.QueryField.SourceAlias != null)
+                IncludeUtil.GetDocIdFromInclude(document.Data, fieldToFetch.QueryField.SourceAlias, _loadedDocumentIds);
+            else
+                _loadedDocumentIds.Add(document.Id ?? string.Empty); // null source alias is the root doc
 
             if (_loadedDocumentIds.Count == 0)
             {
@@ -314,109 +358,121 @@ namespace Raven.Server.Documents.Queries.Results
                 return false;
             }
 
+            var buffer = new List<object>();
+
             foreach (var docId in _loadedDocumentIds)
             {
                 if (docId == null)
                     continue;
 
-                if (_loadedDocuments.TryGetValue(docId, out document) == false)
+                if (_loadedDocuments.TryGetValue(docId, out var doc) == false)
                 {
-                    _loadedDocuments[docId] = document = LoadDocument(docId);
+                    _loadedDocuments[docId] = doc = LoadDocument(docId);
                 }
-                if (document == null)
+                if (doc == null)
                     continue;
-                if (TryGetFieldValueFromDocument(document, fieldToFetch, out var val))
-                    _buffer.Add(val);
+                if (string.IsNullOrEmpty(fieldToFetch.Name)) // we need the whole document here
+                {
+                    buffer.Add(doc);
+                    continue;
+                }
+                if (TryGetFieldValueFromDocument(doc, fieldToFetch, out var val))
+                    buffer.Add(val);
             }
 
             if (fieldToFetch.QueryField.SourceIsArray)
             {
-                value = _buffer;
+                value = buffer;
                 return true;
             }
-            if (_buffer.Count > 0)
+            if (buffer.Count > 0)
             {
-                if (_buffer.Count > 1)
+                if (buffer.Count > 1)
                 {
                     ThrowOnlyArrayFieldCanHaveMultipleValues(fieldToFetch);
                 }
-                value = _buffer[0];
+                value = buffer[0];
                 return true;
             }
             value = null;
             return false;
         }
 
-        private object InvokeFunction(string methodName, Query query, object[] args)
+        private class QueryKey : ScriptRunnerCache.Key
         {
-            //TODO: Maxim fixme
-            // This is intentionally written to be as simple as possible, we are going to replace
-            // this Jint impl with Jurrasic, so there is no point in doing anything fancy.
-            // 
-            // We'll need to handle caching of the function, and proper error handling / parsing
-            // of the function code / errors during their execution. For example, we must get the
-            // document id / reduce key of the document that generated the error. 
-            var jintEngine = new Engine(cfg =>
-            {
-                cfg.LimitRecursion(100);
-                cfg.NullPropagation();
-                cfg.MaxStatements(10 * 1000);
-            });
+            private readonly Dictionary<StringSegment, string> _functions;
 
-            if (query.DeclaredFunctions != null)
+            private bool Equals(QueryKey other)
             {
-                foreach (var funcToken in query.DeclaredFunctions.Values)
+                if (_functions.Count != other._functions.Count)
+                    return false;
+
+                foreach (var function in _functions)
                 {
-                    var func = new StringSegment(query.QueryText, funcToken.TokenStart, funcToken.TokenLength);
-                    jintEngine.Execute(func.ToString());
+                    if (other._functions.TryGetValue(function.Key, out var otherVal) == false
+                        || function.Value != otherVal)
+                        return false;
                 }
+
+                return true;
             }
 
-
-            object Translate(object o)
+            public override bool Equals(object obj)
             {
-                if (o is LazyStringValue lsv)
-                    return lsv.ToString();
-                if (o is LazyCompressedStringValue lcsv)
-                    return lcsv.ToString();
-                if (o is LazyNumberValue lnv)
-                    return lnv.ToDouble(CultureInfo.InvariantCulture);
-                if (o is List<object> l)
+                if (ReferenceEquals(null, obj))
+                    return false;
+                if (ReferenceEquals(this, obj))
+                    return true;
+                if (obj.GetType() != GetType())
+                    return false;
+                return Equals((QueryKey)obj);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
                 {
-                    for (int i = 0; i < l.Count; i++)
+                    int hashCode = 0;
+                    foreach (var function in _functions)
                     {
-                        l[i] = Translate(l[i]);
+                        hashCode = (hashCode * 397) ^ (function.Value.GetHashCode());
                     }
-                    return l.ToArray();
+                    return hashCode;
                 }
-                return o;
             }
 
-            for (int i = 0; i < args.Length; i++)
+            public QueryKey(Dictionary<StringSegment, string> functions)
             {
-                args[i] = Translate(args[i]);
+                _functions = functions;
             }
 
-            var result = jintEngine.Invoke(methodName, args);
-            if(result.IsObject())
-                return PatcherOperationScope.ToBlittable2(result.AsObject());
-            if(result.IsArray())
-                return PatcherOperationScope.ToBlittable2(result.AsArray());
-            if (result.IsBoolean())
-                return result.AsBoolean();
-            if (result.IsString())
-                return result.AsString();
-            if (result.IsDate())
-                return result.AsDate();
-            if (result.IsNull() || result.IsUndefined())
-                return null;
-            if (result.IsNumber())
-                return result.AsNumber();
-            throw new InvalidOperationException("Unknown value as a result of calling " + methodName + ": " + result);
+            public override void GenerateScript(ScriptRunner runner)
+            {
+                foreach (var kvp in _functions)
+                {
+                    runner.AddScript(kvp.Value);
+                }
+            }
+        }
+
+        private object InvokeFunction(LazyStringValue id, string methodName, Query query, object[] args)
+        {
+            var modifier = new QueryResultModifier(id);
+            var key = new QueryKey(query.DeclaredFunctions);
+            using (_database.Scripts.GetScriptRunner(key, readOnly: true, patchRun: out var run))
+            using (var result = run.Run(_context as DocumentsOperationContext, methodName, args))
+            {
+                _includeDocumentsCommand?.AddRange(run.Includes);
+
+                if (result.IsNull)
+                    return null;
+
+                return run.Translate(result, _context, modifier);
+            }
         }
 
 
-        bool TryGetFieldValueFromDocument(Document document, FieldsToFetch.FieldToFetch field, out object value)
+        private bool TryGetFieldValueFromDocument(Document document, FieldsToFetch.FieldToFetch field, out object value)
         {
             if (field.IsDocumentId)
             {
@@ -442,19 +498,6 @@ namespace Raven.Server.Documents.Queries.Results
             return true;
         }
 
-
-        private void MaybeExtractValueFromDocument(FieldsToFetch.FieldToFetch fieldToFetch, Document document, DynamicJsonValue toFill)
-        {
-            
-
-            if (TryGetValue(fieldToFetch, document, out var fieldVal))
-            {
-                if (fieldVal is List<object> list)
-                    fieldVal = new DynamicJsonArray(list);
-                toFill[fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value] = fieldVal;
-            }
-        }
-
         private static void ThrowOnlyArrayFieldCanHaveMultipleValues(FieldsToFetch.FieldToFetch fieldToFetch)
         {
             throw new NotSupportedException(
@@ -473,6 +516,25 @@ namespace Raven.Server.Documents.Queries.Results
             public int GetHashCode(IFieldable obj)
             {
                 return obj.Name.GetHashCode();
+            }
+        }
+
+        private class QueryResultModifier : JsBlittableBridge.IResultModifier
+        {
+            private readonly LazyStringValue _id;
+
+            public QueryResultModifier(LazyStringValue id)
+            {
+                _id = id;
+            }
+
+            public void Modify(ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> writer)
+            {
+                if (_id == null)
+                    return;
+
+                writer.WritePropertyName(Constants.Documents.Metadata.Id);
+                writer.WriteValue(_id);
             }
         }
     }

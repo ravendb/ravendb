@@ -17,7 +17,7 @@ namespace SlowTests.Bugs.Indexing
             const string name = "CreateIndexesOnRemoteServer_1";
             var doc = new DatabaseRecord(name);
 
-            using (var store = new DocumentStore { Urls = UseFiddler(Server.WebUrls), Database = name })
+            using (var store = new DocumentStore { Urls = UseFiddler(Server.WebUrl), Database = name })
             {
                 store.Initialize();
 

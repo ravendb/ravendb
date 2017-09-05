@@ -301,6 +301,7 @@ namespace SlowTests.Tests.Querying
 
                 using (var s = documentStore.OpenSession())
                 {
+                    /*
                     FieldHighlightings titleHighlightings = null;
                     FieldHighlightings categoryHighlightings = null;
 
@@ -322,6 +323,7 @@ namespace SlowTests.Tests.Querying
 
                     Assert.NotEmpty(titleHighlightings.GetFragments(blogTwoId));
                     Assert.NotEmpty(categoryHighlightings.GetFragments(blogTwoId));
+                    */
                 }
             }
         }
@@ -339,8 +341,8 @@ namespace SlowTests.Tests.Querying
                         Maps = { "from blog in docs.Blogs select new { blog.Title, blog.Category }" },
                         Fields = new Dictionary<string, IndexFieldOptions>
                         {
-                            {"Title", new IndexFieldOptions { Storage = FieldStorage.Yes, Indexing = FieldIndexing.Analyzed, TermVector = FieldTermVector.WithPositionsAndOffsets} },
-                            {"Category", new IndexFieldOptions { Storage = FieldStorage.Yes, Indexing = FieldIndexing.Analyzed, TermVector = FieldTermVector.WithPositionsAndOffsets} }
+                            {"Title", new IndexFieldOptions { Storage = FieldStorage.Yes, Indexing = FieldIndexing.Search, TermVector = FieldTermVector.WithPositionsAndOffsets} },
+                            {"Category", new IndexFieldOptions { Storage = FieldStorage.Yes, Indexing = FieldIndexing.Search, TermVector = FieldTermVector.WithPositionsAndOffsets} }
                         }
                     }}));
 
@@ -372,6 +374,7 @@ namespace SlowTests.Tests.Querying
 
                 using (var s = documentStore.OpenSession())
                 {
+                    /*
                     FieldHighlightings titleHighlightings = null;
                     FieldHighlightings categoryHighlightings = null;
 
@@ -393,6 +396,7 @@ namespace SlowTests.Tests.Querying
 
                     Assert.NotEmpty(titleHighlightings.GetFragments(blogTwoId));
                     Assert.NotEmpty(categoryHighlightings.GetFragments(blogTwoId));
+                    */
                 }
             }
         }
@@ -410,8 +414,8 @@ namespace SlowTests.Tests.Querying
                         Maps = { "from blog in docs.Blogs select new { blog.Title, blog.Category }" },
                         Fields = new Dictionary<string, IndexFieldOptions>
                         {
-                            {"Title", new IndexFieldOptions { Storage = FieldStorage.Yes, Indexing = FieldIndexing.Analyzed, TermVector = FieldTermVector.WithPositionsAndOffsets} },
-                            {"Category", new IndexFieldOptions { Storage = FieldStorage.Yes, Indexing = FieldIndexing.Analyzed, TermVector = FieldTermVector.WithPositionsAndOffsets} }
+                            {"Title", new IndexFieldOptions { Storage = FieldStorage.Yes, Indexing = FieldIndexing.Search, TermVector = FieldTermVector.WithPositionsAndOffsets} },
+                            {"Category", new IndexFieldOptions { Storage = FieldStorage.Yes, Indexing = FieldIndexing.Search, TermVector = FieldTermVector.WithPositionsAndOffsets} }
                         }
                     }}));
 
@@ -438,6 +442,7 @@ namespace SlowTests.Tests.Querying
 
                 using (var s = documentStore.OpenSession())
                 {
+                    /*
                     var results =
                         s.Query<Blog>(indexName)
                             .Customize(c => c.WaitForNonStaleResults().Highlight("Title", 18, 2, "TitleFragments"))
@@ -447,6 +452,7 @@ namespace SlowTests.Tests.Querying
 
                     Assert.Equal(1, results.Length);
                     Assert.NotEmpty(results.First().TitleFragments);
+                    */
                 }
             }
         }
@@ -467,8 +473,8 @@ namespace SlowTests.Tests.Querying
                                    select new { Category = g.Key, Title = g.Select(x=>x.Title).Aggregate(string.Concat) }",
                         Fields = new Dictionary<string, IndexFieldOptions>
                         {
-                            {"Title", new IndexFieldOptions { Storage = FieldStorage.Yes, Indexing = FieldIndexing.Analyzed, TermVector = FieldTermVector.WithPositionsAndOffsets} },
-                            {"Category", new IndexFieldOptions { Storage = FieldStorage.Yes, Indexing = FieldIndexing.Analyzed, TermVector = FieldTermVector.WithPositionsAndOffsets} }
+                            {"Title", new IndexFieldOptions { Storage = FieldStorage.Yes, Indexing = FieldIndexing.Search, TermVector = FieldTermVector.WithPositionsAndOffsets} },
+                            {"Category", new IndexFieldOptions { Storage = FieldStorage.Yes, Indexing = FieldIndexing.Search, TermVector = FieldTermVector.WithPositionsAndOffsets} }
                         }
                     }}));
 
@@ -500,6 +506,7 @@ namespace SlowTests.Tests.Querying
 
                 using (var s = documentStore.OpenSession())
                 {
+                    /*
                     var results =
                         s.Query<Blog>(indexName)
                             .Customize(c => c.WaitForNonStaleResults().Highlight("Title", 18, 2, "TitleFragments"))
@@ -509,6 +516,7 @@ namespace SlowTests.Tests.Querying
 
                     Assert.Equal(1, results.Length);
                     Assert.NotEmpty(results.First().TitleFragments);
+                    */
                 }
             }
         }

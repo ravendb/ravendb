@@ -2,12 +2,13 @@
 using System.Collections.Concurrent;
 using Sparrow;
 using Sparrow.Binary;
+using Sparrow.LowMemory;
 using Sparrow.Utils;
 using Voron.Global;
 
 namespace Voron.Impl
 {
-    public unsafe class EncryptionBuffersPool : IDisposable
+    public unsafe class EncryptionBuffersPool : IDisposable, ILowMemoryHandler
     {
         private class NativeAllocation
         {
@@ -26,6 +27,8 @@ namespace Voron.Impl
             {
                 _items[i] = new ConcurrentStack<NativeAllocation>();
             }
+
+            LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
         }
 
         public byte* Get(int size, out NativeMemory.ThreadStats thread)
@@ -105,6 +108,15 @@ namespace Voron.Impl
             catch (ObjectDisposedException)
             {
             }
+        }
+
+        public void LowMemory()
+        {
+            ReleaseUnmanagedResources();
+        }
+
+        public void LowMemoryOver()
+        {
         }
     }
 }

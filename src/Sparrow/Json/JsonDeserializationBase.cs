@@ -96,7 +96,6 @@ namespace Sparrow.Json
                 type == typeof(Guid) ||
                 type == typeof(DateTime) ||
                 type == typeof(DateTimeOffset) ||
-                type == typeof(TimeSpan) ||
                 type == typeof(BlittableJsonReaderArray) ||
                 type == typeof(BlittableJsonReaderObject))
             {
@@ -109,6 +108,16 @@ namespace Sparrow.Json
                     genericTypes = new[] { propertyType };
 
                 var tryGet = Expression.Call(json, nameof(BlittableJsonReaderObject.TryGet), genericTypes, Expression.Constant(propertyName), value);
+                return Expression.Condition(tryGet, value, Expression.Default(propertyType));
+            }
+
+            if (type == typeof(TimeSpan))
+            {
+                var value = GetParameter(propertyType, vars);
+                var methodToCall = typeof(JsonDeserializationBase)
+                    .GetMethod(propertyType == typeof(TimeSpan) ? nameof(TryGetTimeSpan) : nameof(TryGetNullableTimeSpan), BindingFlags.NonPublic | BindingFlags.Static);
+
+                var tryGet = Expression.Call(methodToCall, json, Expression.Constant(propertyName), value);
                 return Expression.Condition(tryGet, value, Expression.Default(propertyType));
             }
 
@@ -535,5 +544,51 @@ namespace Sparrow.Json
 
             return list.ToArray();
         }
+
+        private static bool TryGetTimeSpan(BlittableJsonReaderObject json, string propertyName, out TimeSpan timeSpan)
+        {
+            if (TryGetNullableTimeSpan(json, propertyName, out var nullableTimeSpan) == false)
+            {
+                timeSpan = default(TimeSpan);
+                return false;
+            }
+
+            if (nullableTimeSpan.HasValue == false)
+                throw new FormatException($"Could not convert 'null' to {typeof(TimeSpan).Name}");
+
+            timeSpan = nullableTimeSpan.Value;
+            return true;
+        }
+
+        private static bool TryGetNullableTimeSpan(BlittableJsonReaderObject json, string propertyName, out TimeSpan? timeSpan)
+        {
+            if (json.TryGetMember(propertyName, out var value) == false || value == null)
+            {
+                timeSpan = null;
+                return false;
+            }
+
+            if (value is LazyStringValue || value is LazyCompressedStringValue || value is string)
+            {
+                BlittableJsonReaderObject.ConvertType(value, out timeSpan);
+                return true;
+            }
+
+            if (value is long l)
+            {
+                timeSpan = TimeSpan.FromMilliseconds(l);
+                return true;
+            }
+
+            if (value is LazyNumberValue lnv)
+            {
+                timeSpan = TimeSpan.FromMilliseconds(lnv);
+                return true;
+            }
+
+            throw new FormatException($"Could not convert {value.GetType().Name} ('{value}') to {typeof(TimeSpan).Name}");
+        }
+
+
     }
 }

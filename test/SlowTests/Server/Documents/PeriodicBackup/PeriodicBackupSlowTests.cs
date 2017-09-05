@@ -47,7 +47,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 SpinWait.SpinUntil(() => store.Admin.Server.Send(getPeriodicBackupStatus).Status?.LastFullBackup != null, TimeSpan.FromSeconds(60));
             }
 
-            using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_2"
+            }))
             {
                 await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(),
                     Directory.GetDirectories(backupPath).First());
@@ -118,7 +121,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }, TimeSpan.FromMinutes(2));
             }
 
-            using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_2"
+            }))
             {
                 await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(),
                     Directory.GetDirectories(backupPath).First());
@@ -190,7 +196,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }, TimeSpan.FromMinutes(2));
             }
 
-            using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_2"
+            }))
             {
                 await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(),
                     Directory.GetDirectories(backupPath).First());
@@ -250,7 +259,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }, TimeSpan.FromMinutes(2));
             }
 
-            using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_2"
+            }))
             {
                 await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(),
                     Directory.GetDirectories(backupPath).First());
@@ -259,6 +271,66 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     var users = await session.LoadAsync<User>(new[] { "users/1", "users/2" });
                     Assert.True(users.Any(x => x.Value.Name == "oren"));
                     Assert.True(users.Any(x => x.Value.Name == "ayende"));
+                }
+            }
+        }
+
+        [Fact(Skip = "RavenDB-7931 - Takes too long"), Trait("Category", "Smuggler")]
+        public async Task CanImportTombstonesFromIncrementalBackup()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "fitzchak" }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    IncrementalBackupFrequency = "* * * * *" //every minute
+                };
+
+                var result = await store.Admin.Server.SendAsync(new UpdatePeriodicBackupOperation(config, store.Database));
+                var periodicBackupTaskId = result.TaskId;
+
+                var operation = new GetPeriodicBackupStatusOperation(store.Database, periodicBackupTaskId);
+                SpinWait.SpinUntil(() =>
+                {
+                    var getPeriodicBackupResult = store.Admin.Server.Send(operation);
+                    return getPeriodicBackupResult.Status?.LastEtag > 0;
+                }, TimeSpan.FromMinutes(2));
+
+                var etagForBackups = store.Admin.Server.Send(operation).Status.LastEtag;
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Delete("users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                SpinWait.SpinUntil(() =>
+                {
+                    var newLastEtag = store.Admin.Server.Send(operation).Status.LastEtag;
+                    return newLastEtag != etagForBackups;
+                }, TimeSpan.FromMinutes(2));
+            }
+
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_2"
+            }))
+            {
+                await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(),
+                    Directory.GetDirectories(backupPath).First());
+                using (var session = store.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>("users/1");
+                    Assert.Null(user);
                 }
             }
         }
@@ -308,8 +380,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }, TimeSpan.FromMinutes(2));
             }
 
-            using (var store1 = GetDocumentStore(dbSuffixIdentifier: "2"))
-            using (var store2 = GetDocumentStore(dbSuffixIdentifier: "2"))
+            using (var store1 = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_2"
+            }))
+            using (var store2 = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_2"
+            }))
             {
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
 
@@ -395,7 +473,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 };
                 var restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
                 var restoreResult = store.Admin.Server.Send(restoreBackupTask);
-                var stateRequest = new GetOperationStateOperation(restoreResult.OperationId, isServerStoreOperation: true);
+                var stateRequest = new GetOperationStateOperation(restoreResult.OperationId, true);
 
                 SpinWait.SpinUntil(() =>
                 {
@@ -467,7 +545,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 };
                 var restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
                 var restoreResult = store.Admin.Server.Send(restoreBackupTask);
-                var stateRequest = new GetOperationStateOperation(restoreResult.OperationId, isServerStoreOperation: true);
+                var stateRequest = new GetOperationStateOperation(restoreResult.OperationId, true);
                 store.Admin.Server.Send(stateRequest);
 
                 SpinWait.SpinUntil(() =>
@@ -489,7 +567,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task restore_settings_tests()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_2"
+            }))
             {
                 var restoreConfiguration = new RestoreBackupConfiguration();
 

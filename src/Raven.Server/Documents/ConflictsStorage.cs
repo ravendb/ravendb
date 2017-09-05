@@ -17,6 +17,7 @@ using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Logging;
 using Sparrow.Utils;
+using Voron.Data.RawData;
 using Voron.Util;
 using static Raven.Server.Documents.DocumentsStorage;
 using ConcurrencyException = Voron.Exceptions.ConcurrencyException;
@@ -30,9 +31,12 @@ namespace Raven.Server.Documents
         public static readonly Slice AllConflictedDocsEtagsSlice;
         private static readonly Slice ConflictedCollectionSlice;
         public static readonly Slice ConflictsSlice;
-        private static readonly Slice IdSlice;
+        private static readonly Slice ConflictsIdSlice;
 
-        public static readonly TableSchema ConflictsSchema = new TableSchema();
+        public static readonly TableSchema ConflictsSchema = new TableSchema()
+        {
+            TableType = (byte)TableType.Conflicts
+        };
 
         private readonly DocumentDatabase _documentDatabase;
         private readonly DocumentsStorage _documentsStorage;
@@ -56,7 +60,7 @@ namespace Raven.Server.Documents
         static ConflictsStorage()
         {
             Slice.From(StorageEnvironment.LabelsContext, "ChangeVector", ByteStringType.Immutable, out ChangeVectorSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "Id", ByteStringType.Immutable, out IdSlice);
+            Slice.From(StorageEnvironment.LabelsContext, "ConflictsId", ByteStringType.Immutable, out ConflictsIdSlice);
             Slice.From(StorageEnvironment.LabelsContext, "IdAndChangeVector", ByteStringType.Immutable, out IdAndChangeVectorSlice);
             Slice.From(StorageEnvironment.LabelsContext, "AllConflictedDocsEtags", ByteStringType.Immutable, out AllConflictedDocsEtagsSlice);
             Slice.From(StorageEnvironment.LabelsContext, "ConflictedCollection", ByteStringType.Immutable, out ConflictedCollectionSlice);
@@ -94,7 +98,7 @@ namespace Raven.Server.Documents
                 StartIndex = (int)ConflictsTable.LowerId,
                 Count = 1,
                 IsGlobal = true,
-                Name = IdSlice
+                Name = ConflictsIdSlice
             });
             ConflictsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
             {
@@ -204,6 +208,28 @@ namespace Raven.Server.Documents
                 result.Doc = new BlittableJsonReaderObject(read, size, context);
                 DebugDisposeReaderAfterTransaction(context.Transaction, result.Doc);
             }
+
+            return result;
+        }
+
+        public static DocumentConflict ParseRawDataSectionConflictWithValidation(JsonOperationContext context, ref TableValueReader tvr, int expectedSize)
+        {
+            var read = tvr.Read((int)ConflictsTable.Data, out var size);
+            if (size > expectedSize || size <= 0)
+                throw new ArgumentException("Document size is invalid, possible corruption when parsing BlittableJsonReaderObject", nameof(size));
+
+            var result = new DocumentConflict
+            {
+                StorageId = tvr.Id,
+                LowerId = TableValueToString(context, (int)ConflictsTable.LowerId, ref tvr),
+                Id = TableValueToId(context, (int)ConflictsTable.Id, ref tvr),
+                ChangeVector = TableValueToChangeVector(context, (int)ConflictsTable.ChangeVector, ref tvr),
+                Etag = TableValueToEtag((int)ConflictsTable.Etag, ref tvr),
+                Doc = new BlittableJsonReaderObject(read, size, context),
+                Collection = TableValueToString(context, (int)ConflictsTable.Collection, ref tvr),
+                LastModified = TableValueToDateTime((int)ConflictsTable.LastModified, ref tvr),
+                Flags = TableValueToFlags((int)ConflictsTable.Flags, ref tvr)
+            };         
 
             return result;
         }
@@ -796,7 +822,7 @@ namespace Raven.Server.Documents
                 return 0;
 
             var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
-            return conflictsTable.GetTree(ConflictsSchema.Indexes[IdSlice]).State.NumberOfEntries;
+            return conflictsTable.GetTree(ConflictsSchema.Indexes[ConflictsIdSlice]).State.NumberOfEntries;
         }
     }
 }

@@ -211,13 +211,12 @@ namespace Raven.Server.Documents.Replication
 
             long maxEtag = -1;
             long duplicateResolverEtagAt = -1;
-            var resolverDbId = new Guid(resolver);
 
             foreach (var documentConflict in conflicts)
             {
                 foreach (var changeVectorEntry in documentConflict.ChangeVector.ToChangeVector())
                 {
-                    if (changeVectorEntry.DbId.Equals(resolverDbId))
+                    if (changeVectorEntry.DbId.Equals(resolver))
                     {
                         if (changeVectorEntry.Etag == maxEtag)
                         {
@@ -308,15 +307,8 @@ namespace Raven.Server.Documents.Replication
 
         private void DeleteDocumentFromDifferentCollectionIfNeeded(DocumentsOperationContext ctx, DocumentConflict conflict)
         {
-            Document oldVersion;
-            try
-            {
-                oldVersion = _database.DocumentsStorage.Get(ctx, conflict.LowerId);
-            }
-            catch (DocumentConflictException)
-            {
-                return; // if already conflicted, don't need to do anything
-            }
+            // if already conflicted, don't need to do anything
+            var oldVersion = _database.DocumentsStorage.Get(ctx, conflict.LowerId, throwOnConflict: false);
 
             if (oldVersion == null)
                 return;
@@ -342,10 +334,7 @@ namespace Raven.Server.Documents.Replication
 
             var patch = new PatchConflict(_database, conflicts);
             var updatedConflict = conflicts[0];
-            var patchRequest = new PatchRequest
-            {
-                Script = scriptResolver.Script
-            };
+            var patchRequest = new PatchRequest(scriptResolver.Script, PatchRequestType.Conflict);
             if (patch.TryResolveConflict(context, patchRequest, out BlittableJsonReaderObject resolved) == false)
             {
                 return false;

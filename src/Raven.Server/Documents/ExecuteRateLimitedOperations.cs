@@ -48,10 +48,16 @@ namespace Raven.Server.Documents
                 var id = _documentIds.Dequeue();
 
                 var command = _commandToExecute(id);
-
-                var count = command?.Execute(context) ?? 0;
-
-                Processed += count;
+                try
+                {
+                    var count = command?.Execute(context) ?? 0;
+                    Processed += count;
+                }
+                finally
+                {
+                    if(command is IDisposable d)
+                        d.Dispose();
+                }
 
                 if (_batchSize != null && Processed >= _batchSize)
                     break;

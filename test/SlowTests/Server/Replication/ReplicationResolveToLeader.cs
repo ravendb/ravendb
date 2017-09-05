@@ -9,7 +9,7 @@ using Xunit;
 
 namespace SlowTests.Server.Replication
 {
-    public class ReplicationResolveToDatabase : ReplicationTestsBase, IDocumentTombstoneAware
+    public class ReplicationResolveToDatabase : ReplicationTestBase, IDocumentTombstoneAware
     {
         [Fact]
         public async Task ResolveToDatabase()
@@ -34,7 +34,7 @@ namespace SlowTests.Server.Replication
                 var documentDatabase = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store2.Database).Result;
 
                 await UpdateConflictResolver(store2, 
-                        resovlerDbId: documentDatabase.DbId.ToString());
+                        resovlerDbId: documentDatabase.DbBase64Id);
                 await SetupReplicationAsync(store2, store1);
                 
                 Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Oren"));
@@ -76,7 +76,7 @@ namespace SlowTests.Server.Replication
                 // store2 <--> store1 <--> store3*               
                 var documentDatabase = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store3.Database).Result;
                 //this waits for the information to propagate in the cluster
-                await UpdateConflictResolver(store3, resovlerDbId: documentDatabase.DbId.ToString());
+                await UpdateConflictResolver(store3, resovlerDbId: documentDatabase.DbBase64Id);
                 await SetupReplicationAsync(store3, store1);
 
                 Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Leader"));
@@ -95,17 +95,17 @@ namespace SlowTests.Server.Replication
             using (var store1 = new DocumentStore
             {
                 Database = databaseName,
-                Urls = Servers[0].WebUrls
+                Urls = new[] {Servers[0].WebUrl}
             }.Initialize())
             using (var store2 = new DocumentStore
             {
                 Database = databaseName,
-                Urls = Servers[1].WebUrls
+                Urls = new[] {Servers[1].WebUrl}
             }.Initialize())
             using (var store3 = new DocumentStore
             {
                 Database = databaseName,
-                Urls = Servers[2].WebUrls
+                Urls = new[] {Servers[2].WebUrl}
             }.Initialize())
             {
                 await CreateAndWaitForClusterDatabase(databaseName, store1);
@@ -132,7 +132,7 @@ namespace SlowTests.Server.Replication
                 var documentDatabase = await GetDocumentDatabaseInstanceFor(store2);
                 //this waits for the information to propagate in the cluster
                 await UpdateConflictResolver(store1,
-                    resovlerDbId: documentDatabase.DbId.ToString());
+                    resovlerDbId: documentDatabase.DbBase64Id);
 
                 Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Oren"));
                 Assert.True(WaitForDocument<User>(store2, "foo/bar", u => u.Name == "Oren"));
@@ -140,7 +140,7 @@ namespace SlowTests.Server.Replication
 
 
                 // store2 <--> store1 --> store3*
-                var databaseResolverId = GetDocumentDatabaseInstanceFor(store3).Result.DbId.ToString();
+                var databaseResolverId = GetDocumentDatabaseInstanceFor(store3).Result.DbBase64Id;
                 await UpdateConflictResolver(store3, databaseResolverId);
 
                 using (var session = store3.OpenSession())
@@ -156,7 +156,7 @@ namespace SlowTests.Server.Replication
                 }
 
                 // store2 <--> store1 --> store3*
-                databaseResolverId = GetDocumentDatabaseInstanceFor(store3).Result.DbId.ToString();
+                databaseResolverId = GetDocumentDatabaseInstanceFor(store3).Result.DbBase64Id;
                 await UpdateConflictResolver(store3, databaseResolverId);
 
                 Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Leader"));
@@ -184,7 +184,7 @@ namespace SlowTests.Server.Replication
 
                 // store1* --> store2
                 var documentDatabase = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database).Result;
-                var databaseResolverId = documentDatabase.DbId.ToString();
+                var databaseResolverId = documentDatabase.DbBase64Id;
                 await UpdateConflictResolver(store2, databaseResolverId);
                 await SetupReplicationAsync(store1, store2);
 
@@ -240,7 +240,7 @@ namespace SlowTests.Server.Replication
                     session.SaveChanges();
                 }
 
-                await UpdateConflictResolver(store1, documentDatabase2.DbId.ToString());
+                await UpdateConflictResolver(store1, documentDatabase2.DbBase64Id);
 
                 Assert.Equal(1, WaitUntilHasTombstones(store2).Count);
                 Assert.Equal(1, WaitUntilHasTombstones(store1).Count);

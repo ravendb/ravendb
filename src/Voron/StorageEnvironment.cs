@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Platform.Posix;
+using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron.Data;
 using Voron.Data.BTrees;
@@ -50,7 +51,7 @@ namespace Voron
         /// This is the shared storage where we are going to store all the static constants for names.
         /// WARNING: This context will never be released, so only static constants should be added here.
         /// </summary>
-        public static readonly ByteStringContext LabelsContext = new ByteStringContext(LowMemoryFlag.None, ByteStringContext.MinBlockSizeInBytes);
+        public static readonly ByteStringContext LabelsContext = new ByteStringContext(SharedMultipleUseFlag.None, ByteStringContext.MinBlockSizeInBytes);
 
         private readonly StorageEnvironmentOptions _options;
 
@@ -280,7 +281,6 @@ namespace Voron
 
                     using (var treesTx = new Transaction(tx))
                     {
-
                         var metadataTree = treesTx.ReadTree(Constants.MetadataTreeNameSlice);
                         if (metadataTree == null)
                             VoronUnrecoverableErrorException.Raise(this,
@@ -299,6 +299,8 @@ namespace Voron
 
                         var databseGuidId = _options.GenerateNewDatabaseId == false ? new Guid(buffer) : Guid.NewGuid();
                         DbId = databseGuidId;
+
+                        FillBase64Id(databseGuidId);
 
                         if (_options.GenerateNewDatabaseId)
                         {
@@ -327,6 +329,17 @@ namespace Voron
             }
         }
 
+        private unsafe void FillBase64Id(Guid databseGuidId)
+        {
+            fixed (char* pChars = Base64Id)
+            {
+                var result = Base64.ConvertToBase64ArrayUnpadded(pChars, (byte*)&databseGuidId, 0, 16);
+                Debug.Assert(result == 22);
+            }
+        }
+
+        public string Base64Id { get; } = new string(' ', 22);
+
         private void CreateNewDatabase()
         {
             const int initialNextPageNumber = 0;
@@ -347,6 +360,7 @@ namespace Voron
                 {
 
                     DbId = Guid.NewGuid();
+                    FillBase64Id(DbId);
 
                     var metadataTree = treesTx.CreateTree(Constants.MetadataTreeNameSlice);
                     metadataTree.Add("db-id", DbId.ToByteArray());
@@ -994,7 +1008,7 @@ namespace Voron
             {
                 try
                 {
-                    if(_env.Options.EncryptionEnabled)
+                    if (_env.Options.EncryptionEnabled)
                         Sodium.ZeroMemory(_tmp.TempPagePointer, _tmp.PageSize);
                     _env._tempPagesPool.Enqueue(_tmp);
                 }

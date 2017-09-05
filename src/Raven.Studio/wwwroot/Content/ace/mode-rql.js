@@ -6,33 +6,64 @@ var TextHighlightRules = require("./text_highlight_rules").TextHighlightRules;
 
 var RqlHighlightRules = function() {
 
-    var keywords = (
-        "select|from|where|and|or|group|by|order|as|desc|asc|not|null|index|in"
+    var clausesKeywords = (
+        "declare|from|where|select|group|order|load|include|update"
+    );
+    var clauseAppendKeywords = (
+        "function|index|by"
+    );
+    var insideClauseKeywords = (
+        "as|not|all|between"
+    );
+    var functions = (
+        "count|sum|id|key"
+    );
+    var whereFunctions = (
+        "in|search|boost|startsWith|endsWith|lucene|exact|within|circle"
+    );
+    var orderByFunctions = (
+        "random|score"
+    );
+    
+    var orderByOptions = (
+        "desc|asc|descending|ascending"
+    );
+    var orderByAsOptions = (
+        "string|long|double|alphaNumeric"
     );
 
-    var builtinConstants = (
+    var constants = (
+        "null"
+    );
+    var constantsBoolean = (
         "true|false"
     );
-
-    var builtinFunctions = (
-        "count|sum|key|search|boost|startsWith|endsWith|lucene|exists|exact|random|score"
+    var binaryOperations = (
+        "and|or"
     );
-
-    var dataTypes = (
-        "long|double|string"
+    var operations = (
+        ">=|<=|<|>|=|==|!="
     );
 
     var keywordMapper = this.createKeywordMapper({
-        "support.function": builtinFunctions,
-        "keyword": keywords,
-        "constant.language": builtinConstants,
-        "storage.type": dataTypes
+        "keyword.clause": clausesKeywords,
+        "keyword.clause.clauseAppend": clauseAppendKeywords,
+        "keyword.insideClause": insideClauseKeywords,
+        "keyword.orderByOptions": orderByOptions,
+        "keyword.orderByAsOptions": orderByAsOptions,
+        "function": functions,
+        "function.where": whereFunctions,
+        "function.orderBy": orderByFunctions,
+        "constant.language": constants,
+        "constant.language.boolean": constantsBoolean,
+        "operations.type.binary": binaryOperations,
+        "operations.type": operations
     }, "identifier", true);
 
     this.$rules = {
         "start" : [ {
             token : "comment",
-            regex : "--.*$"
+            regex : "//.*$"
         },  {
             token : "comment",
             start : "/\\*",
@@ -51,22 +82,24 @@ var RqlHighlightRules = function() {
             regex : "[+-]?\\d+(?:(?:\\.\\d*)?(?:[eE][+-]?\\d+)?)?\\b"
         }, {
             token : keywordMapper,
-            regex : "[a-zA-Z_$.][a-zA-Z0-9_$.]*\\b"
+            regex : "[a-zA-Z_$@][a-zA-Z0-9_$@]*\\b"
         }, {
             token : "keyword.operator",
             regex : "\\+|\\-|\\/|\\/\\/|%|<@>|@>|<@|&|\\^|~|<|>|<=|=>|==|!=|<>|="
         }, {
             token : "paren.lparen",
-            regex : "[\\(]"
+            regex : /[\[({]/
         }, {
             token : "paren.rparen",
-            regex : "[\\)]"
+            regex : /[\])}]/
         }, {
             token : "text",
             regex : "\\s+"
         } ]
     };
     this.normalizeRules();
+
+    this.clauseAppendKeywords = clauseAppendKeywords.split("|");
 };
 
 oop.inherits(RqlHighlightRules, TextHighlightRules);
@@ -84,12 +117,15 @@ var RqlHighlightRules = require("./rql_highlight_rules").RqlHighlightRules;
 var Mode = function() {
     this.HighlightRules = RqlHighlightRules;
     this.$behaviour = this.$defaultBehaviour;
+    this.prefixRegexps = [/[a-zA-Z_0-9.'"\\\/\$\-\u00A2-\uFFFF]/]
 };
 oop.inherits(Mode, TextMode);
 
 (function() {
 
-    this.lineCommentStart = "--";
+    this.lineCommentStart = "//";
+    this.blockComment = {start: "/*", end: "*/"};
+    this.$quotes = {'"': '"', "'": "'", "`": "`"};
 
     this.$id = "ace/mode/rql";
 }).call(Mode.prototype);

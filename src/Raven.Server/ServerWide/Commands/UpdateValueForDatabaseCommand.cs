@@ -1,5 +1,4 @@
-﻿using System;
-using Raven.Client.ServerWide;
+﻿using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -10,18 +9,20 @@ namespace Raven.Server.ServerWide.Commands
 {
     public abstract class UpdateValueForDatabaseCommand : CommandBase
     {
+        public string DatabaseName { get; set; }
+
         public abstract string GetItemId();
 
-        protected virtual BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue, bool isPassive)
-        {
-            throw new NotImplementedException();
-        }
+        public abstract void FillJson(DynamicJsonValue json);
 
-        public virtual unsafe void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, bool isPassive)
+        protected abstract BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context,
+            BlittableJsonReaderObject existingValue, bool isPassive);
+
+        public virtual unsafe void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, bool isPassive, out object result)
         {
             BlittableJsonReaderObject itemBlittable = null;
             var itemKey = GetItemId();
-            
+
             using (Slice.From(context.Allocator, itemKey.ToLowerInvariant(), out Slice valueNameLowered))
             {
                 if (items.ReadByKey(valueNameLowered, out TableValueReader reader))
@@ -36,6 +37,7 @@ namespace Raven.Server.ServerWide.Commands
                 if (itemBlittable == null)
                 {
                     items.DeleteByKey(valueNameLowered);
+                    result = GetResult();
                     return;
                 }
 
@@ -47,12 +49,14 @@ namespace Raven.Server.ServerWide.Commands
             using (Slice.From(context.Allocator, itemKey.ToLowerInvariant(), out Slice valueNameLowered))
             {
                 ClusterStateMachine.UpdateValue(index, items, valueNameLowered, valueName, itemBlittable);
+                result = GetResult();
             }
-            
         }
 
-        public abstract void FillJson(DynamicJsonValue json);
-        public string DatabaseName { get; set; }
+        public virtual object GetResult()
+        {
+            return null;
+        }
 
         protected UpdateValueForDatabaseCommand(string databaseName)
         {

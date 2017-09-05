@@ -1,0 +1,51 @@
+<div class="content-margin">
+    <div class="flex-window stretch">
+        <div class="flex-window-head">
+            <div class="clearfix">
+
+                <div class="flex-header flex-horizontal margin-bottom">
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-primary"
+                                data-bind="click: refresh, enable: !spinners.refresh(), css: { 'btn-spinner': spinners.refresh() }">
+                            <i class="icon-refresh"></i>
+                            <span>Refresh</span>
+                        </button>
+                    </div>
+                    <div>Term: <span data-bind="text: topology().currentTerm"></span></div>
+                    <div class="flex-separator"></div>
+                    <div>
+                        <button class="btn btn-default" title="Cluster observer won't be making any decisions"
+                                data-bind="click: suspendObserver, visible: !$root.observerSuspended(), enable: !spinners.toggleObserver(), css: { 'btn-spinner': spinners.toggleObserver() }">
+                            <i class="icon-pause"></i>
+                            <span>Suspend cluster observer</span>
+                        </button>
+                        <button class="btn btn-success" title="Resume cluster observer"
+                                data-bind="click: resumeObserver, visible: $root.observerSuspended(), enable: !spinners.toggleObserver(), css: { 'btn-spinner': spinners.toggleObserver() }">
+                            <i class="icon-play"></i>
+                            <span>Resume cluster observer</span>
+                        </button> 
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+        <div class="flex-window-scroll">
+            <div class="has-error results-error" data-bind="visible: termChanged()">
+                <div class="help-block">
+                    <i class="icon-danger"></i><span>Term has changed. Your results are stale. <a href="#" data-bind="click: refresh">Refresh.</a></span>
+                </div>
+            </div>
+            <div class="scroll-stretch">
+                <div class="panel-body">
+                    <virtual-grid class="resizable documents-grid" params="controller: gridController, emptyTemplate: 'empty-cluster-log-template'"></virtual-grid>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script type="text/html" id="empty-cluster-log-template">
+    No entries found. 
+</script>
+<div class="tooltip json-preview lg" style="opacity: 0">
+    <pre><code class="white-space-pre"></code></pre>
+</div>

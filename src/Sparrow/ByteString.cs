@@ -10,6 +10,7 @@ using Sparrow.Collections;
 using Sparrow.Global;
 using Sparrow.Json;
 using Sparrow.LowMemory;
+using Sparrow.Threading;
 using Sparrow.Utils;
 
 namespace Sparrow
@@ -380,7 +381,7 @@ namespace Sparrow
         {
             Size = size;
             Segment = NativeMemory.AllocateMemory(size, out _thread);
-            InUse = 1;
+            InUse.Raise();
             LowMemoryNotification.NotifyAllocationPending();
         }
 
@@ -437,14 +438,14 @@ namespace Sparrow
     public struct ByteStringMemoryCache : IByteStringAllocator, ILowMemoryHandler
     {
         private static readonly ThreadLocal<SegmentStack> SegmentsPool;
-        private static readonly LowMemoryFlag LowMemoryFlag;
+        private static readonly SharedMultipleUseFlag LowMemoryFlag;
 
         public static readonly NativeMemoryCleaner<SegmentStack, UnmanagedGlobalSegment> Cleaner;
 
         static ByteStringMemoryCache()
         {
             SegmentsPool = new ThreadLocal<SegmentStack>(() => new SegmentStack(), trackAllValues: true);
-            LowMemoryFlag = new LowMemoryFlag();
+            LowMemoryFlag = new SharedMultipleUseFlag();
             Cleaner = new NativeMemoryCleaner<SegmentStack, UnmanagedGlobalSegment>(SegmentsPool, LowMemoryFlag, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
             
             LowMemoryNotification.Instance.RegisterLowMemoryHandler(ByteStringContext.Allocator);
@@ -475,7 +476,7 @@ namespace Sparrow
 
                 if (segment.Size >= size)
                 {
-                    if (Interlocked.CompareExchange(ref segment.InUse, 1, 0) != 0)
+                    if (!segment.InUse.Raise())
                         continue;
 
                     return segment;
@@ -501,7 +502,7 @@ namespace Sparrow
                 return;
             }
 
-            Interlocked.Exchange(ref memory.InUse, 0);
+            memory.InUse.Lower();
             memory.InPoolSince = DateTime.UtcNow;
 
             var stack = SegmentsPool.Value;
@@ -537,15 +538,13 @@ namespace Sparrow
 
         public void LowMemory()
         {
-            if (Interlocked.CompareExchange(ref LowMemoryFlag.LowMemoryState, 1, 0) != 0)
-                return;
-
-            Cleaner.CleanNativeMemory(null);
+            if (LowMemoryFlag.Raise())
+                Cleaner.CleanNativeMemory(null);
         }
 
         public void LowMemoryOver()
         {
-            Interlocked.CompareExchange(ref LowMemoryFlag.LowMemoryState, 0, 1);
+            LowMemoryFlag.Lower();
         }
 
         public class SegmentStack : StackHeader<UnmanagedGlobalSegment>
@@ -561,7 +560,7 @@ namespace Sparrow
         public const int DefaultAllocationBlockSizeInBytes = 1 * MinBlockSizeInBytes;
         public const int MinReusableBlockSizeInBytes = 8;
 
-        public ByteStringContext(LowMemoryFlag lowMemoryFlag, int allocationBlockSize = DefaultAllocationBlockSizeInBytes) : base(lowMemoryFlag, allocationBlockSize)
+        public ByteStringContext(SharedMultipleUseFlag lowMemoryFlag, int allocationBlockSize = DefaultAllocationBlockSizeInBytes) : base(lowMemoryFlag, allocationBlockSize)
         { }
     }
 
@@ -638,7 +637,7 @@ namespace Sparrow
         private readonly FastStack<IntPtr> _externalStringPool;
         private SegmentInformation _externalCurrent;
 
-        public ByteStringContext(LowMemoryFlag lowMemoryFlag, int allocationBlockSize = ByteStringContext.DefaultAllocationBlockSizeInBytes)
+        public ByteStringContext(SharedMultipleUseFlag lowMemoryFlag, int allocationBlockSize = ByteStringContext.DefaultAllocationBlockSizeInBytes)
         {
             if (allocationBlockSize < ByteStringContext.MinBlockSizeInBytes)
                 throw new ArgumentException($"It is not a good idea to allocate chunks of less than the {nameof(ByteStringContext.MinBlockSizeInBytes)} value of {ByteStringContext.MinBlockSizeInBytes}");
@@ -1500,7 +1499,7 @@ namespace Sparrow
         }
 
         [ThreadStatic] private static bool _isFinalizerThread;
-        private readonly LowMemoryFlag _lowMemoryFlag;
+        private readonly SharedMultipleUseFlag _lowMemoryFlag;
 
         private void ReleaseSegment(SegmentInformation segment)
         {
@@ -1512,7 +1511,7 @@ namespace Sparrow
             // Check if we can release this memory segment back to the pool.
             if (_isFinalizerThread || 
                 segment.Memory.Size > ByteStringContext.MaxAllocationBlockSizeInBytes ||
-                _lowMemoryFlag.LowMemoryState != 0)
+                _lowMemoryFlag)
             {
                 segment.Memory.Dispose();
             }

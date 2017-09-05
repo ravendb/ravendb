@@ -8,26 +8,26 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Raven.Client;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Exceptions.Documents.Transformers;
 using Raven.Server.Documents.Includes;
-using Raven.Server.Documents.TransactionCommands;
-using Raven.Server.Documents.Transformers;
+using Raven.Server.Documents.Patch;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Base64 = Sparrow.Utils.Base64;
 using ConcurrencyException = Voron.Exceptions.ConcurrencyException;
+using DeleteDocumentCommand = Raven.Server.Documents.TransactionCommands.DeleteDocumentCommand;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents.Handlers
@@ -63,23 +63,14 @@ namespace Raven.Server.Documents.Handlers
         {
             var ids = GetStringValuesQueryString("id", required: false);
             var metadataOnly = GetBoolValueQueryString("metadata-only", required: false) ?? false;
-            var transformerName = GetStringQueryString("transformer", required: false);
-
-            Transformer transformer = null;
-            if (string.IsNullOrEmpty(transformerName) == false)
-            {
-                transformer = Database.TransformerStore.GetTransformer(transformerName);
-                if (transformer == null)
-                    TransformerDoesNotExistException.ThrowFor(transformerName);
-            }
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
                 if (ids.Count > 0)
-                    GetDocumentsById(context, ids, transformer, metadataOnly);
+                    GetDocumentsById(context, ids, metadataOnly);
                 else
-                    GetDocuments(context, transformer, metadataOnly);
+                    GetDocuments(context, metadataOnly);
 
                 return Task.CompletedTask;
             }
@@ -103,11 +94,11 @@ namespace Raven.Server.Documents.Handlers
                 }
 
                 context.OpenReadTransaction();
-                GetDocumentsById(context, new StringValues(ids), null, metadataOnly);
+                GetDocumentsById(context, new StringValues(ids), metadataOnly);
             }
         }
 
-        private void GetDocuments(DocumentsOperationContext context, Transformer transformer, bool metadataOnly)
+        private void GetDocuments(DocumentsOperationContext context, bool metadataOnly)
         {
             var sw = Stopwatch.StartNew();
 
@@ -153,19 +144,7 @@ namespace Raven.Server.Documents.Handlers
                 writer.WriteStartObject();
                 writer.WritePropertyName("Results");
 
-                if (transformer != null)
-                {
-                    using (var transformerParameters = GetTransformerParameters(context))
-                    using (var scope = transformer.OpenTransformationScope(transformerParameters, null, Database.DocumentsStorage,
-                        Database.TransformerStore, context))
-                    {
-                        writer.WriteDocuments(context, scope.Transform(documents).ToList(), metadataOnly, out numberOfResults);
-                    }
-                }
-                else
-                {
-                    writer.WriteDocuments(context, documents, metadataOnly, out numberOfResults);
-                }
+                writer.WriteDocuments(context, documents, metadataOnly, out numberOfResults);
 
                 writer.WriteEndObject();
             }
@@ -173,13 +152,12 @@ namespace Raven.Server.Documents.Handlers
             AddPagingPerformanceHint(PagingOperationType.Documents, isStartsWith ? nameof(DocumentsStorage.GetDocumentsStartingWith) : nameof(GetDocuments), HttpContext, numberOfResults, pageSize, sw.Elapsed);
         }
 
-        private void GetDocumentsById(DocumentsOperationContext context, StringValues ids, Transformer transformer, bool metadataOnly)
+        private void GetDocumentsById(DocumentsOperationContext context, StringValues ids, bool metadataOnly)
         {
             var sw = Stopwatch.StartNew();
 
             var includePaths = GetStringValuesQueryString("include", required: false);
             var documents = new List<Document>(ids.Count);
-            List<string> changeVectors = null;
             var includes = new List<Document>(includePaths.Count * ids.Count);
             var includeDocs = new IncludeDocumentsCommand(Database.DocumentsStorage, context, includePaths);
             foreach (var id in ids)
@@ -195,28 +173,9 @@ namespace Raven.Server.Documents.Handlers
                 includeDocs.Gather(document);
             }
 
-            IEnumerable<Document> documentsToWrite;
-            if (transformer != null)
-            {
-                var transformerParameters = GetTransformerParameters(context);
-
-                using (var scope = transformer.OpenTransformationScope(transformerParameters, includeDocs, Database.DocumentsStorage, Database.TransformerStore, context))
-                {
-                    documentsToWrite = scope.Transform(documents).ToList();
-                    changeVectors = scope.LoadedDocumentChangeVectors;
-                }
-            }
-            else
-                documentsToWrite = documents;
-
             includeDocs.Fill(includes);
-            if (transformer != null)
-            {
-                if (changeVectors == null)
-                    changeVectors = new List<string>();
-                changeVectors.Add(transformer.Definition.TransformResults);
-            }
-            var actualEtag = ComputeEtagFor(documents, includes, changeVectors);
+
+            var actualEtag = ComputeEtagFor(documents, includes);
 
             var etag = GetStringFromHeaders("If-None-Match");
             if (etag == actualEtag)
@@ -231,11 +190,11 @@ namespace Raven.Server.Documents.Handlers
             var blittable = GetBoolValueQueryString("blittable", required: false) ?? false;
             if (blittable)
             {
-                WriteDocumentsBlittable(context, documentsToWrite, includes, out numberOfResults);
+                WriteDocumentsBlittable(context, documents, includes, out numberOfResults);
             }
             else
             {
-                WriteDocumentsJson(context, metadataOnly, documentsToWrite, includes, out numberOfResults);
+                WriteDocumentsJson(context, metadataOnly, documents, includes, out numberOfResults);
             }
 
             AddPagingPerformanceHint(PagingOperationType.Documents, nameof(GetDocumentsById), HttpContext, numberOfResults, documents.Count, sw.Elapsed);
@@ -246,19 +205,19 @@ namespace Raven.Server.Documents.Handlers
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
-                writer.WritePropertyName("Results");
+                writer.WritePropertyName(nameof(GetDocumentResult.Results));
                 writer.WriteDocuments(context, documentsToWrite, metadataOnly, out numberOfResults);
 
                 writer.WriteComma();
-                writer.WritePropertyName("Includes");
+                writer.WritePropertyName(nameof(GetDocumentResult.Includes));
                 if (includes.Count > 0)
                 {
-                    writer.WriteDocuments(context, includes, metadataOnly, out numberOfResults);
+                    writer.WriteIncludes(context, includes);
                 }
                 else
                 {
-                    writer.WriteStartArray();
-                    writer.WriteEndArray();
+                    writer.WriteStartObject();
+                    writer.WriteEndObject();
                 }
 
                 writer.WriteEndObject();
@@ -277,7 +236,7 @@ namespace Raven.Server.Documents.Handlers
                 writer.StartWriteObjectDocument();
 
                 writer.StartWriteObject();
-                writer.WritePropertyName("Results");
+                writer.WritePropertyName(nameof(GetDocumentResult.Results));
 
                 writer.StartWriteArray();
 
@@ -289,16 +248,17 @@ namespace Raven.Server.Documents.Handlers
 
                 writer.WriteArrayEnd();
 
-                writer.WritePropertyName("Includes");
+                writer.WritePropertyName(nameof(GetDocumentResult.Includes));
 
-                writer.StartWriteArray();
+                writer.StartWriteObject();
 
                 foreach (var include in includes)
                 {
+                    writer.WritePropertyName(include.Id);
                     writer.WriteEmbeddedBlittableDocument(include.Data);
                 }
 
-                writer.WriteArrayEnd();
+                writer.WriteObjectEnd();
 
                 writer.WriteObjectEnd();
 
@@ -306,12 +266,12 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private static unsafe string ComputeEtagFor(List<Document> documents, List<Document> includes, List<string> additionalChangeVectors)
+        private static unsafe string ComputeEtagFor(List<Document> documents, List<Document> includes)
         {
             // This method is efficient because we aren't materializing any values
             // except the etag, which we need
-            if (documents.Count == 1 && (includes == null || includes.Count == 0) && (additionalChangeVectors == null || additionalChangeVectors.Count == 0))
-                return documents[0]?.ChangeVector ?? "";
+            if (documents.Count == 1 && (includes == null || includes.Count == 0))
+                return documents[0]?.ChangeVector ?? string.Empty;
 
             var size = Sodium.crypto_generichash_bytes();
             Debug.Assert((int)size == 32);
@@ -320,26 +280,19 @@ namespace Raven.Server.Documents.Handlers
             if (Sodium.crypto_generichash_init(state, null, UIntPtr.Zero, size) != 0)
                 ThrowFailToInitHash();
 
-            for (int i = 0; i < documents.Count; i++)
+            foreach (var doc in documents)
             {
-                var doc = documents[i];
                 HashDocumentByChangeVector(state, doc);
             }
 
             if (includes != null)
             {
-                for (int i = 0; i < includes.Count; i++)
+                foreach (var doc in includes)
                 {
-                    var doc = includes[i];
-                    HashDocumentByChangeVector(state, doc);
-                }
-            }
+                    if (doc is IncludeDocumentsCommand.ConflictDocument)
+                        continue;
 
-            if (additionalChangeVectors != null)
-            {
-                for (int i = 0; i < additionalChangeVectors.Count; i++)
-                {
-                    HashChangeVector(state, additionalChangeVectors[i]);
+                    HashDocumentByChangeVector(state, doc);
                 }
             }
 
@@ -422,7 +375,7 @@ namespace Raven.Server.Documents.Handlers
 
                 var doc = context.ReadForDiskAsync(RequestBodyStream(), id).ConfigureAwait(false);
 
-                if (id[id.Length - 1] == '/')
+                if (id[id.Length - 1] == '|')
                 {
                     var (_, clusterId) = await ServerStore.GenerateClusterIdentityAsync(id, Database.Name);
                     id = clusterId;
@@ -469,78 +422,93 @@ namespace Raven.Server.Documents.Handlers
                 if (request.TryGet("Patch", out BlittableJsonReaderObject patchCmd) == false || patchCmd == null)
                     throw new ArgumentException("The 'Patch' field in the body request is mandatory");
 
-                var patch = PatchRequest.Parse(patchCmd);
+                var patch = PatchRequest.Parse(patchCmd, out var patchArgs);
 
                 PatchRequest patchIfMissing = null;
+                BlittableJsonReaderObject patchIfMissingArgs = null;
                 if (request.TryGet("PatchIfMissing", out BlittableJsonReaderObject patchIfMissingCmd) && patchIfMissingCmd != null)
-                    patchIfMissing = PatchRequest.Parse(patchIfMissingCmd);
+                    patchIfMissing = PatchRequest.Parse(patchIfMissingCmd, out patchIfMissingArgs);
 
                 var changeVector = context.GetLazyString(GetStringFromHeaders("If-Match"));
 
-                var command = Database.Patcher.GetPatchDocumentCommand(context, id, changeVector, patch, patchIfMissing, skipPatchIfChangeVectorMismatch, debugMode, isTest);
-
-                if (isTest == false)
-                    await Database.TxMerger.Enqueue(command);
-                else
+                using (var command = new PatchDocumentCommand(context,
+                    id,
+                    changeVector,
+                    skipPatchIfChangeVectorMismatch,
+                    (patch, patchArgs),
+                    (patchIfMissing, patchIfMissingArgs),
+                    Database,
+                    isTest,
+                    debugMode
+                ))
                 {
-                    using (patch.IsPuttingDocuments == false ?
-                        context.OpenReadTransaction() :
-                        context.OpenWriteTransaction()) // PutDocument requires the write access to the docs storage
+                    if (isTest == false)
                     {
-                        command.Execute(context);
+                        await Database.TxMerger.Enqueue(command);
                     }
-                }
-
-                switch (command.PatchResult.Status)
-                {
-                    case PatchStatus.DocumentDoesNotExist:
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                        return;
-                    case PatchStatus.Created:
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-                        break;
-                    case PatchStatus.Skipped:
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                        return;
-                    case PatchStatus.Patched:
-                    case PatchStatus.NotModified:
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                }
-
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteStartObject();
-
-                    writer.WritePropertyName(nameof(command.PatchResult.Status));
-                    writer.WriteString(command.PatchResult.Status.ToString());
-                    writer.WriteComma();
-
-                    writer.WritePropertyName(nameof(command.PatchResult.ModifiedDocument));
-                    writer.WriteObject(command.PatchResult.ModifiedDocument);
-
-                    if (debugMode)
+                    else
                     {
-                        writer.WriteComma();
-
-                        writer.WritePropertyName(nameof(command.PatchResult.OriginalDocument));
-                        if (isTest)
-                            writer.WriteObject(command.PatchResult.OriginalDocument);
-                        else
-                            writer.WriteNull();
-
-                        writer.WriteComma();
-
-                        writer.WritePropertyName(nameof(command.PatchResult.Debug));
-                        if (command.PatchResult.Debug != null)
-                            writer.WriteObject(command.PatchResult.Debug);
-                        else
-                            writer.WriteNull();
+                        // PutDocument requires the write access to the docs storage
+                        // testing patching is rare enough not to optimize it
+                        using (context.OpenWriteTransaction())
+                        {
+                            command.Execute(context);
+                        }
                     }
 
-                    writer.WriteEndObject();
+                    switch (command.PatchResult.Status)
+                    {
+                        case PatchStatus.DocumentDoesNotExist:
+                            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                            return;
+                        case PatchStatus.Created:
+                            HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+                            break;
+                        case PatchStatus.Skipped:
+                            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+                            return;
+                        case PatchStatus.Patched:
+                        case PatchStatus.NotModified:
+                            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        writer.WriteStartObject();
+
+                        writer.WritePropertyName(nameof(command.PatchResult.Status));
+                        writer.WriteString(command.PatchResult.Status.ToString());
+                        writer.WriteComma();
+
+                        writer.WritePropertyName(nameof(command.PatchResult.ModifiedDocument));
+                        writer.WriteObject(command.PatchResult.ModifiedDocument);
+
+                        if (debugMode)
+                        {
+                            writer.WriteComma();
+                            writer.WritePropertyName(nameof(command.PatchResult.OriginalDocument));
+                            if (isTest)
+                                writer.WriteObject(command.PatchResult.OriginalDocument);
+                            else
+                                writer.WriteNull();
+
+                            writer.WriteComma();
+
+                            writer.WritePropertyName(nameof(command.PatchResult.Debug));
+
+                            context.Write(writer, new DynamicJsonValue
+                            {
+                                ["Info"] = new DynamicJsonArray(command.DebugOutput),
+                                ["Actions"] = command.DebugActions?.GetDebugActions()
+                            });
+                        }
+
+
+                        writer.WriteEndObject();
+                    }
                 }
             }
         }

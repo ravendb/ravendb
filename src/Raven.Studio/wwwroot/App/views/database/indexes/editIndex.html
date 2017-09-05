@@ -1,6 +1,6 @@
 <div data-bind="if:  !isAutoIndex(), css: { 'content-margin': !isAutoIndex() }">
     <div class="flex-window edit-index">
-        <div class="flex-window-head">
+
             <div class="toolbar">
                 <div class="row">
                     <div class="col-lg-6">
@@ -24,8 +24,7 @@
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="flex-window-scroll">
+        
             <div class="row">
                 <div class="col-sm-2">
                     <h2 id="map-title">Maps <small><i class="icon-info text-info"></i></small></h2>
@@ -186,7 +185,7 @@
                     </div>
                 </div>
             </div>
-        </div>
+        
     </div>
 
     <div class="backdrop"></div>
@@ -290,6 +289,11 @@
     <div class="property operation" data-bind="visible: operation">
         <h4 data-bind="text: operation"></h4>
     </div>
+    <div class="indexing-options">
+        <span class="item" data-bind="css: { active : hasSearch}"><i class="icon-check"></i> <i class="icon-cancel"></i><span>Search</span></span>
+        <span class="item" data-bind="css: { active : hasExact}"><i class="icon-check"></i> <i class="icon-cancel"></i><span>Exact</span></span>
+    </div>
+    
 </script>
 <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ END AUTO INDEX ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 

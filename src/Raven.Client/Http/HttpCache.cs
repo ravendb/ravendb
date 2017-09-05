@@ -1,16 +1,19 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.LowMemory;
+using Sparrow.Threading;
 
 namespace Raven.Client.Http
 {
-    public class HttpCache : IDisposable
+    public class HttpCache : IDisposable, ILowMemoryHandler
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<HttpCache>("Client");
 
@@ -28,6 +31,7 @@ namespace Raven.Client.Http
         {
             _maxSize = maxSize;
             _unmanagedBuffersPool = new UnmanagedBuffersPool(nameof(HttpCache), "Client");
+            LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
         }
 
         public unsafe class HttpCacheItem : IDisposable
@@ -89,23 +93,19 @@ namespace Raven.Client.Http
 
         }
 
-        private Task _cleanupTask;
+        /// <summary>
+        /// Used to check if the FreeSpace routine is running. Avoids creating 
+        /// many tasks that shouldn't be run.
+        /// </summary>
+        private MultipleUseFlag _isFreeSpaceRunning = new MultipleUseFlag();
 
         public unsafe void Set(string url, string changeVector, BlittableJsonReaderObject result)
         {
             var mem = _unmanagedBuffersPool.Allocate(result.Size);
             result.CopyTo(mem.Address);
-            if (Interlocked.Add(ref _totalSize, result.Size) > _maxSize)
+            if (Interlocked.Add(ref _totalSize, result.Size) > _maxSize && _isFreeSpaceRunning.Raise())
             {
-                if (_cleanupTask == null)
-                {
-                    var cleanup = new Task(FreeSpace, TaskCreationOptions.RunContinuationsAsynchronously);
-                    if (Interlocked.CompareExchange(ref _cleanupTask, cleanup, null) == null)
-                    {
-                        cleanup.ContinueWith(_ => Interlocked.Exchange(ref _cleanupTask, null));
-                        cleanup.Start();
-                    }
-                }
+                Task.Run(() => FreeSpace());
             }
             var httpCacheItem = new HttpCacheItem
             {
@@ -149,6 +149,8 @@ namespace Raven.Client.Http
 
         private void FreeSpace()
         {
+            Debug.Assert(_isFreeSpaceRunning);
+
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Started to clear the http cache. Items: {_items.Count}");
 
@@ -181,6 +183,8 @@ namespace Raven.Client.Http
                     sizeCleared += FreeItem(item);
                 }
             }
+
+            _isFreeSpaceRunning.Lower();
         }
 
         private long FreeItem(KeyValuePair<string, HttpCacheItem> item)
@@ -277,6 +281,16 @@ namespace Raven.Client.Http
                 item.Value.Dispose();
             }
             _unmanagedBuffersPool.Dispose();
+        }
+
+        public void LowMemory()
+        {
+            if (_isFreeSpaceRunning.Raise())
+                FreeSpace();
+        }
+
+        public void LowMemoryOver()
+        {
         }
     }
 }

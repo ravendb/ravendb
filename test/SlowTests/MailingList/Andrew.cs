@@ -23,8 +23,8 @@ namespace SlowTests.MailingList
             var indexDefinition = technologySummaryIndex.CreateIndexDefinition();
 
             Assert.Equal(
-                @"docs.Technologies.Where(technology => !technology.__document_id.EndsWith(""/published"")).Select(technology => new {
-    TechnologyId = technology.__document_id,
+                @"docs.Technologies.Where(technology => !Id(technology).EndsWith(""/published"")).Select(technology => new {
+    TechnologyId = Id(technology),
     DrugId = technology.Drug.Id
 })".Replace("\r\n", Environment.NewLine),
                 indexDefinition.Maps.First());

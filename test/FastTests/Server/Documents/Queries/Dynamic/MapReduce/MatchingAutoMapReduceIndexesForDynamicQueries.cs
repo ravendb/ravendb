@@ -26,7 +26,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         [Fact]
         public void Failure_match_if_there_is_no_index()
         {
-            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("SELECT Location, count() FROM Users GROUP BY Location"));
+            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users GROUP BY Location SELECT Location, count() "));
 
             var result = _sut.Match(dynamicQuery);
 
@@ -38,7 +38,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         {
             var definition = new AutoMapReduceIndexDefinition("Users", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Count",
                     Storage = FieldStorage.Yes,
@@ -47,7 +47,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             },
             new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Location",
                     Storage = FieldStorage.Yes,
@@ -57,7 +57,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             add_index(definition);
 
             var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide(
-                "SELECT Location, count() FROM Users GROUP BY Location WHERE Location = 'Poland' ORDER BY Count AS long ASC, Location ASC"));
+                "FROM Users GROUP BY Location WHERE Location = 'Poland' ORDER BY Count AS long ASC, Location ASC SELECT Location, count() "));
 
             var result = _sut.Match(dynamicQuery);
 
@@ -70,12 +70,12 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         {
             var definition = new AutoMapIndexDefinition("Users", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Count",
                     Storage = FieldStorage.Yes,
                 },
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Location",
                     Storage = FieldStorage.Yes,
@@ -84,7 +84,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 
             add_index(definition);
 
-            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("SELECT Location, count() FROM Users GROUP BY Location WHERE Location = 'Poland'"));
+            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users GROUP BY Location WHERE Location = 'Poland' SELECT Location, count() "));
 
             var result = _sut.Match(dynamicQuery);
 
@@ -96,7 +96,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         {
             var definition = new AutoMapReduceIndexDefinition("Users", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Count",
                     Storage = FieldStorage.Yes,
@@ -105,7 +105,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             },
             new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Location",
                     Storage = FieldStorage.Yes,
@@ -114,7 +114,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 
             add_index(definition);
 
-            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("SELECT Location, sum(Count) FROM Users GROUP BY Location"));
+            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users GROUP BY Location SELECT Location, sum(Count) "));
 
             var result = _sut.Match(dynamicQuery);
 
@@ -126,7 +126,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         {
             var definition = new AutoMapReduceIndexDefinition("Users", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Count",
                     Storage = FieldStorage.Yes,
@@ -135,7 +135,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             },
             new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Location",
                     Storage = FieldStorage.Yes,
@@ -144,7 +144,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 
             add_index(definition);
 
-            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("SELECT Location, count(), sum(Sum) FROM Users GROUP BY Location"));
+            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users GROUP BY Location SELECT Location, count(), sum(Sum) "));
 
             var result = _sut.Match(dynamicQuery);
 
@@ -158,7 +158,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             // missing nick name field to match
             var usersByCountReducedByAgeAndLocation = new AutoMapReduceIndexDefinition("Users", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Count",
                     Storage = FieldStorage.Yes,
@@ -167,12 +167,12 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             },
             new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Location",
                     Storage = FieldStorage.Yes,
                 },
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Age",
                     Storage = FieldStorage.Yes,
@@ -182,7 +182,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             // additional Age field to match
             var usersByCountReducedByLocationAndNickNameAndAge = new AutoMapReduceIndexDefinition("Users", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Count",
                     Storage = FieldStorage.Yes,
@@ -191,17 +191,17 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             },
             new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Location",
                     Storage = FieldStorage.Yes,
                 },
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "NickName",
                     Storage = FieldStorage.Yes,
                 },
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Age",
                     Storage = FieldStorage.Yes,
@@ -212,7 +212,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             add_index(usersByCountReducedByLocationAndNickNameAndAge);
 
             var dynamicQuery =
-                DynamicQueryMapping.Create(new IndexQueryServerSide("SELECT Location, count() FROM Users GROUP BY Location, NickName WHERE Location = 'Poland'"));
+                DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users GROUP BY Location, NickName WHERE Location = 'Poland' SELECT Location, count() "));
 
             var result = _sut.Match(dynamicQuery);
 
@@ -224,7 +224,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         {
             var usersByCountGroupedByLocation = new AutoMapReduceIndexDefinition("Users", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Count",
                     Storage = FieldStorage.Yes,
@@ -233,7 +233,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             },
             new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Location",
                     Storage = FieldStorage.Yes,
@@ -242,13 +242,13 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 
             var usersByCountAndTotalAgeGroupedByLocation = new AutoMapReduceIndexDefinition("Users", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Count",
                     Storage = FieldStorage.Yes,
                     Aggregation = AggregationOperation.Count,
                 },
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "TotalAge",
                     Storage = FieldStorage.Yes,
@@ -257,7 +257,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             },
             new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Location",
                     Storage = FieldStorage.Yes,
@@ -267,7 +267,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             add_index(usersByCountGroupedByLocation);
             add_index(usersByCountAndTotalAgeGroupedByLocation);
 
-            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("SELECT Location, count() FROM Users GROUP BY Location WHERE Location = 'Poland'"));
+            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users GROUP BY Location WHERE Location = 'Poland' SELECT Location, count() "));
 
             var result = _sut.Match(dynamicQuery);
 
@@ -280,7 +280,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         {
             var definition = new AutoMapIndexDefinition("Users", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Name",
                     Storage = FieldStorage.No
@@ -297,6 +297,59 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             Assert.Equal(definition.Name, result.IndexName);
         }
 
+        [Fact]
+        public void Partial_match_if_analyzer_is_required_on_group_by_field()
+        {
+            using (var db = CreateDocumentDatabase())
+            {
+                var mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"
+from Users
+group by Name
+where Name = 'arek'
+select Name, count()"));
+
+                db.IndexStore.CreateIndex(mapping.CreateAutoIndexDefinition()).Wait();
+
+                mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"
+from Users
+group by Name
+where search(Name, 'arek')
+select Name, count()"));
+
+                var matcher = new DynamicQueryToIndexMatcher(db.IndexStore);
+
+                var result = matcher.Match(mapping);
+
+                Assert.Equal(DynamicQueryMatchType.Partial, result.MatchType);
+            }
+        }
+
+        [Fact]
+        public void Partial_match_if_exact_is_required_on_group_by_field()
+        {
+            using (var db = CreateDocumentDatabase())
+            {
+                var mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"
+from Users
+group by Name
+where Name = 'arek'
+select Name, count()"));
+
+                db.IndexStore.CreateIndex(mapping.CreateAutoIndexDefinition()).Wait();
+
+                mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"
+from Users
+group by Name
+where exact(Name = 'arek')
+select Name, count()"));
+
+                var matcher = new DynamicQueryToIndexMatcher(db.IndexStore);
+
+                var result = matcher.Match(mapping);
+
+                Assert.Equal(DynamicQueryMatchType.Partial, result.MatchType);
+            }
+        }
 
         protected void add_index(IndexDefinitionBase definition)
         {

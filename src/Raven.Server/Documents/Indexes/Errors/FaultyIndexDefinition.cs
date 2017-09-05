@@ -5,11 +5,16 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Errors
 {
-    public class FaultyIndexDefinition : IndexDefinitionBase
+    public class FaultyIndexDefinition : IndexDefinitionBase<IndexField>
     {
         public FaultyIndexDefinition(string name, HashSet<string> collections, IndexLockMode lockMode, IndexPriority priority, IndexField[] mapFields)
             : base(name, collections, lockMode, priority, mapFields)
         {
+        }
+
+        protected override void PersistMapFields(JsonOperationContext context, BlittableJsonTextWriter writer)
+        {
+            throw new NotSupportedException($"Definition of a faulty '{Name}' index does not support that");
         }
 
         protected override void PersistFields(JsonOperationContext context, BlittableJsonTextWriter writer)

@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 {
     public class MemoryStatsHandler : RequestHandler
     {
-        [RavenAction("/admin/debug/memory/stats", "GET", AuthorizationStatus.ServerAdmin, IsDebugInformationEndpoint = true)]
+        [RavenAction("/admin/debug/memory/stats", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public Task MemoryStats()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -37,7 +37,11 @@ namespace Raven.Server.Documents.Handlers.Debugging
         public static DynamicJsonValue MemoryStatsInternal()
         {
             var currentProcess = Process.GetCurrentProcess();
-            var workingSet = currentProcess.WorkingSet64;
+            long workingSet;
+            if (Sparrow.Platform.PlatformDetails.RunningOnPosix == false)
+                workingSet = currentProcess.WorkingSet64;
+            else
+                workingSet = Sparrow.LowMemory.MemoryInformation.GetRssMemoryUsage(currentProcess.Id);
             long totalUnmanagedAllocations = 0;
             long totalMapping = 0;
             var fileMappingByDir = new Dictionary<string, Dictionary<string, ConcurrentDictionary<IntPtr, long>>>();
@@ -112,15 +116,15 @@ namespace Raven.Server.Documents.Handlers.Debugging
             foreach (var stats in NativeMemory.ThreadAllocations.Values
                 .Where(x => x.ThreadInstance.IsAlive)
                 .GroupBy(x => x.Name)
-                .OrderByDescending(x => x.Sum(y => y.Allocations)))
+                .OrderByDescending(x => x.Sum(y => y.TotalAllocated)))
             {
-                var unmanagedAllocations = stats.Sum(x => x.Allocations);
+                var unmanagedAllocations = stats.Sum(x => x.TotalAllocated);
                 totalUnmanagedAllocations += unmanagedAllocations;
-                var ids = new DynamicJsonArray(stats.OrderByDescending(x => x.Allocations).Select(x => new DynamicJsonValue
+                var ids = new DynamicJsonArray(stats.OrderByDescending(x => x.TotalAllocated).Select(x => new DynamicJsonValue
                 {
                     ["Id"] = x.Id,
-                    ["Allocations"] = x.Allocations,
-                    ["HumaneAllocations"] = Size.Humane(x.Allocations)
+                    ["Allocations"] = x.TotalAllocated,
+                    ["HumaneAllocations"] = Size.Humane(x.TotalAllocated)
                 }));
                 var groupStats = new DynamicJsonValue
                 {

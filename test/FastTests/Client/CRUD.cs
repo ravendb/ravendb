@@ -1,4 +1,4 @@
-﻿using Raven.Client.Documents;
+﻿using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -99,8 +99,7 @@ namespace FastTests.Client
                     newSession.SaveChanges();
 
                     var newFamily = newSession.Load<Family>("family/1");
-                    newFamily.Names = new[] { "RavenDB", "Hibernating Rhinos" };
-                    Assert.Equal(newSession.Advanced.WhatChanged().Count, 0);
+
                     newFamily.Names = new[] {"Toli", "Mitzi", "Boki"};
                     Assert.Equal(newSession.Advanced.WhatChanged().Count, 1);
                     newSession.SaveChanges();
@@ -123,10 +122,10 @@ namespace FastTests.Client
                     newSession.SaveChanges();
 
                     var newFamily = newSession.Load<Family>("family/1");
-                    newFamily.Names = new[] { "RavenDB", "Hibernating Rhinos" };
+                    newFamily.Names = new[] {"Hibernating Rhinos", "RavenDB"};
                     Assert.Equal(newSession.Advanced.WhatChanged().Count, 0);
                     newFamily.Names = new[] { "RavenDB", "Hibernating Rhinos" };
-                    Assert.Equal(newSession.Advanced.WhatChanged().Count, 0);
+                    Assert.Equal(newSession.Advanced.WhatChanged().Count, 1);
                     newSession.SaveChanges();
                 }
             }
@@ -147,8 +146,7 @@ namespace FastTests.Client
                     newSession.SaveChanges();
 
                     var newFamily = newSession.Load<Family>("family/1");
-                    newFamily.Names = new[] { "RavenDB", "Hibernating Rhinos" };
-                    Assert.Equal(newSession.Advanced.WhatChanged().Count, 0);
+
                     newFamily.Names = new[] { "RavenDB" };
                     Assert.Equal(newSession.Advanced.WhatChanged().Count, 1);
                     newSession.SaveChanges();
@@ -171,8 +169,7 @@ namespace FastTests.Client
                     newSession.SaveChanges();
 
                     var newFamily = newSession.Load<Family>("family/1");
-                    newFamily.Names = new[] { "RavenDB", "Hibernating Rhinos" };
-                    Assert.Equal(newSession.Advanced.WhatChanged().Count, 0);
+
                     newFamily.Names = new[] { "RavenDB", "Hibernating Rhinos", "Toli", "Mitzi", "Boki" };
                     Assert.Equal(newSession.Advanced.WhatChanged().Count, 1);
                     newSession.SaveChanges();
@@ -195,8 +192,7 @@ namespace FastTests.Client
                     newSession.SaveChanges();
 
                     var newFamily = newSession.Load<Family>("family/1");
-                    newFamily.Names = new[] { "RavenDB", "Hibernating Rhinos" };
-                    Assert.Equal(newSession.Advanced.WhatChanged().Count, 0);
+
                     newFamily.Names = new[] { "RavenDB", "Toli" };
                     Assert.Equal(newSession.Advanced.WhatChanged().Count, 1);
                     newSession.SaveChanges();
@@ -275,7 +271,32 @@ namespace FastTests.Client
                             Age = 8
                         }
                     };
-                    Assert.Equal(newSession.Advanced.WhatChanged().Count, 0);
+
+                    var changes = newSession.Advanced.WhatChanged();
+
+                    Assert.Equal(1 , changes.Count);
+                    Assert.Equal(4 , changes["family/1"].Length);
+
+                    Assert.Equal("Name", changes["family/1"][0].FieldName);
+                    Assert.Equal(DocumentsChanges.ChangeType.FieldChanged, changes["family/1"][0].Change);
+                    Assert.Equal("Hibernating Rhinos", changes["family/1"][0].FieldOldValue.ToString());
+                    Assert.Equal("RavenDB", changes["family/1"][0].FieldNewValue.ToString());
+
+                    Assert.Equal("Age", changes["family/1"][1].FieldName);
+                    Assert.Equal(DocumentsChanges.ChangeType.FieldChanged, changes["family/1"][1].Change);
+                    Assert.Equal(8L, changes["family/1"][1].FieldOldValue);
+                    Assert.Equal(4L, changes["family/1"][1].FieldNewValue);
+
+                    Assert.Equal("Name", changes["family/1"][2].FieldName);
+                    Assert.Equal(DocumentsChanges.ChangeType.FieldChanged, changes["family/1"][2].Change);
+                    Assert.Equal("RavenDB", changes["family/1"][2].FieldOldValue.ToString());
+                    Assert.Equal("Hibernating Rhinos", changes["family/1"][2].FieldNewValue.ToString());
+
+                    Assert.Equal("Age", changes["family/1"][3].FieldName);
+                    Assert.Equal(DocumentsChanges.ChangeType.FieldChanged, changes["family/1"][3].Change);
+                    Assert.Equal(4L, changes["family/1"][3].FieldOldValue);
+                    Assert.Equal(8L, changes["family/1"][3].FieldNewValue);
+
                     newFamily.Members = new[]
                     {
                         new member()
@@ -289,8 +310,31 @@ namespace FastTests.Client
                             Age = 15
                         }
                     };
-                    Assert.Equal(newSession.Advanced.WhatChanged().Count, 1);
-                    newSession.SaveChanges();
+
+                    changes = newSession.Advanced.WhatChanged();
+
+                    Assert.Equal(1, changes.Count);
+                    Assert.Equal(4, changes["family/1"].Length);
+
+                    Assert.Equal("Name", changes["family/1"][0].FieldName);
+                    Assert.Equal(DocumentsChanges.ChangeType.FieldChanged, changes["family/1"][0].Change);
+                    Assert.Equal("Hibernating Rhinos", changes["family/1"][0].FieldOldValue.ToString());
+                    Assert.Equal("Toli", changes["family/1"][0].FieldNewValue.ToString());
+
+                    Assert.Equal("Age", changes["family/1"][1].FieldName);
+                    Assert.Equal(DocumentsChanges.ChangeType.FieldChanged, changes["family/1"][1].Change);
+                    Assert.Equal(8L, changes["family/1"][1].FieldOldValue);
+                    Assert.Equal(5L, changes["family/1"][1].FieldNewValue);
+
+                    Assert.Equal("Name", changes["family/1"][2].FieldName);
+                    Assert.Equal(DocumentsChanges.ChangeType.FieldChanged, changes["family/1"][2].Change);
+                    Assert.Equal("RavenDB", changes["family/1"][2].FieldOldValue.ToString());
+                    Assert.Equal("Boki", changes["family/1"][2].FieldNewValue.ToString());
+
+                    Assert.Equal("Age", changes["family/1"][3].FieldName);
+                    Assert.Equal(DocumentsChanges.ChangeType.FieldChanged, changes["family/1"][3].Change);
+                    Assert.Equal(4L, changes["family/1"][3].FieldOldValue);
+                    Assert.Equal(15L, changes["family/1"][3].FieldNewValue);
                 }
             }
         }
@@ -341,22 +385,124 @@ namespace FastTests.Client
                                 str = new [] {"a", "b"}
                             }
                        };
-                    Assert.Equal(newSession.Advanced.WhatChanged().Count, 0);
-                    newArr.arr1 = new Arr1[]
-                        {
-                            new Arr1()
-                            {
-                                str = new [] {"q", "w"}
-                            },
-                            new Arr1()
-                            {
-                                str = new [] {"a", "b"}
-                            }
-                       };
-                    Assert.Equal(newSession.Advanced.WhatChanged().Count, 1);
+                    var whatChanged = newSession.Advanced.WhatChanged();
+                    Assert.Equal(1, whatChanged.Count);
+
+                    var change = whatChanged["arr/1"];
+                    Assert.Equal(4, change.Length);
+                    Assert.Equal("a", change[0].FieldOldValue.ToString());
+                    Assert.Equal("d", change[0].FieldNewValue.ToString());
+
+                    Assert.Equal("b", change[1].FieldOldValue.ToString());
+                    Assert.Equal("c", change[1].FieldNewValue.ToString());
+
+                    Assert.Equal("c", change[2].FieldOldValue.ToString());
+                    Assert.Equal("a", change[2].FieldNewValue.ToString());
+
+                    Assert.Equal("d", change[3].FieldOldValue.ToString());
+                    Assert.Equal("b", change[3].FieldNewValue.ToString());
+
                     newSession.SaveChanges();
                 }
+
+                using (var newSession = store.OpenSession())
+                {
+                    var newArr = newSession.Load<Arr2>("arr/1");
+                    newArr.arr1 = new Arr1[]
+                    {
+                        new Arr1()
+                        {
+                            str = new [] {"q", "w"}
+                        },
+                        new Arr1()
+                        {
+                            str = new [] {"a", "b"}
+                        }
+                    };
+                    var whatChanged = newSession.Advanced.WhatChanged();
+                    Assert.Equal(whatChanged.Count, 1);
+
+                    var change = whatChanged["arr/1"];
+                    Assert.Equal(2, change.Length);
+                    Assert.Equal("d", change[0].FieldOldValue.ToString());
+                    Assert.Equal("q", change[0].FieldNewValue.ToString());
+
+                    Assert.Equal("c", change[1].FieldOldValue.ToString());
+                    Assert.Equal("w", change[1].FieldNewValue.ToString());
+                }
             }
+        }
+
+        [Fact]
+        public void CRUD_Can_Update_Property_To_Null()
+        {
+            //RavenDB-8345
+
+            using (var store = GetDocumentStore())
+            {
+                using (var newSession = store.OpenSession())
+                {
+                    newSession.Store(new User { Name = "user1" }, "users/1");
+                    newSession.SaveChanges();
+                }
+
+                using (var newSession = store.OpenSession())
+                {
+                    var user = newSession.Load<User>("users/1");
+                    user.Name = null;
+                    newSession.SaveChanges();
+                }
+
+                using (var newSession = store.OpenSession())
+                {
+                    var user = newSession.Load<User>("users/1");
+                    Assert.Null(user.Name);
+                }
+            }
+        }
+
+        [Fact]
+        public void CRUD_Can_Update_Property_From_Null_To_Object()
+        {
+            //RavenDB-8345
+
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Poc
+                    {
+                        Name = "aviv",
+                        Obj = null
+                    }, "pocs/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var poc = session.Load<Poc>("pocs/1");
+                    Assert.Null(poc.Obj);
+
+                    poc.Obj = new
+                    {
+                        a = 1,
+                        b = "2"
+                    };
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var poc = session.Load<Poc>("pocs/1");
+                    Assert.NotNull(poc.Obj);
+                }
+            }
+        }
+
+        class Poc
+        {
+            public string Name { get; set; }
+            public object Obj { get; set; }
         }
     }
 }

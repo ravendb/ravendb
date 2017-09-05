@@ -101,8 +101,8 @@ namespace SlowTests.Bugs.Indexing
         {
             public override IndexDefinition CreateIndexDefinition()
             {
-                var fieldOptions1 = new IndexFieldOptions { Indexing = FieldIndexing.NotAnalyzed, Storage = FieldStorage.Yes };
-                var fieldOptions2 = new IndexFieldOptions { Indexing = FieldIndexing.Analyzed, Storage = FieldStorage.Yes };
+                var fieldOptions1 = new IndexFieldOptions { Indexing = FieldIndexing.Exact, Storage = FieldStorage.Yes };
+                var fieldOptions2 = new IndexFieldOptions { Indexing = FieldIndexing.Search, Storage = FieldStorage.Yes };
 
                 var index = new IndexDefinition
                 {

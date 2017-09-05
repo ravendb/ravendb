@@ -25,14 +25,16 @@ namespace Raven.Client.Json
         public override void WriteStartObject()
         {
             _manualBlittableJsonDocumentBuilder.StartWriteObject();
-            if (!_first) return;
+            if (!_first)
+                return;
             _first = false;
             WriteMetadata();
         }
 
         private void WriteMetadata()
         {
-            if (_documentInfo == null) return;
+            if (_documentInfo == null)
+                return;
             if (_documentInfo.Metadata?.Modifications != null && (_documentInfo.Metadata.Modifications.Properties.Count > 0))
             {
                 _manualBlittableJsonDocumentBuilder.WritePropertyName(Constants.Documents.Metadata.Key);
@@ -40,8 +42,12 @@ namespace Raven.Client.Json
 
                 foreach (var prop in _documentInfo.Metadata.Modifications.Properties)
                 {
-                    if(prop.Item1.StartsWith("@") && prop.Item1 != Constants.Documents.Metadata.Collection)
-                        continue; // system property, ignoring it
+                    if (prop.Name.Length > 0 && prop.Name[0] == '@')
+                    {
+                        if (prop.Name != Constants.Documents.Metadata.Collection && prop.Name != Constants.Documents.Metadata.Expires)
+                            continue; // system property, ignoring it
+                    }
+
                     _manualBlittableJsonDocumentBuilder.WritePropertyName(prop.Item1);
                     var value = prop.Item2;
 
@@ -65,7 +71,7 @@ namespace Raven.Client.Json
                     else if (value is bool)
                         _manualBlittableJsonDocumentBuilder.WriteValue((bool)value);
                     else if (value is LazyNumberValue)
-                        _manualBlittableJsonDocumentBuilder.WriteValue((LazyNumberValue) value);
+                        _manualBlittableJsonDocumentBuilder.WriteValue((LazyNumberValue)value);
                     else
                         throw new NotSupportedException($"The value type {value.GetType().FullName} of key {prop.Item1} is not supported in the metadata");
                 }
@@ -125,7 +131,7 @@ namespace Raven.Client.Json
                             _manualBlittableJsonDocumentBuilder.WriteArrayEnd();
                             break;
                         case BlittableJsonToken.Integer:
-                            _manualBlittableJsonDocumentBuilder.WriteValue((long) propertyDetails.Value);
+                            _manualBlittableJsonDocumentBuilder.WriteValue((long)propertyDetails.Value);
                             break;
                         case BlittableJsonToken.LazyNumber:
                             if (propertyDetails.Value is LazyNumberValue ldv)
@@ -271,20 +277,26 @@ namespace Raven.Client.Json
 
         public override void WriteValue(int? value)
         {
-            if (value != null) _manualBlittableJsonDocumentBuilder.WriteValue(value.Value);
-            else _manualBlittableJsonDocumentBuilder.WriteValueNull();
+            if (value != null)
+                _manualBlittableJsonDocumentBuilder.WriteValue(value.Value);
+            else
+                _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
         public override void WriteValue(long? value)
         {
-            if (value != null) _manualBlittableJsonDocumentBuilder.WriteValue(value.Value);
-            else _manualBlittableJsonDocumentBuilder.WriteValueNull();
+            if (value != null)
+                _manualBlittableJsonDocumentBuilder.WriteValue(value.Value);
+            else
+                _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
         public override void WriteValue(float? value)
         {
-            if (value != null) _manualBlittableJsonDocumentBuilder.WriteValue(value.Value);
-            else _manualBlittableJsonDocumentBuilder.WriteValueNull();
+            if (value != null)
+                _manualBlittableJsonDocumentBuilder.WriteValue(value.Value);
+            else
+                _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
         public override void WriteValue(double? value)
@@ -300,38 +312,50 @@ namespace Raven.Client.Json
 
         public override void WriteValue(bool? value)
         {
-            if (value != null) _manualBlittableJsonDocumentBuilder.WriteValue(value.Value);
-            else _manualBlittableJsonDocumentBuilder.WriteValueNull();
+            if (value != null)
+                _manualBlittableJsonDocumentBuilder.WriteValue(value.Value);
+            else
+                _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
         public override void WriteValue(short? value)
         {
-            if (value != null) _manualBlittableJsonDocumentBuilder.WriteValue(value.Value);
-            else _manualBlittableJsonDocumentBuilder.WriteValueNull();
+            if (value != null)
+                _manualBlittableJsonDocumentBuilder.WriteValue(value.Value);
+            else
+                _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
         public override void WriteValue(byte? value)
         {
-            if (value != null) _manualBlittableJsonDocumentBuilder.WriteValue(value.Value);
-            else _manualBlittableJsonDocumentBuilder.WriteValueNull();
+            if (value != null)
+                _manualBlittableJsonDocumentBuilder.WriteValue(value.Value);
+            else
+                _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
         public override void WriteValue(decimal? value)
         {
-            if (value != null) _manualBlittableJsonDocumentBuilder.WriteValue((float)value.Value);
-            else _manualBlittableJsonDocumentBuilder.WriteValueNull();
+            if (value != null)
+                _manualBlittableJsonDocumentBuilder.WriteValue((float)value.Value);
+            else
+                _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
         public override void WriteValue(DateTime? value)
         {
-            if (value != null) _manualBlittableJsonDocumentBuilder.WriteValue(value.Value.GetDefaultRavenFormat(isUtc: value.Value.Kind == DateTimeKind.Utc));
-            else _manualBlittableJsonDocumentBuilder.WriteValueNull();
+            if (value != null)
+                _manualBlittableJsonDocumentBuilder.WriteValue(value.Value.GetDefaultRavenFormat(isUtc: value.Value.Kind == DateTimeKind.Utc));
+            else
+                _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
         public override void WriteValue(DateTimeOffset? value)
         {
-            if (value != null) _manualBlittableJsonDocumentBuilder.WriteValue(value.Value.ToString(Default.DateTimeOffsetFormatsToWrite));
-            else _manualBlittableJsonDocumentBuilder.WriteValueNull();
+            if (value != null)
+                _manualBlittableJsonDocumentBuilder.WriteValue(value.Value.ToString(Default.DateTimeOffsetFormatsToWrite));
+            else
+                _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
         protected override void Dispose(bool disposing)
@@ -351,8 +375,10 @@ namespace Raven.Client.Json
 
         public override void WriteValue(Guid? value)
         {
-            if (value != null) _manualBlittableJsonDocumentBuilder.WriteValue(value.Value.ToString());
-            else _manualBlittableJsonDocumentBuilder.WriteValueNull();
+            if (value != null)
+                _manualBlittableJsonDocumentBuilder.WriteValue(value.Value.ToString());
+            else
+                _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
         public override void WriteValue(char value)
@@ -362,8 +388,10 @@ namespace Raven.Client.Json
 
         public override void WriteValue(char? value)
         {
-            if (value != null) _manualBlittableJsonDocumentBuilder.WriteValue(value.Value.ToString());
-            else _manualBlittableJsonDocumentBuilder.WriteValueNull();
+            if (value != null)
+                _manualBlittableJsonDocumentBuilder.WriteValue(value.Value.ToString());
+            else
+                _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
         public override void WriteValue(sbyte value)
@@ -373,8 +401,10 @@ namespace Raven.Client.Json
 
         public override void WriteValue(sbyte? value)
         {
-            if (value != null) _manualBlittableJsonDocumentBuilder.WriteValue(value.Value);
-            else _manualBlittableJsonDocumentBuilder.WriteValueNull();
+            if (value != null)
+                _manualBlittableJsonDocumentBuilder.WriteValue(value.Value);
+            else
+                _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
         public override void WriteValue(uint value)
@@ -384,8 +414,10 @@ namespace Raven.Client.Json
 
         public override void WriteValue(uint? value)
         {
-            if (value != null) _manualBlittableJsonDocumentBuilder.WriteValue(value.Value);
-            else _manualBlittableJsonDocumentBuilder.WriteValueNull();
+            if (value != null)
+                _manualBlittableJsonDocumentBuilder.WriteValue(value.Value);
+            else
+                _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
         public override void WriteValue(ushort value)
@@ -395,8 +427,10 @@ namespace Raven.Client.Json
 
         public override void WriteValue(ushort? value)
         {
-            if (value != null) _manualBlittableJsonDocumentBuilder.WriteValue(value.Value);
-            else _manualBlittableJsonDocumentBuilder.WriteValueNull();
+            if (value != null)
+                _manualBlittableJsonDocumentBuilder.WriteValue(value.Value);
+            else
+                _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
         public override void WriteValue(ulong value)
@@ -406,8 +440,10 @@ namespace Raven.Client.Json
 
         public override void WriteValue(ulong? value)
         {
-            if (value != null) _manualBlittableJsonDocumentBuilder.WriteValue(value.Value);
-            else _manualBlittableJsonDocumentBuilder.WriteValueNull();
+            if (value != null)
+                _manualBlittableJsonDocumentBuilder.WriteValue(value.Value);
+            else
+                _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
         public override void WriteValue(TimeSpan value)
@@ -417,20 +453,26 @@ namespace Raven.Client.Json
 
         public override void WriteValue(TimeSpan? value)
         {
-            if (value != null) _manualBlittableJsonDocumentBuilder.WriteValue(value.Value.ToString("c"));
-            else _manualBlittableJsonDocumentBuilder.WriteValueNull();
+            if (value != null)
+                _manualBlittableJsonDocumentBuilder.WriteValue(value.Value.ToString("c"));
+            else
+                _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
         public override void WriteValue(byte[] value)
         {
-            if (value != null) _manualBlittableJsonDocumentBuilder.WriteValue(Convert.ToBase64String(value));
-            else _manualBlittableJsonDocumentBuilder.WriteValueNull();
+            if (value != null)
+                _manualBlittableJsonDocumentBuilder.WriteValue(Convert.ToBase64String(value));
+            else
+                _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
         public override void WriteValue(Uri value)
         {
-            if (value != null) _manualBlittableJsonDocumentBuilder.WriteValue(value.ToString());
-            else _manualBlittableJsonDocumentBuilder.WriteValueNull();
+            if (value != null)
+                _manualBlittableJsonDocumentBuilder.WriteValue(value.ToString());
+            else
+                _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
         public override void WriteValue(object value)

@@ -100,8 +100,8 @@ namespace SlowTests.Bugs.MultiMapSearch
                                                 }.Boost(3),
                                             });
 
-                Index(x => x.Query, FieldIndexing.Analyzed);
-                Index(x => x.QueryBoosted, FieldIndexing.Analyzed);
+                Index(x => x.Query, FieldIndexing.Search);
+                Index(x => x.QueryBoosted, FieldIndexing.Search);
             }
         }
 

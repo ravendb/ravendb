@@ -5,7 +5,7 @@ using Xunit;
 
 namespace FastTests.Server.Replication
 {
-    public class ReplicationBasicTests : ReplicationTestsBase
+    public class ReplicationBasicTests : ReplicationTestBase
     {
         public readonly string DbName = "TestDB" + Guid.NewGuid();
 
@@ -21,8 +21,14 @@ namespace FastTests.Server.Replication
             var dbName1 = DbName + "-1";
             var dbName2 = DbName + "-2";
             
-            using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))
-            using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
+            using (var store1 = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => dbName1
+            }))
+            using (var store2 = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => dbName2
+            }))
             {
                 await SetupReplicationAsync(store1, store2);
 
@@ -61,8 +67,14 @@ namespace FastTests.Server.Replication
         {
             var dbName1 = DbName + "-1";
             var dbName2 = DbName + "-2";
-            using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))
-            using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
+            using (var store1 = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => dbName1
+            }))
+            using (var store2 = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => dbName2
+            }))
             {
                 await SetupReplicationAsync(store1, store2);
 
@@ -129,8 +141,14 @@ namespace FastTests.Server.Replication
         {
             var dbName1 = DbName + "-1";
             var dbName2 = DbName + "-2";
-            using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))
-            using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
+            using (var store1 = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => dbName1
+            }))
+            using (var store2 = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => dbName2
+            }))
             {
                 await SetupReplicationAsync(store1, store2);
                 await SetupReplicationAsync(store2, store1);
@@ -219,8 +237,14 @@ namespace FastTests.Server.Replication
         {
             var dbName1 = DbName + "-1";
             var dbName2 = DbName + "-2";
-            using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))
-            using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
+            using (var store1 = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => dbName1
+            }))
+            using (var store2 = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => dbName2
+            }))
             {
                 //TODO : configure test code to throw exceptions at server-side during replication
                 //TODO : (find a way to do so)
@@ -262,8 +286,14 @@ namespace FastTests.Server.Replication
         {
             var dbName1 = DbName + "-1";
             var dbName2 = DbName + "-2";
-            using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))
-            using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
+            using (var store1 = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => dbName1
+            }))
+            using (var store2 = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => dbName2
+            }))
             {
                 await SetupReplicationAsync(store1, store2); // master-slave
 

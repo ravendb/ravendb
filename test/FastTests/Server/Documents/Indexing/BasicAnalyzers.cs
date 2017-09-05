@@ -38,36 +38,36 @@ namespace FastTests.Server.Documents.Indexing
             Assert.IsType<LowerCaseKeywordAnalyzer>(analyzer.GetAnalyzer("Field1"));
 
             fields.Clear();
-            fields.Add("Field1", new IndexField { Analyzer = "StandardAnalyzer", Indexing = FieldIndexing.NotAnalyzed }); // 'NotAnalyzed' => 'KeywordAnalyzer'
+            fields.Add("Field1", new IndexField { Name = "Field1", Analyzer = "StandardAnalyzer", Indexing = FieldIndexing.Exact }); // 'NotAnalyzed' => 'KeywordAnalyzer'
             analyzer = operation.GetAnalyzer(fields, forQuerying: false);
 
             Assert.IsType<LowerCaseKeywordAnalyzer>(analyzer.GetAnalyzer(string.Empty));
             Assert.IsType<KeywordAnalyzer>(analyzer.GetAnalyzer("Field1"));
 
             fields.Clear();
-            fields.Add("Field1", new IndexField { Analyzer = null, Indexing = FieldIndexing.Analyzed }); // 'Analyzed = null' => 'StandardAnalyzer'
+            fields.Add("Field1", new IndexField { Name = "Field1", Analyzer = null, Indexing = FieldIndexing.Search }); // 'Analyzed = null' => 'StandardAnalyzer'
             analyzer = operation.GetAnalyzer(fields, forQuerying: false);
 
             Assert.IsType<LowerCaseKeywordAnalyzer>(analyzer.GetAnalyzer(string.Empty));
             Assert.IsType<RavenStandardAnalyzer>(analyzer.GetAnalyzer("Field1"));
 
             fields.Clear();
-            fields.Add("Field1", new IndexField { Analyzer = typeof(NotForQueryingAnalyzer).AssemblyQualifiedName, Indexing = FieldIndexing.Analyzed });
+            fields.Add("Field1", new IndexField { Name = "Field1", Analyzer = typeof(NotForQueryingAnalyzer).AssemblyQualifiedName, Indexing = FieldIndexing.Search });
             analyzer = operation.GetAnalyzer(fields, forQuerying: false);
 
             Assert.IsType<LowerCaseKeywordAnalyzer>(analyzer.GetAnalyzer(string.Empty));
             Assert.IsType<NotForQueryingAnalyzer>(analyzer.GetAnalyzer("Field1"));
 
             fields.Clear();
-            fields.Add("Field1", new IndexField { Analyzer = typeof(NotForQueryingAnalyzer).AssemblyQualifiedName, Indexing = FieldIndexing.Analyzed });
+            fields.Add("Field1", new IndexField { Name = "Field1", Analyzer = typeof(NotForQueryingAnalyzer).AssemblyQualifiedName, Indexing = FieldIndexing.Search });
             analyzer = operation.GetAnalyzer(fields, forQuerying: true);
 
             Assert.IsType<LowerCaseKeywordAnalyzer>(analyzer.GetAnalyzer(string.Empty));
             Assert.IsType<RavenStandardAnalyzer>(analyzer.GetAnalyzer("Field1"));
 
             fields.Clear();
-            fields.Add("Field1", new IndexField { Analyzer = typeof(NotForQueryingAnalyzer).AssemblyQualifiedName, Indexing = FieldIndexing.Analyzed });
-            fields.Add("Field2", new IndexField { Analyzer = "KeywordAnalyzer", Indexing = FieldIndexing.Analyzed });
+            fields.Add("Field1", new IndexField { Name = "Field1", Analyzer = typeof(NotForQueryingAnalyzer).AssemblyQualifiedName, Indexing = FieldIndexing.Search });
+            fields.Add("Field2", new IndexField { Name = "Field2", Analyzer = "KeywordAnalyzer", Indexing = FieldIndexing.Search });
             analyzer = operation.GetAnalyzer(fields, forQuerying: false);
 
             Assert.IsType<LowerCaseKeywordAnalyzer>(analyzer.GetAnalyzer(string.Empty));

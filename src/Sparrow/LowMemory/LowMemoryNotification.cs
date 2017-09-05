@@ -3,17 +3,11 @@ using System.Collections.Generic;
 using System.Threading;
 using Sparrow.Collections;
 using Sparrow.Logging;
+using Sparrow.Threading;
 using Sparrow.Utils;
 
 namespace Sparrow.LowMemory
 {
-    public class LowMemoryFlag
-    {
-        public int LowMemoryState;
-
-        public static LowMemoryFlag None = new LowMemoryFlag();
-    }
-
     public interface ILowMemoryHandler
     {
         void LowMemory();
@@ -133,7 +127,7 @@ namespace Sparrow.LowMemory
                             if (stats.ThreadInstance.IsAlive == false)
                                 continue;
 
-                            totalUnmanagedAllocations += stats.Allocations;
+                            totalUnmanagedAllocations += stats.TotalAllocated;
                         }
 
                         var memInfo = MemoryInformation.GetMemoryInfo();

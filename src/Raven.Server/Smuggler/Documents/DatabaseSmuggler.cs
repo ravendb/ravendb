@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -7,7 +6,6 @@ using System.Threading;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
-using Raven.Client.Documents.Transformers;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes.Auto;
@@ -29,17 +27,9 @@ namespace Raven.Server.Smuggler.Documents
         private CancellationToken _token;
 
         public Action<IndexDefinitionAndType> OnIndexAction;
-        public Action<TransformerDefinition> OnTransformerAction;
-        public Action<KeyValuePair<string, long>> OnIdentityAction;
+        public Action<(string Prefix, long Value)> OnIdentityAction;
 
-        public DatabaseSmuggler(
-            ISmugglerSource source,
-            ISmugglerDestination destination,
-            SystemTime time,
-            DatabaseSmugglerOptions options = null,
-            SmugglerResult result = null,
-            Action<IOperationProgress> onProgress = null,
-            CancellationToken token = default(CancellationToken))
+        public DatabaseSmuggler(DocumentDatabase database, ISmugglerSource source, ISmugglerDestination destination, SystemTime time, DatabaseSmugglerOptions options = null, SmugglerResult result = null, Action<IOperationProgress> onProgress = null, CancellationToken token = default(CancellationToken))
         {
             _source = source;
             _destination = destination;
@@ -48,7 +38,7 @@ namespace Raven.Server.Smuggler.Documents
             _token = token;
 
             if (string.IsNullOrWhiteSpace(_options.TransformScript) == false)
-                _patcher = new SmugglerPatcher(_options);
+                _patcher = new SmugglerPatcher(_options, database);
 
             _time = time;
             _onProgress = onProgress ?? (progress => { });
@@ -57,7 +47,7 @@ namespace Raven.Server.Smuggler.Documents
         public SmugglerResult Execute()
         {
             var result = _result ?? new SmugglerResult();
-
+            using (_patcher?.Initialize())
             using (_source.Initialize(_options, result, out long buildVersion))
             using (_destination.Initialize(_options, result, buildVersion))
             {
@@ -74,8 +64,8 @@ namespace Raven.Server.Smuggler.Documents
                 EnsureStepProcessed(result.Documents.Attachments);
                 EnsureStepProcessed(result.RevisionDocuments);
                 EnsureStepProcessed(result.RevisionDocuments.Attachments);
+                EnsureStepProcessed(result.Tombstones);
                 EnsureStepProcessed(result.Indexes);
-                EnsureStepProcessed(result.Transformers);
                 EnsureStepProcessed(result.Identities);
 
                 return result;
@@ -111,11 +101,11 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.RevisionDocuments:
                     counts = ProcessRevisionDocuments(result);
                     break;
+                case DatabaseItemType.Tombstones:
+                    counts = ProcessTombstones(result);
+                    break;
                 case DatabaseItemType.Indexes:
                     counts = ProcessIndexes(result);
-                    break;
-                case DatabaseItemType.Transformers:
-                    counts = ProcessTransformers(result);
                     break;
                 case DatabaseItemType.Identities:
                     counts = ProcessIdentities(result);
@@ -150,11 +140,11 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.RevisionDocuments:
                     counts = result.RevisionDocuments;
                     break;
+                case DatabaseItemType.Tombstones:
+                    counts = result.Tombstones;
+                    break;
                 case DatabaseItemType.Indexes:
                     counts = result.Indexes;
-                    break;
-                case DatabaseItemType.Transformers:
-                    counts = result.Transformers;
                     break;
                 case DatabaseItemType.Identities:
                     counts = result.Identities;
@@ -179,14 +169,15 @@ namespace Raven.Server.Smuggler.Documents
 
         private SmugglerProgressBase.Counts ProcessIdentities(SmugglerResult result)
         {
-            using (var clusterIdentityActions = _destination.Identities())
+            using (var actions = _destination.Identities())
+            using (_source.GetIdentities(out var identities))
             {
-                foreach (var kvp in _source.GetIdentities())
+                foreach (var kvp in identities)
                 {
                     _token.ThrowIfCancellationRequested();
                     result.Identities.ReadCount++;
 
-                    if (kvp.Equals(default(KeyValuePair<string, long>)))
+                    if (kvp.Equals(default(ValueTuple<string, long>)))
                     {
                         result.Identities.ErroredCount++;
                         continue;
@@ -200,53 +191,17 @@ namespace Raven.Server.Smuggler.Documents
 
                     try
                     {
-                        clusterIdentityActions.WriteIdentity(kvp.Key, kvp.Value);
+                        actions.WriteIdentity(kvp.Prefix, kvp.Value);
                     }
                     catch (Exception e)
                     {
                         result.Identities.ErroredCount++;
-                        result.AddError($"Could not write identity '{kvp.Key}->{kvp.Value}': {e.Message}");
+                        result.AddError($"Could not write identity '{kvp.Prefix}->{kvp.Value}': {e.Message}");
                     }
                 }
             }
 
             return result.Identities;
-        }
-
-        private SmugglerProgressBase.Counts ProcessTransformers(SmugglerResult result)
-        {
-            using (var actions = _destination.Transformers())
-            {
-                foreach (var transformer in _source.GetTransformers())
-                {
-                    _token.ThrowIfCancellationRequested();
-                    result.Transformers.ReadCount++;
-
-                    if (transformer == null)
-                    {
-                        result.Transformers.ErroredCount++;
-                        continue;
-                    }
-
-                    if (OnTransformerAction != null)
-                    {
-                        OnTransformerAction(transformer);
-                        continue;
-                    }
-
-                    try
-                    {
-                        actions.WriteTransformer(transformer);
-                    }
-                    catch (Exception e)
-                    {
-                        result.Transformers.ErroredCount++;
-                        result.AddError($"Could not write transformer '{transformer.Name}': {e.Message}");
-                    }
-                }
-            }
-
-            return result.Transformers;
         }
 
         private SmugglerProgressBase.Counts ProcessIndexes(SmugglerResult result)
@@ -429,6 +384,40 @@ namespace Raven.Server.Smuggler.Documents
                     actions.WriteDocument(item, result.Documents);
 
                     result.Documents.LastEtag = item.Document.Etag;
+                }
+            }
+
+            return result.Documents;
+        }
+
+        private SmugglerProgressBase.Counts ProcessTombstones(SmugglerResult result)
+        {
+            using (var actions = _destination.Tombstones())
+            {
+                foreach (var tombstone in _source.GetTombstones(_options.CollectionsToExport, actions))
+                {
+                    _token.ThrowIfCancellationRequested();
+                    result.Tombstones.ReadCount++;
+
+                    if (result.Tombstones.ReadCount % 1000 == 0)
+                    {
+                        var message = $"Read {result.Tombstones.ReadCount:#,#;;0} tombstones.";
+                        result.AddInfo(message);
+                        _onProgress.Invoke(result.Progress);
+                    }
+
+                    if (tombstone == null)
+                    {
+                        result.Tombstones.ErroredCount++;
+                        continue;
+                    }
+
+                    if (tombstone.LowerId == null)
+                        ThrowInvalidData();
+
+                    actions.WriteTombstone(tombstone, result.Tombstones);
+
+                    result.Tombstones.LastEtag = tombstone.Etag;
                 }
             }
 

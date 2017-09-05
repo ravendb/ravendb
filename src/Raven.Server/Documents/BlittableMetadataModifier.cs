@@ -29,6 +29,7 @@ namespace Raven.Server.Documents
 
         private JsonOperationContext _ctx;
         private LazyStringValue _metadataCollections;
+        private LazyStringValue _metadataExpires;
 
         private readonly FastList<AllocatedMemoryData> _allocations = new FastList<AllocatedMemoryData>();
 
@@ -366,6 +367,23 @@ namespace Raven.Server.Documents
                     }
 
                     goto case -1;
+                case 21: //Raven-Expiration-Date
+                    if (*(long*)state.StringBuffer != 8666383010116297042 ||
+                        *(long*)(state.StringBuffer + sizeof(long)) != 7957695015158966640 ||
+                        *(short*)(state.StringBuffer + sizeof(long) + sizeof(long)) != 17453 ||
+                        state.StringBuffer[20] != (byte)'e')
+                    {
+                        aboutToReadPropertyName = true;
+                        return true;
+                    }
+
+                    var expires = _metadataExpires;
+                    state.StringBuffer = expires.AllocatedMemoryData.Address;
+                    state.StringSize = expires.Size;
+                    {
+                        aboutToReadPropertyName = true;
+                        return true;
+                    }
                 case 23: //Raven-Document-Revision
                     if (*(long*)state.StringBuffer != 8017583188798234962 ||
                         *(long*)(state.StringBuffer + sizeof(long)) != 5921517102558967139 ||
@@ -632,6 +650,7 @@ namespace Raven.Server.Documents
             {
                 _ctx = ctx;
                 _metadataCollections = _ctx.GetLazyStringForFieldWithCaching(CollectionName.MetadataCollectionSegment);
+                _metadataExpires = _ctx.GetLazyStringForFieldWithCaching(Constants.Documents.Metadata.Expires);
                 return;
             }
             Id = null;
@@ -643,6 +662,7 @@ namespace Raven.Server.Documents
             _readingMetadataObject = false;
             _ctx = ctx;
             _metadataCollections = _ctx.GetLazyStringForFieldWithCaching(CollectionName.MetadataCollectionSegment);
+            _metadataExpires = _ctx.GetLazyStringForFieldWithCaching(Constants.Documents.Metadata.Expires);
         }
     }
 }

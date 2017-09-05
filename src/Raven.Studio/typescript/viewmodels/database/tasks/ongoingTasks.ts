@@ -6,8 +6,8 @@ import databaseInfo = require("models/resources/info/databaseInfo");
 import ongoingTasksCommand = require("commands/database/tasks/getOngoingTasksCommand");
 import ongoingTaskReplication = require("models/database/tasks/ongoingTaskReplicationModel");
 import ongoingTaskBackup = require("models/database/tasks/ongoingTaskBackupModel");
-import ongoingTaskEtl = require("models/database/tasks/ongoingTaskETLModel");
-import ongoingTaskSql = require("models/database/tasks/ongoingTaskSQLModel");
+import ongoingTaskEtl = require("models/database/tasks/ongoingTaskRavenEtlModel");
+import ongoingTaskSql = require("models/database/tasks/ongoingTaskSqlEtlModel");
 import ongoingTaskSubscription = require("models/database/tasks/ongoingTaskSubscriptionModel");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import createOngoingTask = require("viewmodels/database/tasks/createOngoingTask");
@@ -17,7 +17,6 @@ import disableOngoingTaskConfirm = require("viewmodels/database/tasks/disableOng
 import ongoingTaskModel = require("models/database/tasks/ongoingTaskModel");
 import deleteOngoingTaskCommand = require("commands/database/tasks/deleteOngoingTaskCommand");
 import toggleOngoingTaskCommand = require("commands/database/tasks/toggleOngoingTaskCommand");
-import ongoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskInfoCommand");
 import databaseGroupGraph = require("models/database/dbGroup/databaseGroupGraph");
 import getDatabaseCommand = require("commands/resources/getDatabaseCommand");
 
@@ -47,7 +46,7 @@ class ongoingTasks extends viewModelBase {
     
     constructor() {
         super();
-        this.bindToCurrentInstance("confirmRemoveOngoingTask", "confirmEnableOngoingTask", "confirmDisableOngoingTask", "refreshOngoingTaskInfo");
+        this.bindToCurrentInstance("confirmRemoveOngoingTask", "confirmEnableOngoingTask", "confirmDisableOngoingTask");
 
         this.initObservables();
     }
@@ -125,23 +124,23 @@ class ongoingTasks extends viewModelBase {
 
             switch (task.TaskType) {
                 case 'Replication':
-                    this.replicationTasks.push(new ongoingTaskReplication(task as Raven.Client.ServerWide.Operations.OngoingTaskReplication, false));
+                    this.replicationTasks.push(new ongoingTaskReplication(task as Raven.Client.ServerWide.Operations.OngoingTaskReplication, true));
                     taskTypesSet.add("External Replication");
                     break;
                 case 'Backup':
-                    this.backupTasks.push(new ongoingTaskBackup(task as Raven.Client.ServerWide.Operations.OngoingTaskBackup));
+                    this.backupTasks.push(new ongoingTaskBackup(task as Raven.Client.ServerWide.Operations.OngoingTaskBackup, true));
                     taskTypesSet.add("Backup");
                     break;
                 case 'RavenEtl':
-                    this.etlTasks.push(new ongoingTaskEtl(task as Raven.Client.ServerWide.Operations.OngoingTaskRavenEtl));
+                    this.etlTasks.push(new ongoingTaskEtl(task as Raven.Client.ServerWide.Operations.OngoingTaskRavenEtl, true));
                     taskTypesSet.add("RavenDB ETL");
                     break;
                 case 'SqlEtl':
-                    this.sqlTasks.push(new ongoingTaskSql(task as Raven.Client.ServerWide.Operations.OngoingTaskSqlEtl));
+                    this.sqlTasks.push(new ongoingTaskSql(task as Raven.Client.ServerWide.Operations.OngoingTaskSqlEtl, true));
                     taskTypesSet.add("SQL ETL");
                     break;
                 case 'Subscription': 
-                    this.subscriptionTasks.push(new ongoingTaskSubscription(task as Raven.Client.ServerWide.Operations.OngoingTaskSubscription)); 
+                    this.subscriptionTasks.push(new ongoingTaskSubscription(task as Raven.Client.ServerWide.Operations.OngoingTaskSubscription, true)); 
                     taskTypesSet.add("Subscription");
                     break;
             };
@@ -211,24 +210,6 @@ class ongoingTasks extends viewModelBase {
         new deleteOngoingTaskCommand(db, model.taskType(), model.taskId, model.taskName())
             .execute()
             .done(() => this.fetchOngoingTasks());
-    }
-
-    refreshOngoingTaskInfo(model: ongoingTaskModel) {
-        new ongoingTaskInfoCommand(this.activeDatabase(), "Subscription", model.taskId, model.taskName())
-            .execute()
-            .done((result: Raven.Client.Documents.Subscriptions.SubscriptionState) => {
-                let subscriptionItem = _.find(this.subscriptionTasks(), x => x.taskName() === result.SubscriptionName);
-
-                subscriptionItem.collection(result.Criteria.Collection); 
-                subscriptionItem.timeOfLastClientActivity(result.TimeOfLastClientActivity); 
-                subscriptionItem.taskState(result.Disabled ? 'Disabled' : 'Enabled'); 
-                // TODO: should 'responsibleNode' be added to subscriptionState class ? Or should we put one refersh button for all tasks and then it won't be needed - to be discussed
-            });
-    }
-
-    disconnectClientFromSubscription(model: ongoingTaskModel) {
-        alert("TBD - Disconnect client from subscription");
-        // TODO..
     }
 
     addNewOngoingTask() {

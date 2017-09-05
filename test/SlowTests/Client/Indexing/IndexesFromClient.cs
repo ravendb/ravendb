@@ -116,7 +116,7 @@ namespace SlowTests.Client.Indexing
 
                 var operation = await store
                     .Operations
-                    .SendAsync(new PatchByQueryOperation(new IndexQuery { Query = $"FROM INDEX '{indexName}'" }, new PatchRequest { Script = "this.LastName = 'Test';" }, new QueryOperationOptions { AllowStale = false }));
+                    .SendAsync(new PatchByQueryOperation(new IndexQuery { Query = $"FROM INDEX '{indexName}' UPDATE {{ this.LastName = 'Test'; }}" }, new QueryOperationOptions { AllowStale = false }));
 
                 await operation
                     .WaitForCompletionAsync(TimeSpan.FromSeconds(15));

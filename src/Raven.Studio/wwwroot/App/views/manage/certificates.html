@@ -1,0 +1,222 @@
+<div class="certificates flex-vertical absolute-fill content-margin">
+    <div class="row flex-row flex-grow flex-stretch-items">
+        <div class="col-sm-12 col-lg-7 flex-vertical">
+            <div class="flex-header">
+                <div>
+                    <button class="btn btn-primary" data-bind="click: enterGenerateCertificateMode">
+                        <i class="icon-magic-wand"></i>
+                        <span>Generate certificate</span>
+                    </button>
+                    <button class="btn btn-default" data-bind="click: enterUploadCertificateMode">
+                        <i class="icon-upload"></i>
+                        <span>Upload certificate</span>
+                    </button>
+                </div>
+            </div>
+            <div class="scroll flex-grow" data-bind="foreach: certificates">
+                <div class="panel certificate-item">
+                    <div class="padding padding-sm flex-horizontal">
+                        <div class="flex-grow">
+                            <a href="#" class="flex-horizontal" data-bind="click: _.partial($root.enterEditCertificateMode, $data)">
+                                <div>
+                                    <i class="icon-certificate"></i>
+                                </div>
+                                <div>
+                                    <h3 class="no-margin" data-bind="text: Name || '<empty name>'"></h3>
+                                </div>
+                            </a>
+                            <div class="thumbprint" data-bind="text: Thumbprint"></div>
+                        </div>
+                        <div class="expiration">
+                            <!-- TODO
+                            <small class="text-danger"><i class="icon-danger"></i><span>Expired 2017-08-01</span></small>
+                            <small><i class="icon-clock"></i><span>Expiring 2022-05-10</span></small>
+                            <small class="text-warning"><i class="icon-warning"></i><span>Expiring 2017-09-10</span></small> -->
+                        </div>
+                        <div class="actions">
+                            <button class="btn btn-default" data-bind="click: _.partial($root.enterEditCertificateMode, $data)"><i class="icon-edit"></i></button>
+                            <button class="btn btn-danger" data-bind="click: _.partial($root.deleteCertificate, $data)"><i class="icon-trash"></i></button>
+                        </div>
+                    </div>
+                    <div class="panel-addon">
+                        <div class="padding padding-sm flex-horizontal">
+                            <div class="margin-right clearance"><i class="icon-clearance"></i><span data-bind="text: $root.clearanceLabelFor(SecurityClearance)"></span></div>
+                            <div class="flex-horizontal">
+                                <div><i class="icon-database"></i></div>
+                                <div class="flex-horizontal flex-wrap" data-bind="foreach: $root.resolveDatabasesAccess($data)">
+                                    <div data-bind="text: $data"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-12 col-lg-5 flex-vertical" data-bind="with: model">
+            <div class="panel padding padding-sm">
+                <form data-bind="submit: $root.save">
+                    <div class="flex-header">
+                        <div class="flex-horizontal margin-bottom">
+                            <div class="flex-grow">
+                                <h3 data-bind="visible: mode() === 'generate'">Generate client certificate</h3>
+                                <h3 data-bind="visible: mode() === 'upload'">Upload certificate</h3>
+                                <h3 data-bind="visible: mode() === 'editExisting'">Edit permissions</h3>
+                            </div>
+                            <div class="flex-start">
+                                <button data-bind="click: $root.onCloseEdit" class="close"><i class="icon-cancel"></i></button>
+                            </div>
+                        </div>
+                        <div class="flex-form">
+                            <div class="form-group" data-bind="validationElement: name">
+                                <label class="control-label">
+                                    Name
+                                </label>
+                                <div class="flex-grow" data-bind="validationElement: name">
+                                    <input type="text" class="form-control" data-bind="textInput: name, disable: mode() === 'editExisting'">
+                                </div>
+                            </div>
+    
+                            <div class="form-group">
+                                <label class="control-label">
+                                    Security clearance
+                                </label>
+                                <div class="btn-group btn-block">
+                                    <button type="button" class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
+                                        <span data-bind="text: securityClearanceLabel"></span> <span class="caret"></span>
+                                    </button>
+                                    <ul class="dropdown-menu" data-bind="foreach: $data.constructor.securityClearanceTypes">
+                                        <li><a href="#" data-bind="text: label, click: _.partial($parent.setClearanceMode, value)"></a></li>
+                                    </ul>
+                                </div>
+                            </div>
+    
+                            <div class="form-group" data-bind="visible: mode() === 'upload'">
+                                <label class="control-label">
+                                    Certificate file
+                                </label>
+                                <div class="input-group file-input" data-bind="validationElement: $root.importedFileName">
+                                    <input type="file" tabindex="-1" name="importFile" id="importFile" accept="" data-bind="event: { change: _.partial($root.fileSelected, $element) }">
+                                    <span class="static-name form-control" data-bind="text: $root.importedFileName() || 'Select file...'"></span>
+                                    <span class="input-group-btn">
+                                        <label for="importFile" class="btn btn-default">
+                                            <i class="icon-document"></i>
+                                            <span>Browse</span>
+                                        </label>
+                                    </span>
+                                    <p class="help-block" data-bind="validationMessage: $root.importedFileName"></p>
+                                </div>
+                            </div>
+
+                            <div class="form-group" data-bind="visible: mode() === 'upload' || mode() === 'generate'">
+                                <label class="control-label">
+                                    Certificate passphrase
+                                </label>
+                                <input class="form-control" type="password" data-bind="textInput: certificatePassphrase" >
+                            </div>
+
+                            <!-- TODO
+                            <div class="form-group">
+                                <label class="control-label">
+                                    Expiration date
+                                </label>
+                                <input class="form-control" type="date" data-bind="textInput: expirationDate">
+                            </div> -->
+                            
+                            <div class="form-group" data-bind="visible: mode() === 'editExisting'">
+                                <label class="control-label">
+                                    Thumbprint
+                                </label>
+                                <input class="form-control" type="text" data-bind="value: thumbprint" disabled>
+                                <button type="button" data-bind="click: $root.copyThumbprint" class="btn btn-default"><i class="icon-copy"></i></button>
+                            </div>
+                            
+                            <h4>Database permissions</h4>
+                           
+                            <div class="flex-horizontal margin-bottom margin-bottom-sm" data-bind="visible: $root.showDatabasesSelector">
+                                <div class="flex-grow" data-bind="validationOptions: { insertMessages: false }, validationElement: $root.newPermissionDatabaseName">
+                                    <div class="dropdown btn-block">
+                                        <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
+                                               id="databaseNameInput"
+                                               data-bind="textInput: $root.newPermissionDatabaseName"
+                                               placeholder="Select a database">
+                                        <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                                        <ul class="dropdown-menu max-height" data-bind="foreach: $root.createDatabaseNameAutocompleter(), autoComplete: '#databaseNameInput'">
+                                            <li data-bind="click: _.partial($root.useDatabase, $data)">
+                                                <a href="#" data-bind="text: $data"></a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                    <span class="help-block" data-bind="validationMessage: $root.newPermissionDatabaseName"></span>
+                                </div>
+                                <div>
+                                    <button data-bind="click: $root.addNewPermission" title="Add permissions for selected database" class="btn btn-default"><i class="icon-plus"></i></button>
+                                </div>
+                            </div>
+                            <ul class="well collection-list" data-bind="visible: $root.showDatabasesSelector() && permissions().length, foreach: permissions">
+                                <li>
+                                    <div class="name" data-bind="text: databaseName">
+                                    </div>
+                                    <div data-bind="validationOptions: { insertMessages: false }">
+                                        <div class="radio radio-default radio-inline">
+                                            <input type="radio" value="Admin" 
+                                                   data-bind="checked: accessLevel, attr: { id: 'accessLevel_admin_' + $index(), name: 'accessLevel_' + $index() }">
+                                            <label data-bind="attr: { for: 'accessLevel_admin_' + $index() }"> Admin </label>
+                                        </div>
+                                        <div class="radio radio-default radio-inline">
+                                            <input type="radio" value="ReadWrite" 
+                                                   data-bind="checked: accessLevel, attr: { id: 'accessLevel_rw_' + $index(), name: 'accessLevel_' + $index() }">
+                                            <label data-bind="attr: { for: 'accessLevel_rw_' + $index() }"> Read/Write </label>
+                                        </div>
+                                    </div>
+                                    <a href="#" data-bind="click: _.partial($root.deletePermission, $data)">
+                                        <i class="icon-trash"></i>
+                                    </a>
+                                </li>
+                            </ul>
+    
+                            <div class="bg-info padding padding-sm flex-horizontal" data-bind="visible: !$root.showDatabasesSelector()">
+                                <div>
+                                    <i class="icon-info"></i>
+                                </div>
+                                <div class="small">
+                                    With user role set to <strong data-bind="text: securityClearanceLabel"></strong> the user of this certificate is going to have access to all databases
+                                </div>
+                            </div>
+    
+                            <div class="flex-horizontal margin-top">
+                                <div class="flex-separator"></div>
+                                <div>
+                                    <button class="btn btn-default" data-bind="click: $root.onCloseEdit"> 
+                                        <i class="icon-cancel"></i>
+                                        <span>Cancel</span>
+                                    </button>
+                                    <button class="btn btn-success" type="submit" 
+                                            data-bind="visible: mode() === 'generate', disable: $root.spinners.processing, css: { 'btn-spinner' : $root.spinners.processing }">
+                                        <i class="icon-magic-wand"></i>
+                                        <span>Generate</span>
+                                    </button>
+                                    <button class="btn btn-success" type="submit" 
+                                            data-bind="visible: mode() === 'editExisting', disable: $root.spinners.processing, css: { 'btn-spinner' : $root.spinners.processing }">
+                                        <i class="icon-save"></i>
+                                        <span>Save</span>
+                                    </button>
+                                    <button class="btn btn-success" type="submit" 
+                                            data-bind="visible: mode() === 'upload', disable: $root.spinners.processing, css: { 'btn-spinner' : $root.spinners.processing }">
+                                        <i class="icon-upload"></i>
+                                        <span>Upload</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<form target="certificate_download_iframe" style="display: none" method="post" data-bind="attr: { action: generateCertificateUrl }">
+    <input name="Options" data-bind="textInput: generateCertPayload" />
+</form>
+
+<iframe name="certificate_download_iframe" style="display: none"></iframe>

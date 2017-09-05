@@ -20,9 +20,14 @@ namespace SlowTests.MailingList
         [Fact]
         public void Can_Deserialize_IdentityUser()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
             {
-                store.Conventions.CustomizeJsonSerializer += serializer => serializer.ObjectCreationHandling = ObjectCreationHandling.Auto;
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.CustomizeJsonSerializer += serializer => serializer.ObjectCreationHandling = ObjectCreationHandling.Auto;
+                }
+            }))
+            {
                 using (IDocumentSession session = store.OpenSession())
                 {
                     var user = new IdentityUser { UserName = "Marcus" };

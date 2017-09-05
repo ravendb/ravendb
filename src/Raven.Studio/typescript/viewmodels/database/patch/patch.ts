@@ -3,7 +3,6 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import patchDocument = require("models/database/patch/patchDocument");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
-import collection = require("models/database/documents/collection");
 import document = require("models/database/documents/document");
 import database = require("models/resources/database");
 import messagePublisher = require("common/messagePublisher");
@@ -12,8 +11,6 @@ import getDocumentWithMetadataCommand = require("commands/database/documents/get
 import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
 import savePatchCommand = require('commands/database/patch/savePatchCommand');
 import patchByQueryCommand = require("commands/database/patch/patchByQueryCommand");
-import getCustomFunctionsCommand = require("commands/database/documents/getCustomFunctionsCommand");
-import queryUtil = require("common/queryUtil");
 import getPatchesCommand = require('commands/database/patch/getPatchesCommand');
 import eventsCollector = require("common/eventsCollector");
 import notificationCenter = require("common/notifications/notificationCenter");
@@ -27,18 +24,14 @@ import deleteDocumentsCommand = require("commands/database/documents/deleteDocum
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import columnsSelector = require("viewmodels/partial/columnsSelector");
 import documentPropertyProvider = require("common/helpers/database/documentPropertyProvider");
-import textColumn = require("widgets/virtualGrid/columns/textColumn");
-import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import patchDocumentCommand = require("commands/database/documents/patchDocumentCommand");
 import showDataDialog = require("viewmodels/common/showDataDialog");
 import verifyDocumentsIDsCommand = require("commands/database/documents/verifyDocumentsIDsCommand");
 import generalUtils = require("common/generalUtils");
-import customFunctions = require("models/database/documents/customFunctions");
-import evaluationContextHelper = require("common/helpers/evaluationContextHelper");
-import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import getDocumentsPreviewCommand = require("commands/database/documents/getDocumentsPreviewCommand");
 import defaultAceCompleter = require("common/defaultAceCompleter");
 import queryCompleter = require("common/queryCompleter");
+import patchSyntax = require("viewmodels/database/patch/patchSyntax");
 
 type fetcherType = (skip: number, take: number, previewCols: string[], fullCols: string[]) => JQueryPromise<pagedResult<document>>;
 
@@ -294,7 +287,6 @@ class patch extends viewModelBase {
     private fullDocumentsProvider: documentPropertyProvider;
     private fetcher = ko.observable<fetcherType>();
 
-    private customFunctionsContext: object;
     private indexes = ko.observableArray<Raven.Client.Documents.Operations.IndexInformation>();
 
     patchDocument = ko.observable<patchDocument>(patchDocument.empty());
@@ -354,10 +346,11 @@ class patch extends viewModelBase {
     private initValidation() {
         const doc = this.patchDocument();
 
+        /* TODO
         doc.script.extend({
             required: true,
             aceValidation: true
-        });
+        });*/
         
         doc.query.extend({
             required: {
@@ -435,7 +428,7 @@ class patch extends viewModelBase {
 
         this.fullDocumentsProvider = new documentPropertyProvider(this.activeDatabase());
 
-        return $.when<any>(this.fetchAllIndexes(this.activeDatabase()), this.fetchCustomFunctions(), this.savedPatches.loadAll(this.activeDatabase()));
+        return $.when<any>(this.fetchAllIndexes(this.activeDatabase()), this.savedPatches.loadAll(this.activeDatabase()));
     }
 
     attached() {
@@ -456,11 +449,6 @@ class patch extends viewModelBase {
             "});",
             (Prism.languages as any).javascript);
 
-        //TODO: don't use lucene syntax - use RQL
-        popoverUtils.longWithHover($(".query-label small"), {
-            content: '<p>Queries use Lucene syntax. Examples:</p><pre><span class="token keyword">Name</span>: Hi?berna*<br/><span class="token keyword">Count</span>: [0 TO 10]<br/><span class="token keyword">Title</span>: "RavenDb Queries 1010" <span class="token keyword">AND Price</span>: [10.99 TO *]</pre>'
-        });
-
         popoverUtils.longWithHover($(".patch-title small"),
             {
                 content: `<p>Patch Scripts are written in JavaScript. <br />Examples: <pre>${jsCode}</pre></p>`
@@ -475,9 +463,9 @@ class patch extends viewModelBase {
 
     compositionComplete() {
         super.compositionComplete();
+        /* TODO
 
         const grid = this.gridController();
-        grid.withEvaluationContext(this.customFunctionsContext);
         this.documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), grid, {
             showRowSelectionCheckbox: false,
             showSelectAllCheckbox: false,
@@ -527,6 +515,7 @@ class patch extends viewModelBase {
         });
 
         this.fetcher.subscribe(() => grid.reset());
+        */
     }
 
     private showPreview(doc: document) {
@@ -709,14 +698,6 @@ class patch extends viewModelBase {
             });
     }
     
-    private fetchCustomFunctions(): JQueryPromise<customFunctions> {
-        return new getCustomFunctionsCommand(this.activeDatabase())
-            .execute()
-            .done(functions => {
-                this.customFunctionsContext = evaluationContextHelper.createContext(functions.functions);
-            });
-    }
-
     previewDocument() {
         this.spinners.preview(true);
 
@@ -755,6 +736,11 @@ class patch extends viewModelBase {
         }
 
         this.test.enterTestMode(documentIdToUse);
+    }
+
+    syntaxHelp() {
+        const viewModel = new patchSyntax();
+        app.showBootstrapDialog(viewModel);
     }
 }
 

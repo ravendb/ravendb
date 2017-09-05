@@ -8,7 +8,7 @@ namespace FastTests.Issues
         [Fact]
         public void EnableDebuggingMustBeSetToFalseForSecurityReasons()
         {
-            Assert.False(IndexAndTransformerCompiler.EnableDebugging);
+            Assert.False(IndexCompiler.EnableDebugging);
         }
     }
 }

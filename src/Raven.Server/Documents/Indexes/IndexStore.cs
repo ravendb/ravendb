@@ -94,7 +94,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private void HandleAutoIndexChange(string name, long etag, IndexDefinitionBase definition)
+        private void HandleAutoIndexChange(string name, long etag, AutoIndexDefinitionBase definition)
         {
             var creationOptions = IndexCreationOptions.Create;
             var existingIndex = GetIndex(name);
@@ -145,14 +145,14 @@ namespace Raven.Server.Documents.Indexes
             CreateIndexInternal(index);
         }
 
-        private static IndexDefinitionBase CreateAutoDefinition(AutoIndexDefinition definition)
+        private static AutoIndexDefinitionBase CreateAutoDefinition(AutoIndexDefinition definition)
         {
             var mapFields = definition
                 .MapFields
                 .Select(x =>
                 {
-                    var field = IndexField.Create(x.Key, x.Value, allFields: null);
-                    field.Aggregation = x.Value.MapReduceOperation;
+                    var field = AutoIndexField.Create(x.Key, x.Value);
+                    field.Aggregation = x.Value.Aggregation;
 
                     return field;
                 })
@@ -177,8 +177,8 @@ namespace Raven.Server.Documents.Indexes
                     .GroupByFields
                     .Select(x =>
                     {
-                        var field = IndexField.Create(x.Key, x.Value, allFields: null);
-                        field.Aggregation = x.Value.MapReduceOperation;
+                        var field = AutoIndexField.Create(x.Key, x.Value);
+                        field.Aggregation = x.Value.Aggregation;
 
                         return field;
                     })
@@ -277,22 +277,21 @@ namespace Raven.Server.Documents.Indexes
                 Debug.Assert(currentIndex != null);
 
                 definition.Name = replacementIndexName;
-                var sideBySideIndex = GetIndex(replacementIndexName);
-                if (sideBySideIndex != null)
+                var replacementIndex = GetIndex(replacementIndexName);
+                if (replacementIndex != null)
                 {
-                    creationOptions = GetIndexCreationOptions(definition, sideBySideIndex, out IndexDefinitionCompareDifferences sideBySideDifferences);
+                    creationOptions = GetIndexCreationOptions(definition, replacementIndex, out IndexDefinitionCompareDifferences sideBySideDifferences);
                     if (creationOptions == IndexCreationOptions.Noop)
                         return;
 
                     if (creationOptions == IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex)
                     {
-                        UpdateIndex(definition, sideBySideIndex, sideBySideDifferences);
+                        UpdateIndex(definition, replacementIndex, sideBySideDifferences);
+                        return;
                     }
-                }
 
-                var replacementIndex = GetIndex(replacementIndexName);
-                if (replacementIndex != null)
                     DeleteIndexInternal(replacementIndex);
+                }
             }
 
             Index index;
@@ -382,7 +381,7 @@ namespace Raven.Server.Documents.Indexes
             definition.RemoveDefaultValues();
             ValidateAnalyzers(definition);
 
-            var instance = IndexAndTransformerCompilationCache.GetIndexInstance(definition); // pre-compile it and validate
+            var instance = IndexCompilationCache.GetIndexInstance(definition); // pre-compile it and validate
 
             await _indexAndTransformerLocker.WaitAsync();
 
@@ -429,7 +428,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 ValidateIndexName(definition.Name);
 
-                var command = PutAutoIndexCommand.Create(definition, _documentDatabase.Name);
+                var command = PutAutoIndexCommand.Create((AutoIndexDefinitionBase)definition, _documentDatabase.Name);
 
                 var (etag, _) = await _serverStore.SendToLeaderAsync(command);
 
@@ -464,11 +463,11 @@ namespace Raven.Server.Documents.Indexes
         {
             Debug.Assert(index != null);
             Debug.Assert(index.Etag > 0);
+            
+            _indexes.Add(index);
 
             if (_documentDatabase.Configuration.Indexing.Disabled == false && _run)
                 index.Start();
-
-            _indexes.Add(index);
 
             _documentDatabase.Changes.RaiseNotifications(
                 new IndexChange
@@ -853,7 +852,7 @@ namespace Raven.Server.Documents.Indexes
                 _logger.Info("Starting to load indexes from record");
 
             List<Exception> exceptions = null;
-            if (_documentDatabase.Configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened)
+            if (_documentDatabase.Configuration.Core.ThrowIfAnyIndexCannotBeOpened)
                 exceptions = new List<Exception>();
 
             // delete all unrecognized index directories
@@ -1077,7 +1076,7 @@ namespace Raven.Server.Documents.Indexes
             public DateTime CreationDate { get; set; }
         }
 
-        public bool TryReplaceIndexes(string oldIndexName, string newIndexName, bool immediately = false)
+        public bool TryReplaceIndexes(string oldIndexName, string replacementIndexName)
         {
             bool lockTaken = false;
             try
@@ -1086,7 +1085,7 @@ namespace Raven.Server.Documents.Indexes
                 if (lockTaken == false)
                     return false;
 
-                if (_indexes.TryGetByName(newIndexName, out Index newIndex) == false)
+                if (_indexes.TryGetByName(replacementIndexName, out Index newIndex) == false)
                     return true;
 
                 if (_indexes.TryGetByName(oldIndexName, out Index oldIndex))
@@ -1111,8 +1110,54 @@ namespace Raven.Server.Documents.Indexes
 
                 if (oldIndex != null)
                 {
-                    using (oldIndex.DrainRunningQueries())
-                        DeleteIndexInternal(oldIndex);
+                    while (_documentDatabase.DatabaseShutdown.IsCancellationRequested == false)
+                    {
+                        try
+                        {
+                            using (oldIndex.DrainRunningQueries())
+                                DeleteIndexInternal(oldIndex);
+
+                            break;
+                        }
+                        catch (TimeoutException)
+                        {
+                        }
+                    }
+                }
+
+                if (newIndex.Configuration.RunInMemory == false)
+                {
+                    while (_documentDatabase.DatabaseShutdown.IsCancellationRequested == false)
+                    {
+                        try
+                        {
+                            using (newIndex.DrainRunningQueries())
+                            using (newIndex.StorageOperation())
+                            {
+                                var oldIndexDirectoryName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(oldIndexName);
+                                var replacementIndexDirectoryName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(replacementIndexName);
+
+                                IOExtensions.MoveDirectory(newIndex.Configuration.StoragePath.Combine(replacementIndexDirectoryName).FullPath,
+                                    newIndex.Configuration.StoragePath.Combine(oldIndexDirectoryName).FullPath);
+
+                                if (newIndex.Configuration.TempPath != null)
+                                {
+                                    IOExtensions.MoveDirectory(newIndex.Configuration.TempPath.Combine(replacementIndexDirectoryName).FullPath,
+                                        newIndex.Configuration.TempPath.Combine(oldIndexDirectoryName).FullPath);
+                                }
+
+                                if (newIndex.Configuration.JournalsStoragePath != null)
+                                {
+                                    IOExtensions.MoveDirectory(newIndex.Configuration.JournalsStoragePath.Combine(replacementIndexDirectoryName).FullPath,
+                                        newIndex.Configuration.JournalsStoragePath.Combine(oldIndexDirectoryName).FullPath);
+                                }
+                            }
+                            break;
+                        }
+                        catch (TimeoutException)
+                        {
+                        }
+                    }
                 }
 
                 _documentDatabase.Changes.RaiseNotifications(

@@ -1,5 +1,7 @@
 ﻿using System;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Raven.Client.Documents.Identity;
 using Raven.Client.Json;
 using Sparrow.Json;
 
@@ -15,10 +17,12 @@ namespace Raven.Client.Documents.Conventions
         private static JsonSerializer _serializer;
 
         private Action<JsonSerializer> _customize;
+        private GenerateEntityIdOnTheClient _generateEntityIdOnTheClient;
 
         public JsonNetBlittableEntitySerializer(DocumentConventions conventions)
         {
             _conventions = conventions;
+            _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(conventions, null);
         }
 
         public object EntityFromJsonStream(Type type, BlittableJsonReaderObject jsonObject)
@@ -35,8 +39,36 @@ namespace Raven.Client.Documents.Conventions
             }
 
             _reader.Init(jsonObject);
+            using (DefaultRavenContractResolver.Register((o, key, value) =>
+            {
+                JToken id;
+                if (key == Constants.Documents.Metadata.Key && value is JObject json)
+                {
+                    if (json.TryGetValue(Constants.Documents.Metadata.Id, out  id))
+                    {
+                        if (_generateEntityIdOnTheClient.TryGetIdFromInstance(o, out var existing) &&
+                            existing != null)
+                            return;
+                        _generateEntityIdOnTheClient.TrySetIdentity(o, id.Value<string>());
+                    }
+                }
 
-            return _serializer.Deserialize(_reader, type);
+                if (key == Constants.Documents.Metadata.Id)
+                {
+                    id = value as JToken;
+                    if (id == null)
+                        return;
+
+                    if (_generateEntityIdOnTheClient.TryGetIdFromInstance(o, out var existing) &&
+                        existing != null)
+                        return;
+                    _generateEntityIdOnTheClient.TrySetIdentity(o, id.Value<string>());
+                }
+            }))
+            {
+                return _serializer.Deserialize(_reader, type);
+            }
+
         }
     }
 }

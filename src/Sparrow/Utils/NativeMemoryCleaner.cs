@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using Sparrow.LowMemory;
+using Sparrow.Threading;
 
 namespace Sparrow.Utils
 {
@@ -8,11 +9,11 @@ namespace Sparrow.Utils
     {
         private readonly ThreadLocal<TStack> _pool;
         private readonly object _lock = new object();
-        private readonly LowMemoryFlag _lowMemoryFlag;
+        private readonly SharedMultipleUseFlag _lowMemoryFlag;
         private readonly TimeSpan _idleTime;
         private readonly Timer _timer;
 
-        public NativeMemoryCleaner(ThreadLocal<TStack> pool, LowMemoryFlag lowMemoryFlag, TimeSpan period, TimeSpan idleTime)
+        public NativeMemoryCleaner(ThreadLocal<TStack> pool, SharedMultipleUseFlag lowMemoryFlag, TimeSpan period, TimeSpan idleTime)
         {
             _pool = pool;
             _lowMemoryFlag = lowMemoryFlag;
@@ -45,7 +46,7 @@ namespace Sparrow.Utils
                         if (item == null)
                             continue;
 
-                        if (_lowMemoryFlag.LowMemoryState == 0)
+                        if (_lowMemoryFlag == false)
                         {
                             var timeInPool = now - item.InPoolSince;
                             if (timeInPool < _idleTime)
@@ -55,7 +56,7 @@ namespace Sparrow.Utils
                         // it is too old, we can dispose it, but need to protect from races
                         // if the owner thread will just pick it up
 
-                        if (Interlocked.CompareExchange(ref item.InUse, 1, 0) != 0)
+                        if (!item.InUse.Raise())
                             continue;
 
                         try

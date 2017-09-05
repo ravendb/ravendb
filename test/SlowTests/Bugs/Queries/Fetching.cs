@@ -2,6 +2,7 @@ using FastTests;
 using Newtonsoft.Json;
 using System.Linq;
 using Newtonsoft.Json.Linq;
+using Raven.Client;
 using Xunit;
 
 namespace SlowTests.Bugs.Queries
@@ -36,7 +37,7 @@ namespace SlowTests.Bugs.Queries
                     var objects = s.Advanced.DocumentQuery<dynamic>()
                         .WaitForNonStaleResults()
                         .SelectFields<JObject>("Tags[].Id", "Tags[].Id3")
-                        .OrderBy("__document_id")
+                        .OrderBy(Constants.Documents.Indexing.Fields.DocumentIdFieldName)
                         .ToArray();
                     Assert.Equal(3, objects.Length);
 

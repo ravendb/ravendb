@@ -48,16 +48,9 @@ namespace FastTests.Client.Indexing
                         ["p0"] = q.QueryParameters["p0"]
                     }, "query/parameters"))
                     {
-                        Transformer = q.Transformer,
                         Start = q.Start,
-                        AllowMultipleIndexEntriesForSameDocumentToResultTransformer = q.AllowMultipleIndexEntriesForSameDocumentToResultTransformer,
                         CutoffEtag = q.CutoffEtag,
-                        DisableCaching = q.DisableCaching,
                         ExplainScores = q.ExplainScores,
-                        HighlightedFields = q.HighlightedFields,
-                        HighlighterKeyName = q.HighlighterKeyName,
-                        HighlighterPostTags = q.HighlighterPostTags,
-                        HighlighterPreTags = q.HighlighterPreTags,
                         PageSize = q.PageSize,
                         ShowTimings = q.ShowTimings,
                         SkipDuplicateChecking = q.SkipDuplicateChecking,

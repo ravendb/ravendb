@@ -10,15 +10,18 @@ using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries.Facets;
+using Raven.Client.Documents.Queries.Spatial;
 using Raven.Client.Documents.Queries.Suggestion;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
+using Raven.Client.Extensions;
 using Raven.Client.Util;
 
 namespace Raven.Client.Documents
@@ -28,6 +31,30 @@ namespace Raven.Client.Documents
     ///</summary>
     public static class LinqExtensions
     {
+#if !NETSTANDARD2_0
+        private static readonly object Locker = new object();
+
+        private static MethodInfo _includeMethod;
+
+        private static MethodInfo _whereMethod2;
+
+        private static MethodInfo _whereMethod3;
+
+        private static MethodInfo _spatialMethod;
+
+        private static MethodInfo _orderByDistanceMethod;
+
+        private static MethodInfo _orderByDistanceDescendingMethod;
+
+        private static MethodInfo _orderByMethod;
+
+        private static MethodInfo _orderByDescendingMethod;
+
+        private static MethodInfo _thenByMethod;
+
+        private static MethodInfo _thenByDescendingMethod;
+#endif
+
         /// <summary>
         /// Includes the specified path in the query, loading the document specified in that path
         /// </summary>
@@ -37,8 +64,7 @@ namespace Raven.Client.Documents
         /// <returns></returns>
         public static IRavenQueryable<TResult> Include<TResult>(this IRavenQueryable<TResult> source, Expression<Func<TResult, object>> path)
         {
-            source.Customize(x => x.Include(path));
-            return source;
+            return source.Include(path.ToPropertyPath());
         }
 
         /// <summary>
@@ -51,8 +77,38 @@ namespace Raven.Client.Documents
         /// <returns></returns>
         public static IRavenQueryable<TResult> Include<TResult, TInclude>(this IRavenQueryable<TResult> source, Expression<Func<TResult, object>> path)
         {
-            source.Customize(x => x.Include<TResult, TInclude>(path));
-            return source;
+            var queryInspector = (IRavenQueryInspector)source;
+            var conventions = queryInspector.Session.Conventions;
+            var idPrefix = conventions.GetCollectionName(typeof(TInclude));
+            if (idPrefix != null)
+            {
+                idPrefix = conventions.TransformTypeCollectionNameToDocumentIdPrefix(idPrefix);
+                idPrefix += conventions.IdentityPartsSeparator;
+            }
+
+            var id = path.ToPropertyPath() + "(" + idPrefix + ")";
+            return source.Include(id);
+        }
+
+        /// <summary>
+        /// Includes the specified path in the query, loading the document specified in that path
+        /// </summary>
+        /// <typeparam name="TResult">The type of the object that holds the id that you want to include.</typeparam>
+        /// <param name="source">The source for querying</param>
+        /// <param name="path">The path, which is name of the property that holds the id of the object to include.</param>
+        /// <returns></returns>
+        public static IRavenQueryable<TResult> Include<TResult>(this IRavenQueryable<TResult> source, string path)
+        {
+#if NETSTANDARD2_0
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+#else
+            MethodInfo currentMethod = GetIncludeMethod();
+#endif
+
+            var expression = ConvertExpressionIfNecessary(source);
+
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(TResult)), expression, Expression.Constant(path)));
+            return (IRavenQueryable<TResult>)queryable;
         }
 
         /// <summary>
@@ -88,7 +144,7 @@ namespace Raven.Client.Documents
         /// <param name="queryable">The queryable interface for the function to be applied to</param>
         public static FacetedQueryResult ToFacets<T>(this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null)
         {
-            var ravenQueryInspector = ((IRavenQueryInspector)queryable);
+            var ravenQueryInspector = (IRavenQueryInspector)queryable;
             return ravenQueryInspector.GetFacets(facetSetupDoc, start, pageSize);
         }
 
@@ -157,7 +213,7 @@ namespace Raven.Client.Documents
         /// <param name="query">The document query interface for the function to be applied to</param>
         public static FacetedQueryResult ToFacets<T>(this IDocumentQuery<T> query, string facetSetupDoc, int start = 0, int? pageSize = null)
         {
-            var documentQuery = ((DocumentQuery<T>)query);
+            var documentQuery = (DocumentQuery<T>)query;
             return documentQuery.GetFacets(facetSetupDoc, start, pageSize);
         }
 
@@ -175,7 +231,7 @@ namespace Raven.Client.Documents
             if (!facetsList.Any())
                 throw new ArgumentException("Facets must contain at least one entry", nameof(facets));
 
-            var documentQuery = ((DocumentQuery<T>)query);
+            var documentQuery = (DocumentQuery<T>)query;
 
             return documentQuery.GetFacets(facetsList, start, pageSize);
         }
@@ -189,12 +245,12 @@ namespace Raven.Client.Documents
         /// <param name="queryable">The queryable interface for the function to be applied to</param>
         public static Lazy<FacetedQueryResult> ToFacetsLazy<T>(this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null)
         {
-            var ravenQueryInspector = ((IRavenQueryInspector)queryable);
+            var ravenQueryInspector = (IRavenQueryInspector)queryable;
             var q = ravenQueryInspector.GetIndexQuery(isAsync: false);
             var query = FacetQuery.Create(q, facetSetupDoc, null, start, pageSize, ravenQueryInspector.Session.Conventions);
             var lazyOperation = new LazyFacetsOperation(ravenQueryInspector.Session.Conventions, query);
 
-            var documentSession = ((DocumentSession)ravenQueryInspector.Session);
+            var documentSession = (DocumentSession)ravenQueryInspector.Session;
             return documentSession.AddLazyOperation<FacetedQueryResult>(lazyOperation, null);
         }
 
@@ -209,12 +265,12 @@ namespace Raven.Client.Documents
         /// <param name="queryable">The queryable interface for the function to be applied to</param>
         public static Lazy<Task<FacetedQueryResult>> ToFacetsLazyAsync<T>(this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null)
         {
-            var ravenQueryInspector = ((IRavenQueryInspector)queryable);
+            var ravenQueryInspector = (IRavenQueryInspector)queryable;
             var q = ravenQueryInspector.GetIndexQuery(true);
             var query = FacetQuery.Create(q, facetSetupDoc, null, start, pageSize, ravenQueryInspector.Session.Conventions);
             var lazyOperation = new LazyFacetsOperation(ravenQueryInspector.Session.Conventions, query);
 
-            var documentSession = ((AsyncDocumentSession)ravenQueryInspector.Session);
+            var documentSession = (AsyncDocumentSession)ravenQueryInspector.Session;
             return documentSession.AddLazyOperation<FacetedQueryResult>(lazyOperation, null);
         }
 
@@ -228,12 +284,12 @@ namespace Raven.Client.Documents
             if (facetsList.Any() == false)
                 throw new ArgumentException("Facets must contain at least one entry", nameof(facets));
 
-            var ravenQueryInspector = ((IRavenQueryInspector)queryable);
+            var ravenQueryInspector = (IRavenQueryInspector)queryable;
             var q = ravenQueryInspector.GetIndexQuery(isAsync: false);
             var query = FacetQuery.Create(q, null, facetsList, start, pageSize, ravenQueryInspector.Session.Conventions);
             var lazyOperation = new LazyFacetsOperation(ravenQueryInspector.Session.Conventions, query);
 
-            var documentSession = ((DocumentSession)ravenQueryInspector.Session);
+            var documentSession = (DocumentSession)ravenQueryInspector.Session;
             return documentSession.AddLazyOperation<FacetedQueryResult>(lazyOperation, null);
         }
 
@@ -247,11 +303,11 @@ namespace Raven.Client.Documents
         public static Lazy<FacetedQueryResult> ToFacetsLazy<T>(this IDocumentQuery<T> query, string facetSetupDoc, int start = 0, int? pageSize = null)
         {
             var indexQuery = query.GetIndexQuery();
-            var documentQuery = ((DocumentQuery<T>)query);
+            var documentQuery = (DocumentQuery<T>)query;
             var facetQuery = FacetQuery.Create(indexQuery, facetSetupDoc, null, start, pageSize, documentQuery.Conventions);
             var lazyOperation = new LazyFacetsOperation(documentQuery.Conventions, facetQuery);
 
-            var documentSession = ((DocumentSession)documentQuery.Session);
+            var documentSession = (DocumentSession)documentQuery.Session;
             return documentSession.AddLazyOperation<FacetedQueryResult>(lazyOperation, null);
         }
 
@@ -274,7 +330,7 @@ namespace Raven.Client.Documents
             var facetQuery = FacetQuery.Create(indexQuery, null, facetsList, start, pageSize, documentQuery.Conventions);
             var lazyOperation = new LazyFacetsOperation(documentQuery.Conventions, facetQuery);
 
-            var documentSession = ((DocumentSession)documentQuery.Session);
+            var documentSession = (DocumentSession)documentQuery.Session;
             return documentSession.AddLazyOperation<FacetedQueryResult>(lazyOperation, null);
         }
 
@@ -288,7 +344,7 @@ namespace Raven.Client.Documents
         /// <param name="token">The cancellation token</param>
         public static Task<FacetedQueryResult> ToFacetsAsync<T>(this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null, CancellationToken token = default(CancellationToken))
         {
-            var ravenQueryInspector = ((IRavenQueryInspector)queryable);
+            var ravenQueryInspector = (IRavenQueryInspector)queryable;
             return ravenQueryInspector.GetFacetsAsync(facetSetupDoc, start, pageSize, token);
         }
 
@@ -307,7 +363,7 @@ namespace Raven.Client.Documents
             if (!facetsList.Any())
                 throw new ArgumentException("Facets must contain at least one entry", nameof(facets));
 
-            var ravenQueryInspector = ((IRavenQueryInspector)queryable);
+            var ravenQueryInspector = (IRavenQueryInspector)queryable;
 
             return ravenQueryInspector.GetFacetsAsync(facetsList, start, pageSize, token);
         }
@@ -356,11 +412,7 @@ namespace Raven.Client.Documents
         public static IRavenQueryable<T> Intersect<T>(this IQueryable<T> self)
         {
             var currentMethod = typeof(LinqExtensions).GetMethod("Intersect");
-            Expression expression = self.Expression;
-            if (expression.Type != typeof(IRavenQueryable<T>))
-            {
-                expression = Expression.Convert(expression, typeof(IRavenQueryable<T>));
-            }
+            var expression = ConvertExpressionIfNecessary(self);
             var queryable =
                 self.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression));
             return (IRavenQueryable<T>)queryable;
@@ -373,7 +425,7 @@ namespace Raven.Client.Documents
         {
             var ofType = queryable.OfType<TResult>();
             var results = queryable.Provider.CreateQuery<TResult>(ofType.Expression);
-            var ravenQueryInspector = ((RavenQueryInspector<TResult>)results);
+            var ravenQueryInspector = (RavenQueryInspector<TResult>)results;
 
             var membersList = ReflectionUtil.GetPropertiesAndFieldsFor<TResult>(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).ToList();
             ravenQueryInspector.FieldsToFetch(membersList.Select(x => x.Name));
@@ -431,7 +483,7 @@ namespace Raven.Client.Documents
 
             var lazyOperation = new LazySuggestionOperation(inspector.Session, query);
 
-            var documentSession = ((DocumentSession)inspector.Session);
+            var documentSession = (DocumentSession)inspector.Session;
             return documentSession.AddLazyOperation<SuggestionQueryResult>(lazyOperation, null);
         }
 
@@ -589,7 +641,7 @@ namespace Raven.Client.Documents
         /// <summary>
         /// Returns a list of results for a query asynchronously. 
         /// </summary>
-        public static Task<IList<T>> ToListAsync<T>(this IQueryable<T> source, CancellationToken token = default(CancellationToken))
+        public static Task<List<T>> ToListAsync<T>(this IQueryable<T> source, CancellationToken token = default(CancellationToken))
         {
             var provider = source.Provider as IRavenQueryProvider;
             if (provider == null)
@@ -634,8 +686,7 @@ namespace Raven.Client.Documents
                                 .Take(0);
 
             provider.MoveAfterQueryExecuted(query);
-            QueryStatistics stats;
-            query.Statistics(out stats);
+            query.Statistics(out var stats);
 
             await query.ToListAsync(token).ConfigureAwait(false);
 
@@ -684,8 +735,7 @@ namespace Raven.Client.Documents
 
             provider.MoveAfterQueryExecuted(query);
 
-            QueryStatistics stats;
-            query.Statistics(out stats);
+            query.Statistics(out var stats);
 
             await query.ToListAsync(token).ConfigureAwait(false);
 
@@ -731,8 +781,7 @@ namespace Raven.Client.Documents
 
             provider.MoveAfterQueryExecuted(query);
 
-            QueryStatistics stats;
-            query.Statistics(out stats);
+            query.Statistics(out var stats);
 
             await query.ToListAsync(token).ConfigureAwait(false);
 
@@ -784,8 +833,7 @@ namespace Raven.Client.Documents
                                 .Take(0);
 
             provider.MoveAfterQueryExecuted(query);
-            QueryStatistics stats;
-            query.Statistics(out stats);
+            query.Statistics(out var stats);
 
             await query.ToListAsync(token).ConfigureAwait(false);
 
@@ -1194,13 +1242,10 @@ namespace Raven.Client.Documents
                                                    decimal boost = 1,
                                                    SearchOptions options = SearchOptions.Guess)
         {
-            var currentMethod = typeof(LinqExtensions).GetMethod("Search");
+            var currentMethod = typeof(LinqExtensions).GetMethod(nameof(Search));
 
-            Expression expression = self.Expression;
-            if (expression.Type != typeof(IRavenQueryable<T>))
-            {
-                expression = Expression.Convert(expression, typeof(IRavenQueryable<T>));
-            }
+            var expression = ConvertExpressionIfNecessary(self);
+
             var queryable = self.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression,
                                                                       fieldSelector,
                                                                       Expression.Constant(searchTerms),
@@ -1214,13 +1259,10 @@ namespace Raven.Client.Documents
         /// </summary>
         public static IOrderedQueryable<T> OrderByScore<T>(this IQueryable<T> self)
         {
-            var currentMethod = typeof(LinqExtensions).GetMethod("OrderByScore");
+            var currentMethod = typeof(LinqExtensions).GetMethod(nameof(OrderByScore));
 
-            Expression expression = self.Expression;
-            if (expression.Type != typeof(IRavenQueryable<T>))
-            {
-                expression = Expression.Convert(expression, typeof(IRavenQueryable<T>));
-            }
+            var expression = ConvertExpressionIfNecessary(self);
+
             var queryable = self.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression));
             return (IOrderedQueryable<T>)queryable;
         }
@@ -1230,13 +1272,10 @@ namespace Raven.Client.Documents
         /// </summary>
         public static IOrderedQueryable<T> OrderByScoreDescending<T>(this IQueryable<T> self)
         {
-            var currentMethod = typeof(LinqExtensions).GetMethod("OrderByScoreDescending");
+            var currentMethod = typeof(LinqExtensions).GetMethod(nameof(OrderByScoreDescending));
 
-            Expression expression = self.Expression;
-            if (expression.Type != typeof(IRavenQueryable<T>))
-            {
-                expression = Expression.Convert(expression, typeof(IRavenQueryable<T>));
-            }
+            var expression = ConvertExpressionIfNecessary(self);
+
             var queryable = self.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression));
             return (IOrderedQueryable<T>)queryable;
         }
@@ -1278,15 +1317,16 @@ namespace Raven.Client.Documents
             var session = documentQuery.AsyncSession;
             await session.Advanced.StreamIntoAsync(self, stream, token).ConfigureAwait(false);
         }
-        
+
         public static IRavenQueryable<T> Where<T>(this IQueryable<T> source, Expression<Func<T, int, bool>> predicate, bool exact)
         {
+#if NETSTANDARD2_0
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+#else
             var currentMethod = GetWhereMethod(3);
-            Expression expression = source.Expression;
-            if (expression.Type != typeof(IRavenQueryable<T>))
-            {
-                expression = Expression.Convert(expression, typeof(IRavenQueryable<T>));
-            }
+#endif
+
+            var expression = ConvertExpressionIfNecessary(source);
 
             var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, predicate, Expression.Constant(exact)));
             return (IRavenQueryable<T>)queryable;
@@ -1294,37 +1334,455 @@ namespace Raven.Client.Documents
 
         public static IRavenQueryable<T> Where<T>(this IQueryable<T> source, Expression<Func<T, bool>> predicate, bool exact)
         {
+#if NETSTANDARD2_0
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+#else
             var currentMethod = GetWhereMethod(2);
-            Expression expression = source.Expression;
-            if (expression.Type != typeof(IRavenQueryable<T>))
-            {
-                expression = Expression.Convert(expression, typeof(IRavenQueryable<T>));
-            }
+#endif
+
+            var expression = ConvertExpressionIfNecessary(source);
 
             var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, predicate, Expression.Constant(exact)));
             return (IRavenQueryable<T>)queryable;
         }
 
+        public static IRavenQueryable<T> Spatial<T>(this IQueryable<T> source, Expression<Func<T, object>> path, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
+        {
+            return source.Spatial(path.ToPropertyPath(), clause);
+        }
+
+        public static IRavenQueryable<T> Spatial<T>(this IQueryable<T> source, string fieldName, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
+        {
+#if NETSTANDARD2_0
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+#else
+            var currentMethod = GetSpatialMethod();
+#endif
+
+            var expression = ConvertExpressionIfNecessary(source);
+
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(fieldName), Expression.Constant(clause)));
+            return (IRavenQueryable<T>)queryable;
+        }
+
+        public static IOrderedQueryable<T> OrderByDistance<T>(this IQueryable<T> source, Expression<Func<T, object>> path, double latitude, double longitude)
+        {
+            return source.OrderByDistance(path.ToPropertyPath(), latitude, longitude);
+        }
+
+        public static IOrderedQueryable<T> OrderByDistance<T>(this IQueryable<T> source, string fieldName, double latitude, double longitude)
+        {
+#if NETSTANDARD2_0
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+#else
+            var currentMethod = GetOrderByDistanceMethod(nameof(OrderByDistance), 4);
+#endif
+
+            var expression = ConvertExpressionIfNecessary(source);
+
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(fieldName), Expression.Constant(latitude), Expression.Constant(longitude)));
+            return (IOrderedQueryable<T>)queryable;
+        }
+
+        public static IOrderedQueryable<T> OrderByDistance<T>(this IQueryable<T> source, Expression<Func<T, object>> path, string shapeWkt)
+        {
+            return source.OrderByDistance(path.ToPropertyPath(), shapeWkt);
+        }
+
+        public static IOrderedQueryable<T> OrderByDistance<T>(this IQueryable<T> source, string fieldName, string shapeWkt)
+        {
+#if NETSTANDARD2_0
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+#else
+            var currentMethod = GetOrderByDistanceMethod(nameof(OrderByDistance), 3);
+#endif
+
+            var expression = ConvertExpressionIfNecessary(source);
+
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(fieldName), Expression.Constant(shapeWkt)));
+            return (IRavenQueryable<T>)queryable;
+        }
+
+        public static IOrderedQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, Expression<Func<T, object>> path, double latitude, double longitude)
+        {
+            return source.OrderByDistanceDescending(path.ToPropertyPath(), latitude, longitude);
+        }
+
+        public static IOrderedQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, string fieldName, double latitude, double longitude)
+        {
+#if NETSTANDARD2_0
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+#else
+            var currentMethod = GetOrderByDistanceMethod(nameof(OrderByDistanceDescending), 4);
+#endif
+
+            var expression = ConvertExpressionIfNecessary(source);
+
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(fieldName), Expression.Constant(latitude), Expression.Constant(longitude)));
+            return (IRavenQueryable<T>)queryable;
+        }
+
+        public static IOrderedQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, Expression<Func<T, object>> path, string shapeWkt)
+        {
+            return source.OrderByDistanceDescending(path.ToPropertyPath(), shapeWkt);
+        }
+
+        public static IOrderedQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, string fieldName, string shapeWkt)
+        {
+#if NETSTANDARD2_0
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+#else
+            var currentMethod = GetOrderByDistanceMethod(nameof(OrderByDistanceDescending), 3);
+#endif
+
+            var expression = ConvertExpressionIfNecessary(source);
+
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(fieldName), Expression.Constant(shapeWkt)));
+            return (IOrderedQueryable<T>)queryable;
+        }
+
+        public static IOrderedQueryable<T> OrderBy<T>(this IQueryable<T> source, Expression<Func<T, object>> path, OrderingType ordering = OrderingType.String)
+        {
+            return source.OrderBy(path.ToPropertyPath(), ordering);
+        }
+
+        public static IOrderedQueryable<T> OrderBy<T>(this IQueryable<T> source, string path, OrderingType ordering = OrderingType.String)
+        {
+#if NETSTANDARD2_0
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+#else
+            var currentMethod = GetOrderByMethod(nameof(OrderBy));
+#endif
+
+            var expression = ConvertExpressionIfNecessary(source);
+
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(path), Expression.Constant(ordering)));
+            return (IOrderedQueryable<T>)queryable;
+        }
+
+        public static IOrderedQueryable<T> OrderByDescending<T>(this IQueryable<T> source, Expression<Func<T, object>> path, OrderingType ordering = OrderingType.String)
+        {
+            return source.OrderByDescending(path.ToPropertyPath(), ordering);
+        }
+
+        public static IOrderedQueryable<T> OrderByDescending<T>(this IQueryable<T> source, string path, OrderingType ordering = OrderingType.String)
+        {
+#if NETSTANDARD2_0
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+#else
+            var currentMethod = GetOrderByMethod(nameof(OrderByDescending));
+#endif
+
+            var expression = ConvertExpressionIfNecessary(source);
+
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(path), Expression.Constant(ordering)));
+            return (IOrderedQueryable<T>)queryable;
+        }
+
+        public static IOrderedQueryable<T> ThenBy<T>(this IOrderedQueryable<T> source, Expression<Func<T, object>> path, OrderingType ordering = OrderingType.String)
+        {
+            return source.ThenBy(path.ToPropertyPath(), ordering);
+        }
+
+        public static IOrderedQueryable<T> ThenBy<T>(this IOrderedQueryable<T> source, string path, OrderingType ordering = OrderingType.String)
+        {
+#if NETSTANDARD2_0
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+#else
+            var currentMethod = GetOrderByMethod(nameof(ThenBy));
+#endif
+
+            var expression = ConvertExpressionIfNecessary(source);
+
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(path), Expression.Constant(ordering)));
+            return (IOrderedQueryable<T>)queryable;
+        }
+
+        public static IOrderedQueryable<T> ThenByDescending<T>(this IOrderedQueryable<T> source, Expression<Func<T, object>> path, OrderingType ordering = OrderingType.String)
+        {
+            return source.ThenByDescending(path.ToPropertyPath(), ordering);
+        }
+
+        public static IOrderedQueryable<T> ThenByDescending<T>(this IOrderedQueryable<T> source, string path, OrderingType ordering = OrderingType.String)
+        {
+#if NETSTANDARD2_0
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+#else
+            var currentMethod = GetOrderByMethod(nameof(ThenByDescending));
+#endif
+
+            var expression = ConvertExpressionIfNecessary(source);
+
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(path), Expression.Constant(ordering)));
+            return (IOrderedQueryable<T>)queryable;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static Expression ConvertExpressionIfNecessary<T>(IQueryable<T> source)
+        {
+            var expression = source.Expression;
+            if (expression.Type != typeof(IRavenQueryable<T>))
+                expression = Expression.Convert(expression, typeof(IRavenQueryable<T>));
+
+            return expression;
+        }
+
+#if !NETSTANDARD2_0
+        private static MethodInfo GetOrderByMethod(string methodName)
+        {
+            var orderByMethod = GetOrderByMethodInfo(methodName);
+            if (orderByMethod != null)
+                return orderByMethod;
+
+            lock (Locker)
+            {
+                orderByMethod = GetOrderByMethodInfo(methodName);
+                if (orderByMethod != null)
+                    return orderByMethod;
+
+                foreach (var method in typeof(LinqExtensions).GetMethods())
+                {
+                    if (method.Name != methodName)
+                        continue;
+
+                    var parameters = method.GetParameters();
+                    if (parameters.Length != 3)
+                        continue;
+
+                    if (parameters[1].ParameterType != typeof(string))
+                        continue;
+
+                    SetOrderByMethodInfo(methodName, method);
+                    break;
+                }
+
+                return GetOrderByMethodInfo(methodName);
+            }
+        }
+
+        private static void SetOrderByMethodInfo(string methodName, MethodInfo method)
+        {
+            switch (methodName)
+            {
+                case nameof(OrderBy):
+                    _orderByMethod = method;
+                    break;
+                case nameof(OrderByDescending):
+                    _orderByDescendingMethod = method;
+                    break;
+                case nameof(ThenBy):
+                    _thenByMethod = method;
+                    break;
+                case nameof(ThenByDescending):
+                    _thenByDescendingMethod = method;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
+
+        private static MethodInfo GetOrderByMethodInfo(string methodName)
+        {
+            switch (methodName)
+            {
+                case nameof(OrderBy):
+                    return _orderByMethod;
+                case nameof(OrderByDescending):
+                    return _orderByDescendingMethod;
+                case nameof(ThenBy):
+                    return _thenByMethod;
+                case nameof(ThenByDescending):
+                    return _thenByDescendingMethod;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
+
+        private static MethodInfo GetOrderByDistanceMethod(string methodName, int numberOfParameters)
+        {
+            var orderByDistanceMethod = GetOrderByDistanceMethodInfo(methodName);
+            if (orderByDistanceMethod != null)
+                return orderByDistanceMethod;
+
+            lock (Locker)
+            {
+                orderByDistanceMethod = GetOrderByDistanceMethodInfo(methodName);
+                if (orderByDistanceMethod != null)
+                    return orderByDistanceMethod;
+
+                foreach (var method in typeof(LinqExtensions).GetMethods())
+                {
+                    if (method.Name != methodName)
+                        continue;
+
+                    var parameters = method.GetParameters();
+                    if (parameters.Length != numberOfParameters)
+                        continue;
+
+                    if (parameters[1].ParameterType != typeof(string))
+                        continue;
+
+                    SetOrderByDistanceMethodInfo(methodName, method);
+                    break;
+                }
+
+                return GetOrderByDistanceMethodInfo(methodName);
+            }
+        }
+
+        private static void SetOrderByDistanceMethodInfo(string methodName, MethodInfo method)
+        {
+            switch (methodName)
+            {
+                case nameof(OrderByDistance):
+                    _orderByDistanceMethod = method;
+                    break;
+                case nameof(OrderByDistanceDescending):
+                    _orderByDistanceDescendingMethod = method;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
+
+        private static MethodInfo GetOrderByDistanceMethodInfo(string methodName)
+        {
+            switch (methodName)
+            {
+                case nameof(OrderByDistance):
+                    return _orderByDistanceMethod;
+                case nameof(OrderByDistanceDescending):
+                    return _orderByDistanceDescendingMethod;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
+
+        private static MethodInfo GetSpatialMethod()
+        {
+            var spatialMethod = _spatialMethod;
+            if (spatialMethod != null)
+                return spatialMethod;
+
+            lock (Locker)
+            {
+                spatialMethod = _spatialMethod;
+                if (spatialMethod != null)
+                    return spatialMethod;
+
+                foreach (var method in typeof(LinqExtensions).GetMethods())
+                {
+                    if (method.Name != nameof(Spatial))
+                        continue;
+
+                    var parameters = method.GetParameters();
+                    if (parameters.Length != 3)
+                        continue;
+
+                    if (parameters[1].ParameterType != typeof(string))
+                        continue;
+
+                    _spatialMethod = method;
+                    break;
+                }
+
+                return _spatialMethod;
+            }
+        }
+
         private static MethodInfo GetWhereMethod(int numberOfFuncArguments)
         {
-            foreach (var method in typeof(LinqExtensions).GetMethods())
+            var whereMethod = GetWhereMethodInfo(numberOfFuncArguments);
+            if (whereMethod != null)
+                return whereMethod;
+
+            lock (Locker)
             {
-                if (method.Name != nameof(Where))
-                    continue;
+                whereMethod = GetWhereMethodInfo(numberOfFuncArguments);
+                if (whereMethod != null)
+                    return whereMethod;
 
-                var parameters = method.GetParameters();
-                if (parameters.Length != 3)
-                    continue;
+                foreach (var method in typeof(LinqExtensions).GetMethods())
+                {
+                    if (method.Name != nameof(Where))
+                        continue;
 
-                var predicate = parameters[1];
-                var func = predicate.ParameterType.GenericTypeArguments[0];
-                if (func.GenericTypeArguments.Length != numberOfFuncArguments)
-                    continue;
+                    var parameters = method.GetParameters();
+                    if (parameters.Length != 3)
+                        continue;
 
-                return method;
+                    var predicate = parameters[1];
+                    var func = predicate.ParameterType.GenericTypeArguments[0];
+                    if (func.GenericTypeArguments.Length != numberOfFuncArguments)
+                        continue;
+
+                    SetWhereMethodInfo(numberOfFuncArguments, method);
+                    break;
+                }
+
+                return GetWhereMethodInfo(numberOfFuncArguments);
             }
-            
-            throw new InvalidOperationException("Could not find Where method.");
         }
+
+        private static MethodInfo GetWhereMethodInfo(int numberOfFuncArguments)
+        {
+            switch (numberOfFuncArguments)
+            {
+                case 2:
+                    return _whereMethod2;
+                case 3:
+                    return _whereMethod3;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
+
+        private static void SetWhereMethodInfo(int numberOfFuncArguments, MethodInfo methodInfo)
+        {
+            switch (numberOfFuncArguments)
+            {
+                case 2:
+                    _whereMethod2 = methodInfo;
+                    break;
+                case 3:
+                    _whereMethod3 = methodInfo;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
+
+        private static MethodInfo GetIncludeMethod()
+        {
+            var includeMethod = _includeMethod;
+            if (includeMethod != null)
+                return includeMethod;
+
+            lock (Locker)
+            {
+                includeMethod = _includeMethod;
+                if (includeMethod != null)
+                    return includeMethod;
+
+                foreach (var method in typeof(LinqExtensions).GetMethods())
+                {
+                    if (method.Name != nameof(Include))
+                        continue;
+
+                    var parameters = method.GetParameters();
+                    if (parameters.Length != 2)
+                        continue;
+
+                    if (parameters[1].ParameterType != typeof(string))
+                        continue;
+
+                    _includeMethod = method;
+                    break;
+                }
+
+                return _includeMethod;
+            }
+        }
+#endif
     }
 }

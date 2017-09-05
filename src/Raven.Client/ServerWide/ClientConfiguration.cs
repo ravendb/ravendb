@@ -24,7 +24,6 @@ namespace Raven.Client.ServerWide
                 [nameof(MaxNumberOfRequestsPerSession)] = MaxNumberOfRequestsPerSession,
                 [nameof(PrettifyGeneratedLinqExpressions)] = PrettifyGeneratedLinqExpressions,
                 [nameof(ReadBalanceBehavior)] = ReadBalanceBehavior
-
             };
         }
     }

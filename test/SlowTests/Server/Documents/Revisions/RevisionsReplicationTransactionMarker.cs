@@ -13,7 +13,7 @@ using System.Threading;
 
 namespace SlowTests.Server.Documents.Revisions
 {
-    public class RevisionsReplicationTransactionMarker : ReplicationTestsBase
+    public class RevisionsReplicationTransactionMarker : ReplicationTestBase
     {
         [Fact]
         public async Task RealSupportForTransactionMarkerAcrossMultiUpdates()

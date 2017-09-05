@@ -73,19 +73,23 @@ namespace SlowTests.MailingList
         [Fact]
         public void GetDummyDoc()
         {
-            using (var documentStore = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
             {
-                documentStore.Conventions.SaveEnumsAsIntegers = true;
-                documentStore.Initialize();
-                new MyDocIndex().Execute(documentStore);
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.SaveEnumsAsIntegers = true;
+                }
+            }))
+            {
+                new MyDocIndex().Execute(store);
 
-                using (IDocumentSession documentSession = documentStore.OpenSession())
+                using (IDocumentSession documentSession = store.OpenSession())
                 {
                     documentSession.Store(new MyDoc { Id = new Guid(0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0).ToString(), Message = "some dummy message" });
                     documentSession.SaveChanges();
                 }
 
-                using (IDocumentSession documentSession = documentStore.OpenSession())
+                using (IDocumentSession documentSession = store.OpenSession())
                 {
                     MyDoc docFetched = documentSession.Load<MyDoc>(new Guid(0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0).ToString()); //returns an object
                     Debug.WriteLine(string.Format("found {0}", docFetched.Id));

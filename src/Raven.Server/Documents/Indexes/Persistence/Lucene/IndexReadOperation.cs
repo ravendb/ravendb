@@ -9,9 +9,13 @@ using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Exceptions;
+using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors;
+using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Documents.Queries.Parser;
@@ -23,6 +27,8 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Spatial4n.Core.Shapes;
+using Spatial4n.Core.Shapes.Impl;
 using Voron.Impl;
 using Query = Lucene.Net.Search.Query;
 
@@ -46,7 +52,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             try
             {
-                _analyzer = CreateAnalyzer(() => new LowerCaseKeywordAnalyzer(), index.Definition.MapFields, forQuerying: true);
+                _analyzer = CreateAnalyzer(() => new LowerCaseKeywordAnalyzer(), index.Definition.IndexFields, forQuerying: true);
             }
             catch (Exception e)
             {
@@ -65,14 +71,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return _searcher.IndexReader.NumDocs();
         }
 
-        public IEnumerable<Document> Query(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, JsonOperationContext documentsContext, CancellationToken token)
+        public IEnumerable<Document> Query(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, JsonOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
             var pageSize = GetPageSize(_searcher, query.PageSize);
             var docsToGet = pageSize;
             var position = query.Start;
 
-            var luceneQuery = GetLuceneQuery(documentsContext, query.Metadata, query.QueryParameters, _analyzer);
-            var sort = GetSort(query);
+            var luceneQuery = GetLuceneQuery(documentsContext, query.Metadata, query.QueryParameters, _analyzer, getSpatialField);
+            var sort = GetSort(query, getSpatialField);
             var returnedResults = 0;
 
             using (var scope = new IndexQueryingScope(_indexType, query, fieldsToFetch, _searcher, retriever, _state))
@@ -124,7 +130,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        public IEnumerable<Document> IntersectQuery(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, JsonOperationContext documentsContext, CancellationToken token)
+        public IEnumerable<Document> IntersectQuery(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, JsonOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
             if (query.Metadata.Query.Where.Type != OperatorType.Method)
                 throw new InvalidQueryException($"Invalid intersect query. WHERE clause must contains just an intersect() method call while it got {query.Metadata.Query.Where.Type} expression", query.Metadata.QueryText, query.QueryParameters);
@@ -146,7 +152,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 if (whereExpression == null)
                     throw new InvalidQueryException($"Invalid intersect query. The intersect clause at position {i} isn't a valid expression", query.Metadata.QueryText, query.QueryParameters);
 
-                subQueries[i] = GetLuceneQuery(documentsContext, query.Metadata, whereExpression, query.QueryParameters, _analyzer);
+                subQueries[i] = GetLuceneQuery(documentsContext, query.Metadata, whereExpression, query.QueryParameters, _analyzer, getSpatialField);
             }
 
             //Not sure how to select the page size here??? The problem is that only docs in this search can be part 
@@ -157,7 +163,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             int previousBaseQueryMatches = 0;
 
             var firstSubDocumentQuery = subQueries[0];
-            var sort = GetSort(query);
+            var sort = GetSort(query, getSpatialField);
 
             using (var scope = new IndexQueryingScope(_indexType, query, fieldsToFetch, _searcher, retriever, _state))
             {
@@ -234,9 +240,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             if (sort == null && _indexHasBoostedFields == false && IsBoostedQuery(documentQuery) == false)
             {
-                if (pageSize == int.MaxValue || pageSize == _searcher.MaxDoc) // we want all docs, no sorting required
+                if (pageSize == int.MaxValue || pageSize >= _searcher.MaxDoc) // we want all docs, no sorting required
                 {
-                    var gatherAllCollector = new GatherAllCollector();
+                    var gatherAllCollector = new GatherAllCollector(Math.Min(pageSize, _searcher.MaxDoc));
                     _searcher.Search(documentQuery, gatherAllCollector, _state);
                     return gatherAllCollector.ToTopDocs();
                 }
@@ -285,7 +291,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return false;
         }
 
-        private static Sort GetSort(IndexQueryServerSide query)
+        private static Sort GetSort(IndexQueryServerSide query, Func<string, SpatialField> getSpatialField)
         {
             var orderByFields = query.Metadata.OrderBy;
 
@@ -298,13 +304,53 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 if (field.OrderingType == OrderByFieldType.Random)
                 {
-                    sort.Add(new RandomSortField(field.Name));
+                    string value = null;
+                    if (field.Arguments != null && field.Arguments.Length > 0)
+                        value = field.Arguments[0].NameOrValue;
+
+                    sort.Add(new RandomSortField(value));
                     continue;
                 }
 
                 if (field.OrderingType == OrderByFieldType.Score)
                 {
                     sort.Add(SortField.FIELD_SCORE);
+                    continue;
+                }
+
+                if (field.OrderingType == OrderByFieldType.Distance)
+                {
+                    var spatialField = getSpatialField(field.Name);
+
+                    Point point;
+                    switch (field.Method)
+                    {
+                        case MethodType.Circle:
+                            var cLatitude = field.Arguments[1].GetDouble(query.QueryParameters);
+                            var cLongitude = field.Arguments[2].GetDouble(query.QueryParameters);
+
+                            point = spatialField.ReadPoint(cLatitude, cLongitude).GetCenter();
+                            break;
+                        case MethodType.Wkt:
+                            var wkt = field.Arguments[0].GetString(query.QueryParameters);
+                            SpatialUnits? spatialUnits = null;
+                            if (field.Arguments.Length == 2)
+                                spatialUnits = Enum.Parse<SpatialUnits>(field.Arguments[1].GetString(query.QueryParameters), ignoreCase: true);
+
+                            point = spatialField.ReadShape(wkt, spatialUnits).GetCenter();
+                            break;
+                        case MethodType.Point:
+                            var pLatitude = field.Arguments[0].GetDouble(query.QueryParameters);
+                            var pLongitude = field.Arguments[1].GetDouble(query.QueryParameters);
+
+                            point = spatialField.ReadPoint(pLatitude, pLongitude).GetCenter();
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+
+                    var dsort = new SpatialDistanceFieldComparatorSource(spatialField, point);
+                    sort.Add(new SortField(field.Name, dsort, field.Ascending == false));
                     continue;
                 }
 
@@ -367,7 +413,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return results;
         }
 
-        public IEnumerable<Document> MoreLikeThis(MoreLikeThisQueryServerSide query, HashSet<string> stopWords, Func<SelectField[], IQueryResultRetriever> createRetriever, JsonOperationContext documentsContext, CancellationToken token)
+        public IEnumerable<Document> MoreLikeThis(MoreLikeThisQueryServerSide query, HashSet<string> stopWords, Func<SelectField[], IQueryResultRetriever> createRetriever, JsonOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
             var documentQuery = new BooleanQuery();
 
@@ -394,7 +440,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 fieldNames = query.Fields;
             else
                 fieldNames = ir.GetFieldNames(IndexReader.FieldOption.INDEXED)
-                    .Where(x => x != Constants.Documents.Indexing.Fields.DocumentIdFieldName && x != Constants.Documents.Indexing.Fields.ReduceKeyFieldName)
+                    .Where(x => x != Constants.Documents.Indexing.Fields.DocumentIdFieldName && x != Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName)
                     .ToArray();
 
             mlt.SetFieldNames(fieldNames);
@@ -406,7 +452,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             if (query.Metadata.WhereFields.Count > 0)
             {
-                var additionalQuery = QueryBuilder.BuildQuery(documentsContext, query.Metadata, query.Metadata.Query.Where, null, _analyzer);
+                var additionalQuery = QueryBuilder.BuildQuery(documentsContext, query.Metadata, query.Metadata.Query.Where, null, _analyzer, getSpatialField);
                 mltQuery = new BooleanQuery
                     {
                         {mltQuery, Occur.MUST},
@@ -432,7 +478,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     continue;
 
                 var doc = _searcher.Doc(hit.Doc, _state);
-                var id = doc.Get(Constants.Documents.Indexing.Fields.DocumentIdFieldName, _state) ?? doc.Get(Constants.Documents.Indexing.Fields.ReduceKeyFieldName, _state);
+                var id = doc.Get(Constants.Documents.Indexing.Fields.DocumentIdFieldName, _state) ?? doc.Get(Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName, _state);
                 if (id == null)
                     continue;
 
@@ -443,13 +489,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        public IEnumerable<BlittableJsonReaderObject> IndexEntries(IndexQueryServerSide query, Reference<int> totalResults, DocumentsOperationContext documentsContext, CancellationToken token)
+        public IEnumerable<BlittableJsonReaderObject> IndexEntries(IndexQueryServerSide query, Reference<int> totalResults, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
             var docsToGet = GetPageSize(_searcher, query.PageSize);
             var position = query.Start;
 
-            var luceneQuery = GetLuceneQuery(documentsContext, query.Metadata, query.QueryParameters, _analyzer);
-            var sort = GetSort(query);
+            var luceneQuery = GetLuceneQuery(documentsContext, query.Metadata, query.QueryParameters, _analyzer, getSpatialField);
+            var sort = GetSort(query, getSpatialField);
 
             var search = ExecuteQuery(luceneQuery, query.Start, docsToGet, sort);
             var termsDocs = IndexedTerms.ReadAllEntriesFromIndex(_searcher.IndexReader, documentsContext, _state);

@@ -58,7 +58,7 @@ namespace Raven.Server.Json
                 return NumberParseResult.Double;
             }
 
-            throw new InvalidOperationException($"Could not parse numeric field for the value '{value}' of the given type: {value.GetType().FullName}");
+            throw new InvalidOperationException($"Could not parse numeric field for the value '{value ?? "null" }' of the given type: {value?.GetType().FullName ?? "null value"}");
         }
     }
 

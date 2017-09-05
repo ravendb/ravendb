@@ -30,7 +30,7 @@ namespace SlowTests.MailingList
                       {
                           Query = AsJson(user).Select(x => x.Value)
                       };
-                Index(x => x.Query, FieldIndexing.Analyzed);
+                Index(x => x.Query, FieldIndexing.Search);
             }
         }
 

@@ -9,7 +9,7 @@ using Xunit;
 
 namespace SlowTests.Server.Replication
 {
-    public class ReplicationWithRevisions : ReplicationTestsBase
+    public class ReplicationWithRevisions : ReplicationTestBase
     {
         [Fact]
         public async Task CanReplicateRevisions()

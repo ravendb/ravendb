@@ -9,13 +9,14 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.ConnectionStrings;
 using Raven.Client.ServerWide.Operations.ETL;
 using Raven.Client.ServerWide.PeriodicBackup;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace RachisTests.DatabaseCluster
 {
-    public class OngoingTasks : ReplicationTestsBase
+    public class OngoingTasks : ReplicationTestBase
     {
-        [Fact]
+        [NightlyBuildFact]
         public async Task CanGetTaskInfo()
         {
             var clusterSize = 3;
@@ -42,7 +43,7 @@ loadToOrders(orderData);
 
             using (var store = new DocumentStore
             {
-                Urls = leader.WebUrls,
+                Urls = new[] {leader.WebUrl},
                 Database = databaseName
             }.Initialize())
             {
@@ -142,7 +143,7 @@ loadToOrders(orderData);
 
             using (var store = new DocumentStore
             {
-                Urls = leader.WebUrls,
+                Urls = new[] {leader.WebUrl},
                 Database = databaseName,
                 Conventions =
                 {
@@ -188,7 +189,7 @@ loadToOrders(orderData);
             }
         }
 
-        [Fact]
+        [NightlyBuildFact]
         public async Task CanToggleTaskState()
         {
             var clusterSize = 3;
@@ -199,7 +200,7 @@ loadToOrders(orderData);
 
             using (var store = new DocumentStore
             {
-                Urls = leader.WebUrls,
+                Urls = new[] {leader.WebUrl},
                 Database = databaseName
             }.Initialize())
             {
@@ -239,7 +240,7 @@ loadToOrders(orderData);
 
             using (var store = new DocumentStore
             {
-                Urls = leader.WebUrls,
+                Urls = new[] {leader.WebUrl},
                 Database = databaseName,
                 Conventions =
                 {

@@ -20,13 +20,16 @@ namespace Raven.Client.Documents.Session.Tokens
         public string FieldName { get; private set; }
         public WhereOperator WhereOperator { get; private set; }
         public SearchOperator? SearchOperator { get; set; }
-        public string ParameterName { get; set; }
+        public string ParameterName { get; private set; }
         public string FromParameterName { get; private set; }
         public string ToParameterName { get; private set; }
         public decimal? Boost { get; set; }
         public decimal? Fuzzy { get; set; }
         public int? Proximity { get; set; }
-        public bool Exact { get; set; }
+        public bool Exact { get; private set; }
+
+        public ShapeToken WhereShape { get; private set; }
+        public double DistanceErrorPct { get; private set; }
 
         public static WhereToken Equals(string fieldName, string parameterName, bool exact)
         {
@@ -35,6 +38,17 @@ namespace Raven.Client.Documents.Session.Tokens
                 FieldName = fieldName,
                 ParameterName = parameterName,
                 WhereOperator = WhereOperator.Equals,
+                Exact = exact
+            };
+        }
+
+        public static WhereToken NotEquals(string fieldName, string parameterName, bool exact)
+        {
+            return new WhereToken
+            {
+                FieldName = fieldName,
+                ParameterName = parameterName,
+                WhereOperator = WhereOperator.NotEquals,
                 Exact = exact
             };
         }
@@ -166,7 +180,57 @@ namespace Raven.Client.Documents.Session.Tokens
                 WhereOperator = WhereOperator.Exists
             };
         }
-        
+
+        public static QueryToken Within(string fieldName, ShapeToken shape, double distanceErrorPct)
+        {
+            return new WhereToken
+            {
+                FieldName = fieldName,
+                ParameterName = null,
+                WhereOperator = WhereOperator.Within,
+                WhereShape = shape,
+                DistanceErrorPct = distanceErrorPct
+            };
+        }
+
+        public static QueryToken Contains(string fieldName, ShapeToken shape, double distanceErrorPct)
+        {
+            return new WhereToken
+            {
+                FieldName = fieldName,
+                ParameterName = null,
+                WhereOperator = WhereOperator.Contains,
+                WhereShape = shape,
+                DistanceErrorPct = distanceErrorPct
+            };
+        }
+
+        public static QueryToken Disjoint(string fieldName, ShapeToken shape, double distanceErrorPct)
+        {
+            return new WhereToken
+            {
+                FieldName = fieldName,
+                ParameterName = null,
+                WhereOperator = WhereOperator.Disjoint,
+                WhereShape = shape,
+                DistanceErrorPct = distanceErrorPct
+            };
+        }
+
+        public static QueryToken Intersects(string fieldName, ShapeToken shape, double distanceErrorPct)
+        {
+            return new WhereToken
+            {
+                FieldName = fieldName,
+                ParameterName = null,
+                WhereOperator = WhereOperator.Intersects,
+                WhereShape = shape,
+                DistanceErrorPct = distanceErrorPct
+            };
+        }
+
+
+      
         public override void WriteTo(StringBuilder writer)
         {
             if (Boost.HasValue)
@@ -198,59 +262,76 @@ namespace Raven.Client.Documents.Session.Tokens
                 case WhereOperator.Exists:
                     writer.Append("exists(");
                     break;
+                case WhereOperator.Within:
+                    writer.Append("within(");
+                    break;
+                case WhereOperator.Contains:
+                    writer.Append("contains(");
+                    break;
+                case WhereOperator.Disjoint:
+                    writer.Append("disjoint(");
+                    break;
+                case WhereOperator.Intersects:
+                    writer.Append("intersects(");
+                    break;
             }
 
-            writer.Append(FieldName);
+            WriteField(writer, FieldName);
 
             switch (WhereOperator)
             {
                 case WhereOperator.In:
                     writer
-                        .Append(" IN (:")
+                        .Append(" IN ($")
                         .Append(ParameterName)
                         .Append(")");
                     break;
                 case WhereOperator.AllIn:
                     writer
-                        .Append(" ALL IN (:")
+                        .Append(" ALL IN ($")
                         .Append(ParameterName)
                         .Append(")");
                     break;
                 case WhereOperator.Between:
                     writer
-                        .Append(" BETWEEN :")
+                        .Append(" BETWEEN $")
                         .Append(FromParameterName)
-                        .Append(" AND :")
+                        .Append(" AND $")
                         .Append(ToParameterName);
                     break;
                 case WhereOperator.Equals:
                     writer
-                        .Append(" = :")
+                        .Append(" = $")
+                        .Append(ParameterName);
+                    break;
+                case WhereOperator.NotEquals:
+                    writer
+                        .Append(" != $")
                         .Append(ParameterName);
                     break;
                 case WhereOperator.GreaterThan:
                     writer
-                        .Append(" > :")
+                        .Append(" > $")
                         .Append(ParameterName);
                     break;
                 case WhereOperator.GreaterThanOrEqual:
                     writer
-                        .Append(" >= :")
+                        .Append(" >= $")
                         .Append(ParameterName);
                     break;
                 case WhereOperator.LessThan:
                     writer
-                        .Append(" < :")
+                        .Append(" < $")
                         .Append(ParameterName);
                     break;
                 case WhereOperator.LessThanOrEqual:
                     writer
-                        .Append(" <= :")
+                        .Append(" <= $")
                         .Append(ParameterName);
                     break;
                 case WhereOperator.Search:
                     writer
-                        .Append(", :")
+                        .Append(", $")
                         .Append(ParameterName);
 
                     if (SearchOperator == Queries.SearchOperator.And)
@@ -262,11 +343,29 @@ namespace Raven.Client.Documents.Session.Tokens
                 case WhereOperator.StartsWith:
                 case WhereOperator.EndsWith:
                     writer
-                        .Append(", :")
+                        .Append(", $")
                         .Append(ParameterName)
                         .Append(")");
                     break;
                 case WhereOperator.Exists:
+                    writer
+                        .Append(")");
+                    break;
+                case WhereOperator.Within:
+                case WhereOperator.Contains:
+                case WhereOperator.Disjoint:
+                case WhereOperator.Intersects:
+                    writer
+                        .Append(", ");
+
+                    WhereShape.WriteTo(writer);
+
+                    if (Math.Abs(DistanceErrorPct - Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct) > double.Epsilon)
+                    {
+                        writer.Append(", ");
+                        writer.Append(DistanceErrorPct);
+                    }
+
                     writer
                         .Append(")");
                     break;
@@ -301,5 +400,6 @@ namespace Raven.Client.Documents.Session.Tokens
                     .Append(")");
             }
         }
+
     }
 }

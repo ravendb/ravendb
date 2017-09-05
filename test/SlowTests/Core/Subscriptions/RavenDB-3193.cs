@@ -33,7 +33,7 @@ namespace SlowTests.Core.Subscriptions
 
                 var subscriptionCreationParams = new SubscriptionCreationOptions
                 {
-                    Criteria = new SubscriptionCriteria("Users")
+                    Query = "from Users"
                 };
                 var id = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
 

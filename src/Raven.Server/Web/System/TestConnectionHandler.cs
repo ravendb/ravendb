@@ -25,11 +25,11 @@ namespace Raven.Server.Web.System
 
             try
             {
-                var timeout = TimeoutManager.WaitFor(ServerStore.Configuration.Cluster.ClusterOperationTimeout.AsTimeSpan);
-                var connectionInfo = ReplicationUtils.GetTcpInfoAsync(url, null, "Test-Connection", Server.ServerCertificateHolder.Certificate);
+                var timeout = TimeoutManager.WaitFor(ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan);
+                var connectionInfo = ReplicationUtils.GetTcpInfoAsync(url, null, "Test-Connection", Server.ClusterCertificateHolder.Certificate);
                 if (await Task.WhenAny(timeout, connectionInfo) == timeout)
                 {
-                    throw new TimeoutException($"Waited for {ServerStore.Configuration.Cluster.ClusterOperationTimeout.AsTimeSpan} to receive tcp info from {url} and got no response");
+                    throw new TimeoutException($"Waited for {ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan} to receive tcp info from {url} and got no response");
                 }
                 using (var tcpClient = new TcpClient())
                 {
@@ -57,7 +57,7 @@ namespace Raven.Server.Web.System
         private async Task<Stream> ConnectAndGetNetworkStreamAsync(TcpConnectionInfo tcpConnectionInfo, TcpClient tcpClient, Logger log)
         {
             await TcpUtils.ConnectSocketAsync(tcpConnectionInfo, tcpClient, log);
-            return await TcpUtils.WrapStreamWithSslAsync(tcpClient, tcpConnectionInfo, Server.ServerCertificateHolder.Certificate);
+            return await TcpUtils.WrapStreamWithSslAsync(tcpClient, tcpConnectionInfo, Server.ClusterCertificateHolder.Certificate);
         }
 
         private async Task<DynamicJsonValue> ConnectToClientNodeAsync(TcpConnectionInfo tcpConnectionInfo, TcpClient tcpClient, Logger log)

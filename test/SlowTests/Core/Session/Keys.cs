@@ -45,10 +45,14 @@ namespace SlowTests.Core.Session
         [Fact]
         public async Task KeyGeneration()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
             {
-                store.Conventions.RegisterAsyncIdConvention<User>((databaseName, entity) => Task.FromResult("def/" + entity.Name));
-
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.RegisterAsyncIdConvention<User>((databaseName, entity) => Task.FromResult("def/" + entity.Name));
+                }
+            }))
+            {
                 using (var session = store.OpenSession())
                 {
                     var user = new User { Name = "John" };
@@ -76,11 +80,15 @@ namespace SlowTests.Core.Session
         [Fact]
         public void KeyGenerationOnLoad()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
             {
-                store.Conventions.RegisterAsyncIdConvention<TShirt>((databaseName, entity) => Task.FromResult("ts/" + entity.ReleaseYear));
-                store.Conventions.RegisterIdLoadConvention<TShirt>(id => "ts/" + id);
-
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.RegisterAsyncIdConvention<TShirt>((databaseName, entity) => Task.FromResult("ts/" + entity.ReleaseYear));
+                    s.Conventions.RegisterIdLoadConvention<TShirt>(id => "ts/" + id);
+                }
+            }))
+            {
                 using (var session = store.OpenSession())
                 {
                     var shirt = new TShirt { Manufacturer = "Test1", ReleaseYear = 1999 };

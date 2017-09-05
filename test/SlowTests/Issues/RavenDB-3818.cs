@@ -1,16 +1,17 @@
 using System.Globalization;
 using System.Linq;
 using FastTests;
-using Raven.Client.Documents.Conventions;
+using Raven.Client;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Indexes.Spatial;
 using Xunit;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_3818 : RavenTestBase
     {
-        [Fact(Skip = "RavenDB-5988")]
+        [Fact]
         public void SparialSearchWithDistanceErrorPercent()
         {
             using (var store = GetDocumentStore())
@@ -18,18 +19,15 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     //Point(12.556675672531128 55.675285554217), corner of the bounding rectangle below
-                    var nearbyPoints1 = (RavenQueryInspector<Entity>)session.Query<Entity, EntitySpatialIndex>()
-                        .Customize(x =>
-                            x.WithinRadiusOf(fieldName: "Coordinates", radius: 1, latitude: 55.675285554217, longitude: 12.556675672531128, distErrorPercent: 0.025));
+                    var nearbyPoints1 = session.Query<EntitySpatialIndex.Result, EntitySpatialIndex>()
+                        .Spatial(x => x.Coordinates, x => x.WithinRadius(1, 55.675285554217, 12.556675672531128, SpatialUnits.Kilometers, 0.025));
+                    var queryUrl1 = RavenTestHelper.GetIndexQuery(nearbyPoints1);
+                    Assert.NotNull(queryUrl1.Query.Contains("within(Coordinates, circle(1, 55.675285554217, 12.556675672531128))"));
 
-                    //var queryUrl1 = nearbyPoints1.GetIndexQuery(false).GetQueryString(DocumentConventions.Default);
-                    //Assert.NotNull(queryUrl1.Contains("distErrorPercent=0.025"));
-
-                    var nearbyPoints2 = (RavenQueryInspector<Entity>)session.Query<Entity, EntitySpatialIndex>()
-                        .Customize(x =>
-                            x.WithinRadiusOf(fieldName: "Coordinates", radius: 1, latitude: 55.675285554217, longitude: 12.556675672531128, distErrorPercent: 0.01));
-                    //var queryUrl2 = nearbyPoints2.GetIndexQuery(false).GetQueryString(DocumentConventions.Default);
-                    //Assert.NotNull(queryUrl2.Contains("distErrorPercent=0.01"));
+                    var nearbyPoints2 = session.Query<EntitySpatialIndex.Result, EntitySpatialIndex>()
+                        .Spatial(x => x.Coordinates, x => x.WithinRadius(1, 55.675285554217, 12.556675672531128, SpatialUnits.Kilometers, 0.01));
+                    var queryUrl2 = RavenTestHelper.GetIndexQuery(nearbyPoints2);
+                    Assert.NotNull(queryUrl2.Query.Contains("within(Coordinates, circle(1, 55.675285554217, 12.556675672531128), 0.01)"));
                 }
             }
         }
@@ -57,6 +55,11 @@ namespace SlowTests.Issues
 
         private class EntitySpatialIndex : AbstractIndexCreationTask<Entity>
         {
+            public class Result
+            {
+                public string Coordinates { get; set; }
+            }
+
             public EntitySpatialIndex()
             {
                 Map = entities => entities.Select(entity => new

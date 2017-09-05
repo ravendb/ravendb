@@ -227,23 +227,23 @@ namespace FastTests.Server.Documents.Indexing.Auto
             {
                 dbName = database.Name;
 
-                var count = new IndexField
+                var count = new AutoIndexField
                 {
                     Name = "Count",
                     Storage = FieldStorage.Yes,
                     Aggregation = AggregationOperation.Count
                 };
 
-                var location = new IndexField
+                var location = new AutoIndexField
                 {
                     Name = "Location",
                     Storage = FieldStorage.Yes,
-                    Indexing = FieldIndexing.Analyzed
+                    Indexing = AutoFieldIndexing.Search | AutoFieldIndexing.Exact | AutoFieldIndexing.Default
                 };
 
                 Assert.True(await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition("Users", new[] {count}, new[] {location})) > 0);
 
-                var sum = new IndexField
+                var sum = new AutoIndexField
                 {
                     Name = "Sum",
                     Storage = FieldStorage.Yes,
@@ -276,7 +276,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal("Users", indexes[0].Definition.Collections.Single());
                 Assert.Equal(1, indexes[0].Definition.MapFields.Count);
                 Assert.Equal("Count", indexes[0].Definition.MapFields["Count"].Name);
-                Assert.Equal(AggregationOperation.Count, indexes[0].Definition.MapFields["Count"].Aggregation);
+                Assert.Equal(AggregationOperation.Count, indexes[0].Definition.MapFields["Count"].As<AutoIndexField>().Aggregation);
 
                 var definition = indexes[0].Definition as AutoMapReduceIndexDefinition;
 
@@ -284,7 +284,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 Assert.Equal(1, definition.GroupByFields.Count);
                 Assert.Equal("Location", definition.GroupByFields["Location"].Name);
-                Assert.Equal(FieldIndexing.Analyzed, definition.GroupByFields["Location"].Indexing);
+                Assert.Equal(AutoFieldIndexing.Search | AutoFieldIndexing.Exact | AutoFieldIndexing.Default, definition.GroupByFields["Location"].Indexing);
 
                 Assert.Equal(IndexLockMode.Unlock, indexes[0].Definition.LockMode);
                 Assert.Equal(IndexPriority.Normal, indexes[0].Definition.Priority);
@@ -296,9 +296,9 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 Assert.Equal(2, indexes[1].Definition.MapFields.Count);
                 Assert.Equal("Count", indexes[1].Definition.MapFields["Count"].Name);
-                Assert.Equal(AggregationOperation.Count, indexes[1].Definition.MapFields["Count"].Aggregation);
+                Assert.Equal(AggregationOperation.Count, indexes[1].Definition.MapFields["Count"].As<AutoIndexField>().Aggregation);
                 Assert.Equal("Sum", indexes[1].Definition.MapFields["Sum"].Name);
-                Assert.Equal(AggregationOperation.Sum, indexes[1].Definition.MapFields["Sum"].Aggregation);
+                Assert.Equal(AggregationOperation.Sum, indexes[1].Definition.MapFields["Sum"].As<AutoIndexField>().Aggregation);
 
                 definition = indexes[0].Definition as AutoMapReduceIndexDefinition;
 
@@ -306,7 +306,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 Assert.Equal(1, definition.GroupByFields.Count);
                 Assert.Equal("Location", definition.GroupByFields["Location"].Name);
-                Assert.Equal(FieldIndexing.Analyzed, definition.GroupByFields["Location"].Indexing);
+                Assert.Equal(AutoFieldIndexing.Search | AutoFieldIndexing.Exact | AutoFieldIndexing.Default, definition.GroupByFields["Location"].Indexing);
 
                 Assert.Equal(IndexLockMode.LockedError, indexes[1].Definition.LockMode);
                 Assert.Equal(IndexPriority.High, indexes[1].Definition.Priority);
@@ -322,13 +322,13 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 "Orders",
                 new[]
                 {
-                    new IndexField
+                    new AutoIndexField
                     {
                         Name = "Lines[].Quantity",
                         Aggregation = AggregationOperation.Sum,
                         Storage = FieldStorage.Yes
                     },
-                    new IndexField
+                    new AutoIndexField
                     {
                         Name = "Lines[].Price",
                         Aggregation = AggregationOperation.Sum,
@@ -337,7 +337,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 },
                 new[]
                 {
-                    new IndexField
+                    new AutoIndexField
                     {
                         Name = "ShipTo.Country",
                         Storage = FieldStorage.Yes
@@ -427,7 +427,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             using (var db = CreateDocumentDatabase())
             using (var index = AutoMapReduceIndex.CreateNew(1, new AutoMapReduceIndexDefinition("Users", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Age",
                     Aggregation = AggregationOperation.Sum,
@@ -435,7 +435,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 }
             }, new[]
                     {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Location",
                     Storage = FieldStorage.Yes
@@ -502,7 +502,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             using (var db = CreateDocumentDatabase())
             using (var index = AutoMapReduceIndex.CreateNew(1, new AutoMapReduceIndexDefinition("Users", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Age",
                     Aggregation = AggregationOperation.Sum,
@@ -510,7 +510,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 }
             }, new[]
             {
-                    new IndexField
+                    new AutoIndexField
                     {
                         Name = "Location",
                         Storage = FieldStorage.Yes
@@ -580,7 +580,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             using (var db = CreateDocumentDatabase())
             using (var index = AutoMapReduceIndex.CreateNew(1, new AutoMapReduceIndexDefinition("Orders", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Count",
                     Aggregation = AggregationOperation.Count,
@@ -588,12 +588,12 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 }
             }, new[]
             {
-                    new IndexField
+                    new AutoIndexField
                     {
                         Name = "Employee",
                         Storage = FieldStorage.Yes
                     },
-                    new IndexField
+                    new AutoIndexField
                     {
                         Name = "Company",
                         Storage = FieldStorage.Yes
@@ -682,7 +682,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
         {
             return new AutoMapReduceIndexDefinition("Users", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Count",
                     Aggregation = AggregationOperation.Count,
@@ -690,7 +690,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 }
             }, new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Location",
                     Storage = FieldStorage.Yes

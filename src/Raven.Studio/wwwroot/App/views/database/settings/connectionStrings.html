@@ -12,14 +12,15 @@
                         <h3 class="text-center text-muted">No RavenDB ETL connection strings have been defined.</h3>
                     </div>
                 </div>
-                <div data-bind="foreach: ravenEtlConnectionStringsNames" class="destinations">
+                <div data-bind="foreach: ravenEtlConnectionStringsNames">
                     <div class="panel padding padding-sm flex-horizontal destination-item" 
                          data-bind="css: { 'panel-info': $root.editedRavenEtlConnectionString() && $data === $root.editedRavenEtlConnectionString().connectionStringName() }">
-                        <div class="flex-grow">
-                            <h4><a href="#" data-bind="click: $parent.onEditRavenEtl, attr: { title: $data }">
+                        <div class="flex-grow text-elipsis">
+                            <a href="#" data-bind="click: $parent.onEditRavenEtl, attr: { title: $data }">
+                                <h4 class="text-elipsis">
                                     <span data-bind="text: $data"></span>
-                                </a>
-                            </h4>
+                                </h4>
+                            </a>
                         </div>
                         <div class="actions">
                             <button class="btn btn-default" data-bind="click: $parent.onEditRavenEtl" title="Edit connection string"><i class="icon-edit"></i></button>
@@ -37,14 +38,15 @@
                         <h3 class="text-center text-muted">No SQL ETL connection strings have been defined.</h3>
                     </div>
                 </div>
-                <div data-bind="foreach: sqlEtlConnectionStringsNames" class="destinations">
+                <div data-bind="foreach: sqlEtlConnectionStringsNames">
                     <div class="panel padding padding-sm flex-horizontal destination-item" 
                          data-bind="css: { 'panel-info': $root.editedSqlEtlConnectionString() && $data === $root.editedSqlEtlConnectionString().connectionStringName() }">
-                        <div class="flex-grow">
-                            <h4><a href="#" data-bind="click: $parent.onEditSqlEtl, attr: { title: $data }">
+                        <div class="flex-grow text-elipsis">
+                            <a href="#" data-bind="click: $parent.onEditSqlEtl, attr: { title: $data }">
+                                <h4 class="text-elipsis">
                                     <span data-bind="text: $data"></span>
-                                </a>
-                            </h4>
+                                </h4>
+                            </a>
                         </div>
                         <div class="actions">
                             <button class="btn btn-default" data-bind="click: $parent.onEditSqlEtl" title="Edit connection string"><i class="icon-edit"></i></button>
@@ -55,13 +57,13 @@
             </div>
         </div>
         <div class="col-sm-12 col-lg-6 flex-vertical" data-bind="visible: editedRavenEtlConnectionString() || editedSqlEtlConnectionString()">
-            <div class="panel padding slidein-style">
-                <div class="flex-horizontal">
+            <div class="panel slidein-style">
+                <div class="flex-horizontal padding">
                     <h3 class="flex-grow" data-bind="visible: editedRavenEtlConnectionString">RavenDB ETL Connection String</h3>
                     <h3 class="flex-grow" data-bind="visible: editedSqlEtlConnectionString">SQL ETL Connection String</h3>
                     <button class="close flex-start" data-bind="click: onCloseEdit"><i class="icon-cancel"></i></button>
                 </div>
-                <form class="flex-form">
+                <form class="flex-form padding">
                     <div data-bind="with: editedRavenEtlConnectionString">
                         <div class="form-group">
                             <label class="control-label">Name</label>
@@ -98,18 +100,14 @@
                     </div>
                     <div class="flex-horizontal">
                         <div class="flex-grow">
-                            <button type="submit" class="btn btn-info" data-bind="click: onTestConnection, enable: editedRavenEtlConnectionString, disable: $root.spinners.test, css: { 'btn-spinner': $root.spinners.test }" title="Test url connection">
+                            <!-- TODO: it is currenly hidden for SQL - since it isn't implemented server side -->
+                            <button type="submit" class="btn btn-info" title="Test url connection"
+                                    data-bind="click: onTestConnection, visible: editedRavenEtlConnectionString, disable: $root.spinners.test, css: { 'btn-spinner': $root.spinners.test }" >
                                 <i class="icon-rocket"></i>
                                 <span>Test connection</span>
                             </button>
                         </div>
-                        <div class="flex-grow" data-bind="with: $root.testConnectionResult">
-                            <div class="text-success" data-bind="visible: Success"> 
-                                Successfully connected to node
-                            </div>
-                            <div class="text-danger" data-bind="visible: !Success">
-                                Connection test failed: <span data-bind="text: Error"></span>
-                            </div>
+                        <div class="flex-grow">
                         </div>
                         <div>
                             <button class="btn btn-default" data-bind="click: onCloseEdit"><i class="icon-cancel"></i><span>Cancel</span></button>
@@ -117,6 +115,18 @@
                         </div>
                     </div>
                 </form>
+                <div class="panel-addon" data-bind="with: $root.testConnectionResult">
+                    <div class="padding bg-success small" data-bind="visible: Success">
+                        <div>Successfully connected to node</div>
+                    </div>
+                    <div class="padding bg-danger small" data-bind="visible: !Success">
+                        Connection test failed: <span data-bind="text: $root.fullErrorDetailsVisible() ? Error : $root.shortErrorText()"></span>
+
+                        <div>
+                            <a href="#" data-bind="click: $root.fullErrorDetailsVisible.toggle.bind($root.fullErrorDetailsVisible), text: $root.fullErrorDetailsVisible() ? 'hide details' : 'show details'"></a>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

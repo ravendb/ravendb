@@ -2,13 +2,13 @@
 
 namespace Raven.Client.Documents.Session.Tokens
 {
-    public class DistinctToken : QueryToken
+    public sealed class DistinctToken : QueryToken
     {
         private DistinctToken()
         {
         }
 
-        public static DistinctToken Instance = new DistinctToken();
+        public static readonly DistinctToken Instance = new DistinctToken();
 
         public override void WriteTo(StringBuilder writer)
         {

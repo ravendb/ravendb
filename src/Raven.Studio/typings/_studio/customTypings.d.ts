@@ -132,6 +132,27 @@ declare module AceAjax {
         start: number;
         type: string;
     }
+
+    interface TextMode {
+        prefixRegexps: RegExp[];
+        $highlightRules: HighlightRules;
+    }
+
+    interface Selection {
+        lead: Anchor;
+    }
+
+    interface Anchor {
+        column: number;
+        row: number;
+    }
+
+    interface HighlightRules {
+    }
+
+    interface RqlHighlightRules extends HighlightRules {
+        clauseAppendKeywords: string[];
+    }
 }
 
 interface DurandalAppModule {

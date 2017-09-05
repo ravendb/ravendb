@@ -113,7 +113,7 @@ namespace SlowTests.MailingList
                             testClass.Password
                         };
 
-                Index(x => x.Query, FieldIndexing.Analyzed);
+                Index(x => x.Query, FieldIndexing.Search);
                 Index(x => x.FirstName, FieldIndexing.Default);
                 Index(x => x.LastName, FieldIndexing.Default);
                 Index(x => x.Email, FieldIndexing.Default);

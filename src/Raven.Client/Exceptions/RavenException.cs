@@ -19,6 +19,8 @@ namespace Raven.Client.Exceptions
         {
         }
 
+        public bool ReachedLeader { get; set; }
+
         public static RavenException Generic(string error, BlittableJsonReaderObject json)
         {
             return new RavenException($"{error}. Response: {json}");

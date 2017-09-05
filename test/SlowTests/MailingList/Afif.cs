@@ -2,14 +2,13 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
-using SlowTests.Utils;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
     public class WhenGroupinByLocation : RavenTestBase
     {
-        [Fact(Skip = "Missing feature: Spatial")]
+        [Fact]
         public void CanFindSale()
         {
             using (var d = GetDocumentStore())
@@ -80,19 +79,19 @@ namespace SlowTests.MailingList
                 AddMap<Sale>(sales => from sale in sales
                                       select new
                                       {
-                                          _ = (object)null,
                                           SaleId = sale.Id,
                                           Locations = sale.Locations.Select(l => new { l.Lat, l.Lng }).ToArray(),
-                                          TotalSold = 0
+                                          TotalSold = 0,
+                                          Coordinates = (object)null
                                       });
 
                 AddMap<Order>(orders => from order in orders
                                         select new
                                         {
-                                            _ = (object)null,
                                             order.SaleId,
                                             Locations = new[] { new { Lat = (double)0, Lng = (double)0 } },
-                                            TotalSold = 1
+                                            TotalSold = 1,
+                                            Coordinates = (object)null
                                         });
 
                 Reduce = sitesales => from sitesale in sitesales
@@ -102,7 +101,7 @@ namespace SlowTests.MailingList
                                       from sale in sales
                                       select new
                                       {
-                                          _ = locations.Select(l => SpatialGenerate(l.Lat, l.Lng)),
+                                          Coordinates = locations.Select(l => CreateSpatialField(l.Lat, l.Lng)),
                                           // marking this as empty works
                                           sale.SaleId,
                                           Locations = locations,

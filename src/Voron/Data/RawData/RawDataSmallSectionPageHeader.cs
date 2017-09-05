@@ -34,5 +34,8 @@ namespace Voron.Data.RawData
 
         [FieldOffset(22)]
         public ulong SectionOwnerHash;
+
+        [FieldOffset(30)]
+        public byte TableType;
     }
 }

@@ -49,11 +49,8 @@ namespace SlowTests.Server.Documents.Patching
                     }
                     x.SaveChanges();
                 }
-
-                var operation = store.Operations.Send(new PatchByQueryOperation(new IndexQuery() {Query = "FROM Users"},  new PatchRequest
-                {
-                    Script = "this.Name = __document_id"
-                }));
+                
+                var operation = store.Operations.Send(new PatchByQueryOperation(new IndexQuery() {Query = "FROM Users UPDATE { this.Name = id(this) } " }));
                 operation.WaitForCompletion(TimeSpan.FromSeconds(30));
 
                 var stats = store.Admin.Send(new GetStatisticsOperation());

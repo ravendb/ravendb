@@ -122,7 +122,7 @@ namespace SlowTests.Issues
                                  select new { Name = animal.Name, Type = animal.Type };
 
                 Analyze(a => a.Name, "StandardAnalyzer");
-                Index(a => a.Name, FieldIndexing.Analyzed);
+                Index(a => a.Name, FieldIndexing.Search);
             }
         }
     }

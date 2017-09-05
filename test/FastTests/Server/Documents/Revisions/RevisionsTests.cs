@@ -131,7 +131,10 @@ namespace FastTests.Server.Documents.Revisions
         {
             var path = NewDataPath();
             var company = new Company { Name = "Company Name" };
-            using (var store = GetDocumentStore(path: path))
+            using (var store = GetDocumentStore(new Options
+            {
+                Path = path
+            }))
             {
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
                 using (var session = store.OpenAsyncSession())
@@ -431,7 +434,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [Theory]
+        [Theory(Skip="RavenDB-8265")]
         [InlineData(false)]
         [InlineData(true)]
         public async Task DeleteRevisionsBeforeFromConsole(bool useConsole)
@@ -468,10 +471,8 @@ namespace FastTests.Server.Documents.Revisions
 
                 if (useConsole)
                 {
-                    new AdminJsConsole(database).ApplyScript(new AdminJsScript
-                    {
-                        Script = "database.DocumentsStorage.RevisionsStorage.Operations.DeleteRevisionsBefore('Users', new Date());"
-                    });
+                    new AdminJsConsole(Server, database).ApplyScript(new AdminJsScript(
+                     "database.DocumentsStorage.RevisionsStorage.Operations.DeleteRevisionsBefore('Users', new Date());"));
                 }
                 else
                 {

@@ -247,7 +247,7 @@ namespace SlowTests.Core.Streaming
             {
                 Map = users => from u in users select new { Name = u.Name, LastName = u.LastName.Boost(10) };
 
-                Indexes.Add(x => x.Name, FieldIndexing.Analyzed);
+                Indexes.Add(x => x.Name, FieldIndexing.Search);
 
                 IndexSuggestions.Add(x => x.Name);
 

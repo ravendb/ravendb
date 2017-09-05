@@ -23,11 +23,14 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "RavenDB-5990")]
+        [Fact]
         public async Task CanCompact()
         {
             var path = NewDataPath();
-            using (var store = GetDocumentStore(path: path))
+            using (var store = GetDocumentStore(new Options
+            {
+                Path = path
+            }))
             {
                 new Users_ByName().Execute(store);
 

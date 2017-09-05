@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ServiceModel.Channels;
-using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide.ETL;
 using Raven.Client.ServerWide.PeriodicBackup;
 using Sparrow.Json.Parsing;
@@ -55,29 +53,17 @@ namespace Raven.Client.ServerWide.Operations
 
     public class OngoingTaskSubscription : OngoingTask
     {
-        public class ClientConnectionIfo
-        {
-            public string ClientUri { get; set; }
-            public SubscriptionOpeningStrategy Strategy { get; set; }
-            public DateTime ClientConnectionTime { get; set; }
-        }
-
         public OngoingTaskSubscription()
         {
             TaskType = OngoingTaskType.Subscription;
         }
 
-        public string Collection { get; set; }
-        public DateTime TimeOfLastClientActivity { get; set; }
-        public string LastChangeVector { get; set; }
-
-        public ClientConnectionIfo ClientConnection { get; set; }
+        public string Query { get; set; }
 
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
-            json[nameof(Collection)] = Collection;
-            json[nameof(TimeOfLastClientActivity)] = TimeOfLastClientActivity;
+            json[nameof(Query)] = Query;
             return json;
         }
     }

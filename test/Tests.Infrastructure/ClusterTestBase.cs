@@ -192,7 +192,7 @@ namespace Tests.Infrastructure
             var serversTopology = Servers.Where(s => allNodes.Contains(s.ServerStore.NodeTag));
             var nodes = serversTopology.Select(x => new ServerNode
             {
-                Url = x.WebUrls[0],
+                Url = x.WebUrl,
                 Database = db
             });
             var stores = GetDocumentStores(nodes, disableTopologyUpdates: true, certificate: certificate);
@@ -310,7 +310,7 @@ namespace Tests.Infrastructure
         protected List<DocumentStore> GetStoresFromTopology(IReadOnlyList<ServerNode> topologyNodes)
         {
             var stores = new List<DocumentStore>();
-            var tokenToUrl = Servers.ToDictionary(x => x.ServerStore.NodeTag, x => x.WebUrls[0]);
+            var tokenToUrl = Servers.ToDictionary(x => x.ServerStore.NodeTag, x => x.WebUrl);
             foreach (var node in topologyNodes)
             {
                 string url;
@@ -344,7 +344,7 @@ namespace Tests.Infrastructure
             for (var i = 0; i < numberOfNodes; i++)
             {
                 var server = servers[i];
-                serversToPorts.Add(server, server.WebUrls[0]);
+                serversToPorts.Add(server, server.WebUrl);
                 if (i == leaderIndex)
                 {
                     server.ServerStore.EnsureNotPassive();
@@ -382,12 +382,12 @@ namespace Tests.Infrastructure
 
                 if (useSsl)
                 {
-                    serverUrl = UseFiddler($"https://127.0.0.1:{GetPort()}");
+                    serverUrl = UseFiddlerUrl($"https://127.0.0.1:{GetPort()}");
                     SetupServerAuthentication(customSettings, serverUrl, doNotReuseServer: false);
                 }
                 else
                 {
-                    serverUrl = UseFiddler($"http://127.0.0.1:{GetPort()}");
+                    serverUrl = UseFiddlerUrl($"http://127.0.0.1:{GetPort()}");
                     customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrl)] = serverUrl;
                 }
 
@@ -441,7 +441,7 @@ namespace Tests.Infrastructure
                 var server = GetNewServer(customSettings, runInMemory: shouldRunInMemory);
                 serversToProxies.Add(server, proxy);
 
-                if (Servers.Any(s => s.WebUrls[0].Equals(server.WebUrls[0], StringComparison.OrdinalIgnoreCase)) == false)
+                if (Servers.Any(s => s.WebUrl.Equals(server.WebUrl, StringComparison.OrdinalIgnoreCase)) == false)
                 {
                     Servers.Add(server);
                 }
@@ -483,12 +483,12 @@ namespace Tests.Infrastructure
             port = port ?? GetPort();
             if (useSsl)
             {
-                serverUrl = UseFiddler($"https://127.0.0.1:{port}");
+                serverUrl = UseFiddlerUrl($"https://127.0.0.1:{port}");
                 SetupServerAuthentication(customSettings, serverUrl, doNotReuseServer: false);
             }
             else
             {
-                serverUrl = UseFiddler($"http://127.0.0.1:{port}");
+                serverUrl = UseFiddlerUrl($"http://127.0.0.1:{port}");
                 customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrl)] = serverUrl;
             }
             return customSettings;

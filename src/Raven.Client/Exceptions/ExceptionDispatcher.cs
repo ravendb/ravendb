@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Reflection;
@@ -45,7 +47,7 @@ namespace Raven.Client.Exceptions
             Exception exception;
             try
             {
-                exception = (Exception)Activator.CreateInstance(type, error);
+                exception = (Exception)Activator.CreateInstance(type, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public, null, new[] { error }, null, null);
             }
             catch (Exception)
             {
@@ -92,7 +94,7 @@ namespace Raven.Client.Exceptions
                     {
                         message = schema.Error;
                     }
-                    exception = (Exception)Activator.CreateInstance(type, message);
+                    exception = (Exception)Activator.CreateInstance(type, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public, null, new[] { message }, null, null);
                 }
                 catch (Exception)
                 {

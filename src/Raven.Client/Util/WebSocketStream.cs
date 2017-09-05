@@ -4,6 +4,7 @@ using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Collections;
+using Sparrow.Threading;
 
 namespace Raven.Client.Util
 {
@@ -17,7 +18,7 @@ namespace Raven.Client.Util
 
         private readonly ConcurrentSet<Task> _activeWriteTasks = new ConcurrentSet<Task>();
 
-        private volatile bool _isDisposed;
+        private SingleUseFlag _isDisposed = new SingleUseFlag();
 
         /// <summary>
         /// Initialize the stream. Assumes the websocket is initialized and connected
@@ -25,7 +26,6 @@ namespace Raven.Client.Util
         /// <remarks>This is not a thread-safe implementation</remarks>
         public WebSocketStream(WebSocket webSocket, CancellationToken cancellationToken)
         {
-            _isDisposed = false;
             if (webSocket == null)
                 throw new ArgumentNullException(nameof(webSocket));
             if (webSocket.State != WebSocketState.Open)
@@ -131,7 +131,7 @@ namespace Raven.Client.Util
             base.Dispose(disposing);
 
             AsyncHelpers.RunSync(() => Task.WhenAll(_activeWriteTasks));
-            _isDisposed = true;
+            _isDisposed.Raise();
         }
     }
 }

@@ -17,12 +17,11 @@ namespace SlowTests.MailingList
             using (var store = GetDocumentStore())
             {
                 store.Initialize();
-                store.Conventions.AllowQueriesOnId = true;
                 store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
                     Maps = { @"
 docs.Casinos
-    .SelectMany(casino => casino.Comments, (casino, comment) => new {CityId = casino.CityId, CasinoId = casino.__document_id, Id = comment.Id, DateTime = comment.DateTime, Author = comment.Author, Text = comment.Text})" },
+    .SelectMany(casino => casino.Comments, (casino, comment) => new {CityId = casino.CityId, CasinoId = Id(casino), Id = comment.Id, DateTime = comment.DateTime, Author = comment.Author, Text = comment.Text})" },
 
                     Fields = new Dictionary<string, IndexFieldOptions>
                     {

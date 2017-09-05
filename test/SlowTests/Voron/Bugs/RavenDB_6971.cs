@@ -14,26 +14,23 @@ namespace SlowTests.Voron.Bugs
         [Fact]
         public void Overflow_shrink_needs_to_update_scratch_buffer_page_to_avoid_data_override_after_restart()
         {
-            using (var store = GetDocumentStore(path: NewDataPath()))
+            using (var store = GetDocumentStore(new Options
+            {
+                Path = NewDataPath()
+            }))
             {
                 store.Admin.Send(new CreateSampleDataOperation());
 
                 for (int i = 0; i < 3; i++)
                 {
-                    store.Operations.Send(new PatchByQueryOperation(new IndexQuery { Query = "FROM Orders" }, new PatchRequest()
-                    {
-                        Script = @"PutDocument(""orders/"", this);"
-                    })).WaitForCompletion(TimeSpan.FromSeconds(30));
+                    store.Operations.Send(new PatchByQueryOperation(new IndexQuery { Query = @"FROM Orders UPDATE { put(""orders/"", this); } " })).WaitForCompletion(TimeSpan.FromSeconds(30));
                 }
 
                 WaitForIndexing(store);
 
                 Server.ServerStore.DatabasesLandlord.UnloadDatabase(store.Database);
 
-                store.Operations.Send(new PatchByQueryOperation(new IndexQuery { Query = "FROM Orders" }, new PatchRequest()
-                {
-                    Script = @"PutDocument(""orders/"", this);"
-                })).WaitForCompletion(TimeSpan.FromSeconds(30));
+                store.Operations.Send(new PatchByQueryOperation(new IndexQuery { Query = @"FROM Orders UPDATE { put(""orders/"", this); } " })).WaitForCompletion(TimeSpan.FromSeconds(30));
 
                 WaitForIndexing(store);
 
@@ -46,7 +43,10 @@ namespace SlowTests.Voron.Bugs
         [Fact]
         public void Applying_new_diff_requires_to_zero_destination_bytes_first()
         {
-            using (var store = GetDocumentStore(path: NewDataPath()))
+            using (var store = GetDocumentStore(new Options
+            {
+                Path = NewDataPath()
+            }))
             {
                 store.Admin.Send(new CreateSampleDataOperation());
 
@@ -55,18 +55,13 @@ namespace SlowTests.Voron.Bugs
 
                 for (int i = 0; i < 3; i++)
                 {
-                    store.Operations.Send(new PatchByQueryOperation(new IndexQuery { Query = "FROM Orders" }, new PatchRequest()
-                    {
-                        Script = @"PutDocument(""orders/"", this);"
-                    })).WaitForCompletion(TimeSpan.FromSeconds(30));
+                    store.Operations.Send(new PatchByQueryOperation(new IndexQuery { Query = @"FROM Orders UPDATE { put(""orders/"", this); } " })).WaitForCompletion(TimeSpan.FromSeconds(30));
+
                 }
 
                 try
                 {
-                    store.Operations.Send(new PatchByQueryOperation(new IndexQuery { Query = "FROM Orders" }, new PatchRequest()
-                    {
-                        Script = @"PutDocument(""orders/"", this);"
-                    })).WaitForCompletion(TimeSpan.FromSeconds(10));
+                    store.Operations.Send(new PatchByQueryOperation(new IndexQuery { Query = @"FROM Orders UPDATE { put(""orders/"", this); } " })).WaitForCompletion(TimeSpan.FromSeconds(30));
                 }
                 catch (TimeoutException)
                 {
@@ -76,10 +71,8 @@ namespace SlowTests.Voron.Bugs
                 Server.ServerStore.DatabasesLandlord.UnloadDatabase(store.Database);
                 try
                 {
-                    store.Operations.Send(new PatchByQueryOperation(new IndexQuery { Query = "FROM Orders" }, new PatchRequest()
-                    {
-                        Script = @"PutDocument(""orders/"", this);"
-                    })).WaitForCompletion(TimeSpan.FromSeconds(10));
+                    store.Operations.Send(new PatchByQueryOperation(new IndexQuery { Query = @"FROM Orders UPDATE { put(""orders/"", this); } " })).WaitForCompletion(TimeSpan.FromSeconds(30));
+
                 }
                 catch (TimeoutException)
                 {

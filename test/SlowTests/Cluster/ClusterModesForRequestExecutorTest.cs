@@ -45,12 +45,12 @@ namespace SlowTests.Cluster
                 using (var documentStore = new DocumentStore
                 {
                     Database = databaseName,
-                    Urls = new[] { ReplacePort(server.WebUrls[0], serverPort) }
+                    Urls = new[] { ReplacePort(server.WebUrl, serverPort) }
                 })
                 {
                     documentStore.Initialize();
 
-                    var (raftIndex, _) = await CreateDatabaseInCluster(databaseName, 1, server.WebUrls[0]);
+                    var (raftIndex, _) = await CreateDatabaseInCluster(databaseName, 1, server.WebUrl);
                     await WaitForRaftIndexToBeAppliedInCluster(raftIndex, TimeSpan.FromSeconds(10));
 
                     var totalReadBeforeChanges = proxy.TotalRead;
@@ -94,14 +94,14 @@ namespace SlowTests.Cluster
             //set proxies with delays to all servers except follower2
             using (var leaderStore = new DocumentStore
             {
-                Urls = new[] { ReplacePort(leader.WebUrls[0], serversToProxies[leader].Port) },
+                Urls = new[] { ReplacePort(leader.WebUrl, serversToProxies[leader].Port) },
                 Database = databaseName,
                 Conventions = conventionsForLoadBalancing
             })
             {
                 leaderStore.Initialize();
 
-                var (index, _) = await CreateDatabaseInCluster(databaseName, 3, leader.WebUrls[0]);
+                var (index, _) = await CreateDatabaseInCluster(databaseName, 3, leader.WebUrl);
                 await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(30));
                 var leaderRequestExecutor = leaderStore.GetRequestExecutor();
 
@@ -110,7 +110,7 @@ namespace SlowTests.Cluster
                 {
                     ClusterTag = leader.ServerStore.NodeTag,
                     Database = databaseName,
-                    Url = leader.WebUrls[0]
+                    Url = leader.WebUrl
                 }, 5000);
 
                 ApplyProxiesOnRequestExecutor(serversToProxies, leaderRequestExecutor);
@@ -153,7 +153,7 @@ namespace SlowTests.Cluster
                 }
 
                 var fastest = leaderRequestExecutor.GetFastestNode().Result.Node;
-                var follower2Proxy = ReplacePort(followers[1].WebUrls[0], serversToProxies[followers[1]].Port);
+                var follower2Proxy = ReplacePort(followers[1].WebUrl, serversToProxies[followers[1]].Port);
 
                 Assert.Equal(follower2Proxy, fastest.Url);
 
@@ -200,19 +200,19 @@ namespace SlowTests.Cluster
 
             using (var leaderStore = new DocumentStore
             {
-                Urls = leader.WebUrls,
+                Urls = new []{ leader.WebUrl },
                 Database = databaseName,
                 Conventions = conventionsForLoadBalancing
             })
             using (var follower1 = new DocumentStore
             {
-                Urls = followers[0].WebUrls,
+                Urls = new[]{ followers[0].WebUrl },
                 Database = databaseName,
                 Conventions = conventionsForLoadBalancing
             })
             using (var follower2 = new DocumentStore
             {
-                Urls = followers[1].WebUrls,
+                Urls = new[]{ followers[1].WebUrl },
                 Database = databaseName,
                 Conventions = conventionsForLoadBalancing
             })
@@ -222,7 +222,7 @@ namespace SlowTests.Cluster
                 follower1.Initialize();
                 follower2.Initialize();
 
-                var (index, _) = await CreateDatabaseInCluster(databaseName, 3, leader.WebUrls[0]);
+                var (index, _) = await CreateDatabaseInCluster(databaseName, 3, leader.WebUrl);
                 await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(30));
                 var leaderRequestExecutor = leaderStore.GetRequestExecutor();
 
@@ -231,7 +231,7 @@ namespace SlowTests.Cluster
                 {
                     ClusterTag = leader.ServerStore.NodeTag,
                     Database = databaseName,
-                    Url = leader.WebUrls[0]
+                    Url = leader.WebUrl
                 },  5000);
 
                 //wait until all nodes in database cluster are members (and not promotables)
@@ -256,7 +256,7 @@ namespace SlowTests.Cluster
                     session.Store(new User { Name = "FooBar" }, "marker");
                     session.SaveChanges();
 
-                    await WaitForDocumentInClusterAsync<User>(session as DocumentSession, "marker", x => true, leader.ServerStore.Configuration.Cluster.ClusterOperationTimeout.AsTimeSpan);
+                    await WaitForDocumentInClusterAsync<User>(session as DocumentSession, "marker", x => true, leader.ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan);
                 }
 
                 var usedUrls = new List<string>();
@@ -292,19 +292,19 @@ namespace SlowTests.Cluster
 
             using (var leaderStore = new DocumentStore
             {
-                Urls = leader.WebUrls,
+                Urls = new[] {leader.WebUrl},
                 Database = databaseName,
                 Conventions = conventionsForLoadBalancing
             })
             using (var follower1 = new DocumentStore
             {
-                Urls = followers[0].WebUrls,
+                Urls = new[] {followers[0].WebUrl},
                 Database = databaseName,
                 Conventions = conventionsForLoadBalancing
             })
             using (var follower2 = new DocumentStore
             {
-                Urls = followers[1].WebUrls,
+                Urls = new[] {followers[1].WebUrl},
                 Database = databaseName,
                 Conventions = conventionsForLoadBalancing
             })
@@ -314,7 +314,7 @@ namespace SlowTests.Cluster
                 follower1.Initialize();
                 follower2.Initialize();
 
-                var (index, _) = await CreateDatabaseInCluster(databaseName, 3, leader.WebUrls[0]);
+                var (index, _) = await CreateDatabaseInCluster(databaseName, 3, leader.WebUrl);
                 await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(30));
                 var leaderRequestExecutor = leaderStore.GetRequestExecutor();
 
@@ -342,7 +342,7 @@ namespace SlowTests.Cluster
 
                     await WaitForDocumentInClusterAsync<User>(session as DocumentSession,
                         "marker", x => true,
-                        leader.ServerStore.Configuration.Cluster.ClusterOperationTimeout.AsTimeSpan);
+                        leader.ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan);
                 }
 
                 var requestExecutor = RequestExecutor.Create(follower1.Urls, databaseName, null, follower1.Conventions);
@@ -364,7 +364,7 @@ namespace SlowTests.Cluster
                     for (var sessionId = 0; sessionId < 5; sessionId++)
                     {
                         requestExecutor.Cache.Clear(); //make sure we do not use request cache
-                        await requestExecutor.ExecuteAsync(new GetStatisticsCommand(), tmpContext, CancellationToken.None, sessionId);
+                        await requestExecutor.ExecuteAsync(new GetStatisticsCommand(), tmpContext, CancellationToken.None, new SessionInfo(sessionId, false));
                     }
                 }
             }
@@ -386,14 +386,14 @@ namespace SlowTests.Cluster
 
             using (var leaderStore = new DocumentStore
             {
-                Urls = leader.WebUrls,
+                Urls = new[] {leader.WebUrl},
                 Database = databaseName,
                 Conventions = conventionsForLoadBalancing
             })
             {
                 leaderStore.Initialize();
 
-                var (index, _) = await CreateDatabaseInCluster(databaseName, 3, leader.WebUrls[0]);
+                var (index, _) = await CreateDatabaseInCluster(databaseName, 3, leader.WebUrl);
                 await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(30));
 
                 using (var session = leaderStore.OpenSession())

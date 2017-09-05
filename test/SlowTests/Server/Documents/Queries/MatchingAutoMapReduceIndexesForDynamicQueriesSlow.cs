@@ -27,7 +27,7 @@ namespace SlowTests.Server.Documents.Queries
         {
             var definition = new AutoMapReduceIndexDefinition("Users", new[]
              {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Count",
                     Storage = FieldStorage.Yes,
@@ -36,7 +36,7 @@ namespace SlowTests.Server.Documents.Queries
             },
              new[]
              {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Location",
                     Storage = FieldStorage.Yes,
@@ -53,7 +53,7 @@ namespace SlowTests.Server.Documents.Queries
                 ReduceErrors = 900
             });
 
-            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("SELECT count() FROM Users GROUP BY Location"));
+            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users GROUP BY Location SELECT count() "));
 
             var result = _sut.Match(dynamicQuery);
 

@@ -34,12 +34,12 @@ namespace SlowTests.MailingList
                 {
                     var s = session.Advanced.DocumentQuery<Item>("test").WhereEquals(x => x.Product.Name, "test").GetIndexQuery();
 
-                    Assert.Equal("FROM INDEX 'test' WHERE Product_Name = :p0", s.Query);
+                    Assert.Equal("FROM INDEX 'test' WHERE Product_Name = $p0", s.Query);
                     Assert.Equal("test", s.QueryParameters["p0"]);
 
                     s = session.Advanced.DocumentQuery<Item>().WhereEquals(x => x.Product.Name, "test").GetIndexQuery();
 
-                    Assert.Equal("FROM Items WHERE Product.Name = :p0", s.Query);
+                    Assert.Equal("FROM Items WHERE Product.Name = $p0", s.Query);
                     Assert.Equal("test", s.QueryParameters["p0"]);
                 }
             }

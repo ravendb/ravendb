@@ -11,7 +11,6 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
-using Raven.Client.Documents.Transformers;
 using SlowTests.Utils;
 using Xunit;
 
@@ -84,25 +83,7 @@ namespace SlowTests.MailingList
                                         PostStatus = g.SelectMany(i => i.PostStatus).Where(i => i != PostStatus.None).ToArray(),
                                     };
 
-                Index(i => i.UserName, FieldIndexing.Analyzed);
-            }
-        }
-
-        private class SearchTransformer : AbstractTransformerCreationTask<Result>
-        {
-            public SearchTransformer()
-            {
-                TransformResults = results => from x in results
-                                              select new
-                                              {
-                                                  x.Id,
-                                                  x.UserName,
-                                                  x.Password,
-                                                  x.SenderId,
-                                                  x.Title,
-                                                  x.Body,
-                                                  x.PostStatus
-                                              };
+                Index(i => i.UserName, FieldIndexing.Search);
             }
         }
 
@@ -179,11 +160,15 @@ namespace SlowTests.MailingList
         [Fact]
         public void CanQueryOnFlagArrays()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
             {
-                store.Conventions.SaveEnumsAsIntegers = true;
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.SaveEnumsAsIntegers = true;
+                }
+            }))
+            {
                 store.ExecuteIndex(new SearchIndex());
-                store.ExecuteTransformer(new SearchTransformer());
 
                 PopulateData(store);
 
@@ -193,8 +178,7 @@ namespace SlowTests.MailingList
                 {
                     var query = session.Query<Result, SearchIndex>()
                         .Customize(i => i.WaitForNonStaleResults())
-                                                           .Where(i => i.PostStatus.Equals(PostStatus.Edited))
-                                                           .TransformWith<SearchTransformer, Transformed>();
+                        .Where(i => i.PostStatus.Equals(PostStatus.Edited));
 
                     var data = query.FirstOrDefault();
                     RavenTestHelper.AssertNoIndexErrors(store);

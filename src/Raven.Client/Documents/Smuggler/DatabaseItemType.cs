@@ -10,7 +10,7 @@ namespace Raven.Client.Documents.Smuggler
         Documents = 1 << 0,
         RevisionDocuments = 1 << 1,
         Indexes = 1 << 2,
-        Transformers = 1 << 3,
-        Identities = 1 << 4
+        Identities = 1 << 4,
+        Tombstones = 1 << 5
     }
 }

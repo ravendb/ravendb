@@ -36,7 +36,7 @@ namespace SlowTests.MailingList.Stacey
                                   Id = i.Id,
                                   Name = new[] { i.Name },
                               };
-                Index(r => r.Name, FieldIndexing.Analyzed);
+                Index(r => r.Name, FieldIndexing.Search);
                 Analyzers.Add(n => n.Name, typeof(NGramAnalyzer).AssemblyQualifiedName);
             }
         }

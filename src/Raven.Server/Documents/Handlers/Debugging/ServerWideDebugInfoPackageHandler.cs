@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         private static readonly string[] EmptyStringArray = new string[0];
 
         //this endpoint is intended to be called by /debug/cluster-info-package only
-        [RavenAction("/admin/debug/remote-cluster-info-package", "GET", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/debug/remote-cluster-info-package", "GET", AuthorizationStatus.Operator)]
         public async Task GetClusterwideInfoPackageForRemote()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
@@ -57,7 +57,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        [RavenAction("/admin/debug/cluster-info-package", "GET", AuthorizationStatus.ServerAdmin, IsDebugInformationEndpoint = true)]
+        [RavenAction("/admin/debug/cluster-info-package", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public async Task GetClusterwideInfoPackage()
         {
             var contentDisposition = $"attachment; filename={DateTime.UtcNow:yyyy-MM-dd H:mm:ss} Cluster Wide.zip";
@@ -115,7 +115,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                         archive,
                                         tag: tagWithUrl.Key,
                                         url: tagWithUrl.Value,
-                                        certificate: Server.ServerCertificateHolder.Certificate,
+                                        certificate: Server.ClusterCertificateHolder.Certificate,
                                         databaseNames: null);
                                 }
                                 catch (Exception e)
@@ -141,7 +141,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                         tag: urlToDatabaseNamesMap.Value.Item2,
                                         url: urlToDatabaseNamesMap.Key,
                                         databaseNames: urlToDatabaseNamesMap.Value.Item1,
-                                        certificate: Server.ServerCertificateHolder.Certificate);
+                                        certificate: Server.ClusterCertificateHolder.Certificate);
                                 }
                                 catch (Exception e)
                                 {
@@ -181,7 +181,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        [RavenAction("/admin/debug/info-package", "GET", AuthorizationStatus.ServerAdmin, IsDebugInformationEndpoint = true)]
+        [RavenAction("/admin/debug/info-package", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public async Task GetInfoPackage()
         {
             var contentDisposition = $"attachment; filename={DateTime.UtcNow:yyyy-MM-dd H:mm:ss} - Node [{ServerStore.NodeTag}].zip";
@@ -220,7 +220,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 ms.Flush();
 
                 var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(url, certificate);
-                requestExecutor.DefaultTimeout = ServerStore.Configuration.Cluster.ClusterOperationTimeout.AsTimeSpan;
+                requestExecutor.DefaultTimeout = ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan;
 
                 var rawStreamCommand = new GetRawStreamResultCommand("admin/debug/remote-cluster-info-package", ms);
 

@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
@@ -10,11 +11,12 @@ using System.Threading.Tasks;
 using Sparrow.Binary;
 using Sparrow.Collections;
 using Sparrow.Extensions;
+using Sparrow.Threading;
 using Sparrow.Utils;
 
 namespace Sparrow.Logging
 {
-    public class LoggingSource
+    public sealed class LoggingSource
     {
         private const string LoggingThreadName = "Logging Thread";
         [ThreadStatic] private static string _currentThreadId;
@@ -29,17 +31,19 @@ namespace Sparrow.Logging
         private string _path;
         private readonly TimeSpan _retentionTime;
         private string _dateString;
-        private volatile bool _keepLogging = true;
+        private MultipleUseFlag _keepLogging = new MultipleUseFlag(true);
         private int _logNumber;
         private DateTime _today;
         public bool IsInfoEnabled;
         public bool IsOperationsEnabled;
         private Stream _additionalOutput;
 
-        public static LoggingSource Instance = new LoggingSource(Path.GetTempPath(), LogMode.None);
+        private Stream _pipeSink;
 
+        public static readonly LoggingSource Instance = new LoggingSource(Path.GetTempPath(), LogMode.None);
 
-        private static byte[] _headerRow = Encodings.Utf8.GetBytes("Time,\tThread,\tLevel,\tSource,\tLogger,\tMessage,\tException");
+        private static byte[] _headerRow = 
+            Encodings.Utf8.GetBytes($"Time,\tThread,\tLevel,\tSource,\tLogger,\tMessage,\tException{Environment.NewLine}");
 
         public class WebSocketContext
         {
@@ -141,7 +145,7 @@ namespace Sparrow.Logging
                     // have to do this on a separate thread
                     Task.Run(() =>
                     {
-                        _keepLogging = false;
+                        _keepLogging.Lower();
                         _hasEntries.Set();
 
                         copyLoggingThread.Join();
@@ -150,7 +154,7 @@ namespace Sparrow.Logging
                 }
                 else
                 {
-                    _keepLogging = false;
+                    _keepLogging.Lower();
                     _hasEntries.Set();
 
                     copyLoggingThread.Join();
@@ -165,7 +169,7 @@ namespace Sparrow.Logging
                 IsOperationsEnabled == false)
                 return;
 
-            _keepLogging = true;
+            _keepLogging.Raise();
             _loggingThread = new Thread(BackgroundLogger)
             {
                 IsBackground = true,
@@ -405,12 +409,31 @@ namespace Sparrow.Logging
             }
         }
 
+        public void AttachPipeSink(Stream stream)
+        {
+            _pipeSink = stream;
+        }
+
+        public void DetachPipeSink()
+        {
+            _pipeSink = null;
+        }
+
         private int ActualWriteToLogTargets(WebSocketMessageEntry item, Stream file)
         {
             ArraySegment<byte> bytes;
             item.Data.TryGetBuffer(out bytes);
             file.Write(bytes.Array, bytes.Offset, bytes.Count);
             _additionalOutput?.Write(bytes.Array, bytes.Offset, bytes.Count);
+
+            try
+            {
+                _pipeSink?.Write(bytes.Array, bytes.Offset, bytes.Count);
+            }
+            catch
+            {
+                // broken pipe
+            }
 
             if (!_listeners.IsEmpty)
             {

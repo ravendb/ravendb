@@ -1,4 +1,5 @@
 using System;
+using Sparrow.Threading;
 
 namespace Raven.Client.Util.Metrics
 {
@@ -17,7 +18,7 @@ namespace Raven.Client.Util.Metrics
         private readonly AtomicLong _uncounted = new AtomicLong(0);
         private readonly double _alpha;
         private readonly double _interval;
-        private volatile bool _initialized;
+        private SingleUseFlag _initialized = new SingleUseFlag();
         private VolatileDouble _rate;
 
         /// <summary>
@@ -82,14 +83,13 @@ namespace Raven.Client.Util.Metrics
         {
             var count = _uncounted.GetAndSet(0);
             var instantRate = count / _interval;
-            if (_initialized)
+            if (_initialized.Raise())
             {
-                _rate += _alpha * (instantRate - _rate);
+                _rate.Set(instantRate);
             }
             else
             {
-                _rate.Set(instantRate);
-                _initialized = true;
+                _rate += _alpha * (instantRate - _rate);
             }
         }
 

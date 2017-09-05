@@ -49,12 +49,11 @@ namespace SlowTests.Bugs
                     //Demonstrates that RavenDb stores a case-sensitive document id somewhere
                     Assert.Equal(documentId, session.Advanced.GetDocumentId(d));
                 }
-
-                const string script = @"  var id = __document_id; this.Name = id;";
+                
 
                 WaitForIndexing(store);
 
-                store.Operations.Send(new PatchByQueryOperation(new IndexQuery { Query = "FROM INDEX 'test'" }, new PatchRequest { Script = script }, new QueryOperationOptions())).WaitForCompletion(TimeSpan.FromSeconds(15));
+                store.Operations.Send(new PatchByQueryOperation(new IndexQuery { Query = "FROM INDEX 'test' UPDATE { var theid = id(this); this.Name = theid ; }" })).WaitForCompletion(TimeSpan.FromSeconds(15));
 
                 using (var session = store.OpenSession())
                 {

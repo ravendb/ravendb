@@ -11,7 +11,7 @@ class patchDocument extends document {
     query = ko.observable<string>();
     script = ko.observable<string>();
 
-    patchAll = ko.observable<boolean>(false);
+    patchAll = ko.observable<boolean>(true);
 
     constructor(dto: patchDto) {
         super(dto);
@@ -26,7 +26,7 @@ class patchDocument extends document {
         meta['@collection'] = 'PatchDocuments';
         return new patchDocument({
             '@metadata': meta,
-            PatchOnOption: "Document",
+            PatchOnOption: "Query",
             Query: "",
             Script: "",
             SelectedItem: "",

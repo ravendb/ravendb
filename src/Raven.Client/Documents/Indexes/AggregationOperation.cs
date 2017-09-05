@@ -6,10 +6,4 @@
         Count,
         Sum
     }
-
-    public enum WithMethods
-    {
-        Load,
-        Include
-    }
 }

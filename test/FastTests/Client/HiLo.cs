@@ -12,7 +12,7 @@ using Xunit;
 
 namespace FastTests.Client
 {
-    public class Hilo : ReplicationTestsBase
+    public class Hilo : ReplicationTestBase
     {
         private class HiloDoc
         {
@@ -113,7 +113,7 @@ namespace FastTests.Client
                     session.SaveChanges();
 
                     for (var i = 0; i < 32; i++)
-                        hiLoKeyGenerator.GenerateDocumentIdAsync(new User()).GetAwaiter().GetResult();                    
+                        hiLoKeyGenerator.GenerateDocumentIdAsync(new User()).GetAwaiter().GetResult();
                 }
 
                 using (var session = store.OpenSession())
@@ -123,7 +123,7 @@ namespace FastTests.Client
                     Assert.Equal(max, 96);
 
                     //we should be receiving a range of 64 now
-                    hiLoKeyGenerator.GenerateDocumentIdAsync(new User()).GetAwaiter().GetResult(); 
+                    hiLoKeyGenerator.GenerateDocumentIdAsync(new User()).GetAwaiter().GetResult();
                 }
 
                 using (var session = store.OpenSession())
@@ -183,8 +183,8 @@ namespace FastTests.Client
         [Fact]
         public async Task Should_Resolve_Conflict_With_Highest_Number()
         {
-            using (var store1 = GetDocumentStore(dbSuffixIdentifier: "foo1"))
-            using (var store2 = GetDocumentStore(dbSuffixIdentifier: "foo2"))
+            using (var store1 = GetDocumentStore(new Options { ModifyDatabaseName = s => s + "_foo1" }))
+            using (var store2 = GetDocumentStore(new Options { ModifyDatabaseName = s => s + "_foo2" }))
             {
                 using (var s1 = store1.OpenSession())
                 {
@@ -352,12 +352,12 @@ namespace FastTests.Client
         {
             using (var server = GetNewServer())
             using (var otherServer = GetNewServer())
-            using (var store = GetDocumentStore(defaultServer: server))
-            using (var otherStore = GetDocumentStore(defaultServer: otherServer))
+            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var otherStore = GetDocumentStore(new Options { Server = otherServer }))
             {
                 using (otherStore.AggressivelyCache()) // Note that we don't even use the other store, we just call AggressivelyCache on it
                 {
-                    var hilo = new AsyncHiLoIdGenerator("users", store, store.Database, 
+                    var hilo = new AsyncHiLoIdGenerator("users", store, store.Database,
                         store.Conventions.IdentityPartsSeparator);
                     Assert.Equal(1L, hilo.NextIdAsync().GetAwaiter().GetResult());
                     Assert.Equal(2L, hilo.NextIdAsync().GetAwaiter().GetResult());
@@ -370,12 +370,12 @@ namespace FastTests.Client
         {
             using (var server = GetNewServer())
             using (var otherServer = GetNewServer())
-            using (var store = GetDocumentStore(defaultServer: server))
-            using (var otherStore = GetDocumentStore(defaultServer: otherServer))
+            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var otherStore = GetDocumentStore(new Options { Server = otherServer }))
             {
                 using (otherStore.AggressivelyCache()) // Note that we don't even use the other store, we just call AggressivelyCache on it
                 {
-                    var hilo = new AsyncHiLoIdGenerator("users", store, store.Database, 
+                    var hilo = new AsyncHiLoIdGenerator("users", store, store.Database,
                         store.Conventions.IdentityPartsSeparator);
                     Assert.Equal(1L, await hilo.NextIdAsync());
                     Assert.Equal(2L, await hilo.NextIdAsync());

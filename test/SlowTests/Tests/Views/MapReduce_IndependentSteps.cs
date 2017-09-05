@@ -46,7 +46,7 @@ select new {
                 Reduce = Reduce,
                 Fields = new Dictionary<string, IndexFieldOptions>
                 {
-                    { "blog_id", new IndexFieldOptions { Indexing = FieldIndexing.NotAnalyzed } }
+                    { "blog_id", new IndexFieldOptions { Indexing = FieldIndexing.Exact } }
                 }
             }}));
         }

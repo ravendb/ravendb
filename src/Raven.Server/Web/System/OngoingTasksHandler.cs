@@ -99,10 +99,7 @@ namespace Raven.Server.Web.System
                     TaskName = subscriptionState.SubscriptionName,
                     TaskState = subscriptionState.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
                     TaskId = subscriptionState.SubscriptionId,
-                    Collection = subscriptionState.Criteria.Collection,
-                    TimeOfLastClientActivity = subscriptionState.TimeOfLastClientActivity,
-                    LastChangeVector = subscriptionState.ChangeVector
-
+                    Query = subscriptionState.Query
                 };
             }
         }
@@ -407,27 +404,27 @@ namespace Raven.Server.Web.System
                             }
 
                             var subscriptionState = JsonDeserializationClient.SubscriptionState(doc);
-
                             tag = dbTopology?.WhoseTaskIsIt(subscriptionState, ServerStore.IsPassive());
-                            var ongoingSubscriptionTask = new OngoingTaskSubscription
+
+                            var subscriptionStateInfo = new SubscriptionStateWithNodeDetails
                             {
-                                Collection = subscriptionState.Criteria.Collection,
-                                TimeOfLastClientActivity = subscriptionState.TimeOfLastClientActivity,
-                                LastChangeVector = subscriptionState.ChangeVector,
+                                Query = subscriptionState.Query,
+                                ChangeVectorForNextBatchStartingPoint = subscriptionState.ChangeVectorForNextBatchStartingPoint,
+                                SubscriptionId = subscriptionState.SubscriptionId,
+                                SubscriptionName = subscriptionState.SubscriptionName,
+                                LastTimeServerMadeProgressWithDocuments = subscriptionState.LastTimeServerMadeProgressWithDocuments,
+                                Disabled = subscriptionState.Disabled,
+                                LastClientConnectionTime = subscriptionState.LastClientConnectionTime,
                                 ResponsibleNode = new NodeId
                                 {
                                     NodeTag = tag,
                                     NodeUrl = clusterTopology.GetUrlFromTag(tag)
-                                },
-                                TaskId = subscriptionState.SubscriptionId,
-                                TaskName = subscriptionState.SubscriptionName,
-                                // todo: here we'll need to talk with the running node? TaskConnectionStatus = subscriptionState.Disabled ? OngoingTaskConnectionStatus.NotActive : OngoingTaskConnectionStatus.Active,
-                                TaskState = subscriptionState.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
+                                }
                             };
-                            WriteResult(context, ongoingSubscriptionTask);
 
-                            
+                            // Todo: here we'll need to talk with the running node? TaskConnectionStatus = subscriptionState.Disabled ? OngoingTaskConnectionStatus.NotActive : OngoingTaskConnectionStatus.Active,
 
+                            WriteResult(context, subscriptionStateInfo.ToJson());
                             break;
 
                         default:

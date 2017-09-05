@@ -55,6 +55,8 @@ namespace Raven.Server
             configuration.Initialize();
 
             LoggingSource.Instance.SetupLogMode(configuration.Logs.Mode, Path.Combine(AppContext.BaseDirectory, configuration.Logs.Path));
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"Logging to { configuration.Logs.Path } set to {configuration.Logs.Mode} level.");
 
             if (WindowsServiceRunner.ShouldRunAsWindowsService())
             {
@@ -90,7 +92,7 @@ namespace Raven.Server
                         {
                             try
                             {
-                                server.OpenPipe();
+                                server.OpenPipes();
                             }
                             catch (Exception e)
                             {
@@ -115,31 +117,18 @@ namespace Raven.Server
                             Console.ForegroundColor = ConsoleColor.Green;
                             Console.WriteLine($"{server.ServerStore.NodeHttpServerUrl}");
                             Console.ForegroundColor = prevColor;
-                            var consoleMre = new ManualResetEvent(false);
 
-                            server.GetTcpServerStatusAsync()
-                                .ContinueWith(tcp =>
-                                {
-                                    if (tcp.IsCompleted)
-                                    {
-                                        prevColor = Console.ForegroundColor;
-                                        Console.Write("Tcp listening on ");
-                                        Console.ForegroundColor = ConsoleColor.Green;
-                                        Console.WriteLine($"{string.Join(", ", tcp.Result.Listeners.Select(l => l.LocalEndpoint))}");
-                                        Console.ForegroundColor = prevColor;
-                                    }
-                                    else
-                                    {
-                                        Console.Error.WriteLine(
-                                            // ReSharper disable once AccessToDisposedClosure
-                                            $"Tcp listen failure (see {server.ServerStore.NodeHttpServerUrl}/info/tcp for details) {tcp.Exception.Message}");
-                                    }
-                                    consoleMre.Set();
-                                });
+                            var tcpServerStatus = server.GetTcpServerStatus();
+                            prevColor = Console.ForegroundColor;
+                            Console.Write("Tcp listening on ");
+                            Console.ForegroundColor = ConsoleColor.Green;
+                            Console.WriteLine($"{string.Join(", ", tcpServerStatus.Listeners.Select(l => l.LocalEndpoint))}");
+                            Console.ForegroundColor = prevColor;
+
                             Console.WriteLine("Server started, listening to requests...");
 
                             IsRunningAsService = false;
-                            rerun = CommandLineSwitches.Daemon ? RunAsService() : RunInteractive(server, consoleMre);
+                            rerun = CommandLineSwitches.Daemon ? RunAsService() : RunInteractive(server);
 
                             Console.WriteLine("Starting shut down...");
                             if (Logger.IsInfoEnabled)
@@ -208,7 +197,7 @@ namespace Raven.Server
             return false;
         }
 
-        private static bool RunInteractive(RavenServer server, ManualResetEvent consoleMre)
+        private static bool RunInteractive(RavenServer server)
         {
             var configuration = server.Configuration;
 
@@ -218,7 +207,7 @@ namespace Raven.Server
                 Path.Combine(AppContext.BaseDirectory, configuration.Logs.Path));
 
 
-            return new RavenCli().Start(server, Console.Out, Console.In, true, consoleMre);
+            return new RavenCli().Start(server, Console.Out, Console.In, true);
         }
 
         public static void WriteServerStatsAndWaitForEsc(RavenServer server)

@@ -28,7 +28,7 @@ namespace SlowTests.Client.Subscriptions
 
                 var subscriptionCreationParams = new SubscriptionCreationOptions
                 {
-                    Criteria = new SubscriptionCriteria("Things"),
+                    Query = "from Things",
                     ChangeVector = lastChangeVector
                 };
                 var subsId = await store.Subscriptions.CreateAsync(subscriptionCreationParams);

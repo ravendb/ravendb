@@ -8,6 +8,7 @@ using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.LowMemory;
+using Sparrow.Threading;
 using Xunit;
 
 namespace FastTests.Blittable.BlittableJsonWriterTests
@@ -17,7 +18,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         [Fact]
         public void BasicObject()
         {
-            using (var context = new JsonOperationContext(1024, 1024 * 4, LowMemoryFlag.None))
+            using (var context = new JsonOperationContext(1024, 1024 * 4, SharedMultipleUseFlag.None))
             {
                 using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
@@ -42,7 +43,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         [Fact]
         public void BasicEmptyObject()
         {
-            using (var context = new JsonOperationContext(1024, 1024 * 4, LowMemoryFlag.None))
+            using (var context = new JsonOperationContext(1024, 1024 * 4, SharedMultipleUseFlag.None))
             {
                 using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
@@ -65,7 +66,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         [Fact]
         public void BasicNestedEmptyObject()
         {
-            using (var context = new JsonOperationContext(1024, 1024 * 4, LowMemoryFlag.None))
+            using (var context = new JsonOperationContext(1024, 1024 * 4, SharedMultipleUseFlag.None))
             {
                 using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
@@ -96,7 +97,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         [Fact]
         public void BasicIntFlatStructure()
         {
-            using (var context = new JsonOperationContext(1024, 1024 * 4, LowMemoryFlag.None))
+            using (var context = new JsonOperationContext(1024, 1024 * 4, SharedMultipleUseFlag.None))
             {
                 using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
@@ -132,7 +133,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         [Fact]
         public void BasicIntNestedStructure()
         {
-            using (var context = new JsonOperationContext(1024, 1024 * 4, LowMemoryFlag.None))
+            using (var context = new JsonOperationContext(1024, 1024 * 4, SharedMultipleUseFlag.None))
             {
                 using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
@@ -194,7 +195,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         [Fact]
         public void BasicIntDeeperNestedStructure()
         {
-            using (var context = new JsonOperationContext(1024, 1024 * 4, LowMemoryFlag.None))
+            using (var context = new JsonOperationContext(1024, 1024 * 4, SharedMultipleUseFlag.None))
             {
                 using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
@@ -316,7 +317,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         [Fact]
         public void FlatObjectWithEmptyArray()
         {
-            using (var context = new JsonOperationContext(1024, 1024 * 4, LowMemoryFlag.None))
+            using (var context = new JsonOperationContext(1024, 1024 * 4, SharedMultipleUseFlag.None))
             {
                 using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
@@ -356,7 +357,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         [Fact]
         public void FlatObjectWithArrayOfEmptyObjects()
         {
-            using (var context = new JsonOperationContext(1024, 1024 * 4, LowMemoryFlag.None))
+            using (var context = new JsonOperationContext(1024, 1024 * 4, SharedMultipleUseFlag.None))
             {
                 using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
@@ -409,7 +410,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         [Fact]
         public void FlatObjectWithIntArrayTest()
         {
-            using (var context = new JsonOperationContext(1024, 1024 * 4, LowMemoryFlag.None))
+            using (var context = new JsonOperationContext(1024, 1024 * 4, SharedMultipleUseFlag.None))
             {
                 using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
@@ -455,7 +456,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         [Fact]
         public void ObjectWithNestedIntArrayTest()
         {
-            using (var context = new JsonOperationContext(1024, 1024 * 4, LowMemoryFlag.None))
+            using (var context = new JsonOperationContext(1024, 1024 * 4, SharedMultipleUseFlag.None))
             {
                 using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
@@ -513,7 +514,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         [Fact]
         public void FlatObjectWithObjectArray()
         {
-            using (var context = new JsonOperationContext(1024, 1024 * 4, LowMemoryFlag.None))
+            using (var context = new JsonOperationContext(1024, 1024 * 4, SharedMultipleUseFlag.None))
             {
                 using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
@@ -571,7 +572,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         [Fact]
         public void FlatObjectWithObjectArrayWithNestedArray()
         {
-            using (var context = new JsonOperationContext(1024, 1024 * 4, LowMemoryFlag.None))
+            using (var context = new JsonOperationContext(1024, 1024 * 4, SharedMultipleUseFlag.None))
             {
                 using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
@@ -639,7 +640,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         [Fact]
         public void SimpleArrayDocument()
         {
-            using (var context = new JsonOperationContext(1024, 1024 * 4, LowMemoryFlag.None))
+            using (var context = new JsonOperationContext(1024, 1024 * 4, SharedMultipleUseFlag.None))
             {
                 using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
@@ -672,7 +673,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         [InlineData(short.MaxValue + 1)]
         public void BigDepthTest(int propertiesAmount)
         {
-            using (var context = new JsonOperationContext(1024, 1024 * 4, LowMemoryFlag.None))
+            using (var context = new JsonOperationContext(1024, 1024 * 4, SharedMultipleUseFlag.None))
             {
                 using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
@@ -713,7 +714,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         [Fact]
         public unsafe void ReadDataTypesTest()
         {
-            using (var context = new JsonOperationContext(1024, 1024 * 4, LowMemoryFlag.None))
+            using (var context = new JsonOperationContext(1024, 1024 * 4, SharedMultipleUseFlag.None))
             {
                 BlittableJsonReaderObject embeddedReader;
                 using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))

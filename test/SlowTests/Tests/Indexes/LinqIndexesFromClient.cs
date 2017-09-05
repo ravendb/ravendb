@@ -12,6 +12,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 using FastTests;
+using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents;
@@ -36,7 +37,7 @@ namespace SlowTests.Tests.Indexes
             }.ToIndexDefinition(new DocumentConventions { PrettifyGeneratedLinqExpressions = false });
 
             indexDefinition.Name = "Index1";
-            var index = IndexAndTransformerCompiler.Compile(indexDefinition);
+            var index = IndexCompiler.Compile(indexDefinition);
 
             var map = index.Maps.Values.First().First();
 
@@ -69,7 +70,7 @@ namespace SlowTests.Tests.Indexes
                     {
                         bool shouldSkip;
                         converter.SetDocument(lazyStringValue, result, context, out shouldSkip);
-                        Assert.Equal("docs/1", converter.Document.Get("__document_id", null));
+                        Assert.Equal("docs/1", converter.Document.Get(Constants.Documents.Indexing.Fields.DocumentIdFieldName, null));
                     }
                 }
             }
@@ -98,7 +99,7 @@ namespace SlowTests.Tests.Indexes
             }.ToIndexDefinition(new DocumentConventions { PrettifyGeneratedLinqExpressions = false });
 
             indexDefinition.Name = "Index1";
-            IndexAndTransformerCompiler.Compile(indexDefinition);
+            IndexCompiler.Compile(indexDefinition);
         }
 
         private class Person
@@ -174,7 +175,7 @@ namespace SlowTests.Tests.Indexes
                 },
                 Maps = { @"docs.Users.Where(user => user.Location == ""Tel Aviv"").Select(user => new {
     Name = user.Name,
-    Id = user.__document_id
+    Id = Id(user)
 })".Replace("\r\n", Environment.NewLine) }
             };
 

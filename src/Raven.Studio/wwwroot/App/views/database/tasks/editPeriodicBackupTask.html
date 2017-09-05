@@ -9,6 +9,8 @@
     </div>
     <div class="panel">
         <div class="padding">
+            <h3 data-bind="visible: $root.isAddingNewBackupTask()">New Backup task</h3>
+            <h3 data-bind="visible: !$root.isAddingNewBackupTask()">Edit Backup task</h3>
             <div class="row flex-row margin-bottom">
                 <label class="control-label col-sm-4 col-lg-2">Task name</label>
                 <div class="col-sm-4 col-lg-4">
@@ -95,7 +97,7 @@
                     <div class="row flex-row margin-bottom">
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4">Backup directory</label>
                         <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: folderPath">
-                            <input data-bind="textInput: folderPath" , type="text" class="form-control" placeholder="Full directory backup path" />
+                            <input data-bind="textInput: folderPath" type="text" class="form-control" placeholder="Full directory backup path" />
                         </div>
                     </div>
                 </div>
@@ -165,6 +167,8 @@
                 </div>
             </div>
         </div>
+        <div class="panel-addon" data-bind="template: { name: 'test-connection-results-template' }">
+        </div>
     </div>
 
     <div class="panel" data-bind="with: azureSettings">
@@ -210,6 +214,8 @@
                     </div>
                 </div>
             </div>
+        </div>
+        <div class="panel-addon" data-bind="template: { name: 'test-connection-results-template' }">
         </div>
     </div>
     
@@ -261,13 +267,15 @@
                         </div>
                     </div>
                     <div class="text-right">
-                        <button data-bind="click: _.partial($root.testCredentials, $data)" class="btn btn-info">
+                        <button data-bind="click: _.partial($root.testCredentials, $data), disable: isTestingCredentials, css: { 'btn-spinner': isTestingCredentials }" class="btn btn-info">
                             <i class="icon-rocket"></i>
                             &nbsp;&nbsp;<span>Test credentials</span>
                         </button>
                     </div>
                 </div>
             </div>
+        </div>
+        <div class="panel-addon" data-bind="template: { name: 'test-connection-results-template' }">
         </div>
     </div>
     
@@ -332,5 +340,24 @@
                 </div>
             </div>
         </div>
+        <div class="panel-addon" data-bind="template: { name: 'test-connection-results-template' }">
+        </div>
     </div>
 </form>
+
+
+
+<script type="text/html" id="test-connection-results-template">
+    <div data-bind="with: testConnectionResult">
+        <div class="padding bg-success small" data-bind="visible: Success">
+            <div>Successfully connected to node</div>
+        </div>
+        <div class="padding bg-danger small" data-bind="visible: !Success">
+            Connection test failed: <span data-bind="text: $parent.fullErrorDetailsVisible() ? Error : $parent.shortErrorText()"></span>
+
+            <div>
+                <a href="#" data-bind="click: $parent.fullErrorDetailsVisible.toggle.bind($parent.fullErrorDetailsVisible), text: $parent.fullErrorDetailsVisible() ? 'hide details' : 'show details'"></a>
+            </div>
+        </div>
+    </div>
+</script>

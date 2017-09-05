@@ -8,6 +8,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Patching;
 //using Raven.Server.Documents.Patch;
 using Sparrow.Json;
@@ -38,7 +39,7 @@ namespace FastTests.Server.Documents.Patching
         //splice(2, 1) will remove 1 elements from position 2 onwards (zero-based)
         private const string SampleScript = @"
     this.Comments.splice(2, 1);
-    this.Id = 'Something new'; 
+    this.Owner = 'Something new'; 
     this.Value++; 
     this.newValue = ""err!!"";
     this.Comments = this.Comments.map(function(comment) {   
@@ -66,7 +67,7 @@ namespace FastTests.Server.Documents.Patching
                     var resultDoc = await commands.GetAsync("someId");
                     var result = commands.Deserialize<CustomType>(resultDoc.BlittableJson);
 
-                    Assert.Equal("Something new", result.Id);
+                    Assert.Equal("Something new", result.Owner);
                     Assert.Equal(2, result.Comments.Count);
                     Assert.Equal("one test", result.Comments[0]);
                     Assert.Equal("two", result.Comments[1]);
@@ -88,7 +89,7 @@ namespace FastTests.Server.Documents.Patching
                     const string email = "somebody@somewhere.com";
                     await store.Operations.SendAsync(new PatchOperation("doc", null, new PatchRequest
                     {
-                        Script = "this.Email = data.Email;",
+                        Script = "this.Email = args.data.Email;",
                         Values =
                         {
                             {"data", new { Email = email }}
@@ -140,7 +141,7 @@ namespace FastTests.Server.Documents.Patching
                     }));
 
                     dynamic doc = await commands.GetAsync("doc");
-                    var age = (int)doc.Age;
+                    var age = (double)doc.Age;
 
                     Assert.Equal(1, age);
                 }
@@ -182,7 +183,7 @@ namespace FastTests.Server.Documents.Patching
                     const string email = "somebody@somewhere.com";
                     await store.Operations.SendAsync(new PatchOperation("doc", null, new PatchRequest
                     {
-                        Script = "this.Contact = contact.Email;",
+                        Script = "this.Contact = args.contact.Email;",
                         Values =
                         {
                             {"contact", new {Email = email}}
@@ -197,33 +198,7 @@ namespace FastTests.Server.Documents.Patching
             }
         }
 
-        [Fact]
-        public async Task CanUseLoDash()
-        {
-            using (var store = GetDocumentStore())
-            {
-                using (var commands = store.Commands())
-                {
-                    await commands.PutAsync("doc", null, new { Contact = (string)null }, null);
-
-                    const string email = "somebody@somewhere.com";
-                    await store.Operations.SendAsync(new PatchOperation("doc", null, new PatchRequest
-                    {
-                        Script = "this.Emails = _.times(3, function(i) { return contact.Email + i; });",
-                        Values =
-                        {
-                            {"contact", new {Email = email}}
-                        }
-                    }));
-
-                    dynamic doc = await commands.GetAsync("doc");
-                    string[] emails = doc.Emails;
-
-                    Assert.Equal(new[] { "somebody@somewhere.com0", "somebody@somewhere.com1", "somebody@somewhere.com2" }, emails);
-                }
-            }
-        }
-
+      
         [Fact]
         public async Task CanPatchUsingRavenJObjectVars()
         {
@@ -236,7 +211,7 @@ namespace FastTests.Server.Documents.Patching
                     var variable = new { NewComment = "New Comment" };
                     await store.Operations.SendAsync(new PatchOperation("doc", null, new PatchRequest
                     {
-                        Script = "this.Comments[0] = variable.NewComment;",
+                        Script = "this.Comments[0] = args.variable.NewComment;",
                         Values =
                         {
                             {"variable", new { NewComment = "New Comment" }}
@@ -261,7 +236,7 @@ namespace FastTests.Server.Documents.Patching
 
                     await store.Operations.SendAsync(new PatchOperation("doc", null, new PatchRequest
                     {
-                        Script = "_.pull(this.Comments,'two');"
+                        Script = "this.Comments.splice(this.Comments.indexOf('two'),1);",
                     }));
 
                     var doc = await commands.GetAsync("doc");
@@ -282,7 +257,7 @@ namespace FastTests.Server.Documents.Patching
 
                     await store.Operations.SendAsync(new PatchOperation("doc", null, new PatchRequest
                     {
-                        Script = "_.remove(this.Comments,function(el) {return el == 'seven';});",
+                        Script = "this.Comments = this.Comments.filter(function(el) {return el != 'seven';});",
                     }));
 
                     var doc = await commands.GetAsync("doc");
@@ -303,7 +278,7 @@ namespace FastTests.Server.Documents.Patching
 
                     await store.Operations.SendAsync(new PatchOperation("doc", null, new PatchRequest
                     {
-                        Script = "this.TheName = Name",
+                        Script = "this.TheName = args.Name",
                         Values =
                         {
                             {"Name", "ayende"}
@@ -334,8 +309,7 @@ namespace FastTests.Server.Documents.Patching
                         }));
                     });
 
-                    Assert.Contains("Could not parse: " + Environment.NewLine
-                                    + "this.Id = 'Something", parseException.Message);
+                    Assert.Contains("this.Id = 'Something", parseException.Message);
                 }
             }
         }
@@ -357,11 +331,7 @@ namespace FastTests.Server.Documents.Patching
                         }));
                     });
 
-                    Assert.Contains("Unable to execute JavaScript: " + Environment.NewLine
-                                    + "throw 'problem'" + Environment.NewLine
-                                    + Environment.NewLine
-                                    + "Error: " + Environment.NewLine
-                                    + "problem", invalidOperationException.Message);
+                    Assert.Contains("problem",invalidOperationException.Message);
                 }
             }
         }
@@ -382,7 +352,7 @@ namespace FastTests.Server.Documents.Patching
                         null,
                         new PatchRequest
                         {
-                            Script = "output(__document_id)",
+                            Script = "output(id(this))",
                         },
                         patchIfMissing: null,
                         skipPatchIfChangeVectorMismatch: false,
@@ -409,16 +379,13 @@ namespace FastTests.Server.Documents.Patching
                 {
                     await commands.PutAsync("doc", null, _test, null);
 
-                    var exception = await Assert.ThrowsAsync<JavaScriptException>(async () =>
+                    await Assert.ThrowsAsync<RavenException>(async () =>
                     {
                         await store.Operations.SendAsync(new PatchOperation("doc", null, new PatchRequest
                         {
                             Script = "while(true) {}",
                         }));
                     });
-
-                    Assert.Contains("Unable to execute JavaScript", exception.Message);
-                    Assert.Contains("The maximum number of statements executed have been reached.", exception.Message);
                 }
             }
         }
@@ -473,7 +440,7 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
                 await store.Operations.SendAsync(new PatchOperation("CustomTypes/1", null, new PatchRequest
                 {
                     Script = @"
-var another = LoadDocument(anotherId);
+var another = load(args.anotherId);
 this.Value = another.Value;
 ",
                     Values =
@@ -581,10 +548,9 @@ this.Value = another.Value;
 
                 await store.Operations.SendAsync(new PatchOperation("CustomTypes/1", null, new PatchRequest
                 {
-                    Script = @"PutDocument(
+                    Script = @"put(
         'NewTypes/1', 
-        { 'CopiedValue':  this.Value },
-        {'CreatedBy': 'JS_Script'});",
+        { 'CopiedValue':  this.Value, '@metadata': {'CreatedBy': 'JS_Script'} });",
                 }));
 
                 using (var commands = store.Commands())
@@ -613,15 +579,13 @@ this.Value = another.Value;
 
                 await store.Operations.SendAsync(new PatchOperation("CustomTypes/1", null, new PatchRequest
                 {
-                    Script = @"PutDocument(
+                    Script = @"put(
         'NewTypes/1', 
-        { 'CopiedValue':this.Value },
-        {'CreatedBy': 'JS_Script'});
+        { 'CopiedValue':this.Value, '@metadata': {'CreatedBy': 'JS_Script'}} );
 
-        PutDocument(
+        put(
         'NewTypes/1', 
-        { 'CopiedValue': this.Value },
-        {'CreatedBy': 'JS_Script 2'});",
+        { 'CopiedValue': this.Value, '@metadata': {'CreatedBy': 'JS_Script 2'} } );",
                 }));
 
                 using (var commands = store.Commands())
@@ -650,8 +614,8 @@ this.Value = another.Value;
 
                 await store.Operations.SendAsync(new PatchOperation("Items/1", null, new PatchRequest
                 {
-                    Script = @"_.forEach(this.Comments, function(comment){
-                                     PutDocument('Comments/' + comment, { 'Comment':comment });
+                    Script = @"this.Comments.map(function(comment){
+                                     put('Comments/' + comment, { 'Comment':comment });
                                  })",
                 }));
 
@@ -681,12 +645,12 @@ this.Value = another.Value;
 
                 await store.Operations.SendAsync(new PatchOperation("CustomTypes/1", null, new PatchRequest
                 {
-                    Script = @"PutDocument(null, { 'Property': 'Value'});",
+                    Script = @"put(null, { 'Property': 'Value'});",
                 }));
 
                 await store.Operations.SendAsync(new PatchOperation("CustomTypes/1", null, new PatchRequest
                 {
-                    Script = @"PutDocument('    ', { 'Property': 'Value'});",
+                    Script = @"put('    ', { 'Property': 'Value'});",
                 }));
 
                 var stats = await store.Admin.SendAsync(new GetStatisticsOperation());
@@ -705,15 +669,15 @@ this.Value = another.Value;
                     await commands.PutAsync("doc", null, _test, null);
                 }
 
-                var exception = await Assert.ThrowsAsync<JavaScriptException>(async () =>
+                var exception = await Assert.ThrowsAsync<ConcurrencyException>(async () =>
                 {
                     await store.Operations.SendAsync(new PatchOperation("doc", null, new PatchRequest
                     {
-                        Script = @"PutDocument('Items/1', { Property: 1}, null, 'invalid-etag');",
+                        Script = @"put('Items/1', { Property: 1}, 'invalid-etag');",
                     }));
                 });
 
-                Assert.Contains("Document Items/1 does not exist, but Put was called with change vector invalid-etag. Optimistic concurrency violation, transaction will be aborted.", exception.Message);
+                Assert.Contains("Document Items/1 does not exist, but Put was called with change vector: invalid-etag. Optimistic concurrency violation, transaction will be aborted.", exception.Message);
             }
         }
 
@@ -728,18 +692,18 @@ this.Value = another.Value;
                     await session.SaveChangesAsync();
                 }
 
-                var exception = await Assert.ThrowsAsync<JavaScriptException>(async () =>
+                var exception = await Assert.ThrowsAsync<ConcurrencyException>(async () =>
                 {
                     await store.Operations.SendAsync(new PatchOperation("CustomTypes/1", null, new PatchRequest
                     {
-                        Script = @"PutDocument(
+                        Script = @"put(
     'Items/1', 
     { 'Property':'Value'},
-    {}, 123456789 );",
+    '123456789' );",
                     }));
                 });
 
-                Assert.Contains("Document Items/1 does not exist, but Put was called with change vector 123456789. Optimistic concurrency violation, transaction will be aborted.", exception.Message);
+                Assert.Contains("Document Items/1 does not exist, but Put was called with change vector: 123456789. Optimistic concurrency violation, transaction will be aborted.", exception.Message);
             }
         }
 
@@ -756,7 +720,7 @@ this.Value = another.Value;
 
                 await store.Operations.SendAsync(new PatchOperation("CustomTypes/1", null, new PatchRequest
                 {
-                    Script = @"PutDocument('NewTypes/1', { }, { });",
+                    Script = @"put('NewTypes/1', { });",
                 }));
 
                 using (var commands = store.Commands())
@@ -777,11 +741,11 @@ this.Value = another.Value;
                     await commands.PutAsync("doc", null, _test, null);
                 }
 
-                var exception = await Assert.ThrowsAsync<JavaScriptException>(async () =>
+                var exception = await Assert.ThrowsAsync<RavenException>(async () =>
                 {
                     await store.Operations.SendAsync(new PatchOperation("doc", null, new PatchRequest
                     {
-                        Script = @"PutDocument('Items/1', null);",
+                        Script = @"put('Items/1', null);",
                     }));
                 });
                 Assert.Contains("Created document must be a valid object which is not null or empty. Document ID: 'Items/1'", exception.Message);
@@ -823,9 +787,8 @@ this.Value = another.Value;
                 }
 
                 var operation = await store.Operations.SendAsync(new PatchByQueryOperation(
-                    new IndexQuery { Query = "FROM INDEX 'TestIndex' WHERE Value = 1" },
-                    new PatchRequest { Script = @"PutDocument('NewItem/3', {'CopiedValue': this.Value });" }),
-                    CancellationToken.None);
+                    "FROM INDEX 'TestIndex' WHERE Value = 1 update { put('NewItem/3', {'CopiedValue': this.Value });}"
+                    ));
                 await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
 
                 using (var commands = store.Commands())
@@ -856,13 +819,20 @@ this.Value = another.Value;
 
                 await store.Operations.SendAsync(new PatchOperation("Item/1", null, new PatchRequest
                 {
-                    Script = "this.Test = this",
+                    Script = @"
+var a = {};
+var b = {};
+b.a = a;
+a.b = b;
+this.Test = this;
+this.Else = a;
+",
                 }));
 
                 using (var commands = store.Commands())
                 {
                     dynamic resultDoc = await commands.GetAsync("Item/1");
-                    Assert.Equal("1", resultDoc.Value.ToString());
+                    Assert.Equal("1", resultDoc.Value<string>("Value"));
 
                     var patchedField = resultDoc.Test;
                     Assert.Equal("1", patchedField.Value.ToString());
@@ -943,8 +913,7 @@ this.Value = another.Value;
                 WaitForIndexing(store);
 
                 var operation = store.Operations.Send(new PatchByQueryOperation(
-                    new IndexQuery { Query = "FROM INDEX 'TestIndex' WHERE Owner = 'Bob'" },
-                    new PatchRequest { Script = SampleScript }));
+                    $"FROM INDEX \'TestIndex\' WHERE Owner = \'Bob\' UPDATE {{ {SampleScript}}}"));
 
                 operation.WaitForCompletion(TimeSpan.FromSeconds(15));
 

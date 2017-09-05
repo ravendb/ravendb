@@ -51,11 +51,11 @@
     <Service Include="{82a7f48d-3b50-4b1e-b82e-3ada8210c358}" />
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="Client\Documents\" />
     <Folder Include="Client\Indexing" />
     <Folder Include="Core\AdminConsole" />
     <Folder Include="Server\Basic" />
     <Folder Include="Server\Documents\Notifications" />
-    <Folder Include="Server\Documents\Patching" />
     <Folder Include="Server\Documents\Revisions" />
   </ItemGroup>
 </Project>

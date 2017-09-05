@@ -57,7 +57,7 @@ namespace FastTests.Server.Basic
             Server.Configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(0, TimeUnit.Milliseconds);
             Server.ServerStore.DatabasesLandlord.OnDatabaseLoaded += s => Thread.Sleep(100); // force timeout          
 
-            var url = Server.WebUrls[0];
+            var url = Server.WebUrl;
             var name = Guid.NewGuid().ToString();
             var doc = GenerateDatabaseDoc(name);
 
@@ -70,7 +70,7 @@ namespace FastTests.Server.Basic
                     {
                         requestExecutor.Execute(
                             new CreateDatabaseOperation(doc).GetCommand(new DocumentConventions(), ctx), ctx);
-                        requestExecutor.Execute(new GetDocumentCommand("Raven/HiloPrefix", includes: null, transformer: null, transformerParameters: null, metadataOnly: false), ctx);
+                        requestExecutor.Execute(new GetDocumentCommand("Raven/HiloPrefix", includes: null, metadataOnly: false), ctx);
                     }
                 });
             }
@@ -86,7 +86,7 @@ namespace FastTests.Server.Basic
             var doc = new DatabaseRecord(name);
             doc.Settings[RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "1";
             doc.Settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "true";
-            doc.Settings[RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened)] = "true";
+            doc.Settings[RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexCannotBeOpened)] = "true";
             doc.Settings[RavenConfiguration.GetKey(x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)] = int.MaxValue.ToString();
 
             return doc;

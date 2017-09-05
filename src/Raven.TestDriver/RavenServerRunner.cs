@@ -37,7 +37,7 @@ namespace Raven.TestDriver
                     locator.CommandArguments,
                     "--ServerUrl=http://127.0.0.1:0",
                     "--RunInMemory=true",
-                    "--Testing.ExitOnParentProcessExit=" + Process.GetCurrentProcess().Id
+                    "--Testing.ParentProcessId=" + Process.GetCurrentProcess().Id
                 };
 
             var argumentsString = string.Join(" ", commandArguments); 

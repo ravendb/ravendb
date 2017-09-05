@@ -48,7 +48,7 @@ namespace SlowTests.Bugs
             {
                 Map = movies => from movie in movies
                                 select new {movie.Name};
-                Index(x=>x.Name, FieldIndexing.Analyzed);
+                Index(x=>x.Name, FieldIndexing.Search);
             }
         }
 

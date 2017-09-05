@@ -61,13 +61,13 @@ namespace FastTests
             configuration.Add(RavenConfiguration.GetKey(x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory), int.MaxValue.ToString());
             configuration.Add(RavenConfiguration.GetKey(x => x.Core.DataDirectory), dataDirectory);
             configuration.Add(RavenConfiguration.GetKey(x => x.Core.RunInMemory), runInMemory.ToString());
-            configuration.Add(RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened), "true");
+            configuration.Add(RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexCannotBeOpened), "true");
 
             modifyConfiguration?.Invoke(configuration);
 
             using (var store = new DocumentStore
             {
-                Urls = UseFiddler(Server.WebUrls),
+                Urls = UseFiddler(Server.WebUrl),
                 Database = name
             })
             {
@@ -95,7 +95,7 @@ namespace FastTests
         {
             using (var store = new DocumentStore
             {
-                Urls = UseFiddler(Server.WebUrls),
+                Urls = UseFiddler(Server.WebUrl),
                 Database = dbName
             })
             {

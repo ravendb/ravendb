@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Sparrow.Json;
@@ -7,14 +6,11 @@ using Voron;
 
 namespace Raven.Server.Documents.Indexes.Auto
 {
-    public class AutoMapIndexDefinition : IndexDefinitionBase
+    public class AutoMapIndexDefinition : AutoIndexDefinitionBase
     {
-        public AutoMapIndexDefinition(string collection, IndexField[] fields)
-            : base(IndexNameFinder.FindMapIndexName(collection, fields), new HashSet<string> { collection }, IndexLockMode.Unlock, IndexPriority.Normal, fields)
+        public AutoMapIndexDefinition(string collection, AutoIndexField[] fields)
+            : base(AutoIndexNameFinder.FindMapIndexName(collection, fields), collection, fields)
         {
-            if (string.IsNullOrEmpty(collection))
-                throw new ArgumentNullException(nameof(collection));
-
             if (fields.Length == 0)
                 throw new ArgumentException("You must specify at least one field.", nameof(fields));
         }
@@ -30,7 +26,9 @@ namespace Raven.Server.Documents.Indexes.Auto
 
             var indexDefinition = new IndexDefinition();
             indexDefinition.Maps.Add(map);
-            indexDefinition.Fields = ConvertFields(MapFields);
+
+            foreach (var kvp in IndexFields)
+                indexDefinition.Fields[kvp.Key] = kvp.Value.ToIndexFieldOptions();
 
             return indexDefinition;
         }
@@ -89,7 +87,28 @@ namespace Raven.Server.Documents.Indexes.Auto
             var lockMode = ReadLockMode(reader);
             var priority = ReadPriority(reader);
             var collections = ReadCollections(reader);
-            var fields = ReadMapFields(reader);
+
+            if (reader.TryGet(nameof(MapFields), out BlittableJsonReaderArray jsonArray) == false)
+                throw new InvalidOperationException("No persisted lock mode");
+
+            var fields = new AutoIndexField[jsonArray.Length];
+
+            for (var i = 0; i < jsonArray.Length; i++)
+            {
+                var json = jsonArray.GetByIndex<BlittableJsonReaderObject>(i);
+
+                json.TryGet(nameof(IndexField.Name), out string name);
+                json.TryGet(nameof(AutoIndexField.Indexing), out string indexing);
+
+                var field = new AutoIndexField
+                {
+                    Name = name,
+                    Storage = FieldStorage.No,
+                    Indexing = (AutoFieldIndexing)Enum.Parse(typeof(AutoFieldIndexing), indexing)
+                };
+
+                fields[i] = field;
+            }
 
             return new AutoMapIndexDefinition(collections[0], fields)
             {

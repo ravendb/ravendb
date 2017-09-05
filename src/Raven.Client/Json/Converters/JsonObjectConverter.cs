@@ -5,9 +5,9 @@ using Raven.Client.Documents.Indexes;
 
 namespace Raven.Client.Json.Converters
 {
-    internal class JsonObjectConverter : RavenJsonConverter
+    internal sealed class JsonObjectConverter : RavenJsonConverter
     {
-        public static JsonObjectConverter Instance = new JsonObjectConverter();
+        public static readonly JsonObjectConverter Instance = new JsonObjectConverter();
 
         private JsonObjectConverter()
         {

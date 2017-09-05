@@ -16,11 +16,15 @@ namespace SlowTests.MailingList
         [Fact]
         public void ShouldWork()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
             {
-                store.Conventions.TransformTypeCollectionNameToDocumentIdPrefix = tag => tag;
-                store.Conventions.FindCollectionName = type => type.Name;
-
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.TransformTypeCollectionNameToDocumentIdPrefix = tag => tag;
+                    s.Conventions.FindCollectionName = type => type.Name;
+                }
+            }))
+            {
                 new LogEntryCountByDate().Execute(store);
                 using (var session = store.OpenSession())
                 {
@@ -33,7 +37,7 @@ namespace SlowTests.MailingList
                     session.SaveChanges();
 
                     var query = session.Query<LogEntryCountByDate.SearchResult>("LogEntry/CountByDate")
-                        //.Where( x => x.EntryDate == DateTime.Today )
+                      //.Where( x => x.EntryDate == DateTime.Today )
                       .Customize(x => x.WaitForNonStaleResultsAsOfNow());
 
                     Assert.Equal(4, query.Count());

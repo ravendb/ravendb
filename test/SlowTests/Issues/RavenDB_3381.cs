@@ -40,7 +40,7 @@ namespace SlowTests.Issues
                             .ToArray(),
                     };
 
-                Index(f => f.SearchText, FieldIndexing.Analyzed);
+                Index(f => f.SearchText, FieldIndexing.Search);
                 TermVector(f => f.SearchText, FieldTermVector.WithPositionsAndOffsets);
 
                 StoreAllFields(FieldStorage.Yes);

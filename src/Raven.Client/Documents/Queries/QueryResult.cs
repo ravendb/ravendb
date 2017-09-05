@@ -13,7 +13,7 @@ namespace Raven.Client.Documents.Queries
     /// <summary>
     /// The result of a query
     /// </summary>
-    public abstract class QueryResult<T> : QueryResultBase<T>
+    public abstract class QueryResult<TResult, TIncludes> : QueryResultBase<TResult, TIncludes>
     {
         /// <summary>
         /// Gets or sets the total results for this query
@@ -52,7 +52,7 @@ namespace Raven.Client.Documents.Queries
         public long ResultSize { get; set; }
     }
 
-    public class QueryResult : QueryResult<BlittableJsonReaderArray>
+    public class QueryResult : QueryResult<BlittableJsonReaderArray, BlittableJsonReaderObject>
     {
         /// <summary>
         /// Ensures that the query results can be used in snapshots

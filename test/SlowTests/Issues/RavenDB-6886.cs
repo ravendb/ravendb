@@ -24,13 +24,14 @@ namespace SlowTests.Issues
             const int clusterSize = 3;
             const string databaseName = "Cluster_identity_for_single_document_should_work";
             var leaderServer = await CreateRaftClusterAndGetLeader(clusterSize);
-            using (var leaderStore = new DocumentStore()
+            using (var leaderStore = GetDocumentStore(new Options
             {
-                Urls = leaderServer.WebUrls,
-                Database = databaseName
-            }.Initialize())
+                Server = leaderServer,
+                ModifyDatabaseName = s => databaseName,
+                DeleteDatabaseOnDispose = false,
+                CreateDatabase = false
+            }))
             {
-                ModifyStore((DocumentStore)leaderStore);
                 await CreateDatabasesInCluster(clusterSize, databaseName, leaderStore);
                 using (var session = leaderStore.OpenSession())
                 {
@@ -59,25 +60,28 @@ namespace SlowTests.Issues
             const string databaseName = "Cluster_identity_for_multiple_documents_on_different_nodes_should_work";
             var leaderServer = await CreateRaftClusterAndGetLeader(clusterSize);
             var followers = Servers.Where(s => s != leaderServer).ToList();
-            using (var leaderStore = new DocumentStore
+            using (var leaderStore = GetDocumentStore(new Options
             {
-                Urls = leaderServer.WebUrls,
-                Database = databaseName
-            }.Initialize())
-            using (var followerA = new DocumentStore
+                Server = leaderServer,
+                ModifyDatabaseName = s => databaseName,
+                DeleteDatabaseOnDispose = false,
+                CreateDatabase = false
+            }))
+            using (var followerA = GetDocumentStore(new Options
             {
-                Urls = followers[0].WebUrls,
-                Database = databaseName
-            }.Initialize())
-            using (var followerB = new DocumentStore
+                Server = followers[0],
+                ModifyDatabaseName = s => databaseName,
+                DeleteDatabaseOnDispose = false,
+                CreateDatabase = false
+            }))
+            using (var followerB = GetDocumentStore(new Options
             {
-                Urls = followers[1].WebUrls,
-                Database = databaseName
-            }.Initialize())
+                Server = followers[1],
+                ModifyDatabaseName = s => databaseName,
+                DeleteDatabaseOnDispose = false,
+                CreateDatabase = false
+            }))
             {
-                ModifyStore((DocumentStore)leaderStore);
-                ModifyStore((DocumentStore)followerA);
-                ModifyStore((DocumentStore)followerB);
                 await CreateDatabasesInCluster(clusterSize, databaseName, leaderStore);
 
                 var leaderInput = Task.Run(() =>
@@ -88,7 +92,7 @@ namespace SlowTests.Issues
                         //after tx commit, the id would be "users/1"
                         for (int i = 0; i < docsInEachNode; i++)
                         {
-                            session.Store(new User {Name = "John Dow"}, "users|");
+                            session.Store(new User { Name = "John Dow" }, "users|");
                         }
                         session.SaveChanges();
                     }
@@ -100,7 +104,7 @@ namespace SlowTests.Issues
                     {
                         for (int i = 0; i < docsInEachNode; i++)
                         {
-                            session.Store(new User {Name = "Jane Dow"}, "users|");
+                            session.Store(new User { Name = "Jane Dow" }, "users|");
                         }
                         session.SaveChanges();
                     }
@@ -112,7 +116,7 @@ namespace SlowTests.Issues
                     {
                         for (int i = 0; i < docsInEachNode; i++)
                         {
-                            session.Store(new User {Name = "Jake Dow"}, "users|");
+                            session.Store(new User { Name = "Jake Dow" }, "users|");
                         }
                         session.SaveChanges();
                     }
@@ -146,7 +150,7 @@ namespace SlowTests.Issues
                     Assert.Equal(docsInEachNode * 3, users.Count);
                     for (var i = 1; i <= docsInEachNode * 3; i++)
                     {
-                        Assert.True(users.Any(u => u.Id == "users/" + i));                            
+                        Assert.True(users.Any(u => u.Id == "users/" + i));
                     }
                 }
             }
@@ -159,25 +163,28 @@ namespace SlowTests.Issues
             const string databaseName = "Cluster_identity_for_multiple_documents_on_different_nodes_should_work";
             var leaderServer = await CreateRaftClusterAndGetLeader(clusterSize);
             var followers = Servers.Where(s => s != leaderServer).ToList();
-            using (var leaderStore = new DocumentStore
+            using (var leaderStore = GetDocumentStore(new Options
             {
-                Urls = leaderServer.WebUrls,
-                Database = databaseName
-            }.Initialize())
-            using (var followerA = new DocumentStore
+                Server = leaderServer,
+                ModifyDatabaseName = s => databaseName,
+                DeleteDatabaseOnDispose = false,
+                CreateDatabase = false
+            }))
+            using (var followerA = GetDocumentStore(new Options
             {
-                Urls = followers[0].WebUrls,
-                Database = databaseName
-            }.Initialize())
-            using (var followerB = new DocumentStore
+                Server = followers[0],
+                ModifyDatabaseName = s => databaseName,
+                DeleteDatabaseOnDispose = false,
+                CreateDatabase = false
+            }))
+            using (var followerB = GetDocumentStore(new Options
             {
-                Urls = followers[1].WebUrls,
-                Database = databaseName
-            }.Initialize())
+                Server = followers[1],
+                ModifyDatabaseName = s => databaseName,
+                DeleteDatabaseOnDispose = false,
+                CreateDatabase = false
+            }))
             {
-                ModifyStore((DocumentStore)leaderStore);
-                ModifyStore((DocumentStore)followerA);
-                ModifyStore((DocumentStore)followerB);
                 await CreateDatabasesInCluster(clusterSize, databaseName, leaderStore);
                 using (var session = leaderStore.OpenSession())
                 {
@@ -239,25 +246,28 @@ namespace SlowTests.Issues
             const string databaseName = "Cluster_identity_for_multiple_documents_on_different_nodes_should_work";
             var leaderServer = await CreateRaftClusterAndGetLeader(clusterSize, leaderIndex: 2);
             var followers = Servers.Where(s => s != leaderServer).ToList();
-            using (var leaderStore = new DocumentStore
+            using (var leaderStore = GetDocumentStore(new Options
             {
-                Urls = leaderServer.WebUrls,
-                Database = databaseName
-            }.Initialize())
-            using (var followerA = new DocumentStore
+                Server = leaderServer,
+                ModifyDatabaseName = s => databaseName,
+                DeleteDatabaseOnDispose = false,
+                CreateDatabase = false
+            }))
+            using (var followerA = GetDocumentStore(new Options
             {
-                Urls = followers[0].WebUrls,
-                Database = databaseName
-            }.Initialize())
-            using (var followerB = new DocumentStore
+                Server = followers[0],
+                ModifyDatabaseName = s => databaseName,
+                DeleteDatabaseOnDispose = false,
+                CreateDatabase = false
+            }))
+            using (var followerB = GetDocumentStore(new Options
             {
-                Urls = followers[1].WebUrls,
-                Database = databaseName
-            }.Initialize())
+                Server = followers[1],
+                ModifyDatabaseName = s => databaseName,
+                DeleteDatabaseOnDispose = false,
+                CreateDatabase = false
+            }))
             {
-                ModifyStore((DocumentStore)leaderStore);
-                ModifyStore((DocumentStore)followerA);
-                ModifyStore((DocumentStore)followerB);
                 await CreateDatabasesInCluster(clusterSize, databaseName, leaderStore);
 
                 Parallel.For(0, 5, _ =>
@@ -268,7 +278,7 @@ namespace SlowTests.Issues
                             {
                                 //id ending with "/" should trigger cluster identity id so
                                 //after tx commit, the id would be "users/1"
-                                session.Store(new User {Name = "John Dow"}, "users|");
+                                session.Store(new User { Name = "John Dow" }, "users|");
                                 session.SaveChanges();
                             }
                         },
@@ -276,7 +286,7 @@ namespace SlowTests.Issues
                         {
                             using (var session = followerA.OpenSession())
                             {
-                                session.Store(new User {Name = "Jane Dow"}, "users|");
+                                session.Store(new User { Name = "Jane Dow" }, "users|");
                                 session.SaveChanges();
                             }
                         },
@@ -284,7 +294,7 @@ namespace SlowTests.Issues
                         {
                             using (var session = followerB.OpenSession())
                             {
-                                session.Store(new User {Name = "Jake Dow"}, "users|");
+                                session.Store(new User { Name = "Jake Dow" }, "users|");
                                 session.SaveChanges();
                             }
                         });
@@ -315,7 +325,7 @@ namespace SlowTests.Issues
                         .ToList();
 
                     Assert.Equal(15, users.Count);
-                    for(int i = 1; i <= 15; i++)
+                    for (int i = 1; i <= 15; i++)
                         Assert.True(users.Any(x => x.Id == "users/" + i));
                 }
             }
@@ -328,13 +338,14 @@ namespace SlowTests.Issues
             const int clusterSize = 3;
             const string databaseName = "Cluster_identity_for_multiple_documents_on_leader_should_work";
             var leaderServer = await CreateRaftClusterAndGetLeader(clusterSize);
-            using (var leaderStore = new DocumentStore()
+            using (var leaderStore = GetDocumentStore(new Options
             {
-                Urls = leaderServer.WebUrls,
-                Database = databaseName
-            }.Initialize())
+                Server = leaderServer,
+                ModifyDatabaseName = s => databaseName,
+                DeleteDatabaseOnDispose = false,
+                CreateDatabase = false
+            }))
             {
-                ModifyStore((DocumentStore)leaderStore);
                 await CreateDatabasesInCluster(clusterSize, databaseName, leaderStore);
                 using (var session = leaderStore.OpenSession())
                 {
@@ -359,7 +370,7 @@ namespace SlowTests.Issues
                     var users = session.Query<User>()
                         .Customize(x => x.WaitForNonStaleResults())
                         .Where(x => x.Name.StartsWith("J"))
-                        .OrderBy(x=>x.Id)
+                        .OrderBy(x => x.Id)
                         .ToList();
 
                     Assert.Equal(3, users.Count);

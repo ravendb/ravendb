@@ -29,7 +29,7 @@ class databaseCreationModel {
 
     spinners = {
         fetchingRestorePoints: ko.observable<boolean>(false)
-    }
+    };
 
     name = ko.observable<string>("");
 
@@ -48,7 +48,7 @@ class databaseCreationModel {
         manualMode: ko.observable<boolean>(false),
         dynamicMode: ko.observable<boolean>(true),
         nodes: ko.observableArray<clusterNode>([])
-    }
+    };
 
     replicationValidationGroup = ko.validatedObservable({
         replicationFactor: this.replication.replicationFactor,
@@ -57,7 +57,7 @@ class databaseCreationModel {
 
     path = {
         dataPath: ko.observable<string>(),
-    }
+    };
 
     pathValidationGroup = ko.validatedObservable({
         dataPath: this.path.dataPath,
@@ -66,7 +66,7 @@ class databaseCreationModel {
     encryption = {
         key: ko.observable<string>(),
         confirmation: ko.observable<boolean>(false)
-    }
+    };
    
     encryptionValidationGroup = ko.validatedObservable({
         key: this.encryption.key,
@@ -98,6 +98,10 @@ class databaseCreationModel {
         const pathConfig = this.configurationSections.find(x => x.name === "Path");
         pathConfig.validationGroup = this.pathValidationGroup;
 
+        encryptionConfig.enabled.subscribe(() => {
+           this.replication.replicationFactor(this.replication.nodes().length); 
+        });
+        
         this.replication.nodes.subscribe(nodes => {
             this.replication.replicationFactor(nodes.length);
         });

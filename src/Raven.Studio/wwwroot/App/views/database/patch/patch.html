@@ -2,7 +2,7 @@
     <div class="flex-window-head">
         <div id="patch-target" data-bind="collapse: !test.testMode()">
             <div class="clearfix">
-                <h3 class="pull-left-sm">Patch target</h3>
+                <h3 class="pull-left-sm">Patch</h3>
                 <div class="pull-right-sm flex-horizontal">
                     <div class="input-group patch-save" data-bind="css: { active: inSaveMode }, validationOptions: { insertMessages: false }, validationElement: patchSaveName">
                         <input class="form-control" style="display: none" placeholder="Patch name" data-bind="textInput: patchSaveName">
@@ -18,6 +18,7 @@
             </div>
 
             <div class="form-horizontal">
+                <!-- TODO
                 <div class="row">
                     <label class="control-label col-sm-3 col-lg-2">Type</label>
 
@@ -33,6 +34,7 @@
                         </div>
                     </div>
                 </div>
+                -->
 
                 <div class="row" data-bind="visible: isDocumentMode, with: patchDocument">
                     <label class="control-label col-sm-3 col-lg-2">Document ID</label>
@@ -56,6 +58,7 @@
                     </div>
                 </div>
 
+                <!-- TODO
                 <div class="row" data-bind="visible: isQueryMode">
                     <div class="col-sm-9 col-lg-4 col-sm-offset-3 col-lg-offset-2 margin-bottom">
                         <div class="checkbox">
@@ -66,27 +69,38 @@
                         </div>
                     </div>
                 </div>
+                 -->
                 <div class="row" data-bind="visible: isQueryMode">
-                    <label class="control-label col-sm-3 col-lg-2 query-label">Query <small><i class="icon-info text-info"></i></small></label>
-
+                    <label class="control-label col-sm-3 col-lg-2 query-label">Patch query<div><a href="#" data-bind="click: syntaxHelp"><small>Syntax help</small></a></div></label>
                     <div class="col-sm-9 col-lg-10 margin-bottom">
                         <div class="patch-container">
                             <div class="patch-main">
                                 <pre class="form-control editor query-source"
-                                     data-bind="aceEditor: { code: patchDocument().query, allowResize: false, minHeight: 100, maxHeight: 100, lang:'ace/mode/rql', completer: queryCompleter.complete }, validationOptions: { errorsAsTitle: false }, validationElement: patchDocument().query"></pre>
+                                     data-bind="aceEditor: { code: patchDocument().query, allowResize: false, minHeight: 300, maxHeight: 300, lang:'ace/mode/rql', completer: queryCompleter.complete }, validationOptions: { errorsAsTitle: false }, validationElement: patchDocument().query"></pre>
                                 
                                 <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: patchDocument().query">
                                     <div class="help-block" data-bind="validationMessage: patchDocument().query"></div>
                                 </div>
                             </div>
+                            <div class="patch-controls">
+
+                                <div class="flex-separator"></div>
+                                
+                                <button class="btn btn-primary btn-block btn-lg text-center" data-bind="click: runPatch" title="Execute patch">
+                                    <i class="icon-play2 icon-lg"></i><br />
+                                    <small class="kbd"><kbd>ctrl</kbd> <strong>+</strong> <kbd>enter</kbd></small>
+                                </button>
+                            </div>
+                            <!-- TODO
                             <div class="query-controls">
                                 <button class="btn btn-default btn-block text-center" data-bind="click: runQuery">
                                     <i class="icon-search"></i><span>Run</span>
                                 </button>
-                            </div>
+                            </div> -->
                         </div>
                     </div>
                 </div>
+                <!-- TODO
                 <div class="row margin-bottom" data-bind="visible: !isDocumentMode()">
                     <label class="control-label col-sm-3 col-lg-2">Matching documents</label>
                     <div class="col-sm-9 col-lg-10 patch-table-container">
@@ -107,10 +121,11 @@
                             <virtual-grid class="resizable patch-grid" params="controller: $root.gridController"></virtual-grid>
                         </div>
                     </div>
-                </div>
+                </div> -->
             </div>
         </div>
 
+        <!-- TODO
         <div class="row form-horizontal" id="patch-script">
             <div class="col-sm-3 col-lg-2 patch-title">
                 <h3>Patch script <small><i class="icon-info text-info"></i></small></h3>
@@ -125,10 +140,7 @@
                         </div>
                     </div>
                     <div class="patch-controls">
-                        <button class="btn btn-primary btn-block btn-lg text-center" data-bind="click: runPatch" title="Execute patch">
-                            <i class="icon-play2 icon-lg"></i><br />
-                            <small class="kbd"><kbd>ctrl</kbd> <strong>+</strong> <kbd>enter</kbd></small>
-                        </button>
+                       
                         <div class="flex-separator"></div>
                         <button class="btn btn-default btn-block text-center margin-top" data-bind="click: enterTestMode" title="Dry patch run. It doesn't modify any data">
                             <i class="icon-rocket"></i><span>Test</span>
@@ -149,6 +161,7 @@
         </div>
         <div id="test-container" data-bind="template: { name: 'test-component' }, collapse: test.testMode()">
         </div>
+        -->
     </div>
 </div>
 <div class="backdrop" data-bind="click: test.closeTestMode"></div>

@@ -25,16 +25,21 @@ namespace SlowTests.MailingList
             {
                 Map = items => from item in items
                                where (item.Flags & Flags.Four) == Flags.Four
-                               select new {item.Flags};
+                               select new { item.Flags };
             }
         }
 
         [Fact]
         public void CanWork()
         {
-            using(var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
             {
-                store.Conventions.SaveEnumsAsIntegers = true;
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.SaveEnumsAsIntegers = true;
+                }
+            }))
+            {
                 new Index().Execute(store);
             }
         }

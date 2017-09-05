@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Analysis;
+using Newtonsoft.Json;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
@@ -12,6 +14,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Util;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
@@ -28,7 +31,7 @@ namespace FastTests.Client.Indexing
             {
                 var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
-                var indexId = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name1" } }));
+                var indexId = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Name1" } }));
                 var index = database.IndexStore.GetIndex(indexId);
 
                 var indexes = database.IndexStore.GetIndexesForCollection("Users").ToList();
@@ -48,7 +51,7 @@ namespace FastTests.Client.Indexing
             {
                 var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
-                var indexId = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name1" } }));
+                var indexId = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Name1" } }));
                 var index = database.IndexStore.GetIndex(indexId);
 
                 var indexes = database.IndexStore.GetIndexesForCollection("Users").ToList();
@@ -68,8 +71,8 @@ namespace FastTests.Client.Indexing
             {
                 var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
-                await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name1" } }));
-                await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name2" } }));
+                await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Name1" } }));
+                await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Name2" } }));
 
                 var status = await store.Admin.SendAsync(new GetIndexingStatusOperation());
 
@@ -113,78 +116,6 @@ namespace FastTests.Client.Indexing
                 Assert.Equal(2, status.Indexes.Length);
                 Assert.Equal(IndexRunningStatus.Running, status.Indexes[0].Status);
                 Assert.Equal(IndexRunningStatus.Running, status.Indexes[1].Status);
-            }
-        }
-
-        [Fact]
-        public async Task GetStats()
-        {
-            var path = NewDataPath();
-            using (var store = GetDocumentStore(path: path))
-            {
-                using (var session = store.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new User { Name = "Fitzchak" });
-                    await session.StoreAsync(new User { Name = "Arek" });
-
-                    await session.SaveChangesAsync();
-                }
-
-                using (var session = store.OpenSession())
-                {
-                    var users = session
-                        .Query<User>()
-                        .Customize(x => x.WaitForNonStaleResults())
-                        .Where(x => x.Name == "Arek")
-                        .ToList();
-
-                    Assert.Equal(1, users.Count);
-                }
-
-                var indexes = await store.Admin.SendAsync(new GetIndexesOperation(0, 128));
-                Assert.Equal(1, indexes.Length);
-
-                var index = indexes[0];
-                IndexStats stats = null;
-
-                Assert.True(SpinWait.SpinUntil(() =>
-                {
-                    stats = store.Admin.Send(new GetIndexStatisticsOperation(index.Name));
-                    if (stats.MapAttempts == 2)
-                        return true;
-
-                    return false;
-                }, TimeSpan.FromSeconds(5)));
-
-                Assert.Equal(index.Etag, stats.Etag);
-                Assert.Equal(index.Name, stats.Name);
-                Assert.False(stats.IsInvalidIndex);
-                Assert.False(stats.IsTestIndex);
-                Assert.False(stats.IsStale);
-                Assert.Equal(IndexType.AutoMap, stats.Type);
-                Assert.Equal(2, stats.EntriesCount);
-                Assert.Equal(2, stats.MapAttempts);
-                Assert.Equal(0, stats.MapErrors);
-                Assert.Equal(2, stats.MapSuccesses);
-                Assert.Equal(1, stats.Collections.Count);
-                Assert.Equal(2 + 1, stats.Collections.First().Value.LastProcessedDocumentEtag); // +1 because of HiLo
-                Assert.Equal(0, stats.Collections.First().Value.LastProcessedTombstoneEtag);
-                Assert.Equal(0, stats.Collections.First().Value.DocumentLag);
-                Assert.Equal(0, stats.Collections.First().Value.TombstoneLag);
-
-                Assert.True(stats.Memory.DiskSize.SizeInBytes >= 0);
-                Assert.NotNull(stats.Memory.DiskSize.HumaneSize);
-                Assert.True(stats.Memory.ThreadAllocations.SizeInBytes >= 0);
-                Assert.NotNull(stats.Memory.ThreadAllocations.HumaneSize);
-
-                Assert.NotNull(stats.LastBatchStats.AllocatedBytes);
-                Assert.True(stats.LastBatchStats.AllocatedBytes.SizeInBytes > 0);
-                Assert.NotNull(stats.LastBatchStats.AllocatedBytes.HumaneSize);
-
-                Assert.True(stats.LastIndexingTime.HasValue);
-                Assert.True(stats.LastQueryingTime.HasValue);
-                Assert.Equal(IndexLockMode.Unlock, stats.LockMode);
-                Assert.Equal(IndexPriority.Normal, stats.Priority);
             }
         }
 
@@ -542,23 +473,36 @@ namespace FastTests.Client.Indexing
                         .DatabasesLandlord
                         .TryGetOrCreateResourceStore(new StringSegment(store.Database));
 
-                    var indexId = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Posts", new[]
+                    var indexId = await database.IndexStore.CreateIndex(new MapIndexDefinition(new IndexDefinition()
                     {
-                        new IndexField
+                        Name = "Posts/ByTitleAndDesc",
+                        Maps = new HashSet<string>()
                         {
-                            Name = "Title",
-                            Analyzer = typeof(SimpleAnalyzer).FullName,
-                            Indexing = FieldIndexing.Analyzed,
-                            Storage = FieldStorage.Yes
+                            "from p in docs.Posts select new { p.Title, p.Desc }"
                         },
-                        new IndexField
+                        Fields = new Dictionary<string, IndexFieldOptions>()
                         {
-                            Name = "Desc",
-                            Analyzer = typeof(SimpleAnalyzer).FullName,
-                            Indexing = FieldIndexing.Analyzed,
-                            Storage = FieldStorage.Yes
+                            {
+                                "Title", new IndexFieldOptions()
+                                {
+                                    Analyzer = typeof(SimpleAnalyzer).FullName,
+                                    Indexing = FieldIndexing.Search,
+                                    Storage = FieldStorage.Yes
+                                }
+                            },
+                            {
+                                "Desc", new IndexFieldOptions()
+                                {
+                                    Analyzer = typeof(SimpleAnalyzer).FullName,
+                                    Indexing = FieldIndexing.Search,
+                                    Storage = FieldStorage.Yes
+                                }
+                            }
                         }
-                    }));
+                    }, new HashSet<string>()
+                    {
+                        "Posts"
+                    }, new[] {"Title", "Desc"}, false));
 
                     var index = database.IndexStore.GetIndex(indexId);
 

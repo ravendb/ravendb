@@ -39,7 +39,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         {
             var definition = new AutoMapIndexDefinition("Users", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Name",
                     Storage = FieldStorage.No
@@ -60,7 +60,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         {
             var definition = new AutoMapIndexDefinition("Users", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Name",
                     Storage = FieldStorage.No
@@ -82,7 +82,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         {
             var usersByName = new AutoMapIndexDefinition("Users", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Name",
                     Storage = FieldStorage.No
@@ -91,12 +91,12 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
             var usersByNameAndAge = new AutoMapIndexDefinition("Users", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Name",
                     Storage = FieldStorage.No
                 },
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Age",
                     Storage = FieldStorage.No,
@@ -119,7 +119,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         {
             var usersByName = new AutoMapIndexDefinition("Users", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Name",
                     Storage = FieldStorage.No
@@ -141,17 +141,17 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         {
             var definition = new AutoMapIndexDefinition("Users", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Name",
                     Storage = FieldStorage.No
                 },
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Address.Street",
                     Storage = FieldStorage.No
                 },
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Friends[].Name",
                     Storage = FieldStorage.No
@@ -173,7 +173,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         {
             var definition = new AutoMapIndexDefinition("Users", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Name",
                     Storage = FieldStorage.No
@@ -195,7 +195,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         {
             var definition = new AutoMapIndexDefinition("Users", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Address.ZipCode",
                     Storage = FieldStorage.No,
@@ -217,7 +217,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         {
             var definition = new AutoMapIndexDefinition("Users", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Name",
                     Storage = FieldStorage.No
@@ -239,7 +239,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         {
             var definition = new AutoMapIndexDefinition("Users", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Age",
                     Storage = FieldStorage.No,
@@ -268,7 +268,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         {
             var definition = new AutoMapIndexDefinition("Users", new[]
             {
-                new IndexField
+                new AutoIndexField
                 {
                     Name = "Name",
                     Storage = FieldStorage.No
@@ -303,6 +303,48 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             result = _sut.Match(dynamicQuery);
 
             Assert.Equal(DynamicQueryMatchType.Failure, result.MatchType);
+        }
+
+        [Fact]
+        public void Partial_match_if_analyzer_is_required()
+        {
+            using (var db = CreateDocumentDatabase())
+            {
+                var mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"from Users
+where Name = 'arek'"));
+
+                db.IndexStore.CreateIndex(mapping.CreateAutoIndexDefinition()).Wait();
+
+                mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"from Users
+where search(Name, 'arek')"));
+
+                var matcher = new DynamicQueryToIndexMatcher(db.IndexStore);
+
+                var result = matcher.Match(mapping);
+
+                Assert.Equal(DynamicQueryMatchType.Partial, result.MatchType);
+            }
+        }
+
+        [Fact]
+        public void Partial_match_if_exact_is_required()
+        {
+            using (var db = CreateDocumentDatabase())
+            {
+                var mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"from Users
+where Name = 'arek'"));
+
+                db.IndexStore.CreateIndex(mapping.CreateAutoIndexDefinition()).Wait();
+
+                mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"from Users
+where exact(Name = 'arek')"));
+
+                var matcher = new DynamicQueryToIndexMatcher(db.IndexStore);
+
+                var result = matcher.Match(mapping);
+
+                Assert.Equal(DynamicQueryMatchType.Partial, result.MatchType);
+            }
         }
 
         private void add_index(AutoMapIndexDefinition definition)

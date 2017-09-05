@@ -26,6 +26,8 @@ namespace Sparrow.Utils
             public long ReleasesFromOtherThreads;
             public Thread ThreadInstance;
 
+            public long TotalAllocated => Allocations - ReleasesFromOtherThreads;
+
             public ThreadStats()
             {
                 ThreadInstance = Thread.CurrentThread;
@@ -38,8 +40,9 @@ namespace Sparrow.Utils
         }
 
         public static void Free(byte* ptr, long size, ThreadStats stats)
-        {
-            var currentThreadValue = ThreadAllocations.Value;
+        {            
+            var currentThreadValue = ThreadAllocations.Value;            
+
             if (currentThreadValue == stats)
             {
                 currentThreadValue.Allocations -= size;
@@ -67,7 +70,6 @@ namespace Sparrow.Utils
         {
             thread = ThreadAllocations.Value;
             thread.Allocations += size;
-
             return (byte*)Marshal.AllocHGlobal((IntPtr)size).ToPointer();
         }
 

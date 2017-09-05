@@ -23,7 +23,7 @@ namespace Raven.Server.Utils.Metrics
 
         private readonly Logger _logger;
 
-        public static MetricsScheduler Instance = new MetricsScheduler();
+        public static readonly MetricsScheduler Instance = new MetricsScheduler();
 
         private MetricsScheduler()
         {

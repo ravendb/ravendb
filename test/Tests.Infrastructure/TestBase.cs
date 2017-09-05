@@ -22,6 +22,7 @@ using Raven.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using Sparrow.Threading;
 using Sparrow.Utils;
 using Xunit;
 
@@ -38,7 +39,7 @@ namespace FastTests
         private static readonly ConcurrentSet<string> GlobalPathsToDelete = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
         private static readonly SemaphoreSlim ConcurrentTestsSemaphore;
-        private volatile bool _concurrentTestsSemaphoreTaken;
+        private MultipleUseFlag _concurrentTestsSemaphoreTaken = new MultipleUseFlag();
 
         private readonly ConcurrentSet<string> _localPathsToDelete = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -185,7 +186,7 @@ namespace FastTests
                     if (_globalServer == null || _globalServer.Disposed)
                     {
                         var globalServer = GetNewServer();
-                        Console.WriteLine($"\tTo attach debugger to test process ({(PlatformDetails.Is32Bits ? "x86" : "x64")}), use proc-id: {Process.GetCurrentProcess().Id}. Url {globalServer.WebUrls[0]}");
+                        Console.WriteLine($"\tTo attach debugger to test process ({(PlatformDetails.Is32Bits ? "x86" : "x64")}), use proc-id: {Process.GetCurrentProcess().Id}. Url {globalServer.WebUrl}");
 
                         AssemblyLoadContext.Default.Unloading += UnloadServer;
                         _globalServer = globalServer;
@@ -199,22 +200,29 @@ namespace FastTests
 
         private void UnloadServer(AssemblyLoadContext obj)
         {
-            lock (ServerLocker)
+            try
             {
-                var copyGlobalServer = _globalServer;
-                _globalServer = null;
-                if (copyGlobalServer == null)
-                    return;
-                copyGlobalServer.Dispose();
+                lock (ServerLocker)
+                {
+                    var copyGlobalServer = _globalServer;
+                    _globalServer = null;
+                    if (copyGlobalServer == null)
+                        return;
+                    copyGlobalServer.Dispose();
 
-                GC.Collect(2);
-                GC.WaitForPendingFinalizers();
+                    GC.Collect(2);
+                    GC.WaitForPendingFinalizers();
 
-                var exceptionAggregator = new ExceptionAggregator("Failed to cleanup test databases");
+                    var exceptionAggregator = new ExceptionAggregator("Failed to cleanup test databases");
 
-                RavenTestHelper.DeletePaths(GlobalPathsToDelete, exceptionAggregator);
+                    RavenTestHelper.DeletePaths(GlobalPathsToDelete, exceptionAggregator);
 
-                exceptionAggregator.ThrowIfNeeded();
+                    exceptionAggregator.ThrowIfNeeded();
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
             }
         }
 
@@ -252,6 +260,7 @@ namespace FastTests
                     configuration.Core.DataDirectory.Combine(partialPath ?? $"Tests{Interlocked.Increment(ref _serverCounter)}");
                 configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(60, TimeUnit.Seconds);
                 configuration.Replication.ReplicationMinimalHeartbeat = new TimeSetting(100, TimeUnit.Milliseconds);
+                configuration.Replication.RetryReplicateAfter = new TimeSetting(3, TimeUnit.Seconds);
                 configuration.Cluster.AddReplicaTimeout = new TimeSetting(10, TimeUnit.Seconds);
 
                 if (deletePrevious)
@@ -264,24 +273,20 @@ namespace FastTests
             }
         }
 
-        protected static string UseFiddler(string url)
+        protected static string UseFiddlerUrl(string url)
         {
             if (Debugger.IsAttached && Process.GetProcessesByName("fiddler").Any())
-                return url.Replace("127.0.0.1", "localhost.fiddler");
+                url = url.Replace("127.0.0.1", "localhost.fiddler");
 
             return url;
         }
 
-        protected static string[] UseFiddler(string[] urls)
+        protected static string[] UseFiddler(string url)
         {
-            if (!Debugger.IsAttached || !Process.GetProcessesByName("fiddler").Any())
-                return urls;
+            if (Debugger.IsAttached && Process.GetProcessesByName("fiddler").Any())
+                url = url.Replace("127.0.0.1", "localhost.fiddler");
 
-            for (var i = 0; i < urls.Length; i++)
-            {
-                urls[i] = urls[i].Replace("127.0.0.1", "localhost.fiddler");
-            }
-            return urls;
+            return new[] { url };
         }
 
         protected static void OpenBrowser(string url)
@@ -320,11 +325,8 @@ namespace FastTests
         {
             GC.SuppressFinalize(this);
 
-            if (_concurrentTestsSemaphoreTaken)
-            {
+            if (_concurrentTestsSemaphoreTaken.Lower())
                 ConcurrentTestsSemaphore.Release();
-                _concurrentTestsSemaphoreTaken = false;
-            }
 
             var exceptionAggregator = new ExceptionAggregator("Could not dispose test");
 
@@ -347,7 +349,7 @@ namespace FastTests
        public Task InitializeAsync()
         {
             return ConcurrentTestsSemaphore.WaitAsync()
-                .ContinueWith(x => _concurrentTestsSemaphoreTaken = true);
+                .ContinueWith(x => _concurrentTestsSemaphoreTaken.Raise());
         }
 
         public Task DisposeAsync()

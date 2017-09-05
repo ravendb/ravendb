@@ -2,46 +2,58 @@
 using System.Collections.Generic;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
+using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Voron;
+using Voron.Data.Tables;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class UpdateClusterIdentityCommand : UpdateDatabaseCommand
+    public class UpdateClusterIdentityCommand : UpdateValueForDatabaseCommand
     {
-        public Dictionary<string,long> Identities { get; set; }
+        public Dictionary<string, long> Identities { get; set; }
 
-        public UpdateClusterIdentityCommand() : base(null)
-        {            
+        public UpdateClusterIdentityCommand()
+            : base(null)
+        {
         }
 
-        public UpdateClusterIdentityCommand(string databaseName, IDictionary<string, long> identities) : base(databaseName)
+        public UpdateClusterIdentityCommand(string databaseName, Dictionary<string, long> identities)
+            : base(databaseName)
         {
             Identities = new Dictionary<string, long>(identities);
         }
 
-        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override string GetItemId()
         {
-            
+            throw new NotSupportedException();
+        }
+
+        protected override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue, bool isPassive)
+        {
+            throw new NotSupportedException();
+        }
+
+        public override void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, bool isPassive, out object result)
+        {
+            result = null;
+            var identities = context.Transaction.InnerTransaction.ReadTree(ClusterStateMachine.Identities);
+
             foreach (var kvp in Identities)
             {
-                if (record.Identities.TryGetValue(kvp.Key, out long existingValue))
+                var itemKey = IncrementClusterIdentityCommand.GetStorageKey(DatabaseName, kvp.Key);
+
+                using (Slice.From(context.Allocator, itemKey, out var key))
                 {
-                    record.Identities[kvp.Key] = Math.Max(existingValue, kvp.Value);
-                }
-                else
-                {
-                    record.Identities.Add(kvp.Key, kvp.Value);
+                    identities.AddMax(key, kvp.Value);
                 }
             }
-            return null;
         }
 
         public override void FillJson(DynamicJsonValue json)
         {
-            if(Identities == null)
-                Identities = new Dictionary<string, long>();
-
-            json[nameof(Identities)] = Identities.ToJson();
+            json[nameof(Identities)] = (Identities ?? new Dictionary<string, long>()).ToJson();
         }
     }
 }

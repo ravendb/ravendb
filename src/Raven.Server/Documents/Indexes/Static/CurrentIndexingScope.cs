@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Exceptions.Documents;
+using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Voron;
@@ -13,6 +15,7 @@ namespace Raven.Server.Documents.Indexes.Static
         private IndexingStatsScope _loadDocumentStats;
         private readonly DocumentsStorage _documentsStorage;
         private readonly DocumentsOperationContext _documentsContext;
+        private readonly Func<string, SpatialField> _getSpatialField;
 
         /// [collection: [key: [referenceKeys]]]
         public Dictionary<string, Dictionary<string, HashSet<Slice>>> ReferencesByCollection;
@@ -23,24 +26,28 @@ namespace Raven.Server.Documents.Indexes.Static
         [ThreadStatic]
         public static CurrentIndexingScope Current;
 
-        public dynamic Source;
+        public DynamicBlittableJson Source;
 
         public string SourceCollection;
+
+        public readonly TransactionOperationContext IndexContext;
+
+        public readonly IndexDefinitionBase IndexDefinition;
+
+        public CurrentIndexingScope(DocumentsStorage documentsStorage, DocumentsOperationContext documentsContext, IndexDefinitionBase indexDefinition, TransactionOperationContext indexContext, Func<string, SpatialField> getSpatialField)
+        {
+            _documentsStorage = documentsStorage;
+            _documentsContext = documentsContext;
+            IndexDefinition = indexDefinition;
+            IndexContext = indexContext;
+            _getSpatialField = getSpatialField;
+        }
 
         public void SetSourceCollection(string collection, IndexingStatsScope stats)
         {
             SourceCollection = collection;
             _stats = stats;
             _loadDocumentStats = null;
-        }
-
-        public TransactionOperationContext IndexContext { get; }
-
-        public CurrentIndexingScope(DocumentsStorage documentsStorage, DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
-        {
-            _documentsStorage = documentsStorage;
-            _documentsContext = documentsContext;
-            IndexContext = indexContext;
         }
 
         public unsafe dynamic LoadDocument(LazyStringValue keyLazy, string keyString, string collectionName)
@@ -54,7 +61,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 if (source == null)
                     throw new ArgumentException("Cannot execute LoadDocument. Source is not set.");
 
-                var id = source.__document_id as LazyStringValue;
+                var id = source.GetId() as LazyStringValue;
                 if (id == null)
                     throw new ArgumentException("Cannot execute LoadDocument. Source does not have a key.");
 
@@ -92,7 +99,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 references.Add(keySlice);
 
-                var document = _documentsStorage.Get(_documentsContext, keySlice);
+                // when there is conflict, we need to apply same behavior as if the document would not exist
+                var document = _documentsStorage.Get(_documentsContext, keySlice, throwOnConflict: false);
 
                 if (document == null)
                 {
@@ -105,6 +113,11 @@ namespace Raven.Server.Documents.Indexes.Static
                 // we can't share one DynamicBlittableJson instance among all documents because we can have multiple LoadDocuments in a single scope
                 return new DynamicBlittableJson(document);
             }
+        }
+
+        public SpatialField GetOrCreateSpatialField(string name)
+        {
+            return _getSpatialField(name);
         }
 
         public void Dispose()

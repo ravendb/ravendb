@@ -29,7 +29,8 @@ namespace Voron.Data.Tables
         private readonly FastDictionary<Slice, FastDictionary<Slice, FixedSizeTree, SliceStructComparer>, SliceStructComparer> _fixedSizeTreeCache = new FastDictionary<Slice, FastDictionary<Slice, FixedSizeTree, SliceStructComparer>, SliceStructComparer>(SliceStructComparer.Instance);
 
         public readonly Slice Name;
-
+        private readonly byte _tableType;
+        
         public long NumberOfEntries { get; private set; }
 
         private long _overflowPageCount;
@@ -74,12 +75,13 @@ namespace Voron.Data.Tables
         /// Using this constructor WILL NOT register the Table for commit in
         /// the Transaction, and hence changes WILL NOT be committed.
         /// </summary>
-        public Table(TableSchema schema, Slice name, Transaction tx, Tree tableTree, bool doSchemaValidation = false)
+        public Table(TableSchema schema, Slice name, Transaction tx, Tree tableTree, byte tableType, bool doSchemaValidation = false)
         {
             Name = name;
 
             _schema = schema;
             _tx = tx;
+            _tableType = tableType;
 
             _tableTree = tableTree;
             if (_tableTree == null)
@@ -112,6 +114,7 @@ namespace Voron.Data.Tables
             _schema = schema;
             _tx = tx;
             _forGlobalReadsOnly = true;
+            _tableType = 0;
         }
 
         public bool ReadByKey(Slice key, out TableValueReader reader)
@@ -228,6 +231,29 @@ namespace Voron.Data.Tables
         }
 
         [Conditional("DEBUG")]
+        private void AssertNoReferenceToThisPage(TableValueBuilder builder, long id)
+        {
+            if (builder == null)
+                return;
+
+            var pageNumber = id / Constants.Storage.PageSize;
+            var page = _tx.LowLevelTransaction.GetPage(pageNumber);
+            for (int i = 0; i < builder.Count; i++)
+            {
+                Slice slice;
+                using (builder.SliceFromLocation(_tx.Allocator, i, out slice))
+                {
+                    if (slice.Content.Ptr >= page.Pointer &&
+                        slice.Content.Ptr < page.Pointer + Constants.Storage.PageSize)
+                    {
+                        throw new InvalidOperationException(
+                            "Invalid attempt to insert data with the source equals to the range we are modifying. This is not permitted since it can cause data corruption when table defrag happens");
+                    }
+                }
+            }
+        }
+
+        [Conditional("DEBUG")]
         private void AssertNoReferenceToOldData(TableValueBuilder builder, byte* oldData, int oldDataSize)
         {
             for (int i = 0; i < builder.Count; i++)
@@ -309,7 +335,7 @@ namespace Voron.Data.Tables
             foreach (var idToMove in idsInSection)
             {
                 var pos = ActiveDataSmallSection.DirectRead(idToMove, out int itemSize);
-                var newId = AllocateFromSmallActiveSection(itemSize);
+                var newId = AllocateFromSmallActiveSection(null, itemSize);
 
                 OnDataMoved(idToMove, newId, pos, itemSize);
 
@@ -371,7 +397,7 @@ namespace Voron.Data.Tables
 
             if (size + sizeof(RawDataSection.RawDataEntrySizes) < RawDataSection.MaxItemSize)
             {
-                id = AllocateFromSmallActiveSection(size);
+                id = AllocateFromSmallActiveSection(builder,size);
 
                 if (ActiveDataSmallSection.TryWriteDirect(id, size, out pos) == false)
                     throw new InvalidOperationException(
@@ -388,6 +414,9 @@ namespace Voron.Data.Tables
 
                 page.Flags = PageFlags.Overflow | PageFlags.RawData;
                 page.OverflowSize = size;
+
+                ((RawDataOverflowPageHeader*)page.Pointer)->SectionOwnerHash = ActiveDataSmallSection.SectionOwnerHash;
+                ((RawDataOverflowPageHeader*)page.Pointer)->TableType = _tableType;
 
                 pos = page.Pointer + PageHeader.SizeOf;
 
@@ -480,7 +509,7 @@ namespace Voron.Data.Tables
             long id;
             if (size + sizeof(RawDataSection.RawDataEntrySizes) < RawDataSection.MaxItemSize)
             {
-                id = AllocateFromSmallActiveSection(size);
+                id = AllocateFromSmallActiveSection(null, size);
 
                 if (ActiveDataSmallSection.TryWriteDirect(id, size, out pos) == false)
                     throw new InvalidOperationException($"After successfully allocating {size:#,#;;0} bytes, failed to write them on {Name}");
@@ -493,6 +522,9 @@ namespace Voron.Data.Tables
 
                 page.Flags = PageFlags.Overflow | PageFlags.RawData;
                 page.OverflowSize = size;
+
+                ((RawDataOverflowPageHeader*)page.Pointer)->SectionOwnerHash = ActiveDataSmallSection.SectionOwnerHash;
+                ((RawDataOverflowPageHeader*)page.Pointer)->TableType = _tableType;
 
                 pos = page.Pointer + PageHeader.SizeOf;
 
@@ -585,7 +617,7 @@ namespace Voron.Data.Tables
             return tree;
         }
 
-        private long AllocateFromSmallActiveSection(int size)
+        private long AllocateFromSmallActiveSection(TableValueBuilder builder, int size)
         {
             if (ActiveDataSmallSection.TryAllocate(size, out long id) == false)
             {
@@ -619,7 +651,7 @@ namespace Voron.Data.Tables
                 var newNumberOfPages = Math.Min(maxSectionSizeInPages,
                     (ushort)(ActiveDataSmallSection.NumberOfPages * 2));
 
-                _activeDataSmallSection = ActiveRawDataSmallSection.Create(_tx.LowLevelTransaction, Name, newNumberOfPages);
+                _activeDataSmallSection = ActiveRawDataSmallSection.Create(_tx.LowLevelTransaction, Name, _tableType, newNumberOfPages);
                 _activeDataSmallSection.DataMoved += OnDataMoved;
                 var val = _activeDataSmallSection.PageNumber;
                 using (Slice.External(_tx.Allocator, (byte*)&val, sizeof(long), out Slice pageNumber))
@@ -631,6 +663,7 @@ namespace Voron.Data.Tables
 
                 Debug.Assert(allocationResult);
             }
+            AssertNoReferenceToThisPage(builder, id);
             return id;
         }
 
@@ -1205,11 +1238,11 @@ namespace Voron.Data.Tables
 
             if (exists)
             {
-                id = Update(id, builder);
+                Update(id, builder);
                 return false;
             }
 
-            id = Insert(builder);
+            Insert(builder);
             return true;
         }
 

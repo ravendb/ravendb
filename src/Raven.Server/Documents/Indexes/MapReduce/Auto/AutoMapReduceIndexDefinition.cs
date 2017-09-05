@@ -3,36 +3,42 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Extensions;
+using Raven.Server.Documents.Indexes.Auto;
 using Sparrow.Json;
 using Voron;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 {
-    public class AutoMapReduceIndexDefinition : IndexDefinitionBase
+    public class AutoMapReduceIndexDefinition : AutoIndexDefinitionBase
     {
-        public readonly Dictionary<string, IndexField> GroupByFields;
+        public readonly Dictionary<string, AutoIndexField> GroupByFields;
         
-        public readonly Dictionary<string, IndexField> MapAndGroupByFields;
+        public readonly Dictionary<string, AutoIndexField> MapAndGroupByFields;
 
-        public AutoMapReduceIndexDefinition(string collection, IndexField[] mapFields, IndexField[] groupByFields)
-            : base(IndexNameFinder.FindMapReduceIndexName(collection, mapFields, groupByFields), new HashSet<string> { collection }, IndexLockMode.Unlock, IndexPriority.Normal, mapFields)
+        public AutoMapReduceIndexDefinition(string collection, AutoIndexField[] mapFields, AutoIndexField[] groupByFields)
+            : base(AutoIndexNameFinder.FindMapReduceIndexName(collection, mapFields, groupByFields), collection, mapFields)
         {
-            GroupByFields = groupByFields.ToDictionary(x => x.Name, x => x);
+            GroupByFields = groupByFields.ToDictionary(x => x.Name, x => x, StringComparer.Ordinal);
             
-            MapAndGroupByFields = new Dictionary<string, IndexField>(MapFields.Count + GroupByFields.Count);
+            MapAndGroupByFields = new Dictionary<string, AutoIndexField>(MapFields.Count + GroupByFields.Count);
 
             foreach (var field in MapFields)
             {
-                MapAndGroupByFields[field.Key] = field.Value;
+                MapAndGroupByFields[field.Key] = field.Value.As<AutoIndexField>();
             }
             
             foreach (var field in GroupByFields)
             {
                 MapAndGroupByFields[field.Key] = field.Value;
+
+                foreach (var indexField in field.Value.ToIndexFields())
+                {
+                    IndexFields.Add(indexField.Name, indexField);
+                }
             }
         }
 
-        public override bool TryGetField(string field, out IndexField value)
+        public override bool TryGetField(string field, out AutoIndexField value)
         {
             if (base.TryGetField(field, out value))
                 return true;
@@ -51,18 +57,15 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
         protected internal override IndexDefinition GetOrCreateIndexDefinitionInternal()
         {
-            var map = $"{Collections.First()}:[{string.Join(";", MapFields.Select(x => $"<Name:{x.Value.Name},Operation:{x.Value.Aggregation}>"))}]";
+            var map = $"{Collections.First()}:[{string.Join(";", MapFields.Select(x => x.Value.As<AutoIndexField>()).Select(x => $"<Name:{x.Name},Operation:{x.Aggregation}>"))}]";
             var reduce = $"{Collections.First()}:[{string.Join(";", GroupByFields.Select(x => $"<Name:{x.Value.Name}>"))}]";
 
             var indexDefinition = new IndexDefinition();
             indexDefinition.Maps.Add(map);
             indexDefinition.Reduce = reduce;
 
-            foreach (var kvp in ConvertFields(MapFields))
-                indexDefinition.Fields[kvp.Key] = kvp.Value;
-
-            foreach (var kvp in ConvertFields(GroupByFields))
-                indexDefinition.Fields[kvp.Key] = kvp.Value;
+            foreach (var kvp in IndexFields)
+                indexDefinition.Fields[kvp.Key] = kvp.Value.ToIndexFieldOptions();
 
             return indexDefinition;
         }
@@ -159,20 +162,20 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             if (reader.TryGet(nameof(MapFields), out jsonArray) == false)
                 throw new InvalidOperationException("No persisted map fields");
 
-            var mapFields = new IndexField[jsonArray.Length];
+            var mapFields = new AutoIndexField[jsonArray.Length];
 
             for (var i = 0; i < jsonArray.Length; i++)
             {
                 var json = jsonArray.GetByIndex<BlittableJsonReaderObject>(i);
 
-                json.TryGet(nameof(IndexField.Name), out string name);
-                json.TryGet(nameof(IndexField.Aggregation), out int aggregationAsInt);
+                json.TryGet(nameof(AutoIndexField.Name), out string name);
+                json.TryGet(nameof(AutoIndexField.Aggregation), out int aggregationAsInt);
 
-                var field = new IndexField
+                var field = new AutoIndexField
                 {
                     Name = name,
                     Storage = FieldStorage.Yes,
-                    Indexing = FieldIndexing.Default,
+                    Indexing = AutoFieldIndexing.Default,
                     Aggregation = (AggregationOperation)aggregationAsInt
                 };
 
@@ -182,7 +185,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             if (reader.TryGet(nameof(GroupByFields), out jsonArray) == false)
                 throw new InvalidOperationException("No persisted group by fields");
 
-            var groupByFields = new IndexField[jsonArray.Length];
+            var groupByFields = new AutoIndexField[jsonArray.Length];
 
             for (var i = 0; i < jsonArray.Length; i++)
             {
@@ -191,11 +194,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                 json.TryGet(nameof(IndexField.Name), out string name);
                 json.TryGet(nameof(IndexField.Indexing), out string indexing);
 
-                var field = new IndexField
+                var field = new AutoIndexField
                 {
                     Name = name,
                     Storage = FieldStorage.Yes,
-                    Indexing = (FieldIndexing)Enum.Parse(typeof(FieldIndexing), indexing)
+                    Indexing = (AutoFieldIndexing)Enum.Parse(typeof(AutoFieldIndexing), indexing)
                 };
 
                 groupByFields[i] = field;

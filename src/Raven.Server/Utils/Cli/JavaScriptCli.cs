@@ -22,8 +22,7 @@ namespace Raven.Server.Utils.Cli
             if (consoleColoring)
                 Console.ForegroundColor = ConsoleColor.DarkCyan;
 
-            writer.WriteLine("(to cancel enter in new line 'cancel' or 'done' to execute)");
-            writer.WriteLine("(  script will be executed automatically if found valid   )");
+            writer.WriteLine("(to cancel enter in new line 'cancel' or 'EXEC' to execute)");
             writer.WriteLine();
 
             var sb = new StringBuilder();
@@ -31,7 +30,7 @@ namespace Raven.Server.Utils.Cli
             if (consoleColoring)
                 Console.ResetColor();
 
-            AdminConsole = database != null ? new AdminJsConsole(database) : new AdminJsConsole(server);
+            AdminConsole = new AdminJsConsole(server, database);
             if (AdminConsole.Log.IsOperationsEnabled)
             {
                 var from = consoleColoring ? "the console cli" : "a named pipe connection";
@@ -47,23 +46,10 @@ namespace Raven.Server.Utils.Cli
                 var line = reader.ReadLine();
                 if (line.Equals("cancel"))
                     return false;
-                if (line.Equals("done"))
+                if (line.Equals("EXEC"))
                     break;
 
                 sb.Append(line);
-
-                var adminJsScript = new AdminJsScript { Script = sb.ToString() };
-                bool hadErrors = false;
-                try
-                {
-                    AdminConsole.GetEngine(adminJsScript, execString);
-                }
-                catch
-                {
-                    hadErrors = true;
-                }
-                if (hadErrors == false)
-                    break;
             }
 
             Script = sb.ToString();

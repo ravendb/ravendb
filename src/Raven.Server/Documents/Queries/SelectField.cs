@@ -28,27 +28,31 @@ namespace Raven.Server.Documents.Queries
 
         public SelectField[] FunctionArgs;
 
+        public bool HasSourceAlias;
+
         private SelectField()
         {
             
         }
 
-        public static SelectField Create(string name)
+        public static SelectField Create(string name, string alias = null)
         {
             return new SelectField
             {
-                Name = name
+                Name = name,
+                Alias = alias
             };
         }
 
-        public static SelectField Create(string name, string alias, string sourceAlias, bool array)
+        public static SelectField Create(string name, string alias, string sourceAlias, bool array, bool hasSourceAlias)
         {
             return new SelectField
             {
                 Name = name,
                 Alias = alias,
                 SourceAlias = sourceAlias,
-                SourceIsArray = array
+                SourceIsArray = array,
+                HasSourceAlias = hasSourceAlias
             };
         }
 

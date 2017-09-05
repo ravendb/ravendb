@@ -61,7 +61,7 @@ namespace Raven.Client.Documents.Session
                 if (command == null)
                     return;
 
-                RequestExecutor.Execute(command, Context, sessionId:_clientSessionId);
+                RequestExecutor.Execute(command, Context, sessionInfo: SessionInfo);
                 saveChangesOperation.SetResult(command.Result);
             }
         }
@@ -80,7 +80,7 @@ namespace Raven.Client.Documents.Session
                 return true;
 
             var command = new HeadDocumentCommand(id, null);
-            RequestExecutor.Execute(command, Context, sessionId:_clientSessionId);
+            RequestExecutor.Execute(command, Context, sessionInfo: SessionInfo);
 
             return command.Result != null;
         }
@@ -97,8 +97,8 @@ namespace Raven.Client.Documents.Session
                 throw new InvalidOperationException("Cannot refresh a transient instance");
             IncrementRequestCount();
 
-            var command = new GetDocumentCommand(new[] { documentInfo.Id }, includes: null, transformer: null, transformerParameters: null, metadataOnly: false);
-            RequestExecutor.Execute(command, Context, sessionId: _clientSessionId);
+            var command = new GetDocumentCommand(new[] { documentInfo.Id }, includes: null, metadataOnly: false);
+            RequestExecutor.Execute(command, Context, sessionInfo: SessionInfo);
 
             RefreshInternal(entity, command, documentInfo);
         }
@@ -165,7 +165,7 @@ namespace Raven.Client.Documents.Session
             var requests = PendingLazyOperations.Select(x => x.CreateRequest(Context)).ToList();
             var multiGetOperation = new MultiGetOperation(this);
             var multiGetCommand = multiGetOperation.CreateRequest(requests);
-            RequestExecutor.Execute(multiGetCommand, Context, sessionId: _clientSessionId);
+            RequestExecutor.Execute(multiGetCommand, Context, sessionInfo: SessionInfo);
             var responses = multiGetCommand.Result;
 
             for (var i = 0; i < PendingLazyOperations.Count; i++)

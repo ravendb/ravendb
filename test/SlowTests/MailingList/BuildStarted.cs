@@ -20,7 +20,6 @@ namespace SlowTests.MailingList
         {
             using (var store = GetDocumentStore())
             {
-                store.Conventions.AllowQueriesOnId = true;
                 using (var session = store.OpenSession())
                 {
                     TestModel testModelItem = session.Query<TestModel>().SingleOrDefault(t => t.Id == 1.ToString()) ??
@@ -49,7 +48,6 @@ namespace SlowTests.MailingList
         {
             using (var store = GetDocumentStore())
             {
-                store.Conventions.AllowQueriesOnId = true;
                 using (var session = store.OpenSession())
                 {
                     session.Store(new TestModel { Id = 1.ToString() });
@@ -77,7 +75,6 @@ namespace SlowTests.MailingList
         {
             using (var store = GetDocumentStore())
             {
-                store.Conventions.AllowQueriesOnId = true;
                 using (var session = store.OpenSession())
                 {
                     var deletedModel = new TestModel { Id = 1.ToString() };

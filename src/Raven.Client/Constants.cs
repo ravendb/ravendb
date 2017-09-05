@@ -102,7 +102,7 @@ namespace Raven.Client
 
             public const int MaxDatabaseNameLength = 128;
 
-            public enum SubscriptionChagneVectorSpecialStates
+            public enum SubscriptionChangeVectorSpecialStates
             {
                 DoNotChange,
                 LastDocument,
@@ -121,6 +121,8 @@ namespace Raven.Client
 
                 public const string Id = "@id";
 
+                public const string Conflict = "@conflict";
+
                 public const string IdProperty = "Id";
 
                 public const string Flags = "@flags";
@@ -134,6 +136,8 @@ namespace Raven.Client
                 public const string RavenClrType = "Raven-Clr-Type";
 
                 public const string ChangeVector = "@change-vector";
+
+                public const string Expires = "@expires";
 
                 public const string HasValue = "HasValue";
             }
@@ -159,29 +163,23 @@ namespace Raven.Client
                     
                     public const string CustomSortFieldName = "__customSort";
 
-                    public const string DocumentIdFieldName = "__document_id";
+                    public const string DocumentIdFieldName = "id()";
 
-                    public const string ReduceKeyFieldName = "__reduce_key";
+                    public const string ReduceKeyHashFieldName = "hash(key())";
 
-                    public const string ReduceValueFieldName = "__reduced_val";
+                    public const string ReduceKeyValueFieldName = "key()";
 
                     public const string AllFields = "__all_fields";
 
                     public const string AllStoredFields = "__all_stored_fields";
 
-                    public const string DefaultSpatialFieldName = "__spatial";
-
-                    public const string SpatialShapeFieldName = "__spatial_shape";
-
-                    public const string DistanceFieldName = "__distance";
+                    public const string SpatialShapeFieldName = "spatial(shape)";
 
                     internal const string RangeFieldSuffix = "_Range";
 
                     public const string RangeFieldSuffixLong = "_L" + RangeFieldSuffix;
 
                     public const string RangeFieldSuffixDouble = "_D" + RangeFieldSuffix;
-
-                    public const string IgnoredDynamicField = "__ignored";
 
                     public const string NullValue = "NULL_VALUE";
 
@@ -230,11 +228,6 @@ namespace Raven.Client
                 public const string SnapshotExtension = ".ravendb-snapshot";
 
                 public const string IncrementalBackupExtension = ".ravendb-incremental-backup";
-            }
-
-            public class Expiration
-            {
-                public const string ExpirationDate = "Raven-Expiration-Date";
             }
         }
     }

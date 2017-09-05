@@ -1078,6 +1078,10 @@ class indexPerformance extends viewModelBase {
         
         const currentDatum = this.tooltip.datum();
 
+        if (!element) {
+            this.hideTooltip();
+            return;
+        }
         
         if (currentDatum !== element || reuseTooltip) {
             let tooltipHtml = `${element.Name}<br/>Duration: ${generalUtils.formatMillis((element).DurationInMs)}`;

@@ -17,12 +17,15 @@ namespace SlowTests.SlowTests.MailingList
         [Fact]
         public void Streaming_documents_will_respect_the_sorting_order()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
             {
-                store.Conventions.CustomizeJsonSerializer = serializer =>
-                                                            serializer.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
-                store.Conventions.AllowQueriesOnId = true;
-
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.CustomizeJsonSerializer = serializer =>
+                        serializer.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
+                }
+            }))
+            {
                 new User_Entity().Execute(store);
 
                 var iteration = 100;

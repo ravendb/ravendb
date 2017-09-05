@@ -18,7 +18,6 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Session.Operations.Lazy;
-using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Session;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
@@ -47,6 +46,7 @@ namespace Raven.Client.Documents.Session
         private static int _instancesCounter;
         private readonly int _hash = Interlocked.Increment(ref _instancesCounter);
         protected bool GenerateDocumentIdsOnStore = true;
+        protected ISessionInfo SessionInfo;
         private BatchOptions _saveChangesOptions;
         private bool _isDisposed;
 
@@ -190,6 +190,7 @@ namespace Raven.Client.Documents.Session
             MaxNumberOfRequestsPerSession = _requestExecutor.Conventions.MaxNumberOfRequestsPerSession;
             GenerateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions, GenerateId);
             EntityToBlittable = new EntityToBlittable(this);
+            SessionInfo = new SessionInfo(_clientSessionId , false);
         }
 
         /// <summary>
@@ -257,7 +258,7 @@ namespace Raven.Client.Documents.Session
 
         internal bool IsLoadedOrDeleted(string id)
         {
-            return (DocumentsById.TryGetValue(id, out DocumentInfo documentInfo) && documentInfo.Document != null) ||
+            return DocumentsById.TryGetValue(id, out DocumentInfo documentInfo) && documentInfo.Document != null ||
                 IsDeleted(id) ||
                 IncludedDocumentsById.ContainsKey(id);
         }
@@ -682,10 +683,10 @@ more responsive application.
         protected void AssertNoNonUniqueInstance(object entity, string id)
         {
             DocumentInfo info;
-            if (string.IsNullOrEmpty(id) || 
-                id[id.Length-1] == '|' ||
+            if (string.IsNullOrEmpty(id) ||
+                id[id.Length - 1] == '|' ||
                 id[id.Length - 1] == '/' ||
-                DocumentsById.TryGetValue(id, out info) == false || 
+                DocumentsById.TryGetValue(id, out info) == false ||
                 ReferenceEquals(info.Entity, entity))
                 return;
 
@@ -721,11 +722,12 @@ more responsive application.
             return result;
         }
 
-        private void UpdateMetadataModifications(DocumentInfo documentInfo)
+        private static void UpdateMetadataModifications(DocumentInfo documentInfo)
         {
-            if ((documentInfo.MetadataInstance == null) || !((MetadataAsDictionary)documentInfo.MetadataInstance).Changed)
+            if (documentInfo.MetadataInstance == null || ((MetadataAsDictionary)documentInfo.MetadataInstance).Changed == false)
                 return;
-            if ((documentInfo.Metadata.Modifications == null) || (documentInfo.Metadata.Modifications.Properties.Count == 0))
+
+            if (documentInfo.Metadata.Modifications == null || documentInfo.Metadata.Modifications.Properties.Count == 0)
             {
                 documentInfo.Metadata.Modifications = new DynamicJsonValue();
             }
@@ -797,10 +799,17 @@ more responsive application.
                 if (result.DeferredCommandsDictionary.TryGetValue((entity.Value.Id, CommandType.ClientNotAttachmentPUT, null), out ICommandData command))
                     ThrowInvalidModifiedDocumentWithDeferredCommand(command);
 
-                var beforeStoreEventArgs = new BeforeStoreEventArgs(this, entity.Value.Id, entity.Key);
-                OnBeforeStore?.Invoke(this, beforeStoreEventArgs);
-                if ((OnBeforeStore != null) && EntityChanged(document, entity.Value, null))
-                    document = EntityToBlittable.ConvertEntityToBlittable(entity.Key, entity.Value);
+                var onOnBeforeStore = OnBeforeStore;
+                if (onOnBeforeStore != null)
+                {
+                    var beforeStoreEventArgs = new BeforeStoreEventArgs(this, entity.Value.Id, entity.Key);
+                    onOnBeforeStore(this, beforeStoreEventArgs);
+                    if (beforeStoreEventArgs.MetadataAccessed)
+                        UpdateMetadataModifications(entity.Value);
+                    if (beforeStoreEventArgs.MetadataAccessed ||
+                        EntityChanged(document, entity.Value, null))
+                        document = EntityToBlittable.ConvertEntityToBlittable(entity.Key, entity.Value);
+                }
 
                 entity.Value.IsNewDocument = false;
                 result.Entities.Add(entity.Key);
@@ -810,8 +819,8 @@ more responsive application.
 
                 entity.Value.Document = document;
 
-                var changeVector = (UseOptimisticConcurrency &&
-                            entity.Value.ConcurrencyCheckMode != ConcurrencyCheckMode.Disabled) ||
+                var changeVector = UseOptimisticConcurrency &&
+                                   entity.Value.ConcurrencyCheckMode != ConcurrencyCheckMode.Disabled ||
                            entity.Value.ConcurrencyCheckMode == ConcurrencyCheckMode.Forced
                     ? entity.Value.ChangeVector
                     : null;
@@ -1049,14 +1058,37 @@ more responsive application.
             KnownMissingIds.Remove(id);
         }
 
-        public void RegisterMissingIncludes(BlittableJsonReaderArray results, ICollection<string> includes)
+        internal void RegisterIncludes(BlittableJsonReaderObject includes)
         {
-            if (includes == null || includes.Count == 0)
+            if (includes == null)
+                return;
+
+            var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+            foreach (var propertyIndex in includes.GetPropertiesByInsertionOrder())
+            {
+                includes.GetPropertyByIndex(propertyIndex, ref propertyDetails);
+
+                if (propertyDetails.Value == null)
+                    continue;
+
+                var json = (BlittableJsonReaderObject)propertyDetails.Value;
+
+                var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(json);
+                if (newDocumentInfo.Metadata.TryGetConflict(out var conflict) && conflict)
+                    continue;
+
+                IncludedDocumentsById[newDocumentInfo.Id] = newDocumentInfo;
+            }
+        }
+
+        public void RegisterMissingIncludes(BlittableJsonReaderArray results, BlittableJsonReaderObject includes, ICollection<string> includePaths)
+        {
+            if (includePaths == null || includePaths.Count == 0)
                 return;
 
             foreach (BlittableJsonReaderObject result in results)
             {
-                foreach (var include in includes)
+                foreach (var include in includePaths)
                 {
                     if (include == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
                         continue;
@@ -1064,13 +1096,19 @@ more responsive application.
                     IncludesUtil.Include(result, include, id =>
                     {
                         if (id == null)
-                            return false;
-                        if (IsLoaded(id) == false)
+                            return;
+
+                        if (IsLoaded(id))
+                            return;
+
+                        if (includes.TryGet(id, out BlittableJsonReaderObject document))
                         {
-                            RegisterMissing(id);
-                            return false;
+                            var metadata = document.GetMetadata();
+                            if (metadata.TryGetConflict(out var conflict) && conflict)
+                                return;
                         }
-                        return true;
+
+                        RegisterMissing(id);
                     });
                 }
             }
@@ -1176,8 +1214,8 @@ more responsive application.
                     IncludesUtil.Include(documentInfo.Document, include, s =>
                     {
                         hasAll &= IsLoaded(s);
-                        return true;
                     });
+
                     if (hasAll == false)
                         return false;
                 }
@@ -1345,15 +1383,11 @@ more responsive application.
 
         public static DocumentInfo GetNewDocumentInfo(BlittableJsonReaderObject document)
         {
-            BlittableJsonReaderObject metadata;
-            string id;
-            string changeVector;
-
-            if (document.TryGet(Constants.Documents.Metadata.Key, out metadata) == false)
+            if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
                 throw new InvalidOperationException("Document must have a metadata");
-            if (metadata.TryGet(Constants.Documents.Metadata.Id, out id) == false)
+            if (metadata.TryGet(Constants.Documents.Metadata.Id, out string id) == false)
                 throw new InvalidOperationException("Document must have an id");
-            if (metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out changeVector) == false)
+            if (metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out string changeVector) == false)
                 throw new InvalidOperationException("Document " + id + " must have an Change Vector");
 
             var newDocumentInfo = new DocumentInfo

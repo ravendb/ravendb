@@ -19,33 +19,33 @@ namespace Raven.Server.Utils
 {
     internal class CertificateUtils
     {
-        public static X509Certificate2 CreateSelfSignedCertificate(string subjectName, string issuerName)
+        public static X509Certificate2 CreateSelfSignedCertificate(string commonNameValue, string issuerName)
         {
-            CreateCertificateAuthorityCertificate(subjectName, out AsymmetricKeyParameter caPrivateKey);
-            return CreateSelfSignedCertificateBasedOnPrivateKey(subjectName, issuerName, caPrivateKey, false, 1);
+            CreateCertificateAuthorityCertificate(commonNameValue, out AsymmetricKeyParameter caPrivateKey, out string caSubjectName);
+            return CreateSelfSignedCertificateBasedOnPrivateKey(commonNameValue, caSubjectName, caPrivateKey, false, 1);
         }
 
-        public static X509Certificate2 CreateSelfSignedClientCertificate(string subjectName, RavenServer.CertificateHolder certificateHolder)
+        public static X509Certificate2 CreateSelfSignedClientCertificate(string commonNameValue, RavenServer.CertificateHolder certificateHolder)
         {
             return CreateSelfSignedCertificateBasedOnPrivateKey(
-                subjectName,
+                commonNameValue,
                 certificateHolder.Certificate.Subject,
                 certificateHolder.PrivateKey.Key,
                 true,
                 5);
         }
 
-        public static X509Certificate2 CreateSelfSignedExpiredClientCertificate(string subjectName, RavenServer.CertificateHolder certificateHolder)
+        public static X509Certificate2 CreateSelfSignedExpiredClientCertificate(string commonNameValue, RavenServer.CertificateHolder certificateHolder)
         {
             return CreateSelfSignedCertificateBasedOnPrivateKey(
-                subjectName,
+                commonNameValue,
                 certificateHolder.Certificate.Subject,
                 certificateHolder.PrivateKey.Key,
                 true,
                 -1);
         }
 
-        private static X509Certificate2 CreateSelfSignedCertificateBasedOnPrivateKey(string subjectName, string issuerName,
+        private static X509Certificate2 CreateSelfSignedCertificateBasedOnPrivateKey(string commonNameValue, string issuerSubjectName,
             AsymmetricKeyParameter issuerPrivKey, bool isClientCertificate, int yearsUntilExpiration)
         {
             const int keyStrength = 2048;
@@ -68,13 +68,13 @@ namespace Raven.Server.Utils
             certificateGenerator.SetSerialNumber(serialNumber);
 
             // Issuer and Subject Name
-            X509Name subjectDN = new X509Name("CN=" + subjectName);
-            X509Name issuerDN = new X509Name("CN=" + issuerName);
+            X509Name subjectDN = new X509Name("CN=" + commonNameValue);
+            X509Name issuerDN = new X509Name(issuerSubjectName);
             certificateGenerator.SetIssuerDN(issuerDN);
             certificateGenerator.SetSubjectDN(subjectDN);
 
             // Valid For
-            DateTime notBefore = DateTime.UtcNow.Date;
+            DateTime notBefore = DateTime.UtcNow.Date.AddDays(-7);
             DateTime notAfter = notBefore.AddYears(yearsUntilExpiration);
             certificateGenerator.SetNotBefore(notBefore);
             certificateGenerator.SetNotAfter(notAfter);
@@ -104,7 +104,7 @@ namespace Raven.Server.Utils
             return convertedCertificate;
         }
 
-        private static void CreateCertificateAuthorityCertificate(string subjectName, [CanBeNull] out AsymmetricKeyParameter caPrivateKey)
+        private static void CreateCertificateAuthorityCertificate(string commonNameValue, [CanBeNull] out AsymmetricKeyParameter caPrivateKey, out string caSubject)
         {
             const int keyStrength = 2048;
 
@@ -118,13 +118,13 @@ namespace Raven.Server.Utils
             certificateGenerator.SetSerialNumber(serialNumber);
 
             // Issuer and Subject Name
-            X509Name subjectDN = new X509Name("CN=" + subjectName);
+            X509Name subjectDN = new X509Name("CN=" + commonNameValue);
             X509Name issuerDN = subjectDN;
             certificateGenerator.SetIssuerDN(issuerDN);
             certificateGenerator.SetSubjectDN(subjectDN);
 
             // Valid For
-            DateTime notBefore = DateTime.UtcNow.Date;
+            DateTime notBefore = DateTime.UtcNow.Date.AddDays(-7);
             DateTime notAfter = notBefore.AddYears(2);
 
             certificateGenerator.SetNotBefore(notBefore);
@@ -143,9 +143,10 @@ namespace Raven.Server.Utils
             ISignatureFactory signatureFactory = new Asn1SignatureFactory("SHA512WITHRSA", issuerKeyPair.Private, random);
 
             // selfsign certificate
-            certificateGenerator.Generate(signatureFactory);
+            var certificate = certificateGenerator.Generate(signatureFactory);
 
             caPrivateKey = issuerKeyPair.Private;
+            caSubject = certificate.SubjectDN + "CA";
         }
 
         private static SecureRandom GetSeededSecureRandom()

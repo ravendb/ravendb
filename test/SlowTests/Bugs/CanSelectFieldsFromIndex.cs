@@ -58,7 +58,7 @@ namespace SlowTests.Bugs
                 while (store.Commands().Query(new IndexQuery { Query = "FROM INDEX 'EmailAndProject'" }).IsStale)
                     Thread.Sleep(100);
 
-                var queryResult = store.Commands().Query(new IndexQuery { Query = "SELECT email FROM INDEX 'EmailAndProject'" });
+                var queryResult = store.Commands().Query(new IndexQuery { Query = "FROM INDEX 'EmailAndProject' as e SELECT e.email" });
 
                 Assert.Equal(9, queryResult.Results.Length);
                 

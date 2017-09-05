@@ -34,7 +34,7 @@ namespace SlowTests.Tests.Linq
                 var _ = documentSession.Query<User>().Where(x => x.Name == "ayende").FirstOrDefault(x => x.Active);
 
                 Assert.Equal(1, queries.Count);
-                Assert.Equal("FROM Users WHERE Name = :p0 AND Active = :p1", queries[0]);
+                Assert.Equal("FROM Users WHERE Name = $p0 AND Active = $p1", queries[0]);
             }
         }
 
@@ -57,7 +57,7 @@ namespace SlowTests.Tests.Linq
                 var _ = documentSession.Query<User>().Where(x => x.Name == "ayende").SingleOrDefault(x => x.Active);
 
                 Assert.Equal(1, queries.Count);
-                Assert.Equal("FROM Users WHERE Name = :p0 AND Active = :p1", queries[0]);
+                Assert.Equal("FROM Users WHERE Name = $p0 AND Active = $p1", queries[0]);
             }
         }
     }

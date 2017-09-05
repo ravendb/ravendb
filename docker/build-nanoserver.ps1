@@ -16,13 +16,13 @@ function BuildWindowsDockerImage ( $projectDir, $version = "4.0.0-custom-40" ) {
         throw "Package file does not exist."
     }
 
-    Copy-Item -Destination ./ravendb-nanoserver -Force $packagePath
+    Copy-Item -Path $packagePath -Destination ./ravendb-nanoserver/RavenDB.zip -Force
 
     docker build ./ravendb-nanoserver `
         -t ravendb/ravendb:$version-windows-nanoserver `
         -t ravendb/ravendb:windows-nanoserver-latest
 
-    Remove-Item "./ravendb-nanoserver/$packageFileName"
+    Remove-Item "./ravendb-nanoserver/RavenDB.zip"
 }
 
 BuildWindowsDockerImage ".." $Version

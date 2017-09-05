@@ -23,8 +23,13 @@
                         <span>Close Test Area</span>
                     </button>
                 </div>
-                <div class="scroll" data-bind="with: editedSubscription">
+                <div class="flex-grow" data-bind="with: editedSubscription">
                     <div class="panel padding flex-form">
+                        <div data-bind="if: liveConnection() && !$root.isAddingNewSubscriptionTask()">
+                            <div class="bg-warning inline-block padding padding-xs small" title="Note: Client connection will be disconnected upon Save !">
+                                <i class="icon-warning"></i>&nbsp;&nbsp;Warning: You are editing a live subscription connection . . .
+                            </div>
+                        </div>
                         <h3 data-bind="visible: $root.isAddingNewSubscriptionTask()">New Subscription</h3>
                         <h3 data-bind="visible: !$root.isAddingNewSubscriptionTask()">Edit Subscription</h3>
                         <div class="form-group margin-top">
@@ -32,49 +37,26 @@
                             <input type="text" class="form-control" id="taskName" placeholder="Enter a descriptive name for the subscription task" title="Note: if no name is supplied then server will create one for you"
                                    data-bind="textInput: taskName, attr: { disabled: !$root.isAddingNewSubscriptionTask() }">
                         </div>
-                        <div class="form-group">
-                            <label class="control-label">Collection</label>
-                            <div class="flex-grow" data-bind="validationOptions: { insertMessages: false }, validationElement: collection">
-                                <div class="dropdown btn-block">
-                                    <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown" 
-                                           data-bind="textInput: collection, attr: { disabled: !$root.isAddingNewSubscriptionTask(), id: 'collectionNameInput' }"  
-                                           placeholder="Select a collection">
-                                    <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
-                                    <ul class="dropdown-menu max-height" data-bind="foreach: createCollectionNameAutocompleter($data), autoComplete: '#' + 'collectionNameInput'">
-                                        <li data-bind="click: _.partial($root.useCollection, $data)">
-                                            <a href="#" data-bind="text: $data"></a>
-                                        </li>  
-                                    </ul>
-                                </div>
-                                <span class="help-block" data-bind="validationMessage: collection"></span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="panel padding">
-                        <div class="toggle" data-bind="validationOptions: { insertMessages: false }, validationElement: includeRevisions">
-                            <input id="include-revisions" type="checkbox" data-bind="checked: includeRevisions">
-                            <label for="include-revisions">Include Revisions</label>
-                        </div>
-                        <div class="help-block" data-bind="validationMessage: includeRevisions"></div>
-                    </div>
-                    <div class="panel padding">
-                        <label>Transform Script:&nbsp;&nbsp;<i class="icon-info text-info" id="scriptInfo"></i></label>
+                        <label>Subscription RQL :&nbsp;&nbsp;</label>
+                        <div class="pull-right"><a href="#" data-bind="click: $root.syntaxHelp"><small>Syntax help</small></a></div>
                         <pre class="form-control margin-top" placeholder="Enter transform script" 
-                             data-bind="aceEditor: { code: script, lang:'ace/mode/javascript', completer: $root.completer }, validationOptions: { errorsAsTitle: false }, validationElement: script" style="height: 160px;">
+                             data-bind="aceEditor: { code: query, lang:'ace/mode/rql', completer: $root.queryCompleter.complete }, validationOptions: { errorsAsTitle: false }, validationElement: query" style="height: 160px;">
                         </pre>
-                        <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: script">
-                            <div class="help-block" data-bind="validationMessage: script"></div>
+                        <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: query">
+                            <div class="help-block" data-bind="validationMessage: query"></div>
                         </div>
                     </div>
                     <div class="panel padding flex-form">
+                        <div class="toggle">
+                            <input id="use-starting-point" type="checkbox" data-bind="checked: setStartingPoint">
+                            <label for="use-starting-point">Use defined starting point</label>
+                        </div>
                         <div class="form-group">
-                            <label class="control-label">Send Documents From</label>
+                            <label class="control-label">Send Documents From :</label>
                             <div class="flex-grow">
-                                <div class="dropdown btn-block" title="Set the starting point for the subscription task">
-                                    <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown" disabled="disabled">
-                                        <span data-bind="text: startingPointType"></span>
-                                        <span class="caret"></span>
-                                    </button>
+                                <div class="dropdown btn-block" title="Set the starting point for the subscription task"> 
+                                    <input readonly type="text" class="form-control dropdown-toggle text-left" data-toggle="dropdown" data-bind="textInput: startingPointType, attr: { 'disabled': !setStartingPoint() }">
+                                    <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
                                     <ul class="dropdown-menu max-height">
                                         <li title="Documents will be sent from the very first document in the collection">
                                             <a href="#" data-bind="click: _.partial($root.setStartingPointType, 'Beginning of Time')">Begining of Time</a>
@@ -89,21 +71,25 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="margin-top">
-                            <div class="row flex-row" data-bind="visible: startingPointChangeVector ">
-                                <div class="col-xs-12 col-sm-6 col-sm-offset-6 col-lg-offset-4 col-lg-12">
-                                    <textarea rows="3" class="form-control" placeholder="Set change vector"></textarea>
-                                </div>
-                                <div class="col-xs-12 col-sm-6 col-sm-offset-6 col-lg-offset-4 col-lg-12">
-                                    <button class="btn btn-default btn-block"><i class="icon-preview"></i><span>&nbsp;Show related document</span></button>
-                                </div>
+                        <div class="form-group" data-bind="visible: startingPointChangeVector() && setStartingPoint()">
+                            <label class="control-label">Change Vector :</label>
+                            <div class="flex-grow" data-bind="validationOptions: { insertMessages: false }, validationElement: startingChangeVector">
+                                <textarea rows="3" class="form-control" placeholder="Enter change vector to start sending documents from" data-bind="textInput: startingChangeVector, attr: { 'disabled': !setStartingPoint() }"></textarea>
+                                <!--<button class="btn btn-default btn-block btn-upcoming"><i class="icon-preview"></i><span>&nbsp;Show related document</span></button>--> <!-- todo: we need end point for this.. -->
+                                <span class="help-block" data-bind="validationMessage: startingChangeVector"></span>
                             </div>
+                        </div>
+                    </div>
+                    <div data-bind="if: changeVectorForNextBatchStartingPoint() && changeVectorForNextBatchStartingPoint() !== 'DoNotChange' && !setStartingPoint()">
+                        <div class="panel padding" title="This change vector is the starting point for next batch"> 
+                            <label for="latest-change-vector">Next batch starting point is :</label>
+                            <textarea id="latest-change-vector" rows="2" class="form-control" disabled="disabled" data-bind="textInput: changeVectorForNextBatchStartingPoint"></textarea>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="col-sm-12 col-lg-6 flex-vertical" id="subscriptionTestArea" data-bind="visible: enableTestArea">
-                <div class="panel padding flex-vertical flex-grow">
+                <div class="panel padding flex-vertical flex-grow fixed">
                     <div class="flex-header"> 
                         <div class="flex-horizontal">
                             <div class="flex-grow"><h3>Test Subscription</h3></div>
@@ -155,4 +141,3 @@
 <div class="tooltip json-preview lg" style="opacity: 0">
     <pre><code class="white-space-pre"></code></pre>
 </div>
-

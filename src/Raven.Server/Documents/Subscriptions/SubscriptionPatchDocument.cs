@@ -1,59 +1,82 @@
-﻿using Jint;
-using Raven.Client.Exceptions.Documents.Patching;
-using Raven.Server.Documents.Patch;
+﻿using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Subscriptions
 {
-    public class SubscriptionPatchDocument : DocumentPatcherBase
+    public class SubscriptionPatchDocument : ScriptRunnerCache.Key
     {
-        public readonly string FilterJavaScript;
-        private readonly PatchRequest _patchRequest;
+        public readonly string Script;
+        public readonly string[] DeclaredFunctions;
 
-        public SubscriptionPatchDocument(DocumentDatabase database, string filterJavaScript) : base(database)
+
+        public SubscriptionPatchDocument(string script, string[] declaredFunctions) 
         {
-            FilterJavaScript = filterJavaScript;
-            _patchRequest = new PatchRequest
+            Script = script;
+            DeclaredFunctions = declaredFunctions;
+        }
+
+        public bool MatchCriteria(ScriptRunner.SingleRun run, DocumentsOperationContext context, object document, ref BlittableJsonReaderObject transformResult)
+        {
+            using (var result = run.Run(context, "execute", new[] {document}))
             {
-                Script = filterJavaScript
-            };
+                var resultAsBool = result.BooleanValue;
+                if (resultAsBool != null)
+                    return resultAsBool.Value;
+
+                transformResult = result.TranslateToObject(context);
+                return transformResult != null;    
+            }
         }
 
-        protected override void CustomizeEngine(Engine engine, PatcherOperationScope scope)
+        public override void GenerateScript(ScriptRunner runner)
         {
-
-        }
-
-        protected override void RemoveEngineCustomizations(Engine engine, PatcherOperationScope scope)
-        {
-            
-        }
-
-        public bool MatchCriteria(DocumentsOperationContext context, Document document, out BlittableJsonReaderObject transformResult)
-        {
-            transformResult = null;
-
-            using (var scope = CreateOperationScope(debugMode: false).Initialize(context))
+            foreach (var script in DeclaredFunctions)
             {
-                ApplySingleScript(context, document.Id, document, _patchRequest, scope);
+                runner.AddScript(script);
+            }
+            runner.AddScript($@"
+function __actual_func(args) {{ 
 
-                var result = scope.ActualPatchResult;
+{Script}
 
-                if (result.IsBoolean())
-                    return result.AsBoolean();
+}};
+function execute(doc, args){{ 
+    return __actual_func.call(doc, args);
+}}");
+        }
 
-                if (result.IsObject())
+        public override bool Equals(object obj)
+        {
+            if(obj is SubscriptionPatchDocument other)
+                return Equals(other);
+            return false;
+        }
+
+        public bool Equals(SubscriptionPatchDocument obj)
+        {
+            if (DeclaredFunctions.Length != obj.DeclaredFunctions.Length)
+                return false;
+
+            for (var index = 0; index < DeclaredFunctions.Length; index++)
+            {
+                if (DeclaredFunctions[index] != obj.DeclaredFunctions[index])
+                    return false;
+            }
+
+            return obj.Script != Script;
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int hashCode = Script.GetHashCode();
+                foreach (var function in DeclaredFunctions)
                 {
-                    var transformedDynamic = scope.ToBlittable(result.AsObject());
-                    transformResult = context.ReadObject(transformedDynamic, document.Id);
-                    return true;
+                    hashCode = (hashCode * 397) ^ (function.GetHashCode());
                 }
-
-                if (result.IsNull() || result.IsUndefined())
-                    return false; // todo: check if that is the value that we want here
-
-                throw new JavaScriptException($"Could not proccess script {_patchRequest.Script}. It\'s return value {result.Type}, instead of bool, object, undefined or null");
+                return hashCode;
             }
         }
     }

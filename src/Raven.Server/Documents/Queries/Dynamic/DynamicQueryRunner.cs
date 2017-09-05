@@ -4,11 +4,13 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Exceptions.Documents.Indexes;
+using Raven.Server.Config;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Transformers;
+using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Utils;
@@ -20,16 +22,18 @@ namespace Raven.Server.Documents.Queries.Dynamic
         public const string CollectionIndexPrefix = "collection/";
 
         private readonly IndexStore _indexStore;
-        private readonly TransformerStore _transformerStore;
+        private readonly DocumentDatabase _database;
         private readonly DocumentsOperationContext _context;
+        private readonly RavenConfiguration _configuration;
         private readonly DocumentsStorage _documents;
         private readonly OperationCancelToken _token;
 
-        public DynamicQueryRunner(IndexStore indexStore, TransformerStore transformerStore, DocumentsStorage documents, DocumentsOperationContext context, OperationCancelToken token)
+        public DynamicQueryRunner(IndexStore indexStore, DocumentDatabase database,  DocumentsStorage documents, DocumentsOperationContext context, RavenConfiguration configuration, OperationCancelToken token)
         {
             _indexStore = indexStore;
-            _transformerStore = transformerStore;
+            _database = database;
             _context = context;
+            _configuration = configuration;
             _token = token;
             _documents = documents;
         }
@@ -118,43 +122,32 @@ namespace Raven.Server.Documents.Queries.Dynamic
             resultToFill.IncludedPaths = query.Metadata.Includes;
 
             var includeDocumentsCommand = new IncludeDocumentsCommand(_documents, _context, query.Metadata.Includes);
+            var fieldsToFetch = new FieldsToFetch(query, null);
+            var totalResults = new Reference<int>();
+            var documents = new CollectionQueryEnumerable(_database, _documents, fieldsToFetch, collection, query, _context, includeDocumentsCommand, totalResults);
+            var cancellationToken = _token.Token;
 
-            Transformer transformer = null;
-            if (string.IsNullOrEmpty(query.Transformer) == false)
+            try
             {
-                transformer = _transformerStore.GetTransformer(query.Transformer);
-                if (transformer == null)
-                    throw new InvalidOperationException($"The transformer '{query.Transformer}' was not found.");
+                foreach (var document in documents)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    resultToFill.AddResult(document);
+
+                    includeDocumentsCommand.Gather(document);
+                }
             }
-
-            using (var scope = transformer?.OpenTransformationScope(query.TransformerParameters, includeDocumentsCommand, _documents, _transformerStore, _context))
+            catch (Exception e)
             {
-                var fieldsToFetch = new FieldsToFetch(query, null, transformer);
-                var documents = new CollectionQueryEnumerable(_documents, fieldsToFetch, collection, query, _context);
+                if (resultToFill.SupportsExceptionHandling == false)
+                    throw;
 
-                var results = scope != null ? scope.Transform(documents) : documents;
-
-                try
-                {
-                    foreach (var document in results)
-                    {
-                        _token.Token.ThrowIfCancellationRequested();
-
-                        resultToFill.AddResult(document);
-
-                        includeDocumentsCommand.Gather(document);
-                    }
-                }
-                catch (Exception e)
-                {
-                    if (resultToFill.SupportsExceptionHandling == false)
-                        throw;
-
-                    resultToFill.HandleException(e);
-                }
+                resultToFill.HandleException(e);
             }
 
             includeDocumentsCommand.Fill(resultToFill.Includes);
+            resultToFill.TotalResults = totalResults.Value;
         }
 
         private unsafe void FillCountOfResultsAndIndexEtag(QueryResultServerSide resultToFill, string collection)
@@ -172,7 +165,6 @@ namespace Raven.Server.Documents.Queries.Dynamic
             else
             {
                 var collectionStats = _documents.GetCollection(collection, _context);
-                resultToFill.TotalResults = (int)collectionStats.Count;
 
                 buffer[0] = _documents.GetLastDocumentEtag(_context, collection);
                 buffer[1] = _documents.GetLastTombstoneEtag(_context, collection);
@@ -193,10 +185,10 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     return (previousIndex, collection);
             }
 
-            var map = DynamicQueryMapping.Create(query);
+            if (query.Metadata.IsCollectionQuery)
+                return (null, collection);
 
-            if (map.MapFields.Length == 0 && map.GroupByFields.Length == 0)
-                return (null, collection); // use collection query
+            var map = DynamicQueryMapping.Create(query);
 
             if (TryMatchExistingIndexToQuery(map, out Index index) == false)
             {
@@ -222,7 +214,11 @@ namespace Raven.Server.Documents.Queries.Dynamic
                             }
                         }
                     });
-                GC.KeepAlive(t);// we explicitly don't care about this instance, this line is here to make the compiler happy
+
+                if (query.WaitForNonStaleResults && 
+                    _configuration.Indexing.TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan ==
+                    TimeSpan.Zero)
+                    await t; // this is used in testing, mainly
 
                 if (query.WaitForNonStaleResultsTimeout.HasValue == false)
                     query.WaitForNonStaleResultsTimeout = TimeSpan.FromSeconds(15); // allow new auto indexes to have some results
@@ -233,7 +229,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         private async Task CleanupSupercededAutoIndexes(Index index, DynamicQueryMapping map)
         {
-            if (map.SupercededIndexes == null || map.SupercededIndexes.Count == 0)
+            if (map.SupersededIndexes == null || map.SupersededIndexes.Count == 0)
                 return;
 
             // this is meant to remove superceded indexes immediately when they are of no use
@@ -253,7 +249,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 }
 
                 var maxSupercededEtag = 0L;
-                foreach (var supercededIndex in map.SupercededIndexes)
+                foreach (var supercededIndex in map.SupersededIndexes)
                 {
                     var etag = supercededIndex.GetLastMappedEtagFor(map.ForCollection);
                     maxSupercededEtag = Math.Max(etag, maxSupercededEtag);
@@ -265,10 +261,15 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     // we'll give it a few seconds to drain any pending queries,
                     // and because it make it easier to demonstrate how we auto
                     // clear the old auto indexes.
+                    var timeout = _configuration.Indexing.TimeBeforeDeletionOfSupersededAutoIndex.AsTimeSpan;
+                    if (timeout != TimeSpan.Zero)
+                    {
+                        await TimeoutManager.WaitFor(
+                            timeout
+                        ).ConfigureAwait(false);
+                    }
 
-                    await TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(15000)).ConfigureAwait(false);
-
-                    foreach (var supercededIndex in map.SupercededIndexes)
+                    foreach (var supercededIndex in map.SupersededIndexes)
                     {
                         try
                         {
@@ -317,12 +318,12 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                     var currentIndex = _indexStore.GetIndex(matchResult.IndexName);
 
-                    if (map.SupercededIndexes == null)
-                        map.SupercededIndexes = new List<Index>();
+                    if (map.SupersededIndexes == null)
+                        map.SupersededIndexes = new List<Index>();
 
-                    map.SupercededIndexes.Add(currentIndex);
+                    map.SupersededIndexes.Add(currentIndex);
 
-                    map.ExtendMappingBasedOn(currentIndex.Definition);
+                    map.ExtendMappingBasedOn((AutoIndexDefinitionBase)currentIndex.Definition);
 
                     break;
             }

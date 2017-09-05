@@ -3,8 +3,11 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using Sparrow;
 using Sparrow.Binary;
+using Sparrow.LowMemory;
+using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron.Data;
 using Voron.Exceptions;
@@ -13,7 +16,7 @@ using Voron.Util.Settings;
 
 namespace Voron.Impl.Paging
 {
-    public abstract unsafe class AbstractPager : IDisposable
+    public abstract unsafe class AbstractPager : IDisposable, ILowMemoryHandler
     {
         private readonly StorageEnvironmentOptions _options;
 
@@ -27,6 +30,7 @@ namespace Voron.Impl.Paging
         private DateTime _lastIncrease;
         private readonly object _pagerStateModificationLocker = new object();
         public bool UsePageProtection { get; } = false;
+        private MultipleUseFlag _lowMemoryFlag = new MultipleUseFlag();
 
         public Action<PagerState> PagerStateChanged;
 
@@ -94,7 +98,6 @@ namespace Voron.Impl.Paging
             Debug.Assert(NodeMaxSize < ushort.MaxValue);
 
             _increaseSize = MinIncreaseSize;
-
             PageMinSpace = (int)(PageMaxSpace * 0.33);
 
             SetPagerState(new PagerState(this));
@@ -244,7 +247,14 @@ namespace Voron.Impl.Paging
                 return MinIncreaseSize;
             }
 
+            if (_lowMemoryFlag)
+            {
+                _lastIncrease = now;
+                return MinIncreaseSize;
+            }
+
             TimeSpan timeSinceLastIncrease = (now - _lastIncrease);
+            _lastIncrease = now;
             if (timeSinceLastIncrease.TotalMinutes < 3)
             {
                 _increaseSize = Math.Min(_increaseSize * 2, MaxIncreaseSize);
@@ -254,7 +264,6 @@ namespace Voron.Impl.Paging
                 _increaseSize = Math.Max(MinIncreaseSize, _increaseSize / 2);
             }
 
-            _lastIncrease = now;
             // At any rate, we won't do an increase by over 50% of current size, to prevent huge empty spaces
             // 
             // The reasoning behind this is that we want to make sure that we increase in size very slowly at first
@@ -348,6 +357,18 @@ namespace Voron.Impl.Paging
         public virtual byte* AcquireRawPagePointer(IPagerLevelTransactionState tx, long pageNumber, PagerState pagerState = null)
         {
             return AcquirePagePointer(tx, pageNumber, pagerState);
+        }
+
+        public void LowMemory()
+        {
+            // We could check for nested calls to LowMemory here, but we 
+            // probably don't want to error because of it.
+            _lowMemoryFlag.Raise();
+        }
+
+        public void LowMemoryOver()
+        {
+            _lowMemoryFlag.Lower();
         }
     }
 

@@ -40,12 +40,14 @@ namespace Raven.Client.Http
         public RavenCommandResponseType ResponseType { get; protected set; }
 
         public TimeSpan? Timeout { get; protected set; }
-        public bool AggressiveCacheAllowed { get; protected set; }
+        public bool CanCache { get; protected set; }
+        public bool CanCacheAggressively { get; protected set; }
 
         protected RavenCommand()
         {
             ResponseType = RavenCommandResponseType.Object;
-            AggressiveCacheAllowed = true;
+            CanCache = true;
+            CanCacheAggressively = true;
         }
 
         public abstract HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url);
@@ -119,8 +121,11 @@ namespace Raven.Client.Http
             return ResponseDisposeHandling.Automatic;
         }
 
-        protected virtual void CacheResponse(HttpCache cache, string url, HttpResponseMessage response, BlittableJsonReaderObject responseJson)
+        protected void CacheResponse(HttpCache cache, string url, HttpResponseMessage response, BlittableJsonReaderObject responseJson)
         {
+            if (CanCache == false)
+                return;
+
             var changeVector = response.GetEtagHeader();
             if (changeVector == null)
                 return;
@@ -147,6 +152,11 @@ namespace Raven.Client.Http
 
             if (changeVector != null)
                 request.Headers.TryAddWithoutValidation("If-Match", $"\"{changeVector}\"");
+        }
+
+        public virtual void OnResponseFailure(HttpResponseMessage response)
+        {
+            
         }
     }
 

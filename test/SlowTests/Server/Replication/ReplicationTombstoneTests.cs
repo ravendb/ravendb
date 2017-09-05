@@ -5,7 +5,7 @@ using Xunit;
 
 namespace SlowTests.Server.Replication
 {
-    public class ReplicationTombstoneTests : ReplicationTestsBase
+    public class ReplicationTombstoneTests : ReplicationTestBase
     {
         [Fact]
         public async Task Tombstones_replication_should_delete_document_at_multiple_destinations_fan()
@@ -13,9 +13,18 @@ namespace SlowTests.Server.Replication
             var dbName1 = "FooBar-1";
             var dbName2 = "FooBar-2";
             var dbName3 = "FooBar-3";
-            using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))
-            using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
-            using (var store3 = GetDocumentStore(dbSuffixIdentifier: dbName3))
+            using (var store1 = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_{dbName1}"
+            }))
+            using (var store2 = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_{dbName2}"
+            }))
+            using (var store3 = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_{dbName3}"
+            }))
             {
                 await SetupReplicationAsync(store1, store2, store3);
 
@@ -54,9 +63,18 @@ namespace SlowTests.Server.Replication
             var dbName1 = "FooBar-1";
             var dbName2 = "FooBar-2";
             var dbName3 = "FooBar-3";
-            using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))
-            using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
-            using (var store3 = GetDocumentStore(dbSuffixIdentifier: dbName3))
+            using (var store1 = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_{dbName1}"
+            }))
+            using (var store2 = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_{dbName2}"
+            }))
+            using (var store3 = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_{dbName3}"
+            }))
             {
                 using (var s1 = store1.OpenSession())
                 {
@@ -96,9 +114,18 @@ namespace SlowTests.Server.Replication
             var dbName1 = "FooBar-1";
             var dbName2 = "FooBar-2";
             var dbName3 = "FooBar-3";
-            using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))
-            using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
-            using (var store3 = GetDocumentStore(dbSuffixIdentifier: dbName3))
+            using (var store1 = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_{dbName1}"
+            }))
+            using (var store2 = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_{dbName2}"
+            }))
+            using (var store3 = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_{dbName3}"
+            }))
             {
                 using (var s1 = store1.OpenSession())
                 {
@@ -158,8 +185,14 @@ namespace SlowTests.Server.Replication
         {
             var dbName1 = "FooBar-1";
             var dbName2 = "FooBar-2";
-            using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))
-            using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
+            using (var store1 = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_{dbName1}"
+            }))
+            using (var store2 = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_{dbName2}"
+            }))
             {
                 using (var s1 = store1.OpenSession())
                 {
@@ -239,8 +272,14 @@ namespace SlowTests.Server.Replication
         {
             var dbName1 = "FooBar-1";
             var dbName2 = "FooBar-2";
-            using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))
-            using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
+            using (var store1 = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_{dbName1}"
+            }))
+            using (var store2 = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_{dbName2}"
+            }))
             {
                 using (var s1 = store1.OpenSession())
                 {
@@ -271,8 +310,14 @@ namespace SlowTests.Server.Replication
         {
             var dbName1 = "FooBar-1";
             var dbName2 = "FooBar-2";
-            using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))
-            using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
+            using (var store1 = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_{dbName1}"
+            }))
+            using (var store2 = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_{dbName2}"
+            }))
             {
                 using (var s1 = store1.OpenSession())
                 {
@@ -306,8 +351,14 @@ namespace SlowTests.Server.Replication
         {
             var dbName1 = "FooBar-1";
             var dbName2 = "FooBar-2";
-            using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))
-            using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
+            using (var store1 = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_{dbName1}"
+            }))
+            using (var store2 = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_{dbName2}"
+            }))
             {
                 using (var s1 = store1.OpenSession())
                 {

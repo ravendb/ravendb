@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Microsoft.Extensions.Primitives;
 using Raven.Client;
+using Raven.Client.Exceptions.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using StringSegment = Sparrow.StringSegment;
@@ -21,6 +22,17 @@ namespace Raven.Server.Documents.Includes
             _storage = storage;
             _context = context;
             _includes = includes;
+        }
+
+        public void AddRange(HashSet<string> ids)
+        {
+            if (ids == null)
+                return;
+
+            if (_includedIds == null)
+                _includedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            _includedIds.UnionWith(ids);
         }
 
         public void Add(string id)
@@ -51,7 +63,7 @@ namespace Raven.Server.Documents.Includes
                 }
                 IncludeUtil.GetDocIdFromInclude(document.Data, new StringSegment(include), _includedIds);
             }
-                
+
         }
 
         public void Fill(List<Document> result)
@@ -64,11 +76,34 @@ namespace Raven.Server.Documents.Includes
                 if (includedDocId == null) //precaution, should not happen
                     continue;
 
-                var includedDoc = _storage.Get(_context, includedDocId);
-                if (includedDoc == null)
-                    continue;
+                Document includedDoc;
+                try
+                {
+                    includedDoc = _storage.Get(_context, includedDocId);
+                    if (includedDoc == null)
+                        continue;
+                }
+                catch (DocumentConflictException e)
+                {
+                    includedDoc = CreateConflictDocument(e);
+                }
 
                 result.Add(includedDoc);
+            }
+        }
+
+        private static Document CreateConflictDocument(DocumentConflictException exception)
+        {
+            return new ConflictDocument(exception.DocId);
+        }
+
+        public class ConflictDocument : Document
+        {
+            public new readonly string Id;
+
+            public ConflictDocument(string docId)
+            {
+                Id = docId;
             }
         }
     }

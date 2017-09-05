@@ -21,7 +21,7 @@ namespace SlowTests.Tests.Bugs.Vlko
 
                     var iq = RavenTestHelper.GetIndexQuery(query);
 
-                    Assert.Equal("FROM Users WHERE ((__document_id = :p0 OR __document_id = :p1) OR __document_id = :p2) AND (Age = :p3)", iq.Query);
+                    Assert.Equal("FROM Users WHERE ((id() = $p0 OR id() = $p1) OR id() = $p2) AND (Age = $p3)", iq.Query);
                     Assert.Equal("1", iq.QueryParameters["p0"]);
                     Assert.Equal("2", iq.QueryParameters["p1"]);
                     Assert.Equal("3", iq.QueryParameters["p2"]);

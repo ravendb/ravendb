@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Server.Documents.Queries.Sorting.AlphaNumeric;
@@ -38,7 +39,7 @@ namespace SlowTests.Tests.Sorting
                 using (var session = store.OpenSession())
                 {
                     var titlesFromServer = session.Query<Track, TracksIndex>()
-                        .Customize(x => x.AddOrder<Track>(y => y.Title, ordering: OrderingType.AlphaNumeric))
+                        .OrderBy(x => x.Title, OrderingType.AlphaNumeric)
                         .Select(x => x.Title)
                         .ToList();
 
@@ -50,7 +51,7 @@ namespace SlowTests.Tests.Sorting
                 using (var session = store.OpenSession())
                 {
                     var titlesFromServer = session.Query<Track, TracksIndex>()
-                        .Customize(x => x.AddOrder("Title", false, OrderingType.AlphaNumeric))
+                        .OrderBy("Title", OrderingType.AlphaNumeric)
                         .Select(x => x.Title)
                         .ToList();
 
@@ -82,7 +83,7 @@ namespace SlowTests.Tests.Sorting
                 using (var session = store.OpenSession())
                 {
                     var titlesFromServer = session.Query<Track, TracksIndex>()
-                        .Customize(x => x.AddOrder<Track>(y => y.Title, ordering: OrderingType.AlphaNumeric))
+                        .OrderBy(x => x.Title, OrderingType.AlphaNumeric)
                         .Select(x => x.Title)
                         .ToList();
 
@@ -94,7 +95,7 @@ namespace SlowTests.Tests.Sorting
                 using (var session = store.OpenSession())
                 {
                     var titlesFromServer = session.Query<Track, TracksIndex>()
-                        .Customize(x => x.AddOrder<Track>(y => y.Title, true, ordering: OrderingType.AlphaNumeric))
+                        .OrderByDescending(x => x.Title, OrderingType.AlphaNumeric)
                         .Select(x => x.Title)
                         .ToList();
 
@@ -130,7 +131,7 @@ namespace SlowTests.Tests.Sorting
                 using (var session = store.OpenSession())
                 {
                     var titlesFromServer = session.Query<Track, TracksIndex>()
-                        .Customize(x => x.AddOrder("Title", ordering: OrderingType.AlphaNumeric))
+                        .OrderBy("Title", OrderingType.AlphaNumeric)
                         .Select(x => x.Title)
                         .ToList();
 
@@ -142,7 +143,7 @@ namespace SlowTests.Tests.Sorting
                 using (var session = store.OpenSession())
                 {
                     var titlesFromServer = session.Query<Track, TracksIndex>()
-                        .Customize(x => x.AddOrder("Title", true, ordering: OrderingType.AlphaNumeric))
+                        .OrderByDescending(x => x.Title, OrderingType.AlphaNumeric)
                         .Select(x => x.Title)
                         .ToList();
 
@@ -178,7 +179,8 @@ namespace SlowTests.Tests.Sorting
                 using (var session = store.OpenSession())
                 {
                     var tracks = session.Query<Track, TracksIndex>()
-                        .Customize(x => x.AddOrder<Track>(y => y.Title, ordering: OrderingType.AlphaNumeric).AddOrder<Track>(y => y.Artist, ordering: OrderingType.AlphaNumeric))
+                        .OrderBy(x => x.Title, OrderingType.AlphaNumeric)
+                        .ThenBy(x => x.Artist, OrderingType.AlphaNumeric)
                         .ToList();
 
                     localTracks.Sort(new AlphaNumericTrackOrder());
@@ -190,7 +192,8 @@ namespace SlowTests.Tests.Sorting
                 using (var session = store.OpenSession())
                 {
                     var tracks = session.Query<Track, TracksIndex>()
-                        .Customize(x => x.AddOrder<Track>(y => y.Title, ordering: OrderingType.AlphaNumeric).AddOrder<Track>(y => y.Artist, true, ordering: OrderingType.AlphaNumeric))
+                        .OrderBy(x => x.Title, OrderingType.AlphaNumeric)
+                        .OrderByDescending(x => x.Artist, OrderingType.AlphaNumeric)
                         .ToList();
 
                     localTracks.Sort(new AlphaNumericTrackOrder(yearDescending: true));
@@ -227,7 +230,8 @@ namespace SlowTests.Tests.Sorting
                 using (var session = store.OpenSession())
                 {
                     var tracks = session.Query<Track, TracksIndex>()
-                        .Customize(x => x.AddOrder<Track>(y => y.Title, ordering: OrderingType.AlphaNumeric).AddOrder<Track>(y => y.Year))
+                        .OrderBy(x => x.Title, OrderingType.AlphaNumeric)
+                        .OrderBy(x => x.Year)
                         .ToList();
 
                     localTracks.Sort(new AlphaNumericTrackOrder());
@@ -239,7 +243,8 @@ namespace SlowTests.Tests.Sorting
                 using (var session = store.OpenSession())
                 {
                     var tracks = session.Query<Track, TracksIndex>()
-                        .Customize(x => x.AddOrder<Track>(y => y.Title, ordering: OrderingType.AlphaNumeric).AddOrder<Track>(y => y.Year, true))
+                        .OrderBy(x => x.Title, OrderingType.AlphaNumeric)
+                        .OrderByDescending(x => x.Year)
                         .ToList();
 
                     localTracks.Sort(new AlphaNumericTrackOrder(yearDescending: true));
@@ -276,7 +281,8 @@ namespace SlowTests.Tests.Sorting
                 using (var session = store.OpenSession())
                 {
                     var tracks = session.Query<Track, TracksIndex>()
-                        .Customize(x => x.AddOrder<Track>(y => y.Year).AddOrder<Track>(y => y.Title, true, ordering: OrderingType.AlphaNumeric))
+                        .OrderBy(x => x.Year)
+                        .ThenByDescending(x => x.Title, OrderingType.AlphaNumeric)
                         .ToList();
 
                     localTracks.Sort(new AlphaNumericTrackOrder2(titleDescending: true));
@@ -288,7 +294,8 @@ namespace SlowTests.Tests.Sorting
                 using (var session = store.OpenSession())
                 {
                     var tracks = session.Query<Track, TracksIndex>()
-                        .Customize(x => x.AddOrder<Track>(y => y.Year, true).AddOrder<Track>(y => y.Title, ordering: OrderingType.AlphaNumeric))
+                        .OrderByDescending(x => x.Year)
+                        .OrderBy(x => x.Title, OrderingType.AlphaNumeric)
                         .ToList();
 
                     localTracks.Sort(new AlphaNumericTrackOrder2(yearDescending: true));
@@ -327,7 +334,7 @@ namespace SlowTests.Tests.Sorting
                 using (var session = store.OpenSession())
                 {
                     var titlesFromServer = session.Query<Track, TracksIndex>()
-                        .Customize(x => x.AddOrder<Track>(y => y.Title, ordering: OrderingType.AlphaNumeric))
+                        .OrderBy(x => x.Title, OrderingType.AlphaNumeric)
                         .Select(x => x.Title)
                         .Take(1024)
                         .ToList();
@@ -341,7 +348,7 @@ namespace SlowTests.Tests.Sorting
                 using (var session = store.OpenSession())
                 {
                     var titlesFromServer = session.Query<Track, TracksIndex>()
-                        .Customize(x => x.AddOrder<Track>(y => y.Title, true, ordering: OrderingType.AlphaNumeric))
+                        .OrderByDescending(x => x.Title, OrderingType.AlphaNumeric)
                         .Select(x => x.Title)
                         .Take(1024)
                         .ToList();
@@ -545,9 +552,9 @@ namespace SlowTests.Tests.Sorting
                     var titlesFromServer = session.Query<Track>()
                         .Customize(x =>
                         {
-                            x.AddOrder<Track>(y => y.Title, ordering: OrderingType.AlphaNumeric);
                             x.WaitForNonStaleResultsAsOfNow();
                         })
+                        .OrderBy(x => x.Title, OrderingType.AlphaNumeric)
                         .Select(x => x.Title)
                         .ToList();
 
@@ -559,7 +566,7 @@ namespace SlowTests.Tests.Sorting
                 using (var session = store.OpenSession())
                 {
                     var titlesFromServer = session.Query<Track>()
-                        .Customize(x => x.AddOrder("Title", ordering: OrderingType.AlphaNumeric))
+                        .OrderBy("Title", OrderingType.AlphaNumeric)
                         .Select(x => x.Title)
                         .ToList();
 
@@ -642,7 +649,7 @@ namespace SlowTests.Tests.Sorting
                                   doc.Year
                               };
 
-                Index(x => x.Title, FieldIndexing.NotAnalyzed);
+                Index(x => x.Title, FieldIndexing.Exact);
             }
         }
 

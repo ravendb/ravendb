@@ -11,6 +11,7 @@ using Raven.Client.Util;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Threading;
 
 namespace Raven.Server.Documents
 {
@@ -232,14 +233,6 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void SendTransformerChanges(TransformerChange change)
-        {
-            if (_watchAllTransformers > 0)
-            {
-                Send(change);
-            }
-        }
-
         private void Send(DocumentChange change)
         {
             var value = new DynamicJsonValue
@@ -269,22 +262,6 @@ namespace Raven.Server.Documents
                 {
                     ValueToSend = value,
                     AllowSkip = change.Type == IndexChangeTypes.BatchCompleted //TODO: make sure it makes sense
-                });
-        }
-
-        private void Send(TransformerChange change)
-        {
-            var value = new DynamicJsonValue
-            {
-                ["Type"] = nameof(TransformerChange),
-                ["Value"] = change.ToJson()
-            };
-
-            if (_disposeToken.IsCancellationRequested == false)
-                _sendQueue.Enqueue(new ChangeValue
-                {
-                    ValueToSend = value,
-                    AllowSkip = false //TODO: are you sure?
                 });
         }
 
@@ -418,12 +395,12 @@ namespace Raven.Server.Documents
             }
         }
 
-        private long _isDisposed;
-        public bool IsDisposed => Interlocked.Read(ref _isDisposed) == 1;
+        private SingleUseFlag _isDisposed = new SingleUseFlag();
+        public bool IsDisposed => _isDisposed.IsRaised();
 
         public void Dispose()
         {
-            Interlocked.Exchange(ref _isDisposed, 1);
+            _isDisposed.Raise();
             _cts.Cancel();
             _sendQueue.Enqueue(new ChangeValue
             {

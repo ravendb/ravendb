@@ -3,13 +3,14 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
+using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents
 {
     public static class DocumentCompare
     {
-        public static DocumentCompareResult IsEqualTo(BlittableJsonReaderObject original, BlittableJsonReaderObject modified,
+        public static unsafe DocumentCompareResult IsEqualTo(BlittableJsonReaderObject original, BlittableJsonReaderObject modified,
             bool tryMergeAttachmentsConflict)
         {
             if (ReferenceEquals(original, modified))
@@ -20,6 +21,13 @@ namespace Raven.Server.Documents
 
             BlittableJsonReaderObject.AssertNoModifications(original, nameof(original), true);
             BlittableJsonReaderObject.AssertNoModifications(modified, nameof(modified), true);
+
+            if (original.Size == modified.Size)
+            {
+                // if this didn't change, we can check the raw memory directly.
+                if(Memory.Compare(original.BasePointer, modified.BasePointer, original.Size) == 0)
+                    return DocumentCompareResult.Equal;
+            }
 
             // Performance improvemnt: We compare the metadata first 
             // because that most of the time the metadata itself won't be the equal, so no need to compare all values

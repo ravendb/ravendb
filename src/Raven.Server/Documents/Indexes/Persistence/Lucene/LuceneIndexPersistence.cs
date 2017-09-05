@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Lucene.Net.Analysis;
@@ -8,9 +9,11 @@ using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
 
@@ -53,7 +56,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _suggestionsDirectories = new Dictionary<string, LuceneVoronDirectory>();
             _suggestionsIndexSearcherHolders = new Dictionary<string, IndexSearcherHolder>();
 
-            var fields = index.Definition.MapFields.Values.ToList();
+            var fields = index.Definition.IndexFields.Values;
 
             switch (_index.Type)
             {
@@ -61,14 +64,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     _converter = new LuceneDocumentConverter(fields);
                     break;
                 case IndexType.AutoMapReduce:
-                    var autoMapReduceIndexDefinition = (AutoMapReduceIndexDefinition)_index.Definition;
-                    fields.AddRange(autoMapReduceIndexDefinition.GroupByFields.Values);
-
                     _converter = new LuceneDocumentConverter(fields, reduceOutput: true);
                     break;
                 case IndexType.MapReduce:
+                    _converter = new AnonymousLuceneDocumentConverter(fields, _index.IsMultiMap, reduceOutput: true);
+                    break;
                 case IndexType.Map:
-                    _converter = new AnonymousLuceneDocumentConverter(fields, _index.IsMultiMap, reduceOutput: _index.Type.IsMapReduce());
+                    _converter = new AnonymousLuceneDocumentConverter(fields, _index.IsMultiMap);
                     break;
                 case IndexType.Faulty:
                     _converter = null;
@@ -182,8 +184,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             CheckDisposed();
             CheckInitialized();
-
-            return new IndexFacetedReadOperation(_index.Definition.Name, _index.Definition.MapFields, _directory, _indexSearcherHolder, readTransaction, _index._indexStorage.DocumentDatabase);
+            
+            return new IndexFacetedReadOperation(_index.Definition.Name, _index.Definition.IndexFields, _directory, _indexSearcherHolder, readTransaction, _index._indexStorage.DocumentDatabase);
         }
 
         public LuceneSuggestionIndexReader OpenSuggestionIndexReader(Transaction readTransaction, string field)
@@ -274,15 +276,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return _fields.ContainsKey(field);
         }
 
-        public void Dispose()
+        public void DisposeWriters()
         {
-            if (_disposed)
-                throw new ObjectDisposedException(nameof(Index));
-
-            _disposed = true;
-
             _indexWriter?.Analyzer?.Dispose();
             _indexWriter?.Dispose();
+            _indexWriter = null;
 
             if (_suggestionsIndexWriters != null)
             {
@@ -290,7 +288,19 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 {
                     writer.Value?.Dispose();
                 }
+
+                _suggestionsIndexWriters = null;
             }
+        }
+
+        public void Dispose()
+        {
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(Index));
+
+            _disposed = true;
+
+            DisposeWriters();
 
             _converter?.Dispose();
             _directory?.Dispose();

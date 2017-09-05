@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Extensions;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
@@ -13,7 +13,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
-    public class MapIndex : MapIndexBase<MapIndexDefinition>
+    public class MapIndex : MapIndexBase<MapIndexDefinition, IndexField>
     {
         private readonly HashSet<string> _referencedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> _suggestionsActive = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -146,6 +146,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public override Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
         {
+            _storageOperation.TryGetReadLock(Timeout.InfiniteTimeSpan, out var storageLock);
+            using (storageLock)
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 using (var tx = context.OpenReadTransaction())
@@ -206,7 +208,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private static MapIndex CreateIndexInstance(IndexDefinition definition)
         {
-            var staticIndex = IndexAndTransformerCompilationCache.GetIndexInstance(definition);
+            var staticIndex = IndexCompilationCache.GetIndexInstance(definition);
 
             var staticMapIndexDefinition = new MapIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields, staticIndex.HasDynamicFields);
             var instance = new MapIndex(definition.Etag, staticMapIndexDefinition, staticIndex);

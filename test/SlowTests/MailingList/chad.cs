@@ -50,19 +50,19 @@ namespace SlowTests.MailingList
                                     new
                                     {
                                         Categories_Id = p.Categories.Select(x => x.Id),
-                                        _ = SpatialGenerate(p.Location.Lat, p.Location.Lng)
+                                        Coordinates = CreateSpatialField(p.Location.Lat, p.Location.Lng)
                                     };
             }
         }
 
-        [Fact(Skip = "Missing feature: Spatial")]
+        [Fact]
         public void CanQuerySpatialData()
         {
-            using(var store = GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Place_ByLocationAndCategoryId().Execute(store);
 
-                using(var session =store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     CreateData(session);
                     session.SaveChanges();
@@ -70,7 +70,7 @@ namespace SlowTests.MailingList
 
                 WaitForIndexing(store);
 
-                using(var session = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     var Without_WithinRadiusOf = session.Advanced.DocumentQuery<Place>("Place/ByLocationAndCategoryId")
                         .WhereEquals("Categories_Id", "4bf58dd8d48988d17f941735")
@@ -78,8 +78,8 @@ namespace SlowTests.MailingList
                         .ToList<Place>();
 
                     var With_WithinRadiusOf = session.Advanced.DocumentQuery<Place>("Place/ByLocationAndCategoryId")
-                            .WhereEquals("Categories_Id","4bf58dd8d48988d17f941735")
-                            .WithinRadiusOf(15, 35.74498, 139.348083)
+                            .WhereEquals("Categories_Id", "4bf58dd8d48988d17f941735")
+                            .WithinRadiusOf("Coordinates", 15, 35.74498, 139.348083)
                             .Take(1024).ToList<Place>();
 
                     Assert.Equal(3, Without_WithinRadiusOf.Count);

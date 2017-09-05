@@ -7,7 +7,7 @@ using Raven.Server.Documents.Replication;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_6415 : ReplicationTestsBase
+    public class RavenDB_6415 : ReplicationTestBase
     {
         private class User
         {
@@ -50,7 +50,7 @@ namespace SlowTests.Issues
                     var cv = new ChangeVectorEntry[1];
                     cv[0] = new ChangeVectorEntry
                     {
-                        DbId = db.DbId,
+                        DbId = db.DbBase64Id,
                         Etag = maxConflictEtag - 1
                     };
                     session.Store(new User { Name = "James Doe" }, cv.SerializeVector(), "users/1");
@@ -103,7 +103,7 @@ namespace SlowTests.Issues
                     var cv = new ChangeVectorEntry[1];
                     cv[0] = new ChangeVectorEntry
                     {
-                        DbId = db.DbId,
+                        DbId = db.DbBase64Id,
                         Etag = maxConflictEtag - 1
                     };
                     session.Delete("users/1", cv.SerializeVector());

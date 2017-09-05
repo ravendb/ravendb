@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests.Voron.FixedSize;
 using Sparrow.Collections;
 using Xunit;
 
@@ -43,12 +44,12 @@ namespace FastTests.Sparrow
         {
             var dict = new FastDictionary<int, int>(0);
             Assert.Equal(0, dict.Count);
-            Assert.Equal(4, dict.Capacity);
+            Assert.Equal(8, dict.Capacity);
             Assert.NotNull(dict.Comparer);
 
             dict = new FastDictionary<int, int>(-1);
             Assert.Equal(0, dict.Count);
-            Assert.Equal(4, dict.Capacity);
+            Assert.Equal(8, dict.Capacity);
             Assert.NotNull(dict.Comparer);
         }
 
@@ -519,6 +520,188 @@ namespace FastTests.Sparrow
             Assert.Equal(8, dict.Capacity);
         }
 
+        private class A
+        {
+            private readonly int _hash;
+
+            public A(int hash = 1)
+            {
+                _hash = hash;
+            }
+
+            public override int GetHashCode()
+            {
+                return _hash;
+            }
+
+            public override bool Equals(object obj)
+            {
+                return ReferenceEquals(obj, this);
+            }
+
+            public override string ToString()
+            {
+                return _hash.ToString();
+            }
+        }
+
+        [Fact]
+        public void ConflictingRemoval()
+        {
+            var dict = new FastDictionary<A, long>();
+
+            var first = new A();
+            var second = new A();
+
+            dict[first] = 1;
+            Assert.Equal(1, dict.Count);
+            dict[second] = 2;
+            Assert.Equal(2, dict.Count);
+            dict.Remove(first);
+            Assert.Equal(1, dict.Count);
+            Assert.Throws<ArgumentException>(() => dict.Add(second, 3));
+
+            Assert.Equal(1, dict.Count);
+            Assert.Equal(1, dict.Keys.Distinct().Count());
+        }
+
+        [Fact]
+        public void ConflictingRemoval2()
+        {
+            var dict = new FastDictionary<A, long>();
+
+            var first = new A();
+            var second = new A();
+
+            dict[first] = 1;
+            Assert.Equal(1, dict.Count);
+            dict[second] = 2;
+            Assert.Equal(2, dict.Count);
+            dict.Remove(first);
+            Assert.Equal(1, dict.Count);
+            dict[second] = 3;
+            Assert.Equal(1, dict.Count);
+            Assert.Equal(1, dict.Keys.Distinct().Count());
+        }
+
+        [Fact]
+        public void ConflictingAddTwice()
+        {
+            var dict = new FastDictionary<A, long>();
+
+            var first = new A(1);
+            var second = new A(33);
+            var third = new A(66);
+
+            dict[first] = 1;
+            Assert.Equal(1, dict.Count);
+            dict[second] = 2;
+            Assert.Equal(2, dict.Count);
+            dict[third] = 3;
+            Assert.Equal(3, dict.Count);
+            dict.Remove(first);
+            Assert.Equal(2, dict.Count);
+            Assert.Throws<ArgumentException>(() => dict.Add(third, 4));
+
+            Assert.Equal(2, dict.Count);
+            Assert.Equal(2, dict.Keys.Distinct().Count());
+        }
+
+        [Fact]
+        public void ConflictingSetTwice()
+        {
+            var dict = new FastDictionary<A, long>();
+
+            var first = new A(1);
+            var second = new A(33);
+            var third = new A(66);
+
+            dict[first] = 1;
+            Assert.Equal(1, dict.Count);
+            dict[second] = 2;
+            Assert.Equal(2, dict.Count);
+            dict[third] = 3;
+            Assert.Equal(3, dict.Count);
+            dict.Remove(first);
+            Assert.Equal(2, dict.Count);
+            dict[third] = 4;
+
+            Assert.Equal(2, dict.Count);
+            Assert.Equal(2, dict.Keys.Distinct().Count());
+        }
+
+        [Theory]
+        [InlineDataWithRandomSeed]
+        public void Random(int i)
+        {
+            var rng = new Random(i);
+
+            var dict = new Dictionary<int, int>(32, EqualityComparer<int>.Default);
+            var fdict = new FastDictionary<int, int>(31, EqualityComparer<int>.Default);
+            for (int j = 0; j < 1000; j++)
+            {
+                int rnd = rng.Next();
+                dict[rnd] = rnd;
+                fdict[rnd] = rnd;
+            }
+
+            Assert.Equal(dict.Count, fdict.Count);
+            Assert.Equal(dict.Keys.Count, fdict.Keys.Count);
+            Assert.Equal(dict.Values.Count, fdict.Values.Count);
+
+            foreach (var item in dict)
+            {
+                Assert.Equal(item.Value, fdict[item.Key]);
+            }
+
+            var deleted = new List<int>();
+            var notDeleted = new List<int>();
+
+            int count = dict.Count;
+            foreach (var item in dict)
+            {
+                int rnd = rng.Next();
+                if (rnd % 2 == 0)
+                {
+                    Assert.True(fdict.Remove(item.Key));
+                    deleted.Add(item.Key);
+
+                    count--;
+                }
+                else
+                {
+                    notDeleted.Add(item.Key);
+                }
+
+                Assert.Equal(count, fdict.Count);
+            }
+
+            Assert.Equal(notDeleted.Count, fdict.Count);
+            Assert.Equal(notDeleted.Count, fdict.Keys.Count);
+            Assert.Equal(notDeleted.Count, fdict.Values.Count);
+
+            foreach (var item in deleted)
+            {
+                Assert.False(fdict.Contains(item));
+            }
+
+            foreach (var item in notDeleted)
+            {
+                Assert.True(fdict.Contains(item));
+            }
+
+
+            fdict.Clear();
+
+            foreach (var item in dict)
+            {
+                Assert.False(fdict.Contains(item.Key));
+            }
+
+            Assert.Equal(0, fdict.Count);
+            Assert.Equal(0, fdict.Keys.Count);
+            Assert.Equal(0, fdict.Values.Count);
+        }
 
     }
 }

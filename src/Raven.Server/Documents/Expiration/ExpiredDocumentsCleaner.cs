@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Exceptions.Documents;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Expiration;
 using Raven.Server.Background;
@@ -114,7 +115,7 @@ namespace Raven.Server.Documents.Expiration
                             {
                                 var entryTicks = it.CurrentKey.CreateReader().ReadBigEndianInt64();
                                 if (entryTicks >= currentTicks)
-                                    return;
+                                    break;
 
                                 var ticksAsSlice = it.CurrentKey.Clone(tx.InnerTransaction.Allocator);
 
@@ -133,28 +134,42 @@ namespace Raven.Server.Documents.Expiration
 
                                             var clonedId = multiIt.CurrentKey.Clone(tx.InnerTransaction.Allocator);
 
-                                            var document = _database.DocumentsStorage.Get(context, clonedId);
-                                            if (document == null)
+                                            try
                                             {
-                                                expiredDocs.Add((clonedId, null));
-                                                continue;
+                                                var document = _database.DocumentsStorage.Get(context, clonedId);
+                                                if (document == null)
+                                                {
+                                                    expiredDocs.Add((clonedId, null));
+                                                    continue;
+                                                }
+
+                                                if (HasExpired(document.Data, currentTime) == false)
+                                                    continue;
+
+                                                expiredDocs.Add((clonedId, document.Id));
                                             }
+                                            catch (DocumentConflictException)
+                                            {
+                                                LazyStringValue id = null;
+                                                var allExpired = true;
+                                                var conflicts = _database.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, clonedId);
+                                                if (conflicts.Count == 0)
+                                                    continue;
 
-                                            // Validate that the expiration value in metadata is still the same.
-                                            // We have to check this as the user can update this value.
-                                            if (document.Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
-                                                metadata.TryGet(Constants.Documents.Expiration.ExpirationDate, out string expirationDate) == false)
-                                                continue;
+                                                foreach (var conflict in conflicts)
+                                                {
+                                                    id = conflict.Id;
 
-                                            if (DateTime.TryParseExact(expirationDate, "O", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind,
-                                                    out DateTime date) == false)
-                                                continue;
+                                                    if (HasExpired(conflict.Doc, currentTime))
+                                                        continue;
 
-                                            if (currentTime < date)
-                                                continue;
+                                                    allExpired = false;
+                                                    break;
+                                                }
 
-                                            expiredDocs.Add((clonedId, document.Id));
-
+                                                if (allExpired)
+                                                    expiredDocs.Add((clonedId, id));
+                                            }
                                         } while (multiIt.MoveNext());
                                     }
                                 }
@@ -178,11 +193,28 @@ namespace Raven.Server.Documents.Expiration
             }
         }
 
+        private static bool HasExpired(BlittableJsonReaderObject data, DateTime currentTime)
+        {
+            // Validate that the expiration value in metadata is still the same.
+            // We have to check this as the user can update this value.
+            if (data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
+                metadata.TryGet(Constants.Documents.Metadata.Expires, out string expirationDate) == false)
+                return false;
+
+            if (DateTime.TryParseExact(expirationDate, "O", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var date) == false)
+                return false;
+
+            if (currentTime < date)
+                return false;
+
+            return true;
+        }
+
         public unsafe void Put(DocumentsOperationContext context,
             Slice lowerId, BlittableJsonReaderObject document)
         {
             if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
-                metadata.TryGet(Constants.Documents.Expiration.ExpirationDate, out string expirationDate) == false)
+                metadata.TryGet(Constants.Documents.Metadata.Expires, out string expirationDate) == false)
                 return;
 
             if (DateTime.TryParseExact(expirationDate, "O", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime date) == false)

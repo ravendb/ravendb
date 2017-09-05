@@ -379,7 +379,11 @@ namespace Raven.Server.Documents.PeriodicBackup
                         configuration.BackupType == BackupType.Snapshot && isFullBackup == false)
                     {
                         // smuggler backup
-                        var result = CreateBackup(backupFilePath, startDocumentEtag, context);
+                        var options = new DatabaseSmugglerOptions();
+                        if (isFullBackup == false)
+                            options.OperateOnTypes |= DatabaseItemType.Tombstones;
+
+                        var result = CreateBackup(options, backupFilePath, startDocumentEtag, context);
                         lastEtag = result.GetLastEtag();
                     }
                     else
@@ -411,8 +415,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        private SmugglerResult CreateBackup(string backupFilePath,
-            long? startDocumentEtag, DocumentsOperationContext context)
+        private SmugglerResult CreateBackup(DatabaseSmugglerOptions options, string backupFilePath, long? startDocumentEtag, DocumentsOperationContext context)
         {
             // the last etag is already included in the last backup
             startDocumentEtag = startDocumentEtag == null ? 0 : ++startDocumentEtag;
@@ -422,11 +425,12 @@ namespace Raven.Server.Documents.PeriodicBackup
             {
                 var smugglerSource = new DatabaseSource(_database, startDocumentEtag.Value);
                 var smugglerDestination = new StreamDestination(file, context, smugglerSource);
-                var smuggler = new DatabaseSmuggler(
+                var smuggler = new DatabaseSmuggler(_database, 
                     smugglerSource,
                     smugglerDestination,
                     _database.Time,
-                    token: _cancellationToken.Token);
+                    token: _cancellationToken.Token, 
+                    options: options);
 
                 result = smuggler.Execute();
             }
@@ -467,7 +471,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Periodic backup status with task id {status.TaskId} was updated");
 
-                await _serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Etag);
+                await _serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index);
             }
             catch (Exception e)
             {

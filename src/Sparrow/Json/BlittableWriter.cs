@@ -459,6 +459,12 @@ namespace Sparrow.Json
             return WriteValue(str.Buffer, str.Size, str.EscapePositions, out token, mode, initialCompressedSize);
         }
 
+        public unsafe int WriteValue(LazyCompressedStringValue str, out BlittableJsonToken token,
+            UsageMode mode)
+        {
+            return WriteValue(str.Buffer, str.UncompressedSize, out token, mode, str.CompressedSize);
+        }
+
         public unsafe int WriteValue(byte* buffer, int size, out BlittableJsonToken token, UsageMode mode, int? initialCompressedSize)
         {
             int startPos = _position;

@@ -7,7 +7,6 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
@@ -25,7 +24,10 @@ namespace SlowTests.MailingList
 
         public IDocumentStore Store()
         {
-            var store = GetDocumentStore(path: _path);
+            var store = GetDocumentStore(new Options
+            {
+                Path = _path
+            });
 
             store.Initialize();
 
@@ -138,7 +140,7 @@ namespace SlowTests.MailingList
                                     template.description
                                    }
                                    };
-                Indexes.Add(x => x.Query, FieldIndexing.Analyzed);
+                Indexes.Add(x => x.Query, FieldIndexing.Search);
             }
         }
     }

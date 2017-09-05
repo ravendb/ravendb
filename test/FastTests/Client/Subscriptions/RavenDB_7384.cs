@@ -25,7 +25,7 @@ namespace FastTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var subscriptionName = store.Subscriptions.Create<User>(new SubscriptionCreationOptions<User>()
+                var subscriptionName = store.Subscriptions.Create<User>(options: new SubscriptionCreationOptions()
                 {
                     Name = "Subs1"
                 });
@@ -60,10 +60,8 @@ namespace FastTests.Client.Subscriptions
                 var operationIndex = await currentDatabase.SubscriptionStorage.PutSubscription(new SubscriptionCreationOptions()
                 {
                     Name = "Subs1",
-                    ChangeVector = Raven.Client.Constants.Documents.SubscriptionChagneVectorSpecialStates.DoNotChange.ToString(),
-                    Criteria = new SubscriptionCriteria("Users")
-
-
+                    ChangeVector = Raven.Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange.ToString(),
+                    Query = "from Users"
                 }, subscriptionState.SubscriptionId, true);
 
                 Assert.Equal(subscriptionTask, await Task.WhenAny(subscriptionTask, Task.Delay(_reasonableWaitTime)));
@@ -77,13 +75,10 @@ namespace FastTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var subscriptionName = store.Subscriptions.Create<User>(new SubscriptionCreationOptions<User>()
+                var subscriptionName = store.Subscriptions.Create<User>(options: new SubscriptionCreationOptions()
                 {
                     Name = "Subs1",
-                    Criteria = new SubscriptionCriteria<User>()
-                    {
-                        Script = "return {Name:'David'};"
-                    }
+                    Query = "from Users select {Name:'David'}"
                 });
 
                 var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions("Subs1"));
@@ -123,11 +118,8 @@ namespace FastTests.Client.Subscriptions
                 await currentDatabase.SubscriptionStorage.PutSubscription(new SubscriptionCreationOptions()
                 {
                     Name = "Subs1",
-                    ChangeVector = Raven.Client.Constants.Documents.SubscriptionChagneVectorSpecialStates.DoNotChange.ToString(),
-                    Criteria = new SubscriptionCriteria("Users")
-                    {
-                        Script = "return {Name:'Jorgen'}"
-                    }
+                    ChangeVector = Raven.Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange.ToString(),
+                    Query = "from Users select {Name:'Jorgen'}"
 
                 }, subscriptionState.SubscriptionId);
 
@@ -171,7 +163,7 @@ namespace FastTests.Client.Subscriptions
             using (context.OpenReadTransaction())
             {
                 var subscriptionData = currentDatabase.SubscriptionStorage.GetSubscriptionFromServerStore(context, "Subs1");
-                return subscriptionData.ChangeVector;
+                return subscriptionData.ChangeVectorForNextBatchStartingPoint;
             }
         }
     }

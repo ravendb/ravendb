@@ -2,13 +2,11 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
-using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Server.Config;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
@@ -16,19 +14,19 @@ using Xunit;
 
 namespace FastTests.Client.Subscriptions
 {
-    public class LimitSubscriptionsConnectionsAmount:SubscriptionTestBase
+    public class LimitSubscriptionsConnectionsAmount : SubscriptionTestBase
     {
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(60 * 10) : TimeSpan.FromSeconds(6);
         [Fact]
         public async Task Run()
         {
-            using (var store = GetDocumentStore(modifyDatabaseRecord: x =>
+            using (var store = GetDocumentStore(new Options
             {
-                x.Settings["Subscriptions.ConcurrentConnections"] = "4";
+                ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(c => c.Subscriptions.MaxNumberOfConcurrentConnections)] = "4"
             }))
             {
                 var mres = new List<AsyncManualResetEvent>();
-                var subscriptionTasks = new List<(Task RunTask,Subscription<User> SubscriptionObject)>();
+                var subscriptionTasks = new List<(Task RunTask, Subscription<User> SubscriptionObject)>();
 
                 using (var session = store.OpenSession())
                 {
@@ -51,8 +49,8 @@ namespace FastTests.Client.Subscriptions
                 var subscriptionTask = OpenAndRunSubscription(store, () => { }).RunTask;
                 Assert.Equal(subscriptionTask, await Task.WhenAny(subscriptionTask, Task.Delay(_reasonableWaitTime)));
                 await Assert.ThrowsAsync(typeof(SubscriptionClosedException), () => subscriptionTask);
-                
-                
+
+
                 subscriptionTasks[0].SubscriptionObject.Dispose();
 
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -60,13 +58,13 @@ namespace FastTests.Client.Subscriptions
                 {
                     var sp = Stopwatch.StartNew();
                     var subscriptionsCount = 0;
-                    
-                    while (sp.Elapsed < _reasonableWaitTime && subscriptionsCount!=3)
+
+                    while (sp.Elapsed < _reasonableWaitTime && subscriptionsCount != 3)
                     {
                         subscriptionsCount = (await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database)).SubscriptionStorage
                             .GetAllRunningSubscriptions(context, false, 0, 1024).Count();
                     }
-                    
+
 
                     Assert.Equal(3, subscriptionsCount);
                 }
@@ -81,7 +79,7 @@ namespace FastTests.Client.Subscriptions
 
         private (Task RunTask, Subscription<User> SubscriptionObject) OpenAndRunSubscription(IDocumentStore store, Action runAction)
         {
-            var subscriptionId = store.Subscriptions.Create<User>(new SubscriptionCreationOptions<User>());
+            var subscriptionId = store.Subscriptions.Create<User>();
 
             var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
 
@@ -90,13 +88,13 @@ namespace FastTests.Client.Subscriptions
                 runAction();
                 return Task.CompletedTask;
             };
-            
+
 
             return (subscription.Run(x =>
             {
                 //noop
-            }),subscription);
-            
+            }), subscription);
+
         }
     }
 }

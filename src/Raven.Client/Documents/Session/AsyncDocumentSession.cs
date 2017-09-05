@@ -42,7 +42,7 @@ namespace Raven.Client.Documents.Session
                 return true;
 
             var command = new HeadDocumentCommand(id, null);
-            await RequestExecutor.ExecuteAsync(command, Context, sessionId: _clientSessionId).ConfigureAwait(false);
+            await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo).ConfigureAwait(false);
 
             return command.Result != null;
         }
@@ -54,8 +54,8 @@ namespace Raven.Client.Documents.Session
                 throw new InvalidOperationException("Cannot refresh a transient instance");
             IncrementRequestCount();
 
-            var command = new GetDocumentCommand(new[] { documentInfo.Id }, includes: null, transformer: null, transformerParameters: null, metadataOnly: false);
-            await RequestExecutor.ExecuteAsync(command, Context, token, sessionId: _clientSessionId).ConfigureAwait(false);
+            var command = new GetDocumentCommand(new[] { documentInfo.Id }, includes: null, metadataOnly: false);
+            await RequestExecutor.ExecuteAsync(command, Context, token, SessionInfo).ConfigureAwait(false);
 
             RefreshInternal(entity, command, documentInfo);
         }
@@ -113,7 +113,7 @@ namespace Raven.Client.Documents.Session
                 if (command == null)
                     return;
 
-                await RequestExecutor.ExecuteAsync(command, Context, token, sessionId: _clientSessionId).ConfigureAwait(false);
+                await RequestExecutor.ExecuteAsync(command, Context, token, SessionInfo).ConfigureAwait(false);
                 saveChangesOperation.SetResult(command.Result);
             }
         }

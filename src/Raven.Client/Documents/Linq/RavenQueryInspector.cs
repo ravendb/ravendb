@@ -15,10 +15,7 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
-using Raven.Client.Documents.Queries.Spatial;
 using Raven.Client.Documents.Session;
-using Raven.Client.Documents.Transformers;
-using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Linq
 {
@@ -110,15 +107,6 @@ namespace Raven.Client.Documents.Linq
             _provider.Customize(action);
             return this;
         }
-
-        public IRavenQueryable<TResult> TransformWith<TTransformer, TResult>() where TTransformer : AbstractTransformerCreationTask, new()
-        {
-            var transformer = new TTransformer();
-            _provider.TransformWith(transformer.TransformerName);
-            var res = (IRavenQueryable<TResult>)this.As<TResult>();
-            return res;
-        }
-
         public IRavenQueryable<TResult> TransformWith<TResult>(string transformerName)
         {
             _provider.TransformWith(transformerName);
@@ -126,28 +114,10 @@ namespace Raven.Client.Documents.Linq
             return res;
         }
 
-        public IRavenQueryable<T> AddQueryInput(string input, object value)
-        {
-            return AddTransformerParameter(input, value);
-        }
-
         public IRavenQueryable<T> AddTransformerParameter(string input, object value)
         {
             _provider.AddTransformerParameter(input, value);
             return this;
-        }
-
-        public IRavenQueryable<T> Spatial(Expression<Func<T, object>> path, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
-        {
-            return Customize(x => x.Spatial(path.ToPropertyPath(), clause));
-        }
-
-        public IRavenQueryable<T> OrderByDistance(SpatialSort sortParamsClause)
-        {
-            if (string.IsNullOrEmpty(sortParamsClause.FieldName))
-                return Customize(x => x.SortByDistance(sortParamsClause.Latitude, sortParamsClause.Longitude));
-
-            return Customize(x => x.SortByDistance(sortParamsClause.Latitude, sortParamsClause.Longitude, sortParamsClause.FieldName));
         }
 
         /// <summary>
@@ -160,7 +130,7 @@ namespace Raven.Client.Documents.Linq
         {
             RavenQueryProviderProcessor<T> ravenQueryProvider = GetRavenQueryProvider();
             string query;
-            if ((_session as AsyncDocumentSession) != null)
+            if (_session is AsyncDocumentSession)
             {
                 var asyncDocumentQuery = ravenQueryProvider.GetAsyncDocumentQueryFor(_expression);
                 query = asyncDocumentQuery.GetIndexQuery().ToString();

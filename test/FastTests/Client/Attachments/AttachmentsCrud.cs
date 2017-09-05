@@ -82,17 +82,17 @@ namespace FastTests.Client.Attachments
                         if (i == 0)
                         {
                             Assert.Equal("igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=", hash);
-                            Assert.Equal(5, attachment.GetNumber(nameof(AttachmentName.Size)));
+                            Assert.Equal(5, attachment.GetLong(nameof(AttachmentName.Size)));
                         }
                         else if (i == 1)
                         {
                             Assert.Equal("Arg5SgIJzdjSTeY6LYtQHlyNiTPmvBLHbr/Cypggeco=", hash);
-                            Assert.Equal(5, attachment.GetNumber(nameof(AttachmentName.Size)));
+                            Assert.Equal(5, attachment.GetLong(nameof(AttachmentName.Size)));
                         }
                         else if (i == 2)
                         {
                             Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", hash);
-                            Assert.Equal(3, attachment.GetNumber(nameof(AttachmentName.Size)));
+                            Assert.Equal(3, attachment.GetLong(nameof(AttachmentName.Size)));
                         }
                     }
                 }
@@ -212,7 +212,7 @@ namespace FastTests.Client.Attachments
                 Assert.Equal("pic", attachment.GetString(nameof(AttachmentName.Name)));
                 Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachment.GetString(nameof(AttachmentName.Hash)));
                 Assert.Equal("image/png", attachment.GetString(nameof(AttachmentName.ContentType)));
-                Assert.Equal(3, attachment.GetNumber(nameof(AttachmentName.Size)));
+                Assert.Equal(3, attachment.GetLong(nameof(AttachmentName.Size)));
             }
         }
 
@@ -470,7 +470,7 @@ namespace FastTests.Client.Attachments
 
                 await store.Operations.SendAsync(new PatchOperation("users/1", null, new PatchRequest
                 {
-                    Script = "this.LastName = newUser.LastName;",
+                    Script = "this.LastName = args.newUser.LastName;",
                     Values =
                     {
                         {"newUser", new {LastName = "Yitzchaki"}}
@@ -617,7 +617,7 @@ namespace FastTests.Client.Attachments
                     var attachment = attachments.Single();
                     Assert.Equal("Profile", attachment.GetString(nameof(AttachmentName.Name)));
                     Assert.Equal("Arg5SgIJzdjSTeY6LYtQHlyNiTPmvBLHbr/Cypggeco=", attachment.GetString(nameof(AttachmentName.Hash)));
-                    Assert.Equal(5, attachment.GetNumber(nameof(AttachmentName.Size)));
+                    Assert.Equal(5, attachment.GetLong(nameof(AttachmentName.Size)));
                     Assert.Equal("image/png", attachment.GetString(nameof(AttachmentName.ContentType)));
                 }
 
@@ -653,7 +653,7 @@ namespace FastTests.Client.Attachments
                     var attachment = attachments.Single();
                     Assert.Equal("Profile", attachment.GetString(nameof(AttachmentName.Name)));
                     Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachment.GetString(nameof(AttachmentName.Hash)));
-                    Assert.Equal(3, attachment.GetNumber(nameof(AttachmentName.Size)));
+                    Assert.Equal(3, attachment.GetLong(nameof(AttachmentName.Size)));
                     Assert.Equal("image/jpeg", attachment.GetString(nameof(AttachmentName.ContentType)));
                 }
 
@@ -703,7 +703,7 @@ namespace FastTests.Client.Attachments
                     Assert.Equal("PROFILE", attachment.GetString(nameof(AttachmentName.Name)));
                     Assert.Equal("image/PNG", attachment.GetString(nameof(AttachmentName.ContentType)));
                     Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachment.GetString(nameof(AttachmentName.Hash)));
-                    Assert.Equal(3, attachment.GetNumber(nameof(AttachmentName.Size)));
+                    Assert.Equal(3, attachment.GetLong(nameof(AttachmentName.Size)));
                 }
 
                 AssertAttachmentCount(store, 1);

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Queries.Spatial;
 
 namespace Raven.Client.Documents.Session
 {
@@ -55,13 +56,6 @@ namespace Raven.Client.Documents.Session
         void CustomSortUsing(string typeName, bool descending = false);
 
         /// <summary>
-        ///   Adds an ordering for a specific field to the query
-        /// </summary>
-        /// <param name = "fieldName">Name of the field.</param>
-        /// <param name = "descending">if set to <c>true</c> [descending].</param>
-        void AddOrder(string fieldName, bool descending, OrderingType ordering = OrderingType.String);
-
-        /// <summary>
         ///   Includes the specified path in the query, loading the document specified in that path
         /// </summary>
         /// <param name = "path">The path.</param>
@@ -96,6 +90,16 @@ namespace Raven.Client.Documents.Session
         ///   Matches value
         /// </summary>
         void WhereEquals(WhereParams whereParams);
+
+        /// <summary>
+        ///   Not matches value
+        /// </summary>
+        void WhereNotEquals(string fieldName, object value, bool exact = false);
+
+        /// <summary>
+        ///   Not matches value
+        /// </summary>
+        void WhereNotEquals(WhereParams whereParams);
 
         /// <summary>
         ///   Simplified method for opening a new clause within the query
@@ -203,11 +207,12 @@ namespace Raven.Client.Documents.Session
 
         /// <summary>
         ///   Order the results by the specified fields
-        ///   The fields are the names of the fields to sort, defaulting to sorting by ascending.
-        ///   You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
+        ///   The field is the name of the field to sort, defaulting to sorting by ascending.
         /// </summary>
-        /// <param name = "fields">The fields.</param>
+        /// <param name = "field">The fields.</param>
         void OrderBy(string field, OrderingType ordering = OrderingType.String);
+
+        void OrderByDescending(string field, OrderingType ordering = OrderingType.String);
 
         void OrderByScore();
 
@@ -308,7 +313,6 @@ namespace Raven.Client.Documents.Session
 
         void Intersect();
         void AddRootType(Type type);
-        void SetTransformer(string transformer);
         void Distinct();
 
         /// <summary>
@@ -321,8 +325,6 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         void ContainsAll(string fieldName, IEnumerable<object> values);
 
-        void SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(bool val);
-
         void GroupBy(string fieldName, params string[] fieldNames);
 
         void GroupByKey(string fieldName, string projectedName = null);
@@ -332,5 +334,15 @@ namespace Raven.Client.Documents.Session
         void GroupByCount(string projectedName = null);
 
         void WhereTrue();
+
+        void Spatial(string fieldName, SpatialCriteria criteria);
+
+        void OrderByDistance(string fieldName, double latitude, double longitude);
+
+        void OrderByDistance(string fieldName, string shapeWkt);
+
+        void OrderByDistanceDescending(string fieldName, double latitude, double longitude);
+
+        void OrderByDistanceDescending(string fieldName, string shapeWkt);
     }
 }

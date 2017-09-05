@@ -15,10 +15,14 @@ namespace SlowTests.Issues
         [Fact]
         public async Task CanChangeConventionJustForOneType_Async()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
             {
-                store.Conventions.RegisterAsyncIdConvention<User>((dbName, user) => Task.FromResult("users/" + user.Name));
-
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.RegisterAsyncIdConvention<User>((dbName, user) => Task.FromResult("users/" + user.Name));
+                }
+            }))
+            {
                 using (var session = store.OpenAsyncSession())
                 {
                     var entity = new User { Name = "Ayende" };

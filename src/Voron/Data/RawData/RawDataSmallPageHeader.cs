@@ -1,11 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
+﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
-using Voron.Data.BTrees;
 
 namespace Voron.Data.RawData
 {
@@ -36,5 +30,11 @@ namespace Voron.Data.RawData
 
         [FieldOffset(14)]
         public ushort PageNumberInSection;
+
+        [FieldOffset(22)]
+        public ulong SectionOwnerHash;
+
+        [FieldOffset(30)]
+        public byte TableType;
     }
 }

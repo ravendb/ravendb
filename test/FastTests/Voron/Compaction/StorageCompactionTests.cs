@@ -11,6 +11,7 @@ using System.Linq;
 using FastTests.Voron.FixedSize;
 using Sparrow;
 using Sparrow.LowMemory;
+using Sparrow.Threading;
 using Xunit;
 using Voron;
 using Voron.Data.Tables;
@@ -38,7 +39,7 @@ namespace FastTests.Voron.Compaction
         public unsafe void ShouldPreserveTables(int entries, int seed)
         {
             // Create random docs to check everything is preserved
-            using (var allocator = new ByteStringContext(LowMemoryFlag.None))
+            using (var allocator = new ByteStringContext(SharedMultipleUseFlag.None))
             {
                 var create = new Dictionary<Slice, long>();
                 var delete = new List<Slice>();

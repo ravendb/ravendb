@@ -166,8 +166,8 @@ namespace SlowTests.MailingList
                                };
 
 
-                Index(x => x.Interpret, FieldIndexing.Analyzed);
-                Index(x => x.Title, FieldIndexing.Analyzed);
+                Index(x => x.Interpret, FieldIndexing.Search);
+                Index(x => x.Title, FieldIndexing.Search);
 
                 Stores = new Dictionary<Expression<Func<Result, object>>, FieldStorage>()
                 {

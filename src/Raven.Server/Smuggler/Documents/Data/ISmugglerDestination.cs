@@ -2,7 +2,7 @@
 using System.IO;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Smuggler;
-using Raven.Client.Documents.Transformers;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide.Context;
 
@@ -13,14 +13,15 @@ namespace Raven.Server.Smuggler.Documents.Data
         IDisposable Initialize(DatabaseSmugglerOptions options, SmugglerResult result, long buildVersion);
         IDocumentActions Documents();
         IDocumentActions RevisionDocuments();
+        IDocumentActions Tombstones();
         IIndexActions Indexes();
-        ITransformerActions Transformers();
         IIdentityActions Identities();
     }
 
     public interface IDocumentActions : INewDocumentActions, IDisposable
     {
         void WriteDocument(DocumentItem item, SmugglerProgressBase.CountsWithLastEtag progress);
+        void WriteTombstone(DocumentTombstone tombstone, SmugglerProgressBase.CountsWithLastEtag progress);
     }
 
     public interface INewDocumentActions
@@ -34,12 +35,6 @@ namespace Raven.Server.Smuggler.Documents.Data
         void WriteIndex(IndexDefinitionBase indexDefinition, IndexType indexType);
         void WriteIndex(IndexDefinition indexDefinition);
     }
-
-    public interface ITransformerActions : IDisposable
-    {
-        void WriteTransformer(TransformerDefinition transformerDefinition);
-    }
-
 
     public interface IIdentityActions : IDisposable
     {

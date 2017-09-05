@@ -3,7 +3,6 @@
 class importDatabaseModel {
     includeDocuments = ko.observable(true);
     includeIndexes = ko.observable(true);
-    includeTransformers = ko.observable(true);
     includeIdentities = ko.observable(true);
     removeAnalyzers = ko.observable(false);
 
@@ -19,9 +18,6 @@ class importDatabaseModel {
         }
         if (this.includeIndexes()) {
             operateOnTypes.push("Indexes");
-        }
-        if (this.includeTransformers()) {
-            operateOnTypes.push("Transformers");
         }
         if (this.includeRevisionDocuments()) {
             operateOnTypes.push("RevisionDocuments");

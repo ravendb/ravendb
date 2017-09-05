@@ -5,7 +5,7 @@ using Xunit;
 
 namespace SlowTests.Server.Replication
 {
-    public class ReplicationCleanTombstones : ReplicationTestsBase
+    public class ReplicationCleanTombstones : ReplicationTestBase
     {
         [Fact]
         public async Task CleanTombstones()

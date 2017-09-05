@@ -39,6 +39,14 @@ class connectionStringSqlEtlModel {
             ConnectionString: ""
         } as Raven.Client.ServerWide.ETL.SqlConnectionString);
     }
+    
+    toDto() {
+        return {
+            Type: "Sql",
+            Name: this.connectionStringName(),
+            ConnectionString: this.connectionString()
+        };
+    }
 }
 
 export = connectionStringSqlEtlModel;

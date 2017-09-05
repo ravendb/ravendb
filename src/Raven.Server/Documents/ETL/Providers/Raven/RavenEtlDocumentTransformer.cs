@@ -8,7 +8,7 @@ using Raven.Client.ServerWide.ETL;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
+
 // ReSharper disable ForCanBeConvertedToForeach
 
 namespace Raven.Server.Documents.ETL.Providers.Raven
@@ -18,7 +18,8 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         private readonly ScriptInput _script;
         private readonly List<ICommandData> _commands = new List<ICommandData>();
 
-        public RavenEtlDocumentTransformer(DocumentDatabase database, DocumentsOperationContext context, ScriptInput script) : base(database, context)
+        public RavenEtlDocumentTransformer(DocumentDatabase database, DocumentsOperationContext context, ScriptInput script) 
+            : base(database, context, script.Transformation)
         {
             _script = script;
 
@@ -27,15 +28,10 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         protected override string[] LoadToDestinations { get; }
 
-        protected override void LoadToFunction(string collectionName, JsValue document, PatcherOperationScope scope)
+        protected override void LoadToFunction(string collectionName, ScriptRunnerResult document)
         {
             if (collectionName == null)
                 ThrowLoadParameterIsMandatory(nameof(collectionName));
-            if (document == null)
-                ThrowLoadParameterIsMandatory(nameof(document));
-
-            var transformed = scope.ToBlittable(document.AsObject());
-
             string id;
 
             if (_script.IsLoadedToDefaultCollection(Current, collectionName))
@@ -46,17 +42,12 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             {
                 id = GetPrefixedId(Current.DocumentId, collectionName, OperationType.Put);
 
-                var newMetadata = new DynamicJsonValue
-                {
-                    [Constants.Documents.Metadata.Collection] = collectionName,
-                    [Constants.Documents.Metadata.Id] = id
-                };
-
-                if (transformed[Constants.Documents.Metadata.Key] is BlittableJsonReaderObject metadata)
-                    metadata.Modifications = newMetadata;
-                else
-                    transformed[Constants.Documents.Metadata.Key] = newMetadata;
+                var metadata = document.GetOrCreate(Constants.Documents.Metadata.Key);
+                metadata.Put(Constants.Documents.Metadata.Collection, collectionName, false);
+                metadata.Put(Constants.Documents.Metadata.Id, id, false);
             }
+
+            var transformed = document.TranslateToObject(Context);
 
             var transformResult = Context.ReadObject(transformed, id);
 
@@ -91,7 +82,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                         ApplyDeleteCommands(item, OperationType.Put);
                     }
 
-                    Apply(Context, Current.Document, _script.Transformation);
+                    SingleRun.Run(Context, "execute", new object[] {Current.Document}).Dispose();
                 }
                 else
                     _commands.Add(new PutCommandDataWithBlittableJson(item.DocumentId, null, item.Document.Data));
@@ -145,7 +136,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 if (string.IsNullOrEmpty(transformation.Script))
                     return;
 
-                Transformation = new PatchRequest { Script = transformation.Script };
+                Transformation = new PatchRequest(transformation.Script, PatchRequestType.RavenEtl);
 
                 LoadToCollections = transformation.GetCollectionsFromScript();
 

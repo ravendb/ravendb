@@ -10,18 +10,14 @@ using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Replication;
-using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions;
-using Raven.Client.Extensions;
-using Raven.Client.Util;
-using Raven.Server.Documents;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace SlowTests.Server.Replication
 {
-    public class AutomaticConflictResolution : ReplicationTestsBase
+    public class AutomaticConflictResolution : ReplicationTestBase
     {
         [Fact]
         public async Task ScriptResolveToTombstone()
@@ -30,7 +26,7 @@ namespace SlowTests.Server.Replication
             using (var slave = GetDocumentStore())
             {
 
-                await SetScriptResolutionAsync(slave, "return ResolveToTombstone();", "Users");
+                await SetScriptResolutionAsync(slave, "return resolveToTombstone;", "Users");
                 await SetupReplicationAsync(master, slave);
 
                 using (var session = slave.OpenSession())
@@ -69,21 +65,20 @@ function onlyUnique(value, index, self) {
     return self.indexOf(value) === index;
 }
 
-    var names = [];
-    var history = [];
-    for(var i = 0; i < docs.length; i++) 
-    {
-        names = names.concat(docs[i].Name.split(' '));
-        history.push(docs[i]);
-    }
-            var out = {
-                Name: names.filter(onlyUnique).join(' '),
-                Age: Math.max.apply(Math,docs.map(function(o){return o.Age;})),
-                Grades:{Bio:12,Math:123,Pys:5,Sports:44},
-                Versions:history,
-                '@metadata':docs[0]['@metadata']
-            }
-output(out);
+var names = [];
+var history = [];
+for(var i = 0; i < docs.length; i++) 
+{
+    names = names.concat(docs[i].Name.split(' '));
+    history.push(docs[i]);
+}
+var out = {
+    Name: names.filter(onlyUnique).join(' '),
+    Age: Math.max.apply(Math,docs.map(function(o){return o.Age;})),
+    Grades:{Bio:12,Math:123,Pys:5,Sports:44},
+    Versions:history,
+    '@metadata':docs[0]['@metadata']
+}
 return out;
 ", "Users");
                 await SetupReplicationAsync(master, slave);
@@ -163,7 +158,11 @@ return out;
         public bool WaitForBiggerChangeVector(DocumentStore store, string changeVector)
         {
             var sw = Stopwatch.StartNew();
-            while (sw.ElapsedMilliseconds < 10000)
+
+            var timeout = 10000;
+            if (Debugger.IsAttached)
+                timeout *= 10;
+            while (sw.ElapsedMilliseconds < timeout)
             {
                 using (var session = store.OpenSession())
                 {

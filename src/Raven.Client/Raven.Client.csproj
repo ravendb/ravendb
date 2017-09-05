@@ -23,6 +23,10 @@
     <GenerateNeutralResourcesLanguageAttribute>false</GenerateNeutralResourcesLanguageAttribute>
     <Product>RavenDB Client</Product>
     <Title>RavenDB Client</Title>
+    <Configurations>Debug;Release;Validate</Configurations>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Validate'">
+    <Optimize>true</Optimize>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
@@ -41,12 +45,12 @@
     <ProjectReference Include="..\Sparrow\Sparrow.csproj" PrivateAssets="All" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Lambda2Js" Version="2.1.1" />
+    <PackageReference Include="Lambda2Js" Version="3.0.1" />
     <PackageReference Include="Microsoft.AspNetCore.Http.Features" Version="1.1.2" />
     <PackageReference Include="Microsoft.CSharp" Version="4.4.0" />
     <PackageReference Include="Microsoft.Extensions.Primitives" Version="1.1.1" />
     <PackageReference Include="Newtonsoft.Json" Version="10.0.3" />
-    <PackageReference Include="Raven.CodeAnalysis" Version="1.0.5">
+    <PackageReference Include="Raven.CodeAnalysis" Version="1.0.6">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="4.4.0" />

@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide.Operations.Certificates;
-using Raven.Server.Config;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Json;
 using Xunit;
@@ -25,14 +24,19 @@ namespace FastTests.Client.Subscriptions
             if (useSsl)
             {
                 var serverCertPath = SetupServerAuthentication();
-                adminCertificate = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), serverAdmin: true);
+                adminCertificate = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
                 clientCertificate = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
                 {
                     [dbName] = DatabaseAccess.ReadWrite
                 });
             }
 
-            using (var store = GetDocumentStore(adminCertificate: adminCertificate, userCertificate: clientCertificate, modifyName: s => dbName))
+            using (var store = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCertificate,
+                ClientCertificate = clientCertificate,
+                ModifyDatabaseName = s => dbName
+            }))
             {
                 using (var subscriptionManager = new DocumentSubscriptions(store))
                 {
@@ -43,10 +47,7 @@ namespace FastTests.Client.Subscriptions
 
                     var subscriptionCreationParams = new SubscriptionCreationOptions()
                     {
-                        Criteria = new SubscriptionCriteria("Things")
-                        {
-                            Script = " return this.Name == 'ThingNo3'"
-                        },
+                        Query = "from Things where Name = 'ThingNo3'",
                         ChangeVector = lastChangeVector
                     };
                     var subsId = subscriptionManager.Create(subscriptionCreationParams);
@@ -80,14 +81,19 @@ namespace FastTests.Client.Subscriptions
             if (useSsl)
             {
                 var serverCertPath = SetupServerAuthentication();
-                adminCertificate = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), serverAdmin: true);
+                adminCertificate = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
                 clientCertificate = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
                 {
                     [dbName] = DatabaseAccess.ReadWrite,
                 });
             }
 
-            using (var store = GetDocumentStore(adminCertificate: adminCertificate, userCertificate: clientCertificate, modifyName: s => dbName))
+            using (var store = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCertificate,
+                ClientCertificate = clientCertificate,
+                ModifyDatabaseName = s => dbName
+            }))
             {
                 using (var subscriptionManager = new DocumentSubscriptions(store))
                 {
@@ -98,21 +104,23 @@ namespace FastTests.Client.Subscriptions
 
                     var subscriptionCreationParams = new SubscriptionCreationOptions()
                     {
-                        Criteria = new SubscriptionCriteria("Things")
-                        {
-                            Script =
-                                @"var namSuffix = parseInt(this.Name.replace('ThingNo', ''));  
-                    if (namSuffix <= 2){
-                        return false;
-                    }
-                    else if (namSuffix == 3){
-                        return null;
-                    }
-                    else if (namSuffix == 4){
-                    return this;
-                    }
-                    return {Name: 'foo', OtherDoc:LoadDocument('things/6-A')}",
-                        },
+                        Query = @"
+declare function project(d) {
+    var namSuffix = parseInt(d.Name.replace('ThingNo', ''));  
+    if (namSuffix <= 2){
+        return false;
+    }
+    else if (namSuffix == 3){
+        return null;
+    }
+    else if (namSuffix == 4){
+        return d;
+    }
+    return {Name: 'foo', OtherDoc:load('things/6-A')}
+}
+from Things as d
+select project(d)
+",
                         ChangeVector = lastChangeVector
                     };
 

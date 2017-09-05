@@ -1,18 +1,16 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
+using Raven.Server.Config;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace FastTests.Server.Documents.Indexing
 {
     public class FullTextSearchOnAutoIndex : RavenTestBase
     {
-        public class User
-        {
-            public string Name;
-        }
-
         [Fact]
         public async Task CanUseFullTextSearchInAutoIndex()
         {
@@ -38,7 +36,7 @@ namespace FastTests.Server.Documents.Indexing
                         .CountAsync();
 
                     Assert.Equal(1, count);
-                    Assert.Equal("Auto/Users/ByAnalyzed(Name)", stats.IndexName);
+                    Assert.Equal("Auto/Users/BySearch(Name)", stats.IndexName);
                 }
 
                 using (var s = store.OpenAsyncSession())
@@ -51,11 +49,11 @@ namespace FastTests.Server.Documents.Indexing
                         .CountAsync();
 
                     Assert.Equal(0, count);
-                    Assert.Equal("Auto/Users/ByName", stats.IndexName);
+                    Assert.Equal("Auto/Users/BySearch(Name)", stats.IndexName);
                 }
             }
         }
-        
+
         [Fact]
         public async Task CanUseFullTextSearchInAutoMapReduceIndex()
         {
@@ -96,7 +94,7 @@ namespace FastTests.Server.Documents.Indexing
                     Assert.Equal(2, results[0].Count);
                     Assert.Equal("Ayende Rahien", results[0].Name);
 
-                    Assert.Equal("Auto/Users/ByCountReducedByAnalyzed(Name)", stats.IndexName);
+                    Assert.Equal("Auto/Users/ByCountReducedBySearch(Name)", stats.IndexName);
                 }
 
                 using (var s = store.OpenSession())
@@ -117,7 +115,7 @@ namespace FastTests.Server.Documents.Indexing
 
                     Assert.Equal(0, results.Count);
 
-                    Assert.Equal("Auto/Users/ByCountReducedByName", stats.IndexName);
+                    Assert.Equal("Auto/Users/ByCountReducedBySearch(Name)", stats.IndexName);
                 }
             }
         }

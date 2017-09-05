@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using FastTests;
+using Raven.Client;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -44,7 +45,7 @@ namespace SlowTests.MailingList
                 {
                     if (first == false)
                         properties.OrElse();
-                    properties.WhereEquals("__document_id", guid);
+                    properties.WhereEquals(Constants.Documents.Indexing.Fields.DocumentIdFieldName, guid);
                     first = false;
                 }
                 properties.CloseSubclause();

@@ -400,7 +400,7 @@ namespace FastTests.Server.Documents
                     }
                 }, "users/1", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
-                    var changeVector = ctx.GetLazyString($"A:1-{Convert.ToBase64String(_documentDatabase.DocumentsStorage.Environment.DbId.ToByteArray())}");
+                    var changeVector = ctx.GetLazyString($"A:1-{_documentDatabase.DocumentsStorage.Environment.Base64Id}");
                     Assert.Throws<ConcurrencyException>(() => _documentDatabase.DocumentsStorage.Put(ctx, "users/1", changeVector, doc));
                 }
 
@@ -425,7 +425,7 @@ namespace FastTests.Server.Documents
                 }, "users/1", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
                     _documentDatabase.DocumentsStorage.Put(ctx, "users/1", null, doc);
-                    var changeVector = ctx.GetLazyString($"A:3-{Convert.ToBase64String(_documentDatabase.DocumentsStorage.Environment.DbId.ToByteArray())}");
+                    var changeVector = ctx.GetLazyString($"A:3-{_documentDatabase.DocumentsStorage.Environment.Base64Id}");
                      Assert.Throws<ConcurrencyException>(() => _documentDatabase.DocumentsStorage.Put(ctx, "users/1", changeVector, doc));
                 }
 
@@ -450,7 +450,7 @@ namespace FastTests.Server.Documents
                 }, "users/1", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
                     _documentDatabase.DocumentsStorage.Put(ctx, "users/1", null, doc);
-                    var changeVector = ctx.GetLazyString($"A:3-{Convert.ToBase64String(_documentDatabase.DocumentsStorage.Environment.DbId.ToByteArray())}");
+                    var changeVector = ctx.GetLazyString($"A:3-{_documentDatabase.DocumentsStorage.Environment.Base64Id}");
                     Assert.Throws<ConcurrencyException>(() => _documentDatabase.DocumentsStorage.Delete(ctx, "users/1", changeVector));
                 }
 
@@ -464,7 +464,7 @@ namespace FastTests.Server.Documents
             using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
                 ctx.OpenWriteTransaction();
-                var changeVector = ctx.GetLazyString($"A:3-{Convert.ToBase64String(_documentDatabase.DocumentsStorage.Environment.DbId.ToByteArray())}");
+                var changeVector = ctx.GetLazyString($"A:3-{_documentDatabase.DocumentsStorage.Environment.Base64Id}");
                 Assert.Throws<ConcurrencyException>(() => _documentDatabase.DocumentsStorage.Delete(ctx, "users/1", changeVector));
 
                 ctx.Transaction.Commit();

@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Queries
             var sw = Stopwatch.StartNew();
             if (query.Metadata.IsDynamic)
             {
-                var runner = new DynamicQueryRunner(_database.IndexStore, _database.TransformerStore, _database.DocumentsStorage, _documentsContext, token);
+                var runner = new DynamicQueryRunner(_database.IndexStore, _database, _database.DocumentsStorage, _documentsContext, _database.Configuration, token);
 
                 result = await runner.Execute(query, existingResultEtag);
                 result.DurationInMs = (long)sw.Elapsed.TotalMilliseconds;
@@ -70,7 +70,7 @@ namespace Raven.Server.Documents.Queries
         {
             if (query.Metadata.IsDynamic)
             {
-                var runner = new DynamicQueryRunner(_database.IndexStore, _database.TransformerStore, _database.DocumentsStorage, _documentsContext, token);
+                var runner = new DynamicQueryRunner(_database.IndexStore, _database, _database.DocumentsStorage, _documentsContext, _database.Configuration, token);
 
                 await runner.ExecuteStream(response, writer, query).ConfigureAwait(false);
 
@@ -212,7 +212,7 @@ namespace Raven.Server.Documents.Queries
         {
             if (query.Metadata.IsDynamic)
             {
-                var runner = new DynamicQueryRunner(_database.IndexStore, _database.TransformerStore, _database.DocumentsStorage, _documentsContext, token);
+                var runner = new DynamicQueryRunner(_database.IndexStore,_database, _database.DocumentsStorage, _documentsContext, _database.Configuration, token);
                 return await runner.ExecuteIndexEntries(query, existingResultEtag);
             }
 
@@ -233,7 +233,7 @@ namespace Raven.Server.Documents.Queries
             if (query.Metadata.IsDynamic == false)
                 throw new InvalidOperationException("Explain can only work on dynamic indexes");
 
-            var runner = new DynamicQueryRunner(_database.IndexStore, _database.TransformerStore, _database.DocumentsStorage, _documentsContext, OperationCancelToken.None);
+            var runner = new DynamicQueryRunner(_database.IndexStore, _database, _database.DocumentsStorage, _documentsContext, _database.Configuration, OperationCancelToken.None);
 
             return runner.ExplainIndexSelection(query);
         }
@@ -252,11 +252,18 @@ namespace Raven.Server.Documents.Queries
             }, token);
         }
 
-        public Task<IOperationResult> ExecutePatchQuery(IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch, DocumentsOperationContext context, Action<DeterminateProgress> onProgress, OperationCancelToken token)
+        public Task<IOperationResult> ExecutePatchQuery(IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch, BlittableJsonReaderObject patchArgs, DocumentsOperationContext context, Action<DeterminateProgress> onProgress, OperationCancelToken token)
         {
             return ExecuteOperation(query, options, context, onProgress, (key, retrieveDetails) =>
             {
-                var command = _database.Patcher.GetPatchDocumentCommand(context, key, changeVector: null, patch: patch, patchIfMissing: null, skipPatchIfChangeVectorMismatch: false, debugMode: false);
+                var command = new PatchDocumentCommand(context, key, 
+                    expectedChangeVector: null, 
+                    skipPatchIfChangeVectorMismatch:false, 
+                    patch:(patch, patchArgs), 
+                    patchIfMissing:(null, null), 
+                    database:_database, 
+                    debugMode: false,
+                    isTest: false);
 
                 return new BulkOperationCommand<PatchDocumentCommand>(command, retrieveDetails, x => new BulkOperationResult.PatchDetails
                 {
@@ -346,12 +353,6 @@ namespace Raven.Server.Documents.Queries
                 Start = query.Start,
                 WaitForNonStaleResultsTimeout = options.StaleTimeout,
                 PageSize = int.MaxValue,
-                HighlighterPreTags = query.HighlighterPreTags,
-                HighlighterPostTags = query.HighlighterPostTags,
-                HighlightedFields = query.HighlightedFields,
-                HighlighterKeyName = query.HighlighterKeyName,
-                TransformerParameters = query.TransformerParameters,
-                Transformer = query.Transformer,
                 QueryParameters = query.QueryParameters
             };
         }

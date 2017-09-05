@@ -5,9 +5,9 @@ using Sparrow.Json;
 
 namespace Raven.Client.Json.Converters
 {
-    internal class ParametersConverter : RavenJsonConverter
+    internal sealed class ParametersConverter : RavenJsonConverter
     {
-        public static ParametersConverter Instance = new ParametersConverter();
+        public static readonly ParametersConverter Instance = new ParametersConverter();
 
         private ParametersConverter()
         {

@@ -1,17 +1,15 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.ServerWide.Operations.Certificates;
-using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace SlowTests.Server.Replication
 {
-    public class ReplicationBasicTestsSlow : ReplicationTestsBase
+    public class ReplicationBasicTestsSlow : ReplicationTestBase
     {
         public readonly string DbName = "TestDB" + Guid.NewGuid();
 
@@ -22,13 +20,13 @@ namespace SlowTests.Server.Replication
         {
             var dbName1 = DbName + "-1";
             var dbName2 = DbName + "-2";
-            
+
             X509Certificate2 clientCertificate = null;
             X509Certificate2 adminCertificate = null;
             if (useSsl)
             {
                 var serverCertPath = SetupServerAuthentication();
-                adminCertificate = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), serverAdmin: true);
+                adminCertificate = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
                 clientCertificate = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
                 {
                     [dbName1] = DatabaseAccess.Admin,
@@ -36,8 +34,18 @@ namespace SlowTests.Server.Replication
                 });
             }
 
-            using (var store1 = GetDocumentStore(adminCertificate: adminCertificate, userCertificate: clientCertificate, modifyName: s => dbName1))
-            using (var store2 = GetDocumentStore(adminCertificate: adminCertificate, userCertificate: clientCertificate, modifyName: s => dbName2))
+            using (var store1 = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCertificate,
+                ClientCertificate = clientCertificate,
+                ModifyDatabaseName = s => dbName1
+            }))
+            using (var store2 = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCertificate,
+                ClientCertificate = clientCertificate,
+                ModifyDatabaseName = s => dbName2
+            }))
             {
                 await SetupReplicationAsync(store1, store2);
                 await SetupReplicationAsync(store2, store1);

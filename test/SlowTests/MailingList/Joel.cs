@@ -43,11 +43,16 @@ namespace SlowTests.MailingList
         [Fact]
         public void CanCreateIndexWithExplicitType()
         {
-            using (var s = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
             {
-                s.Conventions.PrettifyGeneratedLinqExpressions = false;
-                new Index().Execute(s);
-                var indexDefinition = s.Admin.Send(new GetIndexOperation("Index"));
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.PrettifyGeneratedLinqExpressions = false;
+                }
+            }))
+            {
+                new Index().Execute(store);
+                var indexDefinition = store.Admin.Send(new GetIndexOperation("Index"));
                 Assert.Equal(@"docs.Items.Select(item => new {
     Query = new object[] {
         item.Age,

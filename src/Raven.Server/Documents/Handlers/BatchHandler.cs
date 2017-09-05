@@ -296,7 +296,7 @@ namespace Raven.Server.Documents.Handlers
                             // Make sure all the metadata fields are always been add
                             var putReply = new DynamicJsonValue
                             {
-                                ["Type"] = CommandType.PUT.ToString(),
+                                ["Type"] = nameof(CommandType.PUT),
                                 [Constants.Documents.Metadata.Id] = putResult.Id,
                                 [Constants.Documents.Metadata.Collection] = putResult.Collection.Name,
                                 [Constants.Documents.Metadata.ChangeVector] = putResult.ChangeVector,
@@ -326,8 +326,9 @@ namespace Raven.Server.Documents.Handlers
                             {
                                 [nameof(BatchRequestParser.CommandData.Id)] = cmd.Id,
                                 [nameof(BatchRequestParser.CommandData.ChangeVector)] = patchResult.ChangeVector,
-                                [nameof(BatchRequestParser.CommandData.Type)] = CommandType.PATCH.ToString(),
-                                ["PatchStatus"] = patchResult.Status.ToString()
+                                [nameof(BatchRequestParser.CommandData.Type)] = nameof(CommandType.PATCH),
+                                ["PatchStatus"] = patchResult.Status.ToString(),
+                                ["Debug"] = patchResult.Debug
                             });
                             break;
                         case CommandType.DELETE:
@@ -344,7 +345,7 @@ namespace Raven.Server.Documents.Handlers
                                 Reply.Add(new DynamicJsonValue
                                 {
                                     [nameof(BatchRequestParser.CommandData.Id)] = cmd.Id,
-                                    [nameof(BatchRequestParser.CommandData.Type)] = CommandType.DELETE.ToString(),
+                                    [nameof(BatchRequestParser.CommandData.Type)] = nameof(CommandType.DELETE),
                                     ["Deleted"] = deleted != null
                                 });
                             }
@@ -361,7 +362,7 @@ namespace Raven.Server.Documents.Handlers
                                 Reply.Add(new DynamicJsonValue
                                 {
                                     [nameof(BatchRequestParser.CommandData.Id)] = cmd.Id,
-                                    [nameof(BatchRequestParser.CommandData.Type)] = CommandType.DELETE.ToString(),
+                                    [nameof(BatchRequestParser.CommandData.Type)] = nameof(CommandType.DELETE),
                                     ["Deleted"] = deleteResults.Count > 0
                                 });
                             }
@@ -381,7 +382,7 @@ namespace Raven.Server.Documents.Handlers
                                 Reply.Add(new DynamicJsonValue
                                 {
                                     [nameof(BatchRequestParser.CommandData.Id)] = attachmentPutResult.DocumentId,
-                                    [nameof(BatchRequestParser.CommandData.Type)] = CommandType.AttachmentPUT.ToString(),
+                                    [nameof(BatchRequestParser.CommandData.Type)] = nameof(CommandType.AttachmentPUT),
                                     [nameof(BatchRequestParser.CommandData.Name)] = attachmentPutResult.Name,
                                     [nameof(BatchRequestParser.CommandData.ChangeVector)] = attachmentPutResult.ChangeVector,
                                     [nameof(AttachmentDetails.Hash)] = attachmentPutResult.Hash,
@@ -400,7 +401,7 @@ namespace Raven.Server.Documents.Handlers
 
                             Reply.Add(new DynamicJsonValue
                             {
-                                ["Type"] = CommandType.AttachmentPUT.ToString(),
+                                ["Type"] = nameof(CommandType.AttachmentDELETE),
                                 [Constants.Documents.Metadata.Id] = cmd.Id,
                                 ["Name"] = cmd.Name
                             });
@@ -429,6 +430,8 @@ namespace Raven.Server.Documents.Handlers
                 foreach (var cmd in ParsedCommands)
                 {
                     cmd.Document?.Dispose();
+                    if(cmd.PatchCommand!= null)
+                        cmd.PatchCommand.Dispose();
                 }
                 BatchRequestParser.ReturnBuffer(ParsedCommands);
                 AttachmentStreamsTempFile?.Dispose();

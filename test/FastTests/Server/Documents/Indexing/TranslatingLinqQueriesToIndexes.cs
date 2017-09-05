@@ -17,7 +17,7 @@ namespace FastTests.Server.Documents.Indexing
             Expression<Func<IEnumerable<Nestable>, IEnumerable>> map = nests => from nestable in nests
                 select new { nestable.Id };
             var code = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<Nestable, Nestable>(map, new DocumentConventions(), "docs", true);
-            Assert.Contains("Id = nestable.__document_id", code);
+            Assert.Contains("Id = Id(nestable)", code);
         }
 
         [Fact]
@@ -38,7 +38,7 @@ namespace FastTests.Server.Documents.Indexing
                 select new { child.Id, Id2 = nestable.Id };
             var code = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<Nestable, Nestable>(map, new DocumentConventions(), "docs", true);
             Assert.Contains("Id = child.Id", code);
-            Assert.Contains("Id2 = nestable.__document_id", code);
+            Assert.Contains("Id2 = Id(nestable)", code);
         }
 
         [Fact]

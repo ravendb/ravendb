@@ -1,8 +1,8 @@
-// -----------------------------------------------------------------------
+//----------------------------------------------------------------------
 //  <copyright file="ReferencedDocuments.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
-// -----------------------------------------------------------------------
+//----------------------------------------------------------------------
 
 using System.Collections.Generic;
 using System.Linq;
@@ -13,7 +13,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using SlowTests.Core.Utils.Entities;
 using SlowTests.Core.Utils.Indexes;
-using SlowTests.Core.Utils.Transformers;
 
 using Xunit;
 
@@ -36,9 +35,6 @@ namespace SlowTests.Core.Indexing
 
                 var companiesWithEmployees = new Companies_WithReferencedEmployees();
                 companiesWithEmployees.Execute(store);
-
-                var companiesWithEmployeesTransformer = new CompanyEmployeesTransformer();
-                companiesWithEmployeesTransformer.Execute(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -73,14 +69,10 @@ namespace SlowTests.Core.Indexing
                     Assert.Equal(5, javascriptPostsQuery.ToList().Count);
 
 
-                    var companies = session.Advanced.DocumentQuery<Companies_WithReferencedEmployees.CompanyEmployees>(companiesWithEmployees.IndexName)
-                        .SetTransformer(companiesWithEmployeesTransformer.TransformerName)
+                    var companies = session.Advanced.DocumentQuery<Company>(companiesWithEmployees.IndexName)
                         .ToArray();
 
                     Assert.Equal(1, companies.Length);
-                    Assert.Equal("Last Name 1", companies[0].Employees[0]);
-                    Assert.Equal("Last Name 2", companies[0].Employees[1]);
-                    Assert.Equal("Last Name 3", companies[0].Employees[2]);
                 }
             }
         }

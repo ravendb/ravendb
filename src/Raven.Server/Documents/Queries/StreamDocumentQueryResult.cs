@@ -30,10 +30,7 @@ namespace Raven.Server.Documents.Queries
             else
                 _writer.WriteComma();
 
-            using (result.Data)
-            {
-                _writer.WriteDocument(_context, result);
-            }
+            _writer.WriteDocument(_context, result, metadataOnly: false);
         }
 
         public override void HandleException(Exception e)

@@ -24,12 +24,16 @@ namespace FastTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var subscriptionId = store.Subscriptions.Create(new SubscriptionCreationOptions<User>()
+                var subscriptionId = store.Subscriptions.Create(new SubscriptionCreationOptions()
                 {
-                    Criteria = new SubscriptionCriteria<User>()
-                    {
-                        Script = "reta fsd"
-                    }
+                    Query = @"
+declare function project(d){
+    throw 'a party';
+    return d;
+}
+from Users as d
+select project(d)
+"
                 });
 
                 var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
@@ -78,7 +82,6 @@ namespace FastTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
                     var configuration = new RevisionsConfiguration
@@ -108,13 +111,16 @@ namespace FastTests.Client.Subscriptions
                             context)));
                 }
 
-                var subscriptionId = store.Subscriptions.Create(new SubscriptionCreationOptions<User>()
+                var subscriptionId = store.Subscriptions.Create(new SubscriptionCreationOptions()
                 {
-                    Criteria = new SubscriptionCriteria<User>()
-                    {
-                        Script = "reta   fsd",
-                        IncludeRevisions = true
-                    }
+                    Query = @"
+declare function project(d){
+    throw 'nice';
+    return d;
+}
+from Users (Revisions = true) as d
+select project(d)
+"
                 });
 
                 var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));

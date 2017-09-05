@@ -11,7 +11,7 @@ namespace Raven.Server.Web.System
 {
     public class AdminConfigurationHandler : RequestHandler
     {
-        [RavenAction("/admin/configuration/client", "PUT", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/configuration/client", "PUT", AuthorizationStatus.Operator)]
         public async Task PutClientConfiguration()
         {
             ServerStore.EnsureNotPassive();
@@ -22,7 +22,7 @@ namespace Raven.Server.Web.System
 
                 var clientConfiguration = JsonDeserializationServer.ClientConfiguration(clientConfigurationJson);
                 var res = await ServerStore.PutValueInClusterAsync(new PutClientConfigurationCommand(clientConfiguration));
-                await ServerStore.Cluster.WaitForIndexNotification(res.Etag);
+                await ServerStore.Cluster.WaitForIndexNotification(res.Index);
 
                 NoContentStatus();
                 

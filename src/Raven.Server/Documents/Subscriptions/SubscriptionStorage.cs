@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Subscriptions
         public static TimeSpan TwoMinutesTimespan = TimeSpan.FromMinutes(2);
         private readonly ConcurrentDictionary<long, SubscriptionConnectionState> _subscriptionConnectionStates = new ConcurrentDictionary<long, SubscriptionConnectionState>();
         private readonly Logger _logger;
-        private SemaphoreSlim _concurrentConnectionsSemiSemaphore;
+        private readonly SemaphoreSlim _concurrentConnectionsSemiSemaphore;
 
         public SubscriptionStorage(DocumentDatabase db, ServerStore serverStore)
         {
@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Subscriptions
             _serverStore = serverStore;
             _logger = LoggingSource.Instance.GetLogger<SubscriptionStorage>(db.Name);
 
-            _concurrentConnectionsSemiSemaphore = new SemaphoreSlim(db.Configuration.Subscriptions.ConcurrentConnections);
+            _concurrentConnectionsSemiSemaphore = new SemaphoreSlim(db.Configuration.Subscriptions.MaxNumberOfConcurrentConnections);
         }
 
         public void Dispose()
@@ -55,9 +55,8 @@ namespace Raven.Server.Documents.Subscriptions
 
         public async Task<long> PutSubscription(SubscriptionCreationOptions options, long? subscriptionId = null, bool? disabled = false)
         {
-            var command = new PutSubscriptionCommand(_db.Name)
+            var command = new PutSubscriptionCommand(_db.Name, options.Query)
             {
-                Criteria = options.Criteria,
                 InitialChangeVector = options.ChangeVector,
                 SubscriptionName = options.Name,
                 SubscriptionId = subscriptionId,
@@ -89,7 +88,22 @@ namespace Raven.Server.Documents.Subscriptions
                 SubscriptionId = id,
                 SubscriptionName = name,
                 LastDocumentEtagAckedInNode = lastEtag,
-                DbId = _db.DbId
+                LastTimeServerMadeProgressWithDocuments = DateTime.UtcNow
+            };
+
+            var (etag, _) = await _serverStore.SendToLeaderAsync(command);
+            await _db.RachisLogIndexNotifications.WaitForIndexNotification(etag);
+        }
+
+
+        public async Task UpdateClientConnectionTime(long id, string name)
+        {
+            var command = new UpdateSubscriptionClientConnectionTime(_db.Name)
+            {
+                NodeTag = _serverStore.NodeTag,
+                SubscriptionId = id,
+                SubscriptionName = name,
+                LastClientConnectionTime = DateTime.UtcNow
             };
 
             var (etag, _) = await _serverStore.SendToLeaderAsync(command);
@@ -148,9 +162,12 @@ namespace Raven.Server.Documents.Subscriptions
             if (_subscriptionConnectionStates.TryGetValue(subscriptionId, out SubscriptionConnectionState subscriptionConnectionState) == false)
                 return false;
 
-            subscriptionConnectionState.Connection.ConnectionException = ex;
-            subscriptionConnectionState.RegisterRejectedConnection(subscriptionConnectionState.Connection, ex);
-            subscriptionConnectionState.Connection.CancellationTokenSource.Cancel();
+            if (subscriptionConnectionState.Connection != null)
+            {
+                subscriptionConnectionState.RegisterRejectedConnection(subscriptionConnectionState.Connection, ex);
+                subscriptionConnectionState.Connection.ConnectionException = ex;
+                subscriptionConnectionState.Connection.CancellationTokenSource.Cancel();
+            }
 
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Subscription with id {subscriptionId} connection was dropped. Reason: {ex.Message}");
@@ -271,6 +288,21 @@ namespace Raven.Server.Documents.Subscriptions
             GetRunningSubscriptionInternal(history, subscription, subscriptionConnectionState);
             return subscription;
         }
+
+        public SubscriptionConnectionState GetSubscriptionConnection(TransactionOperationContext context, string subscriptionName)
+        {
+            var subscriptionBlittable = _serverStore.Cluster.Read(context, SubscriptionState.GenerateSubscriptionItemKeyName(_db.Name, subscriptionName));
+            if (subscriptionBlittable == null)
+                return null;
+
+                var subscriptionState = JsonDeserializationClient.SubscriptionState(subscriptionBlittable);
+
+            if (_subscriptionConnectionStates.TryGetValue(subscriptionState.SubscriptionId, out SubscriptionConnectionState subscriptionConnection) == false)
+                return null;
+            
+            return subscriptionConnection;
+        }
+
         public class SubscriptionGeneralDataAndStats : SubscriptionState
         {
             public SubscriptionConnection Connection;
@@ -281,13 +313,14 @@ namespace Raven.Server.Documents.Subscriptions
 
             public SubscriptionGeneralDataAndStats(SubscriptionState @base)
             {
-                Criteria = @base.Criteria;
-                ChangeVector = @base.ChangeVector;
+                Query = @base.Query;
+                ChangeVectorForNextBatchStartingPoint = @base.ChangeVectorForNextBatchStartingPoint;
                 SubscriptionId = @base.SubscriptionId;
-                TimeOfLastClientActivity = @base.TimeOfLastClientActivity;
+                LastTimeServerMadeProgressWithDocuments = @base.LastTimeServerMadeProgressWithDocuments;
                 SubscriptionName = @base.SubscriptionName;
             }
         }
+
         public SubscriptionGeneralDataAndStats GetRunningSubscriptionConnectionHistory(TransactionOperationContext context, long subscriptionId)
         {
             if (!_subscriptionConnectionStates.TryGetValue(subscriptionId, out SubscriptionConnectionState subscriptionConnectionState))
@@ -367,9 +400,9 @@ namespace Raven.Server.Documents.Subscriptions
                         continue;
                     }
 
-                    if (subscriptionState.Criteria.Script != subscriptionStateKvp.Value.Connection.SubscriptionState.Criteria.Script)
+                    if (subscriptionState.Query != subscriptionStateKvp.Value.Connection.SubscriptionState.Query)
                     {
-                        DropSubscriptionConnection(subscriptionStateKvp.Key, new SubscriptionClosedException($"The subscription {subscriptionName} script has been modified, connection must be restarted"));
+                        DropSubscriptionConnection(subscriptionStateKvp.Key, new SubscriptionClosedException($"The subscription {subscriptionName} query has been modified, connection must be restarted"));
                     }
 
                     if (databaseRecord.Topology.WhoseTaskIsIt(subscriptionState, _serverStore.IsPassive()) != _serverStore.NodeTag)

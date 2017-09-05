@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
@@ -17,7 +18,7 @@ using Voron.Util;
 
 namespace Raven.Server.Documents.Indexes.MapReduce
 {
-    public abstract class MapReduceIndexBase<T> : Index<T> where T : IndexDefinitionBase
+    public abstract class MapReduceIndexBase<T, TField> : Index<T, TField> where T : IndexDefinitionBase<TField> where TField : IndexFieldBase
     {
         internal const string MapPhaseTreeName = "MapPhaseTree";
         internal const string ReducePhaseTreeName = "ReducePhaseTree";
@@ -71,9 +72,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         }
 
-        public override IQueryResultRetriever GetQueryResultRetriever(IndexQueryServerSide query, DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch)
+        public override IQueryResultRetriever GetQueryResultRetriever(IndexQueryServerSide query, DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand)
         {
-            return new MapReduceQueryResultRetriever(query, DocumentDatabase.DocumentsStorage,documentsContext, fieldsToFetch);
+            return new MapReduceQueryResultRetriever(DocumentDatabase, query, DocumentDatabase.DocumentsStorage,documentsContext, fieldsToFetch, includeDocumentsCommand);
         }
 
         private static Tree GetMapPhaseTree(Transaction tx)

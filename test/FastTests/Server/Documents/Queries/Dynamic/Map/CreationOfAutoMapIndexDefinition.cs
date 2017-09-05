@@ -16,7 +16,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         [Fact]
         public void SpecifyingInvalidParametersWillResultInException()
         {
-            var fields = new[] { new IndexField
+            var fields = new[] { new AutoIndexField
             {
                 Name = "test",
                 Storage = FieldStorage.No
@@ -26,7 +26,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             Assert.Throws<ArgumentNullException>(() => new AutoMapIndexDefinition("test", null));
             Assert.Throws<ArgumentNullException>(() => new AutoMapIndexDefinition(null, fields));
 
-            Assert.Throws<ArgumentException>(() => new AutoMapIndexDefinition("test", new IndexField[0]));
+            Assert.Throws<ArgumentException>(() => new AutoMapIndexDefinition("test", new AutoIndexField[0]));
 
             new AutoMapIndexDefinition("test", fields);
         }
@@ -144,7 +144,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             Assert.True(definition.ContainsField("Name"));
             Assert.True(definition.ContainsField("Age"));
             Assert.Equal("Auto/Users/ByAgeAndName", definition.Name);
-            var nameField = definition.GetField("Name");
+            var nameField = definition.MapFields["Name"];
         }
 
         [Fact]
@@ -245,6 +245,39 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             Assert.Equal("Users", definition.Collections.Single());
             Assert.True(definition.ContainsField("Age"));
             Assert.Equal("Auto/Users/ByAge", definition.Name);
+        }
+
+        [Fact]
+        public void ExtendsIndexingOptionsOfTheSameField()
+        {
+            _sut = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE FirstName = 'a'"));
+
+            var existingDefinition = _sut.CreateAutoIndexDefinition();
+
+            _sut = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE search(FirstName, 'A')"));
+
+            _sut.ExtendMappingBasedOn(existingDefinition);
+
+            var definition = _sut.CreateAutoIndexDefinition();
+
+            Assert.Equal(1, definition.Collections.Count);
+            Assert.Equal("Users", definition.Collections.Single());
+            Assert.True(definition.ContainsField("FirstName"));
+            Assert.Equal(AutoFieldIndexing.Default | AutoFieldIndexing.Search, definition.MapFields["FirstName"].As<AutoIndexField>().Indexing);
+            Assert.Equal("Auto/Users/BySearch(FirstName)", definition.Name);
+
+
+            _sut = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE exact(FirstName = 'A')"));
+
+            _sut.ExtendMappingBasedOn(definition);
+
+            definition = _sut.CreateAutoIndexDefinition();
+
+            Assert.Equal(1, definition.Collections.Count);
+            Assert.Equal("Users", definition.Collections.Single());
+            Assert.True(definition.ContainsField("FirstName"));
+            Assert.Equal(AutoFieldIndexing.Default | AutoFieldIndexing.Search | AutoFieldIndexing.Exact, definition.MapFields["FirstName"].As<AutoIndexField>().Indexing);
+            Assert.Equal("Auto/Users/BySearch(FirstName)AndExact(FirstName)", definition.Name);
         }
 
         private void create_dynamic_mapping(string query)

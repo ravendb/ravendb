@@ -10,6 +10,7 @@ using Voron.Impl;
 using Voron.Global;
 using Sparrow;
 using Sparrow.LowMemory;
+using Sparrow.Threading;
 using Xunit;
 
 namespace SlowTests.Voron
@@ -20,7 +21,7 @@ namespace SlowTests.Voron
         protected StorageEnvironmentOptions _options;
         protected readonly string DataDir = GenerateTempDirectoryWithoutCollisions();
 
-        private ByteStringContext _allocator = new ByteStringContext(LowMemoryFlag.None);
+        private ByteStringContext _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
 
         public static string GenerateTempDirectoryWithoutCollisions()
         {

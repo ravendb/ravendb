@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries.MoreLikeThis;
-using Raven.Client.Documents.Transformers;
 using Raven.Client.Extensions;
 using Sparrow.Json;
 
@@ -39,36 +37,19 @@ namespace Raven.Client.Documents.Session.Operations
 
         public List<T> Complete<T>()
         {
-            foreach (BlittableJsonReaderObject include in _result.Includes)
-            {
-                if (include == null)
-                    continue;
+            _session.RegisterIncludes(_result.Includes);
 
-                var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(include);
-                _session.IncludedDocumentsById[newDocumentInfo.Id] = newDocumentInfo;
+            var list = new List<T>();
+            foreach (BlittableJsonReaderObject document in _result.Results)
+            {
+                var metadata = document.GetMetadata();
+
+                metadata.TryGetId(out var id);
+
+                list.Add(QueryOperation.Deserialize<T>(id, document, metadata, projectionFields: null, disableEntitiesTracking: false, session: _session));
             }
 
-            var usedTransformer = string.IsNullOrEmpty(_query.Transformer) == false;
-            List<T> list;
-            if (usedTransformer)
-            {
-                list = TransformerHelper.ParseResultsForQueryOperation<T>(_session, _result).ToList();
-            }
-            else
-            {
-                list = new List<T>();
-                foreach (BlittableJsonReaderObject document in _result.Results)
-                {
-                    var metadata = document.GetMetadata();
-
-                    string id;
-                    metadata.TryGetId(out id);
-
-                    list.Add(QueryOperation.Deserialize<T>(id, document, metadata, projectionFields: null, disableEntitiesTracking: false, session: _session));
-                }
-            }
-
-            _session.RegisterMissingIncludes(_result.Results, _query.Includes);
+            _session.RegisterMissingIncludes(_result.Results, _result.Includes, _query.Includes);
 
             return list;
         }

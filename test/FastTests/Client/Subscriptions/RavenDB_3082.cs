@@ -51,13 +51,8 @@ namespace FastTests.Client.Subscriptions
                     await session.SaveChangesAsync();
                 }
 
-                var subscriptionCreationParams = new SubscriptionCreationOptions<PersonWithAddress>()
-                {
-                    Criteria = new SubscriptionCriteria<PersonWithAddress>(p => p.Name == "James" && p.Address.ZipCode != 54321)
-                };
-
-
-                var id = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
+                var id = await store.Subscriptions.CreateAsync<PersonWithAddress>(
+                    p => p.Name == "James" && p.Address.ZipCode != 54321);
 
                 using (
                     var subscription =
@@ -76,7 +71,7 @@ namespace FastTests.Client.Subscriptions
                     PersonWithAddress userToTake;
                     for (var i = 0; i < 5; i++)
                     {
-                        Assert.True(users.TryTake(out userToTake, 5000));
+                        Assert.True(users.TryTake(out userToTake, 500000));
                         Assert.Equal("James", userToTake.Name);
                         Assert.Equal(12345, userToTake.Address.ZipCode);
                     }

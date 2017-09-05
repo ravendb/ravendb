@@ -9,7 +9,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
-using Raven.Client.Documents.Transformers;
 using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Session.Loaders
@@ -135,32 +134,6 @@ namespace Raven.Client.Documents.Session.Loaders
         public TResult Load<TResult>(string id)
         {
             return Load<TResult>(new[] { id }).Values.FirstOrDefault();
-        }
-
-        public TResult Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure = null)
-            where TTransformer : AbstractTransformerCreationTask, new()
-        {
-            var transformer = new TTransformer().TransformerName;
-            var configuration = new LoadConfiguration();
-            configure?.Invoke(configuration);
-
-            var result = _session.LoadInternal<TResult>(new[] { id }, _includes.ToArray(), transformer, configuration.TransformerParameters);
-            if (result.Count == 0)
-                return default(TResult);
-
-            Debug.Assert(result.Count == 1);
-
-            return result[id];
-        }
-
-        public Dictionary<string, TResult> Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null)
-            where TTransformer : AbstractTransformerCreationTask, new()
-        {
-            var transformer = new TTransformer().TransformerName;
-            var configuration = new LoadConfiguration();
-            configure?.Invoke(configuration);
-
-            return _session.LoadInternal<TResult>(ids.ToArray(), _includes.ToArray(), transformer, configuration.TransformerParameters);
         }
     }
 }

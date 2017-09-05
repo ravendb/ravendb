@@ -30,7 +30,6 @@ namespace SlowTests.Bugs.Iulian
 
                 using (var s = store.OpenSession())
                 {
-                    store.Conventions.AllowQueriesOnId = true;
                     var loaded = s.Query<Event>().Single(e => e.Id == id);
 
                     Assert.NotNull(loaded);

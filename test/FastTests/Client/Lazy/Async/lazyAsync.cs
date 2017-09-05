@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Transformers;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -131,7 +130,6 @@ namespace FastTests.Client.Lazy.Async
         public async Task LazyLoadById()
         {
             var store = GetDocumentStore();
-            new ContactTransformer().Execute(store);
             new Contact_ByName().Execute(store);
 
             using (var session = store.OpenSession())
@@ -163,11 +161,25 @@ namespace FastTests.Client.Lazy.Async
                 session.Advanced.GetMetadataFor(contact)["Val"] = "hello";
                 session.SaveChanges();
             }
-
+            WaitForIndexing(store);
             using (var session = store.OpenAsyncSession())
             {
-                var contactViewModel = session.Advanced.Lazily.LoadAsync<ContactTransformer, ContactDto>("contacts/1");
-                var contactDto = await contactViewModel.Value;
+                var contactViewModel =
+                    session.Advanced.AsyncDocumentQuery<ContactDto>()
+                        .RawQuery(@"
+from Contacts as contact
+where id(contact) = $id
+load contact.DetailIds as details[]
+select {
+    ContactId: id(contact),
+    ContactName: contact.Name,
+    ContactDetails: details	
+}
+")
+                        .AddParameter("id", "contacts/1")
+                        .LazilyAsync();
+
+                var contactDto = (await contactViewModel.Value).First();
                 foreach (var detail in contactDto.ContactDetails)
                 {
                     Assert.NotNull(detail.Id);
@@ -183,19 +195,6 @@ namespace FastTests.Client.Lazy.Async
             public string MetaVal { get; set; }
         }
 
-        public class ContactTransformer : AbstractTransformerCreationTask<Contact>
-        {
-            public ContactTransformer()
-            {
-                TransformResults = contacts => from c in contacts
-                                               select new
-                                               {
-                                                   ContactId = c.Id,
-                                                   ContactName = c.Name,
-                                                   ContactDetails = LoadDocument<Detail>(c.DetailIds)
-                                               };
-            }
-        }
 
         public class Contact_ByName : AbstractIndexCreationTask<Contact>
         {
@@ -203,12 +202,16 @@ namespace FastTests.Client.Lazy.Async
             {
                 Map = contacts => from c in contacts select new { c.Name };
 
-                Index(x => x.Name, FieldIndexing.Analyzed);
+                Index(x => x.Name, FieldIndexing.Search);
             }
         }
 
         public class Detail
         {
+            public Detail()
+            {
+                
+            }
             public string Id { get; set; }
             public string Name { get; set; }
         }
@@ -230,30 +233,6 @@ namespace FastTests.Client.Lazy.Async
         {
             using (var store = GetDocumentStore())
             {
-                store.ExecuteTransformer(new ItemsTransformer());
-
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new Item { Position = 1 }, "items/1");
-                    session.Store(new Item { Position = 2 }, "items/2");
-                    session.SaveChanges();
-                }
-
-                using (var session = store.OpenAsyncSession())
-                {
-                    var items = await session.LoadAsync<ItemsTransformer, Item>(new[] { "items/1", "items/2" });
-                    Assert.Equal(1 * 3, items["items/1"].Position);
-                    Assert.Equal(2 * 3, items["items/2"].Position);
-                }
-            }
-        }
-
-        [Fact]
-        public async Task WithTransformer2()
-        {
-            using (var store = GetDocumentStore())
-            {
-                store.ExecuteTransformer(new ItemsTransformer());
 
                 using (var session = store.OpenSession())
                 {
@@ -264,9 +243,19 @@ namespace FastTests.Client.Lazy.Async
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var items = await session.LoadAsync<Item>(new[] { "items/1", "items/2" }, typeof(ItemsTransformer));
-                    Assert.Equal(1 * 3, items["items/1"].Position);
-                    Assert.Equal(2 * 3, items["items/2"].Position);
+                    var items = await session.Advanced.AsyncDocumentQuery<Item>()
+                        .RawQuery(@"
+declare function triple(pos) { return pos *3; }
+from Items
+where id() in ($ids)
+select triple(Position) as Position
+")
+                        .AddParameter("ids", new[] {"items/1", "items/2"})
+                        .ToListAsync();
+
+
+                    Assert.Equal(1 * 3, items[0].Position);
+                    Assert.Equal(2 * 3, items[1].Position);
                 }
             }
         }
@@ -275,15 +264,6 @@ namespace FastTests.Client.Lazy.Async
         {
             public int Position { get; set; }
         }
-
-        private class ItemsTransformer : AbstractTransformerCreationTask<Item>
-        {
-            public ItemsTransformer()
-            {
-                TransformResults = docs => docs.Select(doc => new { Position = doc.Position * 3 });
-            }
-        }
-
 
     }
 }

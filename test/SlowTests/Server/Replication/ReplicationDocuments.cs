@@ -17,7 +17,7 @@ using Raven.Server.Documents.Replication;
 
 namespace SlowTests.Server.Replication
 {
-    public class DocumentReplication : ReplicationTestsBase
+    public class DocumentReplication : ReplicationTestBase
     {
         [Fact]
         public async Task CanReplicateDocument()

@@ -2,6 +2,7 @@
 {
     public enum MethodType
     {
+        Id,
         Search,
         Boost,
         StartsWith,
@@ -11,6 +12,14 @@
         Exact,
         Count,
         Sum,
-        Intersect
+        Intersect,
+
+        Circle,
+        Wkt,
+        Point,
+        Within,
+        Contains,
+        Disjoint,
+        Intersects
     }
 }

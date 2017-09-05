@@ -14,7 +14,6 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Xml.Linq;
-using Jint;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Net.Http.Headers;
 using Raven.Client.Documents.Operations;
@@ -22,6 +21,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Operations;
+using Raven.Server.Documents.Patch;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -57,14 +57,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
                 try
                 {
-                    var jint = new Engine(cfg =>
-                    {
-                        cfg.AllowDebuggerStatement(false);
-                        cfg.MaxStatements(options.MaxStepsForTransformScript);
-                        cfg.NullPropagation();
-                    });
-
-                    jint.Execute(string.Format(@"
+                    var scriptRunner = new ScriptRunner(Database,false);
+                    scriptRunner.TryCompileScript(string.Format(@"
                     function Transform(docInner){{
                         return ({0}).apply(this, [docInner]);
                     }};", options.TransformScript));
@@ -123,7 +117,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             {
                 var source = new DatabaseSource(Database, 0);
                 var destination = new StreamDestination(ResponseBodyStream(), context, source);
-                var smuggler = new DatabaseSmuggler(source, destination, Database.Time, options, onProgress: onProgress, token: token.Token);
+                var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options, onProgress: onProgress, token: token.Token);
                 return smuggler.Execute();
             }
         }
@@ -195,7 +189,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                             var source = new StreamSource(stream, context);
                             var destination = new DatabaseDestination(Database);
 
-                            var smuggler = new DatabaseSmuggler(source, destination, Database.Time);
+                            var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time);
 
                             var result = smuggler.Execute();
                             results.Enqueue(result);
@@ -221,9 +215,6 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
                 finalResult.Identities.ReadCount += importResult.Identities.ReadCount;
                 finalResult.Identities.ErroredCount += importResult.Identities.ErroredCount;
-
-                finalResult.Transformers.ReadCount += importResult.Transformers.ReadCount;
-                finalResult.Transformers.ErroredCount += importResult.Transformers.ErroredCount;
 
                 finalResult.Indexes.ReadCount += importResult.Indexes.ReadCount;
                 finalResult.Indexes.ErroredCount += importResult.Indexes.ErroredCount;
@@ -277,7 +268,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     var source = new StreamSource(stream, context);
                     var destination = new DatabaseDestination(Database);
 
-                    var smuggler = new DatabaseSmuggler(source, destination, Database.Time, options, token: token.Token);
+                    var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options, token: token.Token);
 
                     var result = smuggler.Execute();
 
@@ -383,7 +374,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             {
                 var source = new StreamSource(stream, context);
                 var destination = new DatabaseDestination(Database);
-                var smuggler = new DatabaseSmuggler(source, destination, Database.Time, options, result, onProgress, token.Token);
+                var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options, result, onProgress, token.Token);
 
                 smuggler.Execute();
             }

@@ -19,7 +19,7 @@ namespace RachisTests
             public string Name { get; set; }
         }
 
-        [Fact]
+        [NightlyBuildFact]
         public async Task RequestExecutor_failover_with_only_one_database_should_properly_fail()
         {
             var leader = await CreateRaftClusterAndGetLeader(1);
@@ -28,7 +28,7 @@ namespace RachisTests
             using (var store = new DocumentStore
             {
                 Database = databaseName,
-                Urls = leader.WebUrls
+                Urls = new[] {leader.WebUrl}
             }.Initialize())
             {
                 var doc = new DatabaseRecord(databaseName);
@@ -53,11 +53,15 @@ namespace RachisTests
             }
         }
 
-        [Fact]
+        [NightlyBuildFact]
         public async Task RequestExecutor_failover_to_database_topology_should_work()
         {
             var leader = await CreateRaftClusterAndGetLeader(3);
-            using (var store = GetDocumentStore(defaultServer: leader, replicationFactor: 2))
+            using (var store = GetDocumentStore(new Options
+            {
+                Server = leader,
+                ReplicationFactor = 2
+            }))
             {
                 using (var session = (DocumentSession)store.OpenSession())
                 {

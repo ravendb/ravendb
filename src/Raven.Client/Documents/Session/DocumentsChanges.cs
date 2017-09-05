@@ -41,6 +41,7 @@ namespace Raven.Client.Documents.Session
             FieldChanged,
             NewField,
             RemovedField,
+            ArrayValueChanged,
             ArrayValueAdded,
             ArrayValueRemoved,
             FieldTypeChanged,

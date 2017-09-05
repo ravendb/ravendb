@@ -315,7 +315,6 @@ a {
         align-self: flex-end;
     }
 
-
     hr.hr-vertical {
         @media (min-width: @screen-sm) {
             width: 0px;
@@ -359,6 +358,10 @@ a {
             }
         }
     }
+}
+
+.fixed {
+    position: fixed;
 }
 
 .text-elipsis {
@@ -750,6 +753,22 @@ input[type=file] + .form-control {
 
 .margin-none {
     margin: 0;
+}
+
+.margin-left {
+    margin-left: @grid-gutter-width / 2;
+
+    &.margin-left-sm {
+        margin-left: @grid-gutter-width / 4;
+    }
+}
+
+.margin-right {
+    margin-right: @grid-gutter-width / 2;
+
+    &.margin-right-sm {
+        margin-right: @grid-gutter-width / 4;
+    }
 }
 
 .margin-bottom {
@@ -1313,6 +1332,9 @@ pre {
         background-color: @gray-dark;
     }
 
+    .actions {
+        flex-shrink:0;
+    }
 
 
     .panel-name {
@@ -1684,14 +1706,12 @@ ul.properties {
 @import "pages/documents-edit";
 @import "pages/documents";
 @import "pages/indexes.less";
-@import "pages/transformers.less";
 @import "pages/databases.less";
 @import "pages/indexes-terms.less";
 @import "pages/storage-report.less";
 @import "pages/sample-data.less";
 @import "pages/about.less";
 @import "pages/edit-index.less";
-@import "pages/edit-transformer.less";
 @import "pages/query.less";
 @import "pages/patch.less";
 @import "pages/cluster.less";
@@ -1709,3 +1729,4 @@ ul.properties {
 @import "pages/indexes-maintenance.less";
 @import "pages/database-group-graph.less";
 @import "pages/edit-backup.less";
+@import "pages/certificates.less";

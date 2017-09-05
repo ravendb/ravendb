@@ -55,20 +55,24 @@ namespace Raven.Client.Documents.Indexes
             return result;
         }
 
-        public class AutoIndexFieldOptions : IndexFieldOptions
+        public class AutoIndexFieldOptions
         {
-            public AggregationOperation MapReduceOperation { get; set; }
+            public FieldStorage? Storage { get; set; }
+
+            public AutoFieldIndexing? Indexing { get; set; }
+
+            public AggregationOperation Aggregation { get; set; }
 
             protected bool Equals(AutoIndexFieldOptions other)
             {
-                return base.Equals(other) && MapReduceOperation == other.MapReduceOperation;
+                return Storage == other.Storage && Indexing == other.Indexing && Aggregation == other.Aggregation;
             }
 
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
-                if (obj.GetType() != GetType()) return false;
+                if (obj.GetType() != this.GetType()) return false;
                 return Equals((AutoIndexFieldOptions)obj);
             }
 
@@ -76,7 +80,10 @@ namespace Raven.Client.Documents.Indexes
             {
                 unchecked
                 {
-                    return (base.GetHashCode() * 397) ^ (int)MapReduceOperation;
+                    var hashCode = Storage.GetHashCode();
+                    hashCode = (hashCode * 397) ^ Indexing.GetHashCode();
+                    hashCode = (hashCode * 397) ^ (int)Aggregation;
+                    return hashCode;
                 }
             }
         }

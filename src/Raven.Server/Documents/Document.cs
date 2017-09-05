@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Globalization;
 using Raven.Client;
-using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -38,7 +37,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void EnsureMetadata(DocumentsOperationContext context = null)
+        public void EnsureMetadata()
         {
             if (_metadataEnsured)
                 return;
@@ -89,11 +88,17 @@ namespace Raven.Server.Documents
         public bool Expired(DateTime currentDate)
         {
             if (Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false || 
-                metadata.TryGet(Constants.Documents.Expiration.ExpirationDate, out string expirationDate) == false)
+                metadata.TryGet(Constants.Documents.Metadata.Expires, out string expirationDate) == false)
                 return false;
 
             var expirationDateTime = DateTime.ParseExact(expirationDate, new[] {"o", "r"}, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
             return expirationDateTime < currentDate;
+        }
+
+        public void ResetModifications()
+        {
+            _metadataEnsured = false;
+            Data.Modifications = null;
         }
     }
 }

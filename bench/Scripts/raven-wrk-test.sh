@@ -4,7 +4,7 @@ PORT="18123"
 
 LOGNAME="raven-wrk-test"
 LOG="/tmp/${LOGNAME}.log"
-RAVENDB_PATH="../../artifacts/ubuntu.16.04-x64/package/Server/Raven.Server"
+RAVENDB_PATH="../../artifacts/ubuntu.16.04-x64/package/RavenDB/Server/Raven.Server"
 # Warn: DATA_DIR is being removed rm -rf in this script
 DATA_DIR="$(pwd)/TestDataDir"
 RAVEN_CONF="--PublicServerUrl=http://${IP}:${PORT} --ServerUrl=http://0.0.0.0:${PORT} --DataDir=${DATA_DIR} --Security.UnsecuredAccessAllowed=PublicNetwork"

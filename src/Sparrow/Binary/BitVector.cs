@@ -512,7 +512,7 @@ namespace Sparrow.Binary
             return new BitVector(length * BitsPerWord / 2 + prefixAdjustment * 2 * BitsPerByte, newValue);
         }
 
-        public unsafe static BitVector Of(bool prefixFree, ushort* values, int length)
+        public static unsafe BitVector Of(bool prefixFree, ushort* values, int length)
         {
             int prefixAdjustment = (prefixFree ? 1 : 0);
 
@@ -542,7 +542,7 @@ namespace Sparrow.Binary
             return new BitVector(valueLength * BitsPerWord / 4, newValue);
         }
 
-        public unsafe static BitVector Of(bool prefixFree, byte* values, int length)
+        public static unsafe BitVector Of(bool prefixFree, byte* values, int length)
         {
             int prefixAdjustment = (prefixFree ? 2 : 0);          
 
@@ -611,7 +611,9 @@ namespace Sparrow.Binary
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ulong BitInWord(int idx)
         {
-            return 0x8000000000000000UL >> (idx % (int)BitsPerWord);
+            // PERF: Will do the same thing using 22 bytes instead of 43 bytes.
+            //       For reference this is equivalent to [ 0x8000000000000000UL >> (idx % (int)BitsPerWord) ]
+            return 0x8000000000000000UL >> (idx & (BitsPerWord - 1));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

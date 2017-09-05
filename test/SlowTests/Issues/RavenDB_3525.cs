@@ -6,6 +6,7 @@
 
 using System.Linq;
 using FastTests;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
 
@@ -13,7 +14,7 @@ namespace SlowTests.Issues
 {
     public class RavenDB_3525 : RavenTestBase
     {
-        [Fact(Skip = "RavenDB-5988")]
+        [Fact]
         public void WithinRadiusOf_NamedSpatialField()
         {
             using (var store = GetDocumentStore())
@@ -56,7 +57,7 @@ namespace SlowTests.Issues
                     Assert.Single(linqQueryWithSpatial); // for some reason this doesn't work
 
                     var linqQueryWithCustomize = session.Query<ClassWithLocation, NamedSpatialFieldIndex>()
-                        .Customize(x => x.WithinRadiusOf("Location", 1.0, 10.0, 11.0))
+                        .Spatial(x => x.Location, x => x.WithinRadius(1.0, 10.0, 11.0))
                         .Customize(x => x.WaitForNonStaleResults())
                         .ToList();
 
@@ -98,7 +99,7 @@ namespace SlowTests.Issues
                               select new ClassWithLocationReduceResult()
                               {
                                   Id = d.Id,
-                                  Location = (Location)SpatialGenerate("Location", d.Location.Latitude, d.Location.Longitutde)
+                                  Location = (Location)CreateSpatialField(d.Location.Latitude, d.Location.Longitutde)
                               };
             }
         }

@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using Microsoft.Win32.SafeHandles;
 using Sparrow;
+using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron.Exceptions;
 using Voron.Global;
@@ -27,7 +28,7 @@ namespace Voron.Platform.Win32
         private SafeFileHandle _handle;
         private SafeFileHandle _readHandle;
         private NativeOverlapped* _nativeOverlapped;
-        private volatile bool _disposed;
+        private SingleUseFlag _disposed = new SingleUseFlag();
         private int _refs;
 
         public void AddRef()
@@ -94,7 +95,7 @@ namespace Voron.Platform.Win32
 
         public void Write(long posBy4Kb, byte* p, int numberOf4Kb)
         {
-            if (Disposed)
+            if (_disposed)
                 throw new ObjectDisposedException("Win32JournalWriter");
 
             const int maxNumberInSingleWrite = (int.MaxValue / (4 * Constants.Size.Kilobyte));
@@ -198,10 +199,8 @@ namespace Voron.Platform.Win32
 
         public void Dispose()
         {
-            if (_disposed)
+            if (!_disposed.Raise())
                 return;
-
-            _disposed = true;
 
             GC.SuppressFinalize(this);
             _options.IoMetrics.FileClosed(_filename.FullPath);
@@ -228,7 +227,7 @@ namespace Voron.Platform.Win32
             Win32NativeFileMethods.SetFileLength(_handle, size);
         }
 
-        public bool Disposed => _disposed;
+        public bool Disposed => _disposed.IsRaised();
 
 
         ~Win32FileJournalWriter()

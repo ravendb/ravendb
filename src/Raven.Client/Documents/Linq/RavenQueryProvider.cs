@@ -12,6 +12,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Queries.Spatial;
 using Raven.Client.Documents.Session;
 using Raven.Client.Extensions;
 using Sparrow.Extensions;
@@ -310,8 +311,6 @@ namespace Raven.Client.Documents.Linq
         {
             var processor = GetQueryProviderProcessor<T>();
             var result = (IDocumentQuery<TResult>)processor.GetDocumentQueryFor(expression);
-
-            result.SetTransformer(ResultTransformer);
 
             return result;
         }
