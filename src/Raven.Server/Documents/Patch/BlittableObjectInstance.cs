@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Patch
                 return _property;
             }
 
-            public BlittableObjectProperty(BlittableObjectInstance parent,string property)
+            public BlittableObjectProperty(BlittableObjectInstance parent, string property)
                 : base(null, true, null, null)
             {
                 _parent = parent;
@@ -119,11 +119,12 @@ namespace Raven.Server.Documents.Patch
                 var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
 
                 _parent.Blittable.GetPropertyByIndex(propertyIndex, ref propertyDetails, true);
-                
+
                 return TranslateToJs(_parent, key, propertyDetails.Token, propertyDetails.Value);
             }
 
-            private  JsValue TranslateToJs(BlittableObjectInstance owner, string key, BlittableJsonToken type, object value)            {
+            private JsValue TranslateToJs(BlittableObjectInstance owner, string key, BlittableJsonToken type, object value)
+            {
                 switch (type & BlittableJsonReaderBase.TypesMask)
                 {
                     case BlittableJsonToken.Null:
@@ -164,9 +165,9 @@ namespace Raven.Server.Documents.Patch
         }
 
         public BlittableObjectInstance(Engine engine,
-            BlittableObjectInstance parent, 
-            BlittableJsonReaderObject blittable, 
-            string docId, 
+            BlittableObjectInstance parent,
+            BlittableJsonReaderObject blittable,
+            string docId,
             DateTime? lastModified) : base(engine)
         {
             _parent = parent;
@@ -199,13 +200,13 @@ namespace Raven.Server.Documents.Patch
             {
                 yield return new KeyValuePair<string, PropertyDescriptor>(value.Key, value.Value);
             }
-            if(Blittable == null)
+            if (Blittable == null)
                 yield break;
             foreach (var prop in Blittable.GetPropertyNames())
             {
-                if(Deletes?.Contains(prop) == true)
+                if (Deletes?.Contains(prop) == true)
                     continue;
-                if(OwnValues.ContainsKey(prop))
+                if (OwnValues.ContainsKey(prop))
                     continue;
                 yield return new KeyValuePair<string, PropertyDescriptor>(
                     prop,
