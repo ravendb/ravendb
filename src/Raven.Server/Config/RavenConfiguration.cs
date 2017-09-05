@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
@@ -41,8 +40,6 @@ namespace Raven.Server.Config
         public IndexingConfiguration Indexing { get; set; }
 
         public MonitoringConfiguration Monitoring { get; }
-
-        public WebSocketsConfiguration WebSockets { get; set; }
 
         public QueryConfiguration Queries { get; }
 
@@ -91,7 +88,6 @@ namespace Raven.Server.Config
             Security = new SecurityConfiguration();
             PerformanceHints = new PerformanceHintsConfiguration();
             Indexing = new IndexingConfiguration(this);
-            WebSockets = new WebSocketsConfiguration();
             Monitoring = new MonitoringConfiguration();
             Queries = new QueryConfiguration();
             Patching = new PatchingConfiguration();
