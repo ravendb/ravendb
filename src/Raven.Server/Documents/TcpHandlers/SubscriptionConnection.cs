@@ -729,11 +729,12 @@ namespace Raven.Server.Documents.TcpHandlers
                 writer.Write(QueryExpression.Extract(query, q.From.Alias));
                 writer.WriteLine(" = this;");
             }
+            else if(q.Select != null || q.SelectFunctionBody != null || q.Load != null)
+            {
+                throw new InvalidOperationException("Cannot specify a select or load clauses without an alias on the query");
+            }
             if (q.Load != null)
             {
-                if (q.From.Alias == null)
-                    throw new InvalidOperationException("Cannot specify a load clause without an alias on the from");
-
                 var fromAlias = QueryExpression.Extract(query, q.From.Alias);
                 foreach (var tuple in q.Load)
                 {
