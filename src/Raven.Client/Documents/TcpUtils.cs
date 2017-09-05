@@ -65,7 +65,7 @@ namespace Raven.Client.Documents
         public static Task ConnectAsync(TcpClient tcpClient, string url)
         {
             var uri = new Uri(url);
-            if (uri.Host[0] == '[') // IPv6 format, as [::1]
+            if (uri.HostNameType == UriHostNameType.IPv6) 
             {
                 var ipAddress = IPAddress.Parse(uri.Host);
                 return tcpClient.ConnectAsync(ipAddress, uri.Port);
