@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Raven.Server.ServerWide.Context;
@@ -237,7 +238,7 @@ namespace Raven.Server.Documents.Indexes
             private readonly ulong _m;
             private readonly int _ptrSize;
             private readonly uint _partitionCount;
-            private readonly FastDictionary<ulong, Partition, NumericEqualityComparer> _partitions = new FastDictionary<ulong, Partition, NumericEqualityComparer>(default(NumericEqualityComparer));
+            private readonly Dictionary<ulong, Partition> _partitions = new Dictionary<ulong, Partition>(default(NumericEqualityComparer));
             private readonly ByteStringContext _allocator;
             private readonly long _initialCount;
 

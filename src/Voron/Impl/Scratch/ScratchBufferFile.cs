@@ -27,9 +27,9 @@ namespace Voron.Impl.Scratch
         private readonly AbstractPager _scratchPager;
         private readonly int _scratchNumber;
 
-        private readonly FastDictionary<long, LinkedList<PendingPage>, NumericEqualityComparer> _freePagesBySize = new FastDictionary<long, LinkedList<PendingPage>, NumericEqualityComparer>(NumericEqualityComparer.Instance);
-        private readonly FastDictionary<long, LinkedList<long>, NumericEqualityComparer> _freePagesBySizeAvailableImmediately = new FastDictionary<long, LinkedList<long>, NumericEqualityComparer>(NumericEqualityComparer.Instance);
-        private readonly FastDictionary<long, PageFromScratchBuffer, NumericEqualityComparer> _allocatedPages = new FastDictionary<long, PageFromScratchBuffer, NumericEqualityComparer>(NumericEqualityComparer.Instance);
+        private readonly Dictionary<long, LinkedList<PendingPage>> _freePagesBySize = new Dictionary<long, LinkedList<PendingPage>>(NumericEqualityComparer.Instance);
+        private readonly Dictionary<long, LinkedList<long>> _freePagesBySizeAvailableImmediately = new Dictionary<long, LinkedList<long>>(NumericEqualityComparer.Instance);
+        private readonly Dictionary<long, PageFromScratchBuffer> _allocatedPages = new Dictionary<long, PageFromScratchBuffer>(NumericEqualityComparer.Instance);
         
         private long _allocatedPagesCount;
         private long _lastUsedPage;
