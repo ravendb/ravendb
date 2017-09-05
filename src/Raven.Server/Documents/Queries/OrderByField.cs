@@ -1,4 +1,5 @@
-﻿using Raven.Server.Documents.Queries.Parser;
+﻿using System.Globalization;
+using Raven.Server.Documents.Queries.Parser;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries
@@ -40,7 +41,7 @@ namespace Raven.Server.Documents.Queries
             {
                 double value;
                 if (Type != ValueTokenType.Parameter)
-                    value = double.Parse(NameOrValue);
+                    value = double.Parse(NameOrValue, CultureInfo.InvariantCulture);
                 else
                     parameters.TryGet(NameOrValue, out value);
 

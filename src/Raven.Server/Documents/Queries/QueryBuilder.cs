@@ -675,7 +675,7 @@ namespace Raven.Server.Documents.Queries
                     yield return (valueAsLong, ValueTokenType.Long);
                     yield break;
                 case ValueTokenType.Double:
-                    var valueAsDouble = double.Parse(QueryExpression.Extract(query.QueryText, value));
+                    var valueAsDouble = double.Parse(QueryExpression.Extract(query.QueryText, value), CultureInfo.InvariantCulture);
                     yield return (valueAsDouble, ValueTokenType.Double);
                     yield break;
                 case ValueTokenType.True:
@@ -718,7 +718,7 @@ namespace Raven.Server.Documents.Queries
                     var valueAsLong = long.Parse(QueryExpression.Extract(query.QueryText, value));
                     return (valueAsLong, ValueTokenType.Long);
                 case ValueTokenType.Double:
-                    var valueAsDouble = double.Parse(QueryExpression.Extract(query.QueryText, value));
+                    var valueAsDouble = double.Parse(QueryExpression.Extract(query.QueryText, value), CultureInfo.InvariantCulture);
                     return (valueAsDouble, ValueTokenType.Double);
                 case ValueTokenType.True:
                     return (LuceneDocumentConverterBase.TrueString, ValueTokenType.String);
