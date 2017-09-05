@@ -1,0 +1,32 @@
+<div class="modal-dialog" role="document">
+
+    <div class="modal-content" tabindex="-1">
+        <div class="modal-header">
+            <div class="flex-horizontal">
+                <div class="flex-grow">
+                    <h3>Please define encryption key for node: <span data-bind="text: nodeTag"></span></h3>
+                </div>
+                <div>
+                    <button type="button" class="close" data-bind="click: $root.close" aria-hidden="true">
+                        <i class="icon-cancel"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="modal-body">
+            <div data-bind="with: encryptionSection">
+                <div data-bind="compose: 'resources/setupEncryptionKey.html'"></div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <div class="text-right">
+                <button type="button" class=" btn btn-default" data-bind="click: close"><i class="icon-cancel"></i><span>Cancel</span></button>
+                <button data-bind="click: addNode" type="button" class="btn btn-primary">
+                    <i class="icon-plus"></i><span>Add node</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+   
+</div>
