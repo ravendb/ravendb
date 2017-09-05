@@ -31,9 +31,8 @@ namespace Raven.Server.Web.System
                 {
                     throw new TimeoutException($"Waited for {ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan} to receive tcp info from {url} and got no response");
                 }
-                using (var tcpClient = new TcpClient())
+                using (var tcpClient = TcpUtils.NewTcpClient(ServerStore.Engine.TcpConnectionTimeout))
                 {
-                    TcpUtils.SetTimeouts(tcpClient, ServerStore.Engine.TcpConnectionTimeout);
                     result = await ConnectToClientNodeAsync(connectionInfo.Result, tcpClient, LoggingSource.Instance.GetLogger("testing-connection", "testing-connection"));
                 }
             }
