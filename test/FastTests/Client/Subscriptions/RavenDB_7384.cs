@@ -78,7 +78,7 @@ namespace FastTests.Client.Subscriptions
                 var subscriptionName = store.Subscriptions.Create<User>(options: new SubscriptionCreationOptions()
                 {
                     Name = "Subs1",
-                    Query = "from Users select {Name:'David'}"
+                    Query = "from Users as u select {Name:'David'}"
                 });
 
                 var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions("Subs1"));
@@ -119,7 +119,7 @@ namespace FastTests.Client.Subscriptions
                 {
                     Name = "Subs1",
                     ChangeVector = Raven.Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange.ToString(),
-                    Query = "from Users select {Name:'Jorgen'}"
+                    Query = "from Users as u select {Name:'Jorgen'}"
 
                 }, subscriptionState.SubscriptionId);
 

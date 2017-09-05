@@ -103,7 +103,7 @@ namespace Sparrow.Json
             return tempBuffer;
         }
 
-        private unsafe int GetSizeOfEscapePositions()
+        private int GetSizeOfEscapePositions()
         {
             var escapeSequencePos = CompressedSize;
             var numberOfEscapeSequences = BlittableJsonReaderBase.ReadVariableSizeInt(Buffer, ref escapeSequencePos);

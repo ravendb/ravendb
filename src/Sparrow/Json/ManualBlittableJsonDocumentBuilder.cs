@@ -470,6 +470,7 @@ namespace Sparrow.Json
             var currentState = _continuationState.Pop();
             BlittableJsonToken stringToken;
             
+
             var valuePos = _writer.WriteValue(value, out stringToken,UsageMode.None,null);
             _writeToken = new WriteToken //todo: figure out if we really need those WriteTokens
             {
@@ -513,8 +514,7 @@ namespace Sparrow.Json
         public unsafe void WriteEmbeddedBlittableDocument(byte* ptr, int size)
         {
             var currentState = _continuationState.Pop();
-            BlittableJsonToken token;
-            var valuePos = _writer.WriteValue(ptr, size, out token, UsageMode.None, null);
+            var valuePos = _writer.WriteValue(ptr, size, out _, UsageMode.None, null);
             _writeToken = new WriteToken
             {
                 ValuePos = valuePos,
