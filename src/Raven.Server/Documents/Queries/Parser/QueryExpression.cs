@@ -113,7 +113,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 case OperatorType.LessThanEqual:
                 case OperatorType.GreaterThanEqual:
                     var fieldName = Extract(query, Field.TokenStart, Field.TokenLength, Field.EscapeChars);
-                    WriteEqual(query, writer, fieldName, alias, Type, Value, isNestedObjectField: false);
+                    WriteSimpleOperatorJavaScript(query, writer, fieldName, alias, Type, Value);
                     break;
                 case OperatorType.Between:
                     throw new InvalidOperationException("Cannot translate between operation to JavaScript");
@@ -150,11 +150,10 @@ namespace Raven.Server.Documents.Queries.Parser
                     break;
                 case OperatorType.Method:
                     var method = Extract(query, Field.TokenStart, Field.TokenLength, Field.EscapeChars);
-                    var methodType = QueryMethod.GetMethodType(method);
-                    if (methodType == MethodType.Id)
+                    var methodType = QueryMethod.GetMethodType(method, throwIfNoMatch: false);
+                    if (methodType == MethodType.Id && Arguments.Count == 1 && Arguments[0] is QueryExpression idExpression)
                     {
-                        var qe = (QueryExpression)Arguments[0];
-                        WriteEqual(query, writer, $"id({alias})", null, qe.Type, qe.Value, isNestedObjectField: true);
+                        WriteSimpleOperatorJavaScript(query, writer, $"id({alias})", null, idExpression.Type, idExpression.Value);
                         break;
                     }
 
@@ -187,14 +186,12 @@ namespace Raven.Server.Documents.Queries.Parser
             }
         }
 
-        private static void WriteEqual(string query, TextWriter writer, string fieldName, string alias, OperatorType type, ValueToken value, bool isNestedObjectField)
+        private static void WriteSimpleOperatorJavaScript(string query, TextWriter writer, string fieldName, string alias, OperatorType type, ValueToken value)
         {
             if (alias != null)
             {
                 writer.Write(alias);
-
-                if (isNestedObjectField == false)
-                    writer.Write(".");
+                writer.Write(".");
             }
             writer.Write(fieldName);
             switch (type)
