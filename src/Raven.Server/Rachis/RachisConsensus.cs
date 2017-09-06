@@ -135,6 +135,8 @@ namespace Raven.Server.Rachis
 
         public event EventHandler<StateTransition> StateChanged;
 
+        public event EventHandler LeaderElected;
+
         private string _tag;
         private string _clusterId;
 
@@ -540,13 +542,14 @@ namespace Raven.Server.Rachis
 
         public ConcurrentQueue<StateTransition> PrevStates { get; set; } = new ConcurrentQueue<StateTransition>();
 
-        public void TakeOffice()
+        public bool TakeOffice()
         {
             if (CurrentState != State.LeaderElect)
-                return;
+                return false;
 
             CurrentState = State.Leader;
             TaskExecutor.CompleteAndReplace(ref _stateChanged);
+            return true;
         }
 
         public void AppendStateDisposable(IDisposable parentState, IDisposable disposeOnStateChange)
@@ -583,6 +586,15 @@ namespace Raven.Server.Rachis
                 throw new TimeoutException($"Waited for {OperationTimeout} but the command was not applied in this time.");
 
             return await putTask;
+        }
+
+        public void Put(CommandBase cmd)
+        {
+            var leader = _currentLeader;
+            if (leader == null)
+                throw new NotLeadingException("Not a leader, cannot accept commands. " + _lastStateChangeReason);
+
+            leader.PutAsync(cmd);
         }
 
         public void SwitchToCandidateStateOnTimeout()
@@ -1467,6 +1479,11 @@ namespace Raven.Server.Rachis
                 state.Add(TagSlice, str);
             }
 
+        }
+
+        public void LeaderElectToLeaderChanged()
+        {
+            LeaderElected?.Invoke(null, null);
         }
     }
 

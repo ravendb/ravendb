@@ -1,0 +1,40 @@
+<div class="modal-dialog" id="destinationModal" role="document">
+    <form data-bind="submit: save" autocomplete="off">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><i class="icon-cancel"></i></button>
+                <h4 class="modal-title" id="myModalLabel">Re-assign Cores:</h4>
+            </div>
+            <div class="modal-body">
+                <div class="padding padding-sm text-center">
+                    <div class="row row-sm flex-row">
+                        <div class="col-sm-8 margin-bottom">
+                            <div class="row flex-row margin-bottom">
+                                <label class="control-label col-xs-12 col-sm-6 col-lg-5">Cores</label>
+                                <div class="col-xs-12 col-sm-6 col-lg-7">
+                                    <input autocomplete="off" type="text" class="form-control" data-bind="numericInput: assignedCores" id="assigned-cores" placeholder="Assigned cores for the new node">
+                                </div>
+                            </div>
+                            <div class="row flex-row margin-bottom">
+                                <label class="control-label col-xs-6 col-sm-12 col-lg-12">
+                                    Available cores according to the license:
+                                    <span data-bind="text: availableCores"></span>
+                                </label>
+                            </div>
+                            <div class="row flex-row margin-bottom" data-bind="if: numberOfCores() && numberOfCores() != -1">
+                                <label class="control-label col-xs-6 col-sm-11 col-lg-12">
+                                    Total cores on node:
+                                    <span data-bind="text: numberOfCores"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+            <div class="modal-footer">
+                <button type="submit" data-bind="css: { 'btn-spinner': spinners.save }, disable: spinners.save" class="btn btn-primary"><span>Save</span></button>
+            </div>
+        </div>
+    </form>
+</div>

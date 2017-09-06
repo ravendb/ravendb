@@ -6,7 +6,6 @@ import appUrl = require("common/appUrl");
 import generalUtils = require("common/generalUtils");
 import addClusterNodeModel = require("models/database/cluster/addClusterNodeModel");
 import testClusterNodeConnectionCommand = require("commands/database/cluster/testClusterNodeConnectionCommand");
-import license = require("models/auth/license");
 
 class addClusterNode extends viewModelBase {
 

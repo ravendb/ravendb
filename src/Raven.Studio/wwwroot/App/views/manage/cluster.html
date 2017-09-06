@@ -41,11 +41,18 @@
                                 <h5>ADDRESS</h5>
                                 <a target="_blank" data-bind="attr: { href: serverUrl }"><small data-bind="text: serverUrl"></small></a>
                             </div>
-                            <div data-bind="if: assignedCores">
-                                <span>Assigned Cores: </span> <span data-bind="text: assignedCores"></span>
-                            </div>
-                            <div data-bind="if: totalCores">
-                                <span>Total Cores: </span> <span data-bind="text: totalCores"></span>
+                            <div data-bind="if: utilizedCores">
+                                <span>Cores: </span>
+                                <strong data-bind="text: utilizedCores, css: cssCores"></strong><span data-bind="if: numberOfCores() && utilizedCores() != -1">
+                                    / <strong class="text-success" data-bind="text: numberOfCores"></strong>
+                                </span>
+                                <span data-bind="if: installedMemoryInGb">
+                                    , &nbsp;Memory:  
+                                    <span style="color: whitesmoke"><span data-bind="text: utilizedMemoryInGb"></span>GB</span>
+                                    <span data-bind="if: installedMemoryInGb() && installedMemoryInGb() != -1">
+                                        / <span style="color: whitesmoke"><span data-bind="text: installedMemoryInGb()"></span>GB</span>
+                                    </span>
+                                </span>
                             </div>
                         </div>
                         <div class="flex-separator"></div>
@@ -61,20 +68,25 @@
                                 </button>
 
                                 <div class="btn-group">
-                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" 
-                                        data-bind="enable: $root.topology().leader() === tag() || $root.topology().nodeTag() === tag()">
+                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
                                         <span>Operations</span>
                                         <span class="caret"></span>
                                         <span class="sr-only">Toggle Dropdown</span>
                                     </button>
                                     <ul class="dropdown-menu">
                                         <li>
+                                            <a href="#" data-bind="click: _.partial($parent.assignCores, $data)">
+                                                <i class="icon-waiting"></i>
+                                                <span>Re-assign cores</span>
+                                            </a>
+                                        </li>
+                                        <li>
                                             <a href="#" data-bind="click: _.partial($parent.stepDown, $data), visible: $root.topology().leader() === tag(), css: { 'btn-spinner': $root.spinners.stepdown }, disable: $root.spinners.stepdown">
                                                 <i class="icon-stepdown"></i> <span>Step down</span>
                                             </a>
                                         </li>
                                         <li>
-                                            <a href="#" data-bind="click: _.partial($parent.forceTimeout, $data), css: { 'btn-spinner': $root.spinners.forceTimeout() }, disable: $root.spinners.forceTimeout(), visible: $root.topology().nodeTag() === tag()">
+                                            <a href="#" data-bind="click: _.partial($parent.forceTimeout, $data), css: { 'btn-spinner': $root.spinners.forceTimeout() }, disable: $root.spinners.forceTimeout()">
                                                 <i class="icon-waiting"></i>
                                                 <span>Force timeout</span>
                                             </a>

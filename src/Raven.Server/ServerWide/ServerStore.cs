@@ -406,6 +406,7 @@ namespace Raven.Server.ServerWide
 
             _engine.TopologyChanged += OnTopologyChanged;
             _engine.StateChanged += OnStateChanged;
+            _engine.LeaderElected += OnLeaderElected;
 
             if (IsLeader())
             {
@@ -432,14 +433,12 @@ namespace Raven.Server.ServerWide
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                NotificationCenter.Add(ClusterTopologyChanged.Create(GetClusterTopology(context), 
-                    LeaderTag, NodeTag, _engine.CurrentTerm, GetNodesStatuses(), LoadLicenseLimits()?.CoresByNode));
-                
+                OnTopologyChanged(null, GetClusterTopology(context));
+
                 // if we are in passive state, we prevent from tasks to be performed by this node.
                 if (state.From == RachisConsensus.State.Passive || state.To == RachisConsensus.State.Passive)
                 {
                     RefreshOutgoingTasks();
-                    LicenseLimitsChanged?.Invoke(null, null);
                 }
 
                 if (state.To == RachisConsensus.State.LeaderElect)
@@ -447,6 +446,11 @@ namespace Raven.Server.ServerWide
                     _engine.CurrentLeader.OnNodeStatusChange += OnTopologyChanged;
                 }
             }
+        }
+
+        private void OnLeaderElected(object sender, EventArgs e)
+        {
+            LicenseManager.RecalculateLicenseLimits();
         }
 
         public Task RefreshOutgoingTasks()
@@ -513,7 +517,7 @@ namespace Raven.Server.ServerWide
         private void OnTopologyChanged(object sender, ClusterTopology topologyJson)
         {
             NotificationCenter.Add(ClusterTopologyChanged.Create(topologyJson, LeaderTag, 
-                NodeTag, _engine.CurrentTerm, GetNodesStatuses(), LoadLicenseLimits()?.CoresByNode));
+                NodeTag, _engine.CurrentTerm, GetNodesStatuses(), LoadLicenseLimits()?.NodeLicenseDetails));
         }
 
         private void OnDatabaseChanged(object sender, (string DatabaseName, long Index, string Type) t)
@@ -550,6 +554,11 @@ namespace Raven.Server.ServerWide
                     break;
                 case nameof(PutLicenseLimitsCommand):
                     LicenseLimitsChanged?.Invoke(null, null);
+                    using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        OnTopologyChanged(null, GetClusterTopology(context));
+                    }
                     break;
             }
         }
@@ -1093,25 +1102,25 @@ namespace Raven.Server.ServerWide
 
         public void EnsureNotPassive()
         {
-            if (_engine.CurrentState == RachisConsensus.State.Passive)
-            {
-                _engine.Bootstrap(_ravenServer.ServerStore.NodeHttpServerUrl);
+            if (_engine.CurrentState != RachisConsensus.State.Passive)
+                return;
 
-                // We put a certificate in the local state to tell the server who to trust, and this is done before
-                // the cluster exists (otherwise the server won't be able to receive initial requests). Only when we 
-                // create the cluster, we register those local certificates in the cluster.
-                using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            _engine.Bootstrap(_ravenServer.ServerStore.NodeHttpServerUrl);
+
+            // we put a certificate in the local state to tell the server who to trust, and this is done before
+            // the cluster exists (otherwise the server won't be able to receive initial requests). Only when we 
+            // create the cluster, we register those local certificates in the cluster.
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            {
+                using (ctx.OpenReadTransaction())
                 {
-                    using (ctx.OpenReadTransaction())
+                    foreach (var localCertKey in Cluster.GetCertificateKeysFromLocalState(ctx))
                     {
-                        foreach (var localCertKey in Cluster.GetCertificateKeysFromLocalState(ctx))
+                        // if there are trusted certificates in the local state, we will register them in the cluster now
+                        using (var localCertificate = Cluster.GetLocalState(ctx, localCertKey))
                         {
-                            // If there are trusted certificates in the local state, we will register them in the cluster now
-                            using (var localCertificate = Cluster.GetLocalState(ctx, localCertKey))
-                            {
-                                var certificateDefinition = JsonDeserializationServer.CertificateDefinition(localCertificate);
-                                PutValueInClusterAsync(new PutCertificateCommand(localCertKey, certificateDefinition));
-                            }
+                            var certificateDefinition = JsonDeserializationServer.CertificateDefinition(localCertificate);
+                            PutValueInClusterAsync(new PutCertificateCommand(localCertKey, certificateDefinition));
                         }
                     }
                 }
@@ -1177,7 +1186,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public async Task PutLicense(License license)
+        public async Task PutLicenseAsync(License license)
         {
             var command = new PutLicenseCommand(LicenseStorageKey, license);
 
@@ -1188,14 +1197,23 @@ namespace Raven.Server.ServerWide
 
             await WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index);        }
 
-        public async Task PutLicenseLimits(LicenseLimits licenseLimits)
+        public void PutLicenseLimits(LicenseLimits licenseLimits)
         {
+            if (IsLeader() == false)
+                throw new InvalidOperationException("Only the leader can set the license limits!");
+
+            var command = new PutLicenseLimitsCommand(LicenseLimitsStorageKey, licenseLimits);
+            _engine.Put(command);
+        }
+
+        public async Task PutLicenseLimitsAsync(LicenseLimits licenseLimits)
+        {
+            if (IsLeader() == false)
+                throw new InvalidOperationException("Only the leader can set the license limits!");
+
             var command = new PutLicenseLimitsCommand(LicenseLimitsStorageKey, licenseLimits);
 
             var result = await SendToLeaderAsync(command);
-
-            if (Logger.IsInfoEnabled)
-                Logger.Info("Updating licnese limits");
 
             await WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index);
         }

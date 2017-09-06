@@ -5,15 +5,15 @@ import promoteClusterNodeCommand = require("commands/database/cluster/promoteClu
 import demoteClusterNodeCommand = require("commands/database/cluster/demoteClusterNodeCommand");
 import forceLeaderTimeoutCommand = require("commands/database/cluster/forceLeaderTimeoutCommand");
 import changesContext = require("common/changesContext");
-
 import clusterNode = require("models/database/cluster/clusterNode");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import appUrl = require("common/appUrl");
 import app = require("durandal/app");
 import showDataDialog = require("viewmodels/common/showDataDialog");
-
 import router = require("plugins/router");
 import clusterGraph = require("models/database/cluster/clusterGraph");
+import assignCores = require("viewmodels/manage/assignCores");
+import license = require("models/auth/license");
 
 class cluster extends viewModelBase {
 
@@ -32,12 +32,13 @@ class cluster extends viewModelBase {
         delete: ko.observableArray<string>([]),
         promote: ko.observableArray<string>([]),
         demote: ko.observableArray<string>([]),
-        forceTimeout: ko.observable<boolean>(false)
+        forceTimeout: ko.observable<boolean>(false),
+        assignCores: ko.observable<boolean>(false)
     };
 
     constructor() {
         super();
-        this.bindToCurrentInstance("deleteNode", "stepDown", "promote", "demote", "forceTimeout", "showErrorDetails");
+        this.bindToCurrentInstance("deleteNode", "stepDown", "promote", "demote", "forceTimeout", "showErrorDetails", "assignCores");
 
         this.initObservables();
     }
@@ -151,6 +152,13 @@ class cluster extends viewModelBase {
                         .always(() => this.spinners.forceTimeout(false));
                 }
             });
+    }
+
+    assignCores(node: clusterNode) {
+        const utilizedCores = _.sumBy(this.topology().nodes(), x => x.utilizedCores());
+        const availableCores = license.licenseStatus().MaxCores - utilizedCores;
+        const assignCoresView = new assignCores(node.tag(), node.utilizedCores(), availableCores, node.numberOfCores());
+        app.showBootstrapDialog(assignCoresView);
     }
 
     private refresh() {

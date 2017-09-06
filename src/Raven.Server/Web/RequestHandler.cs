@@ -7,6 +7,7 @@ using System.Net;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.WebUtilities;
@@ -499,7 +500,10 @@ namespace Raven.Server.Web
 
         protected void SetLicenseLimitResponse(LicenseLimit licenseLimit)
         {
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+            if (licenseLimit == null)
+                throw new ArgumentNullException(nameof(licenseLimit));
+
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.PaymentRequired;
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {

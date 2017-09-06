@@ -4,49 +4,20 @@
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" data-bind="visible: dismissVisible" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                <h1 class="modal-title" id="myModalLabel">License request</h1>
+                <h1 class="modal-title" id="myModalLabel">Register license
+                    <span data-bind="if: dismissVisible">
+                        (<span data-bind="text: daysToRegister"></span>
+                        days left to register)
+                    </span>
+                </h1>
             </div>
             <img src="Content/img/license_multiple.png" class="img-responsive" />
             <div class="modal-body">
-                <div class="form-container row" data-bind="css: { 'enterKey': licenseKeySectionActive() }">
-                    <section id="licenseRequestForm" class="col-xs-6">
+                <div class="form-container row enterKey">
+                    <section id="enterLicenseKey" class="col-xs-offset-6 col-xs-6">
                         <p class="lead text-center">
-                            To obtain your <span class="font-normal text-primary">free BETA license</span> <span class="nobr">please fill out the form below.</span>
-                        </p>
-                            <div class="form-group" data-bind="validationElement: registrationModel().firstName">
-                                <label for="inputFirstName" class="col-sm-3 control-label">First Name</label>
-                                <div class="col-sm-8">
-                                    <input type="text" class="form-control" id="inputFirstName" data-bind="textInput: registrationModel().firstName">
-                                </div>
-                            </div>
-                            <div class="form-group" data-bind="validationElement: registrationModel().lastName">
-                                <label for="inputLastName" class="col-sm-3 control-label">Last Name</label>
-                                <div class="col-sm-8">
-                                    <input type="text" class="form-control" id="inputLastName" data-bind="textInput: registrationModel().lastName">
-                                </div>
-                            </div>
-                            <div class="form-group" data-bind="validationElement: registrationModel().email">
-                                <label for="inputEmail" class="col-sm-3 control-label">Email</label>
-                                <div class="col-sm-8">
-                                    <input type="email" class="form-control" id="inputEmail" data-bind="textInput: registrationModel().email">
-                                </div>
-                            </div>
-                            <div class="form-group" data-bind="validationElement: registrationModel().company">
-                                <label for="inputCompany" class="col-sm-3 control-label">Company</label>
-                                <div class="col-sm-8">
-                                    <input type="text" class="form-control" id="inputCompany" data-bind="textInput: registrationModel().company">
-                                </div>
-                            </div>
-                    </section>
-
-                    <section id="enterLicenseKey" class="col-xs-6">
-                        
-                        <p class="lead text-center" data-bind="visible: justRegistered">
-                            Please check your e-mail and paste license file. 
-                        </p>
-
-                        <p class="lead text-center" data-bind="visible: !justRegistered()">
-                            Already got a license? <br /> Please paste your license key below.
+                            To obtain a license please click <a target="_blank" href="http://www.ravendb.net/buy">here</a> <br/>
+                            Already got one? <br/> Please paste your license key below.
                         </p>
                         <div class="form-horizontal">
                             <div class="form-group" data-bind="validationElement: licenseKeyModel().key">
@@ -71,7 +42,7 @@
                         <span class="caret"></span>
                         <span class="sr-only">Toggle Dropdown</span>
                     </button>
-                    <ul class="dropdown-menu" data-bind="foreach: [2, 7]">
+                    <ul class="dropdown-menu" data-bind="foreach: [2, 3]">
                         <li>
                             <a href="#" data-bind="click: $root.dismiss">
                                 <i class="icon-recent"></i> <span data-bind="text: 'Dismiss for ' + $data + ' days'"></span> 
@@ -80,12 +51,6 @@
                     </ul>
                 </div>
 
-                <button type="button" class="btn btn-info" data-bind="click: goToEnterLicense, visible: !licenseKeySectionActive()">
-                    Enter license key
-                </button>
-                <button type="button" class="btn btn-default" data-bind="click: goToRegistration, visible: licenseKeySectionActive() && !justRegistered()">
-                    Back to registration
-                </button>
                 <button type="submit" data-bind="css: { 'btn-spinner': isBusy }, enable: !isBusy()" class="btn btn-primary">Submit</button>
             </div>
         </div>

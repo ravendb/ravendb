@@ -276,15 +276,6 @@ interface pagedResultWithAvailableColumns<T> extends pagedResult<T> {
     availableColumns: string[];
 }
 
-interface clusterTopologyDto {
-    Topology: Raven.Client.Http.ClusterTopology;
-    Leader: string;
-    CurrentTerm: number;
-    NodeTag: string;
-    Status: { [key: string]: Raven.Client.Http.NodeStatus; };
-    AssignedCoresByNode: { [key: string]: number; };
-}
-
 type clusterNodeType = "Member" | "Promotable" | "Watcher";
 type databaseGroupNodeType = "Member" | "Promotable" | "Rehab";
 type subscriptionStartType = 'Beginning of Time' | 'Latest Document' | 'Change Vector';

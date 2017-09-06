@@ -407,6 +407,7 @@ namespace Raven.Server.Rachis
                 maxIndexOnQuorum == 0)
                 return; // nothing to do here
 
+            bool changedFromLeaderElectToLeader;
             using (_engine.ContextPool.AllocateOperationContext(out context))
             using (context.OpenWriteTransaction())
             {
@@ -419,7 +420,7 @@ namespace Raven.Server.Rachis
                 if (_engine.GetTermForKnownExisting(context, maxIndexOnQuorum) < _engine.CurrentTerm)
                     return;// can't commit until at least one entry from our term has been published
 
-                _engine.TakeOffice();
+                changedFromLeaderElectToLeader = _engine.TakeOffice();
 
                 _engine.Apply(context, maxIndexOnQuorum, this);
 
@@ -454,6 +455,9 @@ namespace Raven.Server.Rachis
                 // and speed up the followers ambassadors if they can
                 _newEntry.Set();
             }
+
+            if (changedFromLeaderElectToLeader)
+                _engine.LeaderElectToLeaderChanged();
         }
 
         private readonly List<(FollowerAmbassador voter, TimeSpan time)> _timeoutsForVoters = new List<(FollowerAmbassador, TimeSpan)>();

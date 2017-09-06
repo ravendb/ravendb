@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using Raven.Client.Http;
+using Raven.Server.Commercial;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.NotificationCenter.Notifications.Server
@@ -22,7 +23,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Server
         
         public long CurrentTerm { get; private set; }
 
-        public Dictionary<string, int> AssignedCoresByNode { get; private set; }
+        public Dictionary<string, DetailsPerNode> NodeLicenseDetails { get; private set; }
 
         public override DynamicJsonValue ToJson()
         {
@@ -33,7 +34,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Server
             json[nameof(NodeTag)] = NodeTag;
             json[nameof(Status)] = DynamicJsonValue.Convert(Status);
             json[nameof(CurrentTerm)] = CurrentTerm;
-            json[nameof(AssignedCoresByNode)] = DynamicJsonValue.Convert(AssignedCoresByNode);
+            json[nameof(NodeLicenseDetails)] = DynamicJsonValue.Convert(NodeLicenseDetails);
 
             return json;
         }
@@ -41,7 +42,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Server
         public static ClusterTopologyChanged Create(ClusterTopology clusterTopology, 
             string leaderTag, string nodeTag, long term, 
             Dictionary<string, NodeStatus> status,
-            Dictionary<string, int> assignedCoresByNode)
+            Dictionary<string, DetailsPerNode> nodeLicenseDetails)
         {
             return new ClusterTopologyChanged
             {
@@ -50,7 +51,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Server
                 NodeTag = nodeTag,
                 Status = status,
                 CurrentTerm = term,
-                AssignedCoresByNode = assignedCoresByNode
+                NodeLicenseDetails = nodeLicenseDetails
             };
         }
     }

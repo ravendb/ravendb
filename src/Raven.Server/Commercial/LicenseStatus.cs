@@ -103,13 +103,15 @@ namespace Raven.Server.Commercial
 
         public DateTime? Expiration => GetValue<DateTime?>("expiration");
 
-        public int MaxCores => GetValue<int?>("cores") ?? 4;
+        public int MaxCores => GetValue<int?>("cores") ?? 3;
 
-        public int MaxRamInGb => GetValue<int?>("RAM") ?? 6;
+        public int MaxMemory => GetValue<int?>("memory") ?? 6;
+
+        public int Ratio => MaxMemory / MaxCores;
 
         public int MaxClusterSize => GetValue<int?>("maxClusterSize") ?? 3;
 
-        public bool HasGlobalCluster => GetValue<bool>("globalCluster");
+        public bool HasGlobalCluster => GetValue<bool>("distributed");
 
         public bool HasCloudBackups => GetValue<bool>("cloudBackup");
 
@@ -136,6 +138,8 @@ namespace Raven.Server.Commercial
                 [nameof(ShortDescription)] = ShortDescription,
                 [nameof(FormattedExpiration)] = FormattedExpiration,
                 [nameof(Type)] = Type.ToString(),
+                [nameof(Ratio)] = Ratio.ToString(),
+                [nameof(MaxCores)] = MaxCores,
                 [nameof(Attributes)] = TypeConverter.ToBlittableSupportedType(Attributes)
             };
         }

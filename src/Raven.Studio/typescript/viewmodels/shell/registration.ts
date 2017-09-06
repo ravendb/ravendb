@@ -1,49 +1,9 @@
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import app = require("durandal/app");
 import dialog = require("plugins/dialog");
-
-import licenseRegistrationCommand = require("commands/licensing/licenseRegistrationCommand");
 import licenseActivateCommand = require("commands/licensing/licenseActivateCommand");
-
 import moment = require("moment");
 import license = require("models/auth/license");
-
-
-class registrationModel {
-    firstName = ko.observable<string>();
-    lastName = ko.observable<string>();
-    email = ko.observable<string>();
-    company = ko.observable<string>();
-
-    constructor() {
-        this.setupValidation();
-    }
-
-    private setupValidation() {
-        this.firstName.extend({
-            required: true
-        });
-
-        this.lastName.extend({
-            required: true
-        });
-
-        this.email.extend({
-            required: true,
-            email: true
-        });
-    }
-
-    toDto(): Raven.Server.Commercial.UserRegistrationInfo {
-        return {
-            FirstName: this.firstName(),
-            LastName: this.lastName(),
-            Email: this.email(),
-            Company: this.company(),
-            BuildInfo: null
-        }
-    }
-}
 
 class licenseKeyModel {
 
@@ -94,7 +54,7 @@ class registrationDismissStorage {
     }
 
     static dismissFor(days: number) {
-        localStorage.setObject(registrationDismissStorage.storageKey, moment().add(5, "days").toDate().getTime());
+        localStorage.setObject(registrationDismissStorage.storageKey, moment().add(days, "days").toDate().getTime());
     }
 
     static clearDismissStatus() {
@@ -105,11 +65,9 @@ class registrationDismissStorage {
 class registration extends dialogViewModelBase {
 
     isBusy = ko.observable<boolean>(false);
-    licenseKeySectionActive = ko.observable<boolean>(false);
-    justRegistered = ko.observable<boolean>(false);
     dismissVisible = ko.observable<boolean>(true);
+    daysToRegister: KnockoutComputed<number>;
 
-    private registrationModel = ko.validatedObservable(new registrationModel());
     private licenseKeyModel = ko.validatedObservable(new licenseKeyModel());
     private license: Raven.Server.Commercial.LicenseStatus;
 
@@ -122,8 +80,15 @@ class registration extends dialogViewModelBase {
         this.bindToCurrentInstance("dismiss");
 
         this.dismissVisible(canBeDismissed);
-    }
 
+        const firstStart = moment(license.FirstServerStartDate)
+            .add("1", "week").add("1", "day");
+
+        this.daysToRegister = ko.pureComputed(() => {
+            const now = moment();
+            return firstStart.diff(now, "days");
+        });
+    }
 
     static showRegistrationDialogIfNeeded(license: Raven.Server.Commercial.LicenseStatus) {
         if (license.Type === "Invalid") {
@@ -133,27 +98,25 @@ class registration extends dialogViewModelBase {
 
         if (license.Type === "None") {
             const firstStart = moment(license.FirstServerStartDate);
-            const weekAfterFirstStart = firstStart.add("1", "week");
-            const treeWeeksAfterFirstStart = firstStart.add("3", "weeks");
+            // add mutates the original moment
+            const dayAfterFirstStart = firstStart.clone().add("1", "day");
+            const weekAfterFirstStart = dayAfterFirstStart.clone().add("1", "week");
 
             const now = moment();
+            if (now.isBefore(dayAfterFirstStart)) {
+                return;
+            }
 
-            let shouldShow = false;
-            let canDismiss = false;
+            let shouldShow: boolean;
+            let canDismiss: boolean;
 
             if (now.isBefore(weekAfterFirstStart)) {
-                shouldShow = false;
+                const dismissedUntil = registrationDismissStorage.getDismissedUntil();
+                shouldShow = !dismissedUntil || dismissedUntil.getTime() < new Date().getTime();
+                canDismiss = true;
             } else {
-                if (now.isAfter(treeWeeksAfterFirstStart)) {
-                    shouldShow = true;
-                    canDismiss = false;
-                } else {
-                    // show if not dismissed
-                    const dismissedUntil = registrationDismissStorage.getDismissedUntil();
-
-                    canDismiss = true;
-                    shouldShow = !dismissedUntil || dismissedUntil.getTime() < new Date().getTime();
-                }
+                shouldShow = true;
+                canDismiss = false;
             }
 
             if (shouldShow) {
@@ -172,39 +135,7 @@ class registration extends dialogViewModelBase {
         app.closeDialog(this);
     }
 
-    goToEnterLicense() {
-        this.licenseKeySectionActive(true);
-    }
-
-    goToRegistration() {
-        this.licenseKeySectionActive(false);
-    }
-
     submit() {
-        if (this.licenseKeySectionActive()) {
-            this.submitLicenseKey();
-        } else {
-            this.submitRegistration();
-        }
-    }
-
-    private submitRegistration() {
-        if (!this.isValid(this.registrationModel)) {
-            return;
-        }
-
-        this.isBusy(true);
-
-        new licenseRegistrationCommand(this.registrationModel().toDto())
-            .execute()
-            .done(() => {
-                this.justRegistered(true);
-                this.licenseKeySectionActive(true);
-            })
-            .always(() => this.isBusy(false));
-    }
-
-    private submitLicenseKey() {
         if (!this.isValid(this.licenseKeyModel)) {
             return;
         }
