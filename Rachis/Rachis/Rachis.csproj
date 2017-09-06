@@ -117,6 +117,10 @@
       <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
       <Name>Raven.Abstractions</Name>
     </ProjectReference>
+    <ProjectReference Include="..\..\Raven.Sparrow\Sparrow\Sparrow.csproj">
+      <Project>{104699C8-0FD3-4AB9-8542-E8FA89ED199B}</Project>
+      <Name>Sparrow</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\Raven.Voron\Voron\Voron.csproj">
       <Project>{FF83C7C2-BC7B-4DCC-A782-49EF9BBD9390}</Project>
       <Name>Voron</Name>

@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
@@ -127,12 +128,36 @@ namespace Rachis.Transport
             return Response;
         }
 
-        public async Task<HttpResponseMessage> WriteAsync(Func<HttpContent> content)
+        public async Task<HttpResponseMessage> WriteAsync(Func<HttpContent> content, Dictionary<string,string> headers = null)
         {
-            await SendRequestInternal(() => new HttpRequestMessage(HttpMethod, Url)
+            var message = new HttpRequestMessage(HttpMethod, Url)
             {
                 Content = content()
-            }).ConfigureAwait(false);
+            };
+
+            if (headers != null)
+            {
+                foreach (var kvp in headers)
+                {
+                    message.Headers.Add(kvp.Key,kvp.Value);
+                }
+            }
+
+            await SendRequestInternal(() => message).ConfigureAwait(false);
+
+            return Response;
+        }
+
+        public async Task<HttpResponseMessage> WriteAsync(Func<HttpContent> content, string headerKey, string headerValue)
+        {
+            var message = new HttpRequestMessage(HttpMethod, Url)
+            {
+                Content = content()
+            };
+
+            message.Headers.Add(headerKey, headerValue);
+
+            await SendRequestInternal(() => message).ConfigureAwait(false);
 
             return Response;
         }

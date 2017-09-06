@@ -11,6 +11,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Security;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -20,6 +21,7 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.OAuth;
 using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
+using Sparrow;
 
 namespace Rachis.Transport
 {
@@ -220,22 +222,28 @@ namespace Rachis.Transport
                     req.Term, req.LeaderCommit, req.PrevLogTerm, req.PrevLogIndex, req.EntriesCount, req.From, req.ClusterTopologyId);
                 using (var request = CreateRequest(dest, _shortOperationsTimeout, requestUri, HttpMethods.Post, _log))
                 {
-                    var httpResponseMessage = await request.WriteAsync(() => new EntriesContent(req.Entries)).ConfigureAwait(false);
-                    UpdateConnectionFailureCounts(dest, httpResponseMessage);
+                    var content = new EntriesContent(req.Entries);
+                    var contentHash = Hashing.XXHash64.Calculate(await content.ReadAsStringAsync().ConfigureAwait(false), Encoding.UTF8);                    
 
-                    var reply = await httpResponseMessage.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    if (httpResponseMessage.IsSuccessStatusCode == false && httpResponseMessage.StatusCode != HttpStatusCode.NotAcceptable)
-                    {
-                        
-                        _log.Warn("Error appending entries to {0}. Status: {1}\r\n{2}\r\nreason:{3}", dest.Name, httpResponseMessage.StatusCode, reply, httpResponseMessage.ReasonPhrase);
-                        return;
+                    using (var httpResponseMessage = await request.WriteAsync(() => content, "Request-Hash", contentHash.ToString()).ConfigureAwait(false))
+                    {                                               
+                        UpdateConnectionFailureCounts(dest, httpResponseMessage);
+
+                        var reply = await httpResponseMessage.Content.ReadAsStringAsync().ConfigureAwait(false);
+                        if (httpResponseMessage.IsSuccessStatusCode == false && httpResponseMessage.StatusCode != HttpStatusCode.NotAcceptable)
+                        {
+                            _log.Warn("Error appending entries to {0}. Status: {1}\r\n{2}\r\nreason:{3}", dest.Name, httpResponseMessage.StatusCode, reply, httpResponseMessage.ReasonPhrase);
+                            return;
+                        }
+
+                        if (httpResponseMessage.StatusCode == HttpStatusCode.NotAcceptable)
+                        {
+                            _log.Warn("Error appending entries to {0}. Status: NotAcceptable\r\nreason:{1}\r\ncontent{2}", dest.Name, httpResponseMessage.ReasonPhrase, reply);
+                        }
+
+                        var appendEntriesResponse = JsonConvert.DeserializeObject<AppendEntriesResponse>(reply);
+                        SendToSelf(appendEntriesResponse);
                     }
-                    if (httpResponseMessage.StatusCode == HttpStatusCode.NotAcceptable)
-                    {
-                        _log.Warn("Error appending entries to {0}. Status: NotAcceptable\r\nreason:{1}\r\ncontent{2}", dest.Name, httpResponseMessage.ReasonPhrase, reply);
-                    }
-                    var appendEntriesResponse = JsonConvert.DeserializeObject<AppendEntriesResponse>(reply);
-                    SendToSelf(appendEntriesResponse);
                 }
             });
         }
