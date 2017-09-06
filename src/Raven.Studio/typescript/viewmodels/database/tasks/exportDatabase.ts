@@ -1,5 +1,4 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-
 import endpoints = require("endpoints");
 import moment = require("moment");
 import copyToClipboard = require("common/copyToClipboard");
@@ -8,10 +7,8 @@ import messagePublisher = require("common/messagePublisher");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import notificationCenter = require("common/notifications/notificationCenter");
 import database = require("models/resources/database");
-
 import exportDatabaseModel = require("models/database/tasks/exportDatabaseModel");
 import collectionsStats = require("models/database/documents/collectionsStats");
-
 import validateExportDatabaseOptionsCommand = require("commands/database/studio/validateExportDatabaseOptionsCommand");
 import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
 import getNextOperationId = require("commands/database/studio/getNextOperationId");

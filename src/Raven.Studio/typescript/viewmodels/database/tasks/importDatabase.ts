@@ -34,6 +34,7 @@ class importDatabase extends viewModelBase {
     uploadStatus = ko.observable<number>();
 
     importCommand: KnockoutComputed<string>;
+    revisionsTitle: KnockoutComputed<string>;
 
     validationGroup = ko.validatedObservable({
         importedFileName: this.importedFileName,
@@ -51,6 +52,7 @@ class importDatabase extends viewModelBase {
                 this.uploadStatus(0);
             }
         });
+
         this.showTransformScript.subscribe(v => {
             if (v) {
                 this.model.transformScript("function transform(doc) {\r\n  var id = doc['@metadata']['@id'];\r\n  return doc;\r\n}");
@@ -109,7 +111,6 @@ class importDatabase extends viewModelBase {
                 return commandTokens.join(" ");
             });
 
-
         this.setupValidation();
     }
 
@@ -118,10 +119,16 @@ class importDatabase extends viewModelBase {
             required: true
         });
 
-        this.model.transformScript.extend({
-            aceValidation: true
+        this.model.revisionsAreConfigured = ko.computed(() => {
+            return this.activeDatabase().hasRevisionsConfiguration();
         });
 
+        this.revisionsTitle = ko.computed(() => {
+            if (this.model.revisionsAreConfigured()) {
+                return "";
+            }
+            return "Revisions Configuration must be set in order to use this option";
+        });
     }
 
     attached() {
@@ -185,6 +192,10 @@ class importDatabase extends viewModelBase {
 
     importDb() {
         if (!this.isValid(this.validationGroup)) {
+            return;
+        }
+
+        if (!this.isValid(this.model.validationGroup)) {
             return;
         }
 
