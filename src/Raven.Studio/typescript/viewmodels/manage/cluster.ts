@@ -26,6 +26,7 @@ class cluster extends viewModelBase {
     showConnectivity: KnockoutComputed<boolean>;
 
     leaderUrl: KnockoutComputed<string>;
+    licenseSummary: KnockoutComputed<string>;
 
     spinners = {
         stepdown: ko.observable<boolean>(false),
@@ -81,6 +82,15 @@ class cluster extends viewModelBase {
 
         this.showConnectivity = ko.pureComputed(() => {
             return !this.topology().leader() || this.topology().leader() === this.topology().nodeTag();
+        });
+
+        this.licenseSummary = ko.pureComputed(() => {
+            const licenseStatus = license.licenseStatus();
+            if (!licenseStatus) {
+                return null;
+            }
+
+            return licenseStatus.ShortDescription;
         });
     }
 

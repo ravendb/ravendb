@@ -12,7 +12,9 @@ class clusterNode {
     utilizedCores = ko.observable<number>();
     numberOfCores = ko.observable<number>();
     installedMemoryInGb = ko.observable<number>();
+    installedMemory = ko.pureComputed(() => this.getNumber(this.installedMemoryInGb()));
     usableMemoryInGb = ko.observable<number>();
+    usableMemory = ko.pureComputed(() => this.getNumber(this.usableMemoryInGb()));
     errorDetails = ko.observable<string>();
     errorDetailsShort = ko.pureComputed(() => {
         const longError = this.errorDetails();
@@ -126,6 +128,13 @@ class clusterNode {
         });
     }
 
+    private getNumber(num: number): string {
+        if (Number.isInteger(num)) {
+            return num.toString();
+        }
+
+        return num.toFixed(2);
+    }
 }
 
 export = clusterNode;

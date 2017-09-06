@@ -31,7 +31,12 @@ namespace Raven.Server.Web.Studio
                 license = JsonDeserializationServer.License(json);
             }
 
-            await ServerStore.LicenseManager.Activate(license, skipLeaseLicense: false);
+            var licenseLimit = await ServerStore.LicenseManager.Activate(license, skipLeaseLicense: false);
+            if (licenseLimit != null)
+            {
+                SetLicenseLimitResponse(licenseLimit);
+                return;
+            }
 
             NoContentStatus();
         }

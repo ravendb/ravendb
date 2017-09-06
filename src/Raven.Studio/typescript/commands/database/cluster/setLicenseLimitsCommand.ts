@@ -19,7 +19,7 @@ class setLicenseLimitsCommand extends commandBase {
             .fail((response: JQueryXHR) => {
                 this.reportError("Failed to set new license limits", response.responseText, response.statusText);
             })
-            .done(() => this.reportSuccess("Succefully set the new license limit"));
+            .done(() => this.reportSuccess("Successfully set the new license limit"));
     }
 }
 

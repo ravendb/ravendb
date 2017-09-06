@@ -12,7 +12,7 @@ namespace Raven.Client.ServerWide.Commands
         public string Certificate;
         public string ClusterStatus;
         public int NumberOfCores;
-        public int InstalledMemoryInGb;
+        public double InstalledMemoryInGb;
         public double UsableMemoryInGb;
     }
 

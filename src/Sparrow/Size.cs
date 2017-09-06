@@ -91,6 +91,27 @@ namespace Sparrow
             }
         }
 
+        [Pure]
+        public double GetDoubleValue(SizeUnit requestedUnit)
+        {
+            switch (requestedUnit)
+            {
+                case SizeUnit.Bytes:
+                    return _valueInBytes;
+                case SizeUnit.Kilobytes:
+                    return _valueInBytes / (double)OneKb;
+                case SizeUnit.Megabytes:
+                    return _valueInBytes / (double)OneMb;
+                case SizeUnit.Gigabytes:
+                    return _valueInBytes / (double)OneGb;
+                case SizeUnit.Terabytes:
+                    return _valueInBytes / (double)OneTb;
+                default:
+                    ThrowUnsupportedSize();
+                    return -1;// never hit
+            }
+        }
+
         private void ThrowUnsupportedSize()
         {
             throw new NotSupportedException("Not supported size unit: " + _unit);

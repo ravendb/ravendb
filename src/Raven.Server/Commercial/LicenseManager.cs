@@ -20,6 +20,7 @@ using Raven.Client.ServerWide.ETL;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.PeriodicBackup;
 using Raven.Client.Util;
+using Raven.Server.Config.Settings;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -50,11 +51,13 @@ namespace Raven.Server.Commercial
         private readonly ServerStore _serverStore;
         private readonly SemaphoreSlim _leaseLicenseSemaphore = new SemaphoreSlim(1);
         private readonly SemaphoreSlim _licenseLimitsSemaphore = new SemaphoreSlim(1);
+        private readonly bool _skipLoggingLeaseLicenseErrors;
 
         public LicenseManager(ServerStore serverStore)
         {
             _serverStore = serverStore;
-            
+            _skipLoggingLeaseLicenseErrors = serverStore.Configuration.Licensing.SkipLoggingErrors;
+
             _buildInfo = new BuildNumber
             {
                 BuildVersion = ServerVersion.Build,
@@ -163,7 +166,7 @@ namespace Raven.Server.Commercial
                 _licenseStatus.Error = true;
                 _licenseStatus.Message = e.Message;
 
-                if (Logger.IsInfoEnabled)
+                if (Logger.IsInfoEnabled && _skipLoggingLeaseLicenseErrors == false)
                     Logger.Info("Could not validate license", e);
 
                 var alert = AlertRaised.Create(
@@ -235,7 +238,7 @@ namespace Raven.Server.Commercial
                 var oldAssignedCores = 0;
                 var numberOfCores = -1;
                 double usableMemoryInGb = -1;
-                long installedMemoryInGb = -1;
+                double installedMemoryInGb = -1;
                 if (detailsPerNode.TryGetValue(nodeTag, out var nodeDetails))
                 {
                     installedMemoryInGb = nodeDetails.InstalledMemoryInGb;
@@ -361,7 +364,7 @@ namespace Raven.Server.Commercial
                         foreach (var nodeTag in missingNodesAssignment)
                         {
                             var numberOfCores = -1;
-                            long installedMemory = -1;
+                            double installedMemory = -1;
                             double usableMemoryInGb = -1;
                             if (nodeTag == _serverStore.NodeTag)
                             {
@@ -442,9 +445,27 @@ namespace Raven.Server.Commercial
             return true;
         }
 
-        public async Task Activate(License license, bool skipLeaseLicense)
+        public async Task<LicenseLimit> Activate(License license, bool skipLeaseLicense)
         {
-            var licenseAttributes = LicenseValidator.Validate(license, RSAParameters);
+            Dictionary<string, object> licenseAttributes;
+
+            try
+            {
+                licenseAttributes = LicenseValidator.Validate(license, RSAParameters);
+            }
+            catch (Exception e)
+            {
+                var message = $"Could not validate the following license:{Environment.NewLine}" +
+                              $"Id: {license.Id}{Environment.NewLine}" +
+                              $"Name: {license.Name}{Environment.NewLine}" +
+                              $"Keys: [{(license.Keys != null ? string.Join(", ", license.Keys) : "N/A")}]";
+
+                if (Logger.IsInfoEnabled)
+                    Logger.Info(message, e);
+
+                throw new InvalidDataException("Could not validate license!", e);
+            }
+
             var newLicenseStatus = new LicenseStatus
             {
                 Attributes = licenseAttributes
@@ -462,8 +483,7 @@ namespace Raven.Server.Commercial
                     license = await GetUpdatedLicense(license);
                     if (license != null)
                     {
-                        await Activate(license, skipLeaseLicense: true);
-                        return;
+                        return await Activate(license, skipLeaseLicense: true);
                     }
                 }
 
@@ -471,12 +491,9 @@ namespace Raven.Server.Commercial
             }
 
             if (CanActivateLicense(newLicenseStatus, out var licenseLimit) == false)
-            {
-                //TODO: use the license limit
-                return;
-            }
+                return licenseLimit;
 
-            _serverStore.EnsureNotPassive();
+            _serverStore.EnsureNotPassive(skipActivateLicense: true);
 
             try
             {
@@ -485,14 +502,12 @@ namespace Raven.Server.Commercial
                 _licenseStatus.Attributes = licenseAttributes;
                 _licenseStatus.Error = false;
                 _licenseStatus.Message = null;
+
+                return null;
             }
             catch (Exception e)
             {
-                _licenseStatus.Attributes = null;
-                _licenseStatus.Error = true;
-                _licenseStatus.Message = e.Message;
-
-                var message = $"Could not validate the following license:{Environment.NewLine}" +
+                var message = $"Could not save the following license:{Environment.NewLine}" +
                               $"Id: {license.Id}{Environment.NewLine}" +
                               $"Name: {license.Name}{Environment.NewLine}" +
                               $"Keys: [{(license.Keys != null ? string.Join(", ", license.Keys) : "N/A")}]";
@@ -500,7 +515,41 @@ namespace Raven.Server.Commercial
                 if (Logger.IsInfoEnabled)
                     Logger.Info(message, e);
 
-                throw new InvalidDataException("Could not validate license!", e);
+                throw new InvalidDataException("Could not save license!", e);
+            }
+        }
+
+        public void TryActivateLicense()
+        {
+            if (_licenseStatus.Type != LicenseType.None)
+                return;
+
+            var licensePath = _serverStore.Configuration.Licensing.LicensePath;
+            var license = GetLicenseFromPath(licensePath);
+            if (license == null)
+                return;
+
+            AsyncHelpers.RunSync(() => Activate(license, skipLeaseLicense: false));
+        }
+
+        private static License GetLicenseFromPath(string licensePath)
+        {
+            try
+            {
+                var licenseFullPath = new PathSetting(licensePath).ToFullPath();
+                using (var context = JsonOperationContext.ShortTermSingleUse())
+                using (var fileStream = File.Open(licenseFullPath, FileMode.Open, FileAccess.Read))
+                {
+                    var json = context.Read(fileStream, "license activation from license path");
+                    return JsonDeserializationServer.License(json);
+                }
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Failed to get license from path: {licensePath}", e);
+
+                return null;
             }
         }
 
@@ -632,7 +681,7 @@ namespace Raven.Server.Commercial
                             continue;
 
                         int numberOfCores;
-                        long installedMemory;
+                        double installedMemory;
                         double usableMemoryInGb;
                         if (nodeTag == _serverStore.NodeTag)
                         {
@@ -1047,11 +1096,8 @@ namespace Raven.Server.Commercial
 
         public bool CanAddNode(string nodeUrl, int? assignedCores, out LicenseLimit licenseLimit)
         {
-            if (IsValid(out var invalidLicenseLimit) == false)
-            {
-                licenseLimit = invalidLicenseLimit;
+            if (IsValid(out licenseLimit) == false)
                 return false;
-            }
 
             if (CanAssignCores(assignedCores, out var coresDetails) == false)
             {
@@ -1059,7 +1105,7 @@ namespace Raven.Server.Commercial
                 return false;
             }
 
-            if (_licenseStatus.HasGlobalCluster == false &&
+            if (_licenseStatus.DistributedCluster == false &&
                 IsValidLocalUrl(nodeUrl) == false)
             {
                 var details = $"Your current license ({_licenseStatus.Type}) allows adding nodes " +
@@ -1083,11 +1129,8 @@ namespace Raven.Server.Commercial
 
         public bool CanAddPeriodicBackup(BlittableJsonReaderObject readerObject, out LicenseLimit licenseLimit)
         {
-            if (IsValid(out var invalidLicenseLimit) == false)
-            {
-                licenseLimit = invalidLicenseLimit;
+            if (IsValid(out licenseLimit) == false)
                 return false;
-            }
 
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
@@ -1117,7 +1160,7 @@ namespace Raven.Server.Commercial
 
         public bool CanAddExternalReplication(ExternalReplication watcher, out LicenseLimit licenseLimit)
         {
-            if (IsValid(out licenseLimit))
+            if (IsValid(out licenseLimit) == false)
                 return false;
 
             if (IsValidExternalReplication(_licenseStatus, watcher.Url) == false)
@@ -1139,11 +1182,8 @@ namespace Raven.Server.Commercial
 
         public bool CanAddRavenEtl(string url, out LicenseLimit licenseLimit)
         {
-            if (IsValid(out var invalidLicenseLimit) == false)
-            {
-                licenseLimit = invalidLicenseLimit;
+            if (IsValid(out licenseLimit) == false)
                 return false;
-            }
 
             if (IsValidRavenEtl(_licenseStatus, url) == false)
             {
@@ -1164,11 +1204,8 @@ namespace Raven.Server.Commercial
 
         public bool CanAddSqlEtl(out LicenseLimit licenseLimit)
         {
-            if (IsValid(out var invalidLicenseLimit) == false)
-            {
-                licenseLimit = invalidLicenseLimit;
+            if (IsValid(out licenseLimit) == false)
                 return false;
-            }
 
             if (_licenseStatus.HasSqlEtl == false)
             {
@@ -1189,24 +1226,16 @@ namespace Raven.Server.Commercial
             if (_licenseStatus.HasDynamicNodesDistribution)
                 return true;
 
-            var result = _licenseStatus.Type == LicenseType.None;
-            if (result == false)
-            {
-                const string details = "Your current license doesn't include " +
-                                       "the dynamic nodes distribution feature";
-                GenerateLicenseLimit(LimitType.DynamicNodeDistribution, details, addNotification: true);
-            }
-
-            return result;
+            const string details = "Your current license doesn't include " +
+                                   "the dynamic nodes distribution feature";
+            GenerateLicenseLimit(LimitType.DynamicNodeDistribution, details, addNotification: true);
+            return false;
         }
 
         public bool CanCreateEncryptedDatabase(out LicenseLimit licenseLimit)
         {
-            if (IsValid(out var invalidLicenseLimit) == false)
-            {
-                licenseLimit = invalidLicenseLimit;
+            if (IsValid(out licenseLimit) == false)
                 return false;
-            }
 
             if (_licenseStatus.HasEncryption == false)
             {

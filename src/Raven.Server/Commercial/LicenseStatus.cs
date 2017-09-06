@@ -36,7 +36,7 @@ namespace Raven.Server.Commercial
                 }
 
                 int? ram = null;
-                if (Attributes.TryGetValue("RAM", out object memoryObject) &&
+                if (Attributes.TryGetValue("memory", out object memoryObject) &&
                     memoryObject is int)
                 {
                     ram = (int)memoryObject;
@@ -44,7 +44,7 @@ namespace Raven.Server.Commercial
 
                 var list = new List<string>();
                 if (cores != null)
-                    list.Add($"{cores} CPUs");
+                    list.Add($"{cores} Cores");
                 if (ram != null)
                     list.Add($"{(ram.Value == 0 ? "Unlimited" : $"{ram.Value}GB")} RAM");
 
@@ -78,7 +78,7 @@ namespace Raven.Server.Commercial
                 {
                     var typeAsInt = (int)type;
                     if (Enum.IsDefined(typeof(LicenseType), typeAsInt))
-                        return ((LicenseType)typeAsInt);
+                        return (LicenseType)typeAsInt;
                 }
 
                 return LicenseType.Free;
@@ -111,7 +111,7 @@ namespace Raven.Server.Commercial
 
         public int MaxClusterSize => GetValue<int?>("maxClusterSize") ?? 3;
 
-        public bool HasGlobalCluster => GetValue<bool>("distributed");
+        public bool DistributedCluster => GetValue<bool>("distributedCluster");
 
         public bool HasCloudBackups => GetValue<bool>("cloudBackup");
 
