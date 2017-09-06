@@ -97,10 +97,6 @@ class documentBasedColumnsProvider {
 
     static showPreview(doc: document) {
         const docDto = doc.toDto(true);
-        if ("@metadata" in docDto) {
-            const metaDto = docDto["@metadata"];
-            documentMetadata.filterMetadata(metaDto);
-        }
         
         const text = JSON.stringify(docDto, null, 4);
         const title = doc.getId() ? "Document: " + doc.getId() : "Document preview";
