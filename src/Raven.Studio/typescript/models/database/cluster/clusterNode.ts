@@ -2,20 +2,36 @@
 
 import clusterTopology = require("models/database/cluster/clusterTopology");
 import generalUtils = require("common/generalUtils");
+import license = require("models/auth/license");
 
 class clusterNode {
     tag = ko.observable<string>();
     serverUrl = ko.observable<string>();
     type = ko.observable<clusterNodeType>();
     connected = ko.observable<boolean>();
-    assignedCores = ko.observable<number>();
-    totalCores = ko.observable<number>();
+    utilizedCores = ko.observable<number>();
+    numberOfCores = ko.observable<number>();
+    installedMemoryInGb = ko.observable<number>();
+    usableMemoryInGb = ko.observable<number>();
     errorDetails = ko.observable<string>();
     errorDetailsShort = ko.pureComputed(() => {
         const longError = this.errorDetails();
         return generalUtils.trimMessage(longError);
     });
-    
+
+    utilizedMemoryInGb = ko.pureComputed(() => {
+        const licenseStatus = license.licenseStatus();
+        return this.utilizedCores() * licenseStatus.Ratio;
+    });
+
+    cssCores = ko.pureComputed(() => {
+        if (this.utilizedCores() >= this.numberOfCores()) {
+            return "text-success";
+        }
+
+        return "text-warning";
+    });
+
     cssIcon = ko.pureComputed(() => {
         const type = this.type();
         switch (type) {
@@ -32,7 +48,10 @@ class clusterNode {
         this.tag(incoming.tag());
         this.type(incoming.type());
         this.connected(incoming.connected());
-        this.assignedCores(incoming.assignedCores());
+        this.utilizedCores(incoming.utilizedCores());
+        this.numberOfCores(incoming.numberOfCores());
+        this.installedMemoryInGb(incoming.installedMemoryInGb());
+        this.usableMemoryInGb(incoming.usableMemoryInGb());
         this.errorDetails(incoming.errorDetails());
     }
 

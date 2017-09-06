@@ -11,6 +11,9 @@ namespace Raven.Client.ServerWide.Commands
         public string TopologyId;
         public string Certificate;
         public string ClusterStatus;
+        public int NumberOfCores;
+        public int InstalledMemoryInGb;
+        public double UsableMemoryInGb;
     }
 
     public class GetNodeInfoCommand : RavenCommand<NodeInfo>

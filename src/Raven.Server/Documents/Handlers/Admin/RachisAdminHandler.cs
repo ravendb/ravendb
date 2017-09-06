@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
@@ -9,17 +10,18 @@ using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations.Certificates;
-using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
-using Raven.Server.Utils;
 using Raven.Server.Web;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.LowMemory;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
@@ -155,6 +157,14 @@ namespace Raven.Server.Documents.Handlers.Admin
                     json[nameof(NodeInfo.TopologyId)] = ServerStore.GetClusterTopology(context).TopologyId;
                     json[nameof(NodeInfo.Certificate)] = ServerStore.RavenServer.ClusterCertificateHolder.CertificateForClients;
                     json[nameof(ServerStore.Engine.LastStateChangeReason)] = ServerStore.LastStateChangeReason();
+                    json[nameof(NodeInfo.NumberOfCores)] = ProcessorInfo.ProcessorCount;
+                    json[nameof(NodeInfo.NumberOfCores)] = ProcessorInfo.ProcessorCount;
+
+                    var memoryInformation = MemoryInformation.GetMemoryInfo();
+                    json[nameof(NodeInfo.InstalledMemoryInGb)] = memoryInformation.InstalledMemory.GetValue(SizeUnit.Gigabytes);
+                    var usableMemory = memoryInformation.TotalPhysicalMemory
+                        .GetValue(SizeUnit.Bytes) / (double)1024 / 1024 / 1024;
+                    json[nameof(NodeInfo.UsableMemoryInGb)] = usableMemory;
                 }
                 context.Write(writer, json);
                 writer.Flush();
@@ -194,8 +204,8 @@ namespace Raven.Server.Documents.Handlers.Admin
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     var loadLicenseLimits = ServerStore.LoadLicenseLimits();
-                    var assingedCoresByNode = loadLicenseLimits == null ? 
-                        null : TypeConverter.ToBlittableSupportedType(loadLicenseLimits.CoresByNode);
+                    var nodeLicenseDetails = loadLicenseLimits == null ? 
+                        null : DynamicJsonValue.Convert(loadLicenseLimits.NodeLicenseDetails);
                     var json = new DynamicJsonValue
                     {
                         ["Topology"] = topology.ToSortedJson(),
@@ -203,7 +213,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         ["CurrentState"] = ServerStore.CurrentState,
                         ["NodeTag"] = nodeTag,
                         ["CurrentTerm"] = ServerStore.Engine.CurrentTerm,
-                        ["AssignedCoresByNode"] = assingedCoresByNode,
+                        ["NodeLicenseDetails"] = nodeLicenseDetails,
                         [nameof(ServerStore.Engine.LastStateChangeReason)] = ServerStore.LastStateChangeReason()
                     };
                     var clusterErrors = ServerStore.GetClusterErrors();
@@ -267,19 +277,11 @@ namespace Raven.Server.Documents.Handlers.Admin
             if (assignedCores <= 0)
                 throw new ArgumentException("Assigned cores must be greater than 0!");
 
-            ServerStore.LicenseManager.VerifyNewAssignedCoresValue(assignedCores);
-
             var remoteIsHttps = nodeUrl.StartsWith("https:", StringComparison.OrdinalIgnoreCase);
 
             if (HttpContext.Request.IsHttps != remoteIsHttps)
             {
                 throw new InvalidOperationException($"Cannot add node '{nodeUrl}' to cluster because it will create invalid mix of HTTPS & HTTP endpoints. A cluster must be only HTTPS or only HTTP.");
-            }
-
-            if (ServerStore.LicenseManager.CanAddNode(nodeUrl, out var licenseLimit) == false)
-            {
-                SetLicenseLimitResponse(licenseLimit);
-                return;
             }
 
             NodeInfo nodeInfo;
@@ -299,11 +301,23 @@ namespace Raven.Server.Documents.Handlers.Admin
                 }
 
                 nodeInfo = infoCmd.Result;
-
+                
                 if (ServerStore.IsPassive() && nodeInfo.TopologyId != null)
                 {
                     throw new TopologyMismatchException("You can't add new node to an already existing cluster");
                 }
+            }
+
+            if (assignedCores != null && assignedCores > nodeInfo.NumberOfCores)
+            {
+                throw new ArgumentException("Cannot add node because the assigned cores is larger " +
+                                            $"than the available cores on that machine: {nodeInfo.NumberOfCores}");
+            }
+
+            if (ServerStore.LicenseManager.CanAddNode(nodeUrl, assignedCores, out var licenseLimit) == false)
+            {
+                SetLicenseLimitResponse(licenseLimit);
+                return;
             }
 
             ServerStore.EnsureNotPassive();
@@ -369,7 +383,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         var clusterTopology = ServerStore.GetClusterTopology(ctx);
                         var possibleNode = clusterTopology.TryGetNodeTagByUrl(nodeUrl);
                         nodeTag = possibleNode.HasUrl ? possibleNode.NodeTag : null;
-                        await ServerStore.LicenseManager.RecalculateLicenseLimitsIfNeeded(nodeTag, assignedCores);
+                        ServerStore.LicenseManager.RecalculateLicenseLimits(nodeTag, assignedCores, nodeInfo);
                     }
 
                     NoContentStatus();
@@ -389,13 +403,45 @@ namespace Raven.Server.Documents.Handlers.Admin
             if (ServerStore.IsLeader())
             {
                 await ServerStore.RemoveFromClusterAsync(nodeTag);
-                await ServerStore.LicenseManager.RecalculateLicenseLimitsIfNeeded();
+                ServerStore.LicenseManager.RecalculateLicenseLimits();
                 NoContentStatus();
                 return;
             }
             RedirectToLeader();
         }
-        
+
+        [RavenAction("/admin/license/set-limit", "POST", AuthorizationStatus.ClusterAdmin)]
+        public async Task SetLicenseLimit()
+        {
+            SetupCORSHeaders();
+
+            var nodeTag = GetStringQueryString("nodeTag");
+            var newAssignedCores = GetIntValueQueryString("newAssignedCores");
+
+            Debug.Assert(newAssignedCores != null);
+
+            if (newAssignedCores <= 0)
+                throw new ArgumentException("The new assigned cores value must be larger than 0");
+
+            if (ServerStore.IsLeader())
+            {
+                var licenseLimit = await ServerStore
+                    .LicenseManager
+                    .ChangeLicenseLimits(nodeTag, newAssignedCores.Value);
+
+                if (licenseLimit != null)
+                {
+                    SetLicenseLimitResponse(licenseLimit);
+                    return;
+                }
+
+                NoContentStatus();
+                return;
+            }
+
+            RedirectToLeader();
+        }
+
         [RavenAction("/admin/cluster/timeout", "POST", AuthorizationStatus.ClusterAdmin)]
         public Task TimeoutNow()
         {

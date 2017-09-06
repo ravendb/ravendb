@@ -17,7 +17,6 @@ class clusterTopologyManager {
     votingInProgress: KnockoutComputed<boolean>;
     nodesCount: KnockoutComputed<number>;
     
-
     init(): JQueryPromise<clusterTopology> {
         return this.fetchTopology();
     }
@@ -65,19 +64,18 @@ class clusterTopologyManager {
             const topology = this.topology();
             return topology ? topology.nodes().length : 0;
         });
-        
+
         this.votingInProgress = ko.pureComputed(() => {
             const topology = this.topology();
             if (!topology) {
                 return false;
             }
-            
+
             const leader = topology.leader();
             const isPassive = topology.nodeTag() === "?";
             return !leader && !isPassive;
-        })
+        });
     }
-    
 }
 
 export = clusterTopologyManager;

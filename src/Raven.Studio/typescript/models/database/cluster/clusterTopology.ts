@@ -8,7 +8,7 @@ class clusterTopology {
     
     nodes = ko.observableArray<clusterNode>([]);
 
-    constructor(dto: clusterTopologyDto) {
+    constructor(dto: Raven.Server.NotificationCenter.Notifications.Server.ClusterTopologyChanged) {
         this.leader(dto.Leader);
         this.nodeTag(dto.NodeTag);
         this.currentTerm(dto.CurrentTerm);
@@ -22,7 +22,7 @@ class clusterTopology {
         this.nodes(_.concat<clusterNode>(members, promotables, watchers));
         this.nodes(_.sortBy(this.nodes(), x => x.tag().toUpperCase()));
 
-        this.updateAssignedCores(dto.AssignedCoresByNode);
+        this.updateAssignedCores(dto.NodeLicenseDetails);
     }
 
     private mapNodes(type: clusterNodeType, dict: System.Collections.Generic.Dictionary<string, string>,
@@ -36,7 +36,7 @@ class clusterTopology {
         });
     }
 
-    updateWith(incomingChanges: clusterTopologyDto) {
+    updateWith(incomingChanges: Raven.Server.NotificationCenter.Notifications.Server.ClusterTopologyChanged) {
         const newTopology = incomingChanges.Topology;
 
         const existingNodes = this.nodes();
@@ -56,30 +56,32 @@ class clusterTopology {
             if (matchedNode) {
                 matchedNode.updateWith(node);
             } else {
-                let locationToInsert = _.sortedIndexBy(this.nodes(), node, item => item.tag().toLowerCase());
+                const locationToInsert = _.sortedIndexBy(this.nodes(), node, item => item.tag().toLowerCase());
                 this.nodes.splice(locationToInsert, 0, node);
             }
         });
 
-        this.updateAssignedCores(incomingChanges.AssignedCoresByNode);
+        this.updateAssignedCores(incomingChanges.NodeLicenseDetails);
         this.nodeTag(incomingChanges.NodeTag);
         this.leader(incomingChanges.Leader);
         this.currentTerm(incomingChanges.CurrentTerm);
     }
 
-    private updateAssignedCores(assignedCoresByNode: { [index: string]: number; }) {
-        for (let nodeTag in assignedCoresByNode) {
-            if (!assignedCoresByNode.hasOwnProperty(nodeTag)) {
-                continue;
-            }
+    private updateAssignedCores(nodeLicenseDetails: { [key: string]: Raven.Server.Commercial.DetailsPerNode; }) {
+        if (!nodeLicenseDetails)
+            return;
 
+        _.forOwn(nodeLicenseDetails, (detailsPerNode, nodeTag) => {
             const node = this.nodes().find(x => x.tag() === nodeTag);
             if (!node) {
-                continue;
+                return;
             }
 
-            node.assignedCores(assignedCoresByNode[nodeTag]);
-        }
+            node.utilizedCores(detailsPerNode.UtilizedCores);
+            node.numberOfCores(detailsPerNode.NumberOfCores);
+            node.installedMemoryInGb(detailsPerNode.InstalledMemoryInGb);
+            node.usableMemoryInGb(detailsPerNode.UsableMemoryInGb);
+        });
     }
 }
 
