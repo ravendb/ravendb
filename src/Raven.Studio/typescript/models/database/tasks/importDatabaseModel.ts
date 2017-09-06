@@ -4,12 +4,20 @@ class importDatabaseModel {
     includeDocuments = ko.observable(true);
     includeIndexes = ko.observable(true);
     includeIdentities = ko.observable(true);
-    removeAnalyzers = ko.observable(false);
-
     includeRevisionDocuments = ko.observable(true);
+    revisionsAreConfigured: KnockoutComputed<boolean>;
+
     includeExpiredDocuments = ko.observable(true);
+    removeAnalyzers = ko.observable(false);
     
     transformScript = ko.observable<string>();
+
+    validationGroup: KnockoutValidationGroup;
+    validState: KnockoutComputed<boolean>;
+    
+    constructor() {
+        this.initValidation();
+    }
 
     toDto(): Raven.Client.Documents.Smuggler.DatabaseSmugglerOptions {
         const operateOnTypes: Array<Raven.Client.Documents.Smuggler.DatabaseItemType> = [];
@@ -34,6 +42,32 @@ class importDatabaseModel {
         } as Raven.Client.Documents.Smuggler.DatabaseSmugglerOptions;
     }
 
+    private initValidation() {
+        this.validState = ko.pureComputed(() => {
+            return this.includeDocuments()  ||
+                   this.includeIndexes()    ||
+                   this.includeIdentities() ||
+                   (this.includeRevisionDocuments() && this.revisionsAreConfigured());
+        });
+
+        this.transformScript.extend({
+            aceValidation: true
+        });
+
+        this.includeDocuments.extend({
+            validation: [
+                {
+                    validator: () => this.validState(),
+                    message: "Note: At least one 'include' option must be checked..."
+                }
+            ]
+        });
+
+        this.validationGroup = ko.validatedObservable({
+            transformScript: this.transformScript,
+            includeDocuments: this.includeDocuments
+        });
+    }
 }
 
 export = importDatabaseModel;
