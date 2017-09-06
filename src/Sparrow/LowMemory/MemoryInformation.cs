@@ -108,12 +108,11 @@ namespace Sparrow.LowMemory
             return result;
         }
 
-        public static (long InstalledMemory, double UsableMemory) GetMemoryInfoInGb()
+        public static (double InstalledMemory, double UsableMemory) GetMemoryInfoInGb()
         {
             var memoryInformation = GetMemoryInfo();
-            var installedMemoryInGb = memoryInformation.InstalledMemory.GetValue(SizeUnit.Gigabytes);
-            var usableMemoryInBytes = memoryInformation.TotalPhysicalMemory.GetValue(SizeUnit.Bytes);
-            var usableMemoryInGb = usableMemoryInBytes / (double)1024 / 1024 / 1024;
+            var installedMemoryInGb = memoryInformation.InstalledMemory.GetDoubleValue(SizeUnit.Gigabytes);
+            var usableMemoryInGb = memoryInformation.TotalPhysicalMemory.GetDoubleValue(SizeUnit.Gigabytes);
             return (installedMemoryInGb, usableMemoryInGb);
         }
 

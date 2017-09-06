@@ -158,13 +158,10 @@ namespace Raven.Server.Documents.Handlers.Admin
                     json[nameof(NodeInfo.Certificate)] = ServerStore.RavenServer.ClusterCertificateHolder.CertificateForClients;
                     json[nameof(ServerStore.Engine.LastStateChangeReason)] = ServerStore.LastStateChangeReason();
                     json[nameof(NodeInfo.NumberOfCores)] = ProcessorInfo.ProcessorCount;
-                    json[nameof(NodeInfo.NumberOfCores)] = ProcessorInfo.ProcessorCount;
 
                     var memoryInformation = MemoryInformation.GetMemoryInfo();
-                    json[nameof(NodeInfo.InstalledMemoryInGb)] = memoryInformation.InstalledMemory.GetValue(SizeUnit.Gigabytes);
-                    var usableMemory = memoryInformation.TotalPhysicalMemory
-                        .GetValue(SizeUnit.Bytes) / (double)1024 / 1024 / 1024;
-                    json[nameof(NodeInfo.UsableMemoryInGb)] = usableMemory;
+                    json[nameof(NodeInfo.InstalledMemoryInGb)] = memoryInformation.InstalledMemory.GetDoubleValue(SizeUnit.Gigabytes);
+                    json[nameof(NodeInfo.UsableMemoryInGb)] = memoryInformation.TotalPhysicalMemory.GetDoubleValue(SizeUnit.Gigabytes);
                 }
                 context.Write(writer, json);
                 writer.Flush();

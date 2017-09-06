@@ -8,7 +8,7 @@ namespace Raven.Server.Commercial
 
         public int NumberOfCores;
 
-        public long InstalledMemoryInGb;
+        public double InstalledMemoryInGb;
 
         public double UsableMemoryInGb;
 
