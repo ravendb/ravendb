@@ -11,21 +11,61 @@ class popoverUtils {
             container: "body",
             animation: true
         };
+        
+        let overElement = false;
+        let hideHandler: number = undefined;
+        
+        let lastHideTime = null as number;
 
         _.assign(options, extraOptions);
-        return selector.popover(options)
+        const popover = selector.popover(options);
+        
+        const scheduleHide = (self: HTMLElement) => hideHandler = setTimeout(() => {
+            if (!overElement) {
+                $(self).popover("hide");
+                lastHideTime = new Date().getTime();
+            }
+        }, 300);
+        
+        const maybeCancelHide = () => {
+            if (hideHandler) {
+                clearTimeout(hideHandler);
+            }
+            hideHandler = undefined;
+        };
+        
+        return popover
             .on("mouseenter", function () {
+                overElement = true;
                 const self = this;
-                $(self).popover("show");
+                
+                const sinceLastHide = new Date().getTime() - lastHideTime;
+                if (sinceLastHide <= 150) {
+                    // since bootstrap emulates hide event 150 milis after hide
+                    // we schedule next show right after element will be actually removed from DOM
+                    
+                    setTimeout(() => {
+                        $(self).popover("show");
+                    }, 155 - sinceLastHide);
+                } else {
+                    $(self).popover("show");
+                    maybeCancelHide();
+                }
+                
                 $(".popover")
-                    .on("mouseleave", () => $(self).popover("hide"));
+                    .one("mouseleave.popover", () => {
+                        overElement = false;
+
+                        scheduleHide(self);
+                    })
+                    .one("mouseenter.popover", () => {
+                        overElement = true;
+                        maybeCancelHide();
+                    });
             }).on("mouseleave", function () {
                 const self = this;
-                setTimeout(() => {
-                    if (!$(".popover:hover").length) {
-                        $(self).popover("hide");
-                    }
-                }, 300);
+                overElement = false;
+                scheduleHide(self);
             });
     }
 }
