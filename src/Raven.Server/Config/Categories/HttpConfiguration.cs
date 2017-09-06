@@ -25,6 +25,12 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Http.MaxRequestBufferSizeInKb", ConfigurationEntryScope.ServerWideOnly)]
         public Size? MaxRequestBufferSize { get; set; }
 
+        [Description("Set Kestrel's MaxRequestLineSize")]
+        [DefaultValue(16)]
+        [SizeUnit(SizeUnit.Kilobytes)]
+        [ConfigurationEntry("Http.MaxRequestLineSizeInKb", ConfigurationEntryScope.ServerWideOnly)]
+        public Size MaxRequestLineSize { get; set; }
+
         [Description("Whether Raven's HTTP server should GZip encode its responses")]
         [DefaultValue(true)]
         [ConfigurationEntry("Http.AllowResponseCompression", ConfigurationEntryScope.ServerWideOnly)]
