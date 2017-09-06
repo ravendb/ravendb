@@ -99,11 +99,6 @@ namespace Raven.Server.Web.System
             return null;
         }
 
-
-        // This is used to serve clients that don't support gzip
-        private static readonly ConcurrentDictionary<string, byte[]> StaticContentCache = new ConcurrentDictionary<string, byte[]>();
-        private static readonly ConcurrentDictionary<string, byte[]> CompressedStaticContentCache = new ConcurrentDictionary<string, byte[]>();
-
         public async Task WriteFile(FileInfo file)
         {
 #if DEBUG
@@ -121,64 +116,10 @@ namespace Raven.Server.Web.System
             HttpContext.Response.ContentType = GetContentType(file.Extension);
             HttpContext.Response.Headers["ETag"] = fileEtag;
 
-
-            // Load the uncompressed file, either from cache or disk
-            string fileCacheKey = fileEtag + file.FullName;
-
-            byte[] inputFile = StaticContentCache.GetOrAdd(fileCacheKey, _ => File.ReadAllBytesAsync(file.FullName).Result);
-            Stream inputStream = new MemoryStream(inputFile);
-
-            // Transfer the file all at once, these are not actual streams, so 
-            // there is no need to chunk
-            HttpContext.Response.Headers["Transfer-Encoding"] = "identity";
-            if (ShouldSkipCompression(file) || !AcceptsGzipResponse())
+            using (var data = File.OpenRead(file.FullName))
             {
-                // Serve from _fileCache
-                HttpContext.Response.Headers["Content-Length"] = inputFile.Length.ToString();
+                await data.CopyToAsync(HttpContext.Response.Body, 16 * 1024);
             }
-            else
-            {
-                // Serve from _compressedFileCache using gzip encoding
-                HttpContext.Response.Headers["Content-Encoding"] = "gzip";
-                var gzippedFile = CompressedStaticContentCache.GetOrAdd(fileCacheKey, _ =>
-                    {
-                        var responseStream = new MemoryStream();
-                        // Gzip the inputFileStream and put it into the responseStream. The stream is flushed on Dispose
-                        using (var gZipStream = GetGzipStream(responseStream, CompressionMode.Compress, CompressionLevel.Optimal))
-                        {
-                            // ReSharper disable once AccessToModifiedClosure
-                            inputStream.CopyTo(gZipStream);
-                        }
-
-                        // Convert the responseStream into an array
-                        return responseStream.ToArray();
-                    });
-
-                HttpContext.Response.Headers["Content-Length"] = gzippedFile.Length.ToString();
-                inputStream = new MemoryStream(gzippedFile);
-            }
-
-
-            // Since we are copying from a MemoryStream, buffering only hurts
-            var responseBodyStream = HttpContext.Response.Body;
-            await inputStream
-                    .CopyToAsync(responseBodyStream)
-                    .ContinueWith(task => responseBodyStream.FlushAsync());
-        }
-
-        private static readonly List<string> SkipExtensions = new List<string>
-            {
-                ".png",
-                ".jpg",
-                ".ico",
-                ".svg",
-                ".woff2",
-                ".ttf"
-            };
-
-        private static bool ShouldSkipCompression(FileInfo file)
-        {
-            return SkipExtensions.Contains(file.Extension);
         }
 
         [RavenAction("/studio/$", "GET", AuthorizationStatus.UnauthenticatedClients)]
@@ -206,7 +147,7 @@ namespace Raven.Server.Web.System
                 return;
             }
 
-            WriteFileFromZip(zipFilePath, fileName);
+            await WriteFileFromZip(zipFilePath, fileName);
         }
 
         [RavenAction("/", "GET", AuthorizationStatus.UnauthenticatedClients)]
@@ -217,12 +158,12 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-        private void WriteFileFromZip(string zipPath, string fileName)
+        private async Task WriteFileFromZip(string zipPath, string fileName)
         {
-            var etagValue = GetLongFromHeaders("If-None-Match") ?? 
+            var etagValue = GetLongFromHeaders("If-None-Match") ??
                 GetLongFromHeaders("If-Match");
             var currentFileEtag = ZipLastChangedDate.GetOrAdd(
-                zipPath, 
+                zipPath,
                 f => File.GetLastWriteTime(f).Ticks);
 
             if (etagValue == currentFileEtag)
@@ -249,15 +190,17 @@ namespace Raven.Server.Web.System
                 WriteETag(currentFileEtag);
                 using (var entry = zipEntry.Open())
                 {
-                    entry.CopyTo(responseStream);
-                    entry.Flush();
+                    await entry.CopyToAsync(responseStream);
+                    await entry.FlushAsync();
                 }
             }
         }
 
         private static string GetContentType(string fileExtension)
         {
-            return FileExtensionToContentTypeMapping.TryGetValue(fileExtension, out string contentType) ? contentType : "text/plain; charset=utf-8";
+            return FileExtensionToContentTypeMapping.TryGetValue(fileExtension, out string contentType)
+                ? contentType
+                : "text/plain; charset=utf-8";
         }
 
         public string GetHeader(string key)
