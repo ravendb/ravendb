@@ -14,7 +14,7 @@ namespace Raven.Client.ServerWide.Operations
         private readonly string _fromNode;
         private readonly int _timeInSec;
 
-        public DeleteDatabaseOperation(string name, bool hardDelete,string fromNode = null, int timeInSec = 0)
+        public DeleteDatabaseOperation(string name, bool hardDelete, string fromNode = null, int timeInSec = 0)
         {
             _name = name ?? throw new ArgumentNullException(nameof(name));
             _hardDelete = hardDelete;
@@ -34,7 +34,7 @@ namespace Raven.Client.ServerWide.Operations
             private readonly string _fromNode;
             private readonly int _timeInSec;
 
-            public DeleteDatabaseCommand(string name, bool hardDelete,string fromNode, int timeInSec)
+            public DeleteDatabaseCommand(string name, bool hardDelete, string fromNode, int timeInSec)
             {
                 _name = name ?? throw new ArgumentNullException(nameof(name));
                 _hardDelete = hardDelete;
@@ -70,7 +70,7 @@ namespace Raven.Client.ServerWide.Operations
             {
                 Result = JsonDeserializationClient.DeleteDatabaseResult(response);
             }
-            
+
             public override bool IsReadRequest => false;
         }
     }
