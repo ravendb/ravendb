@@ -68,7 +68,10 @@
                         Export all collections
                     </label>
                 </div>
-                <div id="collapseCollections" data-bind="collapse: !model.includeAllCollections()">
+                <div data-bind="visible: !collections().length && !model.includeAllCollections()">
+                    No collections available
+                </div>
+                <div id="collapseCollections" data-bind="collapse: !model.includeAllCollections(), visible: collections().length">
                     <div class="border">
                         <div class="row">
                             <div class="col-sm-6">
