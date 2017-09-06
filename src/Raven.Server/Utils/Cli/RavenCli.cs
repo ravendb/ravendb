@@ -379,11 +379,11 @@ namespace Raven.Server.Utils.Cli
             switch (args.First())
             {
                 case "on":
-                    TimeoutEvent.Disable = false;
+                    cli._server.ServerStore.Engine.Timeout.Disable = false;
                     WriteText("Timer enabled", TextColor, cli);
                     break;
                 case "off":
-                    TimeoutEvent.Disable = true;
+                    cli._server.ServerStore.Engine.Timeout.Disable = true;
                     WriteText("Timer disabled", TextColor, cli);
                     break;
                 case "fire":

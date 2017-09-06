@@ -345,7 +345,7 @@ namespace Raven.Server.Rachis
 
         private void VoteOfNoConfidence()
         {
-            if (TimeoutEvent.Disable)
+            if (_engine.Timeout.Disable)
                 return;
 
             var sb = new StringBuilder();
