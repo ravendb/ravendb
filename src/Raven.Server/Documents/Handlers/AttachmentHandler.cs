@@ -239,7 +239,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private class MergedPutAttachmentCommand : TransactionOperationsMerger.MergedTransactionCommand
+        public class MergedPutAttachmentCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             public string DocumentId;
             public string Name;
