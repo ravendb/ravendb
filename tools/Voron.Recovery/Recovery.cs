@@ -5,15 +5,29 @@ using System.IO;
 using System.IO.Compression;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Exceptions.Database;
+using Raven.Client.Extensions;
+using Raven.Client.Json;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Includes;
+using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Revisions;
+using Raven.Server.Smuggler.Documents;
+using Sparrow;
 using Sparrow.Json;
+using Sparrow.LowMemory;
 using Sparrow.Threading;
+using Sparrow.Utils;
 using Voron.Data;
+using Voron.Data.BTrees;
 using Voron.Data.RawData;
 using Voron.Data.Tables;
 using Voron.Global;
+using Voron.Impl;
 using Voron.Impl.Paging;
+using static System.String;
 
 namespace Voron.Recovery
 {
@@ -34,6 +48,10 @@ namespace Voron.Recovery
             _previouslyWrittenDocs = new Dictionary<string, long>();
         }
 
+
+        private readonly byte[] _streamHashState = new byte[Sodium.crypto_generichash_statebytes()];
+        private readonly byte[] _streamHashResult = new byte[(int)Sodium.crypto_generichash_bytes()];
+        private List<(IntPtr Ptr, int Size)> _attachmentChunks = new List<(IntPtr Ptr, int Size)>();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private long GetFilePosition(long offset, byte* position)
@@ -74,7 +92,7 @@ namespace Voron.Recovery
             //making sure eof is page aligned
             var eof = mem + (fileSize / _pageSize) * _pageSize;
             DateTime lastProgressReport = DateTime.MinValue;
-
+            using (var destinationStreamAttachments = File.OpenWrite(Path.Combine(Path.GetDirectoryName(_output), Path.GetFileNameWithoutExtension(_output) + "-1-Attachments" + Path.GetExtension(_output))))
             using (var destinationStreamDocuments = File.OpenWrite(Path.Combine(Path.GetDirectoryName(_output), Path.GetFileNameWithoutExtension(_output) + "-2-Documents" + Path.GetExtension(_output))))
             using (var destinationStreamRevisions = File.OpenWrite(Path.Combine(Path.GetDirectoryName(_output), Path.GetFileNameWithoutExtension(_output) + "-3-Revisions" + Path.GetExtension(_output))))
             using (var destinationStreamConflicts = File.OpenWrite(Path.Combine(Path.GetDirectoryName(_output), Path.GetFileNameWithoutExtension(_output) + "-4-Conflicts" + Path.GetExtension(_output))))
@@ -82,11 +100,14 @@ namespace Voron.Recovery
             using (var gZipStreamDocuments = new GZipStream(destinationStreamDocuments, CompressionMode.Compress, true))
             using (var gZipStreamRevisions = new GZipStream(destinationStreamRevisions, CompressionMode.Compress, true))
             using (var gZipStreamConflicts = new GZipStream(destinationStreamConflicts, CompressionMode.Compress, true))
+            using (var gZipStreamAttachments = new GZipStream(destinationStreamAttachments, CompressionMode.Compress, true))
             using (var context = new JsonOperationContext(_initialContextSize, _initialContextLongLivedSize, SharedMultipleUseFlag.None))
             using (var documentsWriter = new BlittableJsonTextWriter(context, gZipStreamDocuments))
             using (var revisionsWriter = new BlittableJsonTextWriter(context, gZipStreamRevisions))
             using (var conflictsWriter = new BlittableJsonTextWriter(context, gZipStreamConflicts))
+            using (var attachmentWriter = new BlittableJsonTextWriter(context, gZipStreamAttachments))
             {
+                WriteSmugglerHeader(attachmentWriter, 40018, "Docs");
                 WriteSmugglerHeader(documentsWriter, 40018, "Docs");
                 WriteSmugglerHeader(revisionsWriter, 40018, "RevisionDocuments");
                 WriteSmugglerHeader(conflictsWriter, 40018, "ConflictDocuments");
@@ -118,9 +139,9 @@ namespace Voron.Recovery
                         }
 
                         var pageHeader = (PageHeader*)mem;
-                        
+
                         //this page is not raw data section move on
-                        if ((pageHeader->Flags).HasFlag(PageFlags.RawData) == false)
+                        if ((pageHeader->Flags).HasFlag(PageFlags.RawData) == false && pageHeader->Flags.HasFlag(PageFlags.Stream) == false)
                         {
                             mem += _pageSize;
                             continue;
@@ -138,41 +159,100 @@ namespace Voron.Recovery
                         ulong checksum;
                         if (pageHeader->Flags.HasFlag(PageFlags.Overflow))
                         {
-                            var endOfOverflow = (byte*)pageHeader + VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(pageHeader->OverflowSize) * _pageSize;
-                            // the endOfOeverFlow can be equal to eof if the last page is overflow
-                            if (endOfOverflow > eof)
-                            {
-                                var message =
-                                    $"Overflow page #{pageHeader->PageNumber} (offset={GetFilePosition(startOffset, mem)})" +
-                                    $" size exceeds the end of the file ([{(long)pageHeader}:{(long)endOfOverflow}])";
-                                mem = PrintErrorAndAdvanceMem(message, mem, logFile);
+                            if (ValidateOverflowPage(pageHeader, eof, startOffset, logFile, ref mem) == false)
                                 continue;
+
+                            var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(pageHeader->OverflowSize);
+
+                            if (pageHeader->Flags.HasFlag(PageFlags.Stream))
+                            {
+                                var streamPageHeader = (StreamPageHeader*)pageHeader;
+                                if (streamPageHeader->StreamPageFlags.HasFlag(StreamPageFlags.First) == false)
+                                {
+                                    mem += numberOfPages * _pageSize;
+                                    continue;
+                                }
+
+                                int rc;
+                                fixed (byte* hashStatePtr = _streamHashState)
+                                fixed (byte* hashResultPtr = _streamHashResult)
+                                {
+                                    long totalSize = 0;
+                                    _attachmentChunks.Clear();
+                                    rc = Sodium.crypto_generichash_init(hashStatePtr, null, UIntPtr.Zero, (UIntPtr)_streamHashResult.Length);
+                                    if (rc != 0)
+                                    {
+                                        logFile.WriteLine($"page #{pageHeader->PageNumber} (offset={(long)pageHeader}) failed to initialize Sodium for hash computation will skip this page.");
+                                        mem += numberOfPages * _pageSize;
+                                        continue;
+                                    }
+                                    // write document header, including size
+                                    PageHeader* nextPage = pageHeader;
+                                    byte* nextPagePtr = (byte*)nextPage;
+                                    bool valid = true;
+                                    while (true) // has next
+                                    {
+                                        streamPageHeader = (StreamPageHeader*)nextPage;
+                                        //this is the last page and it contains only stream info + maybe the stream tag
+                                        if (streamPageHeader->ChunkSize == 0)
+                                            break;
+                                        totalSize += streamPageHeader->ChunkSize;                                        
+                                        var dataStart = (byte*)nextPage + PageHeader.SizeOf;
+                                        _attachmentChunks.Add(((IntPtr)dataStart, (int)streamPageHeader->ChunkSize));
+                                        rc = Sodium.crypto_generichash_update(hashStatePtr, dataStart, (ulong)streamPageHeader->ChunkSize);
+                                        if (rc != 0)
+                                        {
+                                            logFile.WriteLine($"page #{pageHeader->PageNumber} (offset={(long)pageHeader}) failed to compute chunk hash, will skip it.");
+                                            valid = false;
+                                            break;
+                                        }
+                                        if (streamPageHeader->StreamNextPageNumber == 0 )
+                                            break;
+                                        nextPage = (PageHeader*)(streamPageHeader->StreamNextPageNumber * _pageSize + startOffset);
+                                        //This is the case that the next page isn't a stream page
+                                        if (nextPage->Flags.HasFlag(PageFlags.Stream) == false || nextPage->Flags.HasFlag(PageFlags.Overflow) == false)
+                                        {
+                                            valid = false;
+                                            logFile.WriteLine($"page #{nextPage->PageNumber} (offset={(long)nextPage}) was suppose to be a stream chunck but isn't marked as Overflow | Stream");
+                                            break;
+                                        }
+                                        valid = ValidateOverflowPage(nextPage, eof, (long)nextPage, logFile, ref nextPagePtr);
+                                        if (valid == false)
+                                        {
+                                            break;
+                                        }                                        
+
+                                    }
+                                    if (valid == false)
+                                    {
+                                        //The first page was valid so we can skip the entire overflow
+                                        mem += numberOfPages * _pageSize;
+                                        continue;
+                                    }
+
+                                    rc = Sodium.crypto_generichash_final(hashStatePtr, hashResultPtr, (UIntPtr)_streamHashResult.Length);
+                                    if (rc != 0)
+                                    {
+                                        logFile.WriteLine($"page #{pageHeader->PageNumber} (offset={(long)pageHeader}) failed to compute attachment hash, will skip it.");
+                                        mem += numberOfPages * _pageSize;
+                                        continue;
+                                    }
+                                    var hash = new string(' ', 44);
+                                    fixed (char* p = hash)
+                                    {
+                                        var len = Base64.ConvertToBase64Array(p, hashResultPtr, 0, 32);
+                                        Debug.Assert(len == 44);
+                                    }
+
+                                    WriteAttachment(attachmentWriter, totalSize, hash);
+                                }
+                                mem += numberOfPages * _pageSize;
                             }
 
-                            if (pageHeader->OverflowSize <= 0)
-                            {
-                                var message =
-                                    $"Overflow page #{pageHeader->PageNumber} (offset={GetFilePosition(startOffset, mem)})" +
-                                    $" OverflowSize is not a positive number ({pageHeader->OverflowSize})";
-                                mem = PrintErrorAndAdvanceMem(message, mem, logFile);
-                                continue;
-                            }
-                            // this can only be here if we know that the overflow size is valid
-                            checksum = StorageEnvironment.CalculatePageChecksum((byte*)pageHeader, pageHeader->PageNumber, pageHeader->Flags, pageHeader->OverflowSize);
-
-                            if (checksum != pageHeader->Checksum)
-                            {
-                                var message =
-                                    $"Invalid checksum for overflow page {pageHeader->PageNumber}, expected hash to be {pageHeader->Checksum} but was {checksum}";
-                                mem = PrintErrorAndAdvanceMem(message, mem, logFile);
-                                continue;
-                            }
-
-
-                            if (Write((byte*)pageHeader + PageHeader.SizeOf, pageHeader->OverflowSize, documentsWriter, revisionsWriter, 
+                            else if (Write((byte*)pageHeader + PageHeader.SizeOf, pageHeader->OverflowSize, documentsWriter, revisionsWriter,
                                 conflictsWriter, logFile, context, startOffset, ((RawDataOverflowPageHeader*)mem)->TableType))
                             {
-                                var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(pageHeader->OverflowSize);
+
                                 mem += numberOfPages * _pageSize;
                             }
                             else //write document failed 
@@ -181,7 +261,7 @@ namespace Voron.Recovery
                             }
                             continue;
                         }
-                        
+
                         checksum = StorageEnvironment.CalculatePageChecksum((byte*)pageHeader, pageHeader->PageNumber, pageHeader->Flags, 0);
 
                         if (checksum != pageHeader->Checksum)
@@ -246,7 +326,7 @@ namespace Voron.Recovery
                             if (entry->AllocatedSize == 0 || entry->UsedSize == -1)
                                 continue;
 
-                            if (Write(currMem + sizeof(RawDataSection.RawDataEntrySizes), entry->UsedSize, documentsWriter, revisionsWriter, 
+                            if (Write(currMem + sizeof(RawDataSection.RawDataEntrySizes), entry->UsedSize, documentsWriter, revisionsWriter,
                                 conflictsWriter, logFile, context, startOffset, ((RawDataSmallPageHeader*)mem)->TableType) == false)
                                 break;
                         }
@@ -259,20 +339,162 @@ namespace Voron.Recovery
                         mem = PrintErrorAndAdvanceMem(message, mem, logFile);
                     }
                 }
+                attachmentWriter.WriteEndArray();
                 documentsWriter.WriteEndArray();
                 conflictsWriter.WriteEndArray();
                 revisionsWriter.WriteEndArray();
+                attachmentWriter.WriteEndObject();
                 documentsWriter.WriteEndObject();
                 conflictsWriter.WriteEndObject();
                 revisionsWriter.WriteEndObject();
 
+                ReportOrphanAttachmentsAndMissingAttachments(logFile, ct);
                 logFile.WriteLine(
                     $"Discovered a total of {_numberOfDocumentsRetrieved:#,#;00} documents within {sw.Elapsed.TotalSeconds::#,#.#;;00} seconds.");
+                logFile.WriteLine($"Discovered a total of {_attachmentsHashs.Count:#,#;00} attachments.");
                 logFile.WriteLine($"Discovered a total of {_numberOfFaultedPages::#,#;00} faulted pages.");
             }
             if (_cancellationRequested)
                 return RecoveryStatus.CancellationRequested;
             return RecoveryStatus.Success;
+        }
+
+        private void ReportOrphanAttachmentsAndMissingAttachments(StreamWriter logFile, CancellationToken ct)
+        {
+            //No need to scare the user if there are no attachments in the dump
+            if (_attachmentsHashs.Count == 0 && _documentsAttachments.Count == 0)
+                return;
+            if (_attachmentsHashs.Count == 0)
+            {
+                logFile.WriteLine("No attachments were recoverd but there are documents pointing to attachments.");
+                return;
+            }
+            if (_documentsAttachments.Count == 0)
+            {
+                foreach (var hash in _attachmentsHashs)
+                {
+                    logFile.WriteLine($"Found orphan attachment with hash {hash}.");
+                }
+                return;
+            }
+            Console.WriteLine("Starting to compute orphan and missing attachments this may take a while.");
+            if (ct.IsCancellationRequested)
+            {
+                return;
+            }
+            _attachmentsHashs.Sort();
+            if (ct.IsCancellationRequested)
+            {
+                return;
+            }
+            _documentsAttachments.Sort((x,y)=>Compare(x.hash, y.hash, StringComparison.Ordinal));
+            //We rely on the fact that the attachment hash are unqiue in the _attachmentsHashs list (no duplicated values).
+            int index = 0;
+            foreach (var hash in _attachmentsHashs)
+            {
+                if (ct.IsCancellationRequested)
+                {
+                    return;
+                }
+                var foundEqual = false;
+                while (_documentsAttachments.Count > index)
+                {
+                    var documentHash = _documentsAttachments[index].hash;
+                    var compareResult = Compare(hash, documentHash, StringComparison.Ordinal);
+                    if (compareResult == 0)
+                    {
+                        index++;
+                        foundEqual = true;
+                        continue;
+                    }
+                    //this is the case where we have a document with a hash but no attachment with that hash
+                    if (compareResult > 0)
+                    {
+                        logFile.WriteLine(
+                            $"Document {_documentsAttachments[index].docId} contians atachment with hash {documentHash} but we were not able to recover such attachment.");
+                        index++;
+                        continue;
+                    }
+                    break;
+                }
+                if (foundEqual == false)
+                {
+                    logFile.WriteLine($"Found orphan attachment with hash {hash}.");
+                }
+
+            }
+        }
+
+        private bool _firstAttachment = true;
+        private long _attachmentNumber = 0;
+        private List<string> _attachmentsHashs = new List<string>();
+        private void WriteAttachment(BlittableJsonTextWriter attachmentWriter, long totalSize, string hash)
+        {
+            if (_firstAttachment == false)
+            {
+                attachmentWriter.WriteComma();
+            }
+            _firstAttachment = false;
+
+            attachmentWriter.WriteStartObject();
+
+            attachmentWriter.WritePropertyName(DocumentItem.Key);
+            attachmentWriter.WriteInteger((byte)DocumentType.Attachment);
+            attachmentWriter.WriteComma();
+
+            attachmentWriter.WritePropertyName(nameof(AttachmentName.Hash));
+            attachmentWriter.WriteString(hash);
+            attachmentWriter.WriteComma();
+
+            attachmentWriter.WritePropertyName(nameof(AttachmentName.Size));
+            attachmentWriter.WriteInteger(totalSize);
+            attachmentWriter.WriteComma();
+
+            attachmentWriter.WritePropertyName(nameof(DocumentItem.AttachmentStream.Tag));
+            attachmentWriter.WriteString($"Recovered attachment #{++_attachmentNumber}");
+
+            attachmentWriter.WriteEndObject();
+            foreach (var chunk in _attachmentChunks)
+            {
+                attachmentWriter.WriteMemoryChunk(chunk.Ptr,chunk.Size);
+            }
+            _attachmentsHashs.Add(hash);
+        }
+
+
+        private bool ValidateOverflowPage(PageHeader* pageHeader, byte* eof, long startOffset, StreamWriter logFile, ref byte* mem)
+        {
+            ulong checksum;
+            var endOfOverflow = (byte*)pageHeader + VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(pageHeader->OverflowSize) * _pageSize;
+            // the endOfOeverFlow can be equal to eof if the last page is overflow
+            if (endOfOverflow > eof)
+            {
+                var message =
+                    $"Overflow page #{pageHeader->PageNumber} (offset={GetFilePosition(startOffset, mem)})" +
+                    $" size exceeds the end of the file ([{(long)pageHeader}:{(long)endOfOverflow}])";
+                mem = PrintErrorAndAdvanceMem(message, mem, logFile);
+                return false;
+            }
+
+            if (pageHeader->OverflowSize <= 0)
+            {
+                var message =
+                    $"Overflow page #{pageHeader->PageNumber} (offset={GetFilePosition(startOffset, mem)})" +
+                    $" OverflowSize is not a positive number ({pageHeader->OverflowSize})";
+                mem = PrintErrorAndAdvanceMem(message, mem, logFile);
+                return false;
+            }
+            // this can only be here if we know that the overflow size is valid
+            checksum = StorageEnvironment.CalculatePageChecksum((byte*)pageHeader, pageHeader->PageNumber, pageHeader->Flags, pageHeader->OverflowSize);
+
+            if (checksum != pageHeader->Checksum)
+            {
+                var message =
+                    $"Invalid checksum for overflow page {pageHeader->PageNumber}, expected hash to be {pageHeader->Checksum} but was {checksum}";
+                mem = PrintErrorAndAdvanceMem(message, mem, logFile);
+                return false;
+            }
+            return true;
         }
 
         private void WriteSmugglerHeader(BlittableJsonTextWriter writer, int version,string docType)
@@ -350,12 +572,38 @@ namespace Voron.Recovery
                 _numberOfDocumentsRetrieved++;
                 logWriter.WriteLine($"Found document with key={document.Id}");
                 _lastRecoveredDocumentKey = document.Id;
+
+                HandleDocumentAttachments(logWriter, document);
+                
                 return true;
             }
             catch (Exception e)
             {
                 logWriter.WriteLine($"Unexpected exception while writing document at position {GetFilePosition(startOffest, mem)}: {e}");
                 return false;
+            }
+        }
+
+        private void HandleDocumentAttachments(StreamWriter logWriter, Document document)
+        {
+            if (document.Flags.HasFlag(DocumentFlags.HasAttachments))
+            {
+                var metadata = document.Data.GetMetadata();
+                if (metadata == null)
+                {
+                    logWriter.WriteLine(
+                        $"Document {document.Id} has attachment flag set but was unable to read its metadata and retrieve the attachments hashes");
+                    return;
+                }
+                var metadataDictionary = new MetadataAsDictionary(metadata);
+                var attachments = metadataDictionary.GetObjects(Raven.Client.Constants.Documents.Metadata.Attachments);
+                foreach (var attachment in attachments)
+                {
+                    var hash = attachment.GetString(nameof(AttachmentName.Hash));
+                    if (IsNullOrEmpty(hash))
+                        continue;
+                    _documentsAttachments.Add((hash, document.Id));
+                }
             }
         }
 
@@ -474,7 +722,8 @@ namespace Voron.Recovery
         private readonly string _datafile;
         private readonly bool _copyOnWrite;
         private readonly Dictionary<string, long> _previouslyWrittenDocs;
-        
+		private readonly List<(string hash,string docId)> _documentsAttachments = new List<(string hash, string docId)>();
+		
         public enum RecoveryStatus
         {
             Success,

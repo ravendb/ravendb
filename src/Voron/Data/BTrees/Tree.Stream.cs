@@ -148,7 +148,7 @@ namespace Voron.Data.BTrees
                     PageNumber = pageNumber,
                     ChunkSize = chunkSize
                 };
-
+                ((StreamPageHeader*)_currentPage.Pointer)->ChunkSize = chunkSize;
                 using (Slice.External(_parent._tx.Allocator, (byte*)&chunkDetails, ChunkDetails.SizeOf, out Slice value))
                 {
                     _tree.Add(_chunkNumber++, value);
@@ -410,6 +410,12 @@ namespace Voron.Data.BTrees
         //This field is for use of the DR tool only 
         [FieldOffset(14)]
         public long StreamNextPageNumber;
+
+        //This field should be the same as the overflow size except 
+        //for the last page that contains some data at the end of the stream
+        //This is needed for the DR tool so we could properly calculate the stream hash
+        [FieldOffset(22)]
+        public long ChunkSize;
     }
 
     [Flags]
