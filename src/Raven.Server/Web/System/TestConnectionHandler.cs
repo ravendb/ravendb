@@ -31,10 +31,7 @@ namespace Raven.Server.Web.System
                 {
                     throw new TimeoutException($"Waited for {ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan} to receive tcp info from {url} and got no response");
                 }
-                using (var tcpClient = TcpUtils.NewTcpClient(ServerStore.Engine.TcpConnectionTimeout))
-                {
-                    result = await ConnectToClientNodeAsync(connectionInfo.Result, tcpClient, LoggingSource.Instance.GetLogger("testing-connection", "testing-connection"));
-                }
+                result = await ConnectToClientNodeAsync(connectionInfo.Result, ServerStore.Engine.TcpConnectionTimeout, LoggingSource.Instance.GetLogger("testing-connection", "testing-connection"));
             }
             catch (Exception e)
             {
@@ -53,42 +50,46 @@ namespace Raven.Server.Web.System
         }
 
 
-        private async Task<Stream> ConnectAndGetNetworkStreamAsync(TcpConnectionInfo tcpConnectionInfo, TcpClient tcpClient, Logger log)
+        private async Task<(TcpClient TcpClient, Stream Connection)> ConnectAndGetNetworkStreamAsync(TcpConnectionInfo tcpConnectionInfo, TimeSpan timeout, Logger log)
         {
-            await TcpUtils.ConnectSocketAsync(tcpConnectionInfo, tcpClient, log);
-            return await TcpUtils.WrapStreamWithSslAsync(tcpClient, tcpConnectionInfo, Server.ClusterCertificateHolder.Certificate);
+            var tcpClient = await TcpUtils.ConnectSocketAsync(tcpConnectionInfo, timeout, log);
+            var connection = await TcpUtils.WrapStreamWithSslAsync(tcpClient, tcpConnectionInfo, Server.ClusterCertificateHolder.Certificate);
+            return (tcpClient, connection);
         }
 
-        private async Task<DynamicJsonValue> ConnectToClientNodeAsync(TcpConnectionInfo tcpConnectionInfo, TcpClient tcpClient, Logger log)
+        private async Task<DynamicJsonValue> ConnectToClientNodeAsync(TcpConnectionInfo tcpConnectionInfo, TimeSpan timeout, Logger log)
         {
-            var connection = await ConnectAndGetNetworkStreamAsync(tcpConnectionInfo, tcpClient, log);
-            var result = new DynamicJsonValue();
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
-            using (var writer = new BlittableJsonTextWriter(ctx, connection))
+            var (tcpClient, connection) = await ConnectAndGetNetworkStreamAsync(tcpConnectionInfo, timeout, log);
+            using (tcpClient)
             {
-                WriteOperationHeaderToRemote(writer);
-                using (var responseJson = await ctx.ReadForMemoryAsync(connection, $"TestConnectionHandler/{tcpConnectionInfo.Url}/Read-Handshake-Response"))
-                {
-                    var headerResponse = JsonDeserializationServer.TcpConnectionHeaderResponse(responseJson);
-                    switch (headerResponse.Status)
-                    {
-                        case TcpConnectionStatus.Ok:
-                            result["Success"] = true;
-                            break;
-                        case TcpConnectionStatus.AuthorizationFailed:
-                            result["Success"] = false;
-                            result["Error"] = $"Connection to {tcpConnectionInfo.Url} failed because of authorization failure: {headerResponse.Message}";
-                            break;
-                        case TcpConnectionStatus.TcpVersionMissmatch:
-                            result["Success"] = false;
-                            result["Error"] = $"Connection to {tcpConnectionInfo.Url} failed because of missmatching tcp version {headerResponse.Message}";
-                            break;
-                    }
-                }
+                var result = new DynamicJsonValue();
 
+                using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
+                using (var writer = new BlittableJsonTextWriter(ctx, connection))
+                {
+                    WriteOperationHeaderToRemote(writer);
+                    using (var responseJson = await ctx.ReadForMemoryAsync(connection, $"TestConnectionHandler/{tcpConnectionInfo.Url}/Read-Handshake-Response"))
+                    {
+                        var headerResponse = JsonDeserializationServer.TcpConnectionHeaderResponse(responseJson);
+                        switch (headerResponse.Status)
+                        {
+                            case TcpConnectionStatus.Ok:
+                                result["Success"] = true;
+                                break;
+                            case TcpConnectionStatus.AuthorizationFailed:
+                                result["Success"] = false;
+                                result["Error"] = $"Connection to {tcpConnectionInfo.Url} failed because of authorization failure: {headerResponse.Message}";
+                                break;
+                            case TcpConnectionStatus.TcpVersionMissmatch:
+                                result["Success"] = false;
+                                result["Error"] = $"Connection to {tcpConnectionInfo.Url} failed because of missmatching tcp version {headerResponse.Message}";
+                                break;
+                        }
+                    }
+
+                }
+                return result;
             }
-            return result;
         }
 
         private void WriteOperationHeaderToRemote(BlittableJsonTextWriter writer)
