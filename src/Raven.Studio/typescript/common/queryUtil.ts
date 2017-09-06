@@ -12,8 +12,9 @@ interface rqlTokensIndexInfo {
     update?: RegExpExecArray,
     where?: RegExpExecArray,
     load?: RegExpExecArray,
-    orderby?: RegExpExecArray
-};
+    orderby?: RegExpExecArray,
+    select?: RegExpExecArray
+}
 
 class queryUtil {
 
@@ -25,13 +26,13 @@ class queryUtil {
      * Escapes lucene single term
      * 
      * Note: Do not use this method for escaping entire query unless you want to end up with: query\:value\ AND\ a\:b
-     * @param query query to escape
+     * @param term term to escape
      */
     static escapeTerm(term: string) {
-        var output = "";
+        let output = "";
 
-        for (var i = 0; i < term.length; i++) {
-            var c = term.charAt(i);
+        for (let i = 0; i < term.length; i++) {
+            const c = term.charAt(i);
             if (c === '\\' || c === '+' || c === '-' || c === '!' || c === '(' || c === ')'
                 || c === ':' || c === '^' || c === '[' || c === ']' || c === '\"'
                 || c === '{' || c === '}' || c === '~' || c === '*' || c === '?'
@@ -84,19 +85,28 @@ class queryUtil {
         return query;
     }
 
-    private static readonly RQL_TOKEN_REGEX = /(?=([^{]*{[^}{]*})*[^}]*$)(?=([^']*'[^']*')*[^']*$)(?=([^"]*"[^"]*")*[^"]*$)(WHERE|ORDER BY|LOAD|UPDATE)(\s+|{)/gi
+    private static readonly RQL_TOKEN_REGEX = /(?=([^{]*{[^}{]*})*[^}]*$)(?=([^']*'[^']*')*[^']*$)(?=([^"]*"[^"]*")*[^"]*$)(SELECT|WHERE|ORDER BY|LOAD|UPDATE)(\s+|{)/gi;
 
     private static readonly RQL_TOKEN_ORDER = [
         'where', 'load', 'orderby', 'update'
     ];
 
-    static replaceWhereWithDocumentIdPredicate(query: string, documentId: string) {
+    static replaceSelectWithFetchAllStoredFields(query: string) {
         if (!query)
             throw new Error("Query is required.");
 
-        if (!documentId)
-            throw new Error("Document ID is required.")
-
+        const tokenIndexes = queryUtil.findTokenIndexes(query);
+        if (tokenIndexes.select) {
+            const selectIdx = tokenIndexes.select.index;
+            
+            return query.substring(0, selectIdx) + " select __all_stored_fields";
+        } else {
+            // select statement wasn't found append at the end of query
+            return query + " select __all_stored_fields";
+        }
+    }
+    
+    private static findTokenIndexes(query: string) {
         let tokenIndexes: rqlTokensIndexInfo = {};
 
         let match: RegExpExecArray;
@@ -109,6 +119,18 @@ class queryUtil {
         } finally {
             queryUtil.RQL_TOKEN_REGEX.lastIndex = 0;
         }
+        
+        return tokenIndexes;
+    }
+    
+    static replaceWhereWithDocumentIdPredicate(query: string, documentId: string) {
+        if (!query)
+            throw new Error("Query is required.");
+
+        if (!documentId)
+            throw new Error("Document ID is required.");
+
+        const tokenIndexes = queryUtil.findTokenIndexes(query);
 
         const { where, update, load, orderby } = tokenIndexes;
 
