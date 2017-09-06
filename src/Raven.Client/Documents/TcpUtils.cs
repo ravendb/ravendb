@@ -62,14 +62,16 @@ namespace Raven.Client.Documents
             }
         }
 
-        public static async Task<TcpClient> ConnectAsync(string url, TimeSpan? timeout = null)
+        public static async Task<TcpClient> ConnectAsync(string url, TimeSpan? timeout = null, bool useIPv6 = false)
         {
-            var tcpClient = NewTcpClient(timeout);
+            var uri = new Uri(url);
+
+            var isIPv6 = uri.HostNameType == UriHostNameType.IPv6;
+            var tcpClient = NewTcpClient(timeout, isIPv6);
 
             try
             {
-                var uri = new Uri(url);
-                if (uri.HostNameType == UriHostNameType.IPv6)
+                if (isIPv6)
                 {
                     var ipAddress = IPAddress.Parse(uri.Host);
                     await tcpClient.ConnectAsync(ipAddress, uri.Port).ConfigureAwait(false);
@@ -78,6 +80,15 @@ namespace Raven.Client.Documents
                 {
                     await tcpClient.ConnectAsync(uri.Host, uri.Port).ConfigureAwait(false);
                 }
+            }
+            catch (NotSupportedException)
+            {
+                tcpClient.Dispose();
+
+                if (useIPv6)
+                    throw;
+
+                return await ConnectAsync(url, timeout, true).ConfigureAwait(false);
             }
             catch
             {
@@ -102,10 +113,21 @@ namespace Raven.Client.Documents
             return stream;
         }
 
-        private static TcpClient NewTcpClient(TimeSpan? timeout)
+        private static TcpClient NewTcpClient(TimeSpan? timeout, bool useIPv6)
         {
-            var tcpClient = new TcpClient(AddressFamily.InterNetworkV6);
-            tcpClient.Client.DualMode = true;
+            // We start with a IPv4 TcpClient and we fallback to use IPv6 TcpClient only if we fail.
+            // This is because that dual mode of IPv6 has a timeout of 1 second 
+            // which is bigger than the election time in the cluster which is 300ms.
+            TcpClient tcpClient;
+            if (useIPv6)
+            {
+                tcpClient = new TcpClient(AddressFamily.InterNetworkV6);
+                tcpClient.Client.DualMode = true;
+            }
+            else
+            {
+                tcpClient = new TcpClient();
+            }
 
             if (timeout.HasValue)
                 SetTimeouts(tcpClient, timeout.Value);
