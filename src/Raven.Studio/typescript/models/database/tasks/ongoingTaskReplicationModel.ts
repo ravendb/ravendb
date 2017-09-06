@@ -9,9 +9,10 @@ class ongoingTaskReplicationModel extends ongoingTask {
 
     destinationDB = ko.observable<string>();
     destinationURL = ko.observable<string>();
+    showReplicationDetails = ko.observable(false);
   
     validationGroup: KnockoutValidationGroup;
-
+    
     constructor(dto: Raven.Client.ServerWide.Operations.OngoingTaskReplication, isInListView: boolean) {
         super();
 
@@ -37,6 +38,10 @@ class ongoingTaskReplicationModel extends ongoingTask {
 
     editTask() {
         router.navigate(this.editUrl());
+    }
+
+    toggleDetails() {
+        this.showReplicationDetails(!this.showReplicationDetails());
     }
 
     toDto(): externalReplicationDataFromUI {

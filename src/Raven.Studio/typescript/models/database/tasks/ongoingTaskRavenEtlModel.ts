@@ -55,6 +55,10 @@ class ongoingTaskRavenEtlModel extends ongoingTask {
         router.navigate(this.editUrl());
     }
 
+    toggleDetails() {
+        // TODO...
+    }
+
     toDto(): ravenEtlDataFromUI {
         return {
             TaskName: this.taskName(),
