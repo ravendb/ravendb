@@ -571,5 +571,22 @@ namespace Sparrow.Json
                 Flush();
             }
         }
+
+        public void WriteMemoryChunk(IntPtr ptr, int size)
+        {
+            Flush();
+            var p = (byte*)ptr.ToPointer();
+            var leftToWrite = size;
+            var totalWritten = 0;
+            while (leftToWrite > 0)
+            {
+                var toWrite = Math.Min(_bufferLen, leftToWrite);
+                Memory.Copy(_buffer, p + totalWritten, toWrite);
+                _pos += toWrite;
+                totalWritten += toWrite;
+                leftToWrite -= toWrite;
+                Flush();
+            }
+        }
     }
 }
