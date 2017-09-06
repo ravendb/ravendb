@@ -139,10 +139,11 @@ namespace Raven.Server.Documents.Replication
                         throw new InvalidOperationException(
                             $"{record.DatabaseName} is encrypted, and require HTTPS for replication, but had endpoint with url {Destination.Url} to database {Destination.Database}");
                 }
-                using (_tcpClient = TcpUtils.NewTcpClient(_parent._server.Engine.TcpConnectionTimeout))
+
+                var task = TcpUtils.ConnectSocketAsync(connectionInfo, _parent._server.Engine.TcpConnectionTimeout, _log);
+                task.Wait(CancellationToken);
+                using (_tcpClient = task.Result)
                 {
-                    TcpUtils.ConnectSocketAsync(connectionInfo, _tcpClient, _log)
-                        .Wait(CancellationToken);
                     var wrapSsl = TcpUtils.WrapStreamWithSslAsync(_tcpClient, connectionInfo, _parent._server.RavenServer.ClusterCertificateHolder.Certificate);
 
                     wrapSsl.Wait(CancellationToken);

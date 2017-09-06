@@ -20,11 +20,11 @@ namespace Raven.Client.Documents
             client.ReceiveTimeout = (int)timeout.TotalMilliseconds;
         }
 
-        internal static async Task ConnectSocketAsync(TcpConnectionInfo connection, TcpClient tcpClient, Logger log)
+        internal static async Task<TcpClient> ConnectSocketAsync(TcpConnectionInfo connection, TimeSpan timeout, Logger log)
         {
             try
             {
-                await ConnectAsync(tcpClient, connection.Url).ConfigureAwait(false);
+                return await ConnectAsync(connection.Url, timeout).ConfigureAwait(false);
             }
             catch (AggregateException ae) when (ae.InnerException is SocketException)
             {
@@ -62,16 +62,30 @@ namespace Raven.Client.Documents
             }
         }
 
-        public static Task ConnectAsync(TcpClient tcpClient, string url)
+        public static async Task<TcpClient> ConnectAsync(string url, TimeSpan? timeout = null)
         {
-            var uri = new Uri(url);
-            if (uri.HostNameType == UriHostNameType.IPv6) 
+            var tcpClient = NewTcpClient(timeout);
+
+            try
             {
-                var ipAddress = IPAddress.Parse(uri.Host);
-                return tcpClient.ConnectAsync(ipAddress, uri.Port);
+                var uri = new Uri(url);
+                if (uri.HostNameType == UriHostNameType.IPv6)
+                {
+                    var ipAddress = IPAddress.Parse(uri.Host);
+                    await tcpClient.ConnectAsync(ipAddress, uri.Port).ConfigureAwait(false);
+                }
+                else
+                {
+                    await tcpClient.ConnectAsync(uri.Host, uri.Port).ConfigureAwait(false);
+                }
+            }
+            catch
+            {
+                tcpClient.Dispose();
+                throw;
             }
 
-            return tcpClient.ConnectAsync(uri.Host, uri.Port);
+            return tcpClient;
         }
 
         internal static async Task<Stream> WrapStreamWithSslAsync(TcpClient tcpClient, TcpConnectionInfo info, X509Certificate2 storeCertificate)
@@ -88,7 +102,7 @@ namespace Raven.Client.Documents
             return stream;
         }
 
-        internal static TcpClient NewTcpClient(TimeSpan? timeout)
+        private static TcpClient NewTcpClient(TimeSpan? timeout)
         {
             var tcpClient = new TcpClient(AddressFamily.InterNetworkV6);
             tcpClient.Client.DualMode = true;
