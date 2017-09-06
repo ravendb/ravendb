@@ -1093,8 +1093,8 @@ namespace Raven.Client.Http
                     continue;
 
                 var extensionsString = new AsnEncodedData(extension.Oid, extension.RawData).Format(false);
-
-                supported = extensionsString.Contains("1.3.6.1.5.5.7.3.2"); // Client Authentication
+                
+                supported = extensionsString.Contains("1.3.6.1.5.5.7.3.2") || extensionsString.Contains("Client Authentication"); // Client Authentication
             }
 
             if (supported == false)
