@@ -67,6 +67,11 @@ namespace Sparrow.Platform.Posix
             return _is32bits ? (_isArm ? Arm.crypto_generichash_bytes() : X86.crypto_generichash_bytes()) : _isMac64 ? MacOsxX64.crypto_generichash_bytes() : X64.crypto_generichash_bytes();
         }
 
+        public static UIntPtr crypto_sign_statebytes()
+        {
+            return _is32bits ? (_isArm ? Arm.crypto_sign_statebytes() : X86.crypto_sign_statebytes()) : _isMac64 ? MacOsxX64.crypto_sign_statebytes() : X64.crypto_sign_statebytes();
+        }
+
         public static UIntPtr crypto_generichash_statebytes()
         {
             return _is32bits ? (_isArm ? Arm.crypto_generichash_statebytes() : X86.crypto_generichash_statebytes()) : _isMac64 ? MacOsxX64.crypto_generichash_statebytes() : X64.crypto_generichash_statebytes();
@@ -85,6 +90,34 @@ namespace Sparrow.Platform.Posix
             return _is32bits
                 ? (_isArm ? Arm.crypto_generichash_init(state, key, keylen, outlen) : X86.crypto_generichash_init(state, key, keylen, outlen))
                 : _isMac64 ? MacOsxX64.crypto_generichash_init(state, key, keylen, outlen) : X64.crypto_generichash_init(state, key, keylen, outlen);
+        }
+
+        public static int crypto_sign_init(void* /* crypto_sign_state  */ state)
+        {
+            return _is32bits
+                ? (_isArm ? Arm.crypto_sign_init(state) : X86.crypto_sign_init(state))
+                : _isMac64 ? MacOsxX64.crypto_sign_init(state) : X64.crypto_sign_init(state);
+        }
+
+
+        public static int crypto_sign_update(void* /* crypto_generichash_state */ state,
+            byte* m,
+            ulong mlen)
+        {
+            return _is32bits
+                ? (_isArm ? Arm.crypto_sign_update(state,m, mlen) : X86.crypto_sign_update(state, m, mlen))
+                : _isMac64 ? MacOsxX64.crypto_sign_update(state, m, mlen) : X64.crypto_sign_update(state, m, mlen);
+        }
+
+        public static int crypto_sign_final_create(void* /* crypto_generichash_state */ state,
+            byte* sig,
+            ulong* siglen_p,
+            byte* sk)
+        {
+            return _is32bits
+                ? (_isArm ? Arm.crypto_sign_final_create(state, sig, siglen_p, sk) : X86.crypto_sign_final_create(state, sig, siglen_p, sk))
+                : _isMac64 ? MacOsxX64.crypto_sign_final_create(state, sig, siglen_p, sk) : X64.crypto_sign_final_create(state, sig, siglen_p, sk);
+
         }
 
         public static int crypto_generichash_update(
@@ -530,10 +563,28 @@ namespace Sparrow.Platform.Posix
             public static extern UIntPtr crypto_generichash_bytes();
 
             [DllImport(LIB_SODIUM)]
+            public static extern UIntPtr crypto_sign_statebytes();
+
+
+            [DllImport(LIB_SODIUM)]
             public static extern UIntPtr crypto_generichash_statebytes();
 
             [DllImport(LIB_SODIUM)]
             public static extern UIntPtr crypto_generichash_keybytes();
+
+            [DllImport(LIB_SODIUM)]
+            public static extern int crypto_sign_init(void* /* crypto_generichash_state */ state);
+
+            [DllImport(LIB_SODIUM)]
+            public static extern int crypto_sign_update(void* /* crypto_generichash_state */ state,
+                byte* m,
+                ulong mlen);
+
+            [DllImport(LIB_SODIUM)]
+            public static extern int crypto_sign_final_create(void* /* crypto_generichash_state */ state,
+                byte* sig,
+                ulong* siglen_p,
+                byte* sk);
 
             [DllImport(LIB_SODIUM)]
             public static extern int crypto_generichash_init(void* /* crypto_generichash_state */ state,
@@ -807,10 +858,28 @@ namespace Sparrow.Platform.Posix
             public static extern UIntPtr crypto_generichash_bytes();
 
             [DllImport(LIB_SODIUM)]
+            public static extern UIntPtr crypto_sign_statebytes();
+
+
+            [DllImport(LIB_SODIUM)]
             public static extern UIntPtr crypto_generichash_statebytes();
 
             [DllImport(LIB_SODIUM)]
             public static extern UIntPtr crypto_generichash_keybytes();
+
+            [DllImport(LIB_SODIUM)]
+            public static extern int crypto_sign_init(void* /* crypto_generichash_state */ state);
+
+            [DllImport(LIB_SODIUM)]
+            public static extern int crypto_sign_update(void* /* crypto_generichash_state */ state,
+                byte* m,
+                ulong mlen);
+
+            [DllImport(LIB_SODIUM)]
+            public static extern int crypto_sign_final_create(void* /* crypto_generichash_state */ state,
+                byte* sig,
+                ulong* siglen_p,
+                byte* sk);
 
             [DllImport(LIB_SODIUM)]
             public static extern int crypto_generichash_init(void* /* crypto_generichash_state */ state,
@@ -1084,10 +1153,27 @@ namespace Sparrow.Platform.Posix
             public static extern UIntPtr crypto_generichash_bytes();
 
             [DllImport(LIB_SODIUM)]
+            public static extern UIntPtr crypto_sign_statebytes();
+
+            [DllImport(LIB_SODIUM)]
             public static extern UIntPtr crypto_generichash_statebytes();
 
             [DllImport(LIB_SODIUM)]
             public static extern UIntPtr crypto_generichash_keybytes();
+
+            [DllImport(LIB_SODIUM)]
+            public static extern int crypto_sign_init(void* /* crypto_generichash_state */ state);
+
+            [DllImport(LIB_SODIUM)]
+            public static extern int crypto_sign_update(void* /* crypto_generichash_state */ state,
+                byte* m,
+                ulong mlen);
+
+            [DllImport(LIB_SODIUM)]
+            public static extern int crypto_sign_final_create(void* /* crypto_generichash_state */ state,
+                byte* sig,
+                ulong* siglen_p,
+                byte* sk);
 
             [DllImport(LIB_SODIUM)]
             public static extern int crypto_generichash_init(void* /* crypto_generichash_state */ state,
@@ -1361,10 +1447,28 @@ namespace Sparrow.Platform.Posix
             public static extern UIntPtr crypto_generichash_bytes();
 
             [DllImport(LIB_SODIUM)]
+            public static extern UIntPtr crypto_sign_statebytes();
+
+
+            [DllImport(LIB_SODIUM)]
             public static extern UIntPtr crypto_generichash_statebytes();
 
             [DllImport(LIB_SODIUM)]
             public static extern UIntPtr crypto_generichash_keybytes();
+
+            [DllImport(LIB_SODIUM)]
+            public static extern int crypto_sign_init(void* /* crypto_generichash_state */ state);
+
+            [DllImport(LIB_SODIUM)]
+            public static extern int crypto_sign_update(void* /* crypto_generichash_state */ state,
+                byte* m,
+                ulong mlen);
+
+            [DllImport(LIB_SODIUM)]
+            public static extern int crypto_sign_final_create(void* /* crypto_generichash_state */ state,
+                byte* sig,
+                ulong* siglen_p,
+                byte* sk);
 
             [DllImport(LIB_SODIUM)]
             public static extern int crypto_generichash_init(void* /* crypto_generichash_state */ state,

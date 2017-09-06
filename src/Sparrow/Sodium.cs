@@ -12,13 +12,6 @@ namespace Sparrow
                     : Platform.Win32.WinSodium.crypto_kdf_keybytes());
         }
 
-        public static UIntPtr crypto_generichash_bytes()
-        {
-            return Platform.PlatformDetails.RunningOnPosix
-                ? Platform.Posix.PosixSodium.crypto_generichash_bytes()
-                : Platform.Win32.WinSodium.crypto_generichash_bytes();
-        }
-
         public static int crypto_generichash_statebytes()
         {
             return (int)(Platform.PlatformDetails.RunningOnPosix
@@ -26,11 +19,52 @@ namespace Sparrow
                 : Platform.Win32.WinSodium.crypto_generichash_statebytes());
         }
 
+        public static UIntPtr crypto_generichash_bytes()
+        {
+            return Platform.PlatformDetails.RunningOnPosix
+                ? Platform.Posix.PosixSodium.crypto_generichash_bytes()
+                : Platform.Win32.WinSodium.crypto_generichash_bytes();
+        }
+
+        public static int crypto_sign_statebytes()
+        {
+            return (int)(Platform.PlatformDetails.RunningOnPosix
+                ? Platform.Posix.PosixSodium.crypto_sign_statebytes()
+                : Platform.Win32.WinSodium.crypto_sign_statebytes());
+        }
+
         public static int crypto_generichash_keybytes()
         {
             return (int)(Platform.PlatformDetails.RunningOnPosix
                 ? Platform.Posix.PosixSodium.crypto_generichash_keybytes()
                 : Platform.Win32.WinSodium.crypto_generichash_keybytes());
+        }
+
+        public static int crypto_sign_init(void* /* crypto_sign_state  */ state)
+        {
+            return Platform.PlatformDetails.RunningOnPosix
+                ? Platform.Posix.PosixSodium.crypto_sign_init(state)
+                : Platform.Win32.WinSodium.crypto_sign_init(state);
+        }
+
+        public static int crypto_sign_update(void* /* crypto_generichash_state */ state,
+            byte* m,
+            ulong mlen)
+        {
+            return Platform.PlatformDetails.RunningOnPosix
+                ? Platform.Posix.PosixSodium.crypto_sign_update(state, m, mlen)
+                : Platform.Win32.WinSodium.crypto_sign_update(state, m, mlen);
+        }
+
+        public static int crypto_sign_final_create(void* /* crypto_generichash_state */ state,
+            byte* sig,
+            ulong* siglen_p,
+            byte* sk)
+        {
+            return Platform.PlatformDetails.RunningOnPosix
+                ? Platform.Posix.PosixSodium.crypto_sign_final_create(state, sig, siglen_p, sk)
+                : Platform.Win32.WinSodium.crypto_sign_final_create(state, sig, siglen_p, sk);
+
         }
 
         public static int crypto_generichash_init(void* /* crypto_generichash_state */ state,
