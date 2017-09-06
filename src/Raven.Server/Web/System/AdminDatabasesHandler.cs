@@ -13,6 +13,7 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features.Authentication;
+using Microsoft.Extensions.Primitives;
 using NCrontab.Advanced;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
@@ -449,60 +450,61 @@ namespace Raven.Server.Web.System
                 throw new ArgumentException($"Unkown backup connection: {type}");
 
             DynamicJsonValue result;
-            
+
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                try {
-                var connectionInfo = await context.ReadForMemoryAsync(RequestBodyStream(), "test-connection");
-                switch (connectionType)
+                try
                 {
-                    case PeriodicBackupTestConnectionType.S3:
-                        var s3Settings = JsonDeserializationClient.S3Settings(connectionInfo);
-                        using (var awsClient = new RavenAwsS3Client(
-                            s3Settings.AwsAccessKey, s3Settings.AwsSecretKey, s3Settings.BucketName,
-                            s3Settings.AwsRegionName, cancellationToken: ServerStore.ServerShutdown))
-                        {
-                            await awsClient.TestConnection();
-                        }
-                        break;
-                    case PeriodicBackupTestConnectionType.Glacier:
-                        var glacierSettings = JsonDeserializationClient.GlacierSettings(connectionInfo);
-                        using (var galcierClient = new RavenAwsGlacierClient(
-                            glacierSettings.AwsAccessKey, glacierSettings.AwsSecretKey,
-                            glacierSettings.AwsRegionName, glacierSettings.VaultName,
-                            cancellationToken: ServerStore.ServerShutdown))
-                        {
-                            await galcierClient.TestConnection();
-                        }
-                        break;
-                    case PeriodicBackupTestConnectionType.Azure:
-                        var azureSettings = JsonDeserializationClient.AzureSettings(connectionInfo);
-                        using (var azureClient = new RavenAzureClient(
-                            azureSettings.AccountName, azureSettings.AccountKey,
-                            azureSettings.StorageContainer, cancellationToken: ServerStore.ServerShutdown))
-                        {
-                            await azureClient.TestConnection();
-                        }
-                        break;
-                    case PeriodicBackupTestConnectionType.FTP:
-                        var ftpSettings = JsonDeserializationClient.FtpSettings(connectionInfo);
-                        using (var ftpClient = new RavenFtpClient(ftpSettings.Url, ftpSettings.Port, ftpSettings.UserName,
-                            ftpSettings.Password, ftpSettings.CertificateAsBase64, ftpSettings.CertificateFileName))
-                        {
-                            await ftpClient.TestConnection();
-                        }
-                        break;
-                    case PeriodicBackupTestConnectionType.Local:
-                    case PeriodicBackupTestConnectionType.None:
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                }
-                    
+                    var connectionInfo = await context.ReadForMemoryAsync(RequestBodyStream(), "test-connection");
+                    switch (connectionType)
+                    {
+                        case PeriodicBackupTestConnectionType.S3:
+                            var s3Settings = JsonDeserializationClient.S3Settings(connectionInfo);
+                            using (var awsClient = new RavenAwsS3Client(
+                                s3Settings.AwsAccessKey, s3Settings.AwsSecretKey, s3Settings.BucketName,
+                                s3Settings.AwsRegionName, cancellationToken: ServerStore.ServerShutdown))
+                            {
+                                await awsClient.TestConnection();
+                            }
+                            break;
+                        case PeriodicBackupTestConnectionType.Glacier:
+                            var glacierSettings = JsonDeserializationClient.GlacierSettings(connectionInfo);
+                            using (var galcierClient = new RavenAwsGlacierClient(
+                                glacierSettings.AwsAccessKey, glacierSettings.AwsSecretKey,
+                                glacierSettings.AwsRegionName, glacierSettings.VaultName,
+                                cancellationToken: ServerStore.ServerShutdown))
+                            {
+                                await galcierClient.TestConnection();
+                            }
+                            break;
+                        case PeriodicBackupTestConnectionType.Azure:
+                            var azureSettings = JsonDeserializationClient.AzureSettings(connectionInfo);
+                            using (var azureClient = new RavenAzureClient(
+                                azureSettings.AccountName, azureSettings.AccountKey,
+                                azureSettings.StorageContainer, cancellationToken: ServerStore.ServerShutdown))
+                            {
+                                await azureClient.TestConnection();
+                            }
+                            break;
+                        case PeriodicBackupTestConnectionType.FTP:
+                            var ftpSettings = JsonDeserializationClient.FtpSettings(connectionInfo);
+                            using (var ftpClient = new RavenFtpClient(ftpSettings.Url, ftpSettings.Port, ftpSettings.UserName,
+                                ftpSettings.Password, ftpSettings.CertificateAsBase64, ftpSettings.CertificateFileName))
+                            {
+                                await ftpClient.TestConnection();
+                            }
+                            break;
+                        case PeriodicBackupTestConnectionType.Local:
+                        case PeriodicBackupTestConnectionType.None:
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+
                     result = new DynamicJsonValue
                     {
                         [nameof(NodeConnectionTestResult.Success)] = true,
                     };
-            }
+                }
                 catch (Exception e)
                 {
                     result = new DynamicJsonValue
@@ -515,7 +517,7 @@ namespace Raven.Server.Web.System
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(writer, result);
-        }
+                }
             }
         }
 
@@ -680,7 +682,6 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/databases", "DELETE", AuthorizationStatus.Operator)]
         public async Task Delete()
         {
-            var names = GetStringValuesQueryString("name");
             var fromNodes = GetStringValuesQueryString("from-node", required: false);
             var isHardDelete = GetBoolValueQueryString("hard-delete", required: false) ?? false;
             var confirmationTimeoutInSec = GetIntValueQueryString("confirmationTimeoutInSec", required: false) ?? 15;
@@ -688,6 +689,8 @@ namespace Raven.Server.Web.System
             var waitOnRecordDeletion = new List<string>();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
+                var names = await GetDatabaseNamesToDeleteAsync(context);
+
                 if (string.IsNullOrEmpty(fromNodes) == false)
                 {
                     using (context.OpenReadTransaction())
@@ -773,6 +776,32 @@ namespace Raven.Server.Web.System
                     }
                 }
             }
+        }
+
+        private async Task<string[]> GetDatabaseNamesToDeleteAsync(JsonOperationContext context)
+        {
+            var names = GetStringValuesQueryString("name", required: false);
+            if (names.Count != 0)
+                return names;
+
+            var json = await context.ReadForMemoryAsync(RequestBodyStream(), "docs");
+            if (json.TryGetMember("Databases", out var databases) && databases is BlittableJsonReaderArray databasesArray)
+            {
+                var results = new List<string>();
+                foreach (var item in databasesArray)
+                {
+                    var name = item?.ToString();
+
+                    if (string.IsNullOrWhiteSpace(name))
+                        continue;
+
+                    results.Add(name);
+                }
+
+                return results.ToArray();
+            }
+
+            return names;
         }
 
         [RavenAction("/admin/databases/disable", "POST", AuthorizationStatus.Operator)]
