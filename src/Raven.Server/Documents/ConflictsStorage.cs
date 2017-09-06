@@ -212,7 +212,7 @@ namespace Raven.Server.Documents
             return result;
         }
 
-        public static DocumentConflict ParseRawDataSectionConflictWithValidation(JsonOperationContext context, ref TableValueReader tvr, int expectedSize)
+        public static DocumentConflict ParseRawDataSectionConflictWithValidation(JsonOperationContext context, ref TableValueReader tvr, int expectedSize, out long etag)
         {
             var read = tvr.Read((int)ConflictsTable.Data, out var size);
             if (size > expectedSize || size <= 0)
@@ -224,7 +224,7 @@ namespace Raven.Server.Documents
                 LowerId = TableValueToString(context, (int)ConflictsTable.LowerId, ref tvr),
                 Id = TableValueToId(context, (int)ConflictsTable.Id, ref tvr),
                 ChangeVector = TableValueToChangeVector(context, (int)ConflictsTable.ChangeVector, ref tvr),
-                Etag = TableValueToEtag((int)ConflictsTable.Etag, ref tvr),
+                Etag = etag = TableValueToEtag((int)ConflictsTable.Etag, ref tvr),
                 Doc = new BlittableJsonReaderObject(read, size, context),
                 Collection = TableValueToString(context, (int)ConflictsTable.Collection, ref tvr),
                 LastModified = TableValueToDateTime((int)ConflictsTable.LastModified, ref tvr),

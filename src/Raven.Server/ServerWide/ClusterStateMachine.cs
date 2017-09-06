@@ -999,13 +999,11 @@ namespace Raven.Server.ServerWide
 
             var info = await ReplicationUtils.GetTcpInfoAsync(url, null, "Cluster", certificate);
 
-            var tcpInfo = new Uri(info.Url);
-            var tcpClient = new TcpClient();
+            var tcpClient = TcpUtils.NewTcpClient(_parent.TcpConnectionTimeout);
             Stream stream = null;
             try
             {
-                TcpUtils.SetTimeouts(tcpClient, _parent.TcpConnectionTimeout);
-                await tcpClient.ConnectAsync(tcpInfo.Host, tcpInfo.Port);
+                await TcpUtils.ConnectAsync(tcpClient, info.Url).ConfigureAwait(false);
                 stream = await TcpUtils.WrapStreamWithSslAsync(tcpClient, info, _parent.ClusterCertificate);
 
                 using (ContextPoolForReadOnlyOperations.AllocateOperationContext(out JsonOperationContext context))

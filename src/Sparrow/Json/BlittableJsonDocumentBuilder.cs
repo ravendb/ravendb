@@ -394,8 +394,7 @@ namespace Sparrow.Json
                     }
                     else
                     {
-                        BlittableJsonToken ignored;
-                        start = _writer.WriteValue(_state.StringBuffer, _state.StringSize, out ignored, _mode, _state.CompressedSize);
+                        start = _writer.WriteValue(_state.StringBuffer, _state.StringSize, out _, _mode, _state.CompressedSize);
                     }
 
                     _state.CompressedSize = null;

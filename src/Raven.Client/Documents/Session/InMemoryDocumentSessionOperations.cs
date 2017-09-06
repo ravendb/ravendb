@@ -46,7 +46,7 @@ namespace Raven.Client.Documents.Session
         private static int _instancesCounter;
         private readonly int _hash = Interlocked.Increment(ref _instancesCounter);
         protected bool GenerateDocumentIdsOnStore = true;
-        protected ISessionInfo SessionInfo;
+        protected SessionInfo SessionInfo;
         private BatchOptions _saveChangesOptions;
         private bool _isDisposed;
 

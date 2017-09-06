@@ -65,7 +65,8 @@ namespace Raven.Server.Routing
             {
                 HttpContext = context,
                 RavenServer = _ravenServer,
-                RouteMatch = tryMatch.Match
+                RouteMatch = tryMatch.Match,
+                AllowResponseCompression = _ravenServer.Configuration.Http.AllowResponseCompression
             };
 
             var tuple = tryMatch.Value.TryGetHandler(reqCtx);

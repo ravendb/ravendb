@@ -4,7 +4,8 @@ function BuildServer ( $srcDir, $outDir, $spec ) {
     $commandArgs = @( "publish" )
 
     $output = [io.path]::combine($outDir, "Server");
-    $commandArgs += @( "--output", $output )
+    $quotedOutput = '"' + $output + '"'
+    $commandArgs += @( "--output", $quotedOutput )
     $commandArgs += @( "--configuration", "Release" )
     $commandArgs += $( "--runtime", "$($spec.Runtime)" )
     $commandArgs += "$srcDir"
@@ -85,7 +86,8 @@ function BuildRvn ( $srcDir, $outDir, $spec ) {
     $commandArgs = @( "publish" )
 
     $output = [io.path]::combine($outDir, "rvn");
-    $commandArgs += @( "--output", $output )
+    $quotedOutput = '"' + $output + '"'
+    $commandArgs += @( "--output", $quotedOutput )
     $commandArgs += @( "--configuration", "Release" )
     $commandArgs += $( "--runtime", "$($spec.Runtime)" )
     $commandArgs += "$srcDir"

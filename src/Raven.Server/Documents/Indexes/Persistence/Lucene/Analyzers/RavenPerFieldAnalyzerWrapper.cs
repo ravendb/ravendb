@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
     public sealed class RavenPerFieldAnalyzerWrapper : Analyzer
     {
         private readonly Analyzer _defaultAnalyzer;
-        private readonly FastDictionary<string, Analyzer, PerFieldAnalyzerComparer> _analyzerMap = new FastDictionary<string, Analyzer, PerFieldAnalyzerComparer>(default(PerFieldAnalyzerComparer));
+        private readonly Dictionary<string, Analyzer> _analyzerMap = new Dictionary<string, Analyzer>(default(PerFieldAnalyzerComparer));
 
         public struct PerFieldAnalyzerComparer : IEqualityComparer<string>
         {

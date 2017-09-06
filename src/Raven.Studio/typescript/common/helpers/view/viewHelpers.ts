@@ -34,6 +34,48 @@ class viewHelpers {
         }
     }
 
+    public static asyncValidationCompleted(context: KnockoutValidationGroup, callback?: Function) {
+        const cb = (...args: any[]) => {
+            return callback ? callback(...args) : undefined
+        };
+
+        const deferred = $.Deferred<void>();
+
+        const validationGroup = (context as any)();
+        const keys = _.keys(validationGroup);
+
+        const asyncValidations = [] as Array<KnockoutObservable<boolean>>;
+
+        keys.forEach(key => {
+            if ("isValidating" in validationGroup[key]) {
+                asyncValidations.push(validationGroup[key].isValidating);
+            }
+        });
+
+        if (asyncValidations.length === 0 || _.every(asyncValidations, x => !x())) {
+            cb();
+            deferred.resolve();
+            return deferred.promise();
+        }
+
+        // there are any validations in progress, await them
+
+        let subscriptions = [] as Array<KnockoutSubscription>;
+
+        const onUpdate = () => {
+            if (_.every(asyncValidations, x => !x())) {
+                // all validators completed its work, clean up and call callback
+                subscriptions.forEach(x => x.dispose());
+                cb();
+                deferred.resolve();
+            }
+        }
+
+        subscriptions = asyncValidations.map(v => v.subscribe(() => onUpdate()));
+
+        return deferred.promise();
+    }
+
     static getPageHostDimenensions(): [number, number] {
         const $pageHostRoot = $(".dynamic-container");
 

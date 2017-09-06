@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.Subscriptions
         public readonly string[] DeclaredFunctions;
 
 
-        public SubscriptionPatchDocument(string script, string[] declaredFunctions) 
+        public SubscriptionPatchDocument(string script, string[] declaredFunctions)
         {
             Script = script;
             DeclaredFunctions = declaredFunctions;
@@ -18,14 +18,14 @@ namespace Raven.Server.Documents.Subscriptions
 
         public bool MatchCriteria(ScriptRunner.SingleRun run, DocumentsOperationContext context, object document, ref BlittableJsonReaderObject transformResult)
         {
-            using (var result = run.Run(context, "execute", new[] {document}))
+            using (var result = run.Run(context, "execute", new[] { document }))
             {
                 var resultAsBool = result.BooleanValue;
                 if (resultAsBool != null)
                     return resultAsBool.Value;
 
                 transformResult = result.TranslateToObject(context);
-                return transformResult != null;    
+                return transformResult != null;
             }
         }
 
@@ -48,7 +48,7 @@ function execute(doc, args){{
 
         public override bool Equals(object obj)
         {
-            if(obj is SubscriptionPatchDocument other)
+            if (obj is SubscriptionPatchDocument other)
                 return Equals(other);
             return false;
         }

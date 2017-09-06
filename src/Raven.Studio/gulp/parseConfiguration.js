@@ -127,7 +127,7 @@ function findGroupName(input) {
     return fileName.substring(0, fileName.length - 16);
 }
 
-var CONFIGURATION_ENTRY_REGEX = /\[ConfigurationEntry\(\"?([^"]+)\"?\)\]/;
+var CONFIGURATION_ENTRY_REGEX = /\[ConfigurationEntry\(\"?([^"]+)\"?[^)]*\)\]/;
 var VALUE_ENTRY_REGEX = /public\s(static\s)?(virtual\s)?([\w\]\[]+\s)?(\w+)/;
 
 function extractSettings(contents) {

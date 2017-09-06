@@ -71,7 +71,7 @@
 
                 <div data-bind="if: replicationTasks().length > 0 && (selectedTaskType() === 'External Replication' || selectedTaskType() === 'All tasks' )">
                     <div class="hr-title">
-                        <h5 class="tasks-list-item external-replication no-text-transform"><i class="icon-external-replication"></i><span>External Replication</span></h5><hr> 
+                        <h5 class="tasks-list-item external-replication no-text-transform"><i class="icon-external-replication"></i><span>External Replication</span></h5><hr>
                     </div>
                     <div data-bind="foreach: replicationTasks">
                         <div class="panel destination-item external-replication" data-bind="if: responsibleNode().NodeTag === $parent.selectedNode() || $parent.selectedNode() === 'All nodes'">
@@ -88,15 +88,24 @@
                                                 <span data-bind="text: taskName"></span>
                                             </a>
                                         </h3>
-                                        <div class="specs">
-                                            <!-- TODO: Change 'location' class name to 'destination db' ; change 'dest name' to 'dest url' ..... -->
-                                            <span title="Destination database" class="location" data-bind="text: destinationDB() + '@'"></span>
-                                            <a target="_blank" title="Destination Url" data-bind="attr: { href: destinationURL }"><span data-bind="text: destinationURL"></span></a>
-                                        </div>
                                     </div>
                                     <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
                                     <div class="status" data-bind="template: { name: 'status-template' }"></div>
                                     <div data-bind="template: { name: 'actions-template' }"></div>
+                                </div>
+                            </div>
+                            <div class="collapse panel-addon" data-bind="collapse: showReplicationDetails">
+                                <div class="padding padding-sm flex-horizontal">
+                                    <div class="flex-grow">
+                                        <ul class="properties">
+                                            <li>
+                                                <span>Destination:</span>
+                                                <span title="Destination <database>@<Url>">
+                                                    <a target="_blank" data-bind="attr: { href: destinationURL }, text: destinationDB() + '@' + destinationURL()"></a>
+                                                </span>
+                                            </li>
+                                        </ul>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -189,22 +198,25 @@
                                                 <span data-bind="text: taskName"></span>
                                             </a>
                                         </h3>
-                                        <div class="specs">
-                                            <div data-bind="visible: lastFullBackup">
-                                                Last full backup: <strong data-bind="text: lastFullBackup"></strong>
-                                            </div>
-                                            <div data-bind="visible: lastIncrementalBackup">
-                                                Last incremental backup: <strong data-bind="text: lastIncrementalBackup"></strong>
-                                            </div>
-                                            <div data-bind="visible: nextBackup">
-                                                Next estimated backup: <strong data-bind="text: nextBackup"></strong>
-                                            </div>
-                                        </div>
                                     </div>
-                                    <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>  <!-- TODO: need to fix the right side elements to be in same line !!! -->
+                                    <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
                                     <div class="status" data-bind="template: { name: 'status-template' }"></div>
+                                    <div data-bind="template: { name: 'actions-template' }"></div>
                                 </div>
-                                <div data-bind="template: { name: 'actions-template' }"></div>
+                            </div>
+                            <div class="collapse panel-addon" data-bind="collapse: showBackupDetails">
+                                <div class="padding padding-sm flex-horizontal">
+                                    <div class="flex-grow">
+                                        <ul class="properties">
+                                            <li data-bind="visible: lastFullBackup"><span>Last full backup:</span><span class="text-details" data-bind="text: lastFullBackup"></span></li>
+                                            <li data-bind="visible: lastIncrementalBackup"><span>Last incremental backup:</span><span  class="text-details" data-bind="text: lastIncrementalBackup"></span></li>
+                                            <li data-bind="visible: nextBackup"><span>Next estimated backup:</span><span data-bind="text: nextBackup, attr: { class: textClass() }"></span></li>
+                                        </ul>
+                                    </div>
+                                    <div>
+                                        <button class="btn btn-default" data-bind="click: refreshBackupInfo" title="Refresh info"><i class="icon-refresh"></i></button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -234,11 +246,7 @@
                                     </div>
                                     <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
                                     <div class="status" data-bind="template: { name: 'status-template' }"></div>
-                                    <div class="actions">
-                                        <button class="btn btn-default" data-bind="click: toggleShowSubscriptionDetails" title="Click for details"><i class="icon-info"></i></button>
-                                        <button class="btn btn-default" data-bind="click: editTask" title="Edit task"><i class="icon-edit"></i></button>
-                                        <button class="btn btn-danger" data-bind="click: $root.confirmRemoveOngoingTask" title="Delete task"><i class="icon-trash"></i></button>
-                                    </div>
+                                    <div data-bind="template: { name: 'actions-template' }"></div>
                                 </div>
                             </div>
                             <div class="collapse panel-addon" data-bind="collapse: showSubscriptionDetails">
@@ -246,12 +254,12 @@
                                     <div class="flex-grow">
                                         <ul class="properties">
                                             <!-- ko if: !clientDetailsIssue() -->
-                                            <li><span>Client IP:</span><strong data-bind="text: clientIP"></strong></li>
-                                            <li><span>Connection Strategy:</span><strong data-bind="text: connectionStrategy"></strong></li>
+                                            <li><span>Client IP:</span><span class="text-details" data-bind="text: clientIP"></span></li>
+                                            <li><span>Connection Strategy:</span><span class="text-details" data-bind="text: connectionStrategy"></span></li>
                                             <!-- /ko -->
-                                            <li><span>Last Server Activity Time:</span><strong data-bind="text: lastTimeServerMadeProgressWithDocuments"></strong></li>
+                                            <li><span>Last Server Activity Time:</span><span class="text-details" data-bind="text: lastTimeServerMadeProgressWithDocuments"></span></li>
                                             <li>
-                                                <span>Last Client Connection Time:</span><strong data-bind="text: lastClientConnectionTime"></strong>
+                                                <span>Last Client Connection Time:</span><span class="text-details" data-bind="text: lastClientConnectionTime"></span>
                                                 <span data-bind="if: clientIP()">
                                                     <button class="btn btn-xs" data-bind="click: disconnectClientFromSubscription" title="Disconnect client from this subscription (unsubscribe client)">
                                                         <i class="icon-disconnected"></i><span>Disconnect</span>
@@ -259,7 +267,7 @@
                                                 </span>
                                             </li>
                                             <!-- ko if: clientDetailsIssue -->
-                                            <li><span>Status:</span><span data-bind="text: clientDetailsIssue, attr: { class: 'text-' + textClass() }"></span></li>
+                                            <li><span>Status:</span><span data-bind="text: clientDetailsIssue, attr: { class: textClass() }"></span></li>
                                             <!-- /ko -->
                                         </ul>
                                     </div>
@@ -354,6 +362,7 @@
 <script type="text/html" id="actions-template">
     <div class="actions-container">
         <div class="actions">
+            <button class="btn btn-default" data-bind="click: toggleDetails" title="Click for details"><i class="icon-info"></i></button>
             <button class="btn btn-default" data-bind="click: editTask" title="Edit task"><i class="icon-edit"></i></button>
             <button class="btn btn-danger" data-bind="click: $root.confirmRemoveOngoingTask" title="Delete task"><i class="icon-trash"></i></button>
         </div>

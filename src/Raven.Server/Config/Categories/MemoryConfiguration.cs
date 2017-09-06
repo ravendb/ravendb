@@ -11,18 +11,18 @@ namespace Raven.Server.Config.Categories
         {
             var memoryInfo = MemoryInformation.GetMemoryInfo();
 
-            LowMemoryDetection = Size.Min(new Size(2, SizeUnit.Gigabytes), memoryInfo.TotalPhysicalMemory * PhysicalRatioForLowMemDetection);
+            LowMemoryLimit = Size.Min(new Size(2, SizeUnit.Gigabytes), memoryInfo.TotalPhysicalMemory * PhysicalRatioForLowMemoryDetection);
         }
 
         [Description("The minimum amount of available memory RavenDB will attempt to achieve (free memory lower than this value will trigger low memory behavior)")]
         [DefaultValue(DefaultValueSetInConstructor)]
         [SizeUnit(SizeUnit.Megabytes)]
-        [ConfigurationEntry("Memory.LowMemoryLimitInMb")]
-        public Size LowMemoryDetection { get; set; }
+        [ConfigurationEntry("Memory.LowMemoryLimitInMb", ConfigurationEntryScope.ServerWideOnly)]
+        public Size LowMemoryLimit { get; set; }
 
         [Description("Physical Memory Ratio For Low Memory Detection")]
         [DefaultValue(0.10)]
-        [ConfigurationEntry("Memory.PhysicalRatioForLowMemoryDetection")]
-        public double PhysicalRatioForLowMemDetection { get; set; }
+        [ConfigurationEntry("Memory.PhysicalRatioForLowMemoryDetection", ConfigurationEntryScope.ServerWideOnly)]
+        public double PhysicalRatioForLowMemoryDetection { get; set; }
     }
 }

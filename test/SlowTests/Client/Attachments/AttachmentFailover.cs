@@ -6,6 +6,8 @@ using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Operations;
+using Raven.Client.Http;
+using Raven.Client.ServerWide;
 using Raven.Server.Documents;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
@@ -26,7 +28,18 @@ namespace SlowTests.Client.Attachments
             using (var store = GetDocumentStore(new Options
             {
                 Server = leader,
-                ReplicationFactor = 2
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Topology = new DatabaseTopology
+                    {
+                        DynamicNodesDistribution = false,
+                        Members =
+                        {
+                            leader.ServerStore.NodeTag,
+                            Servers.First(x=>x!= leader).ServerStore.NodeTag
+                        }
+                    };
+                }
             }))
             {
                 using (var session = (DocumentSession)store.OpenSession())
@@ -53,6 +66,7 @@ namespace SlowTests.Client.Attachments
                     using (var command = saveChangesOperation.CreateRequest())
                     {
                         var (currentIndex, currentNode) = await session.RequestExecutor.GetPreferredNode();
+                        Assert.Equal(currentNode.ClusterTag, leader.ServerStore.NodeTag);
                         var currentServer = Servers.Single(x => x.ServerStore.NodeTag == currentNode.ClusterTag);
                         stream.Position++; // simulating that we already started to call this and we need to reset
                         DisposeServerAndWaitForFinishOfDisposal(currentServer);
@@ -61,7 +75,6 @@ namespace SlowTests.Client.Attachments
                         saveChangesOperation.SetResult(command.Result);
                     }
                 }
-
                 using (var session = store.OpenSession())
                 using (var dummyStream = new BigDummyStream(size))
                 using (var attachment = session.Advanced.GetAttachment("users/1", "File"))
@@ -96,7 +109,18 @@ namespace SlowTests.Client.Attachments
             using (var store = GetDocumentStore(new Options
             {
                 Server = leader,
-                ReplicationFactor = 2
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Topology = new DatabaseTopology
+                    {
+                        DynamicNodesDistribution = false,
+                        Members =
+                        {
+                            leader.ServerStore.NodeTag,
+                            Servers.First(x=>x!= leader).ServerStore.NodeTag
+                        }
+                    };
+                }
             }))
             {
                 using (var session = (DocumentSession)store.OpenSession())
@@ -123,6 +147,7 @@ namespace SlowTests.Client.Attachments
 
                     var (currentIndex, currentNode) = await requestExecutor.GetPreferredNode();
                     var currentServer = Servers.Single(x => x.ServerStore.NodeTag == currentNode.ClusterTag);
+                    Assert.Equal(currentNode.ClusterTag, leader.ServerStore.NodeTag);
 
                     stream.Position++; // simulating that we already started to call this and we need to reset
                     DisposeServerAndWaitForFinishOfDisposal(currentServer);

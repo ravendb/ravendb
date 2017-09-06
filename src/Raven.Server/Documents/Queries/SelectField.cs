@@ -1,4 +1,5 @@
-﻿using Raven.Client.Documents.Indexes;
+﻿using System.Globalization;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Queries.Parser;
 using Sparrow;
 
@@ -32,7 +33,7 @@ namespace Raven.Server.Documents.Queries
 
         private SelectField()
         {
-            
+
         }
 
         public static SelectField Create(string name, string alias = null)
@@ -93,10 +94,10 @@ namespace Raven.Server.Documents.Queries
             switch (type)
             {
                 case Parser.ValueTokenType.Long:
-                    finalVal = long.Parse(val);
+                    finalVal = long.Parse(val, CultureInfo.InvariantCulture);
                     break;
                 case Parser.ValueTokenType.Double:
-                    finalVal = double.Parse(val);
+                    finalVal = double.Parse(val, CultureInfo.InvariantCulture);
                     break;
                 case Parser.ValueTokenType.True:
                     finalVal = true;

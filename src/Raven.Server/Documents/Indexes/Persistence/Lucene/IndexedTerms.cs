@@ -141,7 +141,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             for (int i = 0; i < results.Length; i++)
             {
                 var doc = new DynamicJsonValue();
-                foreach (var kvp in results[i])
+                var dictionary = results[i];
+                if(dictionary == null)
+                    continue;
+                foreach (var kvp in dictionary)
                 {
                     doc[kvp.Key] = kvp.Value;
                 }

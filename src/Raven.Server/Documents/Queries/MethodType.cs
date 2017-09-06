@@ -20,6 +20,8 @@
         Within,
         Contains,
         Disjoint,
-        Intersects
+        Intersects,
+
+        Unknown
     }
 }

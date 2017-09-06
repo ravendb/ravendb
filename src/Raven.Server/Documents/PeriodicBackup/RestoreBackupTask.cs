@@ -14,7 +14,6 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.PeriodicBackup;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
-using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
@@ -144,7 +143,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         options |= InitializeOptions.GenerateNewDatabaseId;
 
                     database.Initialize(options);
-                    SmugglerRestore(_restoreConfiguration.BackupLocation, database, databaseRecord, async identity => await OnIdentityAction(databaseName, restoreSettings.Identities, identity), onProgress, restoreResult);
+                    SmugglerRestore(_restoreConfiguration.BackupLocation, database, databaseRecord, identity => restoreSettings.Identities[identity.Prefix] = identity.Value, onProgress, restoreResult);
                 }
 
                 databaseRecord.Topology = new DatabaseTopology();
@@ -155,10 +154,10 @@ namespace Raven.Server.Documents.PeriodicBackup
                 // TODO: _restoreConfiguration.ReplicationFactor ? 
                 // TODO: _restoreConfiguration.TopologyMembers ? 
 
-                await _serverStore.SendToLeaderAsync(new UpdateClusterIdentityCommand(databaseName, restoreSettings.Identities));
-                var (newEtag, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, restoreSettings.DatabaseValues, isRestore: true);
+                await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, restoreSettings.DatabaseValues, isRestore: true);
+                var index = await WriteIdentitiesAsync(databaseName, restoreSettings.Identities);
 
-                await _serverStore.Cluster.WaitForIndexNotification(newEtag);
+                await _serverStore.Cluster.WaitForIndexNotification(index);
 
                 return restoreResult;
             }
@@ -186,17 +185,38 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        private async Task OnIdentityAction(string databaseName, Dictionary<string, long> identities, (string Prefix, long Value) identity)
+        private async Task<long> WriteIdentitiesAsync(string databaseName, Dictionary<string, long> identities)
         {
             const int batchSize = 1024;
 
-            identities[identity.Prefix] = identity.Value;
+            if (identities.Count <= batchSize)
+                return await SendIdentities(identities);
 
-            if (identities.Count < batchSize)
-                return;
+            long index = 0;
+            var identitiesToSend = new Dictionary<string, long>();
+            foreach (var identity in identities)
+            {
+                identitiesToSend[identity.Key] = identity.Value;
 
-            await _serverStore.SendToLeaderAsync(new UpdateClusterIdentityCommand(databaseName, identities));
-            identities.Clear();
+                if (identitiesToSend.Count < batchSize)
+                    continue;
+
+                index = await SendIdentities(identitiesToSend);
+            }
+
+            if (identitiesToSend.Count > 0)
+                index = await SendIdentities(identitiesToSend);
+
+            return index;
+
+            async Task<long> SendIdentities(Dictionary<string, long> toSend)
+            {
+                var result = await _serverStore.SendToLeaderAsync(new UpdateClusterIdentityCommand(databaseName, toSend));
+
+                toSend.Clear();
+
+                return result.Index;
+            }
         }
 
         private void ValidateArguments()

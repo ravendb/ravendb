@@ -7,7 +7,7 @@ namespace Raven.Server.Config.Categories
     {
         [Description("The directory into which RavenDB will search the studio files, defaults to the base directory")]
         [DefaultValue(null)]
-        [ConfigurationEntry("Studio.Path")]
+        [ConfigurationEntry("Studio.Path", ConfigurationEntryScope.ServerWideOnly)]
         public string Path { get; set; }
     }
 }

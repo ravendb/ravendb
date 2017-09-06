@@ -449,20 +449,54 @@ namespace Sparrow.Json
 
         public int WriteValue(LazyStringValue str)
         {
-            BlittableJsonToken token;
-            return WriteValue(str, out token, UsageMode.None, null);
+            return WriteValue(str, out _, UsageMode.None, null);
         }
 
         public unsafe int WriteValue(LazyStringValue str, out BlittableJsonToken token,
             UsageMode mode, int? initialCompressedSize)
         {
-            return WriteValue(str.Buffer, str.Size, str.EscapePositions, out token, mode, initialCompressedSize);
+            if (str.EscapePositions != null)
+            {
+                return WriteValue(str.Buffer, str.Size, str.EscapePositions, out token, mode, initialCompressedSize);
+            }
+            // else this is a raw value
+            var startPos = _position;
+            token = BlittableJsonToken.String;
+
+            _position += WriteVariableSizeInt(str.Size);
+
+            var escapeSequencePos = GetSizeIncludingEscapeSequences(str.Buffer, str.Size);
+            _unmanagedWriteBuffer.Write(str.Buffer, escapeSequencePos);
+            _position += escapeSequencePos;
+            return startPos;
+        }
+
+        private static unsafe int GetSizeIncludingEscapeSequences(byte* buffer, int size)
+        {
+            var escapeSequencePos = size;
+            // now need to also include the size of the escape positions
+            var numberOfEscapeSequences = BlittableJsonReaderBase.ReadVariableSizeInt(buffer, ref escapeSequencePos);
+            for (int i = 0; i < numberOfEscapeSequences; i++)
+            {
+                BlittableJsonReaderBase.ReadVariableSizeInt(buffer, ref escapeSequencePos);
+            }
+            return escapeSequencePos;
         }
 
         public unsafe int WriteValue(LazyCompressedStringValue str, out BlittableJsonToken token,
             UsageMode mode)
         {
-            return WriteValue(str.Buffer, str.UncompressedSize, out token, mode, str.CompressedSize);
+            var startPos = _position;
+            token = BlittableJsonToken.CompressedString;
+
+            _position += WriteVariableSizeInt(str.UncompressedSize);
+
+            _position += WriteVariableSizeInt(str.CompressedSize);
+
+            // compressed size include escape positions
+            _unmanagedWriteBuffer.Write(str.Buffer, str.CompressedSize);
+            _position += str.CompressedSize;
+            return startPos;
         }
 
         public unsafe int WriteValue(byte* buffer, int size, out BlittableJsonToken token, UsageMode mode, int? initialCompressedSize)

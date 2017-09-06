@@ -311,10 +311,8 @@ namespace Tests.Infrastructure
 
             public override async Task<Stream> ConnectToPeer(string url, X509Certificate2 certificate)
             {
-                var tcpInfo = new Uri(url);
-                var tcpClient = new TcpClient();
-                TcpUtils.SetTimeouts(tcpClient, _parent.TcpConnectionTimeout);
-                await tcpClient.ConnectAsync(tcpInfo.Host, tcpInfo.Port);
+                var tcpClient = TcpUtils.NewTcpClient(_parent.TcpConnectionTimeout);
+                await TcpUtils.ConnectAsync(tcpClient, url);
                 return tcpClient.GetStream();
             }
         }

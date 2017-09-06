@@ -8,12 +8,12 @@ namespace Raven.Client.Documents.Operations
 {
     public partial class OperationExecutor
     {
-        public Operation Send(IOperation<OperationIdResult> operation, ISessionInfo sessionInfo = null, bool isServerOperation = false)
+        public Operation Send(IOperation<OperationIdResult> operation, SessionInfo sessionInfo = null, bool isServerOperation = false)
         {
             return AsyncHelpers.RunSync(() => SendAsync(operation, default(CancellationToken), sessionInfo, isServerOperation));
         }
 
-        public async Task<Operation> SendAsync(IOperation<OperationIdResult> operation, CancellationToken token = default(CancellationToken), ISessionInfo sessionInfo = null, bool isServerOperation = false)
+        public async Task<Operation> SendAsync(IOperation<OperationIdResult> operation, CancellationToken token = default(CancellationToken), SessionInfo sessionInfo = null, bool isServerOperation = false)
         {
             using (GetContext(out JsonOperationContext context))
             {

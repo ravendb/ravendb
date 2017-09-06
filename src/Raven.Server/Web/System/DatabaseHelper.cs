@@ -24,7 +24,7 @@ namespace Raven.Server.Web.System
                 foreach (var categoryProperty in configurationProperty.PropertyType.GetProperties(BindingFlags.Instance | BindingFlags.Public))
                 {
                     var configurationEntryAttribute = categoryProperty.GetCustomAttribute<ConfigurationEntryAttribute>();
-                    if (configurationEntryAttribute == null || configurationEntryAttribute.IsServerWideOnly == false)
+                    if (configurationEntryAttribute == null || configurationEntryAttribute.Scope == ConfigurationEntryScope.ServerWideOrPerDatabase)
                         continue;
 
                     Array.Resize(ref keys, keys.Length + 1);

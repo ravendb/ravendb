@@ -1,6 +1,6 @@
 ﻿namespace Raven.Client.Documents.Session
 {
-    public class SessionInfo : ISessionInfo
+    public class SessionInfo
     {
         public int? SessionId { get;}
 

@@ -224,7 +224,9 @@ gulp.task('z_generate-test-list', function () {
 
 gulp.task('z_mochaTests', function () {
     var mocha = plugins.mochaPhantomjs({
-        reporter: 'spec' //use json for debugging
+        reporter: 'spec', //use json for debugging,
+        suppressStdout: false,
+        suppressStderr: false 
     });
 
     return gulp.src(PATHS.test.html).pipe(mocha);

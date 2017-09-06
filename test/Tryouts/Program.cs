@@ -1,3 +1,5 @@
+using System;
+using System.Threading.Tasks;
 using SlowTests.Server.Documents.PeriodicBackup;
 
 namespace Tryouts
@@ -6,10 +8,14 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            using (var test = new PeriodicBackupTestsSlow())
+            Parallel.For(0, 1000, i =>
             {
-                 test.CanImportTombstonesFromIncrementalBackup().Wait();
-            }
+                Console.WriteLine(i);
+                using (var test = new SlowTests.Client.Attachments.AttachmentFailover())
+                {
+                    test.PutAttachmentsWithFailover_Session().Wait();
+                }
+            });
         }
     }
 }

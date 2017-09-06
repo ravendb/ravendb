@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
+using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
@@ -12,8 +14,7 @@ namespace Raven.Client.Documents
 {
     internal static class TcpUtils
     {
-
-        internal static void SetTimeouts(TcpClient client, TimeSpan timeout)
+        private static void SetTimeouts(TcpClient client, TimeSpan timeout)
         {
             client.SendTimeout = (int)timeout.TotalMilliseconds;
             client.ReceiveTimeout = (int)timeout.TotalMilliseconds;
@@ -21,11 +22,9 @@ namespace Raven.Client.Documents
 
         internal static async Task ConnectSocketAsync(TcpConnectionInfo connection, TcpClient tcpClient, Logger log)
         {
-            var uri = new Uri(connection.Url);
-
             try
             {
-                await tcpClient.ConnectAsync(uri.Host, uri.Port).ConfigureAwait(false);
+                await ConnectAsync(tcpClient, connection.Url).ConfigureAwait(false);
             }
             catch (AggregateException ae) when (ae.InnerException is SocketException)
             {
@@ -62,7 +61,19 @@ namespace Raven.Client.Documents
                 throw;
             }
         }
-        
+
+        public static Task ConnectAsync(TcpClient tcpClient, string url)
+        {
+            var uri = new Uri(url);
+            if (uri.HostNameType == UriHostNameType.IPv6) 
+            {
+                var ipAddress = IPAddress.Parse(uri.Host);
+                return tcpClient.ConnectAsync(ipAddress, uri.Port);
+            }
+
+            return tcpClient.ConnectAsync(uri.Host, uri.Port);
+        }
+
         internal static async Task<Stream> WrapStreamWithSslAsync(TcpClient tcpClient, TcpConnectionInfo info, X509Certificate2 storeCertificate)
         {
             Stream stream = tcpClient.GetStream();
@@ -75,6 +86,18 @@ namespace Raven.Client.Documents
             await sslStream.AuthenticateAsClientAsync(new Uri(info.Url).Host, new X509CertificateCollection(new X509Certificate[]{storeCertificate}), SslProtocols.Tls12, false).ConfigureAwait(false);
             stream = sslStream;
             return stream;
+        }
+
+        internal static TcpClient NewTcpClient(TimeSpan? timeout)
+        {
+            var tcpClient = new TcpClient(AddressFamily.InterNetworkV6);
+            tcpClient.Client.DualMode = true;
+
+            if (timeout.HasValue)
+                SetTimeouts(tcpClient, timeout.Value);
+
+            Debug.Assert(tcpClient.Client != null);
+            return tcpClient;
         }
     }
 }

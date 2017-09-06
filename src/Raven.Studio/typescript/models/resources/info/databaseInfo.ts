@@ -19,6 +19,7 @@ class databaseInfo {
 
     loadError = ko.observable<string>();
 
+    isEncrypted = ko.observable<boolean>();
     isAdmin = ko.observable<boolean>();
     disabled = ko.observable<boolean>();
     backupEnabled = ko.observable<boolean>();
@@ -161,6 +162,7 @@ class databaseInfo {
         this.name = dto.Name;
         this.disabled(dto.Disabled);
         this.isAdmin(dto.IsAdmin);
+        this.isEncrypted(dto.IsEncrypted);
         this.totalSize(dto.TotalSize ? dto.TotalSize.HumaneSize : null);
         this.indexingErrors(dto.IndexingErrors);
         this.alerts(dto.Alerts);

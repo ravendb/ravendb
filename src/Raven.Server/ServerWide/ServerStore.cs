@@ -230,8 +230,8 @@ namespace Raven.Server.ServerWide
         public void Initialize()
         {
             LowMemoryNotification.Initialize(ServerShutdown,
-                Configuration.Memory.LowMemoryDetection.GetValue(SizeUnit.Bytes),
-                Configuration.Memory.PhysicalRatioForLowMemDetection);
+                Configuration.Memory.LowMemoryLimit.GetValue(SizeUnit.Bytes),
+                Configuration.Memory.PhysicalRatioForLowMemoryDetection);
 
             if (Logger.IsInfoEnabled)
                 Logger.Info("Starting to open server store for " + (Configuration.Core.RunInMemory ? "<memory>" : Configuration.Core.DataDirectory.FullPath));
@@ -1261,13 +1261,14 @@ namespace Raven.Server.ServerWide
         private static void ThrowInvalidEngineState(CommandBase cmd)
         {
             throw new NotSupportedException("Cannot send command " + cmd.GetType().FullName + " to the cluster because this node is passive." + Environment.NewLine +
-                                            "Passive nodes aren't members of a cluster and require admin action (such as creating a db) to indicate that this node should create its own cluster");
+                                            "Passive nodes aren't members of a cluster and require admin action (such as creating a db) " +
+                                            "to indicate that this node should create its own cluster");
         }
 
         private void ThrowTimeoutException(CommandBase cmd, Exception requestException)
         {
-            throw new TimeoutException($"Could not send command {cmd.GetType().FullName} from {NodeTag} to leader because there is no leader, and we timed out waiting for one after {Engine.OperationTimeout}",
-                requestException);
+            throw new TimeoutException($"Could not send command {cmd.GetType().FullName} from {NodeTag} to leader because there is no leader, " +
+                                       $"and we timed out waiting for one after {Engine.OperationTimeout}", requestException);
         }
 
         private async Task<(long Index, object Result)> SendToNodeAsync(string engineLeaderTag, CommandBase cmd, Reference<bool> reachedLeader)
@@ -1406,10 +1407,17 @@ namespace Raven.Server.ServerWide
                 if (_nodeTcpServerUrl != null)
                     return _nodeTcpServerUrl;
 
-                Debug.Assert(_ravenServer.WebUrl != null);
+                var ravenServerWebUrl = _ravenServer.WebUrl;
+                if(ravenServerWebUrl == null)
+                    ThrowInvalidTcpUrlOnStartup();
                 var status = _ravenServer.GetTcpServerStatus();
-                return _nodeTcpServerUrl = Configuration.Core.GetNodeTcpServerUrl(_ravenServer.WebUrl, status.Port);
+                return _nodeTcpServerUrl = Configuration.Core.GetNodeTcpServerUrl(ravenServerWebUrl, status.Port);
             }
+        }
+
+        private static void ThrowInvalidTcpUrlOnStartup()
+        {
+            throw new InvalidOperationException("The server has yet to complete startup, cannot get NodeTcpServerUtl");
         }
 
         public DynamicJsonValue GetTcpInfoAndCertificates()

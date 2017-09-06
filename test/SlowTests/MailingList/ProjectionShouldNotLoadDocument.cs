@@ -9,6 +9,7 @@ using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Extensions;
 using Sparrow.Json;
 using Xunit;
 
@@ -52,8 +53,8 @@ namespace SlowTests.MailingList
 
                     // if this is upper case, then we loaded this from the db, because we used Auto-Index that is not storing fields
                     var json = (BlittableJsonReaderObject)result.Results[0];
-                    string documentId;
-                    Assert.True(json.TryGet(Constants.Documents.Metadata.Id, out documentId));
+                    var metadata = json.GetMetadata();
+                    Assert.True(metadata.TryGet(Constants.Documents.Metadata.Id, out string documentId));
                     Assert.Equal("FOO", documentId);
                     Assert.True(result.IndexName.StartsWith("Auto"));
 
@@ -64,7 +65,8 @@ namespace SlowTests.MailingList
 
                     // if this is lower case, then we loaded this from the index, not from the db, because w used Static-Index with stored field
                     json = (BlittableJsonReaderObject)result.Results[0];
-                    Assert.True(json.TryGet(Constants.Documents.Metadata.Id, out documentId));
+                    metadata = json.GetMetadata();
+                    Assert.True(metadata.TryGet(Constants.Documents.Metadata.Id, out documentId));
                     Assert.Equal("foo", documentId);
                     Assert.True(result.IndexName.StartsWith("Index1"));
                 }

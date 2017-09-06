@@ -43,7 +43,7 @@ namespace Raven.Server.Web.Authentication
                     throw new InvalidOperationException($"Cannot generate the certificate '{certificate.Name}' with 'Cluster Admin' security clearance because the current client certificate being used has a lower clearance: {clientCert}");
                 }
 
-                if (Server.ClusterCertificateHolder == null)
+                if (Server.ClusterCertificateHolder?.Certificate == null)
                     throw new InvalidOperationException($"Cannot generate the client certificate '{certificate.Name}' becuase the server certificate is not loaded. " +
                                                         $"You can supply a server certificate by using the following configuration keys: " +
                                                         $"'{RavenConfiguration.GetKey(x => x.Security.CertificatePath)}'/'{RavenConfiguration.GetKey(x => x.Security.CertificateExec)}'/" +

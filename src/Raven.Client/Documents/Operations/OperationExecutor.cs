@@ -29,17 +29,17 @@ namespace Raven.Client.Documents.Operations
             return new OperationExecutor(_store, databaseName);
         }
 
-        public void Send(IOperation operation, ISessionInfo sessionInfo = null, bool isServerOperation = false)
+        public void Send(IOperation operation, SessionInfo sessionInfo = null, bool isServerOperation = false)
         {
             AsyncHelpers.RunSync(() => SendAsync(operation, sessionInfo : sessionInfo));
         }
 
-        public TResult Send<TResult>(IOperation<TResult> operation, ISessionInfo sessionInfo = null, bool isServerOperation = false)
+        public TResult Send<TResult>(IOperation<TResult> operation, SessionInfo sessionInfo = null, bool isServerOperation = false)
         {
             return AsyncHelpers.RunSync(() => SendAsync(operation, sessionInfo: sessionInfo));
         }
 
-        public Task SendAsync(IOperation operation, CancellationToken token = default(CancellationToken), ISessionInfo sessionInfo = null, bool isServerOperation = false)
+        public Task SendAsync(IOperation operation, CancellationToken token = default(CancellationToken), SessionInfo sessionInfo = null, bool isServerOperation = false)
         {
             using (GetContext(out JsonOperationContext context))
             {
@@ -49,7 +49,7 @@ namespace Raven.Client.Documents.Operations
             }
         }
 
-        public async Task<TResult> SendAsync<TResult>(IOperation<TResult> operation, CancellationToken token = default(CancellationToken), ISessionInfo sessionInfo = null, bool isServerOperation = false)
+        public async Task<TResult> SendAsync<TResult>(IOperation<TResult> operation, CancellationToken token = default(CancellationToken), SessionInfo sessionInfo = null, bool isServerOperation = false)
         {
             using (GetContext(out JsonOperationContext context))
             {

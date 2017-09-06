@@ -8,6 +8,7 @@ class queryCriteria {
     showFields = ko.observable<boolean>(false);
     indexEntries = ko.observable<boolean>(false);
     queryText = ko.observable<string>("");
+    metadataOnly = ko.observable<boolean>(false);
     
     validationGroup: KnockoutValidationGroup;
 

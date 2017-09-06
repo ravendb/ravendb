@@ -52,7 +52,7 @@ namespace Raven.Server.Documents
 
         private readonly DocumentDatabase _documentDatabase;
 
-        private FastDictionary<string, CollectionName, OrdinalIgnoreCaseStringStructComparer> _collectionsCache;
+        private Dictionary<string, CollectionName> _collectionsCache;
 
         internal enum TombstoneTable
         {
@@ -880,7 +880,7 @@ namespace Raven.Server.Documents
             return result;
         }
 
-        public static Document ParseRawDataSectionDocumentWithValidation(JsonOperationContext context, ref TableValueReader tvr, int expectedSize)
+        public static Document ParseRawDataSectionDocumentWithValidation(JsonOperationContext context, ref TableValueReader tvr, int expectedSize, out long etag)
         {
             var mem = tvr.Read((int)DocumentsTable.Data, out int size);
 
@@ -892,7 +892,7 @@ namespace Raven.Server.Documents
                 StorageId = tvr.Id,
                 LowerId = TableValueToString(context, (int)DocumentsTable.LowerId, ref tvr),
                 Id = TableValueToId(context, (int)DocumentsTable.Id, ref tvr),
-                Etag = TableValueToEtag((int)DocumentsTable.Etag, ref tvr),
+                Etag = etag = TableValueToEtag((int)DocumentsTable.Etag, ref tvr),
                 Data = new BlittableJsonReaderObject(mem, size, context),
                 ChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref tvr),
                 LastModified = TableValueToDateTime((int)DocumentsTable.LastModified, ref tvr),
@@ -1452,6 +1452,8 @@ namespace Raven.Server.Documents
             }
 
             var collections = context.Transaction.InnerTransaction.OpenTable(CollectionsSchema, CollectionsSlice);
+            if (collections == null)
+                throw new InvalidOperationException("Should never happen!");
 
             name = new CollectionName(collectionName);
             using (Slice.From(context.Allocator, collectionName, out Slice collectionSlice))
@@ -1472,7 +1474,7 @@ namespace Raven.Server.Documents
                 // has to happen after the commit, but while we are holding the write tx lock
                 context.Transaction.InnerTransaction.LowLevelTransaction.BeforeCommitFinalization += _ =>
                 {
-                    var collectionNames = new FastDictionary<string, CollectionName, OrdinalIgnoreCaseStringStructComparer>(_collectionsCache, OrdinalIgnoreCaseStringStructComparer.Instance)
+                    var collectionNames = new Dictionary<string, CollectionName>(_collectionsCache, OrdinalIgnoreCaseStringStructComparer.Instance)
                     {
                         [name.Name] = name
                     };
@@ -1487,9 +1489,9 @@ namespace Raven.Server.Documents
             throw new InvalidOperationException("This method requires active transaction, and no active transactions in the current context...");
         }
 
-        private FastDictionary<string, CollectionName, OrdinalIgnoreCaseStringStructComparer> ReadCollections(Transaction tx)
+        private Dictionary<string, CollectionName> ReadCollections(Transaction tx)
         {
-            var result = new FastDictionary<string, CollectionName, OrdinalIgnoreCaseStringStructComparer>(OrdinalIgnoreCaseStringStructComparer.Instance);
+            var result = new Dictionary<string, CollectionName>(OrdinalIgnoreCaseStringStructComparer.Instance);
 
             var collections = tx.OpenTable(CollectionsSchema, CollectionsSlice);
 

@@ -11,72 +11,72 @@ namespace Raven.Server.Config.Categories
     {
         [Description("The path to .pfx certificate file. If specified, RavenDB will use HTTPS/SSL for all network activities. You can use the '~/' prefix to refer to RavenDB's base directory.")]
         [DefaultValue(null)]
-        [ConfigurationEntry("Security.Certificate.Path")]
+        [ConfigurationEntry("Security.Certificate.Path", ConfigurationEntryScope.ServerWideOnly)]
         public string CertificatePath { get; set; }
 
         [Description("The (optional) password of the .pfx certificate file.")]
         [DefaultValue(null)]
-        [ConfigurationEntry("Security.Certificate.Password")]
+        [ConfigurationEntry("Security.Certificate.Password", ConfigurationEntryScope.ServerWideOnly)]
         public string CertificatePassword { get; set; }
 
         [Description("The path to .pfx cluster certificate file. If specified, RavenDB will use this (second) certificate for communications between servers in the cluster.")]
         [DefaultValue(null)]
-        [ConfigurationEntry("Security.ClusterCertificate.Path")]
+        [ConfigurationEntry("Security.ClusterCertificate.Path", ConfigurationEntryScope.ServerWideOnly)]
         public string ClusterCertificatePath { get; set; }
 
         [Description("The (optional) password of the .pfx cluster certificate file.")]
         [DefaultValue(null)]
-        [ConfigurationEntry("Security.ClusterCertificate.Password")]
+        [ConfigurationEntry("Security.ClusterCertificate.Password", ConfigurationEntryScope.ServerWideOnly)]
         public string ClusterCertificatePassword { get; set; }
 
         [Description("A command or executable providing a .pfx certificate file. If specified, RavenDB will use HTTPS/SSL for all network activities.")]
         [DefaultValue(null)]
-        [ConfigurationEntry("Security.Certificate.Exec")]
+        [ConfigurationEntry("Security.Certificate.Exec", ConfigurationEntryScope.ServerWideOnly)]
         public string CertificateExec { get; set; }
 
         [Description("The command line arguments for the 'Security.Certificate.Exec' command or executable.")]
         [DefaultValue(null)]
-        [ConfigurationEntry("Security.Certificate.Arguments")]
+        [ConfigurationEntry("Security.Certificate.Arguments", ConfigurationEntryScope.ServerWideOnly)]
         public string CertificateExecArguments { get; set; }
 
         [Description("A command or executable providing a .pfx cluster certificate file. If specified, RavenDB will use this (second) certificate for communications between servers in the cluster.")]
         [DefaultValue(null)]
-        [ConfigurationEntry("Security.ClusterCertificate.Exec")]
+        [ConfigurationEntry("Security.ClusterCertificate.Exec", ConfigurationEntryScope.ServerWideOnly)]
         public string ClusterCertificateExec { get; set; }
 
         [Description("The command line arguments for the 'Security.ClusterCertificate.Exec' command or executable.")]
         [DefaultValue(null)]
-        [ConfigurationEntry("Security.ClusterCertificate.Arguments")]
+        [ConfigurationEntry("Security.ClusterCertificate.Arguments", ConfigurationEntryScope.ServerWideOnly)]
         public string ClusterCertificateExecArguments { get; set; }
 
         [Description("The number of milliseconds to wait for the certificate executable to exit. Default: 30 seconds")]
         [DefaultValue(30000)]
-        [ConfigurationEntry("Security.Certificate.Timeout")]
+        [ConfigurationEntry("Security.Certificate.Timeout", ConfigurationEntryScope.ServerWideOnly)]
         public int CertificateExecTimeout { get; set; }
 
         [Description("The path of the (512-bit) Master Key. If specified, RavenDB will use this key to protect secrets.")]
         [DefaultValue(null)]
-        [ConfigurationEntry("Security.MasterKey.Path")]
+        [ConfigurationEntry("Security.MasterKey.Path", ConfigurationEntryScope.ServerWideOnly)]
         public string MasterKeyPath { get; set; }
 
         [Description("A command or executable to run which will provide a (512-bit) Master Key, If specified, RavenDB will use this key to protect secrets.")]
         [DefaultValue(null)]
-        [ConfigurationEntry("Security.MasterKey.Exec")]
+        [ConfigurationEntry("Security.MasterKey.Exec", ConfigurationEntryScope.ServerWideOnly)]
         public string MasterKeyExec { get; set; }
 
         [Description("The command line arguments for the 'Security.MasterKey.Exec' command or executable.")]
         [DefaultValue(null)]
-        [ConfigurationEntry("Security.MasterKey.Arguments")]
+        [ConfigurationEntry("Security.MasterKey.Arguments", ConfigurationEntryScope.ServerWideOnly)]
         public string MasterKeyExecArguments { get; set; }
 
         [Description("The number of milliseconds to wait for the Master Key executable to exit. Default: 30 seconds")]
         [DefaultValue(30000)]
-        [ConfigurationEntry("Security.MasterKey.Timeout")]
+        [ConfigurationEntry("Security.MasterKey.Timeout", ConfigurationEntryScope.ServerWideOnly)]
         public int MasterKeyExecTimeout { get; set; }
 
         [Description("If authentication is disabled, set address range type for which server access is unsecured (None | Local | PrivateNetwork | PublicNetwork).")]
         [DefaultValue(UnsecuredAccessAddressRange.Local)]
-        [ConfigurationEntry("Security.UnsecuredAccessAllowed")]
+        [ConfigurationEntry("Security.UnsecuredAccessAllowed", ConfigurationEntryScope.ServerWideOnly)]
         public UnsecuredAccessAddressRange UnsecuredAccessAllowed { get; set; }
 
         internal bool? IsUnsecureAccessSetupValid { get; private set; }

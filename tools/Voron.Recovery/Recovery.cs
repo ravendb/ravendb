@@ -6,16 +6,13 @@ using System.IO.Compression;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Revisions;
 using Sparrow.Json;
-using Sparrow.LowMemory;
 using Sparrow.Threading;
 using Voron.Data;
 using Voron.Data.RawData;
 using Voron.Data.Tables;
 using Voron.Global;
-using Voron.Impl;
 using Voron.Impl.Paging;
 
 namespace Voron.Recovery
@@ -34,6 +31,7 @@ namespace Voron.Recovery
             // by default CopyOnWriteMode will be true
             _option.CopyOnWriteMode = _copyOnWrite;
             _progressIntervalInSec = config.ProgressIntervalInSec;
+            _previouslyWrittenDocs = new Dictionary<string, long>();
         }
 
 
@@ -319,7 +317,7 @@ namespace Voron.Recovery
                 Document document = null;
                 try
                 {
-                    document = DocumentsStorage.ParseRawDataSectionDocumentWithValidation(context, ref tvr, sizeInBytes);
+                    document = DocumentsStorage.ParseRawDataSectionDocumentWithValidation(context, ref tvr, sizeInBytes, out var currentEtag);
                     if (document == null)
                     {
                         logWriter.WriteLine($"Failed to convert table value to document at position {GetFilePosition(startOffest, mem)}");
@@ -327,6 +325,17 @@ namespace Voron.Recovery
                     }
                     document.EnsureMetadata();
                     document.Data.BlittableValidation();
+
+                    if (_previouslyWrittenDocs.TryGetValue(document.Id, out var previousEtag))
+                    {
+                        // This is a duplicate doc. It can happen when a page is marked as freed, but still exists in the data file.
+                        // We determine which one to choose by their etag. If the document is newer, we will write it again to the
+                        // smuggler file. This way, when importing, it will be the one chosen (last write wins)
+                        if (currentEtag <= previousEtag)
+                            return false;
+                    }
+
+                    _previouslyWrittenDocs[document.Id] = currentEtag;
                 }
                 catch (Exception e)
                 {
@@ -364,7 +373,7 @@ namespace Voron.Recovery
                 Document revision = null;
                 try
                 {
-                    revision = RevisionsStorage.ParseRawDataSectionRevisionWithValidation(context, ref tvr, sizeInBytes);
+                    revision = RevisionsStorage.ParseRawDataSectionRevisionWithValidation(context, ref tvr, sizeInBytes, out var changeVector);
                     if (revision == null)
                     {
                         logWriter.WriteLine($"Failed to convert table value to revision document at position {GetFilePosition(startOffest, mem)}");
@@ -409,7 +418,7 @@ namespace Voron.Recovery
                 DocumentConflict conflict = null;
                 try
                 {
-                    conflict = ConflictsStorage.ParseRawDataSectionConflictWithValidation(context, ref tvr, sizeInBytes);
+                    conflict = ConflictsStorage.ParseRawDataSectionConflictWithValidation(context, ref tvr, sizeInBytes, out var changeVector);
                     if (conflict == null)
                     {
                         logWriter.WriteLine($"Failed to convert table value to conflict document at position {GetFilePosition(startOffest, mem)}");
@@ -464,6 +473,7 @@ namespace Voron.Recovery
         private string _lastRecoveredDocumentKey = "No documents recovered yet";
         private readonly string _datafile;
         private readonly bool _copyOnWrite;
+        private readonly Dictionary<string, long> _previouslyWrittenDocs;
         
         public enum RecoveryStatus
         {
