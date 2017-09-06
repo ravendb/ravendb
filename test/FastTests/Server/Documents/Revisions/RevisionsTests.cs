@@ -202,6 +202,30 @@ namespace FastTests.Server.Documents.Revisions
         }
 
         [Fact]
+        public async Task WillCreateValidRevisionWhenCompressionDocumentWasSaved()
+        {
+            var user = new User { Name = new string('1', 4096 * 2) }; // create a string which will be compressed
+            using (var store = GetDocumentStore())
+            {
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(user);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var actualUser = await session.LoadAsync<User>(user.Id);
+                    Assert.Equal(actualUser.Name, user.Name);
+
+                    var users = await session.Advanced.GetRevisionsForAsync<User>(user.Id);
+                    Assert.Equal(user.Name, users.Single().Name);
+                }
+            }
+        }
+
+        [Fact]
         public async Task WillNotCreateRevision()
         {
             var product = new Product { Description = "A fine document db", Quantity = 5 };
