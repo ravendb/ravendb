@@ -2,7 +2,7 @@
   "profiles": {
     "Raven.Server": {
       "commandName": "Project",
-      "commandLineArgs": "--ServerUrl=http://0.0.0.0:8080 --Security.UnsecuredAccessAllowed=\"PublicNetwork\""
+      "commandLineArgs": "--Security.UnsecuredAccessAllowed=\"PublicNetwork\""
     }
   }
 }

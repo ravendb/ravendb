@@ -503,20 +503,15 @@ namespace Raven.Server
 
             switch (host)
             {
-                case "*":
-                case "+":
-                    return new[] { IPAddress.Any };
-                case "localhost":
                 case "localhost.fiddler":
-                    return new[] { IPAddress.Loopback };
+                    return GetListenIpAddresses("localhost");
                 default:
                     try
                     {
                         var ipHostEntry = Dns.GetHostEntry(host);
 
                         if (ipHostEntry.AddressList.Length == 0)
-                            throw new InvalidOperationException("The specified tcp server hostname has no entries: " +
-                                                                host);
+                            throw new InvalidOperationException("The specified tcp server hostname has no entries: " + host);
                         return ipHostEntry
                             .AddressList
                             .Where(x => x.IsIPv6LinkLocal == false)

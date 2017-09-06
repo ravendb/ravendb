@@ -7,7 +7,7 @@ namespace Raven.Server.Rachis
 {
     public class TimeoutEvent : IDisposable
     {
-        public static bool Disable;
+        public bool Disable;
 
         private readonly ManualResetEventSlim _timeoutEventSlim = new ManualResetEventSlim();
         private ExceptionDispatchInfo _edi;

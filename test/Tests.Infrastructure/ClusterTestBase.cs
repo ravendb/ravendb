@@ -48,10 +48,12 @@ namespace Tests.Infrastructure
 
         private readonly Random _random = new Random();
 
-        protected IDisposable NoTimeouts()
+        protected void NoTimeouts()
         {
-            TimeoutEvent.Disable = true;
-            return new DisposableAction(() => TimeoutEvent.Disable = false);
+            foreach (var server in Servers)
+            {
+                server.ServerStore.Engine.Timeout.Disable = true;
+            }
         }
 
         protected async Task CreateAndWaitForClusterDatabase(string databaseName, IDocumentStore store)

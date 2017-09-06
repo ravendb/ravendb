@@ -459,7 +459,6 @@ namespace Raven.Server.Documents.Handlers
         {
             if (metadata.IsCollectionQuery == false ||
                 metadata.Query.Select != null ||
-                metadata.Query.Load != null ||
                 metadata.Query.Include != null ||
                 metadata.Query.From.Filter != null)
             {

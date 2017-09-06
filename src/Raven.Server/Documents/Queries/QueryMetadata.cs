@@ -955,16 +955,40 @@ namespace Raven.Server.Documents.Queries
             var updateBody = QueryExpression.Extract(QueryText, Query.UpdateBody);
 
             if (Query.From.Alias == null) // will have to use this 
+            {
+                if(Query.Load != null)
+                    throw new InvalidOperationException("When using LOAD, a from alias is required");
                 return updateBody;
-
-            var alias = QueryExpression.Extract(QueryText, Query.From.Alias);
+            }
+            
+            var fromAlias = QueryExpression.Extract(QueryText, Query.From.Alias);
             // patch is sending this, but we can also specify the alias.
             // this is so we can more easily share the code between query patch
             // and per document patch
-            return $@"
-var {alias} = this;
-{updateBody}
-";
+            var sb = new StringBuilder("var ").Append(fromAlias).AppendLine(" = this;");
+
+            if (Query.Load != null)
+            {
+                
+                foreach (var load in Query.Load)
+                {
+                    var fullFieldPath = QueryExpression.Extract(QueryText, load.Expression.Field);
+                    if (fullFieldPath.StartsWith(fromAlias) == false)
+                        throw new InvalidOperationException("Load clause can only load paths starting from the from alias: " + fromAlias);
+                    var indexOfDot = fullFieldPath.IndexOf('.', fromAlias.Length);
+                    fullFieldPath = fullFieldPath.Substring(indexOfDot + 1);
+
+                    sb.Append("var ").Append(QueryExpression.Extract(QueryText, load.Alias))
+                        .Append(" = loadPath(")
+                        .Append(fromAlias)
+                        .Append(", '")
+                        .Append(fullFieldPath.Trim())
+                        .AppendLine("');");
+                }
+            }
+            sb.Append(updateBody);
+
+            return sb.ToString();
 
         }
 

@@ -175,9 +175,10 @@ namespace Raven.Server.ServerWide.Maintenance
                             needToWait = true;
                             continue;
                         }
-                        using (var tcpClient = TcpUtils.NewTcpClient(_parent._server.Engine.TcpConnectionTimeout))
+                        var (tcpClient, connection) = await ConnectToClientNodeAsync(tcpConnection, _parent._server.Engine.TcpConnectionTimeout);
+                        using (tcpClient)
                         using (_cts.Token.Register(tcpClient.Dispose))
-                        using (var connection = await ConnectToClientNodeAsync(tcpConnection, tcpClient))
+                        using (connection)
                         {
                             while (_token.IsCancellationRequested == false)
                             {
@@ -243,9 +244,9 @@ namespace Raven.Server.ServerWide.Maintenance
                 }
             }
 
-            private async Task<Stream> ConnectToClientNodeAsync(TcpConnectionInfo tcpConnectionInfo, TcpClient tcpClient)
+            private async Task<(TcpClient TcpClient, Stream Connection)> ConnectToClientNodeAsync(TcpConnectionInfo tcpConnectionInfo, TimeSpan timeout)
             {
-                await TcpUtils.ConnectSocketAsync(tcpConnectionInfo, tcpClient, _log);
+                var tcpClient = await TcpUtils.ConnectSocketAsync(tcpConnectionInfo, timeout, _log);
                 var connection = await TcpUtils.WrapStreamWithSslAsync(tcpClient, tcpConnectionInfo, _parent._server.RavenServer.ClusterCertificateHolder.Certificate);
                 using (_contextPool.AllocateOperationContext(out JsonOperationContext ctx))
                 using (var writer = new BlittableJsonTextWriter(ctx, connection))
@@ -269,7 +270,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     WriteClusterMaintenanceConnectionHeader(writer);
                 }
 
-                return connection;
+                return (tcpClient, connection);
             }
 
             private void WriteOperationHeaderToRemote(BlittableJsonTextWriter writer)
