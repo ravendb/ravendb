@@ -46,20 +46,20 @@ namespace Raven.Server.Web.System
             // HTML does not have charset because the HTML is expected to declare the charset itself
             {".html", "text/html"},
             {".htm", "text/html"},
-            {".css", "text/css; charset=utf-8"},
-            {".js", "text/javascript; charset=utf-8"},
+            {".css", "text/css"},
+            {".js", "text/javascript"},
             {".ico", "image/vnd.microsoft.icon"},
             {".jpg", "image/jpeg"},
             {".gif", "image/gif"},
             {".png", "image/png"},
             {".xap", "application/x-silverlight-2"},
-            {".json", "application/json; charset=utf-8"},
+            {".json", "application/json"},
             {".eot", "application/vnd.ms-fontobject"},
             {".svg", "image/svg+xml"},
             {".ttf", "application/octet-stream"},
             {".woff", "application/font-woff"},
             {".woff2", "application/font-woff2"},
-            {".appcache", "text/cache-manifest; charset=utf-8"}
+            {".appcache", "text/cache-manifest"}
         };
 
         private static FileInfo TryGetFileName(string basePath, string fileName)
@@ -200,7 +200,7 @@ namespace Raven.Server.Web.System
         {
             return FileExtensionToContentTypeMapping.TryGetValue(fileExtension, out string contentType)
                 ? contentType
-                : "text/plain; charset=utf-8";
+                : "text/plain";
         }
 
         public string GetHeader(string key)

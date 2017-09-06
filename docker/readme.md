@@ -44,11 +44,11 @@ Above mentioned Powershell scripts are simplifying usage of our images allowing 
 
 - `-PublicTcpServerUrl` - set the url under which server is available to the outside world (e.g. tcp://4.live-test.ravendb.net:38888)
 
-NOTE: Script will attempt to create Docker volume, if does not exist for data persistence.
+- `-LogsMode` - set logging level (Operations, Information)
 
-NOTE 2: Due to Windows containers limitations entire directory holding the settings file (passed via `-ConfigPath`) is going to be visible within the container.
+NOTE: Due to Windows containers limitations entire directory holding the settings file (passed via `-ConfigPath`) is going to be visible within the container.
 
-Basic usage (saving data to `c:\docker\raven\databases` and using settings file mounted from host at `c:\docker\raven\settings.json`):
+Basic usage (saving data to `C:\docker\raven\databases` and using settings file mounted from host at `C:\docker\raven\settings.json`):
 ```
 PS C:\work\ravendb-4\docker> .\run-ubuntu1604.ps1 -ConfigPath c:\work\docker\settings.json -DataDir C:\work\docker\databases
 Mounting C:\work\docker\databases as RavenDB data dir.
@@ -87,3 +87,11 @@ Each of images above makes use of 2 volumes:
 
     Ubuntu container: `/databases`
     Windows container: `c:\databases`
+
+#### Dockerfiles
+
+These images were built using the following Dockerfiles:
+
+- [Windows Nanoserver image Dockerfile](https://github.com/ravendb/ravendb/blob/v4.0/docker/ravendb-nanoserver/Dockerfile)
+
+- [Ubuntu 16.04 image Dockerfile](https://github.com/ravendb/ravendb/blob/v4.0/docker/ravendb-ubuntu1604/Dockerfile)

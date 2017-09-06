@@ -7,9 +7,9 @@ services:
       - 8081:8080
       - 38881:38888
     environment:
-      - UnsecuredAccessAllowed=PublicNetwork
-      - PublicServerUrl=http://raven1:8080
-      - PublicTcpServerUrl=tcp://raven1:38888
+      - UNSECURED_ACCESS_ALLOWED=PublicNetwork
+      - PUBLIC_SERVER_URL=http://raven1:8080
+      - PUBLIC_TCP_SERVER_URL=tcp://raven1:38888
       
   raven2:
     image: ravendb/ravendb:ubuntu-latest
@@ -18,9 +18,9 @@ services:
       - 8082:8080
       - 38882:38888
     environment:
-      - UnsecuredAccessAllowed=PublicNetwork
-      - PublicServerUrl=http://raven2:8080
-      - PublicTcpServerUrl=tcp://raven2:38888
+      - UNSECURED_ACCESS_ALLOWED=PublicNetwork
+      - PUBLIC_SERVER_URL=http://raven2:8080
+      - PUBLIC_TCP_SERVER_URL=tcp://raven2:38888
    
   raven3:
     image: ravendb/ravendb:ubuntu-latest
@@ -29,6 +29,6 @@ services:
       - 8083:8080
       - 38883:38888 
     environment:
-      - UnsecuredAccessAllowed=PublicNetwork
-      - PublicServerUrl=http://raven3:8080
-      - PublicTcpServerUrl=tcp://raven3:38888
+      - UNSECURED_ACCESS_ALLOWED=PublicNetwork
+      - PUBLIC_SERVER_URL=http://raven3:8080
+      - PUBLIC_TCP_SERVER_URL=tcp://raven3:38888

@@ -6,6 +6,11 @@ param(
     $PublicServerUrl = "",
     $PublicTcpServerUrl = "",
     $LogsMode = "",
+    $CertificatePath = "",
+    $CertificatePassword = "",
+    $CertificatePasswordFile = "",
+    $IP = "",
+    $Hostname = "",
     [switch]$AuthenticationDisabled,
     [switch]$RemoveOnExit,
     [switch]$DryRun)
@@ -38,16 +43,22 @@ if ($RemoveOnExit) {
 }
 
 if ([string]::IsNullOrEmpty($ConfigPath) -eq $False) {
-    $fileEntry = (Get-Item $ConfigPath)
+    if ($(Test-Path $ConfigPath) -eq $False) {
+        throw "Config file does not exist under $ConfigPath path."
+    }
 
-    $dockerArgs += '-v'
-    $dockerArgs += "$($fileEntry.Directory):c:\raven-config"
+    $configDir = Split-Path $ConfigPath 
+
+    $containerConfigDir = "c:\ravendb\config"
+    $containerConfigFile = Split-Path -Path $ConfigPath -Leaf
+    $dockerArgs += "-v"
+    $dockerArgs += "`"$($configDir):$containerConfigDir`""
 
     $dockerArgs += "-e"
-    $dockerArgs += "CustomConfigFilename=$($fileEntry.Name)"
+    $envConfigPath = $containerConfigDir + '\' + $containerConfigFile 
+    $dockerArgs += "`"CUSTOM_CONFIG_FILE=$envConfigPath`""
 
     write-host "Reading configuration from $ConfigPath"
-    write-host "NOTE: due to Docker Windows containers limitations entire directory holding that file is going to be visible to the container."
 }
 
 if ([string]::IsNullOrEmpty($DataDir) -eq $False) {
@@ -58,22 +69,70 @@ if ([string]::IsNullOrEmpty($DataDir) -eq $False) {
 
 if ($AuthenticationDisabled) {
     $dockerArgs += '-e'
-    $dockerArgs += "UnsecuredAccessAllowed=PublicNetwork"
+    $dockerArgs += "UNSECURED_ACCESS_ALLOWED=PublicNetwork"
 }
 
 if ([string]::IsNullOrEmpty($PublicServerUrl) -eq $False) {
     $dockerArgs += "-e" 
-    $dockerArgs += "PublicServerUrl=$PublicServerUrl"
+    $dockerArgs += "PUBLIC_SERVER_URL=$PublicServerUrl"
 }
 
 if ([string]::IsNullOrEmpty($PublicTcpServerUrl) -eq $False) {
     $dockerArgs += "-e" 
-    $dockerArgs += "PublicTcpServerUrl=$PublicTcpServerUrl"
+    $dockerArgs += "PUBLIC_TCP_SERVER_URL=$PublicTcpServerUrl"
 }
 
 if ([string]::IsNullOrEmpty($LogsMode) -eq $False) {
     $dockerArgs += "-e"
-    $dockerArgs += "LogsMode=$LogsMode"
+    $dockerArgs += "LOGS_MODE=$LogsMode"
+}
+
+if ([string]::IsNullOrEmpty($CertificatePath) -eq $False) {
+    if ($(Test-Path $CertificatePath) -eq $False) {
+        throw "Certificate file does not exist under $CertificatePath."
+    }
+
+    $certDir = Split-Path $CertificatePath # we have to share entire dir for windows container
+
+    $containerCertDir = "c:\ravendb\cert"
+    $containerCertFile = Split-Path -Path $CertificatePath -Leaf
+    $dockerArgs += "-v"
+    $dockerArgs += "`"$($certDir):$containerCertDir`""
+
+    $dockerArgs += "-e"
+    $envCertPath = $containerCertDir + '\' + $containerCertFile 
+    $dockerArgs += "`"CERTIFICATE_PATH=$envCertPath`""
+}
+
+if ([string]::IsNullOrEmpty($CertificatePassword) -eq $False) {
+    $dockerArgs += "-e"
+    $dockerArgs += "`"CERTIFICATE_PASSWORD=$CertificatePassword`""
+}
+
+if ([string]::IsNullOrEmpty($CertificatePasswordFile) -eq $False) {
+    if ($(Test-Path $CertificatePasswordFile) -eq $False) {
+        throw "Certificate file does not exist under $CertificatePath."
+    }
+
+    $passDir = Split-Path $CertificatePasswordFile
+
+    $containerPasswordDir = "C:\ravendb\secrets"
+    $containerPasswordFile = Split-Path -Leaf -Path $CertificatePasswordFile
+
+    $dockerArgs += "-v"
+    $dockerArgs += "`"$($passDir):$containerPasswordDir`""
+
+    $dockerArgs += "-e"
+    $dockerArgs += "`"CERTIFICATE_PASSWORD_FILE=$($containerPasswordDir + '\' + $containerPasswordFile)`""
+}
+
+if ([string]::IsNullOrEmpty($Ip) -eq $False) {
+    $dockerArgs += "--ip"
+    $dockerArgs += "$IP"
+}
+
+if ([string]::IsNullOrEmpty($Hostname) -eq $False) {
+    $dockerArgs += "--hostname=$Hostname"
 }
 
 $dockerArgs += '-p'
@@ -114,6 +173,8 @@ if ([string]::IsNullOrEmpty($ravenIp)) {
 
 $containerIdShort = $containerId.Substring(0, 10)
 
+$scheme = if ([string]::IsNullOrEmpty($CertificatePath)) { "http" } else { "https" }
+
 write-host -nonewline -fore white "**********************************************"
 write-host -fore red "
        _____                       _____  ____
@@ -138,7 +199,7 @@ write-host -nonewline "Inspect with:`t`t"
 write-host -fore cyan "docker inspect $containerIdShort"
 write-host ""
 write-host -nonewline "Access RavenDB Studio on "
-write-host -fore yellow "http://$($ravenIp):$BindPort"
+write-host -fore yellow "$($scheme)://$($ravenIp):$BindPort"
 write-host -nonewline "Listening for TCP connections on: "
 write-host -fore yellow "$($ravenIp):$BindTcpPort"
 write-host ""

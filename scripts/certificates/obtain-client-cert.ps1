@@ -38,8 +38,21 @@ $url = "$ServerUrl/admin/certificates"
 
 write-host "Sending client cert request: $payload"
 
+[Net.ServicePointManager]::ServerCertificateValidationCallback = [System.Net.Security.RemoteCertificateValidationCallback] {
+    param($sender, $certificate, $chain, $sslPolicyErrors)
+
+    # validate whether server cert is used for obtaining client cert
+    $result = $certificate.Thumbprint -eq $serverCert.Thumbprint
+    if ($result -eq $False) {
+        throw "Certificate used for obtaining client certificate must be same as server certificate."
+    }
+
+    return $result
+}
+
 Invoke-WebRequest `
     -Verbose `
+    -Debug `
     -Method POST `
     -Certificate $serverCert `
     -Body $payload `
