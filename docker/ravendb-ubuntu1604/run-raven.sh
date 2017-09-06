@@ -1,41 +1,69 @@
 #!/bin/bash
 
-CUSTOM_SETTINGS_PATH="/opt/raven-settings.json"
-
 COMMAND="./Raven.Server"
 
-COMMAND="$COMMAND --ServerUrl=http://0.0.0.0:8080"
+if [ ! -z "$CERTIFICATE_PATH" ]; then
+    SERVER_URL_SCHEME="https"
+else
+    SERVER_URL_SCHEME="http"
+fi
+
+COMMAND="$COMMAND --ServerUrl=$SERVER_URL_SCHEME://0.0.0.0:8080"
 COMMAND="$COMMAND --ServerUrl.Tcp=tcp://0.0.0.0:38888"
 
-if [ ! -z "$PublicServerUrl" ]; then
-    COMMAND="$COMMAND --PublicServerUrl=$PublicServerUrl"
+if [ ! -z "$PUBLIC_SERVER_URL" ]; then
+    COMMAND="$COMMAND --PublicServerUrl=$PUBLIC_SERVER_URL"
 fi
 
-if [ ! -z "$PublicTcpServerUrl" ]; then
-    COMMAND="$COMMAND --PublicServerUrl.Tcp=$PublicTcpServerUrl"
+if [ ! -z "$PUBLIC_TCP_SERVER_URL" ]; then
+    COMMAND="$COMMAND --PublicServerUrl.Tcp=$PUBLIC_TCP_SERVER_URL"
 fi
 
-if [ ! -z "$UnsecuredAccessAllowed" ]; then
-    COMMAND="$COMMAND --Security.UnsecuredAccessAllowed=$UnsecuredAccessAllowed"
+if [ ! -z "$UNSECURED_ACCESS_ALLOWED" ]; then
+    COMMAND="$COMMAND --Security.UnsecuredAccessAllowed=$UNSECURED_ACCESS_ALLOWED"
 fi
 
-if [ ! -z "$DataDir" ]; then
-    COMMAND="$COMMAND --DataDir=$DataDir"
+if [ ! -z "$DATA_DIR" ]; then
+    COMMAND="$COMMAND --DataDir=\"$DATA_DIR\""
 fi
 
-if [ ! -z "$LogsMode" ]; then
-    COMMAND="$COMMAND --Logs.Mode=$LogsMode"
+if [ ! -z "$LOGS_MODE" ]; then
+    COMMAND="$COMMAND --Logs.Mode=$LOGS_MODE"
+fi
+
+if [ ! -z "$CERTIFICATE_PATH" ]; then
+    COMMAND="$COMMAND --Security.Certificate.Path=\"$CERTIFICATE_PATH\""
+fi
+
+CERT_PASSWORD=""
+
+if [ ! -z "$CERTIFICATE_PASSWORD_FILE" ]; then
+    CERT_PASSWORD=$(<"$CERTIFICATE_PASSWORD_FILE")
+fi
+
+if [ ! -z "$CERTIFICATE_PASSWORD" ]; then
+
+    if [ ! -z "$CERTIFICATE_PASSWORD_FILE" ]; then
+        echo "CERTIFICATE_PASSWORD and CERTIFICATE_PASSWORD_FILE cannot both be specified. Use only one of them to configure server certificate password."
+        exit 1
+    fi
+
+    CERT_PASSWORD="$CERTIFICATE_PASSWORD"
+fi
+
+if [ ! -z "$CERT_PASSWORD" ]; then
+    COMMAND="$COMMAND --Security.Certificate.Password=\"$CERT_PASSWORD\""
 fi
 
 COMMAND="$COMMAND --print-id"
 COMMAND="$COMMAND --daemon"
 
-if [ -f "$CUSTOM_SETTINGS_PATH" ]; then
-    COMMAND="$COMMAND --config-path=\"$CUSTOM_SETTINGS_PATH\""
+if [ -f "$CUSTOM_CONFIG_FILE" ]; then
+    COMMAND="$COMMAND --config-path=\"$CUSTOM_CONFIG_FILE\""
 fi
 
-pwd
-echo "Starting RavenDB server: $COMMAND"
+echo "Starting RavenDB server: ${COMMAND/"$CERT_PASSWORD"/"*******"}"
 
 eval $COMMAND &
+
 ./rvn logstream

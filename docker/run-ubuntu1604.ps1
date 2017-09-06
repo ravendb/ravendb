@@ -6,6 +6,10 @@ param(
     $PublicServerUrl = "",
     $PublicTcpServerUrl = "",
     $LogsMode = "",
+    $CertificatePath = "",
+    $CertificatePassword = "",
+    $CertificatePasswordFile = "",
+    $Hostname = "",
     [switch]$AuthenticationDisabled,
     [switch]$RemoveOnExit,
     [switch]$DryRun,
@@ -84,6 +88,12 @@ function DetermineServerIp ($serverId, $dockerSubnetAddress, $shouldScan) {
     return "$netPrefix.$lastOctet"
 }
 
+$serverUrlScheme = "http"
+if ([string]::IsNullOrEmpty($CertificatePath) -eq $false) {
+    $DontScanVmSubnet = $true;
+    $serverUrlScheme = "https"
+}
+
 $dockerArgs = @('run')
 
 # run in detached mode
@@ -101,12 +111,25 @@ if ($AuthenticationDisabled) {
 if ([string]::IsNullOrEmpty($DataDir) -eq $False) {
     write-host "Mounting $DataDir as RavenDB data dir."
     $dockerArgs += "-v"
-    $dockerArgs += "$($DataDir):/databases"
+    $dockerArgs += "`"$($DataDir):/databases`""
 }
 
 if ([string]::IsNullOrEmpty($ConfigPath) -eq $False) {
+    if ($(Test-Path $ConfigPath) -eq $False) {
+        throw "Config file does not exist under $ConfigPath path."
+    }
+
+    $configDir = Split-Path $ConfigPath 
+
+    $containerConfigDir = "/opt/RavenDB/config"
+    $containerConfigFile = Split-Path -Path $ConfigPath -Leaf
     $dockerArgs += "-v"
-    $dockerArgs += "$($ConfigPath):/opt/raven-settings.json"
+    $dockerArgs += "`"$($configDir):$containerconfigDir`""
+
+    $dockerArgs += "-e"
+    $envConfigPath = $containerConfigDir + '/' + $containerConfigFile 
+    $dockerArgs += "`"CUSTOM_CONFIG_FILE=$envConfigPath`""
+
     write-host "Reading configuration from $ConfigPath"
 }
 
@@ -117,17 +140,65 @@ if ([string]::IsNullOrEmpty($Memory) -eq $False) {
 
 if ([string]::IsNullOrEmpty($PublicServerUrl) -eq $False) {
     $dockerArgs += "-e" 
-    $dockerArgs += "PublicServerUrl=$PublicServerUrl"
+    $dockerArgs += "PUBLIC_SERVER_URL=$PublicServerUrl"
 }
 
 if ([string]::IsNullOrEmpty($PublicTcpServerUrl) -eq $False) {
     $dockerArgs += "-e" 
-    $dockerArgs += "PublicTcpServerUrl=$PublicTcpServerUrl"
+    $dockerArgs += "PUBLIC_TCP_SERVER_URL=$PublicTcpServerUrl"
 }
 
 if ([string]::IsNullOrEmpty($LogsMode) -eq $False) {
     $dockerArgs += "-e"
-    $dockerArgs += "LogsMode=$LogsMode"
+    $dockerArgs += "LOGS_MODE=$LogsMode"
+}
+
+if ([string]::IsNullOrEmpty($CertificatePath) -eq $False) {
+    if ($(Test-Path $CertificatePath) -eq $False) {
+        throw "Certificate file does not exist under $CertificatePath."
+    }
+
+    $containerCertDir = "/opt/RavenDB/cert"
+    $containerCertFile = Split-Path -Leaf -Path $CertificatePath
+
+    $hostDir = Split-Path $CertificatePath
+
+    $dockerArgs += "-v"
+    $dockerArgs += "`"$($hostDir):$containerCertDir`""
+
+    $dockerArgs += "-e"
+    $dockerArgs += "`"CERTIFICATE_PATH=$($containerCertDir + '/' + $containerCertFile)`""
+}
+
+if ([string]::IsNullOrEmpty($CertificatePassword) -eq $False) {
+    $dockerArgs += "-e"
+    $dockerArgs += "CERTIFICATE_PASSWORD=$CertificatePassword"
+}
+
+if ([string]::IsNullOrEmpty($CertificatePasswordFile) -eq $False) {
+    if ($(Test-Path $CertificatePasswordFile) -eq $False) {
+        throw "Certificate file does not exist under $CertificatePath."
+    }
+
+    $containerCertPassDir = "/opt/RavenDB/secrets"
+    $containerCertPassFile = Split-Path -Leaf -Path $CertificatePasswordFile
+
+    $hostDir = Split-Path $CertificatePasswordFile
+
+    $dockerArgs += "-v"
+    $dockerArgs += "`"$($hostDir):$containerCertPassDir`""
+
+    $dockerArgs += "-e"
+    $dockerArgs += "`"CERTIFICATE_PASSWORD_FILE=$($containerCertPassDir + '/' + $containerCertPassFile)`""
+}
+
+if ([string]::IsNullOrEmpty($Ip) -eq $False) {
+    $dockerArgs += "--ip"
+    $dockerArgs += "$IP"
+}
+
+if ([string]::IsNullOrEmpty($Hostname) -eq $False) {
+    $dockerArgs += "--hostname=$Hostname"
 }
 
 $dockerArgs += '-p'
@@ -216,7 +287,7 @@ write-host -fore cyan "docker inspect $containerIdShort"
 if ([string]::IsNullOrEmpty($ravenIp) -eq $False) {
     write-host ""
     write-host -nonewline "Access RavenDB Studio on "
-    write-host -fore yellow "http://$($ravenIp):$BindPort"
+    write-host -fore yellow "$($serverUrlScheme)://$($ravenIp):$BindPort"
     write-host -nonewline "Listening for TCP connections on: "
     write-host -fore yellow "$($ravenIp):$BindTcpPort"
     write-host ""
