@@ -293,7 +293,6 @@ namespace Raven.Server.Documents.Revisions
                 }
 
                 flags |= DocumentFlags.Revision;
-                var data = context.ReadObject(document, id);
                 var newEtag = _database.DocumentsStorage.GenerateNextEtag();
                 var newEtagSwapBytes = Bits.SwapBytes(newEtag);
 
@@ -305,7 +304,7 @@ namespace Raven.Server.Documents.Revisions
                     tvb.Add(SpecialChars.RecordSeparator);
                     tvb.Add(newEtagSwapBytes);
                     tvb.Add(idPtr);
-                    tvb.Add(data.BasePointer, data.Size);
+                    tvb.Add(document.BasePointer, document.Size);
                     tvb.Add((int)flags);
                     tvb.Add(newEtagSwapBytes);
                     tvb.Add(lastModifiedTicks);
