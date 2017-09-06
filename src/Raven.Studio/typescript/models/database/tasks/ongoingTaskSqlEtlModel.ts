@@ -31,6 +31,10 @@ class ongoingTaskSqlEtlModel extends ongoingTask {
     editTask() {
         // TODO...
     }
+
+    toggleDetails() {
+        // TODO...
+    }
 }
 
 export = ongoingTaskSqlEtlModel;

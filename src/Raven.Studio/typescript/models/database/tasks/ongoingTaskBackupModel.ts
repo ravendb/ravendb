@@ -64,7 +64,7 @@ class ongoingTaskBackupModel extends ongoingTask {
         router.navigate(this.editUrl());
     }
 
-    toggleShowBackupDetails() {
+    toggleDetails() {
         this.showBackupDetails(!this.showBackupDetails());
 
         if (this.showBackupDetails()) {

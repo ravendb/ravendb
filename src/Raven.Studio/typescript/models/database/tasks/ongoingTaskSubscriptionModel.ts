@@ -72,7 +72,7 @@ class ongoingTaskSubscriptionModel extends ongoingTask {
         router.navigate(this.editUrl());
     }
 
-    toggleShowSubscriptionDetails() {
+    toggleDetails() {
         this.showSubscriptionDetails(!this.showSubscriptionDetails());
 
         if (this.showSubscriptionDetails()) {
