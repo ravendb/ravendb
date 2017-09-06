@@ -59,7 +59,7 @@ namespace Raven.Client.Documents.Operations
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/sql-migration";
+                url = $"{node.Url}/databases/{node.Database}/admin/sql-migration";
 
                 var request = new HttpRequestMessage
                 {

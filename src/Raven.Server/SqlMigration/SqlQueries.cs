@@ -2,7 +2,7 @@
 
 namespace Raven.Server.SqlMigration
 {
-    public static class Queries
+    public static class SqlQueries
     {
         public const string SelectAllTables = "select TABLE_SCHEMA, TABLE_NAME from INFORMATION_SCHEMA.TABLES where TABLE_TYPE = @tableType order by 'TABLE_SCHEMA','TABLE_NAME'";
         public const string SelectReferantialConstraints = "select CONSTRAINT_NAME, UNIQUE_CONSTRAINT_NAME from information_schema.REFERENTIAL_CONSTRAINTS";

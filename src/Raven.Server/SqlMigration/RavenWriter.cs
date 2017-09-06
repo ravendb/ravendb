@@ -20,7 +20,6 @@ namespace Raven.Server.SqlMigration
 
         private readonly DocumentsOperationContext _context;
         private readonly SqlDatabase _database;
-        private int _documentsCount;
 
         public RavenWriter(DocumentsOperationContext context, SqlDatabase database)
         {
@@ -46,36 +45,52 @@ namespace Raven.Server.SqlMigration
                 {
                     while (reader.Read())
                     {
-                        _documentsCount++;
-
                         var document = _database.Factory.FromReader(reader, table, out var attachments);
 
-                        await InsertDocument(document, attachments);
+                        try
+                        {
+                            await InsertDocument(document, attachments);
+                        }
+                        catch (Exception)
+                        {
+                            if (_database.Factory.Options.SkipUnsopportedTypes)
+                                continue;
+
+                            await EnqueueCommands(); // TODO: Should insert the commands in the queue? or fail immediately 
+                            throw;
+                        }
                     }
                 }
                 
                 OnTableWritten?.Invoke(table.Name, (double) sw.ElapsedMilliseconds / 1000);
             }
             await EnqueueCommands();
-            Console.WriteLine("Documents count: " + _documentsCount);
         }
 
-        private const int BatchSize = 1000;
-        private int _count;
-        private readonly BatchRequestParser.CommandData[] _commands = new BatchRequestParser.CommandData[BatchSize];
+        private const int BatchSize = 1000; // TODO:  what's the most efficient batch size?
+        private readonly List<BatchRequestParser.CommandData> _documentCommands = new List<BatchRequestParser.CommandData>();
         private readonly List<AttachmentHandler.MergedPutAttachmentCommand> _attachmentCommands = new List<AttachmentHandler.MergedPutAttachmentCommand>();
         private readonly List<IDisposable> _toDispose = new List<IDisposable>();
 
         private async Task InsertDocument(RavenDocument ravenDocument, Dictionary<string, byte[]> attachments)
         {
-            var document = _context.ReadObject(ravenDocument, ravenDocument.Id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+            BlittableJsonReaderObject document;
 
-            _commands[_count++] = new BatchRequestParser.CommandData
+            try
+            {
+                document = _context.ReadObject(ravenDocument, ravenDocument.Id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException($"Cannot build raven document from table '{ravenDocument.TableName}'. Raven document id is: {ravenDocument.Id}", e);
+            }
+
+            _documentCommands.Add(new BatchRequestParser.CommandData
             {
                 Type = CommandType.PUT,
                 Document = document,
                 Id = ravenDocument.Id
-            };
+            });
 
             foreach (var attachment in attachments)
             {
@@ -98,10 +113,10 @@ namespace Raven.Server.SqlMigration
                 _toDispose.Add(streamsTempFile);
              }
 
-            if (_count % BatchSize == 0)
+            if (_documentCommands.Count % BatchSize == 0)
             {
                 await EnqueueCommands();
-                _count = 0;
+                _documentCommands.Clear();
                 _attachmentCommands.Clear();
             }
         }
@@ -110,7 +125,7 @@ namespace Raven.Server.SqlMigration
         {
             using (var command = new BatchHandler.MergedBatchCommand { Database = _database.DocumentDatabase })
             {
-                command.ParsedCommands = new ArraySegment<BatchRequestParser.CommandData>(_commands, 0, _count);
+                command.ParsedCommands = new ArraySegment<BatchRequestParser.CommandData>(_documentCommands.ToArray(), 0, _documentCommands.Count);
 
                 try
                 {
@@ -118,7 +133,7 @@ namespace Raven.Server.SqlMigration
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine(e);
+                    throw new InvalidOperationException($"Failed to enqueue batch of {_documentCommands.Count} documents", e);
                 }
 
                 try
@@ -126,9 +141,9 @@ namespace Raven.Server.SqlMigration
                     foreach (var attachment in _attachmentCommands)
                         await _database.DocumentDatabase.TxMerger.Enqueue(attachment);
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
-                    // TODO: Throw exception
+                    throw new InvalidOperationException($"Failed to enqueue batch of {_attachmentCommands.Count} attachments", e);
                 }
                 finally
                 {
@@ -138,13 +153,13 @@ namespace Raven.Server.SqlMigration
                     }
                     _toDispose.Clear();
                 }
-
             }
         }
 
         public void Dispose()
         {
             SqlReader.DisposeAll();
+            SqlConnection.ClearAllPools();
         }
     }
 }

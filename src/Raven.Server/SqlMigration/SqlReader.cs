@@ -9,9 +9,10 @@ namespace Raven.Server.SqlMigration
     {
         private readonly IDbConnection _connection;
         private readonly SqlCommand _command;
+        private readonly bool _oneTimeConnection;
         private IDataReader _reader;
         private bool _executed;
-        private readonly bool _oneTimeConnection;
+
         private static readonly List<SqlReader> AllReaders = new List<SqlReader>();
 
         public SqlReader(IDbConnection connection, string query, bool oneTimeConnection = false)
@@ -21,8 +22,6 @@ namespace Raven.Server.SqlMigration
             _connection = _oneTimeConnection ? ConnectionFactory.OpenConnection(connection.ConnectionString) : connection;
 
             _command = new SqlCommand(query, (SqlConnection) _connection);
-
-            _executed = false;
 
             AllReaders.Add(this);
         }
@@ -93,7 +92,7 @@ namespace Raven.Server.SqlMigration
 
         public void AddParameter(string key, object value) => _command.Parameters.AddWithValue(key, value);
 
-        public Type GetFeildType(int i) => _reader.GetFieldType(i);
+        public Type GetFieldType(int i) => _reader.GetFieldType(i);
 
         public string GetDataTypeName(int i) => _reader.GetDataTypeName(i);
 

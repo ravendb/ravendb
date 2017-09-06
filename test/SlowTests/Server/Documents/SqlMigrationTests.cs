@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
 using FastTests;
@@ -14,11 +15,11 @@ namespace SlowTests.Server.Documents
 {
     public class SqlMigrationTests : RavenTestBase
     {
-        private const string DbName = "SqlMigrationTestDatabase";
+        private const string DatabaseName = "SqlMigrationTestDatabase";
 
-        private static readonly string CreateDatabaseQuery = $"USE master IF EXISTS(select * from sys.databases where name= '{DbName}') DROP DATABASE[{DbName}] CREATE DATABASE[{DbName}]";
+        private static readonly string CreateDatabaseQuery = "USE master IF EXISTS(select * from sys.databases where name= '{0}') DROP DATABASE[{0}] CREATE DATABASE[{0}]";
     
-        public static string DropDatabaseQuery = $"ALTER DATABASE [{DbName}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE [{DbName}]";
+        private static readonly string DropDatabaseQuery = "IF EXISTS(select * from sys.databases where name= '{0}') ALTER DATABASE [{0}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; IF EXISTS(select * from sys.databases where name= '{0}') DROP DATABASE [{0}]";
 
         private static readonly Lazy<string> MasterDatabaseConnection = new Lazy<string>(() =>
         {
@@ -87,7 +88,7 @@ namespace SlowTests.Server.Documents
 
                 using (var dbCommand = con.CreateCommand())
                 {
-                    dbCommand.CommandText = string.Format(CreateDatabaseQuery, DbName);
+                    dbCommand.CommandText = string.Format(CreateDatabaseQuery, DatabaseName);
                     dbCommand.ExecuteNonQuery();
                 }
             }
@@ -115,16 +116,16 @@ namespace SlowTests.Server.Documents
 
         public static string GetConnectionString()
         {
-            return MasterDatabaseConnection.Value + $";Initial Catalog={DbName};";
+            return MasterDatabaseConnection.Value + $";Initial Catalog={DatabaseName};";
         }
 
         [Fact]
         public void CanMigrateSqlDatabase()
         {
-            Initialize();
-
             using (var store = GetDocumentStore())
             {
+                Initialize();
+
                 var tablesToWrite = new List<SqlMigrationTable>
                 {
                     new SqlMigrationTable("dbo.Customer")
@@ -148,12 +149,11 @@ namespace SlowTests.Server.Documents
                         }
                     }
                 };
-
                 var operation = new SqlMigrationOperation(GetConnectionString(), true, true, true, false, tablesToWrite);
 
                 var result = store.Operations.Send(operation);
 
-                Assert.Equal(result.Success, true);
+                Assert.True(result.Success);
 
                 using (var session = store.OpenSession())
                 {
@@ -179,14 +179,14 @@ namespace SlowTests.Server.Documents
         [Fact]
         public void CanMigrateWithQuery()
         {
-            Initialize();
             using (var store = GetDocumentStore())
             {
+                Initialize();
                 var tablesToWrite = new List<SqlMigrationTable>
                 {
                     new SqlMigrationTable("dbo.Customer")
                     {
-                        Query = "select top 1 * from [dbo].[Customer]"
+                        Query = "select * from [dbo].[Customer] where Id = 3"
                     }
                 };
 
@@ -194,12 +194,12 @@ namespace SlowTests.Server.Documents
 
                 var result = store.Operations.Send(operation);
 
-                Assert.Equal(result.Success, true);
+                Assert.True(result.Success);
 
                 using (var session = store.OpenSession())
                 {
-                    Assert.Equal(session.Advanced.Exists("dbo.Customer/1"), true);
-                    Assert.Equal(session.Advanced.Exists("dbo.Customer/2"), false);
+                    Assert.True(session.Advanced.Exists("dbo.Customer/3"));
+                    Assert.False(session.Advanced.Exists("dbo.Customer/1"));
                 }
             }
         }
@@ -207,9 +207,10 @@ namespace SlowTests.Server.Documents
         [Fact]
         public void CanMigrateWithPatch()
         {
-            Initialize();
             using (var store = GetDocumentStore())
             {
+                Initialize();
+
                 const string name = "Name Test";
 
                 var tablesToWrite = new List<SqlMigrationTable>
@@ -224,7 +225,7 @@ namespace SlowTests.Server.Documents
 
                 var result = store.Operations.Send(operation);
 
-                Assert.Equal(result.Success, true);
+                Assert.True(result.Success);
 
                 using (var session = store.OpenSession())
                 {
@@ -237,9 +238,9 @@ namespace SlowTests.Server.Documents
         [Fact]
         public void ReturnsCorrectErrors()
         {
-            Initialize();
             using (var store = GetDocumentStore())
             {
+                Initialize();
                 var tablesToWrite = new List<SqlMigrationTable>
                 {
                     new SqlMigrationTable("dbo.Order")
@@ -250,35 +251,35 @@ namespace SlowTests.Server.Documents
                             {
                                 Property = "Foo"
                             },
-                            new SqlMigrationTable("dbo.OrderItem")
+                            new SqlMigrationTable("dbo.OrderItem") // duplicate property
                             {
                                 Property = "Foo"
                             },
                             new SqlMigrationTable("dbo.NotExists"),
-                            new SqlMigrationTable("dbo.Product"),
+                            new SqlMigrationTable("dbo.Product"), // cannot embed into 'Order'
                             new SqlMigrationTable("")
                         }
                     },
                     new SqlMigrationTable("dbo.Product"),
-                    new SqlMigrationTable("dbo.Product"),
+                    new SqlMigrationTable("dbo.Product"), // duplicate table
                     new SqlMigrationTable("dbo.Details")
                     {
-                        Query = "Invalid query"
+                        Query = " ORDER BY + Invalid query"
                     },
                     new SqlMigrationTable("dbo.Photo")
                     {
-                        Query = "select Pic from [dbo].[Photo]"
+                        Query = "select Pic from [dbo].[Photo]" // query doesn't contain all primary keys
                     },
                     new SqlMigrationTable("dbo.Customer")
                     {
                         EmbeddedTables = new List<SqlMigrationTable>
                         {
                             new SqlMigrationTable("dbo.Order"),
-                            new SqlMigrationTable("dbo.Order")
+                            new SqlMigrationTable("dbo.Order") // duplicate embedded table
                         }
                     },
                     new SqlMigrationTable("dbo.NoPkTable"),
-                    new SqlMigrationTable("dbo.UnsupportedTable"),
+                    new SqlMigrationTable("dbo.UnsupportedTable"), // table contains unsupported type column
                     new SqlMigrationTable("dbo.OrderItem")
                     {
                         Patch = "Invalid patch script"
@@ -289,28 +290,30 @@ namespace SlowTests.Server.Documents
 
                 var result = store.Operations.Send(operation);
 
-                Assert.Equal(result.Success, false);
-                Assert.Equal(result.Errors.Length, 11);
-                Assert.Equal(result.Errors[0], "Couldn't find table 'dbo.NotExists' in the database (Table name must include schema name)");
-                Assert.Equal(result.Errors[1], "A table is missing a name");
-                Assert.Equal(result.Errors[2], "Table 'dbo.Product' cannot embed into 'dbo.Order'");
-                Assert.Equal(result.Errors[3], "Duplicate property name 'Foo'");
-                Assert.Equal(result.Errors[4], "Duplicate table 'dbo.Product'");
-                Assert.Equal(result.Errors[5], "Duplicate property name 'dbo.Order'");
-                Assert.Equal(result.Errors[6], "Failed to read table 'dbo.Details' using the given query");
-                Assert.Equal(result.Errors[7], "Query for table 'dbo.Photo' must select all primary keys");
-                Assert.Equal(result.Errors[8], "Table 'dbo.NoPkTable' must have at list 1 primary key");
-                Assert.Equal(result.Errors[9], "Cannot read column 'Node' in table 'dbo.UnsupportedTable'");
-                Assert.Equal(result.Errors[10], "Cannot patch table 'dbo.OrderItem' using the given script");
+                Assert.False(result.Success);
+                Assert.Equal(result.Errors.Length, 12);
+                Assert.True(result.Errors.Contains("Couldn't find table 'dbo.NotExists' in the sql database (Table name must include schema name)"));
+                Assert.True(result.Errors.Contains("A table is missing a name"));
+                Assert.True(result.Errors.Contains("Table 'dbo.Product' cannot embed into 'dbo.Order'"));
+                Assert.True(result.Errors.Contains("Duplicate property name 'Foo'"));
+                Assert.True(result.Errors.Contains("Duplicate table 'dbo.Product'"));
+                Assert.True(result.Errors.Contains("Duplicate property name 'dbo.Order'"));
+                Assert.True(result.Errors.Contains("Failed to read table 'dbo.Details' using the given query"));
+                Assert.True(result.Errors.Contains("Query for table 'dbo.Photo' must select all primary keys"));
+                Assert.True(result.Errors.Contains("Table 'dbo.NoPkTable' must have at list 1 primary key"));
+                Assert.True(result.Errors.Contains($"Cannot read column 'Node' in table 'dbo.UnsupportedTable'. (Unsupported type: {DatabaseName}.sys.hierarchyid)"));
+                Assert.True(result.Errors.Contains("Cannot patch table 'dbo.OrderItem' using the given script"));
+                Assert.True(result.Errors.Contains("Query cannot contain an 'ORDER BY' clause (dbo.Details)"));
+                
             }
         }
 
         [Fact]
         public void CanGetTableSchema()
         {
-            Initialize();
             using (var store = GetDocumentStore())
             {
+                Initialize();
                 var operation = new SqlSchemaOperation(GetConnectionString());
 
                 var result = store.Operations.Send(operation);
@@ -323,7 +326,7 @@ namespace SlowTests.Server.Documents
         {
             base.Dispose();
 
-            DropDatabase();            
+            DropDatabase();
         }
 
         private void DropDatabase()
@@ -335,7 +338,7 @@ namespace SlowTests.Server.Documents
 
                 using (var dbCommand = con.CreateCommand())
                 {
-                    dbCommand.CommandText = string.Format(DropDatabaseQuery, DbName);
+                    dbCommand.CommandText = string.Format(DropDatabaseQuery, DatabaseName);
 
                     dbCommand.ExecuteNonQuery();
                 }

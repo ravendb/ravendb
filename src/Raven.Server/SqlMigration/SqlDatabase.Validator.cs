@@ -10,13 +10,11 @@ namespace Raven.Server.SqlMigration
         {
             private readonly List<string> _errors = new List<string>();
             private readonly SqlDatabase _database;
-            private readonly RavenDocumentFactory _factory;
             public bool IsValid;
 
-            public Validator(SqlDatabase database, RavenDocumentFactory factory)
+            public Validator(SqlDatabase database)
             {
                 _database = database;
-                _factory = factory;
                 IsValid = false;
             }
 
@@ -57,23 +55,24 @@ namespace Raven.Server.SqlMigration
             {
                 var allTables = GetAllTablesNamesFromDatabase(_database.Connection);
 
-                for (var i = 0; i < tables.Count; i++)
+                var count = 0;
+
+                while (count < tables.Count)
                 {
-                    var table = tables[i];
+                    var table = tables[count];
 
                     if (string.IsNullOrEmpty(table.Name))
                     {
                         AddError("A table is missing a name");
                         tables.Remove(table);
-                        i--;
                     }
 
                     else if (!allTables.Contains(table.Name))
                     {
-                        AddError($"Couldn't find table '{table.Name}' in the database (Table name must include schema name)");
+                        AddError($"Couldn't find table '{table.Name}' in the sql database (Table name must include schema name)");
                         tables.Remove(table);
-                        i--;
                     }
+                    else count++;
                 }
             }
 
@@ -81,10 +80,8 @@ namespace Raven.Server.SqlMigration
             {
                 foreach (var table in tables)
                 {
-                    foreach (var item in table.EmbeddedTables)
+                    foreach (var embeddedTable in table.EmbeddedTables)
                     {
-                        var embeddedTable = item.Item2;
-
                         if (!embeddedTable.ForeignKeys.ContainsValue(table.Name) && tables.Contains(embeddedTable))
                             AddError($"Table '{embeddedTable.Name}' cannot embed into '{table.Name}'");
                     }
@@ -110,29 +107,26 @@ namespace Raven.Server.SqlMigration
                 }
             }
 
-            private void ValidateDuplicateEmbeddedTables(List<Tuple<string, SqlTable>> tableEmbeddedTables)
+            private void ValidateDuplicateEmbeddedTables(List<SqlEmbeddedTable> tableEmbeddedTables)
             {
                 var properties = new List<string>();
                 var tables = new List<SqlTable>();
 
-                foreach (var item in tableEmbeddedTables)
+                foreach (var embeddedTable in tableEmbeddedTables)
                 {
-                    var property = item.Item1;
-                    var table = item.Item2;
-
-                    if (properties.Contains(property))
-                        AddError($"Duplicate property name '{property}'");
+                    if (properties.Contains(embeddedTable.Property))
+                        AddError($"Duplicate property name '{embeddedTable.Property}'");
 
                     else
-                        properties.Add(property);
+                        properties.Add(embeddedTable.Property);
 
-                    if (tables.Contains(table))
-                        AddError($"Duplicate table '{table.Name}' (try give them property name)");
+                    if (tables.Contains(embeddedTable))
+                        AddError($"Duplicate table '{embeddedTable.Name}' (try give them property name)");
 
                     else
-                        tables.Add(table);
+                        tables.Add(embeddedTable);
 
-                    ValidateDuplicateEmbeddedTables(table.EmbeddedTables);
+                    ValidateDuplicateEmbeddedTables(embeddedTable.EmbeddedTables);
                 }
             }
 
@@ -158,10 +152,10 @@ namespace Raven.Server.SqlMigration
             {
                 document = null;
 
-                if (table.InitialQuery.Contains(" order by "))
+                if (table.InitialQuery.ToLower().Contains(" order by "))
                     AddError($"Query cannot contain an 'ORDER BY' clause ({table.Name})");
 
-                var reader = new SqlReader(_database.Connection, Queries.SelectSingleRowFromQuery(table.InitialQuery));
+                var reader = new SqlReader(_database.Connection, SqlQueries.SelectSingleRowFromQuery(table.InitialQuery));
 
                 try
                 {
@@ -179,7 +173,7 @@ namespace Raven.Server.SqlMigration
                     {
                         try
                         {
-                            document = _factory.FromReader(reader, table, true);
+                            document = _database.Factory.FromReader(reader, table, true);
                         }
                         catch (Exception e)
                         {

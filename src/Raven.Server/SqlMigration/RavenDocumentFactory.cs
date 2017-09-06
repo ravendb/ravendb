@@ -5,13 +5,13 @@ namespace Raven.Server.SqlMigration
 {
     public class RavenDocumentFactory
     {
-        private readonly Options _options;
+        public WriteOptions Options { get;}
 
-        public RavenDocumentFactory() : this(new Options()) {}
+        public RavenDocumentFactory() : this(new WriteOptions()) {}
 
-        public RavenDocumentFactory(Options options)
+        public RavenDocumentFactory(WriteOptions options)
         {
-            _options = options;
+            Options = options;
         }
 
         public RavenDocument FromReader(SqlReader reader, SqlTable table, bool valuesOnly = false)
@@ -21,13 +21,12 @@ namespace Raven.Server.SqlMigration
 
         public RavenDocument FromReader(SqlReader reader, SqlTable table, out Dictionary<string, byte[]> attachments, bool valuesOnly = false)
         {
-            IDictionary<string, byte[]> attachmentsDic = new Dictionary<string, byte[]>();
-            var document = FromReader(reader, table, ref attachmentsDic, valuesOnly);
-            attachments = (Dictionary<string, byte[]>) attachmentsDic;
+            attachments = new Dictionary<string, byte[]>();
+            var document = FromReaderInternal(reader, table, ref attachments, valuesOnly);
             return document;
         }
 
-        private RavenDocument FromReader(SqlReader reader, SqlTable table, ref IDictionary<string, byte[]> attachments, bool valuesOnly = false)
+        private RavenDocument FromReaderInternal(SqlReader reader, SqlTable table, ref Dictionary<string, byte[]> attachments, bool valuesOnly = false)
         {
             var document = new RavenDocument(table.Name);
 
@@ -48,25 +47,24 @@ namespace Raven.Server.SqlMigration
                 }
                 catch (Exception e)
                 {
-                    if (_options.SkipUnsopportedTypes)
+                    if (Options.SkipUnsopportedTypes)
                         continue;
 
                     throw new InvalidOperationException($"Cannot read column '{columnName}' in table '{table.Name}'. (Unsupported type: {reader.GetDataTypeName(i)})", e);
                 }
 
-                table.ForeignKeys.TryGetValue(columnName, out var tableName);
-
+                var isForeignKey = table.ForeignKeys.TryGetValue(columnName, out var foreignKeyTable);
                 var isNullOrEmpty = value is DBNull || string.IsNullOrWhiteSpace(value.ToString());
 
                 if (table.PrimaryKeys.Contains(columnName))
                 {
                     id += $"/{value}";
 
-                    if (tableName == null && !table.IsEmbedded)
+                    if (!isForeignKey && !table.IsEmbedded)
                         continue;
                 }
 
-                if (_options.BinaryToAttachment && reader.GetFeildType(i) == typeof(byte[]))
+                if (Options.BinaryToAttachment && reader.GetFieldType(i) == typeof(byte[]))
                 {
                     if (!isNullOrEmpty)
                         attachments.Add($"{columnName}_{attachments.Count}", (byte[]) value);
@@ -74,10 +72,10 @@ namespace Raven.Server.SqlMigration
 
                 else
                 {
-                    if (tableName != null && !isNullOrEmpty)
-                        value = $"{GetName(tableName)}/{value}";
+                    if (isForeignKey && !isNullOrEmpty)
+                        value = $"{GetName(foreignKeyTable)}/{value}";
 
-                    document.Set(columnName, value, _options.TrimStrings);
+                    document.Set(columnName, value, Options.TrimStrings);
                 }
             }
 
@@ -92,23 +90,21 @@ namespace Raven.Server.SqlMigration
             return document;
         }
 
-        private void SetEmbeddedDocuments(RavenDocument document, SqlTable parentTable, ref IDictionary<string, byte[]> attachments)
+        private void SetEmbeddedDocuments(RavenDocument document, SqlTable parentTable, ref Dictionary<string, byte[]> attachments)
         {
-            foreach (var item in parentTable.EmbeddedTables)
+            foreach (var childTable in parentTable.EmbeddedTables)
             {
-                var childTable = item.Item2;
-
-                var childColumns = childTable.GetColumnsReferencingTable(parentTable.Name);
-
                 var parentValues = GetValuesFromColumns(parentTable.GetReader(), parentTable.PrimaryKeys);
+
+                var childColumns = childTable.GetColumnsReferencingParentTable();
 
                 SqlReader childReader;
 
                 if (childColumns.Count > parentTable.PrimaryKeys.Count || parentTable.IsEmbedded)
-                    childReader = childTable.GetReaderWhere(childColumns, parentValues);
+                    childReader = childTable.GetReaderWhere(parentValues);
 
                 else
-                    childReader = childTable.GetReader(childColumns);
+                    childReader = childTable.GetReader();
 
                 if (!childReader.HasValue() && !childReader.Read())
                     continue;
@@ -128,9 +124,9 @@ namespace Raven.Server.SqlMigration
 
                 do
                 {
-                    var innerDocument = FromReader(childReader, childTable, ref attachments);
+                    var innerDocument = FromReaderInternal(childReader, childTable, ref attachments);
 
-                    document.Append(item.Item1, innerDocument);
+                    document.Append(childTable.Property, innerDocument);
 
                     if (!childReader.Read()) break;
 
@@ -183,10 +179,10 @@ namespace Raven.Server.SqlMigration
 
         private string GetName(string tableName)
         {
-            return _options.IncludeSchema ? tableName : tableName.Substring(tableName.IndexOf('.') + 1);
+            return Options.IncludeSchema ? tableName : tableName.Substring(tableName.IndexOf('.') + 1);
         }
 
-        public class Options
+        public class WriteOptions
         {
             public bool IncludeSchema { get; set; } = true;
             public bool BinaryToAttachment { get; set; } = true;

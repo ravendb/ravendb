@@ -1,87 +1,52 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using Raven.Server.Config;
 
 namespace Raven.Server.SqlMigration
 {
     public class SqlTable
     {
+        public readonly string Name;
+        public readonly List<string> PrimaryKeys;
+        public Dictionary<string, string> ForeignKeys { get; private set; }
+        public readonly string InitialQuery;
+        public readonly List<SqlEmbeddedTable> EmbeddedTables;
 
-        public string Name { get; }
-        public List<string> PrimaryKeys { get; }
-        public Dictionary<string, string> ForeignKeys { get; }
-        public string InitialQuery { get; }
-        public readonly List<Tuple<string, SqlTable>> EmbeddedTables;
+        protected readonly string PatchScript;
+        protected readonly IDbConnection Connection;
+        protected readonly RavenConfiguration RavenConfiguration;
+        protected JsPatch Patcher;
+        protected SqlReader Reader;
         public bool IsEmbedded;
 
-        private readonly string _patchScript;
-        private readonly IDbConnection _connection;
-        private SqlReader _reader;
-        private JsPatch _patcher;
-
-        public SqlTable(string tableName, string query, string patch, IDbConnection connection)
+        public SqlTable(string tableName, string query, string patch, IDbConnection connection, RavenConfiguration config)
         {
             Name = tableName;
             PrimaryKeys = new List<string>();
             ForeignKeys = new Dictionary<string, string>();
-            InitialQuery = string.IsNullOrEmpty(query) ? Queries.SelectTable(Name) : query;
-            EmbeddedTables = new List<Tuple<string, SqlTable>>();
+            InitialQuery = string.IsNullOrEmpty(query) ? SqlQueries.SelectTable(Name) : query;
+            EmbeddedTables = new List<SqlEmbeddedTable>();
+
+            PatchScript = string.IsNullOrEmpty(patch) ? null : patch;
+            Connection = connection;
+            RavenConfiguration = config;
+
             IsEmbedded = false;
-
-            _patchScript = string.IsNullOrEmpty(patch) ? null : patch;
-            _connection = connection;
-        }
-
-        public void Embed(SqlTable table, string property = null)
-        {
-            if (string.IsNullOrEmpty(property))
-                property = table.Name;
-
-            EmbeddedTables.Add(Tuple.Create(property, table));
-            table.IsEmbedded = true;
         }
 
         public JsPatch GetJsPatcher()
         {
-            if (_patcher == null && !string.IsNullOrEmpty(_patchScript))
-                _patcher = new JsPatch(_patchScript);
-
-            return _patcher;
+            return Patcher ?? (Patcher = new JsPatch(PatchScript, RavenConfiguration));
         }
 
-        public List<string> GetColumnsReferencingTable(string parentTableName)
+        public SqlReader GetReader()
         {
-            var lst = new List<string>();
+            if (Reader != null) return Reader;
 
-            foreach (var item in ForeignKeys)
-                if (item.Value == parentTableName)
-                    lst.Add(item.Key);
-
-            return lst;
-        }
-
-        public SqlReader GetReader(List<string> columns = null)
-        {
-            if (_reader != null) return _reader;
-
-            var query = InitialQuery + Queries.OrderByColumns(columns ?? PrimaryKeys);
-            _reader = new SqlReader(_connection, query, columns != null);
-
-            return _reader;
-        }
-
-        public SqlReader GetReaderWhere(List<string> columns, List<string> values)
-        {
-            var query = Queries.SelectFromQueryWhere(InitialQuery, columns, values) + Queries.OrderByColumns(columns);
-
-            if (_reader != null)
-            {
-                _reader.SetCommand(query);
-                return _reader;
-            }
-
-            _reader = new SqlReader(_connection, query, columns != null);
-            return _reader;
+            var query = InitialQuery + SqlQueries.OrderByColumns(PrimaryKeys);
+            Reader = new SqlReader(Connection, query);
+            return Reader;
         }
     }
 }

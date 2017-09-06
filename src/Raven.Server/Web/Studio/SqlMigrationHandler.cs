@@ -13,16 +13,20 @@ namespace Raven.Server.Web.Studio
 {
     public class SqlMigrationHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/sql-schema", "POST", AuthorizationStatus.DatabaseAdmin)]
+        [RavenAction("/databases/*/admin/sql-schema", "POST", AuthorizationStatus.DatabaseAdmin)]
         public Task SqlSchema()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var sqlImportDoc = context.ReadForDisk(RequestBodyStream(), null);
-                sqlImportDoc.TryGet("ConnectionString", out string connectionString);
+                if (sqlImportDoc.TryGet("ConnectionString", out string connectionString) == false)
+                    throw new InvalidOperationException("ConnectionString is a required field when asking for sql-schema");
 
-                if (!ValidateConnection(connectionString, context))
+                if (!ValidateConnection(connectionString))
+                {
+                    WriteRespone(new List<string>{ "Cannot open connection using the given connection string" }, context);
                     return Task.CompletedTask;
+                }
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
@@ -54,38 +58,38 @@ namespace Raven.Server.Web.Studio
         }
 
 
-        [RavenAction("/databases/*/sql-migration", "POST", AuthorizationStatus.DatabaseAdmin)]
+        [RavenAction("/databases/*/admin/sql-migration", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task ImportSql()
         {
-            Console.Clear();
-
-            var sw = new Stopwatch();
-            sw.Start();
-
-            Console.WriteLine("Started...");
-            Console.WriteLine();
-
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var sqlImportDoc = context.ReadForDisk(RequestBodyStream(), null);
 
-                sqlImportDoc.TryGet("ConnectionString", out string connectionString);
-                sqlImportDoc.TryGet("Tables", out BlittableJsonReaderArray tablesFromUser);
-                sqlImportDoc.TryGet("BinaryToAttachment", out bool binaryToAttachment);
-                sqlImportDoc.TryGet("IncludeSchema", out bool includeSchema);
-                sqlImportDoc.TryGet("TrimStrings", out bool trimStrings);
-                sqlImportDoc.TryGet("SkipUnsupportedTypes", out bool skipUnsopportedTypes);
+                if (sqlImportDoc.TryGet("ConnectionString", out string connectionString) == false)
+                    throw new InvalidOperationException("'ConnectionString' is a required field when asking for sql-migration");
 
-                if (!ValidateConnection(connectionString, context))
-                    return;
-
-                var options = new RavenDocumentFactory.Options
+                if (!ValidateConnection(connectionString))
                 {
-                    IncludeSchema = includeSchema,
-                    BinaryToAttachment = binaryToAttachment,
-                    TrimStrings = trimStrings,
-                    SkipUnsopportedTypes = skipUnsopportedTypes
-                };
+                    WriteRespone(new List<string> { "Cannot open connection using the given connection string" }, context);
+                    return;
+                }
+
+                if (sqlImportDoc.TryGet("Tables", out BlittableJsonReaderArray tablesFromUser) == false)
+                    throw new InvalidOperationException("'Tables' is a required field when asking for sql-migration");
+
+                var options = new RavenDocumentFactory.WriteOptions();
+
+                if (sqlImportDoc.TryGet("BinaryToAttachment", out bool binaryToAttachment))
+                    options.BinaryToAttachment = binaryToAttachment;
+
+                if (sqlImportDoc.TryGet("IncludeSchema", out bool includeSchema))
+                    options.IncludeSchema = includeSchema;
+
+                if (sqlImportDoc.TryGet("TrimStrings", out bool trimStrings))
+                    options.TrimStrings = trimStrings;
+
+                if (sqlImportDoc.TryGet("SkipUnsupportedTypes", out bool skipUnsopportedTypes))
+                    options.SkipUnsopportedTypes = skipUnsopportedTypes;
 
                 var factory = new RavenDocumentFactory(options);
 
@@ -110,51 +114,25 @@ namespace Raven.Server.Web.Studio
                     }
                 }
 
-                Console.WriteLine("Over all time: " + (double)sw.ElapsedMilliseconds / 1000);
-
                 WriteRespone(errors, context);
             }
-            SqlConnection.ClearAllPools();
         }
 
-        private bool ValidateConnection(string connectionString, DocumentsOperationContext context)
+        private bool ValidateConnection(string connectionString)
         {
             SqlConnection connection;
 
             try
             {
-                connection = (SqlConnection)ConnectionFactory.OpenConnection(connectionString);
+                connection = (SqlConnection) ConnectionFactory.OpenConnection(connectionString);
             }
             catch
             {
-                BadConnectionString(context);
                 return false;
             }
 
             connection.Dispose();
             return true;
-        }
-
-        private void BadConnectionString(DocumentsOperationContext context)
-        {
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                writer.WriteStartObject();
-
-                writer.WritePropertyName("Errors");
-                writer.WriteStartArray();
-
-                writer.WriteString("Cannot open connection using the given connection string");
-
-                writer.WriteEndArray();
-
-                writer.WriteComma();
-
-                writer.WritePropertyName("Success");
-                writer.WriteBool(false);
-
-                writer.WriteEndObject();
-            }
         }
 
         private void WriteRespone(List<string> errors, DocumentsOperationContext context)
@@ -190,7 +168,6 @@ namespace Raven.Server.Web.Studio
 
         private void OnTableWritten(string tableName, double time)
         {
-            Console.WriteLine($"'{tableName}' has written in {time}");
         }
     }
 }

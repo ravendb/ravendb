@@ -1,6 +1,6 @@
 ﻿using System;
 using Jint;
-using Raven.Server.Documents;
+using Raven.Server.Config;
 using Raven.Server.Documents.Patch;
 
 namespace Raven.Server.SqlMigration
@@ -12,22 +12,19 @@ namespace Raven.Server.SqlMigration
         private readonly Engine _engine;
         private readonly bool _hasScript;
 
-        public JsPatch(string patchScript)
+        public JsPatch(string patchScript, RavenConfiguration config)
         {
             if (string.IsNullOrEmpty(patchScript))
                 return;
 
-            // reaching maximum statements count
-            /*var adminJsConsole = new AdminJsConsole(documentDatabase);
+            _engine = new Engine(options =>
+                {
+                    options.LimitRecursion(64)
+                        .SetReferencesResolver(new ScriptRunner.SingleRun.NullPropgationReferenceResolver())
+                        .MaxStatements(config.Patching.MaxStepsForScript)
+                        .Strict();
+                });
 
-            var script = new AdminJsScript
-            {
-                Script = patchScript
-            };
-
-            _engine = adminJsConsole.GetEngine(script, ExecutionStr);*/
-
-            _engine = new Engine();
             _engine.Execute(string.Format(ExecutionStr, patchScript));
 
             _hasScript = true;
@@ -44,7 +41,7 @@ namespace Raven.Server.SqlMigration
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException($"Error patching documents of table '{document.TableName}'", e);
+                throw new InvalidOperationException($"Error patching document of table '{document.TableName}'", e);
             }
         }
     }

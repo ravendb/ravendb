@@ -9,7 +9,7 @@ namespace Raven.Server.SqlMigration
     public partial class SqlDatabase
     {
         public readonly DocumentDatabase DocumentDatabase;
-        public readonly List<SqlTable> Tables;
+        public List<SqlTable> Tables;
         public readonly IDbConnection Connection;
         public readonly RavenDocumentFactory Factory;
 
@@ -19,22 +19,22 @@ namespace Raven.Server.SqlMigration
         {
             Connection = ConnectionFactory.OpenConnection(connectionString);
             DocumentDatabase = documentDatabase;
-            SetTablesFromBlittableArray(tablesToWrite, ref Tables);
+            SetTablesFromBlittableArray(tablesToWrite);
 
             Factory = factory;
-            _validator = new Validator(this, Factory);
+            _validator = new Validator(this);
 
             SetPrimaryKeys();
             SetForeignKeys();
         }
 
-        private void SetTablesFromBlittableArray(BlittableJsonReaderArray tablesToWrite, ref List<SqlTable> tables, SqlTable parentTable = null)
+        private void SetTablesFromBlittableArray(BlittableJsonReaderArray tablesToWrite, SqlTable parentTable = null)
         {
             if (tablesToWrite == null)
                 return;
 
-            if (tables == null)
-                tables = new List<SqlTable>();
+            if (Tables == null)
+                Tables = new List<SqlTable>();
 
             foreach (BlittableJsonReaderObject item in tablesToWrite.Items)
             {
@@ -43,13 +43,20 @@ namespace Raven.Server.SqlMigration
                 item.TryGet("Patch", out string patchScript);
                 item.TryGet("Property", out string propertyName);
 
-                var table = new SqlTable(name, childQuery, patchScript, Connection);
-                parentTable?.Embed(table, propertyName);
+                SqlTable table;
+
+                if (parentTable != null)
+                {
+                    table = new SqlEmbeddedTable(name, childQuery, patchScript, Connection, DocumentDatabase.Configuration, parentTable.Name, propertyName);
+                    parentTable.EmbeddedTables.Add((SqlEmbeddedTable) table);
+                }
+                else table = new SqlTable(name, childQuery, patchScript, Connection, DocumentDatabase.Configuration);
+
 
                 if (item.TryGet("Embedded", out BlittableJsonReaderArray childEmbeddedTables))
-                    SetTablesFromBlittableArray(childEmbeddedTables, ref tables, table);
+                    SetTablesFromBlittableArray(childEmbeddedTables, table);
 
-                tables.Add(table);
+                Tables.Add(table);
             }
         }
 
@@ -77,7 +84,7 @@ namespace Raven.Server.SqlMigration
         {
             var lst = new List<string>();
 
-            using (var reader = new SqlReader(connection, Queries.SelectAllTables))
+            using (var reader = new SqlReader(connection, SqlQueries.SelectAllTables))
             {
                 reader.AddParameter("tableType", "BASE TABLE");
 
@@ -92,7 +99,7 @@ namespace Raven.Server.SqlMigration
         {
             var referentialConstraints = new Dictionary<string, string>();
 
-            using (var reader = new SqlReader(Connection, Queries.SelectReferantialConstraints))
+            using (var reader = new SqlReader(Connection, SqlQueries.SelectReferantialConstraints))
             {
                 while (reader.Read())
                     referentialConstraints.Add(reader["CONSTRAINT_NAME"].ToString(), reader["UNIQUE_CONSTRAINT_NAME"].ToString());
@@ -104,7 +111,7 @@ namespace Raven.Server.SqlMigration
                 var parentColumnName = new List<string>();
                 var childTableName = new List<string>();
 
-                using (var reader = new SqlReader(Connection, Queries.SelectKeyColumnUsageWhereConstraintName))
+                using (var reader = new SqlReader(Connection, SqlQueries.SelectKeyColumnUsageWhereConstraintName))
                 {
                     reader.AddParameter("constraintName", kvp.Key);
 
@@ -119,7 +126,7 @@ namespace Raven.Server.SqlMigration
                     while (reader.Read());
                 }
 
-                using (var reader = new SqlReader(Connection, Queries.SelectKeyColumnUsageWhereConstraintName))
+                using (var reader = new SqlReader(Connection, SqlQueries.SelectKeyColumnUsageWhereConstraintName))
                 {
                     reader.AddParameter("constraintName", kvp.Value);
 
@@ -133,6 +140,8 @@ namespace Raven.Server.SqlMigration
 
                 var temp = GetAllTablesByName(parentTableName);
 
+
+
                 foreach (var table in temp)
                     for (var i = 0; i < parentColumnName.Count; i++)
                         if (!table.ForeignKeys.TryAdd(parentColumnName[i], childTableName[i]))
@@ -142,7 +151,7 @@ namespace Raven.Server.SqlMigration
 
         private void SetPrimaryKeys()
         {
-            using (var reader = new SqlReader(Connection, Queries.SelectPrimaryKeys))
+            using (var reader = new SqlReader(Connection, SqlQueries.SelectPrimaryKeys))
             {
                 while (reader.Read())
                 {
