@@ -10,6 +10,6 @@
     {
         Ok,
         AuthorizationFailed,
-        TcpVersionMissmatch
+        TcpVersionMismatch
     }
 }
