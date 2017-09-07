@@ -319,6 +319,27 @@ namespace FastTests
             throw new TimeoutException("The indexes stayed stale for more than " + timeout.Value + ", stats at " + file);
         }
 
+        public static IndexErrors[] WaitForIndexingErrors(IDocumentStore store, TimeSpan? timeout = null)
+        {
+            timeout = timeout ?? (Debugger.IsAttached
+                          ? TimeSpan.FromMinutes(15)
+                          : TimeSpan.FromMinutes(1));
+
+            var sp = Stopwatch.StartNew();
+            while (sp.Elapsed < timeout.Value)
+            {
+                var indexes = store.Admin.Send(new GetIndexErrorsOperation());
+                foreach (var index in indexes)
+                {
+                    if (index.Errors.Any())
+                        return indexes;
+                }
+
+                Thread.Sleep(32);
+            }
+
+            throw new TimeoutException("Got no index error for more than " + timeout.Value);
+        }
 
         protected async Task<T> WaitForValueAsync<T>(Func<Task<T>> act, T expectedVal, int timeout = 15000)
         {
