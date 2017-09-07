@@ -38,7 +38,7 @@ namespace SlowTests.Issues
 
                     DisposeServerAndWaitForFinishOfDisposal(Servers[1]);
 
-                    leaderStore.Admin.Server.Send(new DeleteDatabaseOperation(databaseName, hardDelete: true));
+                    leaderStore.Admin.Server.Send(new DeleteDatabasesOperation(databaseName, hardDelete: true));
 
                     var url = Servers[1].WebUrl;
                     var dataDir = Servers[1].Configuration.Core.DataDirectory.FullPath.Split('/').Last();

@@ -118,7 +118,7 @@ namespace SlowTests.Issues
 
         private async Task DeleteDatabaseInCluster(string databaseName, IDocumentStore store, string fromNode)
         {
-            var databaseResult = await store.Admin.Server.SendAsync(new DeleteDatabaseOperation(databaseName, true, fromNode));
+            var databaseResult = await store.Admin.Server.SendAsync(new DeleteDatabasesOperation(databaseName, true, fromNode));
 
             foreach (var server in Servers)
             {
