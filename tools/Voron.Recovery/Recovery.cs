@@ -427,7 +427,7 @@ namespace Voron.Recovery
 
         private bool _firstAttachment = true;
         private long _attachmentNumber = 0;
-        private List<string> _attachmentsHashs = new List<string>();
+        private readonly List<string> _attachmentsHashs = new List<string>();
         private void WriteAttachment(BlittableJsonTextWriter attachmentWriter, long totalSize, string hash)
         {
             if (_firstAttachment == false)
@@ -438,8 +438,8 @@ namespace Voron.Recovery
 
             attachmentWriter.WriteStartObject();
 
-            attachmentWriter.WritePropertyName(DocumentItem.Key);
-            attachmentWriter.WriteInteger((byte)DocumentType.Attachment);
+            attachmentWriter.WritePropertyName(DocumentItem.ExportDocumentType.Key);
+            attachmentWriter.WriteString(DocumentItem.ExportDocumentType.Attachment);
             attachmentWriter.WriteComma();
 
             attachmentWriter.WritePropertyName(nameof(AttachmentName.Hash));
