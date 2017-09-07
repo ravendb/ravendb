@@ -43,7 +43,7 @@ namespace Raven.Tests.Raft.Client
             }
         }
 
-        [Theory]
+        [Theory(Skip = "Flaky test")]
         [PropertyData("Nodes")]
         public void DeleteShouldBePropagated(int numberOfNodes)
         {
