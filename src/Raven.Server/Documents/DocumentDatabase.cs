@@ -85,7 +85,7 @@ namespace Raven.Server.Documents
 
         public DocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore)
         {
-            Scripts = new ScriptRunnerCache(this);
+            Scripts = new ScriptRunnerCache(this, Configuration);
             _logger = LoggingSource.Instance.GetLogger<DocumentDatabase>(Name);
             _serverStore = serverStore;
             StartTime = SystemTime.UtcNow;
