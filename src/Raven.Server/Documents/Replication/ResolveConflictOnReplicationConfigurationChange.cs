@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Client.Exceptions.Documents;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Patch;
 using Raven.Server.NotificationCenter.Notifications;

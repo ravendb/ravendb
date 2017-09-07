@@ -1,7 +1,6 @@
 ﻿using System.Globalization;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Queries.Parser;
-using Sparrow;
 
 namespace Raven.Server.Documents.Queries
 {

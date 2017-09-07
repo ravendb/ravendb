@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Jint.Native;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.ServerWide.ETL;
 using Raven.Server.Documents.Patch;

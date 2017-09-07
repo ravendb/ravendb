@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Exceptions.Documents;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;

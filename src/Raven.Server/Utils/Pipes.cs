@@ -1,13 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.Utils.Cli;
 using Sparrow.Logging;

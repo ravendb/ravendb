@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using Esprima.Ast;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Indexes;

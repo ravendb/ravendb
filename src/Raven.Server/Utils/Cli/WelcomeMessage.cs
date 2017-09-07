@@ -5,7 +5,6 @@ using System.Runtime.InteropServices;
 using Raven.Server.ServerWide;
 using Sparrow;
 using Sparrow.LowMemory;
-using Sparrow.Platform;
 using Sparrow.Utils;
 
 namespace Raven.Server.Utils.Cli

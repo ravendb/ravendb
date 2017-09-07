@@ -1,6 +1,5 @@
 using System;
 using System.Linq;
-using Lucene.Net.Util;
 
 namespace Raven.Server.Config
 {
