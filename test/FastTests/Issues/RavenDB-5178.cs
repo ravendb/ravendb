@@ -26,7 +26,7 @@ namespace FastTests.Issues
                 }
                 finally
                 {
-                    store.Admin.Server.Send(new DeleteDatabaseOperation(longName, true));
+                    store.Admin.Server.Send(new DeleteDatabasesOperation(longName, true));
                 }
             }
         }

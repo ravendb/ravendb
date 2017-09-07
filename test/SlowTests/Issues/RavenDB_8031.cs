@@ -52,7 +52,7 @@ namespace SlowTests.Issues
                     }
                     finally
                     {
-                        store.Admin.Server.Send(new DeleteDatabaseOperation(dbName, hardDelete: true));
+                        store.Admin.Server.Send(new DeleteDatabasesOperation(dbName, hardDelete: true));
                     }
                 }
             }

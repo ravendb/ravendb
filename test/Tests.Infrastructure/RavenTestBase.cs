@@ -215,12 +215,12 @@ namespace FastTests
                                             Certificate = options.AdminCertificate
                                         }.Initialize())
                                         {
-                                            result = adminStore.Admin.Server.Send(new DeleteDatabaseOperation(name, hardDelete));
+                                            result = adminStore.Admin.Server.Send(new DeleteDatabasesOperation(name, hardDelete));
                                         }
                                     }
                                     else
                                     {
-                                        result = store.Admin.Server.Send(new DeleteDatabaseOperation(name, hardDelete));
+                                        result = store.Admin.Server.Send(new DeleteDatabasesOperation(name, hardDelete));
                                     }
                                 }
                                 catch (DatabaseDoesNotExistException)

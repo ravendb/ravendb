@@ -329,7 +329,7 @@ namespace RachisTests.DatabaseCluster
 
                 var node = Servers[1].ServerStore.Engine.Tag;
                 DisposeServerAndWaitForFinishOfDisposal(Servers[1]);
-                await leaderStore.Admin.Server.SendAsync(new DeleteDatabaseOperation(databaseName, true));
+                await leaderStore.Admin.Server.SendAsync(new DeleteDatabasesOperation(databaseName, true));
 
                 await WaitForValueAsync(async () =>
                 {

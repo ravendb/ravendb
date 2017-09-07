@@ -98,7 +98,7 @@ namespace FastTests.Server.Basic
                     else
                         Assert.False(landlord.LastRecentlyUsed.TryGetValue(name, out outTime));
 
-                    store.Admin.Server.Send(new DeleteDatabaseOperation(name, true));
+                    store.Admin.Server.Send(new DeleteDatabasesOperation(name, true));
                 }
             }
         }

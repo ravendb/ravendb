@@ -143,7 +143,7 @@ namespace RachisTests
 
                 await subscription.DisposeAsync();
 
-                var deleteResult = store.Admin.Server.Send(new DeleteDatabaseOperation(defaultDatabase, hardDelete: true));
+                var deleteResult = store.Admin.Server.Send(new DeleteDatabasesOperation(defaultDatabase, hardDelete: true));
 
                 foreach (var ravenServer in Servers)
                 {

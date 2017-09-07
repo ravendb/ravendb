@@ -73,7 +73,7 @@ namespace Raven.TestDriver
 
                 try
                 {
-                    store.Admin.Server.Send(new DeleteDatabaseOperation(store.Database, true));
+                    store.Admin.Server.Send(new DeleteDatabasesOperation(store.Database, true));
                 }
                 catch (DatabaseDoesNotExistException)
                 {
