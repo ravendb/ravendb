@@ -371,7 +371,12 @@ namespace Raven.Client.FileSystem
                 throw;
             }
 
-            return new YieldStreamResults(request, await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false));
+            return new YieldStreamResults(request, await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false),
+                () =>
+                {
+                    response.Content?.Dispose();
+                    response.Dispose();
+                });
         }
 
         private async Task<IAsyncEnumerator<FileHeader>> StreamQueryAsyncImpl(string query, string[] sortFields, int start, int pageSize, OperationMetadata operationMetadata)
@@ -431,7 +436,12 @@ namespace Raven.Client.FileSystem
                 throw;
             }
 
-            return new YieldStreamResults(request, await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false));
+            return new YieldStreamResults(request, await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false),
+                () =>
+                {
+                    response.Content?.Dispose();
+                    response.Dispose();
+                });
         }
 
         public Task<IAsyncEnumerator<FileHeader>> StreamQueryAsync(string query, string[] sortFields = null, int start = 0, int pageSize = int.MaxValue)
@@ -444,16 +454,18 @@ namespace Raven.Client.FileSystem
             private readonly HttpJsonRequest request;
 
             private readonly Stream stream;
+            private readonly Action onDispose;
             private readonly StreamReader streamReader;
             private readonly JsonTextReaderAsync reader;
             private bool complete;
 
             private bool wasInitialized;
 
-            public YieldStreamResults(HttpJsonRequest request, Stream stream)
+            public YieldStreamResults(HttpJsonRequest request, Stream stream, Action onDispose = null)
             {
                 this.request = request;
                 this.stream = stream;
+                this.onDispose = onDispose;
                 streamReader = new StreamReader(stream);
                 reader = new JsonTextReaderAsync(streamReader);
             }
@@ -481,6 +493,8 @@ namespace Raven.Client.FileSystem
                 stream.Dispose();
 #endif
                 request.Dispose();
+
+                onDispose?.Invoke();
             }
 
             public async Task<bool> MoveNextAsync()
