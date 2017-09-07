@@ -7,5 +7,9 @@ namespace Raven.Server.Commercial
         public License License { get; set; }
 
         public BuildNumber BuildInfo { get; set; }
+
+        public string ClusterId { get; set; }
+
+        public int UtilizedCores { get; set; }
     }
 }

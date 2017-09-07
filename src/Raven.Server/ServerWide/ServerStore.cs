@@ -215,6 +215,15 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        public ClusterTopology GetClusterTopology()
+        {
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                return GetClusterTopology(context);
+            }
+        }
+
         public ClusterTopology GetClusterTopology(TransactionOperationContext context)
         {
             return _engine.GetTopology(context);
@@ -450,7 +459,7 @@ namespace Raven.Server.ServerWide
 
         private void OnLeaderElected(object sender, EventArgs e)
         {
-            LicenseManager.RecalculateLicenseLimits();
+            LicenseManager.CalculateLicenseLimits();
         }
 
         public Task RefreshOutgoingTasks()
@@ -1100,14 +1109,13 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(addDatabaseCommand);
         }
 
-        public void EnsureNotPassive(bool skipActivateLicense = false)
+        public void EnsureNotPassive()
         {
             if (_engine.CurrentState != RachisConsensus.State.Passive)
                 return;
 
             _engine.Bootstrap(_ravenServer.ServerStore.NodeHttpServerUrl);
-            if (skipActivateLicense == false)
-                LicenseManager.TryActivateLicense();
+            LicenseManager.TryActivateLicense();
 
             // we put a certificate in the local state to tell the server who to trust, and this is done before
             // the cluster exists (otherwise the server won't be able to receive initial requests). Only when we 
