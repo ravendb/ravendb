@@ -13,6 +13,7 @@ using Jint.Runtime.References;
 using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Client.Exceptions.Documents.Patching;
+using Raven.Server.Config;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -24,14 +25,16 @@ namespace Raven.Server.Documents.Patch
     {
         private readonly ConcurrentQueue<SingleRun> _cache = new ConcurrentQueue<SingleRun>();
         private readonly DocumentDatabase _db;
+        private readonly RavenConfiguration _configuration;
         private readonly bool _enableClr;
         public readonly List<string> ScriptsSource = new List<string>();
 
         public long Runs;
 
-        public ScriptRunner(DocumentDatabase db, bool enableClr)
+        public ScriptRunner(DocumentDatabase db, RavenConfiguration configuration, bool enableClr)
         {
             _db = db;
+            _configuration = configuration;
             _enableClr = enableClr;
         }
 
@@ -43,7 +46,7 @@ namespace Raven.Server.Documents.Patch
         public ReturnRun GetRunner(out SingleRun run)
         {
             if (_cache.TryDequeue(out run) == false)
-                run = new SingleRun(_db, this, ScriptsSource);
+                run = new SingleRun(_db, _configuration, this, ScriptsSource);
             Interlocked.Increment(ref Runs);
             return new ReturnRun(this, run);
         }
@@ -64,6 +67,7 @@ namespace Raven.Server.Documents.Patch
         public class SingleRun
         {
             private readonly DocumentDatabase _database;
+            private readonly RavenConfiguration _configuration;
 
             private readonly List<IDisposable> _disposables = new List<IDisposable>();
             private readonly ScriptRunner _runner;
@@ -102,15 +106,16 @@ namespace Raven.Server.Documents.Patch
                 }
             }
 
-            public SingleRun(DocumentDatabase database, ScriptRunner runner, List<string> scriptsSource)
+            public SingleRun(DocumentDatabase database, RavenConfiguration configuration, ScriptRunner runner, List<string> scriptsSource)
             {
                 _database = database;
+                _configuration = configuration;
                 _runner = runner;
                 ScriptEngine = new Engine(options =>
                 {
                     options.LimitRecursion(64)
                         .SetReferencesResolver(new NullPropgationReferenceResolver())
-                        .MaxStatements(database.Configuration.Patching.MaxStepsForScript)
+                        .MaxStatements(_configuration.Patching.MaxStepsForScript)
                         .Strict();
                 });
                 ScriptEngine.SetValue("output", new ClrFunctionInstance(ScriptEngine, OutputDebug));

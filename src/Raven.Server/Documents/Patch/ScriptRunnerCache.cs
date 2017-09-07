@@ -63,7 +63,7 @@ namespace Raven.Server.Documents.Patch
         {
             var value = new Lazy<ScriptRunner>(() =>
             {
-                var runner = new ScriptRunner(_database, EnableClr);
+                var runner = new ScriptRunner(_database, _configuration, EnableClr);
                 script.GenerateScript(runner);
                 return runner;
             });
