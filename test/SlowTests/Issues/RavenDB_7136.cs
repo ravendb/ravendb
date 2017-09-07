@@ -66,13 +66,10 @@ namespace SlowTests.Issues
                 }
 
                 WaitForIndexing(store);
-
-                var errors = store.Admin.Send(new GetIndexErrorsOperation());
-                
-                Assert.Equal(1, errors.Length);
-
-                Assert.Equal(1, errors[0].Errors.Length);
-                Assert.Contains(nameof(DivideByZeroException), errors[0].Errors[0].Error);
+                var indexes = WaitForIndexingErrors(store);
+                var error = indexes.Single();
+                Assert.Equal(1, error.Errors.Length);
+                Assert.Contains(nameof(DivideByZeroException), error.Errors[0].Error);
             }
         }
     }
