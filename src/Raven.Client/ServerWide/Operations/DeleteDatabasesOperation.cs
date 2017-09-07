@@ -35,7 +35,7 @@ namespace Raven.Client.ServerWide.Operations
                 throw new ArgumentNullException(nameof(parameters));
 
             if (parameters.Names == null || parameters.Names.Length == 0)
-                throw new ArgumentNullException(nameof(parameters));
+                throw new ArgumentNullException(nameof(parameters.Names));
 
             _parameters = parameters;
         }
@@ -51,6 +51,13 @@ namespace Raven.Client.ServerWide.Operations
 
             public DeleteDatabaseCommand(DocumentConventions conventions, JsonOperationContext context, Parameters parameters)
             {
+                if (conventions == null)
+                    throw new ArgumentNullException(nameof(conventions));
+                if (context == null)
+                    throw new ArgumentNullException(nameof(context));
+                if (parameters == null)
+                    throw new ArgumentNullException(nameof(parameters));
+
                 _parameters = EntityToBlittable.ConvertEntityToBlittable(parameters, conventions, context);
             }
 

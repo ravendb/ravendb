@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Session;
 using Raven.Client.Http;
+using Raven.Client.Json;
 using Raven.Client.Json.Converters;
 using Sparrow.Json;
 
@@ -9,43 +11,71 @@ namespace Raven.Client.ServerWide.Operations
 {
     public class DisableDatabaseToggleOperation : IServerOperation<DisableDatabaseToggleResult>
     {
-        private readonly string _databaseName;
-        private readonly bool _ifDisableRequest;
+        private readonly bool _disable;
+        private readonly Parameters _parameters;
 
-        public DisableDatabaseToggleOperation(string databaseName, bool ifDisableRequest)
+        public DisableDatabaseToggleOperation(string name, bool disable)
         {
-            _databaseName = databaseName ?? throw new ArgumentNullException(nameof(databaseName));
-            _ifDisableRequest = ifDisableRequest;
+            if (name == null)
+                throw new ArgumentNullException(nameof(name));
+
+            _disable = disable;
+            _parameters = new Parameters
+            {
+                Names = new[] { name }
+            };
         }
 
-        public RavenCommand<DisableDatabaseToggleResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
+        public DisableDatabaseToggleOperation(Parameters parameters, bool disable)
         {
-            return new DisableDatabaseToggleCommand(_databaseName, _ifDisableRequest);
+            if (parameters == null)
+                throw new ArgumentNullException(nameof(parameters));
+
+            if (parameters.Names == null || parameters.Names.Length == 0)
+                throw new ArgumentNullException(nameof(parameters.Names));
+
+            _disable = disable;
+            _parameters = parameters;
+        }
+
+        public RavenCommand<DisableDatabaseToggleResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        {
+            return new DisableDatabaseToggleCommand(conventions, context, _parameters, _disable);
         }
 
         public class DisableDatabaseToggleCommand : RavenCommand<DisableDatabaseToggleResult>
         {
+            private readonly bool _disable;
+            private readonly BlittableJsonReaderObject _parameters;
 
-            private readonly string _databaseName;
-            private readonly bool _ifDisableRequest;
-
-            public DisableDatabaseToggleCommand(string databaseName, bool ifDisableRequest)
+            public DisableDatabaseToggleCommand(DocumentConventions conventions, JsonOperationContext context, Parameters parameters, bool disable)
             {
-                _databaseName = databaseName;
-                _ifDisableRequest = ifDisableRequest;
+                if (conventions == null)
+                    throw new ArgumentNullException(nameof(conventions));
+                if (context == null)
+                    throw new ArgumentNullException(nameof(context));
+                if (parameters == null)
+                    throw new ArgumentNullException(nameof(parameters));
+
+                _disable = disable;
+                _parameters = EntityToBlittable.ConvertEntityToBlittable(parameters, conventions, context);
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                var toggle = _ifDisableRequest ? "disable" : "enable";
-                url = $"{node.Url}/admin/databases/{toggle}?name={_databaseName}";
+                var toggle = _disable ? "disable" : "enable";
+                url = $"{node.Url}/admin/databases/{toggle}";
 
                 return new HttpRequestMessage
                 {
-                    Method = HttpMethod.Post
+                    Method = HttpMethod.Post,
+                    Content = new BlittableJsonContent(stream =>
+                    {
+                        ctx.Write(stream, _parameters);
+                    })
                 };
             }
-        
+
             public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
             {
                 if (response == null ||
@@ -60,6 +90,11 @@ namespace Raven.Client.ServerWide.Operations
             }
 
             public override bool IsReadRequest => false;
+        }
+
+        public class Parameters
+        {
+            public string[] Names { get; set; }
         }
     }
 }
