@@ -26,6 +26,11 @@ namespace Raven.Client.ServerWide.Operations
             };
         }
 
+        public ToggleDatabasesStateOperation(string[] databaseNames, bool disable) 
+            : this(new Parameters { DatabaseNames = databaseNames }, disable)
+        {
+        }
+
         public ToggleDatabasesStateOperation(Parameters parameters, bool disable)
         {
             if (parameters == null)
