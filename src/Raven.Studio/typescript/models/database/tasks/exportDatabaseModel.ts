@@ -18,7 +18,7 @@ class exportDatabaseModel {
     transformScript = ko.observable<string>();
     
     validationGroup: KnockoutValidationGroup;
-    validState: KnockoutComputed<boolean>;
+    exportDefinitionHasIncludes: KnockoutComputed<boolean>;
 
     constructor() {
         this.initValidation();
@@ -50,7 +50,7 @@ class exportDatabaseModel {
     }
 
     private initValidation() {
-        this.validState = ko.pureComputed(() => {
+        this.exportDefinitionHasIncludes = ko.pureComputed(() => {
             return this.includeDocuments() || this.includeIndexes() || this.includeIdentities()  || this.includeRevisionDocuments();
         });
 
@@ -58,10 +58,10 @@ class exportDatabaseModel {
             aceValidation: true
         });
 
-        this.includeDocuments.extend({
+        this.exportDefinitionHasIncludes.extend({
             validation: [
                 {
-                    validator: () => this.validState(),
+                    validator: () => this.exportDefinitionHasIncludes(),
                     message: "Note: At least one 'include' option must be checked..."
                 }
             ]
@@ -69,7 +69,7 @@ class exportDatabaseModel {
        
         this.validationGroup = ko.validatedObservable({
             transformScript: this.transformScript,
-            includeDocuments: this.includeDocuments
+            exportDefinitionHasIncludes: this.exportDefinitionHasIncludes
         });
     }
 }

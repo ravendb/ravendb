@@ -23,11 +23,11 @@
                 <div class="col-lg-12">
                     <div class="row">
                         <div class="col-sm-6 col-lg-3">
-                            <div class="toggle" data-bind="validationElement: includeDocuments, validationOptions: { insertMessages: false }">
+                            <div class="toggle">
                                 <input id="toggle1" type="checkbox" data-bind="checked: includeDocuments">
                                 <label for="toggle1">Include Documents</label>
                             </div>
-                            <div class="toggle" data-bind="attr: { title: $root.revisionsTitle() }">
+                            <div class="toggle" data-bind="attr: { title: $root.activeDatabase().hasRevisionsConfiguration() ? '' : 'Revisions Configuration must be set in order to use this option' }">
                                 <input id="toggle6" type="checkbox" data-bind="checked: includeRevisionDocuments, disable: !$root.activeDatabase().hasRevisionsConfiguration()"/>
                                 <label for="toggle6">Include Document Revisions</label>
                             </div>
@@ -39,8 +39,8 @@
                                 <input id="toggle3" type="checkbox" data-bind="checked: includeIdentities">
                                 <label for="toggle3">Include Identities</label>
                             </div>
-                            <div data-bind="validationElement: includeDocuments">
-                                <div class="help-block" data-bind="validationMessage: includeDocuments"></div>
+                            <div data-bind="validationElement: importDefinitionHasIncludes">
+                                <div class="help-block" data-bind="validationMessage: importDefinitionHasIncludes"></div>
                             </div>
                         </div>
                         <div class="col-sm-6 col-lg-3">

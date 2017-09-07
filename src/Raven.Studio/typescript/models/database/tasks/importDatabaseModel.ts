@@ -13,7 +13,7 @@ class importDatabaseModel {
     transformScript = ko.observable<string>();
 
     validationGroup: KnockoutValidationGroup;
-    validState: KnockoutComputed<boolean>;
+    importDefinitionHasIncludes: KnockoutComputed<boolean>;
     
     constructor() {
         this.initValidation();
@@ -43,7 +43,7 @@ class importDatabaseModel {
     }
 
     private initValidation() {
-        this.validState = ko.pureComputed(() => {
+        this.importDefinitionHasIncludes = ko.pureComputed(() => {
             return this.includeDocuments()  ||
                    this.includeIndexes()    ||
                    this.includeIdentities() ||
@@ -54,10 +54,10 @@ class importDatabaseModel {
             aceValidation: true
         });
 
-        this.includeDocuments.extend({
+        this.importDefinitionHasIncludes.extend({
             validation: [
                 {
-                    validator: () => this.validState(),
+                    validator: () => this.importDefinitionHasIncludes(),
                     message: "Note: At least one 'include' option must be checked..."
                 }
             ]
@@ -65,7 +65,7 @@ class importDatabaseModel {
 
         this.validationGroup = ko.validatedObservable({
             transformScript: this.transformScript,
-            includeDocuments: this.includeDocuments
+            importDefinitionHasIncludes: this.importDefinitionHasIncludes
         });
     }
 }
