@@ -58,11 +58,11 @@ namespace SlowTests.Client.Subscriptions
                 Assert.True(mre.WaitOne(_reasonableWaitTime));
                 mre.Reset();
 
-                store.Admin.Server.Send(new DisableDatabaseToggleOperation(store.Database, true));
+                store.Admin.Server.Send(new ToggleDatabasesStateOperation(store.Database, true));
 
                 await Assert.ThrowsAsync<DatabaseDisabledException>(async () => await subscriptionTask);
 
-                store.Admin.Server.Send(new DisableDatabaseToggleOperation(store.Database, false));
+                store.Admin.Server.Send(new ToggleDatabasesStateOperation(store.Database, false));
 
 
                 subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions("Subs1"));

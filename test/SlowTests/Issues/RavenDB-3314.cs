@@ -21,19 +21,19 @@ namespace SlowTests.Issues
                 };
                 index.Execute(store);
 
-                store.Admin.Send(new SetIndexPriorityOperation("SampleIndex", IndexPriority.Normal));
+                store.Admin.Send(new SetIndexesPriorityOperation("SampleIndex", IndexPriority.Normal));
 
                 var stats = store.Admin.Send(new GetStatisticsOperation()).Indexes.First(x => x.Name == "SampleIndex");
 
                 Assert.Equal(IndexPriority.Normal, stats.Priority);
 
-                store.Admin.Send(new SetIndexPriorityOperation("SampleIndex", IndexPriority.Low));
+                store.Admin.Send(new SetIndexesPriorityOperation("SampleIndex", IndexPriority.Low));
 
                 stats = store.Admin.Send(new GetStatisticsOperation()).Indexes.First(x => x.Name == "SampleIndex");
 
                 Assert.Equal(IndexPriority.Low, stats.Priority);
 
-                store.Admin.Send(new SetIndexPriorityOperation("SampleIndex", IndexPriority.High));
+                store.Admin.Send(new SetIndexesPriorityOperation("SampleIndex", IndexPriority.High));
 
                 stats = store.Admin.Send(new GetStatisticsOperation()).Indexes.First(x => x.Name == "SampleIndex");
 

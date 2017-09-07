@@ -38,11 +38,11 @@ namespace SlowTests.Issues
                 var index = new People_ByName();
                 index.Execute(store);
 
-                store.Admin.Send(new SetIndexLockOperation(index.IndexName, IndexLockMode.LockedError));
+                store.Admin.Send(new SetIndexesLockOperation(index.IndexName, IndexLockMode.LockedError));
 
                 index.Execute(store);
 
-                store.Admin.Send(new SetIndexLockOperation(index.IndexName, IndexLockMode.Unlock));
+                store.Admin.Send(new SetIndexesLockOperation(index.IndexName, IndexLockMode.Unlock));
 
                 var definition = index.CreateIndexDefinition();
                 definition.LockMode = IndexLockMode.LockedError;
@@ -67,11 +67,11 @@ namespace SlowTests.Issues
                 var index = new People_ByName();
                 await index.ExecuteAsync(store).ConfigureAwait(false);
 
-                store.Admin.Send(new SetIndexLockOperation(index.IndexName, IndexLockMode.LockedError));
+                store.Admin.Send(new SetIndexesLockOperation(index.IndexName, IndexLockMode.LockedError));
 
                 await index.ExecuteAsync(store).ConfigureAwait(false);
 
-                store.Admin.Send(new SetIndexLockOperation(index.IndexName, IndexLockMode.Unlock));
+                store.Admin.Send(new SetIndexesLockOperation(index.IndexName, IndexLockMode.Unlock));
 
                 var definition = index.CreateIndexDefinition();
                 definition.LockMode = IndexLockMode.LockedError;

@@ -444,15 +444,15 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/set-lock", "POST", AuthorizationStatus.ValidUser)]
         public async Task SetLockMode()
         {
-            var names = GetStringValuesQueryString("name");
-            var modeStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("mode");
-
-            if (Enum.TryParse(modeStr, out IndexLockMode mode) == false)
-                throw new InvalidOperationException("Query string value 'mode' is not a valid mode: " + modeStr);
-
-            foreach (var name in names)
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                await Database.IndexStore.SetLock(name, mode);
+                var json = await context.ReadForMemoryAsync(RequestBodyStream(), "index/set-lock");
+                var parameters = JsonDeserializationServer.Parameters.SetIndexLockParameters(json);
+
+                foreach (var name in parameters.IndexNames)
+                {
+                    await Database.IndexStore.SetLock(name, parameters.Mode);
+                }
             }
 
             NoContentStatus();
@@ -461,18 +461,18 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/set-priority", "POST", AuthorizationStatus.ValidUser)]
         public async Task SetPriority()
         {
-            var names = GetStringValuesQueryString("name");
-            var priorityStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("priority");
-
-            if (Enum.TryParse(priorityStr, out IndexPriority priority) == false)
-                throw new InvalidOperationException("Query string value 'priority' is not a valid priority: " + priorityStr);
-
-            foreach (var name in names)
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                await Database.IndexStore.SetPriority(name, priority);
-            }
+                var json = await context.ReadForMemoryAsync(RequestBodyStream(), "index/set-priority");
+                var parameters = JsonDeserializationServer.Parameters.SetIndexPriorityParameters(json);
 
-            NoContentStatus();
+                foreach (var name in parameters.IndexNames)
+                {
+                    await Database.IndexStore.SetPriority(name, parameters.Priority);
+                }
+
+                NoContentStatus();
+            }
         }
 
         [RavenAction("/databases/*/indexes/errors", "GET", AuthorizationStatus.ValidUser)]
@@ -681,8 +681,8 @@ namespace Raven.Server.Documents.Handlers
         private async Task<bool> SendDataOrHeartbeatToWebSocket(Task<WebSocketReceiveResult> receive, WebSocket webSocket, LiveIndexingPerformanceCollector collector, MemoryStream ms, int timeToWait)
         {
             if (receive.IsCompleted || webSocket.State != WebSocketState.Open)
-                return false; 
-          
+                return false;
+
             var tuple = await collector.Stats.TryDequeueAsync(TimeSpan.FromMilliseconds(timeToWait));
             if (tuple.Item1 == false)
             {

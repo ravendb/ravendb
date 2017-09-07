@@ -66,7 +66,7 @@ namespace SlowTests.Server.Replication
                     Assert.Equal("Shalom", user2.Name);
                 }
 
-                var result = master.Admin.Server.Send(new DisableDatabaseToggleOperation(master.Database, true));
+                var result = master.Admin.Server.Send(new ToggleDatabasesStateOperation(master.Database, true));
 
                 Assert.True(result.Success);
                 Assert.True(result.Disabled);
@@ -79,8 +79,8 @@ namespace SlowTests.Server.Replication
                 using (var session = master.OpenSession())
                 {
                     //disable database is propagated through cluster, so both master and slave would be disabled after 
-                    //sending DisableDatabaseToggleOperation
-                    //note: the handler that receives DisableDatabaseToggleOperation "waits" until the cluster has a quorum
+                    //sending ToggleDatabasesStateOperation
+                    //note: the handler that receives ToggleDatabasesStateOperation "waits" until the cluster has a quorum
                     //thus, session.Load() operation would fail now
 
                     var e = Assert.Throws<AllTopologyNodesDownException>(() => session.Load<User>("users/1"));
@@ -91,7 +91,7 @@ namespace SlowTests.Server.Replication
                 }
 
                 //now we enable all databases, so it should propagate as well and make them available for requests
-                result = master.Admin.Server.Send(new DisableDatabaseToggleOperation(master.Database, false));
+                result = master.Admin.Server.Send(new ToggleDatabasesStateOperation(master.Database, false));
                 
                 Assert.True(result.Success);
                 Assert.False(result.Disabled);

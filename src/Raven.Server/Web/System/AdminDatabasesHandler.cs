@@ -702,13 +702,13 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "docs");
-                var parameters = JsonDeserializationServer.DeleteDatabasesParameters(json);
+                var parameters = JsonDeserializationServer.Parameters.DeleteDatabasesParameters(json);
 
                 if (parameters.FromNodes != null && parameters.FromNodes.Length > 0)
                 {
                     using (context.OpenReadTransaction())
                     {
-                        foreach (var databaseName in parameters.Names)
+                        foreach (var databaseName in parameters.DatabaseNames)
                         {
                             var record = ServerStore.Cluster.ReadDatabase(context, databaseName);
                             if (record == null)
@@ -730,7 +730,7 @@ namespace Raven.Server.Web.System
                 }
 
                 long index = -1;
-                foreach (var name in parameters.Names)
+                foreach (var name in parameters.DatabaseNames)
                 {
                     var (newIndex, _) = await ServerStore.DeleteDatabaseAsync(name, parameters.HardDelete, parameters.FromNodes);
                     index = newIndex;
@@ -830,7 +830,7 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "databases/toggle");
-                var parameters = JsonDeserializationServer.DisableDatabaseToggleParameters(json);
+                var parameters = JsonDeserializationServer.Parameters.DisableDatabaseToggleParameters(json);
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
@@ -839,7 +839,7 @@ namespace Raven.Server.Web.System
 
                     writer.WriteStartArray();
                     var first = true;
-                    foreach (var name in parameters.Names)
+                    foreach (var name in parameters.DatabaseNames)
                     {
                         if (first == false)
                             writer.WriteComma();

@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.ServerWide;
@@ -31,7 +32,7 @@ namespace RachisTests
             var databaseName = "test";
             using (var store = new DocumentStore()
             {
-                Urls = new[] {leader.WebUrl},
+                Urls = new[] { leader.WebUrl },
                 Database = databaseName
             }.Initialize())
             {
@@ -53,7 +54,7 @@ namespace RachisTests
 
                     var serverTagToBeDeleted = res.Topology.Members[0];
                     replicationFactor--;
-                    deleteResult = store.Admin.Server.Send(new DeleteDatabasesOperation(databaseName, hardDelete: true, fromNode: serverTagToBeDeleted,timeInSec:30));
+                    deleteResult = store.Admin.Server.Send(new DeleteDatabasesOperation(databaseName, hardDelete: true, fromNode: serverTagToBeDeleted, timeToWaitForConfirmation: TimeSpan.FromSeconds(30)));
                     Assert.Empty(deleteResult.PendingDeletes);
                     await AssertNumberOfNodesContainingDatabase(deleteResult.RaftCommandIndex, databaseName, numberOfInstances, replicationFactor);
                 }
@@ -73,7 +74,7 @@ namespace RachisTests
                 await server.ServerStore.Cluster.WaitForIndexNotification(eTag);
                 try
                 {
-                    if(server.ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(databaseName,out var _))
+                    if (server.ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(databaseName, out var _))
                         numberOfInstances++;
                 }
                 catch
