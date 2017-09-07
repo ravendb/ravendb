@@ -9,14 +9,16 @@ class saveIndexPriorityCommand extends commandBase {
     }
 
     execute(): JQueryPromise<void> {
-        const args = {
-            name: this.indexName, 
-            priority: this.priority
-        }
-        const url = endpoints.databases.index.indexesSetPriority + this.urlEncodeArgs(args);
-        return this.post(url, null, this.db, { dataType: undefined })
+        const payload = {
+            Priority: this.priority,
+            IndexNames: [this.indexName]
+        } as Raven.Client.Documents.Operations.Indexes.SetIndexesPriorityOperation.Parameters;
+        
+        const url = endpoints.databases.index.indexesSetPriority;
+        
+        return this.post(url, JSON.stringify(payload), this.db, { dataType: undefined })
             .done(() => {
-                this.reportSuccess(`${this.indexName} Priority was set to ${args.priority}`);
+                this.reportSuccess(`${this.indexName} Priority was set to ${this.priority}`);
             })
             .fail((response: JQueryXHR) => this.reportError("Failed to set index priority", response.responseText));
     }
