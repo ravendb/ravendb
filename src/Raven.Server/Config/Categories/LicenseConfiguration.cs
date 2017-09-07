@@ -1,6 +1,5 @@
 using System.ComponentModel;
 using Raven.Server.Config.Attributes;
-using Raven.Server.Config.Settings;
 
 namespace Raven.Server.Config.Categories
 {
@@ -16,9 +15,9 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("License.Path", ConfigurationEntryScope.ServerWideOnly)]
         public string LicensePath { get; set; }
 
-        [Description("Skip logging of lease license errors")]
+        [Description("EXPERT ONLY. Skip logging of lease license errors")]
         [DefaultValue(false)]
-        [ConfigurationEntry("License.Skip.Logging.Errors", ConfigurationEntryScope.ServerWideOnly)]
-        public bool SkipLoggingErrors { get; set; }
+        [ConfigurationEntry("License.SkipLeasingErrorsLogging", ConfigurationEntryScope.ServerWideOnly)]
+        public bool SkipLeasingErrorsLogging { get; set; }
     }
 }
