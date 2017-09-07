@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.Queries
             _documentsContext = documentsContext;
         }
 
-        public async Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, StringValues includes, long? existingResultEtag, OperationCancelToken token)
+        public async Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, long? existingResultEtag, OperationCancelToken token)
         {
             DocumentQueryResult result;
             var sw = Stopwatch.StartNew();
