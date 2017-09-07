@@ -10,6 +10,7 @@ using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Server.Commercial;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -305,6 +306,9 @@ namespace Raven.Server.Documents.Handlers.Admin
                 }
             }
 
+            if (assignedCores == null)
+                assignedCores = ServerStore.LicenseManager.GetCoresToAssign(nodeInfo.NumberOfCores);
+
             if (assignedCores != null && assignedCores > nodeInfo.NumberOfCores)
             {
                 throw new ArgumentException("Cannot add node because the assigned cores is larger " +
@@ -380,7 +384,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         var clusterTopology = ServerStore.GetClusterTopology(ctx);
                         var possibleNode = clusterTopology.TryGetNodeTagByUrl(nodeUrl);
                         nodeTag = possibleNode.HasUrl ? possibleNode.NodeTag : null;
-                        ServerStore.LicenseManager.RecalculateLicenseLimits(nodeTag, assignedCores, nodeInfo);
+                        ServerStore.LicenseManager.CalculateLicenseLimits(nodeTag, assignedCores, nodeInfo);
                     }
 
                     NoContentStatus();
@@ -400,7 +404,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             if (ServerStore.IsLeader())
             {
                 await ServerStore.RemoveFromClusterAsync(nodeTag);
-                ServerStore.LicenseManager.RecalculateLicenseLimits();
+                ServerStore.LicenseManager.CalculateLicenseLimits();
                 NoContentStatus();
                 return;
             }

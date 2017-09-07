@@ -205,7 +205,7 @@ namespace Raven.Server.Commercial
                 Logger.Info("Failed to reload license limits", e);
             }
 
-            RecalculateLicenseLimits();
+            CalculateLicenseLimits();
         }
 
         private int GetClusterSize()
@@ -213,11 +213,7 @@ namespace Raven.Server.Commercial
             if (_serverStore.IsPassive())
                 return 1;
 
-            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                return _serverStore.GetClusterTopology(context).AllNodes.Count;
-            }
+            return _serverStore.GetClusterTopology().AllNodes.Count;
         }
 
         public async Task<LicenseLimit> ChangeLicenseLimits(string nodeTag, int newAssignedCores)
@@ -254,9 +250,9 @@ namespace Raven.Server.Commercial
                         Type = LimitType.Cores,
                         Details = $"Cannot change the license limit for node: {nodeTag} " +
                                   $"from: {oldAssignedCores} core{Pluralize(oldAssignedCores)} " +
-                                  $"to {newAssignedCores} core{Pluralize(newAssignedCores)}" +
+                                  $"to {newAssignedCores} core{Pluralize(newAssignedCores)} " +
                                   $"because the utilized number of cores in the cluster will be: {utilizedCores} " +
-                                  $"while the maximum allowed cores acoording to the license is: {maxCores}."
+                                  $"while the maximum allowed cores according to the license is: {maxCores}."
                     };
                 }
 
@@ -302,7 +298,7 @@ namespace Raven.Server.Commercial
             return count == 1 ? string.Empty : "s";
         }
 
-        public void RecalculateLicenseLimits(
+        public void CalculateLicenseLimits(
             string assignedNodeTag = null,
             int? assignedCores = null,
             NodeInfo nodeInfo = null)
@@ -322,8 +318,10 @@ namespace Raven.Server.Commercial
                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
                 {
+                    var hasChanges = false;
                     if (assignedNodeTag != null && assignedCores != null && nodeInfo != null)
                     {
+                        hasChanges = true;
                         detailsPerNode[assignedNodeTag] = new DetailsPerNode
                         {
                             UtilizedCores = assignedCores.Value,
@@ -338,7 +336,7 @@ namespace Raven.Server.Commercial
                     var utilizedCores = detailsPerNode.Sum(x => x.Value.UtilizedCores);
                     if (allNodeTags.Count == detailsPerNode.Count &&
                         allNodeTags.SequenceEqual(detailsPerNode.Keys) &&
-                        utilizedCores <= _licenseStatus.MaxCores)
+                        hasChanges == false)
                     {
                         return;
                     }
@@ -363,9 +361,9 @@ namespace Raven.Server.Commercial
 
                         foreach (var nodeTag in missingNodesAssignment)
                         {
-                            var numberOfCores = -1;
-                            double installedMemory = -1;
-                            double usableMemoryInGb = -1;
+                            int numberOfCores;
+                            double installedMemory;
+                            double usableMemoryInGb;
                             if (nodeTag == _serverStore.NodeTag)
                             {
                                 numberOfCores = ProcessorInfo.ProcessorCount;
@@ -373,13 +371,21 @@ namespace Raven.Server.Commercial
                                 installedMemory = memoryInfo.InstalledMemory;
                                 usableMemoryInGb = memoryInfo.UsableMemory;
                             }
-                            else if (nodeTag == assignedNodeTag && nodeInfo != null)
+                            else
                             {
+                                if (nodeTag != assignedNodeTag || nodeInfo == null)
+                                {
+                                    nodeInfo = AsyncHelpers.RunSync(() => GetNodeInfo(allNodes[nodeTag], context));
+                                }
+
                                 numberOfCores = nodeInfo.NumberOfCores;
                                 installedMemory = nodeInfo.InstalledMemoryInGb;
                                 usableMemoryInGb = nodeInfo.UsableMemoryInGb;
                             }
-                                
+
+                            if (numberOfCores != -1)
+                                coresPerNode = Math.Min(coresPerNode, numberOfCores);
+
                             detailsPerNode[nodeTag] = new DetailsPerNode
                             {
                                 UtilizedCores = coresPerNode,
@@ -390,22 +396,7 @@ namespace Raven.Server.Commercial
                         }
                     }
 
-                    utilizedCores = detailsPerNode.Sum(x => x.Value.UtilizedCores);
-                    if (utilizedCores > _licenseStatus.MaxCores)
-                    {
-                        // need to redistribute the number of cores
-                        var coresPerNode = Math.Max(1, _licenseStatus.MaxCores / allNodeTags.Count);
-                        foreach (var nodeTag in allNodeTags)
-                        {
-                            detailsPerNode[nodeTag] = new DetailsPerNode
-                            {
-                                UtilizedCores = coresPerNode,
-                                NumberOfCores = detailsPerNode[nodeTag].NumberOfCores,
-                                InstalledMemoryInGb = detailsPerNode[nodeTag].InstalledMemoryInGb,
-                                UsableMemoryInGb = detailsPerNode[nodeTag].UsableMemoryInGb
-                            };
-                        }
-                    }
+                    CheckLicenseStatus(detailsPerNode);
                 }
 
                 _serverStore.PutLicenseLimits(licenseLimits);
@@ -419,6 +410,40 @@ namespace Raven.Server.Commercial
             {
                 _licenseLimitsSemaphore.Release();
             }
+        }
+
+        private void CheckLicenseStatus(Dictionary<string, DetailsPerNode> detailsPerNode)
+        {
+            var utilizedCores = detailsPerNode.Sum(x => x.Value.UtilizedCores);
+            if (utilizedCores <= _licenseStatus.MaxCores)
+                return;
+
+            var details = $"The number of utilized cores is: {utilizedCores}," +
+                          $"while the license limit is: {_licenseStatus.MaxCores} cores";
+            GenerateLicenseLimit(LimitType.Cores, details, addNotification: true);
+
+            _licenseStatus.Error = true;
+            _licenseStatus.Message = details;
+        }
+
+        private int GetUtilizedCores()
+        {
+            var licenseLimits = _serverStore.LoadLicenseLimits();
+            var detailsPerNode = licenseLimits?.NodeLicenseDetails;
+            if (detailsPerNode == null)
+                return 0;
+
+            return detailsPerNode.Sum(x => x.Value.UtilizedCores);
+        }
+
+        public int GetCoresToAssign(int numberOfCores)
+        {
+            var utilizedCores = GetUtilizedCores();
+            if (utilizedCores == 0)
+                return Math.Min(numberOfCores, _licenseStatus.MaxCores);
+
+            var availableCores = Math.Max(1, _licenseStatus.MaxCores - utilizedCores);
+            return Math.Min(availableCores, numberOfCores);
         }
 
         private bool CanAssignCores(int? assignedCores, out string details)
@@ -445,7 +470,7 @@ namespace Raven.Server.Commercial
             return true;
         }
 
-        public async Task<LicenseLimit> Activate(License license, bool skipLeaseLicense)
+        public async Task<LicenseLimit> Activate(License license, bool skipLeaseLicense, bool ensureNotPassive = true)
         {
             Dictionary<string, object> licenseAttributes;
 
@@ -473,7 +498,7 @@ namespace Raven.Server.Commercial
 
             var licenseExpiration = newLicenseStatus.Expiration;
             if (licenseExpiration.HasValue == false)
-                throw new LicenseExpiredException("License doesn't have an expirtaion date!");
+                throw new LicenseExpiredException("License doesn't have an expiration date!");
 
             if (licenseExpiration < DateTime.UtcNow)
             {
@@ -483,7 +508,7 @@ namespace Raven.Server.Commercial
                     license = await GetUpdatedLicense(license);
                     if (license != null)
                     {
-                        return await Activate(license, skipLeaseLicense: true);
+                        return await Activate(license, skipLeaseLicense: true, ensureNotPassive: ensureNotPassive);
                     }
                 }
 
@@ -493,7 +518,8 @@ namespace Raven.Server.Commercial
             if (CanActivateLicense(newLicenseStatus, out var licenseLimit) == false)
                 return licenseLimit;
 
-            _serverStore.EnsureNotPassive(skipActivateLicense: true);
+            if (ensureNotPassive)
+                _serverStore.EnsureNotPassive();
 
             try
             {
@@ -524,12 +550,21 @@ namespace Raven.Server.Commercial
             if (_licenseStatus.Type != LicenseType.None)
                 return;
 
-            var licensePath = _serverStore.Configuration.Licensing.LicensePath;
-            var license = GetLicenseFromPath(licensePath);
-            if (license == null)
-                return;
+            string licensePath = null;
+            try
+            {
+                licensePath = _serverStore.Configuration.Licensing.LicensePath;
+                var license = GetLicenseFromPath(licensePath);
+                if (license == null)
+                    return;
 
-            AsyncHelpers.RunSync(() => Activate(license, skipLeaseLicense: false));
+                AsyncHelpers.RunSync(() => Activate(license, skipLeaseLicense: false, ensureNotPassive: false));
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Failed to activate license from license path: {licensePath}", e);
+            }
         }
 
         private static License GetLicenseFromPath(string licensePath)
@@ -567,7 +602,9 @@ namespace Raven.Server.Commercial
             var leaseLicenseInfo = new LeaseLicenseInfo
             {
                 License = license,
-                BuildInfo = _buildInfo
+                BuildInfo = _buildInfo,
+                ClusterId = _serverStore.GetClusterTopology().TopologyId,
+                UtilizedCores = GetUtilizedCores()
             };
 
             var response = await ApiHttpClient.Instance.PostAsync("/api/v2/license/lease",
