@@ -7,14 +7,16 @@
 using System;
 using System.Linq;
 using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Documents.Revisions;
 using Raven.Client.Http;
+using Raven.Client.Json;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Patch;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
@@ -401,7 +403,7 @@ namespace FastTests.Server.Documents.Revisions
                 var id = "users/1";
                 if (useSession)
                 {
-                    var user = new User {Name = "Fitzchak"};
+                    var user = new User { Name = "Fitzchak" };
                     for (var i = 0; i < 2; i++)
                     {
                         using (var session = store.OpenAsyncSession())
@@ -419,9 +421,9 @@ namespace FastTests.Server.Documents.Revisions
                 }
                 else
                 {
-                    await store.Commands().PutAsync(id, null, new User {Name = "Fitzchak"});
+                    await store.Commands().PutAsync(id, null, new User { Name = "Fitzchak" });
                     await store.Commands().DeleteAsync(id, null);
-                    await store.Commands().PutAsync(id, null, new User {Name = "Fitzchak"});
+                    await store.Commands().PutAsync(id, null, new User { Name = "Fitzchak" });
                     await store.Commands().DeleteAsync(id, null);
                 }
 
@@ -450,7 +452,10 @@ namespace FastTests.Server.Documents.Revisions
                 Assert.Equal(DocumentFlags.DeleteRevision.ToString(), revisions[2][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
                 Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision).ToString(), revisions[3][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
 
-                await store.Admin.SendAsync(new DeleteRevisionsOperation(id, "users/not/exists"));
+                await store.Admin.SendAsync(new DeleteRevisionsOperation(new AdminRevisionsHandler.Parameters
+                {
+                    DocumentIds = new[] { id, "users/not/exists" }
+                }));
 
                 statistics = store.Admin.Send(new GetStatisticsOperation());
                 Assert.Equal(useSession ? 1 : 0, statistics.CountOfDocuments);
@@ -458,7 +463,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [Theory(Skip="RavenDB-8265")]
+        [Theory(Skip = "RavenDB-8265")]
         [InlineData(false)]
         [InlineData(true)]
         public async Task DeleteRevisionsBeforeFromConsole(bool useConsole)
@@ -474,7 +479,7 @@ namespace FastTests.Server.Documents.Revisions
                 {
                     using (var session = store.OpenAsyncSession())
                     {
-                        await session.StoreAsync(new User {Name = "Fitzchak " + i});
+                        await session.StoreAsync(new User { Name = "Fitzchak " + i });
                         await session.SaveChangesAsync();
                     }
                 }
@@ -483,7 +488,7 @@ namespace FastTests.Server.Documents.Revisions
                 {
                     using (var session = store.OpenAsyncSession())
                     {
-                        await session.StoreAsync(new User {Name = "Fitzchak " + (i + 100)});
+                        await session.StoreAsync(new User { Name = "Fitzchak " + (i + 100) });
                         await session.SaveChangesAsync();
                     }
                 }
@@ -511,42 +516,45 @@ namespace FastTests.Server.Documents.Revisions
 
         public class DeleteRevisionsOperation : IAdminOperation
         {
-            private readonly string[] _ids;
+            private readonly AdminRevisionsHandler.Parameters _parameters;
 
-            public DeleteRevisionsOperation(params string[] ids)
+            public DeleteRevisionsOperation(AdminRevisionsHandler.Parameters parameters)
             {
-                _ids = ids;
+                _parameters = parameters;
             }
 
             public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
             {
-                return new DeleteRevisionsCommand(_ids);
+                return new DeleteRevisionsCommand(conventions, context, _parameters);
             }
 
             private class DeleteRevisionsCommand : RavenCommand
             {
-                private readonly string[] _ids;
+                private readonly BlittableJsonReaderObject _parameters;
 
-                public DeleteRevisionsCommand(params string[] ids)
+                public DeleteRevisionsCommand(DocumentConventions conventions, JsonOperationContext context, AdminRevisionsHandler.Parameters parameters)
                 {
-                    _ids = ids;
+                    if (conventions == null)
+                        throw new ArgumentNullException(nameof(conventions));
+                    if (context == null)
+                        throw new ArgumentNullException(nameof(context));
+                    if (parameters == null)
+                        throw new ArgumentNullException(nameof(parameters));
+
+                    _parameters = EntityToBlittable.ConvertEntityToBlittable(parameters, conventions, context);
                 }
 
                 public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
                 {
-                    var sb = new StringBuilder($"{node.Url}/databases/{node.Database}/admin/revisions?");
-
-                    foreach (var id in _ids)
-                    {
-                        sb.Append("&id=");
-                        sb.Append(id);
-                    }
-
-                    url = sb.ToString();
+                    url = $"{node.Url}/databases/{node.Database}/admin/revisions";
 
                     return new HttpRequestMessage
                     {
                         Method = HttpMethod.Delete,
+                        Content = new BlittableJsonContent(stream =>
+                        {
+                            ctx.Write(stream, _parameters);
+                        })
                     };
                 }
             }
