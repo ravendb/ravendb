@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading;
+using JetBrains.Annotations;
 using Raven.Server.Config;
 
 namespace Raven.Server.Documents.Patch
@@ -18,10 +19,10 @@ namespace Raven.Server.Documents.Patch
         private SpinLock _cleaning = new SpinLock();
         public bool EnableClr;
 
-        public ScriptRunnerCache(DocumentDatabase database, RavenConfiguration configuration)
+        public ScriptRunnerCache(DocumentDatabase database, [NotNull] RavenConfiguration configuration)
         {
             _database = database;
-            _configuration = configuration;
+            _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         }
 
         public abstract class Key
