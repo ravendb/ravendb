@@ -80,9 +80,9 @@ namespace Raven.Server.Web.System
                                 result["Success"] = false;
                                 result["Error"] = $"Connection to {tcpConnectionInfo.Url} failed because of authorization failure: {headerResponse.Message}";
                                 break;
-                            case TcpConnectionStatus.TcpVersionMissmatch:
+                            case TcpConnectionStatus.TcpVersionMismatch:
                                 result["Success"] = false;
-                                result["Error"] = $"Connection to {tcpConnectionInfo.Url} failed because of missmatching tcp version {headerResponse.Message}";
+                                result["Error"] = $"Connection to {tcpConnectionInfo.Url} failed because of mismatching tcp version {headerResponse.Message}";
                                 break;
                         }
                     }
