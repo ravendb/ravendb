@@ -263,7 +263,7 @@ namespace Raven.Server.ServerWide.Maintenance
                                 throw new UnauthorizedAccessException(
                                     $"Node with ClusterTag = {ClusterTag} replied to initial handshake with authorization failure {headerResponse.Message}");
                             case TcpConnectionStatus.TcpVersionMismatch:
-                                throw new InvalidOperationException($"Node with ClusterTag = {ClusterTag} replied to initial handshake with missmatching tcp version {headerResponse.Message}");
+                                throw new InvalidOperationException($"Node with ClusterTag = {ClusterTag} replied to initial handshake with mismatching tcp version {headerResponse.Message}");
                         }                        
                     }
 
