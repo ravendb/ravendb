@@ -2,7 +2,6 @@
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
-using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
 
 namespace Raven.Server.Smuggler.Documents

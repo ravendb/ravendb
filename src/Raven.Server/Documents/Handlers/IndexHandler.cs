@@ -376,7 +376,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/c-sharp-index-definition", "GET", AuthorizationStatus.ValidUser)]
         public Task GenerateCSharpIndexDefinition()
         {
-            var indexName = HttpContext.Request.Query["name"];
+            var indexName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             var index = Database.IndexStore.GetIndex(indexName);
             if (index == null)
             {

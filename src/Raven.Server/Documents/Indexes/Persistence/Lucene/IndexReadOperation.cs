@@ -11,10 +11,8 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Exceptions;
-using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors;
-using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.MoreLikeThis;
@@ -28,7 +26,6 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Spatial4n.Core.Shapes;
-using Spatial4n.Core.Shapes.Impl;
 using Voron.Impl;
 using Query = Lucene.Net.Search.Query;
 

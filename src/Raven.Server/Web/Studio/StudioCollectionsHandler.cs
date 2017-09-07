@@ -6,7 +6,6 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Extensions;
 using Raven.Server.Documents;
 using Raven.Server.Json;
 using Raven.Server.Routing;

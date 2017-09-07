@@ -17,10 +17,8 @@ using Voron.Data.Tables;
 using Voron.Impl;
 using Sparrow;
 using Sparrow.Binary;
-using Sparrow.Collections;
 using Sparrow.Logging;
 using Voron.Data;
-using Voron.Data.RawData;
 using Voron.Exceptions;
 
 namespace Raven.Server.Documents

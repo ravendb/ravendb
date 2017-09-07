@@ -1,5 +1,4 @@
-﻿using System.Net;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.ServerWide;

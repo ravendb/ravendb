@@ -1,16 +1,12 @@
 ﻿using System;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Config.Settings;
-using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 using Voron;
-using Voron.Data;
 using Voron.Exceptions;
 using Voron.Impl.Compaction;
 

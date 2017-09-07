@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Text.RegularExpressions;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Patch

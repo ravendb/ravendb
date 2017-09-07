@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using NCrontab.Advanced;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;

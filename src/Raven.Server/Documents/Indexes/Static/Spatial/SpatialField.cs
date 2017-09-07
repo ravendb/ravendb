@@ -11,8 +11,6 @@ using Sparrow.Json;
 using Spatial4n.Core.Context.Nts;
 using Spatial4n.Core.Distance;
 using Spatial4n.Core.Shapes;
-using Spatial4n.Core.Shapes.Impl;
-using Spatial4n.Core.Shapes.Nts;
 
 namespace Raven.Server.Documents.Indexes.Static.Spatial
 {
