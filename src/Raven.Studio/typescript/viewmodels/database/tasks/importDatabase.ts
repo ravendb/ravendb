@@ -34,7 +34,6 @@ class importDatabase extends viewModelBase {
     uploadStatus = ko.observable<number>();
 
     importCommand: KnockoutComputed<string>;
-    revisionsTitle: KnockoutComputed<string>;
 
     validationGroup = ko.validatedObservable({
         importedFileName: this.importedFileName,
@@ -119,15 +118,8 @@ class importDatabase extends viewModelBase {
             required: true
         });
 
-        this.model.revisionsAreConfigured = ko.computed(() => {
+        this.model.revisionsAreConfigured = ko.pureComputed(() => {
             return this.activeDatabase().hasRevisionsConfiguration();
-        });
-
-        this.revisionsTitle = ko.computed(() => {
-            if (this.model.revisionsAreConfigured()) {
-                return "";
-            }
-            return "Revisions Configuration must be set in order to use this option";
         });
     }
 
