@@ -45,7 +45,6 @@ class indexDefinition {
 
     configuration = ko.observableArray<configurationItem>();
     lockMode: Raven.Client.Documents.Indexes.IndexLockMode;
-    indexStoragePath = ko.observable<string>();
 
     priority = ko.observable<Raven.Client.Documents.Indexes.IndexPriority>();
 
@@ -77,12 +76,6 @@ class indexDefinition {
         this.lockMode = dto.LockMode;
         this.priority(dto.Priority);
         this.configuration(this.parseConfiguration(dto.Configuration));
-
-        const existingIndexStoragePath = this.configuration().find(x => x.key() === configuration.indexing.storagePath);
-        if (existingIndexStoragePath && existingIndexStoragePath.value()) {
-            this.indexStoragePath(existingIndexStoragePath.value());
-            this.configuration.remove(existingIndexStoragePath);
-        }
 
         if (!this.isAutoIndex()) {
             this.initValidation();
@@ -156,10 +149,6 @@ class indexDefinition {
         this.configuration().forEach((configItem: configurationItem) => {
             result[configItem.key()] = configItem.value();
         });
-
-        if (this.indexStoragePath()) {
-            result[configuration.indexing.storagePath] = this.indexStoragePath();
-        }
 
         return result;
     }
