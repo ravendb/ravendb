@@ -596,7 +596,7 @@ namespace Raven.Server
 
                             if (MatchingOperationVersion(header, out var error) == false)
                             {
-                                RespondToTcpConnection(stream, context, error, TcpConnectionStatus.TcpVersionMissmatch);
+                                RespondToTcpConnection(stream, context, error, TcpConnectionStatus.TcpVersionMismatch);
                                 if (Logger.IsInfoEnabled)
                                 {
                                     Logger.Info(
