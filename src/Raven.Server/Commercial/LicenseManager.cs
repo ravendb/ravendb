@@ -51,12 +51,12 @@ namespace Raven.Server.Commercial
         private readonly ServerStore _serverStore;
         private readonly SemaphoreSlim _leaseLicenseSemaphore = new SemaphoreSlim(1);
         private readonly SemaphoreSlim _licenseLimitsSemaphore = new SemaphoreSlim(1);
-        private readonly bool _skipLoggingLeaseLicenseErrors;
+        private readonly bool _skipLeasingErrorsLogging;
 
         public LicenseManager(ServerStore serverStore)
         {
             _serverStore = serverStore;
-            _skipLoggingLeaseLicenseErrors = serverStore.Configuration.Licensing.SkipLoggingErrors;
+            _skipLeasingErrorsLogging = serverStore.Configuration.Licensing.SkipLeasingErrorsLogging;
 
             _buildInfo = new BuildNumber
             {
@@ -166,7 +166,7 @@ namespace Raven.Server.Commercial
                 _licenseStatus.Error = true;
                 _licenseStatus.Message = e.Message;
 
-                if (Logger.IsInfoEnabled && _skipLoggingLeaseLicenseErrors == false)
+                if (Logger.IsInfoEnabled && _skipLeasingErrorsLogging == false)
                     Logger.Info("Could not validate license", e);
 
                 var alert = AlertRaised.Create(
