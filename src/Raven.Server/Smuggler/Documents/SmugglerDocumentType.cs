@@ -8,15 +8,15 @@ using Voron;
 
 namespace Raven.Server.Smuggler.Documents
 {
-    public enum DocumentType : byte
-    {
-        Document = 1,
-        Attachment = 2
-    }
-
     public class DocumentItem
     {
-        public const string Key = "@document-type";
+        public static class ExportDocumentType
+        {
+            public const string Key = "@export-type";
+
+            public const string Document = nameof(Document);
+            public const string Attachment = nameof(Attachment);
+        }
 
         public Document Document;
         public List<AttachmentStream> Attachments;
