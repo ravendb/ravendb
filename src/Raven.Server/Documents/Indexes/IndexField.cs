@@ -62,6 +62,8 @@ namespace Raven.Server.Documents.Indexes
 
             if (options.Suggestions.HasValue)
                 field.HasSuggestions = options.Suggestions.Value;
+            else if (allFields?.Suggestions != null)
+                field.HasSuggestions = allFields.Suggestions.Value;
 
             if (options.Spatial != null)
                 field.Spatial = new SpatialOptions(options.Spatial);

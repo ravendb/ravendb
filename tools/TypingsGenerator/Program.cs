@@ -9,6 +9,7 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
@@ -24,6 +25,7 @@ using Raven.Server.Commercial;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.Handlers;
+using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Operations;
@@ -276,6 +278,13 @@ namespace TypingsGenerator
 
             scripter.AddType(typeof(NodeConnectionTestResult));
             
+            
+            // request with POST parameters
+            scripter.AddType(typeof(DeleteDatabasesOperation.Parameters));
+            scripter.AddType(typeof(ToggleDatabasesStateOperation.Parameters));
+            scripter.AddType(typeof(SetIndexesLockOperation.Parameters));
+            scripter.AddType(typeof(SetIndexesPriorityOperation.Parameters));
+            scripter.AddType(typeof(AdminRevisionsHandler.Parameters));
 
             return scripter;
         }

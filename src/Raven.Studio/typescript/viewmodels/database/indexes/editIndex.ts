@@ -27,7 +27,6 @@ import showDataDialog = require("viewmodels/common/showDataDialog");
 
 class editIndex extends viewModelBase { 
 
-    static readonly DefaultIndexStoragePath = "~/{Database Name}/Indexes";
     static readonly $body = $("body");
 
     isEditingExistingIndex = ko.observable<boolean>(false);
@@ -42,9 +41,6 @@ class editIndex extends viewModelBase {
     canEditIndexName: KnockoutComputed<boolean>;
 
     fieldNames = ko.observableArray<string>([]);
-    defaultIndexPath = ko.observable<string>();
-    additionalStoragePaths = ko.observableArray<string>([]);
-    selectedIndexPath: KnockoutComputed<string>;
     indexNameHasFocus = ko.observable<boolean>(false);
 
     private indexesNames = ko.observableArray<string>();
@@ -86,13 +82,6 @@ class editIndex extends viewModelBase {
             firstMap.throttle(1000).subscribe(() => {
                 this.updateIndexFields();
             });
-        });
-
-        this.selectedIndexPath = ko.pureComputed(() => {
-            const defaultPath = this.defaultIndexPath();
-            const selectedPath = this.editedIndex().indexStoragePath();
-
-            return selectedPath || defaultPath + " (default)";
         });
 
         this.canEditIndexName = ko.pureComputed(() => {
@@ -183,22 +172,6 @@ class editIndex extends viewModelBase {
         this.addReduceHelpPopover();
     }
 
-    private updateIndexPaths() {
-        new getDatabaseSettingsCommand(this.activeDatabase())
-            .execute()
-            .done((databaseDocument: document) => {
-                const settings = (<any>databaseDocument)["Settings"] as dictionary<string>;
-                const indexStoragePath = settings[configuration.indexing.storagePath];
-                /* TODO
-                const additionalPaths = settings[configuration.indexing.additionalStoragePaths]
-                    ? settings[configuration.indexing.additionalStoragePaths].split(";")
-                    : [];
-                this.additionalStoragePaths(additionalPaths);*/
-                this.defaultIndexPath(indexStoragePath || editIndex.DefaultIndexStoragePath);
-            })
-            .fail((response: JQueryXHR) => messagePublisher.reportError("Failed to load database settings.", response.responseText, response.statusText));
-    }
-
     private updateIndexFields() {
         const map = this.editedIndex().maps()[0].map();
         new getIndexFieldsFromMapCommand(this.activeDatabase(), map)
@@ -210,7 +183,7 @@ class editIndex extends viewModelBase {
 
     private initializeDirtyFlag() {
         const indexDef: indexDefinition = this.editedIndex();
-        const checkedFieldsArray: Array<KnockoutObservable<any>> = [indexDef.name, indexDef.maps, indexDef.reduce, indexDef.numberOfFields, indexDef.indexStoragePath, indexDef.outputReduceToCollection];
+        const checkedFieldsArray: Array<KnockoutObservable<any>> = [indexDef.name, indexDef.maps, indexDef.reduce, indexDef.numberOfFields, indexDef.outputReduceToCollection];
 
         const configuration = indexDef.configuration();
         if (configuration) {
@@ -388,7 +361,6 @@ class editIndex extends viewModelBase {
                 this.originalIndexName = this.editedIndex().name();
                 this.editedIndex().hasReduce(!!this.editedIndex().reduce());
                 this.updateIndexFields();
-                this.updateIndexPaths();
             });
     }
 

@@ -290,6 +290,7 @@ namespace Raven.Server.Documents.Indexes
 
         public virtual bool IsMultiMap => false;
 
+        public virtual void ResetIsSideBySideAfterReplacement() { }
 
         public AsyncManualResetEvent.FrozenAwaiter GetIndexingBatchAwaiter()
         {

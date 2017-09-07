@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Net.Http;
 using System.Threading;
-using Raven.Client.Util;
 using Sparrow.Logging;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;

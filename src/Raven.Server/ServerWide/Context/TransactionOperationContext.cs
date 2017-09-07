@@ -2,7 +2,6 @@
 using Sparrow.Json;
 using Voron;
 using Sparrow;
-using Sparrow.LowMemory;
 using Sparrow.Threading;
 
 namespace Raven.Server.ServerWide.Context

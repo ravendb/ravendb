@@ -136,7 +136,6 @@ namespace Raven.Server.Documents.Handlers
             var indexQuery = await GetIndexQuery(context, method);
 
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
-            var includes = GetStringValuesQueryString("include", required: false);
             var metadataOnly = GetBoolValueQueryString("metadata-only", required: false) ?? false;
 
             var runner = new QueryRunner(Database, context);
@@ -144,7 +143,7 @@ namespace Raven.Server.Documents.Handlers
             DocumentQueryResult result;
             try
             {
-                result = await runner.ExecuteQuery(indexQuery, includes, existingResultEtag, token).ConfigureAwait(false);
+                result = await runner.ExecuteQuery(indexQuery, existingResultEtag, token).ConfigureAwait(false);
             }
             catch (IndexDoesNotExistException)
             {

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
@@ -40,7 +39,7 @@ namespace Raven.Server.Documents.Queries
             _documentsContext = documentsContext;
         }
 
-        public async Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, StringValues includes, long? existingResultEtag, OperationCancelToken token)
+        public async Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, long? existingResultEtag, OperationCancelToken token)
         {
             DocumentQueryResult result;
             var sw = Stopwatch.StartNew();

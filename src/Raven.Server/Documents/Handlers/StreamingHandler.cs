@@ -2,7 +2,6 @@
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions.Documents.Indexes;
-using Raven.Client.Exceptions.Documents.Transformers;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Json;
 using Raven.Server.Routing;

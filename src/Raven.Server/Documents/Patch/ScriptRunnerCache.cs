@@ -2,12 +2,14 @@ using System;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading;
+using Raven.Server.Config;
 
 namespace Raven.Server.Documents.Patch
 {
     public class ScriptRunnerCache
     {
         private readonly DocumentDatabase _database;
+        private readonly RavenConfiguration _configuration;
 
         private readonly ConcurrentDictionary<Key, Lazy<ScriptRunner>> _cache =
             new ConcurrentDictionary<Key, Lazy<ScriptRunner>>();
@@ -16,9 +18,10 @@ namespace Raven.Server.Documents.Patch
         private SpinLock _cleaning = new SpinLock();
         public bool EnableClr;
 
-        public ScriptRunnerCache(DocumentDatabase database)
+        public ScriptRunnerCache(DocumentDatabase database, RavenConfiguration configuration)
         {
             _database = database;
+            _configuration = configuration;
         }
 
         public abstract class Key
@@ -60,7 +63,7 @@ namespace Raven.Server.Documents.Patch
         {
             var value = new Lazy<ScriptRunner>(() =>
             {
-                var runner = new ScriptRunner(_database, EnableClr);
+                var runner = new ScriptRunner(_database, _configuration, EnableClr);
                 script.GenerateScript(runner);
                 return runner;
             });
@@ -70,7 +73,7 @@ namespace Raven.Server.Documents.Patch
 
             // we were the one who added it, need to check that we are there
             var count = Interlocked.Increment(ref _numberOfCachedScripts);
-            if (count > _database.Configuration.Patching.MaxNumberOfCachedScripts)
+            if (count > _configuration.Patching.MaxNumberOfCachedScripts)
             {
                 bool taken = false;
                 try
@@ -96,7 +99,7 @@ namespace Raven.Server.Documents.Patch
         private int CleanTheCache()
         {
             foreach (var pair in _cache.OrderBy(x => x.Value.Value.Runs)
-                .Take(_database.Configuration.Patching.MaxNumberOfCachedScripts / 4)
+                .Take(_configuration.Patching.MaxNumberOfCachedScripts / 4)
             )
             {
                 _cache.TryRemove(pair.Key, out _);

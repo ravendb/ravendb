@@ -48,7 +48,7 @@ namespace Indexing.Benchmark
             if (_store.Admin.Server.Send(new GetDatabaseNamesOperation(0, 100)).Contains(DbName))
             {
                 _store.Admin.Send(new GetStatisticsOperation()); // give some time for database to load
-                _store.Admin.Server.Send(new DeleteDatabaseOperation(DbName, hardDelete: true));
+                _store.Admin.Server.Send(new DeleteDatabasesOperation(DbName, hardDelete: true));
             }
 
             var doc = new DatabaseRecord(DbName);

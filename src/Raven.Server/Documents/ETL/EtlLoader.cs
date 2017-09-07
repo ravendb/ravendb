@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.ETL;
-using Raven.Server.Config.Categories;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.NotificationCenter.Notifications;

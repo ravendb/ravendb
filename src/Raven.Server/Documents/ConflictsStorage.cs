@@ -17,7 +17,6 @@ using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Logging;
 using Sparrow.Utils;
-using Voron.Data.RawData;
 using Voron.Util;
 using static Raven.Server.Documents.DocumentsStorage;
 using ConcurrencyException = Voron.Exceptions.ConcurrencyException;

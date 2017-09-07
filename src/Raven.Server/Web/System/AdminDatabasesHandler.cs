@@ -13,7 +13,6 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features.Authentication;
-using Microsoft.Extensions.Primitives;
 using NCrontab.Advanced;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
@@ -23,6 +22,7 @@ using Raven.Client.Http;
 using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
+using Raven.Client.ServerWide.ETL;
 using Raven.Client.ServerWide.ETL;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.ConnectionStrings;
@@ -699,30 +699,27 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/databases", "DELETE", AuthorizationStatus.Operator)]
         public async Task Delete()
         {
-            var fromNodes = GetStringValuesQueryString("from-node", required: false);
-            var isHardDelete = GetBoolValueQueryString("hard-delete", required: false) ?? false;
-            var confirmationTimeoutInSec = GetIntValueQueryString("confirmationTimeoutInSec", required: false) ?? 15;
-
             var waitOnRecordDeletion = new List<string>();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var names = await GetDatabaseNamesToDeleteAsync(context);
+                var json = await context.ReadForMemoryAsync(RequestBodyStream(), "docs");
+                var parameters = JsonDeserializationServer.Parameters.DeleteDatabasesParameters(json);
 
-                if (string.IsNullOrEmpty(fromNodes) == false)
+                if (parameters.FromNodes != null && parameters.FromNodes.Length > 0)
                 {
                     using (context.OpenReadTransaction())
                     {
-                        foreach (var databaseName in names)
+                        foreach (var databaseName in parameters.DatabaseNames)
                         {
                             var record = ServerStore.Cluster.ReadDatabase(context, databaseName);
                             if (record == null)
                                 continue;
 
-                            foreach (var node in fromNodes)
+                            foreach (var node in parameters.FromNodes)
                             {
                                 if (record.Topology.RelevantFor(node) == false)
                                 {
-                                    throw new InvalidOperationException($"Database={databaseName} doesn't reside in node={fromNodes} so it can't be deleted from it");
+                                    throw new InvalidOperationException($"Database '{databaseName}' doesn't reside on node '{node}' so it can't be deleted from it");
                                 }
                                 record.Topology.RemoveFromTopology(node);
                             }
@@ -734,103 +731,72 @@ namespace Raven.Server.Web.System
                 }
 
                 long index = -1;
-                foreach (var name in names)
+                foreach (var name in parameters.DatabaseNames)
                 {
-                    var (newIndex, _) = await ServerStore.DeleteDatabaseAsync(name, isHardDelete, fromNodes);
+                    var (newIndex, _) = await ServerStore.DeleteDatabaseAsync(name, parameters.HardDelete, parameters.FromNodes);
                     index = newIndex;
                 }
                 await ServerStore.Cluster.WaitForIndexNotification(index);
 
-                if (confirmationTimeoutInSec > 0)
-                {
-                    var sp = Stopwatch.StartNew();
-                    var timeout = TimeSpan.FromSeconds(confirmationTimeoutInSec);
-                    int databaseIndex = 0;
-                    while (waitOnRecordDeletion.Count > databaseIndex)
-                    {
-                        var databaseName = waitOnRecordDeletion[databaseIndex];
-                        using (context.OpenReadTransaction())
-                        {
-                            var record = ServerStore.Cluster.ReadDatabase(context, databaseName);
-                            if (record == null)
-                            {
-                                waitOnRecordDeletion.RemoveAt(databaseIndex);
-                                continue;
-                            }
-                        }
-                        // we'll now wait for the _next_ operation in the cluster
-                        // since deletion involve multiple operations in the cluster
-                        // we'll now wait for the next command to be applied and check
-                        // whatever that removed the db in question
-                        index++;
-                        var remaining = timeout - sp.Elapsed;
-                        try
-                        {
-                            if (remaining < TimeSpan.Zero)
-                            {
-                                databaseIndex++;
-                                continue; // we are done waiting, but still want to locally check the rest of the dbs
-                            }
+                var timeToWaitForConfirmation = parameters.TimeToWaitForConfirmation ?? TimeSpan.FromSeconds(15);
 
-                            await ServerStore.Cluster.WaitForIndexNotification(index, remaining);
+                var sp = Stopwatch.StartNew();
+                int databaseIndex = 0;
+                while (waitOnRecordDeletion.Count > databaseIndex)
+                {
+                    var databaseName = waitOnRecordDeletion[databaseIndex];
+                    using (context.OpenReadTransaction())
+                    {
+                        var record = ServerStore.Cluster.ReadDatabase(context, databaseName);
+                        if (record == null)
+                        {
+                            waitOnRecordDeletion.RemoveAt(databaseIndex);
+                            continue;
                         }
-                        catch (TimeoutException)
+                    }
+                    // we'll now wait for the _next_ operation in the cluster
+                    // since deletion involve multiple operations in the cluster
+                    // we'll now wait for the next command to be applied and check
+                    // whatever that removed the db in question
+                    index++;
+                    var remaining = timeToWaitForConfirmation - sp.Elapsed;
+                    try
+                    {
+                        if (remaining < TimeSpan.Zero)
                         {
                             databaseIndex++;
+                            continue; // we are done waiting, but still want to locally check the rest of the dbs
                         }
+
+                        await ServerStore.Cluster.WaitForIndexNotification(index, remaining);
                     }
-
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    catch (TimeoutException)
                     {
-                        context.Write(writer, new DynamicJsonValue
-                        {
-                            [nameof(DeleteDatabaseResult.RaftCommandIndex)] = index,
-                            [nameof(DeleteDatabaseResult.PendingDeletes)] = new DynamicJsonArray(waitOnRecordDeletion)
-                        });
-                        writer.Flush();
+                        databaseIndex++;
                     }
                 }
-            }
-        }
 
-        private async Task<string[]> GetDatabaseNamesToDeleteAsync(JsonOperationContext context)
-        {
-            var names = GetStringValuesQueryString("name", required: false);
-            if (names.Count != 0)
-                return names;
-
-            var json = await context.ReadForMemoryAsync(RequestBodyStream(), "docs");
-            if (json.TryGetMember("Databases", out var databases) && databases is BlittableJsonReaderArray databasesArray)
-            {
-                var results = new List<string>();
-                foreach (var item in databasesArray)
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    var name = item?.ToString();
-
-                    if (string.IsNullOrWhiteSpace(name))
-                        continue;
-
-                    results.Add(name);
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        [nameof(DeleteDatabaseResult.RaftCommandIndex)] = index,
+                        [nameof(DeleteDatabaseResult.PendingDeletes)] = new DynamicJsonArray(waitOnRecordDeletion)
+                    });
                 }
-
-                return results.ToArray();
             }
-
-            return names;
         }
 
         [RavenAction("/admin/databases/disable", "POST", AuthorizationStatus.Operator)]
         public async Task DisableDatabases()
         {
-            await ToggleDisableDatabases(disableRequested: true);
+            await ToggleDisableDatabases(disable: true);
         }
 
         [RavenAction("/admin/databases/enable", "POST", AuthorizationStatus.Operator)]
         public async Task EnableDatabases()
         {
-            await ToggleDisableDatabases(disableRequested: false);
+            await ToggleDisableDatabases(disable: false);
         }
 
         [RavenAction("/admin/databases/dynamic-node-distribution", "POST", AuthorizationStatus.Operator)]
@@ -860,69 +826,72 @@ namespace Raven.Server.Web.System
         }
 
 
-        private async Task ToggleDisableDatabases(bool disableRequested)
+        private async Task ToggleDisableDatabases(bool disable)
         {
-            var names = GetStringValuesQueryString("name");
-
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                writer.WriteStartObject();
-                writer.WritePropertyName("Status");
+                var json = await context.ReadForMemoryAsync(RequestBodyStream(), "databases/toggle");
+                var parameters = JsonDeserializationServer.Parameters.DisableDatabaseToggleParameters(json);
 
-                writer.WriteStartArray();
-                var first = true;
-                foreach (var name in names)
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    if (first == false)
-                        writer.WriteComma();
-                    first = false;
+                    writer.WriteStartObject();
+                    writer.WritePropertyName("Status");
 
-                    DatabaseRecord databaseRecord;
-                    using (context.OpenReadTransaction())
-                        databaseRecord = ServerStore.Cluster.ReadDatabase(context, name);
-
-                    if (databaseRecord == null)
+                    writer.WriteStartArray();
+                    var first = true;
+                    foreach (var name in parameters.DatabaseNames)
                     {
+                        if (first == false)
+                            writer.WriteComma();
+                        first = false;
+
+                        DatabaseRecord databaseRecord;
+                        using (context.OpenReadTransaction())
+                            databaseRecord = ServerStore.Cluster.ReadDatabase(context, name);
+
+                        if (databaseRecord == null)
+                        {
+                            context.Write(writer, new DynamicJsonValue
+                            {
+                                ["Name"] = name,
+                                ["Success"] = false,
+                                ["Reason"] = "database not found"
+                            });
+                            continue;
+                        }
+
+                        if (databaseRecord.Disabled == disable)
+                        {
+                            var state = disable ? "disabled" : "enabled";
+                            context.Write(writer, new DynamicJsonValue
+                            {
+                                ["Name"] = name,
+                                ["Success"] = true, //even if we have nothing to do, no reason to return failure status
+                                ["Disabled"] = disable,
+                                ["Reason"] = $"Database already {state}"
+                            });
+                            continue;
+                        }
+
+                        databaseRecord.Disabled = disable;
+
+                        var (index, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, null);
+                        await ServerStore.Cluster.WaitForIndexNotification(index);
+
                         context.Write(writer, new DynamicJsonValue
                         {
                             ["Name"] = name,
-                            ["Success"] = false,
-                            ["Reason"] = "database not found"
+                            ["Success"] = true,
+                            ["Disabled"] = disable,
+                            ["Reason"] = $"Database state={databaseRecord.Disabled} was propagated on the cluster"
                         });
-                        continue;
                     }
 
-                    if (databaseRecord.Disabled == disableRequested)
-                    {
-                        var state = disableRequested ? "disabled" : "enabled";
-                        context.Write(writer, new DynamicJsonValue
-                        {
-                            ["Name"] = name,
-                            ["Success"] = true, //even if we have nothing to do, no reason to return failure status
-                            ["Disabled"] = disableRequested,
-                            ["Reason"] = $"Database already {state}"
-                        });
-                        continue;
-                    }
+                    writer.WriteEndArray();
 
-                    databaseRecord.Disabled = disableRequested;
-
-                    var (index, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, null);
-                    await ServerStore.Cluster.WaitForIndexNotification(index);
-
-                    context.Write(writer, new DynamicJsonValue
-                    {
-                        ["Name"] = name,
-                        ["Success"] = true,
-                        ["Disabled"] = disableRequested,
-                        ["Reason"] = $"Database state={databaseRecord.Disabled} was propagated on the cluster"
-                    });
+                    writer.WriteEndObject();
                 }
-
-                writer.WriteEndArray();
-
-                writer.WriteEndObject();
             }
         }
 
@@ -954,7 +923,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/etl", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task AddEtl()
         {
-            
+
 
             var id = GetLongQueryString("id", required: false);
 
@@ -979,7 +948,7 @@ namespace Raven.Server.Web.System
                 case EtlType.Raven:
                     var ravenEtlConfiguration = JsonDeserializationCluster.RavenEtlConfiguration(etlConfiguration);
                     var ravenConnectionStringName = ravenEtlConfiguration.ConnectionStringName;
-                    
+
                     if (databaseRecord.RavenConnectionStrings == null ||
                         databaseRecord.RavenConnectionStrings.TryGetValue(ravenConnectionStringName, out var ravenConnectionString) == false)
                     {

@@ -153,8 +153,8 @@ namespace FastTests.Client.Indexing
                 Assert.Equal(IndexLockMode.Unlock, stats.LockMode);
                 Assert.Equal(IndexPriority.Normal, stats.Priority);
 
-                await store.Admin.SendAsync(new SetIndexLockOperation(index.Name, IndexLockMode.LockedIgnore));
-                await store.Admin.SendAsync(new SetIndexPriorityOperation(index.Name, IndexPriority.Low));
+                await store.Admin.SendAsync(new SetIndexesLockOperation(index.Name, IndexLockMode.LockedIgnore));
+                await store.Admin.SendAsync(new SetIndexesPriorityOperation(index.Name, IndexPriority.Low));
 
                 stats = await store.Admin.SendAsync(new GetIndexStatisticsOperation(index.Name));
 

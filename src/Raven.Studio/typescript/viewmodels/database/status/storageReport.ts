@@ -198,7 +198,7 @@ class storageReport extends viewModelBase {
     }
 
     private mapTree(tree: Voron.Debugging.TreeReport): storageReportItem {
-        const children = tree.Streams ? tree.Streams.Streams.map(x => this.mapStream(x)) : [];
+        const children = (tree.Streams && tree.Streams.Streams) ? tree.Streams.Streams.map(x => this.mapStream(x)) : [];
         const item = new storageReportItem(tree.Name, "tree", true, tree.AllocatedSpaceInBytes, children);
         item.pageCount = tree.PageCount;
         item.numberOfEntries = tree.NumberOfEntries;

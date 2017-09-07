@@ -1,5 +1,6 @@
 ﻿using System;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
@@ -7,12 +8,14 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.ETL;
 using Raven.Client.ServerWide.Expiration;
+using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.PeriodicBackup;
 using Raven.Client.ServerWide.Revisions;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Commercial;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
+using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Handlers.Debugging;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.PeriodicBackup;
@@ -33,8 +36,7 @@ namespace Raven.Server.Json
 {
     internal sealed class JsonDeserializationServer : JsonDeserializationBase
     {
-        public static readonly Func<BlittableJsonReaderObject, ServerWideDebugInfoPackageHandler.NodeDebugInfoRequestHeader> NodeDebugInfoRequestHeader =
-            GenerateJsonDeserializationRoutine<ServerWideDebugInfoPackageHandler.NodeDebugInfoRequestHeader>();
+        public static readonly Func<BlittableJsonReaderObject, ServerWideDebugInfoPackageHandler.NodeDebugInfoRequestHeader> NodeDebugInfoRequestHeader = GenerateJsonDeserializationRoutine<ServerWideDebugInfoPackageHandler.NodeDebugInfoRequestHeader>();
 
         public static readonly Func<BlittableJsonReaderObject, DatabaseStatusReport> DatabaseStatusReport = GenerateJsonDeserializationRoutine<DatabaseStatusReport>();
 
@@ -78,6 +80,7 @@ namespace Raven.Server.Json
         internal static readonly Func<BlittableJsonReaderObject, LegacyIndexDefinition> LegacyIndexDefinition = GenerateJsonDeserializationRoutine<LegacyIndexDefinition>();
 
         public static readonly Func<BlittableJsonReaderObject, FacetSetup> FacetSetup = GenerateJsonDeserializationRoutine<FacetSetup>();
+
         public static readonly Func<BlittableJsonReaderObject, Facet> Facet = GenerateJsonDeserializationRoutine<Facet>();
 
         public static readonly Func<BlittableJsonReaderObject, LatestVersionCheck.VersionInfo> LatestVersionCheckVersionInfo = GenerateJsonDeserializationRoutine<LatestVersionCheck.VersionInfo>();
@@ -91,6 +94,7 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, UserRegistrationInfo> UserRegistrationInfo = GenerateJsonDeserializationRoutine<UserRegistrationInfo>();
 
         public static readonly Func<BlittableJsonReaderObject, FeedbackForm> FeedbackForm = GenerateJsonDeserializationRoutine<FeedbackForm>();
+
         public static readonly Func<BlittableJsonReaderObject, CustomIndexPaths> CustomIndexPaths = GenerateJsonDeserializationRoutine<CustomIndexPaths>();
 
         public static readonly Func<BlittableJsonReaderObject, CertificateDefinition> CertificateDefinition = GenerateJsonDeserializationRoutine<CertificateDefinition>();
@@ -106,5 +110,22 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, FacetQueryServerSide> FacetQuery = GenerateJsonDeserializationRoutine<FacetQueryServerSide>();
 
         public static readonly Func<BlittableJsonReaderObject, SuggestionQueryServerSide> SuggestionQuery = GenerateJsonDeserializationRoutine<SuggestionQueryServerSide>();
+
+        public class Parameters
+        {
+            private Parameters()
+            {
+            }
+
+            public static readonly Func<BlittableJsonReaderObject, DeleteDatabasesOperation.Parameters> DeleteDatabasesParameters = GenerateJsonDeserializationRoutine<DeleteDatabasesOperation.Parameters>();
+
+            public static readonly Func<BlittableJsonReaderObject, ToggleDatabasesStateOperation.Parameters> DisableDatabaseToggleParameters = GenerateJsonDeserializationRoutine<ToggleDatabasesStateOperation.Parameters>();
+
+            public static readonly Func<BlittableJsonReaderObject, SetIndexesLockOperation.Parameters> SetIndexLockParameters = GenerateJsonDeserializationRoutine<SetIndexesLockOperation.Parameters>();
+
+            public static readonly Func<BlittableJsonReaderObject, SetIndexesPriorityOperation.Parameters> SetIndexPriorityParameters = GenerateJsonDeserializationRoutine<SetIndexesPriorityOperation.Parameters>();
+
+            public static readonly Func<BlittableJsonReaderObject, AdminRevisionsHandler.Parameters> DeleteRevisionsParameters = GenerateJsonDeserializationRoutine<AdminRevisionsHandler.Parameters>();
+        }
     }
 }

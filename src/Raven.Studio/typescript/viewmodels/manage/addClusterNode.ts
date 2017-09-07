@@ -42,16 +42,18 @@ class addClusterNode extends viewModelBase {
     }
 
     save() {
-        if (this.isValid(this.model.validationGroup)) {
-            eventsCollector.default.reportEvent("cluster", "add-server");
-
-            this.spinners.save(true);
-
-            new addNodeToClusterCommand(this.model.serverUrl(), this.model.addAsWatcher(), this.model.assignedCores())
-                .execute()
-                .done(() => this.goToClusterView())
-                .always(() => this.spinners.save(false));
+        if (!this.isValid(this.model.validationGroup)) {
+            return;
         }
+
+        eventsCollector.default.reportEvent("cluster", "add-server");
+
+        this.spinners.save(true);
+
+        new addNodeToClusterCommand(this.model.serverUrl(), this.model.addAsWatcher(), this.model.assignedCores())
+            .execute()
+            .done(() => this.goToClusterView())
+            .always(() => this.spinners.save(false));
     }
 
     testConnection() {

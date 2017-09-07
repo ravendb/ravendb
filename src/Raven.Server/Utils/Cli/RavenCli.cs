@@ -16,7 +16,6 @@ using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Debugging;
 using Raven.Server.Documents.Patch;
-using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;

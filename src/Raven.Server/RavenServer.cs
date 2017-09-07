@@ -72,9 +72,13 @@ namespace Raven.Server
             JsonDeserializationValidator.Validate();
 
             Configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-
             if (Configuration.Initialized == false)
                 throw new InvalidOperationException("Configuration must be initialized");
+
+            AdminScripts = new ScriptRunnerCache(null, Configuration)
+            {
+                EnableClr = true
+            };
 
             ServerStore = new ServerStore(Configuration, this);
             Metrics = new MetricsCountersManager();
@@ -596,7 +600,7 @@ namespace Raven.Server
 
                             if (MatchingOperationVersion(header, out var error) == false)
                             {
-                                RespondToTcpConnection(stream, context, error, TcpConnectionStatus.TcpVersionMissmatch);
+                                RespondToTcpConnection(stream, context, error, TcpConnectionStatus.TcpVersionMismatch);
                                 if (Logger.IsInfoEnabled)
                                 {
                                     Logger.Info(
@@ -707,10 +711,7 @@ namespace Raven.Server
         private ClusterMaintenanceWorker _clusterMaintenanceWorker;
 
         // This is used for admin scripts only
-        public ScriptRunnerCache AdminScripts = new ScriptRunnerCache(null)
-        {
-            EnableClr = true
-        };
+        public readonly ScriptRunnerCache AdminScripts;
 
         private TcpListenerStatus _tcpListenerStatus;
 

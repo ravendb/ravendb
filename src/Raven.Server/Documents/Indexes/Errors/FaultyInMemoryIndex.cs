@@ -8,7 +8,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
-using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Faceted;

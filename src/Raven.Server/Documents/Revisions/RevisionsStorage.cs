@@ -17,7 +17,6 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Utils;
 using Voron;
-using Voron.Data.RawData;
 using Voron.Data.Tables;
 using Voron.Impl;
 using static Raven.Server.Documents.DocumentsStorage;

@@ -51,6 +51,7 @@ class importDatabase extends viewModelBase {
                 this.uploadStatus(0);
             }
         });
+
         this.showTransformScript.subscribe(v => {
             if (v) {
                 this.model.transformScript("function transform(doc) {\r\n  var id = doc['@metadata']['@id'];\r\n  return doc;\r\n}");
@@ -109,7 +110,6 @@ class importDatabase extends viewModelBase {
                 return commandTokens.join(" ");
             });
 
-
         this.setupValidation();
     }
 
@@ -118,10 +118,9 @@ class importDatabase extends viewModelBase {
             required: true
         });
 
-        this.model.transformScript.extend({
-            aceValidation: true
+        this.model.revisionsAreConfigured = ko.pureComputed(() => {
+            return this.activeDatabase().hasRevisionsConfiguration();
         });
-
     }
 
     attached() {
@@ -185,6 +184,10 @@ class importDatabase extends viewModelBase {
 
     importDb() {
         if (!this.isValid(this.validationGroup)) {
+            return;
+        }
+
+        if (!this.isValid(this.model.validationGroup)) {
             return;
         }
 

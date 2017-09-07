@@ -21,19 +21,19 @@ namespace SlowTests.Issues
                 };
                 index.Execute(store);
 
-                store.Admin.Send(new SetIndexLockOperation("IndexEmployee", IndexLockMode.Unlock));
+                store.Admin.Send(new SetIndexesLockOperation("IndexEmployee", IndexLockMode.Unlock));
                 var indexDefinition = store.Admin.Send(new GetIndexOperation("IndexEmployee"));
                 Assert.Equal(IndexLockMode.Unlock, indexDefinition.LockMode);
 
-                store.Admin.Send(new SetIndexLockOperation("IndexEmployee", IndexLockMode.LockedError));
+                store.Admin.Send(new SetIndexesLockOperation("IndexEmployee", IndexLockMode.LockedError));
                 indexDefinition = store.Admin.Send(new GetIndexOperation("IndexEmployee"));
                 Assert.Equal(IndexLockMode.LockedError, indexDefinition.LockMode);
 
-                store.Admin.Send(new SetIndexLockOperation("IndexEmployee", IndexLockMode.LockedIgnore));
+                store.Admin.Send(new SetIndexesLockOperation("IndexEmployee", IndexLockMode.LockedIgnore));
                 indexDefinition = store.Admin.Send(new GetIndexOperation("IndexEmployee"));
                 Assert.Equal(IndexLockMode.LockedIgnore, indexDefinition.LockMode);
 
-                store.Admin.Send(new SetIndexLockOperation("IndexEmployee", IndexLockMode.LockedIgnore));
+                store.Admin.Send(new SetIndexesLockOperation("IndexEmployee", IndexLockMode.LockedIgnore));
                 indexDefinition = store.Admin.Send(new GetIndexOperation("IndexEmployee"));
                 Assert.Equal(IndexLockMode.LockedIgnore, indexDefinition.LockMode);
             }

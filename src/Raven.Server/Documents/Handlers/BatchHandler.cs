@@ -11,7 +11,6 @@ using Microsoft.Net.Http.Headers;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Extensions;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;

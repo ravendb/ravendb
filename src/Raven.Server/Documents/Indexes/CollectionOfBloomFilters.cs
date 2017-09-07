@@ -5,7 +5,6 @@ using System.Runtime.CompilerServices;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
-using Sparrow.Collections;
 using Sparrow.Json;
 using Voron;
 using Voron.Data.BTrees;

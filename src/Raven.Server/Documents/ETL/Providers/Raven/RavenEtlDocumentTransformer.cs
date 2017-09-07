@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using Jint.Native;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Lucene.Net.Analysis;
@@ -9,11 +8,8 @@ using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
-using Raven.Server.Documents.Indexes.Auto;
-using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
-using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
 

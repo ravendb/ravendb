@@ -25,28 +25,13 @@ namespace Raven.Server.Commercial
         {
             get
             {
-                if (Attributes == null)
-                    return null;
-
-                int? cores = null;
-                if (Attributes.TryGetValue("cores", out object coresObject) &&
-                    coresObject is int)
+                var maxMemory = MaxMemory;
+                var list = new List<string>
                 {
-                    cores = (int)coresObject;
-                }
-
-                int? ram = null;
-                if (Attributes.TryGetValue("memory", out object memoryObject) &&
-                    memoryObject is int)
-                {
-                    ram = (int)memoryObject;
-                }
-
-                var list = new List<string>();
-                if (cores != null)
-                    list.Add($"{cores} Cores");
-                if (ram != null)
-                    list.Add($"{(ram.Value == 0 ? "Unlimited" : $"{ram.Value}GB")} RAM");
+                    $"{MaxCores} Cores",
+                    $"{(maxMemory == 0 ? "Unlimited" : $"{maxMemory}GB")} RAM",
+                    $"cluster size: {MaxClusterSize}"
+                };
 
                 return string.Join(", ", list);
             }

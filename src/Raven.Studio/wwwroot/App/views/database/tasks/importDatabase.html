@@ -2,10 +2,8 @@
 <div class="panel">
     <div class="panel-body">
         <form data-bind="submit: importDb">
-            <p>Import data from a .ravendbdump file into the current database.</p>
-
+            <h3>Import data from a .ravendbdump file into the current database</h3>
             <p class="bg-warning padding padding-xs small"><i class="icon-warning"></i> Note: Importing will overwrite any existing documents and indexes.</p>
-            
             <div class="row">
                 <div class="col-sm-6">
                     <div class="input-group file-input" data-bind="validationElement: importedFileName">
@@ -13,8 +11,7 @@
                         <span class="static-name form-control" data-bind="text: importedFileName() || 'Select file...'"></span>
                         <span class="input-group-btn">
                             <label for="importDatabaseFilePicker" class="btn btn-default">
-                                <i class="icon-document"></i>
-                                <span>Browse</span>
+                                <i class="icon-document"></i><span>Browse</span>
                             </label>
                         </span>
                         <p class="help-block" data-bind="validationMessage: importedFileName"></p>
@@ -25,60 +22,49 @@
             <div class="row" data-bind="with: model">
                 <div class="col-lg-12">
                     <div class="row">
-                        <div class="col-sm-6 col-lg-4">
+                        <div class="col-sm-6 col-lg-3">
                             <div class="toggle">
                                 <input id="toggle1" type="checkbox" data-bind="checked: includeDocuments">
-                                <label for="toggle1">
-                                    Include Documents
-                                </label>
+                                <label for="toggle1">Include Documents</label>
                             </div>
-                            <div class="toggle">
-                                <input id="toggle6" type="checkbox" data-bind="checked: includeRevisionDocuments">
-                                <label for="toggle6">
-                                    Include Document Revisions
-                                </label>
+                            <div class="toggle" data-bind="attr: { title: $root.activeDatabase().hasRevisionsConfiguration() ? '' : 'Revisions Configuration must be set in order to use this option' }">
+                                <input id="toggle6" type="checkbox" data-bind="checked: includeRevisionDocuments, disable: !$root.activeDatabase().hasRevisionsConfiguration()"/>
+                                <label for="toggle6">Include Document Revisions</label>
                             </div>
                             <div class="toggle">
                                 <input id="toggle2" type="checkbox" data-bind="checked: includeIndexes">
-                                <label for="toggle2">
-                                    Include Indexes
-                                </label>
-                            </div>
-                            
-                        </div>
-                        <div class="col-sm-6 col-lg-4">
-                            <div class="toggle">
-                                <input id="toggle5" type="checkbox" data-bind="checked: removeAnalyzers">
-                                <label for="toggle5">
-                                    Remove Analyzers
-                                </label>
+                                <label for="toggle2">Include Indexes</label>
                             </div>
                             <div class="toggle">
                                 <input id="toggle3" type="checkbox" data-bind="checked: includeIdentities">
-                                <label for="toggle3">
-                                    Include Identities
-                                </label>
+                                <label for="toggle3">Include Identities</label>
+                            </div>
+                            <div data-bind="validationElement: importDefinitionHasIncludes">
+                                <div class="help-block" data-bind="validationMessage: importDefinitionHasIncludes"></div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6 col-lg-3">
+                            <div class="toggle">
+                                <input id="toggle5" type="checkbox" data-bind="checked: removeAnalyzers">
+                                <label for="toggle5">Remove Analyzers</label>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
             <br />
-
             <div data-bind="collapse: showAdvancedOptions, with: model">
-                <div class="toggle">
+                <!-- TODO: see issue 8493 ! -->
+                <!--<div class="toggle">
                     <input id="includeExpiredDocuments" type="checkbox" data-bind="checked: includeExpiredDocuments">
                     <label for="includeExpiredDocuments">
                         Include Expired Documents
                     </label>
-                </div>
-
+                </div>-->
                 <div class="form-group">
                     <div class="toggle">
                         <input id="useTransformScript" type="checkbox" data-bind="checked: $root.showTransformScript">
-                        <label for="useTransformScript" class="use-transform-script">
-                            Use Transform script 
-                        </label>
+                        <label for="useTransformScript" class="use-transform-script">Use Transform script </label>
                         <small class="scriptPopover"><i class="icon-info text-info"></i></small>
                     </div>
                     <div data-bind="collapse: $root.showTransformScript">
@@ -88,7 +74,8 @@
                         </div>
                     </div>
                 </div>
-                <div class="form-group">
+                <!-- TODO: see issue 8456 -->
+                <!--<div class="form-group">
                     <label class="control-label">Command</label>
                     <div class="input-group">
                         <span class="input-group-btn">
@@ -99,14 +86,12 @@
                         </span>
                         <input onClick="this.select();" class="form-control" readonly data-bind="value: $root.importCommand">
                     </div>
-                </div>
+                </div>-->
             </div>
             <hr />
-
             <div class="progress" data-bind="visible: isUploading()">
                 <div class="progress-bar progress-bar-primary progress-bar-striped" role="progressbar" data-bind="style: { width: uploadStatus() + '%' }"> <span class="sr-only" data-bind="text: uploadStatus() + '%'"></span> </div>
             </div>
-
             <button class="btn btn-default" type="button" data-bind="click: showAdvancedOptions.toggle.bind(showAdvancedOptions)">
                 Advanced
             </button>

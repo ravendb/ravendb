@@ -16,7 +16,7 @@ namespace SlowTests.Issues
             {
                 store.ExecuteIndex(new SimpleIndex());
                 //Checking that we can lock index
-                store.Admin.Send(new SetIndexLockOperation("SimpleIndex", IndexLockMode.LockedIgnore));
+                store.Admin.Send(new SetIndexesLockOperation("SimpleIndex", IndexLockMode.LockedIgnore));
                 var indexDefinition = store.Admin.Send(new GetIndexOperation("SimpleIndex"));
                 var map = indexDefinition.Maps.First();
                 Assert.Equal(indexDefinition.LockMode, IndexLockMode.LockedIgnore);
@@ -27,7 +27,7 @@ namespace SlowTests.Issues
                 indexDefinition = store.Admin.Send(new GetIndexOperation("SimpleIndex"));
                 Assert.Equal(indexDefinition.Maps.First(), map);
                 //Checking that we can unlock a index
-                store.Admin.Send(new SetIndexLockOperation("SimpleIndex", IndexLockMode.Unlock));
+                store.Admin.Send(new SetIndexesLockOperation("SimpleIndex", IndexLockMode.Unlock));
                 indexDefinition = store.Admin.Send(new GetIndexOperation("SimpleIndex"));
                 Assert.Equal(indexDefinition.LockMode, IndexLockMode.Unlock);
                 //checking that the index is indeed overridden

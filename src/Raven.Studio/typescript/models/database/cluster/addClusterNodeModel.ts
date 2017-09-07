@@ -4,7 +4,7 @@ class addClusterNodeModel {
     serverUrl = ko.observable<string>();
     addAsWatcher = ko.observable<boolean>(false);
     assignedCores = ko.observable<number>(undefined);
-    autoAssign = ko.observable<boolean>(true);
+    usaAvailableCores = ko.observable<boolean>(true);
 
     validationGroup: KnockoutValidationGroup = ko.validatedObservable({
         serverUrl: this.serverUrl,
@@ -12,7 +12,7 @@ class addClusterNodeModel {
     });
 
     constructor() {
-        this.autoAssign.subscribe(newValue => {
+        this.usaAvailableCores.subscribe(newValue => {
             this.assignedCores.clearError();
             if (!newValue)
                 return;
@@ -46,7 +46,7 @@ class addClusterNodeModel {
 
         this.assignedCores.extend({
             required: {
-                onlyIf: () => !this.autoAssign()
+                onlyIf: () => !this.usaAvailableCores()
             },
             min: 1
         });

@@ -1051,7 +1051,7 @@ namespace Raven.Server.ServerWide
                                 break;
                             case TcpConnectionStatus.AuthorizationFailed:
                                 throw new AuthorizationException($"Unable to access  {url} because {reply.Message}");
-                            case TcpConnectionStatus.TcpVersionMissmatch:
+                            case TcpConnectionStatus.TcpVersionMismatch:
                                 throw new InvalidOperationException($"Unable to access  {url} because {reply.Message}");
                         }
                     }

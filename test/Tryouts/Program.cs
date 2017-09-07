@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using SlowTests.Issues;
 using SlowTests.Server.Documents.PeriodicBackup;
 
 namespace Tryouts
@@ -8,14 +9,14 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            Parallel.For(0, 1000, i =>
+            for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                using (var test = new SlowTests.Client.Attachments.AttachmentFailover())
+                using (var test = new RavenDB_7136())
                 {
-                    test.PutAttachmentsWithFailover_Session().Wait();
+                    test.IfOneOfTheMultiMapFunctionsIsFailingWeNeedToResetTheEnumeratorToAvoidApplyingWrongFunctionOnPreviousDocument();
                 }
-            });
+            }
         }
     }
 }
