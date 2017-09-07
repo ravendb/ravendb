@@ -26,7 +26,7 @@ namespace SlowTests.Issues
 
                 store.Admin.Server.Send(new DeleteDatabasesOperation(new DeleteDatabasesOperation.Parameters
                 {
-                    Names = new[] { dbName1, dbName2 },
+                    DatabaseNames = new[] { dbName1, dbName2 },
                     HardDelete = true,
                     TimeToWaitForConfirmation = TimeSpan.FromSeconds(30)
                 }));

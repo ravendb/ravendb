@@ -9,30 +9,30 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations
 {
-    public class DisableDatabaseToggleOperation : IServerOperation<DisableDatabaseToggleResult>
+    public class ToggleDatabasesStateOperation : IServerOperation<DisableDatabaseToggleResult>
     {
         private readonly bool _disable;
         private readonly Parameters _parameters;
 
-        public DisableDatabaseToggleOperation(string name, bool disable)
+        public ToggleDatabasesStateOperation(string databaseName, bool disable)
         {
-            if (name == null)
-                throw new ArgumentNullException(nameof(name));
+            if (databaseName == null)
+                throw new ArgumentNullException(nameof(databaseName));
 
             _disable = disable;
             _parameters = new Parameters
             {
-                Names = new[] { name }
+                DatabaseNames = new[] { databaseName }
             };
         }
 
-        public DisableDatabaseToggleOperation(Parameters parameters, bool disable)
+        public ToggleDatabasesStateOperation(Parameters parameters, bool disable)
         {
             if (parameters == null)
                 throw new ArgumentNullException(nameof(parameters));
 
-            if (parameters.Names == null || parameters.Names.Length == 0)
-                throw new ArgumentNullException(nameof(parameters.Names));
+            if (parameters.DatabaseNames == null || parameters.DatabaseNames.Length == 0)
+                throw new ArgumentNullException(nameof(parameters.DatabaseNames));
 
             _disable = disable;
             _parameters = parameters;
@@ -40,15 +40,15 @@ namespace Raven.Client.ServerWide.Operations
 
         public RavenCommand<DisableDatabaseToggleResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new DisableDatabaseToggleCommand(conventions, context, _parameters, _disable);
+            return new ToggleDatabaseStateCommand(conventions, context, _parameters, _disable);
         }
 
-        public class DisableDatabaseToggleCommand : RavenCommand<DisableDatabaseToggleResult>
+        public class ToggleDatabaseStateCommand : RavenCommand<DisableDatabaseToggleResult>
         {
             private readonly bool _disable;
             private readonly BlittableJsonReaderObject _parameters;
 
-            public DisableDatabaseToggleCommand(DocumentConventions conventions, JsonOperationContext context, Parameters parameters, bool disable)
+            public ToggleDatabaseStateCommand(DocumentConventions conventions, JsonOperationContext context, Parameters parameters, bool disable)
             {
                 if (conventions == null)
                     throw new ArgumentNullException(nameof(conventions));
@@ -94,7 +94,7 @@ namespace Raven.Client.ServerWide.Operations
 
         public class Parameters
         {
-            public string[] Names { get; set; }
+            public string[] DatabaseNames { get; set; }
         }
     }
 }

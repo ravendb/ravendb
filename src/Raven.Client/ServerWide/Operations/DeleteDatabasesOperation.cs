@@ -13,14 +13,14 @@ namespace Raven.Client.ServerWide.Operations
     {
         private readonly Parameters _parameters;
 
-        public DeleteDatabasesOperation(string name, bool hardDelete, string fromNode = null, TimeSpan? timeToWaitForConfirmation = null)
+        public DeleteDatabasesOperation(string databaseName, bool hardDelete, string fromNode = null, TimeSpan? timeToWaitForConfirmation = null)
         {
-            if (name == null)
-                throw new ArgumentNullException(nameof(name));
+            if (databaseName == null)
+                throw new ArgumentNullException(nameof(databaseName));
 
             _parameters = new Parameters
             {
-                Names = new[] { name },
+                DatabaseNames = new[] { databaseName },
                 HardDelete = hardDelete,
                 TimeToWaitForConfirmation = timeToWaitForConfirmation
             };
@@ -34,8 +34,8 @@ namespace Raven.Client.ServerWide.Operations
             if (parameters == null)
                 throw new ArgumentNullException(nameof(parameters));
 
-            if (parameters.Names == null || parameters.Names.Length == 0)
-                throw new ArgumentNullException(nameof(parameters.Names));
+            if (parameters.DatabaseNames == null || parameters.DatabaseNames.Length == 0)
+                throw new ArgumentNullException(nameof(parameters.DatabaseNames));
 
             _parameters = parameters;
         }
@@ -87,7 +87,7 @@ namespace Raven.Client.ServerWide.Operations
 
         public class Parameters
         {
-            public string[] Names { get; set; }
+            public string[] DatabaseNames { get; set; }
 
             public bool HardDelete { get; set; }
 

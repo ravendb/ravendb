@@ -63,17 +63,17 @@ namespace SlowTests.Issues
                 var indexStats = store.Admin.Send(new GetIndexStatisticsOperation(index.IndexName));
                 Assert.Equal(IndexPriority.Normal, indexStats.Priority);
 
-                store.Admin.Send(new SetIndexPriorityOperation(index.IndexName, IndexPriority.Normal)); // no-op
+                store.Admin.Send(new SetIndexesPriorityOperation(index.IndexName, IndexPriority.Normal)); // no-op
 
                 indexStats = store.Admin.Send(new GetIndexStatisticsOperation(index.IndexName));
                 Assert.Equal(IndexPriority.Normal, indexStats.Priority);
 
-                store.Admin.Send(new SetIndexPriorityOperation(index.IndexName, IndexPriority.Low));
+                store.Admin.Send(new SetIndexesPriorityOperation(index.IndexName, IndexPriority.Low));
 
                 indexStats = store.Admin.Send(new GetIndexStatisticsOperation(index.IndexName));
                 Assert.Equal(IndexPriority.Low, indexStats.Priority);
 
-                store.Admin.Send(new SetIndexPriorityOperation(index.IndexName, IndexPriority.High));
+                store.Admin.Send(new SetIndexesPriorityOperation(index.IndexName, IndexPriority.High));
 
                 indexStats = store.Admin.Send(new GetIndexStatisticsOperation(index.IndexName));
                 Assert.Equal(IndexPriority.High, indexStats.Priority);

@@ -54,15 +54,15 @@ namespace SlowTests.Tests.Indexes
                     var results = session.Query<Person>().Customize(x => x.WaitForNonStaleResults()).Statistics(out statistics).Where(x => x.Name == "Vasia").ToList();
                 }
 
-                store.Admin.Send(new SetIndexLockOperation(statistics.IndexName, IndexLockMode.Unlock));
+                store.Admin.Send(new SetIndexesLockOperation(statistics.IndexName, IndexLockMode.Unlock));
                 var index = store.Admin.Send(new GetIndexOperation(statistics.IndexName));
                 Assert.Equal(IndexLockMode.Unlock, index.LockMode);
 
-                store.Admin.Send(new SetIndexLockOperation(statistics.IndexName, IndexLockMode.LockedError));
+                store.Admin.Send(new SetIndexesLockOperation(statistics.IndexName, IndexLockMode.LockedError));
                 index = store.Admin.Send(new GetIndexOperation(statistics.IndexName));
                 Assert.Equal(IndexLockMode.LockedError, index.LockMode);
 
-                store.Admin.Send(new SetIndexLockOperation(statistics.IndexName, IndexLockMode.LockedIgnore));
+                store.Admin.Send(new SetIndexesLockOperation(statistics.IndexName, IndexLockMode.LockedIgnore));
                 index = store.Admin.Send(new GetIndexOperation(statistics.IndexName));
                 Assert.Equal(IndexLockMode.LockedIgnore, index.LockMode);
             }

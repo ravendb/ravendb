@@ -53,7 +53,7 @@ namespace SlowTests.Issues
 
                 new Entity_ById_V2().Execute(documentStore);
 
-                documentStore.Admin.Send(new SetIndexLockOperation("Entity/ById", IndexLockMode.LockedIgnore));
+                documentStore.Admin.Send(new SetIndexesLockOperation("Entity/ById", IndexLockMode.LockedIgnore));
 
                 var index1 = documentStore.Admin.Send(new GetIndexOperation("Entity/ById"));
                 var index2 = documentStore.Admin.Send(new GetIndexOperation($"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}Entity/ById"));
@@ -84,7 +84,7 @@ namespace SlowTests.Issues
 
                 new Entity_ById_V2().Execute(documentStore);
 
-                documentStore.Admin.Send(new SetIndexPriorityOperation("Entity/ById", IndexPriority.High));
+                documentStore.Admin.Send(new SetIndexesPriorityOperation("Entity/ById", IndexPriority.High));
 
                 var index1 = documentStore.Admin.Send(new GetIndexOperation("Entity/ById"));
                 var index2 = documentStore.Admin.Send(new GetIndexOperation($"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}Entity/ById"));
