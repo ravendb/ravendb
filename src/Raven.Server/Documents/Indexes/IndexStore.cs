@@ -1107,6 +1107,7 @@ namespace Raven.Server.Documents.Indexes
 
                 _indexes.ReplaceIndex(oldIndexName, oldIndex, newIndex);
                 newIndex.Rename(oldIndexName);
+                newIndex.ResetIsSideBySideAfterReplacement();
 
                 if (oldIndex != null)
                 {

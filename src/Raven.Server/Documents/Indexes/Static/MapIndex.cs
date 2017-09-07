@@ -52,6 +52,11 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public override bool IsMultiMap => _compiled.Maps.Count > 1 || _compiled.Maps.Any(x => x.Value.Count > 1);
 
+        public override void ResetIsSideBySideAfterReplacement()
+        {
+            _isSideBySide = null;
+        }
+
         protected override IIndexingWork[] CreateIndexWorkExecutors()
         {
             var workers = new List<IIndexingWork>
