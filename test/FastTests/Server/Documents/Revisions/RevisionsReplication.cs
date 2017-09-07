@@ -12,6 +12,7 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Handlers.Admin;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -187,7 +188,7 @@ namespace FastTests.Server.Documents.Revisions
                 var id = "users/1";
                 if (useSession)
                 {
-                    var user = new User {Name = "Fitzchak"};
+                    var user = new User { Name = "Fitzchak" };
                     for (var i = 0; i < 2; i++)
                     {
                         using (var session = store1.OpenAsyncSession())
@@ -205,9 +206,9 @@ namespace FastTests.Server.Documents.Revisions
                 }
                 else
                 {
-                    await store1.Commands().PutAsync(id, null, new User {Name = "Fitzchak"});
+                    await store1.Commands().PutAsync(id, null, new User { Name = "Fitzchak" });
                     await store1.Commands().DeleteAsync(id, null);
-                    await store1.Commands().PutAsync(id, null, new User {Name = "Fitzchak"});
+                    await store1.Commands().PutAsync(id, null, new User { Name = "Fitzchak" });
                     await store1.Commands().DeleteAsync(id, null);
                 }
 
@@ -237,13 +238,16 @@ namespace FastTests.Server.Documents.Revisions
                 Assert.Equal(DocumentFlags.DeleteRevision.ToString(), revisions[2][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
                 Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision | DocumentFlags.FromReplication).ToString(), revisions[3][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
 
-                await store1.Admin.SendAsync(new RevisionsTests.DeleteRevisionsOperation(id, "users/not/exists"));
+                await store1.Admin.SendAsync(new RevisionsTests.DeleteRevisionsOperation(new AdminRevisionsHandler.Parameters
+                {
+                    DocumentIds = new[] { id, "users/not/exists" }
+                }));
                 WaitForMarker(store1, store2);
 
                 statistics = store2.Admin.Send(new GetStatisticsOperation());
                 Assert.Equal(useSession ? 3 : 2, statistics.CountOfDocuments);
-               
-                Assert.Equal(0, statistics.CountOfRevisionDocuments); 
+
+                Assert.Equal(0, statistics.CountOfRevisionDocuments);
             }
         }
 

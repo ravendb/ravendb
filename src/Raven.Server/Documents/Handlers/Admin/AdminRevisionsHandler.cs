@@ -7,8 +7,10 @@
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Raven.Client.Exceptions.Documents.Revisions;
+using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
@@ -21,11 +23,15 @@ namespace Raven.Server.Documents.Handlers.Admin
             if (revisionsStorage.Configuration == null)
                 throw new RevisionsDisabledException();
 
-            var ids = GetStringValuesQueryString("id");
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                var json = await context.ReadForMemoryAsync(RequestBodyStream(), "admin/revisions/delete");
+                var parameters = JsonDeserializationServer.Parameters.DeleteRevisionsParameters(json);
 
-            var cmd = new DeleteRevisionsCommand(ids, Database);
-            await Database.TxMerger.Enqueue(cmd);
-            NoContentStatus();
+                var cmd = new DeleteRevisionsCommand(parameters.DocumentIds, Database);
+                await Database.TxMerger.Enqueue(cmd);
+                NoContentStatus();
+            }
         }
 
         private class DeleteRevisionsCommand : TransactionOperationsMerger.MergedTransactionCommand
@@ -33,7 +39,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             private readonly StringValues _ids;
             private readonly DocumentDatabase _database;
 
-            public DeleteRevisionsCommand(StringValues ids, DocumentDatabase database)
+            public DeleteRevisionsCommand(string[] ids, DocumentDatabase database)
             {
                 _ids = ids;
                 _database = database;
@@ -47,6 +53,11 @@ namespace Raven.Server.Documents.Handlers.Admin
                 }
                 return 1;
             }
+        }
+
+        public class Parameters
+        {
+            public string[] DocumentIds { get; set; }
         }
     }
 }
