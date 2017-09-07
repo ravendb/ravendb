@@ -578,9 +578,9 @@ namespace Raven.Client.Connection.Implementation
                 {
                     factory.CacheResponse(Url, data, ResponseHeaders);
                 }
+
                 if (factory.CanLogRequest)
                 {
-
                     factory.OnLogRequest(owner, new RequestResultArgs
                     {
                         DurationMilliseconds = CalculateDuration(),
@@ -862,6 +862,7 @@ namespace Raven.Client.Connection.Implementation
                 CopyHeadersToHttpRequestMessage(rawRequestMessage);
 
                 Response = await httpClient.SendAsync(rawRequestMessage, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
+                
                 ResponseStatusCode = Response.StatusCode;
                 if (Response.IsSuccessStatusCode == false &&
                     (ResponseStatusCode == HttpStatusCode.PreconditionFailed ||

@@ -179,7 +179,11 @@ namespace Raven.Client.Indexes
             {
                 try
                 {
-                    replicateTransformerRequest.ExecuteRawResponseAsync().Wait();
+                    replicateTransformerRequest.ExecuteRawResponseAsync().ContinueWith(t =>
+                    {
+                        t.Result.Content.Dispose();
+                        t.Result.Dispose();
+                    }).Wait();
                 }
                 catch (Exception)
                 {
@@ -199,7 +203,11 @@ namespace Raven.Client.Indexes
             {
                 try
                 {
-                    await replicateTransformerRequest.ExecuteRawResponseAsync().ConfigureAwait(false);
+                    await replicateTransformerRequest.ExecuteRawResponseAsync().ContinueWith(t =>
+                    {
+                        t.Result.Content.Dispose();
+                        t.Result.Dispose();
+                    }).ConfigureAwait(false);
                 }
                 catch (Exception)
                 {

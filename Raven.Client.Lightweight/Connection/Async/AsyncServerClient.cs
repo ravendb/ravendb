@@ -298,7 +298,11 @@ namespace Raven.Client.Connection.Async
             var url = String.Format("/replication/replicate-indexes?indexName={0}", Uri.EscapeDataString(name));
 
             using (var request = CreateRequest(url, HttpMethods.Post))
-                return request.ExecuteRawResponseAsync();
+                 return request.ExecuteRawResponseAsync().ContinueWith(t =>
+                 {
+                     t.Result.Content.Dispose();
+                     t.Result.Dispose();
+                 }, token);
         }
 
         public Task ResetIndexAsync(string name, CancellationToken token = default(CancellationToken))
@@ -2028,7 +2032,12 @@ namespace Raven.Client.Connection.Async
                 throw;
             }
 
-            return new YieldStreamResultsAsync(request, await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false));
+            return new YieldStreamResultsAsync(request, await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false), 
+                onDispose: () =>
+                {
+                    response.Content.Dispose();
+                    response.Dispose();
+                });
         }
 
         public Task<IAsyncEnumerator<RavenJObject>> StreamQueryAsync(string index, IndexQuery query, Reference<QueryHeaderInformation> queryHeaderInfo, CancellationToken token = default(CancellationToken))
@@ -2045,14 +2054,26 @@ namespace Raven.Client.Connection.Async
         {
             var data = await DirectStreamQuery(index, query, queryHeaderInfo, operationMetadata, requestTimeMetric, cancellationToken).ConfigureAwait(false);
 
-            return new YieldStreamResultsAsync(data.Request, await data.Response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false));
+            return new YieldStreamResultsAsync(data.Request, await data.Response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false),
+                onDispose: () =>
+                {
+                    data.Request.Dispose();
+                    data.Response.Content.Dispose();
+                    data.Response.Dispose();
+                });
         }
 
         private async Task<IEnumerator<RavenJObject>> DirectStreamQuerySync(string index, IndexQuery query, Reference<QueryHeaderInformation> queryHeaderInfo, OperationMetadata operationMetadata, IRequestTimeMetric requestTimeMetric, CancellationToken cancellationToken = default(CancellationToken))
         {
             var data = await DirectStreamQuery(index, query, queryHeaderInfo, operationMetadata, requestTimeMetric, cancellationToken).ConfigureAwait(false);
 
-            return new YieldStreamResultsSync(data.Request, await data.Response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false));
+            return new YieldStreamResultsSync(data.Request, await data.Response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false),
+                onDispose: () =>
+                {
+                    data.Request.Dispose();
+                    data.Response.Content.Dispose();
+                    data.Response.Dispose();
+                });
         }
 
         private class HttpData
@@ -2163,8 +2184,15 @@ namespace Raven.Client.Connection.Async
 
             private bool wasInitialized;
             private readonly Func<JsonTextReaderAsync, bool> customizedEndResult;
+            private readonly Action onDispose;
 
-            public YieldStreamResultsAsync(HttpJsonRequest request, Stream stream, int start = 0, int pageSize = 0, RavenPagingInformation pagingInformation = null, Func<JsonTextReaderAsync, bool> customizedEndResult = null)
+            public YieldStreamResultsAsync(HttpJsonRequest request, 
+                Stream stream, 
+                int start = 0, 
+                int pageSize = 0, 
+                RavenPagingInformation pagingInformation = null, 
+                Func<JsonTextReaderAsync, bool> customizedEndResult = null,
+                Action onDispose = null)
             {
                 this.request = request;
                 this.start = start;
@@ -2172,6 +2200,7 @@ namespace Raven.Client.Connection.Async
                 this.pagingInformation = pagingInformation;
                 this.stream = stream;
                 this.customizedEndResult = customizedEndResult;
+                this.onDispose = onDispose;
                 streamReader = new StreamReader(stream);
                 reader = new JsonTextReaderAsync(streamReader);
             }
@@ -2229,6 +2258,8 @@ namespace Raven.Client.Connection.Async
                 catch (Exception)
                 {
                 }
+
+                onDispose?.Invoke();
             }
 
             public async Task<bool> MoveNextAsync()
@@ -2325,8 +2356,15 @@ namespace Raven.Client.Connection.Async
 
             private bool wasInitialized;
             private readonly Func<JsonTextReader, bool> customizedEndResult;
+            private readonly Action onDispose;
 
-            public YieldStreamResultsSync(HttpJsonRequest request, Stream stream, int start = 0, int pageSize = 0, RavenPagingInformation pagingInformation = null, Func<JsonTextReader, bool> customizedEndResult = null)
+            public YieldStreamResultsSync(HttpJsonRequest request, 
+                Stream stream, 
+                int start = 0, 
+                int pageSize = 0, 
+                RavenPagingInformation pagingInformation = null, 
+                Func<JsonTextReader, bool> customizedEndResult = null,
+                Action onDispose = null)
             {
                 this.request = request;
                 this.start = start;
@@ -2334,6 +2372,7 @@ namespace Raven.Client.Connection.Async
                 this.pagingInformation = pagingInformation;
                 this.stream = stream;
                 this.customizedEndResult = customizedEndResult;
+                this.onDispose = onDispose;
                 streamReader = new StreamReader(stream);
                 reader = new JsonTextReader(streamReader);
             }
@@ -2391,6 +2430,8 @@ namespace Raven.Client.Connection.Async
                 catch (Exception)
                 {
                 }
+
+                onDispose?.Invoke();
             }
 
             public bool MoveNext()
@@ -2526,13 +2567,25 @@ namespace Raven.Client.Connection.Async
         private async Task<IAsyncEnumerator<RavenJObject>> DirectStreamDocsAsync(Etag fromEtag, string startsWith, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, OperationMetadata operationMetadata, IRequestTimeMetric requestTimeMetric, string skipAfter, string transformer, Dictionary<string, RavenJToken> transformerParameters, CancellationToken cancellationToken = default(CancellationToken))
         {
             var data = await DirectStreamDocs(fromEtag, startsWith, matches, start, pageSize, exclude, pagingInformation, operationMetadata, requestTimeMetric, skipAfter, transformer, transformerParameters, cancellationToken).ConfigureAwait(false);
-            return new YieldStreamResultsAsync(data.Request, await data.Response.GetResponseStreamWithHttpDecompression().WithCancellation(cancellationToken).ConfigureAwait(false), start, pageSize, pagingInformation);
+            return new YieldStreamResultsAsync(data.Request, await data.Response.GetResponseStreamWithHttpDecompression().WithCancellation(cancellationToken).ConfigureAwait(false), start, pageSize, pagingInformation,
+                onDispose: () =>
+                {
+                    data.Request.Dispose();
+                    data.Response.Content.Dispose();
+                    data.Response.Dispose();
+                });
         }
 
         private async Task<IEnumerator<RavenJObject>> DirectStreamDocsSync(Etag fromEtag, string startsWith, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, OperationMetadata operationMetadata, IRequestTimeMetric requestTimeMetric, string skipAfter, string transformer, Dictionary<string, RavenJToken> transformerParameters, CancellationToken cancellationToken = default(CancellationToken))
         {
             var data = await DirectStreamDocs(fromEtag, startsWith, matches, start, pageSize, exclude, pagingInformation, operationMetadata, requestTimeMetric, skipAfter, transformer, transformerParameters, cancellationToken).ConfigureAwait(false);
-            return new YieldStreamResultsSync(data.Request, await data.Response.GetResponseStreamWithHttpDecompression().WithCancellation(cancellationToken).ConfigureAwait(false), start, pageSize, pagingInformation);
+            return new YieldStreamResultsSync(data.Request, await data.Response.GetResponseStreamWithHttpDecompression().WithCancellation(cancellationToken).ConfigureAwait(false), start, pageSize, pagingInformation,
+                onDispose: () =>
+                {
+                    data.Request.Dispose();
+                    data.Response.Content.Dispose();
+                    data.Response.Dispose();
+                });
         }
 
         private async Task<HttpData> DirectStreamDocs(Etag fromEtag, string startsWith, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, OperationMetadata operationMetadata, IRequestTimeMetric requestTimeMetric, string skipAfter, string transformer, Dictionary<string, RavenJToken> transformerParameters, CancellationToken cancellationToken)
