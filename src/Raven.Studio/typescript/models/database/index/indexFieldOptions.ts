@@ -48,6 +48,10 @@ class indexFieldOptions {
             label: "Search",
             value: "Search"
         }];
+    
+    static readonly SpatialType: Array<Raven.Client.Documents.Indexes.Spatial.SpatialFieldType> = ["Cartesian", "Geography"];
+    
+    static readonly CircleRadiusType: Array<Raven.Client.Documents.Indexes.Spatial.SpatialUnits> = [ "Kilometers", "Miles"];
 
     name = ko.observable<string>();
 
@@ -175,7 +179,7 @@ class indexFieldOptions {
             name: this.name
         });
     }
-
+    
     static defaultFieldOptions() {
         return new indexFieldOptions(indexFieldOptions.DefaultFieldOptions, indexFieldOptions.getDefaultDto(), indexFieldOptions.globalDefaults());
     }

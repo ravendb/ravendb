@@ -16,12 +16,6 @@ class spatialOptions {
     canSpecifyTreeLevel: KnockoutComputed<boolean>;
     canSpecifyCoordinates: KnockoutComputed<boolean>;
 
-    private static readonly strategyGeo = "GeohashPrefixTree" as Raven.Client.Documents.Indexes.Spatial.SpatialSearchStrategy;
-    private static readonly strategyBounding = "BoundingBox" as Raven.Client.Documents.Indexes.Spatial.SpatialSearchStrategy;
-    private static readonly strategyQuad = "QuadPrefixTree" as Raven.Client.Documents.Indexes.Spatial.SpatialSearchStrategy;
-    private static readonly typeGeo = "Geography" as Raven.Client.Documents.Indexes.Spatial.SpatialFieldType;
-    private static readonly typeCart = "Cartesian" as Raven.Client.Documents.Indexes.Spatial.SpatialFieldType;
-
     constructor(dto: Raven.Client.Documents.Indexes.Spatial.SpatialOptions) {
         this.type(dto.Type);
         this.strategy(dto.Strategy);
@@ -33,13 +27,17 @@ class spatialOptions {
         this.units(dto.Units);
 
         this.availableStrategies(this.getAvailableStrategies());
-        this.canSpecifyUnits = ko.pureComputed(() => this.type() === spatialOptions.typeGeo);
-        this.canSpecifyTreeLevel = ko.pureComputed(() => this.strategy() !== spatialOptions.strategyBounding);
+        this.canSpecifyUnits = ko.pureComputed(() => this.type() === "Geography");
+        this.canSpecifyTreeLevel = ko.pureComputed(() => this.strategy() !== "BoundingBox");
         this.precision = ko.pureComputed(() => this.getPrecisionString());
-        this.canSpecifyCoordinates = ko.pureComputed(() => this.type() === spatialOptions.typeCart);
+        this.canSpecifyCoordinates = ko.pureComputed(() => this.type() === "Cartesian");
         this.type.subscribe(newType => {
             this.resetCoordinates();
-            this.availableStrategies(this.getAvailableStrategies());
+            const availableStrategies = this.getAvailableStrategies(); 
+            if (!_.includes(availableStrategies, this.strategy())) {
+                this.strategy(availableStrategies[0]);
+            }
+            this.availableStrategies(availableStrategies);
         });
         this.strategy.subscribe(newStrategy => this.updateMaxTreeLevelFromStrategy(newStrategy));
     }
@@ -59,13 +57,13 @@ class spatialOptions {
 
     static empty(): spatialOptions {
         const dto: Raven.Client.Documents.Indexes.Spatial.SpatialOptions = {
-            Type: spatialOptions.typeGeo,
+            Type: "Geography",
             MaxTreeLevel: 9,
             MinX: -180,
             MaxX: 180,
             MinY: -90,
             MaxY: 90,
-            Strategy: spatialOptions.strategyGeo,
+            Strategy: "GeohashPrefixTree",
             Units: "Kilometers"
         };
         return new spatialOptions(dto);
@@ -88,14 +86,14 @@ class spatialOptions {
         const type = this.type();
         const units = this.units();
 
-        if (strategy === spatialOptions.strategyBounding) {
+        if (strategy === "BoundingBox") {
             return "";
         }
 
         let x = maxX - minX;
         let y = maxY - minY;
         for (let i = 0; i < maxTreeLevel; i++) {
-            if (strategy === spatialOptions.strategyGeo) {
+            if (strategy === "GeohashPrefixTree") {
                 if (i % 2 == 0) {
                     x /= 8;
                     y /= 4;
@@ -105,13 +103,13 @@ class spatialOptions {
                     y /= 8;
                 }
             }
-            else if (strategy === spatialOptions.strategyQuad) {
+            else if (strategy === "QuadPrefixTree") {
                 x /= 2;
                 y /= 2;
             }
         }
 
-        if (type === spatialOptions.typeGeo) {
+        if (type === "Geography") {
             const earthMeanRadiusKm = 6371.0087714;
             const milesToKm = 1.60934;
 
@@ -130,17 +128,17 @@ class spatialOptions {
     }
 
     private getAvailableStrategies(): Raven.Client.Documents.Indexes.Spatial.SpatialSearchStrategy[] {
-        if (this.type() === spatialOptions.typeGeo) {
-            return [spatialOptions.strategyGeo, spatialOptions.strategyQuad, spatialOptions.strategyBounding];
+        if (this.type() === "Geography") {
+            return ["GeohashPrefixTree", "QuadPrefixTree", "BoundingBox"];
         } else {
-            return [spatialOptions.strategyQuad, spatialOptions.strategyBounding];
+            return ["QuadPrefixTree", "BoundingBox"];
         }
     }
 
     private updateMaxTreeLevelFromStrategy(strategy: Raven.Client.Documents.Indexes.Spatial.SpatialSearchStrategy) {
-        if (strategy === spatialOptions.strategyGeo) {
+        if (strategy === "GeohashPrefixTree") {
             this.maxTreeLevel(9);
-        } else if (strategy === spatialOptions.strategyQuad) {
+        } else if (strategy === "QuadPrefixTree") {
             this.maxTreeLevel(23);
         }
     }
