@@ -225,8 +225,13 @@ namespace Raven.Server.Smuggler.Documents
 
                 Writer.WriteStartObject();
 
-                Writer.WritePropertyName(DocumentItem.Key);
-                Writer.WriteInteger((byte)DocumentType.Attachment);
+                Writer.WritePropertyName(Constants.Documents.Metadata.Key);
+                Writer.WriteStartObject();
+
+                Writer.WritePropertyName(DocumentItem.ExportDocumentType.Key);
+                Writer.WriteString(DocumentItem.ExportDocumentType.Attachment);
+
+                Writer.WriteEndObject();
                 Writer.WriteComma();
 
                 Writer.WritePropertyName(nameof(AttachmentName.Hash));
