@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
@@ -320,8 +321,9 @@ namespace Raven.Server.Smuggler.Documents
                     var data = builder.CreateReader();
                     builder.Reset();
 
-                    if (data.TryGet(DocumentItem.Key, out byte type) &&
-                        type == (byte)DocumentType.Attachment)
+                    if (data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
+                        metadata.TryGet(DocumentItem.ExportDocumentType.Key, out string type) &&
+                        type == DocumentItem.ExportDocumentType.Attachment)
                     {
                         if (attachments == null)
                             attachments = new List<DocumentItem.AttachmentStream>();
