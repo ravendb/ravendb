@@ -13,17 +13,15 @@ class toggleDatabaseCommand extends commandBase {
     }
 
     execute(): JQueryPromise<statusDto<disableDatabaseResult>> {
-        const args = {
-            name: this.dbs.map(x => x.name)
-        };
+        const payload = {
+            DatabaseNames: this.dbs.map(x => x.name)
+        } as Raven.Client.ServerWide.Operations.ToggleDatabasesStateOperation.Parameters;
 
-        const endPoint = this.disable ?
+        const url = this.disable ?
             endpoints.global.adminDatabases.adminDatabasesDisable :
             endpoints.global.adminDatabases.adminDatabasesEnable;
 
-        const url = endPoint + this.urlEncodeArgs(args);
-
-        return this.post(url, null)
+        return this.post(url, JSON.stringify(payload))
             .fail((response: JQueryXHR) => this.reportError("Failed to toggle database status", response.responseText, response.statusText));
     }
 
