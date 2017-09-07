@@ -689,7 +689,7 @@ namespace Raven.Server.Documents.Replication
 
             public const int MaxConnectionTimeout = 60000;
 
-            public int ErrorCount { get; set; }
+            public readonly Queue<Exception> Errors = new Queue<Exception>();
 
             public TimeSpan NextTimeout { get; set; } = TimeSpan.FromMilliseconds(500);
 
@@ -700,18 +700,18 @@ namespace Raven.Server.Documents.Replication
             public void Reset()
             {
                 NextTimeout = TimeSpan.FromMilliseconds(500);
-                ErrorCount = 0;
+                Errors.Clear();
             }
 
             public void OnError(Exception e)
             {
-                ErrorCount++;
+                Errors.Enqueue(e);
+                while (Errors.Count > 25)
+                    Errors.TryDequeue(out _);
+
                 NextTimeout = TimeSpan.FromMilliseconds(Math.Min(NextTimeout.TotalMilliseconds * 4, MaxConnectionTimeout));
                 RetryOn = DateTime.UtcNow + NextTimeout;
-                LastException = e;
             }
-
-            public Exception LastException { get; set; }
         }
 
         public int GetSizeOfMajority()

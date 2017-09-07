@@ -336,8 +336,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/replication/debug/outgoing-failures", "GET", AuthorizationStatus.ValidUser, 
-            IsDebugInformationEndpoint = true)]
+        [RavenAction("/databases/*/replication/debug/outgoing-failures", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
         public Task GetReplicationOutgoingFailureStats()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -350,14 +349,19 @@ namespace Raven.Server.Documents.Handlers
                     {
                         ["Key"] = new DynamicJsonValue
                         {
-                            ["Url"] = item.Key.Url,
-                            ["Database"] = item.Key.Database,
-                            ["Disabled"] = item.Key.Disabled
+                            [nameof(item.Key.Url)] = item.Key.Url,
+                            [nameof(item.Key.Database)] = item.Key.Database,
+                            [nameof(item.Key.Disabled)] = item.Key.Disabled
                         },
                         ["Value"] = new DynamicJsonValue
                         {
-                            ["ErrorCount"] = item.Value.ErrorCount,
-                            ["NextTimeout"] = item.Value.NextTimeout
+                            ["ErrorsCount"] = item.Value.Errors.Count,
+                            [nameof(item.Value.Errors)] = new DynamicJsonArray(item.Value.Errors.Select(e => e.ToString())),
+                            [nameof(item.Value.NextTimeout)] = item.Value.NextTimeout,
+                            [nameof(item.Value.RetryOn)] = item.Value.RetryOn,
+                            [nameof(item.Value.External)] = item.Value.External,
+                            [nameof(item.Value.DestinationDbId)] = item.Value.DestinationDbId,
+                            [nameof(item.Value.LastHeartbeatTicks)] = item.Value.LastHeartbeatTicks,
                         }
                     });
                 }
