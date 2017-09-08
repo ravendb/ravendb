@@ -47,6 +47,8 @@ class cluster extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
 
+        $('[data-toggle="tooltip"]').tooltip();
+
         this.graph.init($("#clusterGraphContainer"), this.topology().nodes().length);
 
         this.graph.draw(this.topology().nodes(), this.topology().leader());
