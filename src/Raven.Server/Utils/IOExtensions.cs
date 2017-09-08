@@ -8,7 +8,7 @@ namespace Raven.Server.Utils
 {
     public static class IOExtensions
     {
-        private const int Retries = 10;
+        private const int Retries = 50;
 
         public static void DeleteFile(string file)
         {
@@ -115,6 +115,8 @@ namespace Raven.Server.Utils
                             stringBuilder.Append(" ").Append(processesUsingFile.ProcessName).Append(' ').Append(processesUsingFile.Id).
                                 AppendLine();
                         }
+                        Console.Beep();
+                        Console.ReadLine();
                         throw new IOException(stringBuilder.ToString());
                     }
                 }
