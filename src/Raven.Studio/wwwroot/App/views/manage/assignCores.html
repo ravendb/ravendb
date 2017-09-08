@@ -9,9 +9,9 @@
                 <div class="padding padding-sm text-center">
                     <div class="row flex-row">
                         <div class="col-xs-12 col-sm-4 flex-end">
-                            <div class="row row-sm">
-                                <label class="control-label col-xs-12 col-sm-6 col-lg-5">Cores</label>
-                                <div class="col-xs-12 col-sm-6 col-lg-7">
+                            <div class="row row-sm" data-bind="validationElement: assignedCores">
+                                <label class="control-label col-xs-12 col-sm-4">Cores</label>
+                                <div class="col-xs-12 col-sm-8">
                                     <input autocomplete="off" type="text" class="form-control" data-bind="numericInput: assignedCores" id="assigned-cores" placeholder="Assigned cores for the new node">
                                 </div>
                             </div>
@@ -29,6 +29,7 @@
                 
             </div>
             <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-bind="click: $root.close">Close</button>
                 <button type="submit" data-bind="css: { 'btn-spinner': spinners.save }, disable: spinners.save" class="btn btn-primary"><span>Save</span></button>
             </div>
         </div>
