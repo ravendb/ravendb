@@ -6,6 +6,8 @@ import generalUtils = require("common/generalUtils");
 class recentError extends abstractNotification {
 
     static currentErrorId = 1;
+    
+    static licenceLimitMarker = "$$Licence-Limit$$";
 
     details = ko.observable<string>();
     httpStatus = ko.observable<string>();
