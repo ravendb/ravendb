@@ -1,0 +1,29 @@
+<div class="modal-dialog" role="document">
+    <div class="modal-content">
+        <div class="modal-header">
+            <div class="flex-horizontal">
+                <div class="flex-grow">
+                    <h3 class="modal-title" data-bind="text: licenseLimitNotification.title"></h3>
+                </div>
+                
+                <button type="button" class="close" data-bind="click: $root.close" aria-hidden="true">
+                    <i class="icon-cancel"></i>
+                </button>
+            </div>
+        </div>
+
+        <img src="content/img/license_multiple.png" class="img-responsive"/>
+        <div class="modal-body">
+            <p class="text-center" data-bind="text: licenseLimitNotification.message">
+            </p>
+        </div>
+
+        <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-bind="click: $root.close">Close</button>
+            <a target="_blank" href="https://ravendb.net/buy" class="btn btn-primary">
+                <i class="icon-raven"></i>
+                <span>Buy license</span>
+            </a>
+        </div>
+    </div>
+</div>

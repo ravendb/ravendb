@@ -29,6 +29,7 @@ import newVersionAvailableDetails = require("viewmodels/common/notificationCente
 import genericAlertDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/genericAlertDetails");
 import recentErrorDetails = require("viewmodels/common/notificationCenter/detailViewer/recentErrorDetails");
 import notificationCenterSettings = require("common/notifications/notificationCenterSettings");
+import licenseLimitDetails = require("viewmodels/common/notificationCenter/detailViewer/licenseLimitDetails");
 
 
 interface detailsProvider {
@@ -93,6 +94,7 @@ class notificationCenter {
     private initializeObservables() {
 
         this.detailsProviders.push(
+            licenseLimitDetails,
             // recent errors: 
             recentErrorDetails,
 
