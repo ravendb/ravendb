@@ -49,7 +49,7 @@ class notificationCenter {
         dismiss: ko.observableArray<string>([]),
         postpone: ko.observableArray<string>([]),
         kill: ko.observableArray<string>([])
-    }
+    };
 
     showNotifications = ko.observable<boolean>(false);
 
@@ -80,7 +80,7 @@ class notificationCenter {
         if (this.shouldConsumeHideEvent(e)) {
             this.showNotifications(false);
         }
-    }
+    };
 
     constructor() {
         this.initializeObservables();
@@ -192,6 +192,12 @@ class notificationCenter {
     }
 
     private onRecentError(error: recentError) {
+        if (error.httpStatus() === "Payment Required") {
+            error.details(recentError.licenceLimitMarker);
+            
+            this.openDetails(error);
+        }
+        
         this.globalNotifications.push(error);
     }
 
