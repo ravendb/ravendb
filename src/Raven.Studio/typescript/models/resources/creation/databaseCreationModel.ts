@@ -131,7 +131,7 @@ class databaseCreationModel {
                 .execute()
                 .done((restorePoints: Raven.Server.Documents.PeriodicBackup.RestorePoints) => {
                     this.restorePoints(restorePoints.List.map(x => {
-                        var date = x.Key;
+                        const date = x.Key;
                         const dateFormat = "YYYY MMMM Do, h:mm A";
                         x.Key = moment.utc(date).local().format(dateFormat);
                         return x;
@@ -225,8 +225,7 @@ class databaseCreationModel {
             validation: [
                 {
                     validator: (_: string) => {
-                        const result = this.isFromBackup && !this.backupDirectoryError();
-                        return result;
+                        return this.isFromBackup && !this.backupDirectoryError();
                     },
                     message: "Couldn't fetch restore points, {0}",
                     params: this.backupDirectoryError
