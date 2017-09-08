@@ -1059,8 +1059,15 @@ namespace Voron.Impl.Journal
                     if (j.Number == lastProcessedJournal) // we are in the last log we synced
                     {
                         if (j.Available4Kbs != 0 || //　if there are more pages to be used here or
-                        j.PageTranslationTable.MaxTransactionId() != lastFlushedTransactionId) // we didn't synchronize whole journal
+                            // we didn't synchronize whole journal
+                            j.PageTranslationTable.MaxTransactionId() != lastFlushedTransactionId) 
                             continue; // do not mark it as unused
+
+
+                        // Since we got the snapshot, this journal file had writes, so we 
+                        // are going to skip it for this round
+                        if (j.WritePosIn4KbPosition != j.FileInstance.WritePosIn4KbPosition)
+                            continue;
                     }
                     unusedJournalFiles.Add(_waj._files.First(x => x.Number == j.Number));
                 }

@@ -11,6 +11,7 @@ namespace Voron.Impl.Journal
         public long Available4Kbs;
         public long LastTransaction;
         public JournalFile FileInstance;
+        public long WritePosIn4KbPosition;
 
         public int CompareTo(JournalSnapshot other)
         {

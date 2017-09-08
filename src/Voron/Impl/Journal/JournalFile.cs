@@ -47,7 +47,7 @@ namespace Voron.Impl.Journal
         }
 
 
-        internal long WritePosIn4KbPosition => _writePosIn4Kb;
+        internal long WritePosIn4KbPosition => Volatile.Read(ref _writePosIn4Kb);
 
         public long Number { get; }
 
@@ -83,11 +83,13 @@ namespace Voron.Impl.Journal
         public JournalSnapshot GetSnapshot()
         {
             var lastTxId = _pageTranslationTable.GetLastSeenTransactionId();
+            
             return new JournalSnapshot
             {
                 FileInstance = this,
                 Number = Number,
                 Available4Kbs = Available4Kbs,
+                WritePosIn4KbPosition = WritePosIn4KbPosition,
                 PageTranslationTable = _pageTranslationTable,
                 LastTransaction = lastTxId
             };
@@ -112,8 +114,6 @@ namespace Voron.Impl.Journal
 
             using (_locker2.Lock())
             {
-                _writePosIn4Kb += pages.NumberOf4Kbs;
-
                 Debug.Assert(!_unusedPages.Any(_unusedPagesHashSetPool.Contains)); // We ensure there cannot be duplicates here (disjoint sets). 
 
                 foreach (var item in _unusedPagesHashSetPool)
@@ -163,8 +163,14 @@ namespace Voron.Impl.Journal
             using (_locker2.Lock())
             {
                 _pageTranslationTable.SetItems(tx, ptt);
+                // it is important that the last write position will be set
+                // _after_ the PTT update, because a flush that is concurrent 
+                // with the write will first get the WritePosIn4KB and then 
+                // do the flush based on the PTT. Worst case, we'll flush 
+                // more then we need, but won't get into a position where we
+                // think we flushed, and then realize that we didn't.
+                Interlocked.Add(ref _writePosIn4Kb, pages.NumberOf4Kbs);
             }
-
         }
 
         private void UpdatePageTranslationTable(LowLevelTransaction tx, HashSet<PagePosition> unused, Dictionary<long, PagePosition> ptt)
