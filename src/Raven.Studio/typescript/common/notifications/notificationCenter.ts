@@ -222,6 +222,10 @@ class notificationCenter {
         } else {
             const alertObject = new alert(database, alertDto);
             notificationsContainer.push(alertObject);
+            
+            if (alertObject.alertType().startsWith("LicenseManager_")) {
+                this.openDetails(alertObject);
+            }
         }
     }
 
