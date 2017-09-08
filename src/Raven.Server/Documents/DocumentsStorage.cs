@@ -17,6 +17,7 @@ using Voron.Data.Tables;
 using Voron.Impl;
 using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Collections;
 using Sparrow.Logging;
 using Voron.Data;
 using Voron.Exceptions;
@@ -50,7 +51,7 @@ namespace Raven.Server.Documents
 
         private readonly DocumentDatabase _documentDatabase;
 
-        private Dictionary<string, CollectionName> _collectionsCache;
+        private FastDictionary<string, CollectionName, OrdinalIgnoreCaseStringStructComparer> _collectionsCache;
 
         internal enum TombstoneTable
         {
@@ -1472,7 +1473,7 @@ namespace Raven.Server.Documents
                 // has to happen after the commit, but while we are holding the write tx lock
                 context.Transaction.InnerTransaction.LowLevelTransaction.BeforeCommitFinalization += _ =>
                 {
-                    var collectionNames = new Dictionary<string, CollectionName>(_collectionsCache, OrdinalIgnoreCaseStringStructComparer.Instance)
+                    var collectionNames = new FastDictionary<string, CollectionName, OrdinalIgnoreCaseStringStructComparer>(_collectionsCache, OrdinalIgnoreCaseStringStructComparer.Instance)
                     {
                         [name.Name] = name
                     };
@@ -1487,9 +1488,9 @@ namespace Raven.Server.Documents
             throw new InvalidOperationException("This method requires active transaction, and no active transactions in the current context...");
         }
 
-        private Dictionary<string, CollectionName> ReadCollections(Transaction tx)
+        private FastDictionary<string, CollectionName, OrdinalIgnoreCaseStringStructComparer> ReadCollections(Transaction tx)
         {
-            var result = new Dictionary<string, CollectionName>(OrdinalIgnoreCaseStringStructComparer.Instance);
+            var result = new FastDictionary<string, CollectionName, OrdinalIgnoreCaseStringStructComparer>(OrdinalIgnoreCaseStringStructComparer.Instance);
 
             var collections = tx.OpenTable(CollectionsSchema, CollectionsSlice);
 
