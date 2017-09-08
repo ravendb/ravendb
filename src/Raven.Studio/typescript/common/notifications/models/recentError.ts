@@ -37,17 +37,17 @@ class recentError extends abstractNotification {
         try {
             const parsedDetails = JSON.parse(details);
 
-            if (parsedDetails && parsedDetails.Message && parsedDetails.Error) {
+            if (parsedDetails && parsedDetails.Message) {
                 return {
                     message: parsedDetails.Message,
                     error: parsedDetails.Error
                 };
-            } else {
-                return { message: details, error: null };
             }
         } catch (e) {
-            return { message: details, error: null };
         }
+
+        // fallback to message with entire details
+        return { message: details, error: null };
     }
 
     static create(severity: Raven.Server.NotificationCenter.Notifications.NotificationSeverity, title: string, details: string, httpStatus: string) {

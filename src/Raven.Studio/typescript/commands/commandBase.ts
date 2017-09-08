@@ -41,21 +41,21 @@ class commandBase {
     }
 
     protected head<T>(relativeUrl: string, args: any, db?: database, resultsSelector?: (results: any, xhr: JQueryXHR) => T): JQueryPromise<T> {
-        var ajax = this.ajax<T>(relativeUrl, args, "HEAD", db);
+        const ajax = this.ajax<T>(relativeUrl, args, "HEAD", db);
         if (resultsSelector) {
-            var task = $.Deferred();
+            const task = $.Deferred();
             ajax.done((results, status, xhr) => {
-                var allHeaders = xhr.getAllResponseHeaders();
+                const allHeaders = xhr.getAllResponseHeaders();
                 if (allHeaders) {
-                    var headersObject = {};
-                    var headersArray = xhr.getAllResponseHeaders().trim().split(/\r?\n/);
-                    for (var n = 0; n < headersArray.length; n++) {
-                        var keyValue = headersArray[n].split(": ");
+                    const headersObject = {};
+                    const headersArray = xhr.getAllResponseHeaders().trim().split(/\r?\n/);
+                    for (let n = 0; n < headersArray.length; n++) {
+                        const keyValue = headersArray[n].split(": ");
                         if (keyValue.length === 2) {
                             (<any>headersObject)[keyValue[0]] = keyValue[1];
                         }
                     }
-                    var transformedResults = resultsSelector(headersObject, xhr);
+                    const transformedResults = resultsSelector(headersObject, xhr);
                     task.resolve(transformedResults);
                 }
             });
@@ -113,10 +113,10 @@ class commandBase {
             type: method,
             headers: <any>undefined,
             xhr: () => {
-                var xhr = new XMLHttpRequest();
+                const xhr = new XMLHttpRequest();
                 xhr.upload.addEventListener("progress", (evt: ProgressEvent) => {
                     if (evt.lengthComputable) {
-                        var percentComplete = (evt.loaded / evt.total) * 100;
+                        const percentComplete = (evt.loaded / evt.total) * 100;
                         if (percentComplete < 100) {
                             requestExecution.markProgress();
                         }
@@ -135,27 +135,10 @@ class commandBase {
             }
         }
 
-        var ajaxTask = $.Deferred();
-
-        $.ajax(defaultOptions).always(() => {
-            requestExecution.markCompleted();
-        }).done((results, status, xhr) => {
-            ajaxTask.resolve(results, status, xhr);
-        }).fail((request, status, error) => {
-            var dbBeingUpdated = request.getResponseHeader("Raven-Database-Load-In-Progress");
-            if (dbBeingUpdated) {
-                ajaxTask.reject(request, status, error);
-                /* TODO
-                var currentDb = appUrl.getDatabase();
-                if (currentDb != null && currentDb.name === dbBeingUpdated) {
-                    router.navigate(appUrl.forUpgrade(new database(dbBeingUpdated, false, []))); //TODO: use database manger to get this database!
-                }*/
-            } else {
-                ajaxTask.reject(request, status, error);
-            }
-        });
-
-        return ajaxTask.promise();
+        return $.ajax(defaultOptions)
+            .always(() => {
+                requestExecution.markCompleted();
+            });
     }
 
     protected extractEtag(xhr: JQueryXHR) {
