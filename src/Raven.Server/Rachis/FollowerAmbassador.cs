@@ -225,7 +225,8 @@ namespace Raven.Server.Rachis
                                         }
                                         throw new InvalidOperationException(msg);
                                     }
-                                    Debug.Assert(aer.CurrentTerm == _engine.CurrentTerm);
+                                    if(aer.CurrentTerm != _engine.CurrentTerm)
+                                        ThrowInvalidTermChanged(aer);
                                     UpdateLastMatchFromFollower(aer.LastLogIndex);
                                 }
 
@@ -307,6 +308,12 @@ namespace Raven.Server.Rachis
             {
                 _connection?.Dispose();
             }
+        }
+
+        private void ThrowInvalidTermChanged(AppendEntriesResponse aer)
+        {
+            throw new ConcurrencyException("The current engine term has changed (" + aer.CurrentTerm + " -> " + _engine.CurrentTerm + "), this " +
+                                           "ambassor term is no longer valid");
         }
 
         private void SendSnapshot(Stream stream)
