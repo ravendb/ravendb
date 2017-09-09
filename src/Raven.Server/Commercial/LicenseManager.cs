@@ -650,45 +650,54 @@ namespace Raven.Server.Commercial
 
         private async Task LeaseLicense()
         {
-            if (_serverStore.IsLeader() == false)
-            {
-                // only the leader is in charge of updating the license
-                return;
-            }
-
-            if (_leaseLicenseSemaphore.Wait(0) == false)
-                return;
-
             try
             {
-                var loadedLicense = _serverStore.LoadLicense();
-                if (loadedLicense == null)
+
+                if (_serverStore.IsLeader() == false)
+                {
+                    // only the leader is in charge of updating the license
+                    return;
+                }
+
+                if (_leaseLicenseSemaphore.Wait(0) == false)
                     return;
 
-                var updatedLicense = await GetUpdatedLicense(loadedLicense);
-                if (updatedLicense == null)
-                    return;
+                try
+                {
+                    var loadedLicense = _serverStore.LoadLicense();
+                    if (loadedLicense == null)
+                        return;
 
-                await Activate(updatedLicense, skipLeaseLicense: true);
+                    var updatedLicense = await GetUpdatedLicense(loadedLicense);
+                    if (updatedLicense == null)
+                        return;
+
+                    await Activate(updatedLicense, skipLeaseLicense: true);
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info("Error leasing license", e);
+
+                    var alert = AlertRaised.Create(
+                        "Error leasing license",
+                        "Could not lease license",
+                        AlertType.LicenseManager_LeaseLicenseError,
+                        NotificationSeverity.Warning,
+                        details: new ExceptionDetails(e));
+
+                    _serverStore.NotificationCenter.Add(alert);
+                }
+                finally
+                {
+                    _leaseLicenseSemaphore.Release();
+                    ReloadLicenseLimits();
+                }
             }
             catch (Exception e)
             {
                 if (Logger.IsInfoEnabled)
-                    Logger.Info("Error leasing license", e);
-
-                var alert = AlertRaised.Create(
-                    "Error leasing license",
-                    "Could not lease license",
-                    AlertType.LicenseManager_LeaseLicenseError,
-                    NotificationSeverity.Warning,
-                    details: new ExceptionDetails(e));
-
-                _serverStore.NotificationCenter.Add(alert);
-            }
-            finally
-            {
-                _leaseLicenseSemaphore.Release();
-                ReloadLicenseLimits();
+                    Logger.Info("Failed to lease license", e);
             }
         }
 
