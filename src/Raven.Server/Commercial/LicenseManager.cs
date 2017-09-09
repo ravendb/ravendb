@@ -1108,7 +1108,7 @@ namespace Raven.Server.Commercial
                 if (ravenConnectionStrings.TryGetValue(ravenEtl.ConnectionStringName, out var value) == false)
                     continue;
 
-                hasInvalidRavenEtl |= IsValidRavenEtl(licenseStatus, value.Url) == false;
+                hasInvalidRavenEtl |= IsValidRavenEtl(licenseStatus) == false;
             }
 
             return hasInvalidRavenEtl;
@@ -1217,15 +1217,14 @@ namespace Raven.Server.Commercial
             return licenseStatus.HasExternalReplication || IsValidLocalUrl(url);
         }
 
-        public bool CanAddRavenEtl(string url, out LicenseLimit licenseLimit)
+        public bool CanAddRavenEtl(out LicenseLimit licenseLimit)
         {
             if (IsValid(out licenseLimit) == false)
                 return false;
 
-            if (IsValidRavenEtl(_licenseStatus, url) == false)
+            if (IsValidRavenEtl(_licenseStatus) == false)
             {
-                var details = $"Your current license ({_licenseStatus.Type}) allows adding Raven ETL " +
-                              "destinations that run locally (localhost, 127.*.*.* or [::1])";
+                const string details = "Your current license doesn't include the RavenDB ETL feature";
                 licenseLimit = GenerateLicenseLimit(LimitType.RavenEtl, details);
                 return false;
             }
@@ -1234,9 +1233,9 @@ namespace Raven.Server.Commercial
             return true;
         }
 
-        private static bool IsValidRavenEtl(LicenseStatus licenseStatus, string url)
+        private static bool IsValidRavenEtl(LicenseStatus licenseStatus)
         {
-            return licenseStatus.HasRavenEtl || IsValidLocalUrl(url);
+            return licenseStatus.HasRavenEtl;
         }
 
         public bool CanAddSqlEtl(out LicenseLimit licenseLimit)

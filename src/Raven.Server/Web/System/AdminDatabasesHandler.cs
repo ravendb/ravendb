@@ -940,21 +940,12 @@ namespace Raven.Server.Web.System
 
         private bool CanAddOrUpdateEtl(string databaseName, BlittableJsonReaderObject etlConfiguration)
         {
-            var databaseRecord = ServerStore.LoadDatabaseRecord(databaseName, out _);
             LicenseLimit licenseLimit;
             switch (EtlConfiguration<ConnectionString>.GetEtlType(etlConfiguration))
             {
                 case EtlType.Raven:
-                    var ravenEtlConfiguration = JsonDeserializationCluster.RavenEtlConfiguration(etlConfiguration);
-                    var ravenConnectionStringName = ravenEtlConfiguration.ConnectionStringName;
-
-                    if (databaseRecord.RavenConnectionStrings == null ||
-                        databaseRecord.RavenConnectionStrings.TryGetValue(ravenConnectionStringName, out var ravenConnectionString) == false)
-                    {
-                        throw new InvalidOperationException($"Cannot update Raven ETL because connection string {ravenConnectionStringName} doesn't exist!");
-                    }
-
-                    if (ServerStore.LicenseManager.CanAddRavenEtl(ravenConnectionString.Url, out licenseLimit) == false)
+                 
+                    if (ServerStore.LicenseManager.CanAddRavenEtl(out licenseLimit) == false)
                     {
                         SetLicenseLimitResponse(licenseLimit);
                         return false;
@@ -962,15 +953,6 @@ namespace Raven.Server.Web.System
 
                     break;
                 case EtlType.Sql:
-                    var sqlEtlSqlConfiguration = JsonDeserializationCluster.SqlEtlConfiguration(etlConfiguration);
-                    var sqlConnectionStringName = sqlEtlSqlConfiguration.ConnectionStringName;
-
-                    if (databaseRecord.SqlConnectionStrings == null ||
-                        databaseRecord.SqlConnectionStrings.TryGetValue(sqlConnectionStringName, out var sqlConnectionString) == false)
-                    {
-                        throw new InvalidOperationException($"Cannot update SQL ETL because connection string {sqlConnectionStringName} doesn't exist!");
-                    }
-
                     if (ServerStore.LicenseManager.CanAddSqlEtl(out licenseLimit) == false)
                     {
                         SetLicenseLimitResponse(licenseLimit);
