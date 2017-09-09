@@ -3,36 +3,33 @@
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close"><i class="icon-cancel"></i></button>
-                <h4 class="modal-title" id="myModalLabel">Re-assign Cores:</h4>
+                <h4 class="modal-title" id="myModalLabel">Reassign Cores:</h4>
             </div>
             <div class="modal-body">
                 <div class="padding padding-sm text-center">
-                    <div class="row row-sm flex-row">
-                        <div class="col-sm-8 margin-bottom">
-                            <div class="row flex-row margin-bottom">
-                                <label class="control-label col-xs-12 col-sm-6 col-lg-5">Cores</label>
-                                <div class="col-xs-12 col-sm-6 col-lg-7">
+                    <div class="row flex-row">
+                        <div class="col-xs-12 col-sm-4 flex-end">
+                            <div class="row row-sm" data-bind="validationElement: assignedCores">
+                                <label class="control-label col-xs-12 col-sm-4">Cores</label>
+                                <div class="col-xs-12 col-sm-8">
                                     <input autocomplete="off" type="text" class="form-control" data-bind="numericInput: assignedCores" id="assigned-cores" placeholder="Assigned cores for the new node">
                                 </div>
                             </div>
-                            <div class="row flex-row margin-bottom">
-                                <label class="control-label col-xs-6 col-sm-12 col-lg-12">
-                                    Available cores according to the license:
-                                    <span data-bind="text: availableCores"></span>
-                                </label>
-                            </div>
-                            <div class="row flex-row margin-bottom" data-bind="if: numberOfCores() && numberOfCores() != -1">
-                                <label class="control-label col-xs-6 col-sm-11 col-lg-12">
-                                    Total cores on node:
-                                    <span data-bind="text: numberOfCores"></span>
-                                </label>
-                            </div>
+                        </div>
+                        <div class="col-xs-6 col-sm-4 flex-end">
+                            <p class="small">Available cores according to the license:</p>
+                            <div data-bind="text: availableCores"></div>
+                        </div>
+                        <div class="col-xs-6 col-sm-4 flex-end" data-bind="if: numberOfCores() && numberOfCores() != -1">
+                            <p class="small">Total cores on node:</p>
+                            <div data-bind="text: numberOfCores"></div>
                         </div>
                     </div>
                 </div>
                 
             </div>
             <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-bind="click: $root.close">Close</button>
                 <button type="submit" data-bind="css: { 'btn-spinner': spinners.save }, disable: spinners.save" class="btn btn-primary"><span>Save</span></button>
             </div>
         </div>

@@ -248,11 +248,11 @@ namespace Raven.Server.Commercial
                     return new LicenseLimit
                     {
                         Type = LimitType.Cores,
-                        Details = $"Cannot change the license limit for node: {nodeTag} " +
-                                  $"from: {oldAssignedCores} core{Pluralize(oldAssignedCores)} " +
+                        Message = $"Cannot change the license limit for node {nodeTag} " +
+                                  $"from {oldAssignedCores} core{Pluralize(oldAssignedCores)} " +
                                   $"to {newAssignedCores} core{Pluralize(newAssignedCores)} " +
-                                  $"because the utilized number of cores in the cluster will be: {utilizedCores} " +
-                                  $"while the maximum allowed cores according to the license is: {maxCores}."
+                                  $"because the utilized number of cores in the cluster will be {utilizedCores} " +
+                                  $"while the maximum allowed cores according to the license is {maxCores}."
                     };
                 }
 
@@ -1287,13 +1287,13 @@ namespace Raven.Server.Commercial
 
         private LicenseLimit GenerateLicenseLimit(
             LimitType limitType, 
-            string details,
+            string message,
             bool addNotification = false)
         {
             var licenseLimit = new LicenseLimit
             {
                 Type = limitType,
-                Details = details
+                Message = message
             };
 
             if (addNotification)

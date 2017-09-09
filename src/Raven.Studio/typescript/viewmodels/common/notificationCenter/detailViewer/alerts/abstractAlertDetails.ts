@@ -13,7 +13,7 @@ abstract class abstractAlertDetails extends dialogViewModelBase {
 
     spinners = {
         postpone: ko.observable<boolean>(false)
-    }
+    };
 
     constructor(alert: alert, notificationCenter: notificationCenter) {
         super();

@@ -29,6 +29,7 @@ import newVersionAvailableDetails = require("viewmodels/common/notificationCente
 import genericAlertDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/genericAlertDetails");
 import recentErrorDetails = require("viewmodels/common/notificationCenter/detailViewer/recentErrorDetails");
 import notificationCenterSettings = require("common/notifications/notificationCenterSettings");
+import licenseLimitDetails = require("viewmodels/common/notificationCenter/detailViewer/licenseLimitDetails");
 
 
 interface detailsProvider {
@@ -49,7 +50,7 @@ class notificationCenter {
         dismiss: ko.observableArray<string>([]),
         postpone: ko.observableArray<string>([]),
         kill: ko.observableArray<string>([])
-    }
+    };
 
     showNotifications = ko.observable<boolean>(false);
 
@@ -80,7 +81,7 @@ class notificationCenter {
         if (this.shouldConsumeHideEvent(e)) {
             this.showNotifications(false);
         }
-    }
+    };
 
     constructor() {
         this.initializeObservables();
@@ -93,6 +94,7 @@ class notificationCenter {
     private initializeObservables() {
 
         this.detailsProviders.push(
+            licenseLimitDetails,
             // recent errors: 
             recentErrorDetails,
 
@@ -192,6 +194,12 @@ class notificationCenter {
     }
 
     private onRecentError(error: recentError) {
+        if (error.httpStatus() === "Payment Required") {
+            error.details(recentError.licenceLimitMarker);
+            
+            this.openDetails(error);
+        }
+        
         this.globalNotifications.push(error);
     }
 
@@ -214,6 +222,10 @@ class notificationCenter {
         } else {
             const alertObject = new alert(database, alertDto);
             notificationsContainer.push(alertObject);
+            
+            if (alertObject.alertType().startsWith("LicenseManager_")) {
+                this.openDetails(alertObject);
+            }
         }
     }
 

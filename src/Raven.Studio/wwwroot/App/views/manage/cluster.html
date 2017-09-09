@@ -5,18 +5,19 @@
             <div class="flex-header flex-horizontal">
                 <button data-bind="click: addNode, enable: canAddNodes" class="btn btn-primary"><i class="icon-plus"></i> <span>Add Node to cluster</span></button>
                 <div class="flex-separator"></div>
-                <div data-bind="if: licenseSummary">
-                    License limits: <strong data-bind="text: licenseSummary"></strong>
+                <div class="flex-end text-muted" data-bind="if: licenseSummary">
+                    <small>License limits: <span data-bind="text: licenseSummary"></span></small>
                 </div>
-                <div>Term: <span data-bind="text: topology().currentTerm"></span></div>
+                <div class="flex-end text-muted">
+                    <small>Term: <span data-bind="text: topology().currentTerm"></span></small>
+                </div>
             </div>
 
             <div class="scroll flex-grow" data-bind="foreach: topology().nodes">
-                <div class="panel destination-item">
+                <div class="panel panel-state">
                     <div data-bind="attr: { 'data-state-text': createStateObservable($root.topology), class: 'state ' + createStateClassObservable($root.topology)() } "></div>
-                    <div class="padding destination-info">
-                        <div class="info-container">
-                            <div class="flex-horizontal">
+                    <div class="padding flex-horizontal">
+                        <div class="info-container flex-horizontal">                  
                                 <div class="node flex-grow">
                                     <h5>TAG</h5>
                                     <div class="flex-horizontal">
@@ -38,25 +39,7 @@
                                     <h3 data-bind="visible: $root.topology().leader() !== tag()">
                                         <i data-bind="attr: { class: cssIcon, title: type }" ></i> <span data-bind="text: type"></span>
                                     </h3>
-                                </div>
-                            </div>
-                            <div class="address">
-                                <h5>ADDRESS</h5>
-                                <a target="_blank" data-bind="attr: { href: serverUrl }"><small data-bind="text: serverUrl"></small></a>
-                            </div>
-                            <div data-bind="if: utilizedCores">
-                                <span>Cores: </span>
-                                <strong data-bind="text: utilizedCores, css: cssCores"></strong><span data-bind="if: numberOfCores() && utilizedCores() != -1">
-                                    / <strong class="text-success" data-bind="text: numberOfCores"></strong>
-                                </span>
-                                <span data-bind="if: installedMemoryInGb">
-                                    , &nbsp;Memory:  
-                                    <span style="color: whitesmoke"><span data-bind="text: utilizedMemoryInGb"></span>GB</span>
-                                    <span data-bind="if: installedMemoryInGb() && installedMemoryInGb() != -1">
-                                        / <span style="color: whitesmoke"><span data-bind="text: installedMemory"></span>GB</span>
-                                    </span>
-                                </span>
-                            </div>
+                                </div>                            
                         </div>
                         <div class="flex-separator"></div>
                         <div class="actions-container">
@@ -80,7 +63,7 @@
                                         <li>
                                             <a href="#" data-bind="click: _.partial($parent.assignCores, $data)">
                                                 <i class="icon-waiting"></i>
-                                                <span>Re-assign cores</span>
+                                                <span>Reassign cores</span>
                                             </a>
                                         </li>
                                         <li>
@@ -102,6 +85,27 @@
                                         title="Remove node from cluster">
                                     <i class="icon-trash"></i>
                                 </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-addon">
+                        <div class="padding flex-horizontal info-container">
+                            <div class="address">
+                                <h5>ADDRESS</h5>
+                                <a target="_blank" data-bind="attr: { href: serverUrl }"><span data-bind="text: serverUrl"></span></a>
+                            </div>
+                            <div class="cores" data-bind="if: utilizedCores">
+                                <h5>CORES</h5>
+                                <strong data-bind="text: utilizedCores, css: cssCores" data-toggle="tooltip" title="Assigned CPU cores limit"></strong><span data-bind="if: numberOfCores() && utilizedCores() != -1">
+                                    / <strong data-bind="text: numberOfCores" data-toggle="tooltip" title="Total CPU cores count"></strong>
+                                </span>
+                            </div>
+                            <div class="memory" data-bind="if: installedMemoryInGb">
+                                <h5>MEMORY</h5>
+                                <span style="color: whitesmoke" data-toggle="tooltip" title="Assigned memory limit"><span data-bind="text: utilizedMemoryInGb"></span>GB</span>
+                                <span data-bind="if: installedMemoryInGb() && installedMemoryInGb() != -1">
+                                    / <span style="color: whitesmoke" data-toggle="tooltip" title="Total memory installed on machine"><span data-bind="text: installedMemory"></span>GB</span>
+                                </span>
                             </div>
                         </div>
                     </div>
