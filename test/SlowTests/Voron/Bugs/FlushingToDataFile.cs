@@ -8,10 +8,13 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Sparrow;
 using Voron;
 using Voron.Global;
 using Voron.Impl;
+using Voron.Impl.Journal;
 using Xunit;
 
 namespace SlowTests.Voron.Bugs
@@ -23,6 +26,72 @@ namespace SlowTests.Voron.Bugs
             options.ManualFlushing = true;
             options.MaxLogFileSize = 2 * Constants.Storage.PageSize;
         }
+
+
+        [Fact]
+        public void SkipUpdateDatabaseStateAfterSyncIfNewerSyncCalled()
+        {
+            UpdateDatabaseStateAfterSyncIfNewerSyncCalled(false);
+        }
+
+        [Fact]
+        public void FailOnRaceConditionAtUpdateDatabaseStateAfterSyncIfNewerSyncCalled()
+        {
+            Assert.Throws<InvalidOperationException>(() => UpdateDatabaseStateAfterSyncIfNewerSyncCalled(true));
+        }
+
+        private void UpdateDatabaseStateAfterSyncIfNewerSyncCalled(bool forceFail)
+        {
+            var value1 = new byte[4000];
+            new Random().NextBytes(value1);
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var tree = tx.CreateTree("foo");
+                tree.Add("foo/0", new MemoryStream(value1));
+                tx.Commit();
+            }
+
+            Env.Journal.Applicator.TestingWait = new ManualResetEvent(false);
+
+            Env.FlushLogToDataFile();
+
+            var task = new Task(() =>
+            {
+                using (var op = new WriteAheadJournal.JournalApplicator.SyncOperation(Env.Journal.Applicator))
+                {
+                    Env.Journal.Applicator.TestingDoNotWait = forceFail;
+                    op.SyncDataFile();                    
+                }
+            });
+            task.Start();
+
+            // ReSharper disable once AccessToDisposedClosure
+            Assert.True(SpinWait.SpinUntil(() => Env.Journal.Applicator.TestingNowWaitingSignal, 2000));
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var tree = tx.CreateTree("bar");
+                tree.Add("bar/0", new MemoryStream(value1));
+                tx.Commit();
+            }
+            Env.FlushLogToDataFile();
+            using (var op = new WriteAheadJournal.JournalApplicator.SyncOperation(Env.Journal.Applicator))
+            {
+                Env.Journal.Applicator.TestingDoNotWait = true;
+                op.SyncDataFile();
+            }
+
+            Env.Journal.Applicator.TestingWait.Set();
+
+            Env.Journal.Applicator.TestingWait.Dispose();
+
+            Assert.True(SpinWait.SpinUntil(() => task.IsCompletedSuccessfully, 2000));
+
+            if (Env.Journal.Applicator.TestingSkippedUpdateDatabaseStateAfterSync == false)
+                throw new InvalidOperationException("Race condition was not detected at UpdateDatabaseStateAfterSync");
+        }
+
 
         [Fact]
         public unsafe void ReadTransactionShouldNotReadFromJournalSnapshotIfJournalWasFlushedInTheMeanwhile()
