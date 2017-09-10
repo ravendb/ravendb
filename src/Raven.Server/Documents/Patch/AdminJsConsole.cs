@@ -25,7 +25,6 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-
         public string ApplyScript(AdminJsScript script)
         {
             var sw = Stopwatch.StartNew();
@@ -112,7 +111,7 @@ namespace Raven.Server.Documents.Patch
                 return true;
             if (obj.GetType() != GetType())
                 return false;
-            return Equals((AdminJsScript)obj);
+            return Equals((AdminJsScriptKey)obj);
         }
 
         public override int GetHashCode()

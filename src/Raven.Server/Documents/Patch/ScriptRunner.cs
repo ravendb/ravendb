@@ -116,7 +116,8 @@ namespace Raven.Server.Documents.Patch
                     options.LimitRecursion(64)
                         .SetReferencesResolver(new NullPropgationReferenceResolver())
                         .MaxStatements(_configuration.Patching.MaxStepsForScript)
-                        .Strict();
+                        .Strict()
+                        .AddObjectConverter(new JintTimeSpanConverter());
                 });
                 ScriptEngine.SetValue("output", new ClrFunctionInstance(ScriptEngine, OutputDebug));
 

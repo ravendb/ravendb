@@ -4,8 +4,7 @@ namespace Raven.Server.Config.Settings
 {
     public struct UriSetting
     {
-        public static readonly Type TypeOf = typeof(UriSetting);
-        public static readonly Type NullableTypeOf = typeof(UriSetting?);
+        public readonly string UriValue;
 
         public UriSetting(string uri)
         {
@@ -20,7 +19,5 @@ namespace Raven.Server.Config.Settings
             if (Uri.TryCreate(uri, UriKind.RelativeOrAbsolute, out _) == false)
                 throw new ArgumentException($"{uri} is not a valid URI.");
         }
-
-        public readonly string UriValue;
     }
 }
