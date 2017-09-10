@@ -17,8 +17,8 @@ class licenseModel {
             });
     }
 
-    static licenseShortDescription = ko.computed(() => {
-        var status = licenseModel.licenseStatus();
+    static licenseShortDescription = ko.pureComputed(() => {
+        const status = licenseModel.licenseStatus();
         if (!status) {
             return 'no-license';
         }
@@ -28,8 +28,8 @@ class licenseModel {
     });
 
 
-    static licenseCssClass = ko.computed(() => {
-        var status = licenseModel.licenseStatus();
+    static licenseCssClass = ko.pureComputed(() => {
+        const status = licenseModel.licenseStatus();
         if (!status) {
             return 'no-license';
         }
@@ -40,8 +40,8 @@ class licenseModel {
         }
     });
 
-    static supportCssClass = ko.computed(() => {
-        var support = licenseModel.supportCoverage();
+    static supportCssClass = ko.pureComputed(() => {
+        const support = licenseModel.supportCoverage();
         if (!support) {
             return 'no-support';
         }
