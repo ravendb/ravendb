@@ -64,9 +64,9 @@ namespace Voron.Impl
             public readonly TableValueBuilder TableValueBuilder = new TableValueBuilder();
 
             public int ScratchPagesTablePoolIndex = 0;
-            public Dictionary<long, PageFromScratchBuffer> ScratchPagesInUse = new Dictionary<long, PageFromScratchBuffer>(new NumericEqualityComparer());
-            public Dictionary<long, PageFromScratchBuffer> ScratchPagesReadyForNextTx = new Dictionary<long, PageFromScratchBuffer>(new NumericEqualityComparer());
-            public readonly Dictionary<long, long> DirtyOverflowPagesPool = new Dictionary<long, long>(new NumericEqualityComparer());
+            public FastDictionary<long, PageFromScratchBuffer, NumericEqualityComparer> ScratchPagesInUse = new FastDictionary<long, PageFromScratchBuffer, NumericEqualityComparer>(new NumericEqualityComparer());
+            public FastDictionary<long, PageFromScratchBuffer, NumericEqualityComparer> ScratchPagesReadyForNextTx = new FastDictionary<long, PageFromScratchBuffer, NumericEqualityComparer>(new NumericEqualityComparer());
+            public readonly FastDictionary<long, long, NumericEqualityComparer> DirtyOverflowPagesPool = new FastDictionary<long, long, NumericEqualityComparer>(new NumericEqualityComparer());
             public readonly HashSet<long> DirtyPagesPool = new HashSet<long>(NumericEqualityComparer.Instance);
 
             public void Reset()
@@ -81,9 +81,9 @@ namespace Voron.Impl
 
         // BEGIN: Structures that are safe to pool.
         private readonly HashSet<long> _dirtyPages;
-        private readonly Dictionary<long, long> _dirtyOverflowPages;
+        private readonly FastDictionary<long, long, NumericEqualityComparer> _dirtyOverflowPages;
         private readonly Stack<long> _pagesToFreeOnCommit; // TODO: This can be a regular list. There is no reason why we need to use an stack here. 
-        private readonly Dictionary<long, PageFromScratchBuffer> _scratchPagesTable;
+        private readonly FastDictionary<long, PageFromScratchBuffer, NumericEqualityComparer> _scratchPagesTable;
         private readonly HashSet<PagerState> _pagerStates; // TODO: Understand if it makes sense for this to be a list instead. 
         private readonly Dictionary<int, PagerState> _scratchPagerStates;
         // END: Structures that are safe to pool.

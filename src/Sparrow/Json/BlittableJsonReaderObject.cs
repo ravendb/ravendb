@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -24,8 +23,8 @@ namespace Sparrow.Json
 
         public DynamicJsonValue Modifications;
 
-        private Dictionary<StringSegment, object> _objectsPathCache;
-        private Dictionary<int, object> _objectsPathCacheByIndex;
+        private FastDictionary<StringSegment, object, StringSegmentEqualityStructComparer> _objectsPathCache;
+        private FastDictionary<int, object, NumericEqualityComparer> _objectsPathCacheByIndex;
 
         public override string ToString()
         {

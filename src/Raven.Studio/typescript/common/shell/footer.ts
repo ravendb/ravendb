@@ -5,7 +5,7 @@ import getDatabaseFooterStatsCommand = require("commands/resources/getDatabaseFo
 import changesContext = require("common/changesContext");
 import changeSubscription = require("common/changeSubscription");
 import appUrl = require("common/appUrl");
-import license = require("models/auth/license");
+import license = require("models/auth/licenseModel");
 
 class footerStats {
     countOfDocuments = ko.observable<number>();

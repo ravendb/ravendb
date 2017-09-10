@@ -33,18 +33,18 @@ namespace Sparrow.Json
         private AllocatedMemoryData _tempBuffer;
         private List<GCHandle> _pinnedObjects;
    
-        private readonly Dictionary<string, LazyStringValue> _fieldNames = new Dictionary<string, LazyStringValue>(OrdinalStringStructComparer.Instance);
+        private readonly FastDictionary<string, LazyStringValue, OrdinalStringStructComparer> _fieldNames = new FastDictionary<string, LazyStringValue, OrdinalStringStructComparer>(OrdinalStringStructComparer.Instance);
 
         private struct PathCacheHolder
         {
-            public PathCacheHolder(Dictionary<StringSegment, object> path, Dictionary<int, object> byIndex)
+            public PathCacheHolder(FastDictionary<StringSegment, object, StringSegmentEqualityStructComparer> path, FastDictionary<int, object, NumericEqualityComparer> byIndex)
             {
                 Path = path;
                 ByIndex = byIndex;
             }
             
-            public readonly Dictionary<StringSegment, object> Path;
-            public readonly Dictionary<int, object> ByIndex;
+            public readonly FastDictionary<StringSegment, object, StringSegmentEqualityStructComparer> Path;
+            public readonly FastDictionary<int, object, NumericEqualityComparer> ByIndex;
         }
 
         private int _numberOfAllocatedPathCaches = -1;
@@ -54,7 +54,7 @@ namespace Sparrow.Json
         private readonly FastList<LazyStringValue> _allocateStringValues = new FastList<LazyStringValue>(256);
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void AcquirePathCache(out Dictionary<StringSegment, object> pathCache, out Dictionary<int, object> pathCacheByIndex)
+        public void AcquirePathCache(out FastDictionary<StringSegment, object, StringSegmentEqualityStructComparer> pathCache, out FastDictionary<int, object, NumericEqualityComparer> pathCacheByIndex)
         {
             // PERF: Avoids allocating gigabytes in FastDictionary instances on high traffic RW operations like indexing. 
             if (_numberOfAllocatedPathCaches >= 0)
@@ -69,13 +69,13 @@ namespace Sparrow.Json
                 return;
             }
 
-            pathCache = new Dictionary<StringSegment, object>(default(StringSegmentEqualityStructComparer));
-            pathCacheByIndex = new Dictionary<int, object>(default(NumericEqualityComparer));
+            pathCache = new FastDictionary<StringSegment, object, StringSegmentEqualityStructComparer>(default(StringSegmentEqualityStructComparer));
+            pathCacheByIndex = new FastDictionary<int, object, NumericEqualityComparer>(default(NumericEqualityComparer));
         }
 
-        public void ReleasePathCache(Dictionary<StringSegment, object> pathCache, Dictionary<int, object> pathCacheByIndex)
+        public void ReleasePathCache(FastDictionary<StringSegment, object, StringSegmentEqualityStructComparer> pathCache, FastDictionary<int, object, NumericEqualityComparer> pathCacheByIndex)
         {
-            if (_numberOfAllocatedPathCaches < _allocatePathCaches.Length - 1 && pathCache.Count < 256)
+            if (_numberOfAllocatedPathCaches < _allocatePathCaches.Length - 1 && pathCache.Capacity < 256)
             {
                 pathCache.Clear();
                 pathCacheByIndex.Clear();

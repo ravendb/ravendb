@@ -3,7 +3,7 @@ import app = require("durandal/app");
 import dialog = require("plugins/dialog");
 import licenseActivateCommand = require("commands/licensing/licenseActivateCommand");
 import moment = require("moment");
-import license = require("models/auth/license");
+import license = require("models/auth/licenseModel");
 
 class licenseKeyModel {
 

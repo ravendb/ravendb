@@ -372,8 +372,11 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
-
-                var doc = context.ReadForDiskAsync(RequestBodyStream(), id).ConfigureAwait(false);
+                // We HAVE to read the document in full, trying to parallelize the doc read
+                // and the identity generation needs to take into account that the identity 
+                // generation can fail and will leave the reading task hanging if we abort
+                // easier to just do in syncronously
+                var doc = await context.ReadForDiskAsync(RequestBodyStream(), id).ConfigureAwait(false);
 
                 if (id[id.Length - 1] == '|')
                 {
@@ -383,7 +386,7 @@ namespace Raven.Server.Documents.Handlers
 
                 var changeVector = context.GetLazyString(GetStringQueryString("If-Match", false));
 
-                var cmd = new MergedPutCommand(await doc, id, changeVector, Database);
+                var cmd = new MergedPutCommand(doc, id, changeVector, Database);
 
                 await Database.TxMerger.Enqueue(cmd);
 

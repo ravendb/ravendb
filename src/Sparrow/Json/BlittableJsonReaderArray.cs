@@ -14,7 +14,7 @@ namespace Sparrow.Json
         private readonly byte* _metadataPtr;
         private readonly byte* _dataStart;
         private readonly long _currentOffsetSize;
-        private Dictionary<int, Tuple<object, BlittableJsonToken>> _cache;
+        private FastDictionary<int, Tuple<object, BlittableJsonToken>, NumericEqualityComparer> _cache;
 
         public DynamicJsonArray Modifications;
 
@@ -106,7 +106,7 @@ namespace Sparrow.Json
                 {
                     if (_cache == null)
                     {
-                        _cache = new Dictionary<int, Tuple<object, BlittableJsonToken>>(default(NumericEqualityComparer));
+                        _cache = new FastDictionary<int, Tuple<object, BlittableJsonToken>, NumericEqualityComparer>(default(NumericEqualityComparer));
                     }
                     _cache[index] = result;
                 }

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using Sparrow;
 using Sparrow.Collections;
 
@@ -11,9 +10,9 @@ namespace Voron.Data.BTrees
     {
         public FastStack<TreePage> Pages = new FastStack<TreePage>();
 
-        private static readonly ObjectPool<Dictionary<long, TreePage>> _pagesByNumPool = new ObjectPool<Dictionary<long, TreePage>>(() => new Dictionary<long, TreePage>(50, default(NumericEqualityComparer)));
+        private static readonly ObjectPool<FastDictionary<long, TreePage, NumericEqualityComparer>> _pagesByNumPool = new ObjectPool<FastDictionary<long, TreePage, NumericEqualityComparer>>(() => new FastDictionary<long, TreePage, NumericEqualityComparer>(50, default(NumericEqualityComparer)));
 
-        private readonly Dictionary<long, TreePage> _pagesByNum;
+        private readonly FastDictionary<long, TreePage, NumericEqualityComparer> _pagesByNum;
 
         private bool _anyOverrides;
 
@@ -93,8 +92,12 @@ namespace Voron.Data.BTrees
             {
                 var pagesNumbersToRemove = new HashSet<long>();
 
-                foreach (var page in _pagesByNum.Where(page => page.Value.PageNumber == p.PageNumber))
-                    pagesNumbersToRemove.Add(page.Key);
+                foreach (var tuple in _pagesByNum)
+                {
+                    if (tuple.Value.PageNumber == p.PageNumber)
+                        pagesNumbersToRemove.Add(tuple.Key);
+                }
+                    
 
                 foreach (var pageToRemove in pagesNumbersToRemove)
                     removedSecondary |= _pagesByNum.Remove(pageToRemove);
