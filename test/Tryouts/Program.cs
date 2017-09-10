@@ -13,19 +13,22 @@ namespace Tryouts
             for (int i = 0; i < 10000; i++)
             {
                 Console.WriteLine(i);
-                using (var test = new SlowTests.Server.Replication.ReplicationBasicTestsSlow())
+                Parallel.For(0, 1, _ =>
                 {
-                    try
+                    using (var test = new SlowTests.Issues.RavenDB_5489())
                     {
-                        test.Master_master_replication_from_etag_zero_without_conflict_should_work(true).Wait();
+                        try
+                        {
+                            test.IfIndexEncountersCorruptionItShouldBeMarkedAsErrored().Wait();
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine(e);
+                            Console.WriteLine("-------------");
+                            throw;
+                        }
                     }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e);
-                        Console.WriteLine("-------------");
-                        throw;
-                    }
-                }
+                });
             }
         }
     }

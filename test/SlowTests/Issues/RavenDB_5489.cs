@@ -58,6 +58,9 @@ namespace SlowTests.Issues
                     Assert.Contains("Simulated corruption", e.InnerException.Message);
                 }
 
+                result = SpinWait.SpinUntil(() => store.Admin.Send(new GetIndexErrorsOperation())[0].Errors.Length != 0 , TimeSpan.FromSeconds(5));
+                Assert.True(result);
+
                 var errors = store.Admin.Send(new GetIndexErrorsOperation(new[] { new Users_ByName().IndexName }));
                 Assert.Equal(1, errors[0].Errors.Length);
                 Assert.Contains("Simulated corruption", errors[0].Errors[0].Error);
