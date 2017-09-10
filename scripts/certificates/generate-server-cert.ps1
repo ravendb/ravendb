@@ -4,6 +4,7 @@ param(
     $CertName = $null,
     $CertPassphrase = "test",
     $CN = $null,
+    $DNS = $null,
     $CertFile = "server.pfx",
     $SignerName = "RavenDB Server CA"
 )
@@ -22,7 +23,7 @@ if ([string]::IsNullOrEmpty($CN)) {
 }
 
 if ([string]::IsNullOrEmpty($DNS)) {
-    $DNS = [System.Environment]::MachineName
+    $DNS = $CN
 }
 
 if ([string]::IsNullOrEmpty($CertName)) {
