@@ -683,6 +683,7 @@ namespace Raven.Server.Rachis
         {
             Debug.Assert(context.Transaction != null);
             var topologyJson = SetTopology(this, context, topology);
+            _clusterId = topology.TopologyId;
 
             return topologyJson;
         }
