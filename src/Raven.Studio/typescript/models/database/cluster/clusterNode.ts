@@ -2,7 +2,7 @@
 
 import clusterTopology = require("models/database/cluster/clusterTopology");
 import generalUtils = require("common/generalUtils");
-import license = require("models/auth/license");
+import license = require("models/auth/licenseModel");
 
 class clusterNode {
     tag = ko.observable<string>();

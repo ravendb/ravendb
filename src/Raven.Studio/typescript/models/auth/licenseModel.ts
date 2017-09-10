@@ -2,7 +2,7 @@
 
 import getLicenseStatusCommand = require("commands/auth/getLicenseStatusCommand");
 
-class license {
+class licenseModel {
     static licenseStatus = ko.observable<Raven.Server.Commercial.LicenseStatus>();
     static supportCoverage = ko.observable<supportCoverageDto>();
 
@@ -13,13 +13,24 @@ class license {
                 if (result.Status.includes("AGPL")) {
                     result.Status = "Development Only";
                 }
-                license.licenseStatus(result);
+                licenseModel.licenseStatus(result);
             });
     }
 
+    static licenseShortDescription = ko.computed(() => {
+        var status = licenseModel.licenseStatus();
+        if (!status) {
+            return 'no-license';
+        }
+       
+        const maxMemory = status.MaxMemory === 0 ? "Unlimited" : `${status.MaxMemory} GB RAM` ;
+        return `${status.MaxCores} Cores, ${maxMemory}, Cluster size: ${status.MaxClusterSize}`;
+    });
+
+
     static licenseCssClass = ko.computed(() => {
-        var status = license.licenseStatus();
-        if (status == null) {
+        var status = licenseModel.licenseStatus();
+        if (!status) {
             return 'no-license';
         }
         if (status.Status.includes("Expired")) {
@@ -30,8 +41,8 @@ class license {
     });
 
     static supportCssClass = ko.computed(() => {
-        var support = license.supportCoverage();
-        if (support == null) {
+        var support = licenseModel.supportCoverage();
+        if (!support) {
             return 'no-support';
         }
         switch (support.Status) {
@@ -47,4 +58,4 @@ class license {
     });
 }
 
-export = license;
+export = licenseModel;
