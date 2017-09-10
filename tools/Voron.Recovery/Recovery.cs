@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations;
@@ -28,6 +29,7 @@ using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Paging;
 using static System.String;
+using static Voron.Data.BTrees.Tree;
 
 namespace Voron.Recovery
 {
@@ -190,12 +192,16 @@ namespace Voron.Recovery
                                     PageHeader* nextPage = pageHeader;
                                     byte* nextPagePtr = (byte*)nextPage;
                                     bool valid = true;
+                                    string tag = null;
                                     while (true) // has next
                                     {
                                         streamPageHeader = (StreamPageHeader*)nextPage;
                                         //this is the last page and it contains only stream info + maybe the stream tag
                                         if (streamPageHeader->ChunkSize == 0)
+                                        {
+                                            ExtractTagFromLastPage(nextPage, streamPageHeader, ref tag);
                                             break;
+                                        }
                                         totalSize += streamPageHeader->ChunkSize;                                        
                                         var dataStart = (byte*)nextPage + PageHeader.SizeOf;
                                         _attachmentChunks.Add(((IntPtr)dataStart, (int)streamPageHeader->ChunkSize));
@@ -206,8 +212,11 @@ namespace Voron.Recovery
                                             valid = false;
                                             break;
                                         }
-                                        if (streamPageHeader->StreamNextPageNumber == 0 )
+                                        if (streamPageHeader->StreamNextPageNumber == 0)
+                                        {
+                                            ExtractTagFromLastPage(nextPage, streamPageHeader, ref tag);
                                             break;
+                                        }
                                         nextPage = (PageHeader*)(streamPageHeader->StreamNextPageNumber * _pageSize + startOffset);
                                         //This is the case that the next page isn't a stream page
                                         if (nextPage->Flags.HasFlag(PageFlags.Stream) == false || nextPage->Flags.HasFlag(PageFlags.Overflow) == false)
@@ -244,7 +253,7 @@ namespace Voron.Recovery
                                         Debug.Assert(len == 44);
                                     }
 
-                                    WriteAttachment(attachmentWriter, totalSize, hash);
+                                    WriteAttachment(attachmentWriter, totalSize, hash, tag);
                                 }
                                 mem += numberOfPages * _pageSize;
                             }
@@ -359,6 +368,21 @@ namespace Voron.Recovery
             return RecoveryStatus.Success;
         }
 
+        private static void ExtractTagFromLastPage(PageHeader* nextPage, StreamPageHeader* streamPageHeader, ref string tag)
+        {
+            var si = (StreamInfo*)((byte*)nextPage + streamPageHeader->ChunkSize + PageHeader.SizeOf);
+            var tagSize = si->TagSize;
+            if (nextPage->OverflowSize > tagSize + streamPageHeader->ChunkSize + StreamInfo.SizeOf)
+            {
+                //not sure if we should fail because of missing tag
+                return;
+            }
+            if (tagSize > 0)
+            {
+                tag = Encodings.Utf8.GetString((byte*)si + StreamInfo.SizeOf, tagSize);
+            }
+        }
+
         private void ReportOrphanAttachmentsAndMissingAttachments(StreamWriter logFile, CancellationToken ct)
         {
             //No need to scare the user if there are no attachments in the dump
@@ -371,9 +395,9 @@ namespace Voron.Recovery
             }
             if (_documentsAttachments.Count == 0)
             {
-                foreach (var hash in _attachmentsHashs)
+                foreach (var (hash, docId) in _attachmentsHashs)
                 {
-                    logFile.WriteLine($"Found orphan attachment with hash {hash}.");
+                    ReportOrphanAttachmentDocumentId(logFile, hash, docId);
                 }
                 return;
             }
@@ -382,7 +406,7 @@ namespace Voron.Recovery
             {
                 return;
             }
-            _attachmentsHashs.Sort();
+            _attachmentsHashs.Sort((x, y) => Compare(x.hash, y.hash, StringComparison.Ordinal));
             if (ct.IsCancellationRequested)
             {
                 return;
@@ -390,7 +414,7 @@ namespace Voron.Recovery
             _documentsAttachments.Sort((x,y)=>Compare(x.hash, y.hash, StringComparison.Ordinal));
             //We rely on the fact that the attachment hash are unqiue in the _attachmentsHashs list (no duplicated values).
             int index = 0;
-            foreach (var hash in _attachmentsHashs)
+            foreach (var (hash, docId) in _attachmentsHashs)
             {
                 if (ct.IsCancellationRequested)
                 {
@@ -419,16 +443,27 @@ namespace Voron.Recovery
                 }
                 if (foundEqual == false)
                 {
-                    logFile.WriteLine($"Found orphan attachment with hash {hash}.");
+                    ReportOrphanAttachmentDocumentId(logFile, hash, docId);
                 }
 
             }
         }
 
+        private static void ReportOrphanAttachmentDocumentId(StreamWriter logFile, string hash, string docId)
+        {
+            var msg = new StringBuilder($"Found orphan attachment with hash {hash}");
+            if (docId != null)
+            {
+                msg.Append($" its tag indicates it was part of {docId}'s attachments");
+            }
+            logFile.WriteLine(msg.ToString());
+        }
+
         private bool _firstAttachment = true;
         private long _attachmentNumber = 0;
-        private readonly List<string> _attachmentsHashs = new List<string>();
-        private void WriteAttachment(BlittableJsonTextWriter attachmentWriter, long totalSize, string hash)
+        private readonly List<(string hash, string docId)> _attachmentsHashs = new List<(string, string)>();
+        private const string TagPrefix = "Recovered attachment #";
+        private void WriteAttachment(BlittableJsonTextWriter attachmentWriter, long totalSize, string hash,string tag = null)
         {
             if (_firstAttachment == false)
             {
@@ -456,14 +491,19 @@ namespace Voron.Recovery
             attachmentWriter.WriteComma();
 
             attachmentWriter.WritePropertyName(nameof(DocumentItem.AttachmentStream.Tag));
-            attachmentWriter.WriteString($"Recovered attachment #{++_attachmentNumber}");
+            attachmentWriter.WriteString(tag??$"{TagPrefix}{++_attachmentNumber}");
 
             attachmentWriter.WriteEndObject();
             foreach (var chunk in _attachmentChunks)
             {
                 attachmentWriter.WriteMemoryChunk(chunk.Ptr,chunk.Size);
             }
-            _attachmentsHashs.Add(hash);
+            string docId = null;
+            if (tag != null)
+            {
+                docId = tag.Substring(0,tag.IndexOf((char)SpecialChars.RecordSeparator));
+            }
+            _attachmentsHashs.Add((hash, docId));
         }
 
 
@@ -727,8 +767,8 @@ namespace Voron.Recovery
         private readonly string _datafile;
         private readonly bool _copyOnWrite;
         private readonly Dictionary<string, long> _previouslyWrittenDocs;
-		private readonly List<(string hash,string docId)> _documentsAttachments = new List<(string hash, string docId)>();
-		
+        private readonly List<(string hash,string docId)> _documentsAttachments = new List<(string hash, string docId)>();
+        
         public enum RecoveryStatus
         {
             Success,
