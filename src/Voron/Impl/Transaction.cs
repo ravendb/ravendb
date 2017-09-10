@@ -14,7 +14,7 @@ namespace Voron.Impl
 {
     public unsafe class Transaction : IDisposable
     {
-        private FastDictionary<Tuple<Tree, Slice>, Tree, TreeAndSliceComparer> _multiValueTrees;
+        private Dictionary<Tuple<Tree, Slice>, Tree> _multiValueTrees;
 
         private readonly LowLevelTransaction _lowLevelTransaction;
 
@@ -26,11 +26,11 @@ namespace Voron.Impl
 
         public ByteStringContext Allocator => _lowLevelTransaction.Allocator;
 
-        private FastDictionary<Slice, Table, SliceStructComparer> _tables;
+        private Dictionary<Slice, Table> _tables;
 
-        private FastDictionary<Slice, Tree, SliceStructComparer> _trees;
+        private Dictionary<Slice, Tree> _trees;
 
-        private FastDictionary<Slice, FixedSizeTree, SliceStructComparer> _globalFixedSizeTree;
+        private Dictionary<Slice, FixedSizeTree> _globalFixedSizeTree;
 
         public IEnumerable<Tree> Trees => _trees == null ? Enumerable.Empty<Tree>() : _trees.Values;
 
@@ -48,7 +48,7 @@ namespace Voron.Impl
         {
             if (_trees != null)
                 return;
-            _trees = new FastDictionary<Slice, Tree, SliceStructComparer>(SliceStructComparer.Instance);
+            _trees = new Dictionary<Slice, Tree>(SliceStructComparer.Instance);
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
@@ -143,7 +143,7 @@ namespace Voron.Impl
         public Table OpenTable(TableSchema schema, Slice name)
         {
             if (_tables == null)
-                _tables = new FastDictionary<Slice, Table, SliceStructComparer>(SliceStructComparer.Instance);
+                _tables = new Dictionary<Slice, Table>(SliceStructComparer.Instance);
 
             Table value;
             if (_tables.TryGetValue(name, out value))
@@ -204,7 +204,7 @@ namespace Voron.Impl
         internal void AddMultiValueTree(Tree tree, Slice key, Tree mvTree)
         {
             if (_multiValueTrees == null)
-                _multiValueTrees = new FastDictionary<Tuple<Tree, Slice>, Tree, TreeAndSliceComparer>();
+                _multiValueTrees = new Dictionary<Tuple<Tree, Slice>, Tree>(new TreeAndSliceComparer());
             mvTree.IsMultiValueTree = true;
             _multiValueTrees.Add(Tuple.Create(tree, key.Clone(_lowLevelTransaction.Allocator, ByteStringType.Immutable)), mvTree);
         }
@@ -437,7 +437,7 @@ namespace Voron.Impl
         public FixedSizeTree GetGlobalFixedSizeTree(Slice name, ushort valSize, bool isIndexTree = false, NewPageAllocator newPageAllocator = null)
         {
             if (_globalFixedSizeTree == null)
-                _globalFixedSizeTree = new FastDictionary<Slice, FixedSizeTree, SliceStructComparer>(SliceStructComparer.Instance);
+                _globalFixedSizeTree = new Dictionary<Slice, FixedSizeTree>(SliceStructComparer.Instance);
 
             FixedSizeTree tree;
             if (_globalFixedSizeTree.TryGetValue(name, out tree) == false)
