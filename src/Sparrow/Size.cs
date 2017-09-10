@@ -13,9 +13,6 @@ namespace Sparrow
 {
     public struct Size
     {
-        public static readonly Type TypeOf = typeof(Size);
-        public static readonly Type NullableTypeOf = typeof(Size?);
-
         public static readonly Size Zero = new Size(0, SizeUnit.Bytes);
 
         private const long OneKb = 1024;

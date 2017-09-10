@@ -463,7 +463,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [Theory(Skip = "RavenDB-8265")]
+        [Theory]
         [InlineData(false)]
         [InlineData(true)]
         public async Task DeleteRevisionsBeforeFromConsole(bool useConsole)

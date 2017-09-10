@@ -585,6 +585,15 @@ namespace Raven.Server.Utils.Cli
                 {
                     writer.WriteString(result.RawJsValue.AsString());
                 }
+                else if (result.RawJsValue.IsDate())
+                {
+                    var date = result.RawJsValue.AsDate();
+                    writer.WriteString(date.ToDateTime().ToString("O"));
+                }
+                else if (result.RawJsValue.IsNumber())
+                {
+                    writer.WriteDouble(result.RawJsValue.AsNumber());
+                }
                 else
                 {
                     writer.WriteObject(result.TranslateToObject(ctx));

@@ -1,44 +1,52 @@
-using System;
 using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Raven.Client.Extensions;
 using Raven.Server.Config.Settings;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
-using Raven.Server.Utils.Metrics;
-using Sparrow.Json.Parsing;
 using Xunit;
 
 namespace SlowTests.Core.AdminConsole
 {
     public class AdminJsConsoleTests : RavenTestBase
     {
-        [Fact(Skip = "RavenDB-8265")]
+        [Fact]
         public async Task CanGetSettings()
         {
             using (var store = GetDocumentStore())
             {
                 var database = await GetDocumentDatabaseInstanceFor(store);
 
-                var result = new AdminJsConsole(Server, database).ApplyScript(new AdminJsScript
-                (
-                    @"
+                var result = ExecuteScript(database, @"
                                 return { 
                                     DatabaseName: database.Name,
                                     RunInMemory: database.Configuration.Core.RunInMemory,
                                     MaxConcurrentFlushes: database.Configuration.Storage.MaxConcurrentFlushes
                                 };
-                             "
-                ));
-                var djv = JsonConvert.DeserializeObject<dynamic>(result).Result;
-                Assert.NotNull(djv);
-                Assert.Equal(database.Name , djv["DatabaseName"]);
-                Assert.Equal(true, djv["RunInMemory"]);
-                Assert.Equal(10L, djv["MaxConcurrentFlushes"]);
+                             ");
+
+                Assert.Equal(database.Name , result["DatabaseName"]);
+                Assert.Equal(true, result["RunInMemory"]);
+                Assert.Equal(10L, result["MaxConcurrentFlushes"]);
             }
         }
 
-        [Fact(Skip = "RavenDB-8265")]
+        private JToken ExecuteScript(DocumentDatabase database, string script)
+        {
+            var result = new AdminJsConsole(Server, database).ApplyScript(new AdminJsScript
+            (
+                script
+            ));
+
+            Assert.NotNull(result);
+            var token = JsonConvert.DeserializeObject<JObject>(result).GetValue("Result");
+            Assert.NotNull(token);
+            return token;
+        }
+
+        [Fact]
         public async Task CanGetResultAsDateObject()
         {
             using (var store = GetDocumentStore())
@@ -46,18 +54,15 @@ namespace SlowTests.Core.AdminConsole
                 var database = await GetDocumentDatabaseInstanceFor(store);
                 var startTime = database.StartTime;
 
-                var result = new AdminJsConsole(Server, database).ApplyScript(new AdminJsScript
-                (@"
+                var result = ExecuteScript(database, @"
                                 return database.StartTime;
-                             "
-                ));
+                             ");
 
-                Assert.NotNull(result);
                 Assert.Equal(startTime.ToInvariantString(), result.ToInvariantString());
             }
         }
 
-        [Fact(Skip = "RavenDB-8265")]
+        [Fact]
         public async Task CanGetResultAsPrimitiveObject()
         {
             using (var store = GetDocumentStore())
@@ -65,43 +70,31 @@ namespace SlowTests.Core.AdminConsole
                 var database = await GetDocumentDatabaseInstanceFor(store);
                 var maxConcurrentFlushes = (long)database.Configuration.Storage.MaxConcurrentFlushes;
 
-                var result = new AdminJsConsole(Server, database).ApplyScript(new AdminJsScript
-                (@"
+                var result = ExecuteScript(database, @"
                                 return database.Configuration.Storage.MaxConcurrentFlushes
-                             "
-                ));
+                             ");
 
-                Assert.NotNull(result);
-                Assert.IsType<long>(result);
-                Assert.Equal(maxConcurrentFlushes, long.Parse(result));
+                Assert.Equal(maxConcurrentFlushes, result.Value<long>());
 
                 var allowScriptsToAdjustNumberOfSteps = database.Configuration.Indexing.MapTimeout;
 
-                var result2 = new AdminJsConsole(Server,database).ApplyScript(new AdminJsScript
-                (@"
+                var result2 = ExecuteScript(database, @"
                                 return database.Configuration.Indexing.MapTimeout
-                             "
-                ));
+                             ");
 
-                Assert.NotNull(result2);
-                Assert.IsType<TimeSetting>(result2);
-                Assert.Same(allowScriptsToAdjustNumberOfSteps, result2);
+                Assert.Equal(allowScriptsToAdjustNumberOfSteps, result2.ToObject<TimeSetting>());
 
                 var serverUrl = database.Configuration.Core.ServerUrl;
 
-                var result3 = new AdminJsConsole(Server,database).ApplyScript(new AdminJsScript
-                ( @"
+                var result3 = ExecuteScript(database, @"
                                 return database.Configuration.Core.ServerUrl
-                             "
-                ));
+                             ");
 
-                Assert.NotNull(result3);
-                Assert.IsType<string>(result3);
-                Assert.Equal(serverUrl, result3);
+                Assert.Equal(serverUrl, result3.Value<string>());
             }
         }
 
-        [Fact(Skip = "RavenDB-8265")]
+        [Fact]
         public async Task CanGetResultAsComplexObject()
         {
             using (var store = GetDocumentStore())
@@ -118,25 +111,21 @@ namespace SlowTests.Core.AdminConsole
                     session.SaveChanges();
                 }
 
-                var result = new AdminJsConsole(Server, database).ApplyScript(new AdminJsScript
-                (
-                    @"
+                var result = ExecuteScript(database, @"
                                 return database.Metrics.RequestsMeter
                              "
-                ));
+                );
 
-                var resultAsMeterMetric = result as dynamic;
-                Assert.NotNull(resultAsMeterMetric);
-                Assert.Equal(requestsMeter.Count, resultAsMeterMetric.Count);
-                Assert.Equal(requestsMeter.FifteenMinuteRate, resultAsMeterMetric.FifteenMinuteRate);
-                Assert.Equal(requestsMeter.FiveMinuteRate, resultAsMeterMetric.FiveMinuteRate);
-                Assert.Equal(requestsMeter.FiveSecondRate, resultAsMeterMetric.FiveSecondRate);
-                Assert.Equal(requestsMeter.OneMinuteRate, resultAsMeterMetric.OneMinuteRate);
-                Assert.Equal(requestsMeter.OneSecondRate, resultAsMeterMetric.OneSecondRate);
+                Assert.Equal(requestsMeter.Count, result["Count"].Value<long>());
+                Assert.Equal(requestsMeter.FifteenMinuteRate, result["FifteenMinuteRate"].Value<double>());
+                Assert.Equal(requestsMeter.FiveMinuteRate, result["FiveMinuteRate"].Value<double>());
+                Assert.Equal(requestsMeter.FiveSecondRate, result["FiveSecondRate"].Value<double>());
+                Assert.Equal(requestsMeter.OneMinuteRate, result["OneMinuteRate"].Value<double>());
+                Assert.Equal(requestsMeter.OneSecondRate, result["OneSecondRate"].Value<double>());
             }
         }
 
-        [Fact(Skip = "RavenDB-8265")]
+        [Fact]
         public async Task CanModifyConfigurationOnTheFly()
         {
             using (var store = GetDocumentStore())
@@ -148,14 +137,12 @@ namespace SlowTests.Core.AdminConsole
                 Assert.Null(configuration.Queries.MaxClauseCount);
                 Assert.Equal(10, configuration.Storage.MaxConcurrentFlushes);
 
-                new AdminJsConsole(Server, database).ApplyScript(new AdminJsScript
-                (
-                  @"
+                ExecuteScript(database, @"
                                 database.Configuration.Core.ThrowIfAnyIndexCannotBeOpened = false;
                                 database.Configuration.Queries.MaxClauseCount = 2048;
                                 database.Configuration.Storage.MaxConcurrentFlushes = 40;
                              "
-                ));
+                );
 
                 Assert.False(configuration.Core.ThrowIfAnyIndexCannotBeOpened);
                 Assert.Equal(2048, database.Configuration.Queries.MaxClauseCount);
@@ -163,24 +150,20 @@ namespace SlowTests.Core.AdminConsole
             }
         }
 
-        [Fact(Skip = "RavenDB-8265")]
+        [Fact]
         public void CanGetServerSettings()
         {
-            var result = new AdminJsConsole(Server,null).ApplyScript(new AdminJsScript
-            (@"
+            var result = ExecuteScript(null, @"
                             return { 
                                 AllowScriptsToAdjustNumberOfSteps: server.Configuration.Patching.AllowScriptsToAdjustNumberOfSteps,
                                 MaxConcurrentFlushes: server.Configuration.Storage.MaxConcurrentFlushes
                             };"
-            ));
-            var djv = result as dynamic;
-
-            Assert.NotNull(djv);
-            Assert.Equal(false, djv["AllowScriptsToAdjustNumberOfSteps"]);
-            Assert.Equal(10L, djv["MaxConcurrentFlushes"]);           
+            );
+            Assert.Equal(JValue.CreateNull(), result["AllowScriptsToAdjustNumberOfSteps"]); // Test not exists property access
+            Assert.Equal(10L, result["MaxConcurrentFlushes"]);
         }
 
-        [Fact(Skip = "RavenDB-8265")]
+        [Fact]
         public void CanModifyServerConfigurationOnTheFly()
         {
             var configuration = Server.Configuration;
@@ -189,25 +172,23 @@ namespace SlowTests.Core.AdminConsole
             Assert.Null(configuration.Queries.MaxClauseCount);
             Assert.Equal(10, configuration.Storage.MaxConcurrentFlushes);
 
-            new AdminJsConsole(Server, null).ApplyScript(new AdminJsScript
-            (@"
+            ExecuteScript(null, @"
                             server.Configuration.Core.ThrowIfAnyIndexCannotBeOpened = true;
                             server.Configuration.Queries.MaxClauseCount = 2048;
                             server.Configuration.Storage.MaxConcurrentFlushes = 40;
                             "
-            ));
+            );
 
             Assert.True(configuration.Core.ThrowIfAnyIndexCannotBeOpened);
             Assert.Equal(2048, configuration.Queries.MaxClauseCount);
             Assert.Equal(40, configuration.Storage.MaxConcurrentFlushes);            
         }
 
-        [Fact(Skip = "RavenDB-8265")]
+        [Fact]
         public void CanReturnNullResult()
         {
-            var result = new AdminJsConsole(Server, null).ApplyScript(new AdminJsScript(@"return null"));
-
-            Assert.Null(result);
+            var result = ExecuteScript(null, "return null");
+            Assert.Equal(JValue.CreateNull(), (JValue)result);
         }
     }
 }
