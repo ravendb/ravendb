@@ -12,12 +12,12 @@ class deleteDatabaseFromNodeCommand extends commandBase {
     execute(): JQueryPromise<updateDatabaseConfigurationsResult> {
         const url = endpoints.global.adminDatabases.adminDatabases;
         const args = {
-            "hard-delete": this.isHardDelete,
-            name: this.db.name,
-            "from-node": this.nodes
+            HardDelete: this.isHardDelete,
+            DatabaseNames: [this.db.name],
+            FromNodes: this.nodes
         };
 
-        return this.del<updateDatabaseConfigurationsResult>(url + this.urlEncodeArgs(args), null, null)
+        return this.del<updateDatabaseConfigurationsResult>(url, JSON.stringify(args), null)
             .done(() => {
                 this.reportSuccess(`Successfully deleted database from ${pluralizeHelpers.pluralize(this.nodes.length, "node", "nodes: ")} ${this.nodes.join(", ")}.`);
             })
