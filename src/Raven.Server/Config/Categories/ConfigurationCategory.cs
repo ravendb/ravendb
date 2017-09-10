@@ -81,12 +81,14 @@ namespace Raven.Server.Config.Categories
                 TimeUnitAttribute timeUnit = null;
                 SizeUnitAttribute sizeUnit = null;
 
-                if (property.PropertyType == TimeSetting.TypeOf || property.PropertyType == TimeSetting.NullableTypeOf)
+                if (property.PropertyType == typeof(TimeSetting) || 
+                    property.PropertyType == typeof(TimeSetting?))
                 {
                     timeUnit = property.GetCustomAttribute<TimeUnitAttribute>();
                     Debug.Assert(timeUnit != null);
                 }
-                else if (property.PropertyType == Size.TypeOf || property.PropertyType == Size.NullableTypeOf)
+                else if (property.PropertyType == typeof(Size) ||
+                         property.PropertyType == typeof(Size?))
                 {
                     sizeUnit = property.GetCustomAttribute<SizeUnitAttribute>();
                     Debug.Assert(sizeUnit != null);
@@ -173,11 +175,13 @@ namespace Raven.Server.Config.Categories
                         }
                         else
                         {
-                            if (property.PropertyType == typeof(int) || property.PropertyType == typeof(int?))
+                            if (property.PropertyType == typeof(int) || 
+                                property.PropertyType == typeof(int?))
                             {
                                 property.SetValue(this, Math.Max(Convert.ToInt32(value), minValue.Int32Value));
                             }
-                            else if (property.PropertyType == Size.TypeOf)
+                            else if (property.PropertyType == typeof(Size) ||
+                                     property.PropertyType == typeof(Size?))
                             {
                                 property.SetValue(this, new Size(Math.Max(Convert.ToInt32(value), minValue.Int32Value), sizeUnit.Unit));
                             }

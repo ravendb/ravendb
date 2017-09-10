@@ -10,8 +10,7 @@ namespace Raven.Server.Config.Settings
 {
     public struct TimeSetting
     {
-        public static readonly Type TypeOf = typeof(TimeSetting);
-        public static readonly Type NullableTypeOf = typeof(TimeSetting?);
+        public TimeSpan AsTimeSpan;
 
         public TimeSetting(long value, TimeUnit unit)
         {
@@ -45,8 +44,6 @@ namespace Raven.Server.Config.Settings
                     throw new ArgumentOutOfRangeException(nameof(unit), unit, "Unknown TimeUnit value");
             }
         }
-
-        public readonly TimeSpan AsTimeSpan;
     }
 
     public enum TimeUnit
