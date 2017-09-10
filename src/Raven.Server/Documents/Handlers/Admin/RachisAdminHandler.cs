@@ -377,14 +377,14 @@ namespace Raven.Server.Documents.Handlers.Admin
                         await ServerStore.Cluster.WaitForIndexNotification(res.Index);
                     }
                         
-                    await ServerStore.AddNodeToClusterAsync(nodeUrl, nodeTag, validateNotInTopology:false, asWatcher:watcher?? false);
+                    await ServerStore.AddNodeToClusterAsync(nodeUrl, nodeTag, validateNotInTopology:false, asWatcher: watcher ?? false);
 
                     using (ctx.OpenReadTransaction())
                     {
                         var clusterTopology = ServerStore.GetClusterTopology(ctx);
                         var possibleNode = clusterTopology.TryGetNodeTagByUrl(nodeUrl);
                         nodeTag = possibleNode.HasUrl ? possibleNode.NodeTag : null;
-                        ServerStore.LicenseManager.CalculateLicenseLimits(nodeTag, assignedCores, nodeInfo);
+                        ServerStore.LicenseManager.CalculateLicenseLimits(nodeTag, assignedCores, nodeInfo, forceFetchingNodeInfo: true);
                     }
 
                     NoContentStatus();
@@ -404,7 +404,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             if (ServerStore.IsLeader())
             {
                 await ServerStore.RemoveFromClusterAsync(nodeTag);
-                ServerStore.LicenseManager.CalculateLicenseLimits();
+                ServerStore.LicenseManager.CalculateLicenseLimits(forceFetchingNodeInfo: true);
                 NoContentStatus();
                 return;
             }

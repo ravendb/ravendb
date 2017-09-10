@@ -559,7 +559,7 @@ namespace Raven.Server.ServerWide
                     break;
                 case nameof(PutLicenseCommand):
                 case nameof(DeactivateLicenseCommand):
-                    LicenseChanged?.Invoke(null, null);
+                    InvokeLicenseChagned();
                     break;
                 case nameof(PutLicenseLimitsCommand):
                     LicenseLimitsChanged?.Invoke(null, null);
@@ -570,6 +570,11 @@ namespace Raven.Server.ServerWide
                     }
                     break;
             }
+        }
+
+        public void InvokeLicenseChagned()
+        {
+            LicenseChanged?.Invoke(null, null);
         }
 
         public IEnumerable<string> GetSecretKeysNames(TransactionOperationContext context)
