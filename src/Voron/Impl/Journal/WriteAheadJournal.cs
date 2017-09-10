@@ -439,6 +439,12 @@ namespace Voron.Impl.Journal
             private Action<LowLevelTransaction> _updateJournalStateAfterFlush;
             private Task _pendingSync = Task.CompletedTask;
 
+            // for testing pupose:
+            public bool TestingNowWaitingSignal = false;
+            public ManualResetEvent TestingWait = null;
+            public bool TestingSkippedUpdateDatabaseStateAfterSync { get; set; }
+            public bool TestingDoNotWait { get; set; }
+
             public void OnTransactionCommitted(LowLevelTransaction tx)
             {
                 var action = Volatile.Read(ref _updateJournalStateAfterFlush);
@@ -588,10 +594,10 @@ namespace Voron.Impl.Journal
                         _pendingSync.Wait(token);
                         token.ThrowIfCancellationRequested();
                         var operation = new SyncOperation(this);
-                        if (operation.TryGatherInformationToStartSync())
+                        if (operation.TryGatherInformationToStartSync(out var syncCounter))
                         {
                             _pendingSync = operation.Task;
-                            ThreadPool.QueueUserWorkItem(state => ((SyncOperation)state).CompleteSync(), operation);
+                            ThreadPool.QueueUserWorkItem(state => ((SyncOperation)state).CompleteSync(syncCounter), operation);
                         }
                     }
 
@@ -843,7 +849,7 @@ namespace Voron.Impl.Journal
 
                 public bool SyncDataFile()
                 {
-                    if (TryGatherInformationToStartSync() == false)
+                    if (TryGatherInformationToStartSync(out var syncCounter) == false)
                         return false;
 
                     if (_parent._waj._env.Disposed)
@@ -855,11 +861,19 @@ namespace Voron.Impl.Journal
                     if (_parent._waj._env.Disposed)
                         return false;
 
-                    UpdateDatabaseStateAfterSync();
+                    if (_parent != null)
+                    {
+                        _parent.TestingNowWaitingSignal = true;
+                        if (_parent.TestingDoNotWait == false)
+                            _parent.TestingWait?.WaitOne();
+                    }
+
+                    UpdateDatabaseStateAfterSync(syncCounter);
+
                     return true;
                 }
 
-                public void CompleteSync()
+                public void CompleteSync(long syncCounter)
                 {
                     try
                     {
@@ -869,7 +883,7 @@ namespace Voron.Impl.Journal
                             {
                                 CallPagerSync();
 
-                                UpdateDatabaseStateAfterSync();
+                                UpdateDatabaseStateAfterSync(syncCounter);
                             }
                             _tcs.TrySetResult(null);
                         }
@@ -880,12 +894,21 @@ namespace Voron.Impl.Journal
                     }
                 }
 
-                private void UpdateDatabaseStateAfterSync()
+                private void UpdateDatabaseStateAfterSync(long previousSyncedCounter)
                 {
                     lock (_parent._flushingLock)
                     {
                         if (_parent._waj._env.Disposed)
                             return;
+
+                        // This might be an erlier sync which started at SyncDataFile()
+                        // but it is UpdateDatabaseStateAfterSync _after_ the next sync call made it's update
+                        // so we exiting here to prevent overrun
+                        if (previousSyncedCounter != _parent._waj._env.LastSyncCounter)
+                        {
+                            _parent.TestingSkippedUpdateDatabaseStateAfterSync = true;
+                            return;
+                        }
 
                         _parent._totalWrittenButUnsyncedBytes -= _currentTotalWrittenBytes;
                         _parent.UpdateFileHeaderAfterDataFileSync(_lastSyncedJournal, _lastSyncedTransactionId, ref _transactionHeader);
@@ -917,8 +940,9 @@ namespace Voron.Impl.Journal
                     }
                 }
 
-                public bool TryGatherInformationToStartSync()
+                public bool TryGatherInformationToStartSync(out long syncCounter)
                 {
+                    syncCounter = -1;
                     // We need _transactionHeader to be the frozen value at the time we _started_ the
                     // sync process
                     try
@@ -936,7 +960,7 @@ namespace Voron.Impl.Journal
                             return false;
                         }
 
-                        Interlocked.Increment(ref _parent._waj._env.LastSyncCounter);
+                        syncCounter = Interlocked.Increment(ref _parent._waj._env.LastSyncCounter);
 
                         if (_parent._waj._env.Disposed)
                             return false; // we have already disposed, nothing to do here
