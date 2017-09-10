@@ -1,6 +1,6 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require("viewmodels/shell");
-import license = require("models/auth/license");
+import license = require("models/auth/licenseModel");
 import registration = require("viewmodels/shell/registration");
 import deactivateLicenseCommand = require("commands/licensing/deactivateLicenseCommand");
 
@@ -44,11 +44,11 @@ class about extends viewModelBase {
 
     shortDescription = ko.pureComputed(() => {
         const licenseStatus = this.licenseStatus();
-        if (!licenseStatus || !licenseStatus.ShortDescription) {
+        if (!licenseStatus || !license.licenseShortDescription()) {
             return null;
         }
 
-        return licenseStatus.ShortDescription;
+        return license.licenseShortDescription();
     });
 
     registered = ko.pureComputed(() => {

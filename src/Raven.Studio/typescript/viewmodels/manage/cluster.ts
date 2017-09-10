@@ -13,7 +13,7 @@ import showDataDialog = require("viewmodels/common/showDataDialog");
 import router = require("plugins/router");
 import clusterGraph = require("models/database/cluster/clusterGraph");
 import assignCores = require("viewmodels/manage/assignCores");
-import license = require("models/auth/license");
+import license = require("models/auth/licenseModel");
 
 class cluster extends viewModelBase {
 
@@ -92,7 +92,7 @@ class cluster extends viewModelBase {
                 return null;
             }
 
-            return licenseStatus.ShortDescription;
+            return license.licenseShortDescription();
         });
     }
 

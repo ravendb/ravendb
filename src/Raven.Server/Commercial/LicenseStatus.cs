@@ -21,22 +21,6 @@ namespace Raven.Server.Commercial
 
         public string Status => Attributes == null ? "AGPL - Open Source" : "Commercial";
 
-        public string ShortDescription
-        {
-            get
-            {
-                var maxMemory = MaxMemory;
-                var list = new List<string>
-                {
-                    $"{MaxCores} Cores",
-                    $"{(maxMemory == 0 ? "Unlimited" : $"{maxMemory}GB")} RAM",
-                    $"cluster size: {MaxClusterSize}"
-                };
-
-                return string.Join(", ", list);
-            }
-        }
-
         public string FormattedExpiration
         {
             get
@@ -119,8 +103,11 @@ namespace Raven.Server.Commercial
                 [nameof(FirstServerStartDate)] = FirstServerStartDate,
                 [nameof(Error)] = Error,
                 [nameof(Message)] = Message,
+                [nameof(MaxCores)] = MaxCores,
+                [nameof(MaxMemory)] = MaxMemory,
+                [nameof(MaxClusterSize)] = MaxClusterSize,
+                [nameof(Expiration)] = Expiration,
                 [nameof(Status)] = Status,
-                [nameof(ShortDescription)] = ShortDescription,
                 [nameof(FormattedExpiration)] = FormattedExpiration,
                 [nameof(Type)] = Type.ToString(),
                 [nameof(Ratio)] = Ratio.ToString(),
