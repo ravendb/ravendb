@@ -187,7 +187,8 @@ namespace Raven.Server.ServerWide.Maintenance
                                     var readResponseTask = context.ReadForMemoryAsync(connection, _readStatusUpdateDebugString, internalTaskCancellationToken.Token);
                                     var timeout = TimeoutManager.WaitFor(receiveFromWorkerTimeout, _token);
 
-                                    if (await Task.WhenAny(readResponseTask.AsTask(), timeout) == timeout)
+                                    if (readResponseTask.IsCompleted == false && 
+                                        await Task.WhenAny(readResponseTask.AsTask(), timeout) == timeout)
                                     {
                                         if (_log.IsInfoEnabled)
                                         {
@@ -200,6 +201,16 @@ namespace Raven.Server.ServerWide.Maintenance
                                             _lastSuccessfulReceivedReport);
                                         needToWait = true;
                                         internalTaskCancellationToken.Cancel();
+                                        try
+                                        {
+                                            await readResponseTask;
+                                        }
+                                        catch 
+                                        {
+                                            // expecting and ignoring this error, we MUST wait 
+                                            // until the task is done before releasing the context that
+                                            // it is using
+                                        }
                                         break;
                                     }
 
