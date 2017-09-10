@@ -512,7 +512,7 @@ namespace Raven.Server.Web.System
                 }
 
                 var watcher = JsonDeserializationClient.ExternalReplication(watcherBlittable);
-                if (ServerStore.LicenseManager.CanAddExternalReplication(watcher, out var licenseLimit) == false)
+                if (ServerStore.LicenseManager.CanAddExternalReplication(out var licenseLimit) == false)
                 {
                     SetLicenseLimitResponse(licenseLimit);
                     return;

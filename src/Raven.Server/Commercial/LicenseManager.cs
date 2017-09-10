@@ -1091,15 +1091,7 @@ namespace Raven.Server.Commercial
             if (externalReplications == null)
                 return false;
 
-            var hasInvalidExternalReplication = false;
-
-            foreach (var externalReplication in externalReplications)
-            {
-                hasInvalidExternalReplication |= 
-                    IsValidExternalReplication(licenseStatus, externalReplication.Url) == false;
-            }
-
-            return hasInvalidExternalReplication;
+            return IsValidExternalReplication(licenseStatus) == false;
         }
 
         private static bool HasInvalidRavenEtl(
@@ -1151,11 +1143,9 @@ namespace Raven.Server.Commercial
                 return false;
             }
 
-            if (_licenseStatus.DistributedCluster == false &&
-                IsValidLocalUrl(nodeUrl) == false)
+            if (_licenseStatus.DistributedCluster == false)
             {
-                var details = $"Your current license ({_licenseStatus.Type}) allows adding nodes " +
-                        "that run locally (localhost, 127.*.*.* or [::1])";
+                var details = $"Your current license ({_licenseStatus.Type}) does not allow adding nodes to the cluster";
                 licenseLimit = GenerateLicenseLimit(LimitType.ForbiddenHost, details);
                 return false;
             }
@@ -1204,15 +1194,14 @@ namespace Raven.Server.Commercial
             } 
         }
 
-        public bool CanAddExternalReplication(ExternalReplication watcher, out LicenseLimit licenseLimit)
+        public bool CanAddExternalReplication(out LicenseLimit licenseLimit)
         {
             if (IsValid(out licenseLimit) == false)
                 return false;
 
-            if (IsValidExternalReplication(_licenseStatus, watcher.Url) == false)
+            if (IsValidExternalReplication(_licenseStatus) == false)
             {
-                var details = $"Your current license ({_licenseStatus.Type}) allows adding external replication " +
-                               "destinations that run locally (localhost, 127.*.*.* or [::1])";
+                var details = $"Your current license ({_licenseStatus.Type}) does not allow adding external replication";
                 licenseLimit = GenerateLicenseLimit(LimitType.ExternalReplication, details);
                 return false;
             }
@@ -1221,9 +1210,9 @@ namespace Raven.Server.Commercial
             return true;
         }
 
-        private static bool IsValidExternalReplication(LicenseStatus licenseStatus, string url)
+        private static bool IsValidExternalReplication(LicenseStatus licenseStatus)
         {
-            return licenseStatus.HasExternalReplication || IsValidLocalUrl(url);
+            return licenseStatus.HasExternalReplication;
         }
 
         public bool CanAddRavenEtl(out LicenseLimit licenseLimit)
@@ -1321,34 +1310,6 @@ namespace Raven.Server.Commercial
 
             licenseLimit = null;
             return true;
-        }
-
-        private static bool IsValidLocalUrl(string url)
-        {
-            if (string.IsNullOrWhiteSpace(url))
-                return false;
-
-            var uri = new Uri(url);
-            if (IPAddress.TryParse(uri.Host, out var ipAddress) == false)
-            {
-                return uri.Host == "localhost" || uri.Host == "localhost.fiddler";
-            }
-
-            switch (ipAddress.AddressFamily)
-            {
-                case AddressFamily.InterNetwork:
-                    // ipv4
-                    if (uri.Host.StartsWith("127"))
-                        return true;
-                    break;
-                case AddressFamily.InterNetworkV6:
-                    if (uri.Host == "[::1]")
-                        return true;
-                    // ipv6
-                    break;
-            }
-
-            return false;
         }
     }
 }
