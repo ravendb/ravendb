@@ -3,9 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
-using System.Net.Sockets;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -46,7 +44,6 @@ namespace Raven.Server.Commercial
         private readonly LicenseStatus _licenseStatus = new LicenseStatus();
         private readonly BuildNumber _buildInfo;
         private Timer _leaseLicenseTimer;
-        private Timer _updateNodesInfoTimer;
         private RSAParameters? _rsaParameters;
         private readonly ServerStore _serverStore;
         private readonly SemaphoreSlim _leaseLicenseSemaphore = new SemaphoreSlim(1);
@@ -126,13 +123,8 @@ namespace Raven.Server.Commercial
             finally
             {
                 _leaseLicenseTimer = new Timer(state =>
-                    AsyncHelpers.RunSync(LeaseLicense), null,
+                    AsyncHelpers.RunSync(ExecuteTasks), null,
                     (int)TimeSpan.FromMinutes(1).TotalMilliseconds,
-                    (int)TimeSpan.FromHours(24).TotalMilliseconds);
-
-                _updateNodesInfoTimer = new Timer(state =>
-                    AsyncHelpers.RunSync(UpdateNodesInfo), null,
-                    (int)TimeSpan.FromSeconds(30).TotalMilliseconds,
                     (int)TimeSpan.FromHours(24).TotalMilliseconds);
             }
         }
@@ -166,7 +158,7 @@ namespace Raven.Server.Commercial
                 _licenseStatus.Error = true;
                 _licenseStatus.Message = e.Message;
 
-                if (Logger.IsInfoEnabled && _skipLeasingErrorsLogging == false)
+                if (Logger.IsInfoEnabled)
                     Logger.Info("Could not validate license", e);
 
                 var alert = AlertRaised.Create(
@@ -233,11 +225,12 @@ namespace Raven.Server.Commercial
 
                 var oldAssignedCores = 0;
                 var numberOfCores = -1;
-                double usableMemoryInGb = -1;
                 double installedMemoryInGb = -1;
+                double usableMemoryInGb = -1;
                 if (detailsPerNode.TryGetValue(nodeTag, out var nodeDetails))
                 {
                     installedMemoryInGb = nodeDetails.InstalledMemoryInGb;
+                    usableMemoryInGb = nodeDetails.UsableMemoryInGb;
                     oldAssignedCores = nodeDetails.UtilizedCores;
                 }
 
@@ -271,7 +264,7 @@ namespace Raven.Server.Commercial
                         usableMemoryInGb = nodeInfo.UsableMemoryInGb;
                     }
 
-                    if (numberOfCores < newAssignedCores)
+                    if (numberOfCores != -1 && numberOfCores < newAssignedCores)
                         throw new ArgumentException($"The new assigned cores count: {newAssignedCores} " +
                                                     $"is larger than the number of cores in the node: {numberOfCores}");
 
@@ -301,7 +294,8 @@ namespace Raven.Server.Commercial
         public void CalculateLicenseLimits(
             string assignedNodeTag = null,
             int? assignedCores = null,
-            NodeInfo nodeInfo = null)
+            NodeInfo nodeInfo = null,
+            bool forceFetchingNodeInfo = false)
         {
             if (_serverStore.IsLeader() == false)
                 return;
@@ -333,7 +327,6 @@ namespace Raven.Server.Commercial
 
                     var allNodes = _serverStore.GetClusterTopology(context).AllNodes;
                     var allNodeTags = allNodes.Keys;
-                    var utilizedCores = detailsPerNode.Sum(x => x.Value.UtilizedCores);
                     if (allNodeTags.Count == detailsPerNode.Count &&
                         allNodeTags.SequenceEqual(detailsPerNode.Keys) &&
                         hasChanges == false)
@@ -356,6 +349,7 @@ namespace Raven.Server.Commercial
 
                     if (missingNodesAssignment.Count > 0)
                     {
+                        var utilizedCores = detailsPerNode.Sum(x => x.Value.UtilizedCores);
                         var availableCores = _licenseStatus.MaxCores - utilizedCores;
                         var coresPerNode = Math.Max(1, availableCores / missingNodesAssignment.Count);
 
@@ -373,14 +367,17 @@ namespace Raven.Server.Commercial
                             }
                             else
                             {
-                                if (nodeTag != assignedNodeTag || nodeInfo == null)
+                                if (nodeTag != assignedNodeTag)
+                                    nodeInfo = null;
+
+                                if (nodeInfo == null && forceFetchingNodeInfo)
                                 {
                                     nodeInfo = AsyncHelpers.RunSync(() => GetNodeInfo(allNodes[nodeTag], context));
                                 }
 
-                                numberOfCores = nodeInfo.NumberOfCores;
-                                installedMemory = nodeInfo.InstalledMemoryInGb;
-                                usableMemoryInGb = nodeInfo.UsableMemoryInGb;
+                                numberOfCores = nodeInfo?.NumberOfCores ?? -1;
+                                installedMemory = nodeInfo?.InstalledMemoryInGb ?? -1;
+                                usableMemoryInGb = nodeInfo?.UsableMemoryInGb ?? -1;
                             }
 
                             if (numberOfCores != -1)
@@ -617,10 +614,10 @@ namespace Raven.Server.Commercial
                 return null;
             }
 
-            var licenseAsStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+            var leasedLicenseAsStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
-                var json = context.Read(licenseAsStream, "leased license info");
+                var json = context.Read(leasedLicenseAsStream, "leased license info");
                 var leasedLicense = JsonDeserializationServer.LeasedLicense(json);
 
                 var newLicense = leasedLicense.License;
@@ -648,56 +645,60 @@ namespace Raven.Server.Commercial
             }
         }
 
-        private async Task LeaseLicense()
+        private async Task ExecuteTasks()
         {
             try
             {
+                await LeaseLicense();
 
-                if (_serverStore.IsLeader() == false)
-                {
-                    // only the leader is in charge of updating the license
+                await UpdateNodesInfo();
+
+                ReloadLicenseLimits();
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info("Failed to execute tasks", e);
+            }
+        }
+
+        private async Task LeaseLicense()
+        {
+            if (_serverStore.IsLeader() == false)
+                return;
+
+            if (_leaseLicenseSemaphore.Wait(0) == false)
+                return;
+
+            try
+            {
+                var loadedLicense = _serverStore.LoadLicense();
+                if (loadedLicense == null)
                     return;
-                }
 
-                if (_leaseLicenseSemaphore.Wait(0) == false)
+                var updatedLicense = await GetUpdatedLicense(loadedLicense);
+                if (updatedLicense == null)
                     return;
 
-                try
-                {
-                    var loadedLicense = _serverStore.LoadLicense();
-                    if (loadedLicense == null)
-                        return;
-
-                    var updatedLicense = await GetUpdatedLicense(loadedLicense);
-                    if (updatedLicense == null)
-                        return;
-
-                    await Activate(updatedLicense, skipLeaseLicense: true);
-                }
-                catch (Exception e)
-                {
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info("Error leasing license", e);
-
-                    var alert = AlertRaised.Create(
-                        "Error leasing license",
-                        "Could not lease license",
-                        AlertType.LicenseManager_LeaseLicenseError,
-                        NotificationSeverity.Warning,
-                        details: new ExceptionDetails(e));
-
-                    _serverStore.NotificationCenter.Add(alert);
-                }
-                finally
-                {
-                    _leaseLicenseSemaphore.Release();
-                    ReloadLicenseLimits();
-                }
+                await Activate(updatedLicense, skipLeaseLicense: true);
             }
             catch (Exception e)
             {
                 if (Logger.IsInfoEnabled)
                     Logger.Info("Failed to lease license", e);
+
+                var alert = AlertRaised.Create(
+                    "Failed to lease license",
+                    "Could not lease license",
+                    AlertType.LicenseManager_LeaseLicenseError,
+                    NotificationSeverity.Warning,
+                    details: new ExceptionDetails(e));
+
+                _serverStore.NotificationCenter.Add(alert);
+            }
+            finally
+            {
+                _leaseLicenseSemaphore.Release();
             }
         }
 
@@ -794,15 +795,10 @@ namespace Raven.Server.Commercial
 
         private async Task HandleLeaseLicenseFailure(HttpResponseMessage response)
         {
+            if (Logger.IsInfoEnabled == false || _skipLeasingErrorsLogging)
+                return;
+
             var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            if (response.StatusCode == HttpStatusCode.ExpectationFailed)
-            {
-                // TODO: handle lease canceled on the server
-                // the license was canceled
-                _licenseStatus.Attributes = null;
-                _licenseStatus.Error = true;
-                _licenseStatus.Message = responseString;
-            }
 
             var alert = AlertRaised.Create(
                 "Lease license failure",
@@ -950,7 +946,6 @@ namespace Raven.Server.Commercial
         public void Dispose()
         {
             _leaseLicenseTimer?.Dispose();
-            _updateNodesInfoTimer?.Dispose();
         }
 
         private bool CanActivateLicense(LicenseStatus newLicenseStatus, out LicenseLimit licenseLimit)

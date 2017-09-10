@@ -13,9 +13,9 @@ namespace Raven.Server.Commercial
 
         private static readonly string[] Terms =
         {
-            "type", "version", "expiration", "memory", "cores", "redist", "encryption",
-            "snmp", "distributedCluster", "maxClusterSize", "snapshotBackup", "cloudBackup",
-            "dynamicNodesDistribution", "ravenEtl", "sqlEtl"
+            "type", "version", "expiration", "memory", "cores", "redist", "encryption", "snmp",
+            "distributedCluster", "maxClusterSize", "snapshotBackup", "cloudBackup", "dynamicNodesDistribution",
+            "externalReplication", "delayedExternalReplication", "ravenEtl", "sqlEtl"
         };
 
         private enum ValueType : byte

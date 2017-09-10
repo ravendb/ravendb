@@ -9,11 +9,13 @@ using Raven.Server.NotificationCenter.BackgroundWork;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Sparrow.Collections;
+using Sparrow.Logging;
 
 namespace Raven.Server.NotificationCenter
 {
     public class NotificationCenter : IDisposable
     {
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<NotificationCenter>("NotificationCenter");
         private readonly ConcurrentSet<ConnectedWatcher> _watchers = new ConcurrentSet<ConnectedWatcher>();
         private readonly List<BackgroundWorkBase> _backgroundWorkers = new List<BackgroundWorkBase>();
         private readonly NotificationsStorage _notificationsStorage;
@@ -94,25 +96,37 @@ namespace Raven.Server.NotificationCenter
 
         public void Add(Notification notification)
         {
-            if (notification.IsPersistent)
+            try
             {
-                if (_notificationsStorage.Store(notification) == false)
+                if (notification.IsPersistent)
+                {
+                    if (_notificationsStorage.Store(notification) == false)
+                        return;
+                }
+
+                if (_watchers.Count == 0)
                     return;
+
+                using (_notificationsStorage.Read(notification.Id, out NotificationTableValue existing))
+                {
+                    if (existing?.PostponedUntil > SystemTime.UtcNow)
+                        return;
+                }
+
+                // ReSharper disable once InconsistentlySynchronizedField
+                foreach (var watcher in _watchers)
+                {
+                    watcher.NotificationsQueue.Enqueue(notification);
+                }
             }
-
-            if (_watchers.Count == 0)
-                return;
-
-            using (_notificationsStorage.Read(notification.Id, out NotificationTableValue existing))
+            catch (ObjectDisposedException)
             {
-                if (existing?.PostponedUntil > SystemTime.UtcNow)
-                    return;
+                // we are disposing
             }
-
-            // ReSharper disable once InconsistentlySynchronizedField
-            foreach (var watcher in _watchers)
+            catch (Exception e)
             {
-                watcher.NotificationsQueue.Enqueue(notification);
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Failed to add notification: '{notification.ToJson()}' to the notification center", e);
             }
         }
 

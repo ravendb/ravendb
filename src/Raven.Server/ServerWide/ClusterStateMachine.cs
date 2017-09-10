@@ -1070,7 +1070,7 @@ namespace Raven.Server.ServerWide
         {
             using (context.OpenWriteTransaction())
             {
-                // Lets read all the certificate keys from the cluster, and delete the matching ones from the local state
+                // lets read all the certificate keys from the cluster, and delete the matching ones from the local state
                 var clusterCertificateKeys = serverStore.Cluster.ItemKeysStartingWith(context, Constants.Certificates.Prefix, 0, int.MaxValue);
 
                 foreach (var key in clusterCertificateKeys)
@@ -1080,7 +1080,10 @@ namespace Raven.Server.ServerWide
                         DeleteLocalState(context, key);
                     }
                 }
-                //There is potentially a lot of work to be done here so we are responding to the change on a separate task.
+
+                serverStore.InvokeLicenseChagned();
+
+                // there is potentially a lot of work to be done here so we are responding to the change on a separate task.
                 var onDatabaseChanged = DatabaseChanged;
                 if (onDatabaseChanged != null)
                 {

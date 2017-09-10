@@ -108,6 +108,8 @@ namespace Raven.Server.Commercial
 
         public bool HasExternalReplication => GetValue<bool>("externalReplication");
 
+        public bool HasDelayedExternalReplication => GetValue<bool>("delayedExternalReplication");
+
         public bool HasRavenEtl => GetValue<bool>("ravenEtl");
 
         public bool HasSqlEtl => GetValue<bool>("sqlEtl");
