@@ -165,8 +165,7 @@ namespace FastTests.Client.Lazy.Async
             using (var session = store.OpenAsyncSession())
             {
                 var contactViewModel =
-                    session.Advanced.AsyncDocumentQuery<ContactDto>()
-                        .RawQuery(@"
+                    session.Advanced.AsyncRawQuery<ContactDto>(@"
 from Contacts as contact
 where id(contact) = $id
 load contact.DetailIds as details[]
@@ -243,8 +242,7 @@ select {
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var items = await session.Advanced.AsyncDocumentQuery<Item>()
-                        .RawQuery(@"
+                    var items = await session.Advanced.AsyncRawQuery<Item>(@"
 declare function triple(pos) { return pos *3; }
 from Items
 where id() in ($ids)

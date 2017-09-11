@@ -107,8 +107,8 @@ namespace SlowTests.Verifications
                     var results1 = session.Query<PersonnelAll.Mapping, PersonnelAll>().ToArray();
 
                     // With transform (will give 1 to 4 results, depending on the weather?)
-                    var results2 = session.Advanced.DocumentQuery<Result, PersonnelAll>()
-                        .RawQuery(@"
+                    var results2 = session.Advanced
+                        .RawQuery<Result, PersonnelAll>(@"
 from index PersonnelAll
 select LastName as FullName, Id
 ")

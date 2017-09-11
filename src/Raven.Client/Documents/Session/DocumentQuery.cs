@@ -15,7 +15,7 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     /// A query against a Raven index
     /// </summary>
-    public partial class DocumentQuery<T> : AbstractDocumentQuery<T, DocumentQuery<T>>, IDocumentQuery<T>
+    public partial class DocumentQuery<T> : AbstractDocumentQuery<T, DocumentQuery<T>>, IDocumentQuery<T>, IRawDocumentQuery<T>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="DocumentQuery{T}"/> class.
@@ -76,7 +76,14 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResults(TimeSpan waitTimeout)
+        IDocumentQuery<T> IQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResults(TimeSpan waitTimeout)
+        {
+            WaitForNonStaleResults(waitTimeout);
+            return this;
+        }
+
+        /// <inheritdoc />
+        IRawDocumentQuery<T> IQueryBase<T, IRawDocumentQuery<T>>.WaitForNonStaleResults(TimeSpan waitTimeout)
         {
             WaitForNonStaleResults(waitTimeout);
             return this;
@@ -105,17 +112,25 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
-        void IDocumentQueryBase<T, IDocumentQuery<T>>.AfterQueryExecuted(Action<QueryResult> action)
+        void IQueryBase<T, IDocumentQuery<T>>.AfterQueryExecuted(Action<QueryResult> action)
         {
             AfterQueryExecuted(action);
         }
 
+        void IQueryBase<T, IRawDocumentQuery<T>>.AfterQueryExecuted(Action<QueryResult> action)
+        {
+            AfterQueryExecuted(action);
+        }
 
-        void IDocumentQueryBase<T, IDocumentQuery<T>>.AfterStreamExecuted(Action<BlittableJsonReaderObject> action)
+        void IQueryBase<T, IDocumentQuery<T>>.AfterStreamExecuted(Action<BlittableJsonReaderObject> action)
         {
             AfterStreamExecuted(action);
         }
 
+        void IQueryBase<T, IRawDocumentQuery<T>>.AfterStreamExecuted(Action<BlittableJsonReaderObject> action)
+        {
+            AfterStreamExecuted(action);
+        }
         /// <inheritdoc />
         IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OpenSubclause()
         {
@@ -180,40 +195,74 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Statistics(out QueryStatistics stats)
+        IDocumentQuery<T> IQueryBase<T, IDocumentQuery<T>>.Statistics(out QueryStatistics stats)
         {
             Statistics(out stats);
             return this;
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.UsingDefaultOperator(QueryOperator queryOperator)
+        IRawDocumentQuery<T> IQueryBase<T, IRawDocumentQuery<T>>.Statistics(out QueryStatistics stats)
+        {
+            Statistics(out stats);
+            return this;
+        }
+
+        /// <inheritdoc />
+        IDocumentQuery<T> IQueryBase<T, IDocumentQuery<T>>.UsingDefaultOperator(QueryOperator queryOperator)
         {
             UsingDefaultOperator(queryOperator);
             return this;
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.NoTracking()
+        IRawDocumentQuery<T> IQueryBase<T, IRawDocumentQuery<T>>.UsingDefaultOperator(QueryOperator queryOperator)
+        {
+            UsingDefaultOperator(queryOperator);
+            return this;
+        }
+
+        /// <inheritdoc />
+        IDocumentQuery<T> IQueryBase<T, IDocumentQuery<T>>.NoTracking()
         {
             NoTracking();
             return this;
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.NoCaching()
+        IRawDocumentQuery<T> IQueryBase<T, IRawDocumentQuery<T>>.NoTracking()
+        {
+            NoTracking();
+            return this;
+        }
+
+        /// <inheritdoc />
+        IDocumentQuery<T> IQueryBase<T, IDocumentQuery<T>>.NoCaching()
         {
             NoCaching();
             return this;
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.ShowTimings()
+        IRawDocumentQuery<T> IQueryBase<T, IRawDocumentQuery<T>>.NoCaching()
+        {
+            NoCaching();
+            return this;
+        }
+
+        /// <inheritdoc />
+        IDocumentQuery<T> IQueryBase<T, IDocumentQuery<T>>.ShowTimings()
         {
             ShowTimings();
             return this;
         }
 
+        /// <inheritdoc />
+        IRawDocumentQuery<T> IQueryBase<T, IRawDocumentQuery<T>>.ShowTimings()
+        {
+            ShowTimings();
+            return this;
+        }
         /// <inheritdoc />
         IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Include(string path)
         {
@@ -250,14 +299,28 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Take(int count)
+        IDocumentQuery<T> IQueryBase<T, IDocumentQuery<T>>.Take(int count)
         {
             Take(count);
             return this;
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Skip(int count)
+        IRawDocumentQuery<T> IQueryBase<T, IRawDocumentQuery<T>>.Take(int count)
+        {
+            Take(count);
+            return this;
+        }
+
+        /// <inheritdoc />
+        IDocumentQuery<T> IQueryBase<T, IDocumentQuery<T>>.Skip(int count)
+        {
+            Skip(count);
+            return this;
+        }
+
+        /// <inheritdoc />
+        IRawDocumentQuery<T> IQueryBase<T, IRawDocumentQuery<T>>.Skip(int count)
         {
             Skip(count);
             return this;
@@ -502,14 +565,14 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQuery<T>.RawQuery(string query)
+        IDocumentQuery<T> IRawDocumentQuery<T>.RawQuery(string query)
         {
             RawQuery(query);
             return this;
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQuery<T>.AddParameter(string name, object value)
+        IDocumentQuery<T> IRawDocumentQuery<T>.AddParameter(string name, object value)
         {
             AddParameter(name, value);
             return this;
@@ -557,42 +620,84 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResultsAsOfNow()
+        IDocumentQuery<T> IQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResultsAsOfNow()
         {
             WaitForNonStaleResultsAsOfNow();
             return this;
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResultsAsOfNow(TimeSpan waitTimeout)
+        IRawDocumentQuery<T> IQueryBase<T, IRawDocumentQuery<T>>.WaitForNonStaleResultsAsOfNow()
+        {
+            WaitForNonStaleResultsAsOfNow();
+            return this;
+        }
+
+        /// <inheritdoc />
+        IDocumentQuery<T> IQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResultsAsOfNow(TimeSpan waitTimeout)
         {
             WaitForNonStaleResultsAsOfNow(waitTimeout);
             return this;
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResultsAsOf(long cutOffEtag)
+        IRawDocumentQuery<T> IQueryBase<T, IRawDocumentQuery<T>>.WaitForNonStaleResultsAsOfNow(TimeSpan waitTimeout)
+        {
+            WaitForNonStaleResultsAsOfNow(waitTimeout);
+            return this;
+        }
+
+        /// <inheritdoc />
+        IDocumentQuery<T> IQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResultsAsOf(long cutOffEtag)
         {
             WaitForNonStaleResultsAsOf(cutOffEtag);
             return this;
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResultsAsOf(long cutOffEtag, TimeSpan waitTimeout)
+        IRawDocumentQuery<T> IQueryBase<T, IRawDocumentQuery<T>>.WaitForNonStaleResultsAsOf(long cutOffEtag)
+        {
+            WaitForNonStaleResultsAsOf(cutOffEtag);
+            return this;
+        }
+
+        /// <inheritdoc />
+        IDocumentQuery<T> IQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResultsAsOf(long cutOffEtag, TimeSpan waitTimeout)
         {
             WaitForNonStaleResultsAsOf(cutOffEtag, waitTimeout);
             return this;
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResults()
+        IRawDocumentQuery<T> IQueryBase<T, IRawDocumentQuery<T>>.WaitForNonStaleResultsAsOf(long cutOffEtag, TimeSpan waitTimeout)
+        {
+            WaitForNonStaleResultsAsOf(cutOffEtag, waitTimeout);
+            return this;
+        }
+
+        /// <inheritdoc />
+        IDocumentQuery<T> IQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResults()
         {
             WaitForNonStaleResults();
             return this;
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.BeforeQueryExecuted(Action<IndexQuery> beforeQueryExecuted)
+        IRawDocumentQuery<T> IQueryBase<T, IRawDocumentQuery<T>>.WaitForNonStaleResults()
+        {
+            WaitForNonStaleResults();
+            return this;
+        }
+
+        /// <inheritdoc />
+        IDocumentQuery<T> IQueryBase<T, IDocumentQuery<T>>.BeforeQueryExecuted(Action<IndexQuery> beforeQueryExecuted)
+        {
+            BeforeQueryExecuted(beforeQueryExecuted);
+            return this;
+        }
+
+        /// <inheritdoc />
+        IRawDocumentQuery<T> IQueryBase<T, IRawDocumentQuery<T>>.BeforeQueryExecuted(Action<IndexQuery> beforeQueryExecuted)
         {
             BeforeQueryExecuted(beforeQueryExecuted);
             return this;

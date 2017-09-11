@@ -151,8 +151,8 @@ namespace SlowTests.Verifications
                 WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
-                    var results = session.Advanced.DocumentQuery<BaseEntityResult>()
-                        .RawQuery(@"
+                    var results = session.Advanced
+                        .RawQuery<BaseEntityResult>(@"
 from index 'TranslatedEntities/Map' as p
 select {
     Id: p.Id,
@@ -182,8 +182,8 @@ select {
 
                 using (var session = store.OpenSession())
                 {
-                    var results = session.Advanced.DocumentQuery<BaseEntityResult>()
-                        .RawQuery(@"
+                    var results = session.Advanced
+                        .RawQuery<BaseEntityResult>(@"
 from index 'TranslatedEntities/MapReduce' as p
 select {
     Id: p.Id,

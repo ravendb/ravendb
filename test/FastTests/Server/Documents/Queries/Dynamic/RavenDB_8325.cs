@@ -27,7 +27,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic
 
                     session.SaveChanges();
 
-                    var items = session.Advanced.DocumentQuery<Item>().RawQuery("from Items where Value >= 0 order by Value").ToList();
+                    var items = session.Advanced.RawQuery<Item>("from Items where Value >= 0 order by Value").ToList();
 
                     Assert.Equal(1, items[0].Value);
                     Assert.Equal(10, items[1].Value);

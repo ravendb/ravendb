@@ -48,9 +48,8 @@ namespace SlowTests.Bugs.LiveProjections
 
                 using (var session = documentStore.OpenSession())
                 {
-                    var rep = session.Advanced.DocumentQuery<ProductDetailsReport>()
-                        .WaitForNonStaleResultsAsOfNow()
-                        .RawQuery(@"
+                    var rep = session.Advanced                        
+                        .RawQuery<ProductDetailsReport>(@"
 declare function mapVariants(v) {
     for(var i = 0; i< v.length; i++)
     {
@@ -63,7 +62,7 @@ select {
     Name: p.Name,
     Variants: p.Variants.map(function(n){ return {Name: n.Name.toUpperCase()}; })
 }
-")
+").WaitForNonStaleResultsAsOfNow()
                         .ToList();
 
                     var first = rep.FirstOrDefault();
