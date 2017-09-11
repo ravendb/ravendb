@@ -18,7 +18,6 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.PeriodicBackup;
 using Raven.Client.Util;
 using Raven.Server.Config;
-using Raven.Server.Config.Settings;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -613,27 +612,6 @@ namespace Raven.Server.Commercial
             {
                 var json = context.Read(stream, "license/json");
                 return JsonDeserializationServer.License(json);
-            }
-        }
-
-        private static License GetLicenseFromPath(string licensePath)
-        {
-            try
-            {
-                var licenseFullPath = new PathSetting(licensePath).ToFullPath();
-                using (var context = JsonOperationContext.ShortTermSingleUse())
-                using (var fileStream = File.Open(licenseFullPath, FileMode.Open, FileAccess.Read))
-                {
-                    var json = context.Read(fileStream, "license activation from license path");
-                    return JsonDeserializationServer.License(json);
-                }
-            }
-            catch (Exception e)
-            {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Failed to get license from path: {licensePath}", e);
-
-                return null;
             }
         }
 
