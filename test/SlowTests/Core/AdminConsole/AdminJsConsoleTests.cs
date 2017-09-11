@@ -164,6 +164,20 @@ namespace SlowTests.Core.AdminConsole
         }
 
         [Fact]
+        public void CanGetServerStoreConfigs()
+        {
+            var result = ExecuteScript(null, @"
+                            return { 
+                                MaxNumberOfCachedScripts: server.ServerStore.Configuration.Patching.MaxNumberOfCachedScripts,
+                                MaxConcurrentFlushes: server.ServerStore.Configuration.Storage.MaxConcurrentFlushes
+                            };"
+            );
+
+            Assert.Equal(2048, result["MaxNumberOfCachedScripts"]); 
+            Assert.Equal(10, result["MaxConcurrentFlushes"]);
+        }
+
+        [Fact]
         public void CanModifyServerConfigurationOnTheFly()
         {
             var configuration = Server.Configuration;
