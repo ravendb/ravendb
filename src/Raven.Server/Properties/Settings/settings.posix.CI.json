@@ -1,5 +1,5 @@
 ﻿{
-  "ServerUrl": "http://0.0.0.0:8080",
+  "ServerUrl": "http://localhost:8080",
   "RunInMemory": false,
   "Storage.TempPath": "/tmp/RavenDB/Storage",
   "Indexing.TempPath": "/tmp/RavenDB/Indexing"
