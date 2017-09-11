@@ -27,8 +27,6 @@ namespace Raven.Client.Documents.Changes
         /// </summary>
         public string CollectionName { get; set; }
 
-        public bool IsSystemDocument { get; set; }
-
         /// <summary>
         /// Document type name.
         /// </summary>
@@ -70,7 +68,6 @@ namespace Raven.Client.Documents.Changes
             {
                 CollectionName = collectionName,
                 ChangeVector = changeVector,
-                IsSystemDocument = false,
                 Id = id,
                 TypeName = typeName,
                 Type = (DocumentChangeTypes)Enum.Parse(typeof(DocumentChangeTypes), type, ignoreCase: true)

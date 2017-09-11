@@ -51,7 +51,7 @@ namespace Raven.Server.Documents
             AssertMetadataWasFiltered(document);
 #endif
 
-            var collectionName = _documentsStorage.ExtractCollectionName(context, id, document);
+            var collectionName = _documentsStorage.ExtractCollectionName(context, document);
             var newEtag = _documentsStorage.GenerateNextEtag();
 
             var modifiedTicks = lastModifiedTicks ?? _documentDatabase.Time.GetUtcNow().Ticks;
@@ -86,7 +86,7 @@ namespace Raven.Server.Documents
                     }
 
                     oldDoc = new BlittableJsonReaderObject(oldValue.Read((int)DocumentsTable.Data, out int oldSize), oldSize, context);
-                    var oldCollectionName = _documentsStorage.ExtractCollectionName(context, id, oldDoc);
+                    var oldCollectionName = _documentsStorage.ExtractCollectionName(context, oldDoc);
                     if (oldCollectionName != collectionName)
                         ThrowInvalidCollectionNameChange(id, oldCollectionName, collectionName);
 
@@ -106,7 +106,7 @@ namespace Raven.Server.Documents
                 changeVector = result.ChangeVector;
                 nonPersistentFlags |= result.NonPersistentFlags;
 
-                if (collectionName.IsSystem == false &&
+                if (collectionName.IsHiLoCollection == false &&
                     (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
                 {
                     if (ShouldRecreateAttachments(context, lowerId, oldDoc, document, ref flags, nonPersistentFlags))
@@ -162,7 +162,7 @@ namespace Raven.Server.Documents
                     }
                 }
 
-                if (collectionName.IsSystem == false)
+                if (collectionName.IsHiLoCollection == false)
                 {
                     _documentDatabase.ExpiredDocumentsCleaner?.Put(context, lowerId, document);
                 }
@@ -177,7 +177,6 @@ namespace Raven.Server.Documents
                     CollectionName = collectionName.Name,
                     Id = id,
                     Type = DocumentChangeTypes.Put,
-                    IsSystemDocument = collectionName.IsSystem
                 });
 
 #if DEBUG

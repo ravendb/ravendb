@@ -284,15 +284,6 @@ namespace Raven.Server.Documents.Replication
                         _log.Info($"Skipping replication of {item.Id} because it is an artificial document");
                     return false;
                 }
-
-                if (CollectionName.IsSystemDocument(item.Id.Buffer, item.Id.Size, out bool isHiLo) && isHiLo == false)
-                {
-                    stats.RecordSystemDocumentSkip();
-
-                    if (_log.IsInfoEnabled)
-                        _log.Info($"Skipping replication of {item.Id} because it is a system document");
-                    return false;
-                }
             }
 
             // destination already has it

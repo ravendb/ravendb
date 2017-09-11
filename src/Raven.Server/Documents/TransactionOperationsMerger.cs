@@ -248,7 +248,6 @@ namespace Raven.Server.Documents
                     switch (result)
                     {
                         case PendingOperations.CompletedAll:
-                        case PendingOperations.ModifiedSystemDocuments:
                             try
                             {
                                 tx.Commit();
@@ -382,7 +381,6 @@ namespace Raven.Server.Documents
                         switch (result)
                         {
                             case PendingOperations.CompletedAll:
-                            case PendingOperations.ModifiedSystemDocuments:
                                 try
                                 {
                                     context.Transaction.Commit();
@@ -449,7 +447,6 @@ namespace Raven.Server.Documents
         private enum PendingOperations
         {
             CompletedAll,
-            ModifiedSystemDocuments,
             HasMore
         }
 
@@ -519,8 +516,6 @@ namespace Raven.Server.Documents
             {
                 _log.Info($"Merged {pendingOps.Count} operations in {sp.Elapsed} and there is no more work");
             }
-            if (context.Transaction.ModifiedSystemDocuments)
-                return PendingOperations.ModifiedSystemDocuments;
 
             return GetPendingOperationsStatus(context, pendingOps.Count == 0);
         }
@@ -578,14 +573,6 @@ namespace Raven.Server.Documents
             // This optimization is disabled when encryption is on	
             if (context.Environment.Options.EncryptionEnabled)
                 return PendingOperations.CompletedAll;
-
-            if (context.Transaction.ModifiedSystemDocuments)
-                // a transaction that modified system documents may cause us to 
-                // do certain actions (for example, initialize trees for versioning)
-                // which we can't really do if we are starting another transaction
-                // immediately. This way, we skip this optimization for this
-                // kind of work
-                return PendingOperations.ModifiedSystemDocuments;
 
             if (forceCompletion)
                 return PendingOperations.CompletedAll;

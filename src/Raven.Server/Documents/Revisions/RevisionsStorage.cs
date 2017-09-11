@@ -233,7 +233,7 @@ namespace Raven.Server.Documents.Revisions
             BlittableJsonReaderObject.AssertNoModifications(document, id, assertChildren: true);
 
             if (collectionName == null)
-                collectionName = _database.DocumentsStorage.ExtractCollectionName(context, id, document);
+                collectionName = _database.DocumentsStorage.ExtractCollectionName(context, document);
 
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr))
             {
@@ -409,7 +409,7 @@ namespace Raven.Server.Documents.Revisions
             var ptr = tvr.Reader.Read((int)Columns.Document, out int size);
             var data = new BlittableJsonReaderObject(ptr, size, context);
 
-            return _documentsStorage.ExtractCollectionName(context, null, data);
+            return _documentsStorage.ExtractCollectionName(context, data);
         }
 
         private long DeleteRevisions(DocumentsOperationContext context, Table table, Slice prefixSlice, CollectionName collectionName,
@@ -518,7 +518,7 @@ namespace Raven.Server.Documents.Revisions
 
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr))
             {
-                var collectionName = _documentsStorage.ExtractCollectionName(context, id, deleteRevisionDocument);
+                var collectionName = _documentsStorage.ExtractCollectionName(context, deleteRevisionDocument);
                 Delete(context, lowerId, idPtr, id, collectionName, deleteRevisionDocument, changeVector, lastModifiedTicks, nonPersistentFlags);
             }
         }

@@ -106,7 +106,7 @@ namespace Raven.Server.Documents.Replication
             string incomingChangeVector,
             BlittableJsonReaderObject doc)
         {
-            var collection = CollectionName.GetCollectionName(id, doc);
+            var collection = CollectionName.GetCollectionName(doc);
 
             var hasScript = _conflictResolver.ScriptConflictResolversCache.TryGetValue(collection, out ScriptResolver scriptResolver);
             if (!hasScript || scriptResolver == null)
@@ -180,7 +180,7 @@ namespace Raven.Server.Documents.Replication
                 ChangeVector = incomingChangeVector,
                 Collection = context.GetLazyStringForFieldWithCaching(
                     collection ??
-                    CollectionName.GetCollectionName(id, doc)),
+                    CollectionName.GetCollectionName(doc)),
                 Doc = doc,
                 LowerId = context.GetLazyString(id)
             });

@@ -576,7 +576,7 @@ namespace Raven.Server.Documents
                     // we delete the data directly, without generating a tombstone, because we have a 
                     // conflict instead
                     _documentsStorage.EnsureLastEtagIsPersisted(context, existingDoc.Etag);
-                    collectionName = _documentsStorage.ExtractCollectionName(context, existingDoc.Id, existingDoc.Data);
+                    collectionName = _documentsStorage.ExtractCollectionName(context, existingDoc.Data);
 
                     //make sure that the relevant collection tree exists
                     var table = tx.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
@@ -611,7 +611,7 @@ namespace Raven.Server.Documents
                 }
                 else // has existing conflicts
                 {
-                    collectionName = _documentsStorage.ExtractCollectionName(context, id, incomingDoc);
+                    collectionName = _documentsStorage.ExtractCollectionName(context, incomingDoc);
 
                     using (GetConflictsIdPrefix(context, lowerId, out Slice prefixSlice))
                     {
@@ -674,7 +674,6 @@ namespace Raven.Server.Documents
                     CollectionName = collectionName.Name,
                     Id = id,
                     Type = DocumentChangeTypes.Conflict,
-                    IsSystemDocument = false
                 });
             }
         }
@@ -701,7 +700,6 @@ namespace Raven.Server.Documents
                         Id = lowerId.ToString(),
                         ChangeVector = changeVector,
                         CollectionName = collectionName.Name,
-                        IsSystemDocument = collectionName.IsSystem
                     });
                     return new DeleteOperationResult
                     {
