@@ -29,8 +29,8 @@ namespace Raven.Server.Documents.Patch
         {
             _writer.StartWriteObject();
 
+            modifier?.Modify(jsObject);
             WriteRawObjectProperties(jsObject);
-            modifier?.Modify(_writer);
 
             _writer.WriteObjectEnd();
         }
@@ -311,7 +311,7 @@ namespace Raven.Server.Documents.Patch
 
         public interface IResultModifier
         {
-            void Modify(ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> writer);
+            void Modify(ObjectInstance json);
         }
     }
 }

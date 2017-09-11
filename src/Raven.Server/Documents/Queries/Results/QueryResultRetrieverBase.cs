@@ -8,6 +8,9 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Json;
 using System.IO;
+using Jint.Native;
+using Jint.Native.Object;
+using Jint.Runtime;
 using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Server.Documents.Includes;
@@ -176,6 +179,11 @@ namespace Raven.Server.Documents.Queries.Results
 
         private static Document ReturnProjection(DynamicJsonValue result, Document doc, float score, JsonOperationContext context)
         {
+            result[Constants.Documents.Metadata.Key] = new DynamicJsonValue
+            {
+                [Constants.Documents.Metadata.Projection] = true
+            };
+
             var newData = context.ReadObject(result, "projection result");
 
             try
@@ -448,7 +456,7 @@ namespace Raven.Server.Documents.Queries.Results
                 if (result.IsNull)
                     return null;
 
-                return run.Translate(result, _context);
+                return run.Translate(result, _context, QueryResultModifier.Instance);
             }
         }
 
@@ -496,6 +504,30 @@ namespace Raven.Server.Documents.Queries.Results
             public int GetHashCode(IFieldable obj)
             {
                 return obj.Name.GetHashCode();
+            }
+        }
+
+        private class QueryResultModifier : JsBlittableBridge.IResultModifier
+        {
+            public static readonly QueryResultModifier Instance = new QueryResultModifier();
+
+            private QueryResultModifier()
+            {
+            }
+
+            public void Modify(ObjectInstance json)
+            {
+                ObjectInstance metadata;
+                var value = json.Get(Constants.Documents.Metadata.Key);
+                if (value.Type == Types.Object)
+                    metadata = value.AsObject();
+                else
+                {
+                    metadata = json.Engine.Object.Construct(Array.Empty<JsValue>());
+                    json.Put(Constants.Documents.Metadata.Key, metadata, false);
+                }
+
+                metadata.Put(Constants.Documents.Metadata.Projection, JsValue.True, false);
             }
         }
     }

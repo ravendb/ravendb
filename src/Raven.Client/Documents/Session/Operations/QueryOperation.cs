@@ -115,10 +115,10 @@ namespace Raven.Client.Documents.Session.Operations
 
         internal static T Deserialize<T>(string id, BlittableJsonReaderObject document, BlittableJsonReaderObject metadata, string[] projectionFields, bool disableEntitiesTracking, InMemoryDocumentSessionOperations session)
         {
-            if (projectionFields == null || projectionFields.Length == 0)
+            if (metadata.TryGetProjection(out var projection) == false || projection == false)
                 return session.TrackEntity<T>(id, document, metadata, disableEntitiesTracking);
 
-            if (projectionFields.Length == 1) // we only select a single field
+            if (projectionFields != null && projectionFields.Length == 1) // we only select a single field
             {
                 var type = typeof(T);
                 var typeInfo = type.GetTypeInfo();
