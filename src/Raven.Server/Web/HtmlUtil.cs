@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using Raven.Server.Config;
@@ -18,6 +19,8 @@ namespace Raven.Server.Web
         }
 
         private const string UnsafePageHtmlResource = "Raven.Server.Web.Assets.Unsafe.html";
+        
+        private const string AuthErrorPageHtmlResource = "Raven.Server.Web.Assets.AuthError.html";
 
         private static string _unsafePageRenderedHtml;
 
@@ -60,6 +63,20 @@ namespace Raven.Server.Web
 
             var unsecuredAccessFlagsHtml = string.Join("&nbsp;<strong>|</strong>&nbsp;", flagsSpans);
             return unsecuredAccessFlagsHtml;
+        }
+        
+        public static string RenderStudioAuthErrorPage(string reason)
+        {
+            using (var reader = new StreamReader(
+                typeof(RavenServer).GetTypeInfo().Assembly.GetManifestResourceStream(AuthErrorPageHtmlResource)))
+            {
+                var html = reader.ReadToEnd();
+
+                return RenderPlaceholders(html, new Dictionary<string, string>
+                {
+                    {"AUTH_ERROR", WebUtility.HtmlEncode(reason)}
+                });
+            }
         }
     }
 }

@@ -25,6 +25,7 @@
   <ItemGroup>
     <Compile Include="..\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
     <EmbeddedResource Include="Web\Assets\Unsafe.html" />
+    <EmbeddedResource Include="Web\Assets\AuthError.html" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\..\Imports\metrics.net\Src\Metrics\**\*.cs" />

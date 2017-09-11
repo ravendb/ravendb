@@ -116,15 +116,32 @@ namespace Raven.Server.Routing
 
         private bool TryAuthorize(RouteInformation route, HttpContext context, DocumentDatabase database)
         {
+            var feature = context.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+            
             switch (route.AuthorizationStatus)
             {
                 case AuthorizationStatus.UnauthenticatedClients:
+                    var userWantsToAccessStudioMainPage = context.Request.Path == "/studio/index.html";
+                    if (userWantsToAccessStudioMainPage)
+                    {
+                        switch (feature?.Status)
+                        {
+                            case null:
+                            case RavenServer.AuthenticationStatus.NoCertificateProvided:
+                            case RavenServer.AuthenticationStatus.Expired:
+                            case RavenServer.AuthenticationStatus.NotYetValid:
+                            case RavenServer.AuthenticationStatus.None:
+                            case RavenServer.AuthenticationStatus.UnfamiliarCertificate:
+                                UnlikelyFailAuthorization(context, database?.Name, feature);
+                                return false;
+                        }
+                    }
+                    
                     return true;
                 case AuthorizationStatus.ClusterAdmin:
                 case AuthorizationStatus.Operator:
                 case AuthorizationStatus.ValidUser:
                 case AuthorizationStatus.DatabaseAdmin:
-                    var feature = context.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
 
                     switch (feature?.Status)
                     {
@@ -172,7 +189,7 @@ namespace Raven.Server.Routing
             string message;
             if (feature == null || feature.Status == RavenServer.AuthenticationStatus.None || feature.Status == RavenServer.AuthenticationStatus.NoCertificateProvided)
             {
-                message = "This server requires client certificate for authentication, but none was provided by the client";
+                message = "This server requires client certificate for authentication, but none was provided by the client.";
             }
             else
             {
@@ -184,27 +201,27 @@ namespace Raven.Server.Routing
 
                 if (feature.Status == RavenServer.AuthenticationStatus.UnfamiliarCertificate)
                 {
-                    message = "The provided client certificate '" + name + "' is not on the allowed list of certificates that can access this server";
+                    message = "Supplied client certificate '" + name + "' is unknown to the server. In order to register your certificate please contact your system administrator.";
                 }
                 else if (feature.Status == RavenServer.AuthenticationStatus.Allowed)
                 {
-                    message = "The provided client certificate '" + name + "' is not authorized to access " + (database ?? "the server");
+                    message = "Could not authorize access to " + (database ?? "the server") + " using provided client certificate '" + name + "'.";
                 }
                 else if (feature.Status == RavenServer.AuthenticationStatus.Operator)
                 {
-                    message = "The provided client certificate '" + name + "' does not have sufficient level to access " + (database ?? "the server");
+                    message = "Insufficient security clearance to access " + (database ?? "the server") + " using provided client certificate '" + name + "'.";
                 }
                 else if (feature.Status == RavenServer.AuthenticationStatus.Expired)
                 {
-                    message = "The provided client certificate '" + name + "' is expired on " + feature.Certificate.NotAfter;
+                    message = "Supplied client certificate '" + name + "' has expired on " + feature.Certificate.NotAfter.ToString("D") + ". Please contact your system administrator in order to obtain a new one.";
                 }
                 else if (feature.Status == RavenServer.AuthenticationStatus.NotYetValid)
                 {
-                    message = "The provided client certificate '" + name + "' is not yet valid because it starts on " + feature.Certificate.NotBefore;
+                    message = "Supplied client certificate '" + name + "'cannot be used before " + feature.Certificate.NotBefore.ToString("D");
                 }
                 else
                 {
-                    message = "Access to this server was denied, but the reason why is confidential, you did not see this message and your memory will self destruct in 5 seconds.";
+                    message = "Access to the server was denied.";
                 }
             }
             context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
@@ -216,7 +233,7 @@ namespace Raven.Server.Routing
                 if (RavenServerStartup.IsHtmlAcceptable(context))
                 {
                     context.Response.StatusCode = (int)HttpStatusCode.Redirect;
-                    context.Response.Headers["Location"] = "/studio/auth-error.html?err=" + Uri.EscapeDataString(message);
+                    context.Response.Headers["Location"] = "/studio-auth-error.html?err=" + Uri.EscapeDataString(message);
                     return;
                 }
 

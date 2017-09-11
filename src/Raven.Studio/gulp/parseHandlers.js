@@ -154,6 +154,11 @@ function urlToFieldName(input) {
     var capitalizeNext = false;
     for (var i = 0; i < input.length; i++) {
         var c = input[i];
+        if (c === ".") {
+            buffer += "_";
+            continue;
+        }
+        
         if (c === "/" || c === "-") {
             capitalizeNext = true;
         } else {
