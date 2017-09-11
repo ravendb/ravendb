@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json;
@@ -193,6 +194,7 @@ namespace SlowTests.Core.AdminConsole
         [Fact]
         public void CanGetServerStoreConfigs()
         {
+            DoNotReuseServer();
             var result = ExecuteScript(null, @"
                             return { 
                                 MaxNumberOfCachedScripts: server.ServerStore.Configuration.Patching.MaxNumberOfCachedScripts,
@@ -200,8 +202,15 @@ namespace SlowTests.Core.AdminConsole
                             };"
             );
 
-            Assert.Equal(2048, result["MaxNumberOfCachedScripts"]); 
-            Assert.Equal(10, result["MaxConcurrentFlushes"]);
+            try
+            {
+                Assert.Equal(2048, result["MaxNumberOfCachedScripts"]);
+                Assert.Equal(10, result["MaxConcurrentFlushes"]);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Cannot understand " + result.ToString(Formatting.Indented), e);
+            }
         }
 
         [Fact]
