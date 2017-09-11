@@ -15,6 +15,8 @@ namespace Raven.Server.Commercial
 
         public bool Error { get; set; }
 
+        public Guid? Id { get; set; }
+
         public Dictionary<string, object> Attributes { get; set; }
 
         public string Message { get; set; }
@@ -72,6 +74,20 @@ namespace Raven.Server.Commercial
 
         public DateTime? Expiration => GetValue<DateTime?>("expiration");
 
+        public bool Expired
+        {
+            get
+            {
+                if (Type == LicenseType.None)
+                    return false;
+
+                if (Expiration == null)
+                    return true;
+
+                return DateTime.Compare(Expiration.Value, DateTime.UtcNow) < 0;
+            }
+        }
+
         public int MaxCores => GetValue<int?>("cores") ?? 3;
 
         public int MaxMemory => GetValue<int?>("memory") ?? 6;
@@ -108,12 +124,13 @@ namespace Raven.Server.Commercial
                 [nameof(MaxCores)] = MaxCores,
                 [nameof(MaxMemory)] = MaxMemory,
                 [nameof(MaxClusterSize)] = MaxClusterSize,
+                [nameof(Ratio)] = Ratio.ToString(),
                 [nameof(Expiration)] = Expiration,
+                [nameof(Expired)] = Expired,
                 [nameof(Status)] = Status,
                 [nameof(FormattedExpiration)] = FormattedExpiration,
                 [nameof(Type)] = Type.ToString(),
-                [nameof(Ratio)] = Ratio.ToString(),
-                [nameof(MaxCores)] = MaxCores,
+                [nameof(Id)] = Id?.ToString(),
                 [nameof(Attributes)] = TypeConverter.ToBlittableSupportedType(Attributes)
             };
         }

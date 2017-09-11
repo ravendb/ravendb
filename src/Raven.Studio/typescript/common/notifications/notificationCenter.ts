@@ -196,7 +196,6 @@ class notificationCenter {
     private onRecentError(error: recentError) {
         if (error.httpStatus() === "Payment Required") {
             error.details(recentError.licenceLimitMarker);
-            
             this.openDetails(error);
         }
         

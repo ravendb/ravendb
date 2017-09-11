@@ -20,9 +20,9 @@
 
         <div class="modal-footer">
             <button type="button" class="btn btn-default" data-bind="click: $root.close">Close</button>
-            <a target="_blank" href="https://ravendb.net/buy" class="btn btn-primary">
+            <a target="_blank" data-bind="click: $root.register, attr: { 'href': url }" class="btn btn-primary">
                 <i class="icon-raven"></i>
-                <span>Buy license</span>
+                <span>Request license</span>
             </a>
         </div>
     </div>

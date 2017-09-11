@@ -61,7 +61,7 @@ class about extends viewModelBase {
     });
 
     register() {
-        registration.showRegistrationDialog(this.licenseStatus(), true);
+        registration.showRegistrationDialog(this.licenseStatus(), false, true);
     }
 
     deactivateLicense() {

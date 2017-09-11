@@ -5,8 +5,13 @@
             <div class="flex-header flex-horizontal">
                 <button data-bind="click: addNode, enable: canAddNodes" class="btn btn-primary"><i class="icon-plus"></i> <span>Add Node to cluster</span></button>
                 <div class="flex-separator"></div>
-                <div class="flex-end text-muted" data-bind="if: licenseSummary">
-                    <small>License limits: <span data-bind="text: licenseSummary"></span></small>
+                <div class="flex-end text-muted" data-bind="if: utilizedCores() > 0">
+                    <small>Available resources: <strong data-bind="text: utilizedCores, css: cssCores" data-toggle="tooltip" title="Total Assigned CPU cores"></strong>
+                        / <strong data-bind="text: maxCores" data-toggle="tooltip" title="Licensed cores"></strong>
+                        <span data-bind="if: totalServersCores() > maxCores()">
+                            / <strong data-bind="text: totalServersCores" data-toggle="tooltip" title="Total number of available cores"></strong>
+                        </span> Cores
+                    </small>
                 </div>
                 <div class="flex-end text-muted">
                     <small>Term: <span data-bind="text: topology().currentTerm"></span></small>
@@ -97,7 +102,7 @@
                             <div class="cores" data-bind="if: utilizedCores">
                                 <h5>CORES</h5>
                                 <strong data-bind="text: utilizedCores, css: cssCores" data-toggle="tooltip" title="Assigned CPU cores limit"></strong><span data-bind="if: numberOfCores() && utilizedCores() != -1">
-                                    / <strong data-bind="text: numberOfCores" data-toggle="tooltip" title="Total CPU cores count"></strong>
+                                    <span data-bind="numberOfCores() > 0">/ <strong data-bind="text: numberOfCores" data-toggle="tooltip" title="Total CPU cores count"></strong></span>
                                 </span>
                             </div>
                             <div class="memory" data-bind="if: installedMemoryInGb">
