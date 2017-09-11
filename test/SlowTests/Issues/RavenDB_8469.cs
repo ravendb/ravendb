@@ -74,8 +74,8 @@ select {
 
                 using (var session = store.OpenSession())
                 {
-                    session.Advanced.DocumentQuery<object>()
-                        .RawQuery(@"declare function upper(o){
+                    session.Advanced
+                        .RawQuery<object>(@"declare function upper(o){
   return o.Name.toUpperCase();
 }
 from Orders as o
