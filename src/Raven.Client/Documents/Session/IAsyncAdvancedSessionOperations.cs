@@ -37,17 +37,6 @@ namespace Raven.Client.Documents.Session
         /// Query the specified index using provided raw query
         /// </summary>
         /// <typeparam name="T">The query result type</typeparam>
-        /// <param name="indexName">The index to query or null for dynamic</param>
-        /// <returns></returns>
-        IAsyncRawDocumentQuery<T> AsyncRawQuery<T>(string query, string indexName = null);
-
-        /// <summary>
-        /// Query the specified index using provided raw query
-        /// </summary>
-        /// <typeparam name="T">The query result type</typeparam>
-        /// <typeparam name="TIndexCreator">The index creator task</typeparam>
-        /// <param name="indexName">The index to query or null for dynamic</param>
-        /// <returns></returns>
-        IAsyncRawDocumentQuery<T> AsyncRawQuery<T, TIndexCreator>(string query) where TIndexCreator : AbstractIndexCreationTask, new();
+        IAsyncRawDocumentQuery<T> AsyncRawQuery<T>(string query);
     }
 }
