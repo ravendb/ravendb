@@ -17,7 +17,6 @@ namespace Raven.Server.Documents
 
         private List<DocumentChange> _documentNotifications;
 
-        private List<DocumentChange> _systemDocumentChangeNotifications;
         private bool _replaced;
 
         public DocumentsTransaction(DocumentsOperationContext context, Transaction transaction, DocumentsChanges changes)
@@ -38,18 +37,9 @@ namespace Raven.Server.Documents
         {
             change.TriggeredByReplicationThread = IncomingReplicationHandler.IsIncomingReplication;
 
-            if (change.IsSystemDocument)
-            {
-                if (_systemDocumentChangeNotifications == null)
-                    _systemDocumentChangeNotifications = new List<DocumentChange>();
-                _systemDocumentChangeNotifications.Add(change);
-            }
-            else
-            {
-                if (_documentNotifications == null)
-                    _documentNotifications = new List<DocumentChange>();
-                _documentNotifications.Add(change);
-            }
+            if (_documentNotifications == null)
+                _documentNotifications = new List<DocumentChange>();
+            _documentNotifications.Add(change);
         }
 
         private bool _isDisposed;
@@ -83,21 +73,11 @@ namespace Raven.Server.Documents
 
         private void AfterCommit()
         {
-            if (_systemDocumentChangeNotifications != null)
-            {
-                foreach (var notification in _systemDocumentChangeNotifications)
-                {
-                    _changes.RaiseSystemNotifications(notification);
-                }
-            }
-
             if (_documentNotifications == null)
                 return;
 
             ThreadPool.QueueUserWorkItem(state => ((DocumentsTransaction)state).RaiseNotifications(), this);
         }
-
-        public bool ModifiedSystemDocuments => _systemDocumentChangeNotifications?.Count > 0;
 
         private void RaiseNotifications()
         {

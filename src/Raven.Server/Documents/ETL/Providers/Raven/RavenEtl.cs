@@ -78,11 +78,10 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             }
         }
 
-        protected override bool ShouldFilterOutSystemDocument(bool isHiLo)
+        protected override bool ShouldFilterOutHiLoDocument()
         {
             // if we transfer all documents to the same collections (no script specified) then don't exclude HiLo docs
-
-            return (isHiLo && string.IsNullOrEmpty(Transformation.Script)) == false;
+            return string.IsNullOrEmpty(Transformation.Script) == false;
         }
 
         private static void ThrowTimeoutException(int numberOfCommands, Exception e)

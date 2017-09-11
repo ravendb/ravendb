@@ -88,7 +88,7 @@ namespace Raven.Server.Documents
 
                             token.Delay();
 
-                            if (isAllDocs && IsSystemDocument(document))
+                            if (isAllDocs && IsHiLoDocument(document))
                                 continue;
                             
                             if (document.Etag > lastEtag) // we don't want to go over the documents that we have patched
@@ -132,9 +132,9 @@ namespace Raven.Server.Documents
             };
         }
 
-        private static unsafe bool IsSystemDocument(Document document)
+        private static unsafe bool IsHiLoDocument(Document document)
         {
-            return CollectionName.IsSystemDocument(document.Id.Buffer, document.Id.Length, out var _);
+            return CollectionName.IsHiLoDocument(document.Id.Buffer, document.Id.Length);
         }
 
         protected virtual IEnumerable<Document> GetDocuments(DocumentsOperationContext context, string collectionName, long startEtag, int batchSize, bool isAllDocs)
@@ -156,9 +156,9 @@ namespace Raven.Server.Documents
             if (isAllDocs)
             {
                 var allDocsCount = Database.DocumentsStorage.GetNumberOfDocuments(context);
-                Database.DocumentsStorage.GetNumberOfDocumentsToProcess(context, CollectionName.SystemCollection, 0, out long systemDocsCount);
+                Database.DocumentsStorage.GetNumberOfDocumentsToProcess(context, CollectionName.HiLoCollection, 0, out long hiloDocsCount);
 
-                return allDocsCount - systemDocsCount;
+                return allDocsCount - hiloDocsCount;
             }
 
             Database.DocumentsStorage.GetNumberOfDocumentsToProcess(context, collectionName, 0, out long totalCount);

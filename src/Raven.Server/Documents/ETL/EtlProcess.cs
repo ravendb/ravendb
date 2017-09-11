@@ -162,15 +162,14 @@ namespace Raven.Server.Documents.ETL
                         continue;
                     }
 
-                    if (Transformation.ApplyToAllDocuments && CollectionName.IsSystemDocument(item.DocumentId.Buffer, item.DocumentId.Size, out var isHilo))
+                    if (Transformation.ApplyToAllDocuments &&
+                        CollectionName.IsHiLoDocument(item.DocumentId.Buffer, item.DocumentId.Size) &&
+                        ShouldFilterOutHiLoDocument())
                     {
-                        if (ShouldFilterOutSystemDocument(isHilo))
-                        {
-                            stats.RecordChangeVector(item.ChangeVector);
-                            stats.RecordLastFilteredOutEtag(stats.LastTransformedEtag);
+                        stats.RecordChangeVector(item.ChangeVector);
+                        stats.RecordLastFilteredOutEtag(stats.LastTransformedEtag);
 
-                            continue;
-                        }
+                        continue;
                     }
 
                     using (stats.For(EtlOperations.Transform))
@@ -487,7 +486,7 @@ namespace Raven.Server.Documents.ETL
             }
         }
 
-        protected abstract bool ShouldFilterOutSystemDocument(bool isHiLo);
+        protected abstract bool ShouldFilterOutHiLoDocument();
 
         private static bool AlreadyLoadedByDifferentNode(ExtractedItem item, EtlProcessState state)
         {

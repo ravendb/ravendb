@@ -992,7 +992,6 @@ namespace Raven.Server.Documents
                     Id = id,
                     ChangeVector = changeVector,
                     CollectionName = collectionName.Name,
-                    IsSystemDocument = collectionName.IsSystem
                 });
 
                 return new DeleteOperationResult
@@ -1019,7 +1018,7 @@ namespace Raven.Server.Documents
 
                 EnsureLastEtagIsPersisted(context, doc.Etag);
 
-                collectionName = ExtractCollectionName(context, lowerId, doc.Data);
+                collectionName = ExtractCollectionName(context, doc.Data);
                 var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
 
                 var ptr = table.DirectRead(doc.StorageId, out int size);
@@ -1034,7 +1033,7 @@ namespace Raven.Server.Documents
                     etag = tombstoneEtag.Etag;
                 }
 
-                if (collectionName.IsSystem == false &&
+                if (collectionName.IsHiLoCollection == false &&
                     (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
                 {
                     var revisionsStorage = _documentDatabase.DocumentsStorage.RevisionsStorage;
@@ -1060,7 +1059,6 @@ namespace Raven.Server.Documents
                     Id = id,
                     ChangeVector = changeVector,
                     CollectionName = collectionName.Name,
-                    IsSystemDocument = collectionName.IsSystem
                 });
 
                 return new DeleteOperationResult
@@ -1425,17 +1423,9 @@ namespace Raven.Server.Documents
             return collectionName;
         }
 
-        public CollectionName ExtractCollectionName(DocumentsOperationContext context, string id, BlittableJsonReaderObject document)
+        public CollectionName ExtractCollectionName(DocumentsOperationContext context, BlittableJsonReaderObject document)
         {
-            var originalCollectionName = CollectionName.GetCollectionName(id, document);
-
-            return ExtractCollectionName(context, originalCollectionName);
-        }
-
-        private CollectionName ExtractCollectionName(DocumentsOperationContext context, Slice id, BlittableJsonReaderObject document)
-        {
-            var originalCollectionName = CollectionName.GetCollectionName(id, document);
-
+            var originalCollectionName = CollectionName.GetCollectionName(document);
             return ExtractCollectionName(context, originalCollectionName);
         }
 

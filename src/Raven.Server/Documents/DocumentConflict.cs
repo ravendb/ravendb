@@ -29,7 +29,7 @@ namespace Raven.Server.Documents
                 StorageId = doc.StorageId,
                 ChangeVector = doc.ChangeVector,
                 LastModified = doc.LastModified,
-                Collection = ctx.GetLazyStringForFieldWithCaching(CollectionName.GetCollectionName(doc.Id, doc.Data))
+                Collection = ctx.GetLazyStringForFieldWithCaching(CollectionName.GetCollectionName(doc.Data))
             };
         }
 

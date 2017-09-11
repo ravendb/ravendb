@@ -34,7 +34,7 @@ namespace Raven.Server.Documents
     public class CollectionName
     {
         public const string EmptyCollection = "@empty";
-        public const string SystemCollection = "@system";
+        public const string HiLoCollection = "@hilo";
 
         public static readonly StringSegment EmptyCollectionSegment;
         public static readonly StringSegment MetadataKeySegment;
@@ -44,8 +44,8 @@ namespace Raven.Server.Documents
         private readonly string _tombstones;
 
         public readonly string Name;
-        public readonly bool IsSystem;
         private readonly string _revisions;
+        private bool? _isHiLoCollection;
 
         static CollectionName()
         {
@@ -57,12 +57,13 @@ namespace Raven.Server.Documents
         public CollectionName(string name)
         {
             Name = name;
-            IsSystem = IsSystemCollection(name);
 
             _documents = GetName(CollectionTableType.Documents);
             _tombstones = GetName(CollectionTableType.Tombstones);
             _revisions = GetName(CollectionTableType.Revisions);
         }
+
+        public bool IsHiLoCollection => (bool)(_isHiLoCollection ?? (_isHiLoCollection = false));
 
         public string GetTableName(CollectionTableType type)
         {
@@ -115,56 +116,33 @@ namespace Raven.Server.Documents
             return Equals(left, right) == false;
         }
 
-        public static bool IsSystemCollection(string collection)
+        public static unsafe bool IsHiLoDocument(byte* buffer, int length)
         {
-            return string.Equals(collection, SystemCollection, StringComparison.OrdinalIgnoreCase);
-        }
-
-        public static unsafe string GetCollectionName(Slice id, BlittableJsonReaderObject document)
-        {
-            if (IsSystemDocument(id.Content.Ptr, id.Size, out bool _))
-            {
-                return SystemCollection;
-            }
-
-            return GetCollectionName(document);
-        }
-
-        public static unsafe bool IsSystemDocument(byte* buffer, int length, out bool isHiLo)
-        {
-            isHiLo = false;
-
-            if (length < 6)
+            if (length < 11)
                 return false;
 
-            // case insensitive 'Raven/' match without doing allocations
+            // case insensitive 'Raven/Hilo/' match without doing allocations
 
             if (buffer[0] != (byte)'R' && buffer[0] != (byte)'r' ||
                 buffer[1] != (byte)'A' && buffer[1] != (byte)'a' ||
                 buffer[2] != (byte)'V' && buffer[2] != (byte)'v' ||
                 buffer[3] != (byte)'E' && buffer[3] != (byte)'e' ||
                 buffer[4] != (byte)'N' && buffer[4] != (byte)'n' ||
-                buffer[5] != (byte)'/')
-                return false;
-
-            if (length < 11)
-                return true;
-
-            // Now need to find if the next bits are 'hilo/'
-            if ((buffer[6] == (byte)'H' || buffer[6] == (byte)'h') &&
-                (buffer[7] == (byte)'I' || buffer[7] == (byte)'i') &&
-                (buffer[8] == (byte)'L' || buffer[8] == (byte)'l') &&
-                (buffer[9] == (byte)'O' || buffer[9] == (byte)'o') &&
-                buffer[10] == (byte)'/')
+                buffer[5] != (byte)'/' ||
+                buffer[6] != (byte)'H' && buffer[6] == (byte)'h' ||
+                buffer[7] != (byte)'I' && buffer[7] == (byte)'i' ||
+                buffer[8] != (byte)'L' && buffer[8] == (byte)'l' ||
+                buffer[9] != (byte)'O' && buffer[9] == (byte)'o' ||
+                buffer[10] != (byte)'/')
             {
-                isHiLo = true;
+                return false;
             }
 
             return true;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool IsSystemCollectionName(string id)
+        public static bool TestIsHiLoCollection(string id)
         {
             if (id.Length < 6)
                 return false;
@@ -182,22 +160,8 @@ namespace Raven.Server.Documents
             return true;
         }
 
-        public static string GetCollectionName(string id, BlittableJsonReaderObject document)
-        {
-            if (id != null && IsSystemCollectionName(id))
-                return SystemCollection;
-
-            return GetCollectionName(document);
-        }
-
         public static string GetCollectionName(DynamicBlittableJson document)
         {
-            dynamic dynamicDocument = document;
-            string id = dynamicDocument.Id;
-
-            if (id != null && IsSystemCollectionName(id))
-                return SystemCollection;
-
             return GetCollectionName(document.BlittableJson);
         }
 
