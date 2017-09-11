@@ -15,11 +15,11 @@ namespace Tryouts
                 Console.WriteLine(i);
                 Parallel.For(0, 1, _ =>
                 {
-                    using (var test = new SlowTests.Issues.RavenDB_5489())
+                    using (var test = new SlowTests.Client.BulkInserts())
                     {
                         try
                         {
-                            test.IfIndexEncountersCorruptionItShouldBeMarkedAsErrored().Wait();
+                            test.Simple_Bulk_Insert_With_Ssl().Wait();
                         }
                         catch (Exception e)
                         {

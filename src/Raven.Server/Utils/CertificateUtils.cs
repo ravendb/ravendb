@@ -21,15 +21,18 @@ namespace Raven.Server.Utils
     {
         public static X509Certificate2 CreateSelfSignedCertificate(string commonNameValue, string issuerName)
         {
-            CreateCertificateAuthorityCertificate(commonNameValue, out AsymmetricKeyParameter caPrivateKey, out var caCert);
-            return CreateSelfSignedCertificateBasedOnPrivateKey(commonNameValue, caCert, caPrivateKey, false, 1);
+            CreateCertificateAuthorityCertificate(commonNameValue + " CA", out AsymmetricKeyParameter caPrivateKey, out var caSubjectName);
+            var selfSignedCertificateBasedOnPrivateKey = CreateSelfSignedCertificateBasedOnPrivateKey(commonNameValue, caSubjectName, caPrivateKey, false, 1);
+            selfSignedCertificateBasedOnPrivateKey.Verify();
+            return selfSignedCertificateBasedOnPrivateKey;
         }
 
         public static X509Certificate2 CreateSelfSignedClientCertificate(string commonNameValue, RavenServer.CertificateHolder certificateHolder)
         {
+            var readCertificate = new X509CertificateParser().ReadCertificate(certificateHolder.Certificate.Export(X509ContentType.Cert));
             return CreateSelfSignedCertificateBasedOnPrivateKey(
                 commonNameValue,
-                certificateHolder.Certificate,
+                readCertificate.SubjectDN,
                 certificateHolder.PrivateKey.Key,
                 true,
                 5);
@@ -37,15 +40,19 @@ namespace Raven.Server.Utils
 
         public static X509Certificate2 CreateSelfSignedExpiredClientCertificate(string commonNameValue, RavenServer.CertificateHolder certificateHolder)
         {
+            var readCertificate = new X509CertificateParser().ReadCertificate(certificateHolder.Certificate.Export(X509ContentType.Cert));
             return CreateSelfSignedCertificateBasedOnPrivateKey(
                 commonNameValue,
-                certificateHolder.Certificate,
+                readCertificate.SubjectDN,
                 certificateHolder.PrivateKey.Key,
                 true,
                 -1);
         }
 
-        private static X509Certificate2 CreateSelfSignedCertificateBasedOnPrivateKey(string commonNameValue, X509Certificate2 issuerCertificate, AsymmetricKeyParameter issuerPrivKey, bool isClientCertificate, int yearsUntilExpiration)
+        private static X509Certificate2 CreateSelfSignedCertificateBasedOnPrivateKey(string commonNameValue, 
+            X509Name issuer, 
+            AsymmetricKeyParameter issuerPrivKey,
+            bool isClientCertificate, int yearsUntilExpiration)
         {
             const int keyStrength = 2048;
 
@@ -67,9 +74,9 @@ namespace Raven.Server.Utils
             certificateGenerator.SetSerialNumber(serialNumber);
 
             // Issuer and Subject Name
-            var readCertificate = new X509CertificateParser().ReadCertificate(issuerCertificate.Export(X509ContentType.Cert));
+         
             X509Name subjectDN = new X509Name("CN=" + commonNameValue);
-            certificateGenerator.SetIssuerDN(readCertificate.SubjectDN);
+            certificateGenerator.SetIssuerDN(issuer);
             certificateGenerator.SetSubjectDN(subjectDN);
 
             // Valid For
@@ -103,7 +110,9 @@ namespace Raven.Server.Utils
             return convertedCertificate;
         }
 
-        private static void CreateCertificateAuthorityCertificate(string commonNameValue, [CanBeNull] out AsymmetricKeyParameter caPrivateKey, out X509Certificate2 caCert)
+        private static void CreateCertificateAuthorityCertificate(string commonNameValue, 
+            [CanBeNull] out AsymmetricKeyParameter caPrivateKey,
+            out X509Name name)
         {
             const int keyStrength = 2048;
 
@@ -145,7 +154,7 @@ namespace Raven.Server.Utils
             var certificate = certificateGenerator.Generate(signatureFactory);
 
             caPrivateKey = issuerKeyPair.Private;
-            caCert = new X509Certificate2(certificate.GetEncoded());
+            name = certificate.SubjectDN;
         }
 
         private static SecureRandom GetSeededSecureRandom()
