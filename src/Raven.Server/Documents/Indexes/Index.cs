@@ -212,7 +212,7 @@ namespace Raven.Server.Documents.Indexes
                 options.OnNonDurableFileSystemError += documentDatabase.HandleNonDurableFileSystemError;
                 options.OnRecoveryError += documentDatabase.HandleOnRecoveryError;
                 options.CompressTxAboveSizeInBytes = documentDatabase.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
-                options.SchemaVersion = 1;
+                options.SchemaVersion = Constants.Schemas.IndexVersion;
                 options.ForceUsing32BitsPager = documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
                 options.TimeToSyncAfterFlashInSec = (int)documentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
                 options.NumOfConcurrentSyncsPerPhysDrive = documentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
@@ -330,7 +330,7 @@ namespace Raven.Server.Documents.Indexes
                 options.OnNonDurableFileSystemError += documentDatabase.HandleNonDurableFileSystemError;
                 options.OnRecoveryError += documentDatabase.HandleOnRecoveryError;
 
-                options.SchemaVersion = 1;
+                options.SchemaVersion = Constants.Schemas.IndexVersion;
                 options.CompressTxAboveSizeInBytes = documentDatabase.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
                 options.ForceUsing32BitsPager = documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
                 options.TimeToSyncAfterFlashInSec = (int)documentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
