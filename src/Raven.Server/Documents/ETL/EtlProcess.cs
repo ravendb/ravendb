@@ -162,16 +162,6 @@ namespace Raven.Server.Documents.ETL
                         continue;
                     }
 
-                    if (Transformation.ApplyToAllDocuments &&
-                        CollectionName.IsHiLoDocument(item.DocumentId.Buffer, item.DocumentId.Size) &&
-                        ShouldFilterOutHiLoDocument())
-                    {
-                        stats.RecordChangeVector(item.ChangeVector);
-                        stats.RecordLastFilteredOutEtag(stats.LastTransformedEtag);
-
-                        continue;
-                    }
-
                     using (stats.For(EtlOperations.Transform))
                     {
                         CancellationToken.ThrowIfCancellationRequested();
@@ -485,8 +475,6 @@ namespace Raven.Server.Documents.ETL
                 }
             }
         }
-
-        protected abstract bool ShouldFilterOutHiLoDocument();
 
         private static bool AlreadyLoadedByDifferentNode(ExtractedItem item, EtlProcessState state)
         {

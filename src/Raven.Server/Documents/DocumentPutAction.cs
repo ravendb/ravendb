@@ -106,7 +106,8 @@ namespace Raven.Server.Documents
                 changeVector = result.ChangeVector;
                 nonPersistentFlags |= result.NonPersistentFlags;
 
-                if (collectionName.IsHiLoCollection == false &&
+                var isHiLoDocument = CollectionName.IsHiLoDocument(lowerId.Content.Ptr, lowerId.Size);
+                if (isHiLoDocument == false &&
                     (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
                 {
                     if (ShouldRecreateAttachments(context, lowerId, oldDoc, document, ref flags, nonPersistentFlags))
@@ -162,7 +163,7 @@ namespace Raven.Server.Documents
                     }
                 }
 
-                if (collectionName.IsHiLoCollection == false)
+                if (isHiLoDocument == false)
                 {
                     _documentDatabase.ExpiredDocumentsCleaner?.Put(context, lowerId, document);
                 }
