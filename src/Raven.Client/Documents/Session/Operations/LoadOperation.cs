@@ -79,8 +79,7 @@ namespace Raven.Client.Documents.Session.Operations
             if (_session.IsDeleted(id))
                 return default(T);
 
-            DocumentInfo doc;
-            if (_session.DocumentsById.TryGetValue(id, out doc))
+            if (_session.DocumentsById.TryGetValue(id, out var doc))
                 return _session.TrackEntity<T>(doc);
 
             if (_session.IncludedDocumentsById.TryGetValue(id, out doc))

@@ -117,6 +117,8 @@ namespace Raven.Client
 
                 public const string Collection = "@collection";
 
+                public const string Projection = "@projection";
+
                 public const string Key = "@metadata";
 
                 public const string Id = "@id";
@@ -152,7 +154,7 @@ namespace Raven.Client
                 private Indexing()
                 {
                 }
-                
+
                 public const string SideBySideIndexNamePrefix = "ReplacementOf/";
 
                 public class Fields
@@ -160,7 +162,7 @@ namespace Raven.Client
                     private Fields()
                     {
                     }
-                    
+
                     public const string CustomSortFieldName = "__customSort";
 
                     public const string DocumentIdFieldName = "id()";
@@ -204,7 +206,7 @@ namespace Raven.Client
                     public const double MilesToKm = 1.60934;
                 }
             }
-            
+
             public class Querying
             {
                 private Querying()

@@ -342,7 +342,7 @@ more responsive application.
         /// <param name="entityType"></param>
         /// <param name="documentFound">The document found.</param>
         /// <returns></returns>
-        public object TrackEntity(Type entityType, DocumentInfo documentFound)
+        private object TrackEntity(Type entityType, DocumentInfo documentFound)
         {
             return TrackEntity(entityType, documentFound.Id, documentFound.Document, documentFound.Metadata, noTracking: false);
         }

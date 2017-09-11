@@ -36,6 +36,8 @@ namespace Raven.Client.Documents.Session
             _inner.Clear();
         }
 
+        public int Count => _inner.Count;
+
         public IEnumerator<KeyValuePair<string, DocumentInfo>> GetEnumerator()
         {
             return _inner.GetEnumerator();
