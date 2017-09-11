@@ -90,11 +90,6 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             }
         }
 
-        protected override bool ShouldFilterOutHiLoDocument()
-        {
-            return true;
-        }
-
         public SqlEtlSimulationResult Simulate(SimulateSqlEtl simulateSqlEtl, DocumentsOperationContext context, IEnumerable<SqlTableWithRecords> toWrite)
         {
             var summaries = new List<TableQuerySummary>();

@@ -34,7 +34,6 @@ namespace Raven.Server.Documents
     public class CollectionName
     {
         public const string EmptyCollection = "@empty";
-        public const string HiLoCollection = "@hilo";
 
         public static readonly StringSegment EmptyCollectionSegment;
         public static readonly StringSegment MetadataKeySegment;
@@ -45,7 +44,6 @@ namespace Raven.Server.Documents
 
         public readonly string Name;
         private readonly string _revisions;
-        private bool? _isHiLoCollection;
 
         static CollectionName()
         {
@@ -62,8 +60,6 @@ namespace Raven.Server.Documents
             _tombstones = GetName(CollectionTableType.Tombstones);
             _revisions = GetName(CollectionTableType.Revisions);
         }
-
-        public bool IsHiLoCollection => (bool)(_isHiLoCollection ?? (_isHiLoCollection = false));
 
         public string GetTableName(CollectionTableType type)
         {
@@ -137,25 +133,6 @@ namespace Raven.Server.Documents
             {
                 return false;
             }
-
-            return true;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool TestIsHiLoCollection(string id)
-        {
-            if (id.Length < 6)
-                return false;
-
-            // case insensitive 'Raven/' match without doing allocations
-
-            if (id[5] != '/' ||
-                id[0] != 'R' && id[0] != 'r' ||
-                id[1] != 'A' && id[1] != 'a' ||
-                id[2] != 'V' && id[2] != 'v' ||
-                id[3] != 'E' && id[3] != 'e' ||
-                id[4] != 'N' && id[4] != 'n')
-                return false;
 
             return true;
         }
