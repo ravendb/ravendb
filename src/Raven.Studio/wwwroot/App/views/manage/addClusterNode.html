@@ -16,6 +16,11 @@
                                 <div data-bind="validationElement: serverUrl">
                                     <input autocomplete="off" type="text" class="form-control" data-bind="textInput: serverUrl" id="url" placeholder="Enter server url"> 
                                 </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label  class="control-label"></label>
+                            <div class="flex-grow">
                                 <div class="toggle">
                                     <input id="toggleWatcher" type="checkbox" data-bind="checked: addAsWatcher" />
                                     <label for="toggleWatcher"><small>Add node as Watcher</small></label>
@@ -23,14 +28,22 @@
                             </div>
                         </div>
                         <div class="form-group">
-                            <label for="assigned-cores" class="control-label">Cores</label>
+                            <label class="control-label"></label>
                             <div class="flex-grow">
-                                <div data-bind="validationElement: assignedCores">
-                                    <input autocomplete="off" type="text" class="form-control" data-bind="numericInput: assignedCores, disable: usaAvailableCores" id="assigned-cores" placeholder="Assigned cores for the new node">
-                                </div>
                                 <div class="toggle">
                                     <input id="toggleAutoAssign" type="checkbox" data-bind="checked: usaAvailableCores" />
                                     <label for="toggleAutoAssign"><small>Use available cores</small></label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div data-bind="collapse: !usaAvailableCores()">
+                            <div class="form-group">
+                                <label for="assigned-cores" class="control-label">Assigned Cores</label>
+                                <div class="flex-grow">
+                                    <div data-bind="validationElement: assignedCores">
+                                        <input autocomplete="off" type="text" class="form-control" data-bind="numericInput: assignedCores, disable: usaAvailableCores" id="assigned-cores" placeholder="Assigned cores for the new node">
+                                    </div>
                                 </div>
                             </div>
                         </div>
