@@ -11,6 +11,7 @@ class recentError extends abstractNotification {
 
     details = ko.observable<string>();
     httpStatus = ko.observable<string>();
+    licenseLimitType = ko.observable<string>();
 
     shortMessage: KnockoutComputed<string>;
 
@@ -20,6 +21,7 @@ class recentError extends abstractNotification {
         this.initObservables();
         this.updateWith(dto);
         this.createdAt(moment.utc());
+        this.licenseLimitType(dto.LicenseLimitType);
     }
 
     updateWith(incomingChanges: recentErrorDto) {
@@ -35,21 +37,22 @@ class recentError extends abstractNotification {
         this.shortMessage = ko.pureComputed(() => generalUtils.trimMessage(this.message()));
     }
 
-    static tryExtractMessageAndException(details: string): { message: string, error: string } {
+    static tryExtractMessageAndException(details: string): { message: string, error: string, licenseLimitType: string } {
         try {
             const parsedDetails = JSON.parse(details);
 
             if (parsedDetails && parsedDetails.Message) {
                 return {
                     message: parsedDetails.Message,
-                    error: parsedDetails.Error
+                    error: parsedDetails.Error,
+                    licenseLimitType: parsedDetails.Type
                 };
             }
         } catch (e) {
         }
 
         // fallback to message with entire details
-        return { message: details, error: null };
+        return { message: details, error: null, licenseLimitType: null };
     }
 
     static create(severity: Raven.Server.NotificationCenter.Notifications.NotificationSeverity, title: string, details: string, httpStatus: string) {
@@ -63,7 +66,8 @@ class recentError extends abstractNotification {
             Type: "RecentError",
             Details: messageAndException.error,
             HttpStatus: httpStatus,
-            Severity: severity
+            Severity: severity,
+            LicenseLimitType: messageAndException.licenseLimitType
         } as recentErrorDto;
 
         return new recentError(dto);

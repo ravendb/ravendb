@@ -197,7 +197,16 @@ class shell extends viewModelBase {
         this.onBootstrapFinishedTask
             .done(() => {
                 registration.showRegistrationDialogIfNeeded(license.licenseStatus());
+                this.tryReopen();
             });
+    }
+
+    private tryReopen() {
+        const random = Math.random() * (3 - 1) + 1;
+        setTimeout(() => {
+            registration.showRegistrationDialogIfNeeded(license.licenseStatus());
+            this.tryReopen();
+        }, random * 1000 * 60);
     }
 
     urlForCollection(coll: collection) {
@@ -339,7 +348,8 @@ class shell extends viewModelBase {
             shell.serverMainVersion(Math.floor(currentBuildVersion / 10000));
         }
 
-        const env = license.licenseStatus().Type;
+        const licenseStatus = license.licenseStatus();
+        const env = licenseStatus ? licenseStatus.Type : "N/A";
         const version = buildVersionResult.FullVersion;
         eventsCollector.default.initialize(
             shell.serverMainVersion() + "." + shell.serverMinorVersion(), currentBuildVersion, env, version, shouldTrack);

@@ -66,20 +66,23 @@ class registration extends dialogViewModelBase {
 
     isBusy = ko.observable<boolean>(false);
     dismissVisible = ko.observable<boolean>(true);
+    canBeClosed = ko.observable<boolean>(false);
     daysToRegister: KnockoutComputed<number>;
+    url = ko.observable<string>();
 
     private licenseKeyModel = ko.validatedObservable(new licenseKeyModel());
     private license: Raven.Server.Commercial.LicenseStatus;
 
     private hasInvalidLicense = ko.observable<boolean>(false);
 
-    constructor(license: Raven.Server.Commercial.LicenseStatus, canBeDismissed: boolean) {
+    constructor(license: Raven.Server.Commercial.LicenseStatus, canBeDismissed: boolean, canBeClosed: boolean) {
         super();
         this.license = license;
 
         this.bindToCurrentInstance("dismiss");
 
         this.dismissVisible(canBeDismissed);
+        this.canBeClosed(canBeClosed);
 
         const firstStart = moment(license.FirstServerStartDate)
             .add("1", "week").add("1", "day");
@@ -88,51 +91,73 @@ class registration extends dialogViewModelBase {
             const now = moment();
             return firstStart.diff(now, "days");
         });
+
+        let url = "https://ravendb.net/request-license?";
+        if (license && license.Id) {
+            url += `&id=${license.Id}`;
+        }
+        this.url(url);
     }
 
     static showRegistrationDialogIfNeeded(license: Raven.Server.Commercial.LicenseStatus) {
-        if (license.Type === "Invalid") {
-            registration.showRegistrationDialog(license, false);
-            return;
-        }
+        switch (license.Type) {
+            case "Invalid":
+                registration.showRegistrationDialog(license, false, false);
+                break;
+            case "None":
+                const firstStart = moment(license.FirstServerStartDate);
+                // add mutates the original moment
+                const dayAfterFirstStart = firstStart.clone().add("1", "day");
+                const weekAfterFirstStart = dayAfterFirstStart.clone().add("1", "week");
 
-        if (license.Type === "None") {
-            const firstStart = moment(license.FirstServerStartDate);
-            // add mutates the original moment
-            const dayAfterFirstStart = firstStart.clone().add("1", "day");
-            const weekAfterFirstStart = dayAfterFirstStart.clone().add("1", "week");
+                const now = moment();
+                if (now.isBefore(dayAfterFirstStart)) {
+                    return;
+                }
 
-            const now = moment();
-            if (now.isBefore(dayAfterFirstStart)) {
-                return;
-            }
+                let shouldShow: boolean;
+                let canDismiss: boolean;
 
-            let shouldShow: boolean;
-            let canDismiss: boolean;
+                if (now.isBefore(weekAfterFirstStart)) {
+                    const dismissedUntil = registrationDismissStorage.getDismissedUntil();
+                    shouldShow = !dismissedUntil || dismissedUntil.getTime() < new Date().getTime();
+                    canDismiss = true;
+                } else {
+                    shouldShow = true;
+                    canDismiss = false;
+                }
 
-            if (now.isBefore(weekAfterFirstStart)) {
-                const dismissedUntil = registrationDismissStorage.getDismissedUntil();
-                shouldShow = !dismissedUntil || dismissedUntil.getTime() < new Date().getTime();
-                canDismiss = true;
-            } else {
-                shouldShow = true;
-                canDismiss = false;
-            }
-
-            if (shouldShow) {
-                registration.showRegistrationDialog(license, canDismiss);
-            }
+                if (shouldShow) {
+                    registration.showRegistrationDialog(license, canDismiss, false);
+                }
+            default:
+                if (license.Expired) {
+                    registration.showRegistrationDialog(license, false, false);
+                }
+                break;
         }
     }
 
-    static showRegistrationDialog(license: Raven.Server.Commercial.LicenseStatus, canBeDismissed: boolean) {
-        const vm = new registration(license, canBeDismissed);
+    static showRegistrationDialog(license: Raven.Server.Commercial.LicenseStatus, canBeDismissed: boolean, canBeClosed: boolean) {
+        if ($("#licenseModal").is(":visible") && $("#enterLicenseKey").is(":visible")) {
+            return;
+        }
+
+        const vm = new registration(license, canBeDismissed, canBeClosed);
         app.showBootstrapDialog(vm);
     }
 
     dismiss(days: number) {
         registrationDismissStorage.dismissFor(days);
         app.closeDialog(this);
+    }
+
+    close() {
+        if (!this.canBeClosed()) {
+            return;
+        }
+
+        super.close();
     }
 
     submit() {

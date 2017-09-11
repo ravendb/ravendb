@@ -26,7 +26,17 @@ class cluster extends viewModelBase {
     showConnectivity: KnockoutComputed<boolean>;
 
     leaderUrl: KnockoutComputed<string>;
-    licenseSummary: KnockoutComputed<string>;
+    utilizedCores: KnockoutComputed<number>;
+    maxCores: KnockoutComputed<number>;
+    totalServersCores: KnockoutComputed<number>;
+
+    cssCores = ko.pureComputed(() => {
+        if (this.utilizedCores() === this.maxCores()) {
+            return "text-success";
+        }
+
+        return "text-warning";
+    });
 
     spinners = {
         stepdown: ko.observable<boolean>(false),
@@ -86,13 +96,25 @@ class cluster extends viewModelBase {
             return !this.topology().leader() || this.topology().leader() === this.topology().nodeTag();
         });
 
-        this.licenseSummary = ko.pureComputed(() => {
-            const licenseStatus = license.licenseStatus();
-            if (!licenseStatus) {
-                return null;
+        this.utilizedCores = ko.pureComputed(() => {
+            const nodes = this.topology().nodes();
+            const utilizedCores = _.sumBy(nodes, x => !x.utilizedCores() ? 0 : x.utilizedCores());
+            return utilizedCores;
+        });
+
+        this.maxCores = ko.pureComputed(() => {
+            const status = license.licenseStatus();
+            if (!status) {
+                return -1;
             }
 
-            return license.licenseShortDescription();
+            return status.MaxCores;
+        });
+
+        this.totalServersCores = ko.pureComputed(() => {
+            const nodes = this.topology().nodes();
+            const numberOfCores = _.sumBy(nodes, x => !x.numberOfCores() || x.numberOfCores() === -1 ? 0 : x.numberOfCores());
+            return numberOfCores;
         });
     }
 

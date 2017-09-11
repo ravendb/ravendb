@@ -43,6 +43,7 @@ namespace Raven.Server.Commercial
         private readonly LicenseStatus _licenseStatus = new LicenseStatus();
         private readonly BuildNumber _buildInfo;
         private Timer _leaseLicenseTimer;
+        private bool _disableCalculatingLicenseLimits;
         private RSAParameters? _rsaParameters;
         private readonly ServerStore _serverStore;
         private readonly SemaphoreSlim _leaseLicenseSemaphore = new SemaphoreSlim(1);
@@ -135,34 +136,37 @@ namespace Raven.Server.Commercial
 
         private void ReloadLicense()
         {
-            var licnese = _serverStore.LoadLicense();
-            if (licnese == null)
+            var license = _serverStore.LoadLicense();
+            if (license == null)
             {
                 // license is not active
                 _licenseStatus.Attributes = null;
                 _licenseStatus.Error = false;
                 _licenseStatus.Message = null;
+                _licenseStatus.Id = null;
                 return;
             }
 
             try
             {
-                _licenseStatus.Attributes = LicenseValidator.Validate(licnese, RSAParameters);
+                _licenseStatus.Attributes = LicenseValidator.Validate(license, RSAParameters);
                 _licenseStatus.Error = false;
                 _licenseStatus.Message = null;
+                _licenseStatus.Id = license.Id;
             }
             catch (Exception e)
             {
                 _licenseStatus.Attributes = null;
                 _licenseStatus.Error = true;
                 _licenseStatus.Message = e.Message;
+                _licenseStatus.Id = null;
 
                 if (Logger.IsInfoEnabled)
                     Logger.Info("Could not validate license", e);
 
                 var alert = AlertRaised.Create(
                     "License manager initialization error",
-                    "Could not intitalize the license manager",
+                    "Could not initialize the license manager",
                     AlertType.LicenseManager_InitializationError,
                     NotificationSeverity.Warning,
                     details: new ExceptionDetails(e));
@@ -292,6 +296,9 @@ namespace Raven.Server.Commercial
             bool forceFetchingNodeInfo = false)
         {
             if (_serverStore.IsLeader() == false)
+                return;
+
+            if (_disableCalculatingLicenseLimits)
                 return;
 
             if (_licenseLimitsSemaphore.Wait(0) == false)
@@ -514,11 +521,15 @@ namespace Raven.Server.Commercial
 
             try
             {
-                await _serverStore.PutLicenseAsync(license);
+                using (DisableCalculatingCoresCount())
+                    await _serverStore.PutLicenseAsync(license);
 
                 _licenseStatus.Attributes = licenseAttributes;
                 _licenseStatus.Error = false;
                 _licenseStatus.Message = null;
+                _licenseStatus.Id = license.Id;
+
+                CalculateLicenseLimits(forceFetchingNodeInfo: true);
 
                 return null;
             }
@@ -534,6 +545,15 @@ namespace Raven.Server.Commercial
 
                 throw new InvalidDataException("Could not save license!", e);
             }
+        }
+
+        private IDisposable DisableCalculatingCoresCount()
+        {
+            _disableCalculatingLicenseLimits = true;
+            return new DisposableAction(() =>
+            {
+                _disableCalculatingLicenseLimits = false;
+            });
         }
 
         public void TryActivateLicense()
@@ -990,7 +1010,7 @@ namespace Raven.Server.Commercial
             }
 
             var clusterSize = GetClusterSize();
-            var maxClusterSize = _licenseStatus.MaxClusterSize;
+            var maxClusterSize = newLicenseStatus.MaxClusterSize;
             if (clusterSize > maxClusterSize)
             {
                 var details = "Cannot activate license because the maximum allowed cluster size is: " +
@@ -1079,7 +1099,7 @@ namespace Raven.Server.Commercial
             if (snapshotBackupsCount > 0 &&
                 newLicenseStatus.HasSnapshotBackups == false)
             {
-                var details = GenerateDetails(cloudBackupsCount, "snapshot bakcups");
+                var details = GenerateDetails(cloudBackupsCount, "snapshot backups");
                 licenseLimit = GenerateLicenseLimit(LimitType.SnapshotBackup, details);
                 return false;
             }

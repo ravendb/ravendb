@@ -559,7 +559,7 @@ namespace Raven.Server.ServerWide
                     break;
                 case nameof(PutLicenseCommand):
                 case nameof(DeactivateLicenseCommand):
-                    InvokeLicenseChagned();
+                    InvokeLicenseChanged();
                     break;
                 case nameof(PutLicenseLimitsCommand):
                     LicenseLimitsChanged?.Invoke(null, null);
@@ -572,7 +572,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public void InvokeLicenseChagned()
+        public void InvokeLicenseChanged()
         {
             LicenseChanged?.Invoke(null, null);
         }
@@ -1208,7 +1208,7 @@ namespace Raven.Server.ServerWide
             var result = await SendToLeaderAsync(command);
 
             if (Logger.IsInfoEnabled)
-                Logger.Info($"Updating licnese id: {license.Id}");
+                Logger.Info($"Updating license id: {license.Id}");
 
             await WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index);        }
 
@@ -1243,7 +1243,7 @@ namespace Raven.Server.ServerWide
             var result = await SendToLeaderAsync(command);
 
             if (Logger.IsInfoEnabled)
-                Logger.Info($"Deactivating licnese id: {license.Id}");
+                Logger.Info($"Deactivating license id: {license.Id}");
 
             await WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index);
         }
