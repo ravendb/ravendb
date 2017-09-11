@@ -31,10 +31,6 @@ if [ ! -z "$LOGS_MODE" ]; then
     COMMAND="$COMMAND --Logs.Mode=$LOGS_MODE"
 fi
 
-if [ ! -z "$CERTIFICATE_PATH" ]; then
-    COMMAND="$COMMAND --Security.Certificate.Path=\"$CERTIFICATE_PATH\""
-fi
-
 CERT_PASSWORD=""
 
 if [ ! -z "$CERTIFICATE_PASSWORD_FILE" ]; then
@@ -49,6 +45,22 @@ if [ ! -z "$CERTIFICATE_PASSWORD" ]; then
     fi
 
     CERT_PASSWORD="$CERTIFICATE_PASSWORD"
+fi
+
+if [ ! -z "$CERTIFICATE_PATH" ]; then
+    COMMAND="$COMMAND --Security.Certificate.Path=\"$CERTIFICATE_PATH\""
+
+    if [ ! -d "/usr/share/ca-certificates/ravendb" ]; then
+        mkdir -p /usr/share/ca-certificates/ravendb
+        openssl pkcs12 -in "$CERTIFICATE_PATH" -out /tmp/server-temp.pem -password "pass:$CERT_PASSWORD" -passout "pass:" -cacerts
+        openssl x509 -in /tmp/server-temp.pem -out /usr/share/ca-certificates/ravendb/server.pem
+        chmod 755 /usr/share/ca-certificates/ravendb
+        chmod 644 /usr/share/ca-certificates/ravendb/server.pem
+        mv /usr/share/ca-certificates/ravendb/server.pem /usr/share/ca-certificates/ravendb/server.crt
+        echo "ravendb/server.crt" >> /etc/ca-certificates.conf
+        update-ca-certificates
+    fi
+
 fi
 
 if [ ! -z "$CERT_PASSWORD" ]; then
