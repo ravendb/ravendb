@@ -4,32 +4,32 @@
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" data-bind="visible: dismissVisible" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                <h1 class="modal-title" id="myModalLabel">Register license
-                    <span data-bind="if: dismissVisible">
-                        (<span data-bind="text: daysToRegister"></span>
-                        days left to register)
-                    </span>
-                </h1>
+                <h3 class="modal-title" id="myModalLabel">Register license
+                    
+                </h3>
             </div>
             <img src="Content/img/license_multiple.png" class="img-responsive" />
             <div class="modal-body">
-                <div class="form-container row enterKey">
-                    <section id="enterLicenseKey" class="col-xs-offset-6 col-xs-6">
-                        <p class="lead text-center">
-                            To obtain a license please click <a target="_blank" href="http://www.ravendb.net/buy">here</a> <br/>
-                            Already got one? <br/> Please paste your license key below.
-                        </p>
-                        <div class="form-horizontal">
-                            <div class="form-group" data-bind="validationElement: licenseKeyModel().key">
-                                <label for="inputLicenseKey" class="col-sm-3 control-label">License key</label>
-                                <div class="col-sm-8">
-                                    <textarea rows="5" class="form-control" id="inputLicenseKey" data-bind="textInput: licenseKeyModel().key"
-                                              placeholder='e.g. { "LicenseId": "12345ABCD" ... }'></textarea>
-                                </div>
+                <section id="enterLicenseKey">
+                    <p class="text-center lead"><span data-bind="if: dismissVisible">
+    <strong class="text-warning" data-bind="text: daysToRegister"></strong>
+    days left to register
+</span></p>
+                    <p class="text-center ">
+                      Click here to <strong><a target="_blank" href="http://www.ravendb.net/buy">obtain a license</a></strong>
+                    </p>
+
+                    <p class="text-center">Already got one?<br/>Please paste your license key below.</p>
+                    <div class="form-horizontal">
+                        <div class="form-group" data-bind="validationElement: licenseKeyModel().key">
+                            <label for="inputLicenseKey" class="col-sm-3 control-label">License key</label>
+                            <div class="col-sm-8">
+                                <textarea rows="5" class="form-control" id="inputLicenseKey" data-bind="textInput: licenseKeyModel().key"
+                                          placeholder='e.g. { "LicenseId": "12345ABCD" ... }'></textarea>
                             </div>
                         </div>
-                    </section>
-                </div>
+                    </div>
+                </section>
             </div>
             <div class="modal-footer">
                 
