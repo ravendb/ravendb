@@ -41,8 +41,7 @@ namespace SlowTests.Verifications
 
                 using (var session = store.OpenSession())
                 {
-                    var customer = session.Advanced.DocumentQuery<CustomerListingModel>()
-                        .RawQuery(@"
+                    var customer = session.Advanced.RawQuery<CustomerListingModel>(@"
 from Customers as customer
 select {
     Id: id(customer),

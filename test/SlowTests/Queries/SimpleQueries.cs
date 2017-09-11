@@ -77,8 +77,7 @@ namespace SlowTests.Queries
                 //WaitForUserToContinueTheTest(store);
                 using (var s = store.OpenSession())
                 {
-                    var documentQuery = s.Advanced.DocumentQuery<T>()
-                        .RawQuery(q);
+                    var documentQuery = s.Advanced.RawQuery<T>(q);
                     if (parameters != null)
                     {
                         foreach (var parameter in parameters)
@@ -163,8 +162,8 @@ select project(e)")]
             {
                 using (var s = store.OpenSession())
                 {
-                    var employees = s.Advanced.DocumentQuery<Employee>()
-                        .RawQuery(q)
+                    var employees = s.Advanced
+                        .RawQuery<Employee>(q)
                         .ToList();
 
                     Assert.Equal(1, employees.Count);

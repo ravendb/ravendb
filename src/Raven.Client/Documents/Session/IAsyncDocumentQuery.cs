@@ -10,17 +10,79 @@ using Raven.Client.Documents.Queries.Spatial;
 
 namespace Raven.Client.Documents.Session
 {
-    /// <summary>
-    ///     Asynchronous query against a raven index
-    /// </summary>
-    public interface IAsyncDocumentQuery<T> : IDocumentQueryBase<T, IAsyncDocumentQuery<T>>
+    public interface IAsyncDocumentQueryBase<T> 
     {
-        string IndexName { get; }
-
         /// <summary>
         /// Register the query as a lazy-count query and return a lazy instance that will evaluate the query when needed.
         /// </summary>
         Lazy<Task<int>> CountLazilyAsync(CancellationToken token = default(CancellationToken));
+
+
+        /// <summary>
+        ///     Executed the query and returns the results.
+        /// </summary>
+        Task<List<T>> ToListAsync(CancellationToken token = default(CancellationToken));
+
+        /// <summary>
+        ///     Returns first element or throws if sequence is empty.
+        /// </summary>
+        Task<T> FirstAsync(CancellationToken token = default(CancellationToken));
+
+        /// <summary>
+        ///     Returns first element or default value for type if sequence is empty.
+        /// </summary>
+        Task<T> FirstOrDefaultAsync(CancellationToken token = default(CancellationToken));
+
+        /// <summary>
+        ///     Returns first element or throws if sequence is empty or contains more than one element.
+        /// </summary>
+        Task<T> SingleAsync(CancellationToken token = default(CancellationToken));
+
+        /// <summary>
+        ///     Returns first element or default value for given type if sequence is empty. Throws if sequence contains more than
+        ///     one element.
+        /// </summary>
+        Task<T> SingleOrDefaultAsync(CancellationToken token = default(CancellationToken));
+
+        /// <summary>
+        /// Gets the total count of records for this query
+        /// </summary>
+        Task<int> CountAsync(CancellationToken token = default(CancellationToken));
+
+        /// <summary>
+        ///     Register the query as a lazy query and return a lazy
+        ///     instance that will evaluate the query only when needed.
+        /// Also provide a function to execute when the value is evaluated
+        /// </summary>
+        Lazy<Task<IEnumerable<T>>> LazilyAsync(Action<IEnumerable<T>> onEval = null);
+    }
+
+
+    public interface IAsyncRawDocumentQuery<T> :
+        IQueryBase<T, IAsyncRawDocumentQuery<T>>,
+        IAsyncDocumentQueryBase<T>
+    {
+        /// <summary>
+        /// Set the full text of the RQL query that will be sent to the server.
+        /// Must be the only call that is made on this query object
+        /// </summary>
+        IAsyncDocumentQuery<T> RawQuery(string query);
+
+        /// <summary>
+        /// Add a named parameter to the query
+        /// </summary>
+        IAsyncDocumentQuery<T> AddParameter(string name, object value);
+    }
+
+
+    /// <summary>
+    ///     Asynchronous query against a raven index
+    /// </summary>
+    public interface IAsyncDocumentQuery<T> : 
+        IDocumentQueryBase<T, IAsyncDocumentQuery<T>>,
+        IAsyncDocumentQueryBase<T>
+    {
+        string IndexName { get; }
 
         /// <summary>
         ///     Get the facets as per the specified doc with the given start and pageSize
@@ -46,13 +108,6 @@ namespace Raven.Client.Documents.Session
         ///     Create the index query object for this query
         /// </summary>
         IndexQuery GetIndexQuery();
-
-        /// <summary>
-        ///     Register the query as a lazy query and return a lazy
-        ///     instance that will evaluate the query only when needed.
-        /// Also provide a function to execute when the value is evaluated
-        /// </summary>
-        Lazy<Task<IEnumerable<T>>> LazilyAsync(Action<IEnumerable<T>> onEval = null);
 
         /// <summary>
         ///     Gets the query result. Executing this method for the first time will execute the query.
@@ -99,52 +154,11 @@ namespace Raven.Client.Documents.Session
         IAsyncDocumentQuery<T> Spatial(string fieldName, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
 
         /// <summary>
-        ///     Executed the query and returns the results.
-        /// </summary>
-        Task<List<T>> ToListAsync(CancellationToken token = default(CancellationToken));
-
-        /// <summary>
-        ///     Returns first element or throws if sequence is empty.
-        /// </summary>
-        Task<T> FirstAsync(CancellationToken token = default(CancellationToken));
-
-        /// <summary>
-        ///     Returns first element or default value for type if sequence is empty.
-        /// </summary>
-        Task<T> FirstOrDefaultAsync(CancellationToken token = default(CancellationToken));
-
-        /// <summary>
-        ///     Returns first element or throws if sequence is empty or contains more than one element.
-        /// </summary>
-        Task<T> SingleAsync(CancellationToken token = default(CancellationToken));
-
-        /// <summary>
-        ///     Returns first element or default value for given type if sequence is empty. Throws if sequence contains more than
-        ///     one element.
-        /// </summary>
-        Task<T> SingleOrDefaultAsync(CancellationToken token = default(CancellationToken));
-
-        /// <summary>
-        /// Gets the total count of records for this query
-        /// </summary>
-        Task<int> CountAsync(CancellationToken token = default(CancellationToken));
-
-        /// <summary>
         /// Changes the return type of the query
         /// </summary>
         IAsyncDocumentQuery<TResult> OfType<TResult>();
 
         IAsyncGroupByDocumentQuery<T> GroupBy(string fieldName, params string[] fieldNames);
 
-        /// <summary>
-        /// Set the full text of the RQL query that will be sent to the server.
-        /// Must be the only call that is made on this query object
-        /// </summary>
-        IAsyncDocumentQuery<T> RawQuery(string query);
-
-        /// <summary>
-        /// Add a named parameter to the query
-        /// </summary>
-        IAsyncDocumentQuery<T> AddParameter(string name, object value);
     }
 }

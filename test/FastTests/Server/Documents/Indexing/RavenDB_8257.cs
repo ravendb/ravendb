@@ -46,8 +46,8 @@ namespace FastTests.Server.Documents.Indexing
 
                 using (var session = store.OpenSession())
                 {
-                    var products = session.Advanced.DocumentQuery<dynamic>()
-                        .RawQuery(@"from index 'ReduceIndex' as user
+                    var products = session.Advanced
+                        .RawQuery<dynamic>(@"from index 'ReduceIndex' as user
 where user.Name = 'Vasiliy' and user.Age = 20
 select {
 Name: user.Name,
@@ -73,8 +73,7 @@ Count: user.Count
 
                 using (var session = store.OpenSession())
                 {
-                    var products = session.Advanced.DocumentQuery<dynamic>()
-                        .RawQuery(@"from index 'ReduceIndex' as user
+                    var products = session.Advanced.RawQuery<dynamic>(@"from index 'ReduceIndex' as user
 where user.Name = 'Vasiliy' and user.Age = 20
 select {
 Age: user.Age,
