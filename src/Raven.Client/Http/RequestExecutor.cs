@@ -412,6 +412,7 @@ namespace Raven.Client.Http
                 {
                     // auth exceptions will always happen, on all nodes
                     // so errors immediately
+                    _lastKnownUrls = initialUrls;
                     throw;
                 }
                 catch (Exception e)

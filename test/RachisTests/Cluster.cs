@@ -45,7 +45,6 @@ namespace RachisTests
                 Assert.Equal(databaseResult.Topology.AllNodes.Count(), ++replicationFactor);
                 numberOfInstances = 0;
                 await AssertNumberOfNodesContainingDatabase(databaseResult.RaftCommandIndex, databaseName, numberOfInstances, replicationFactor);
-                DeleteDatabaseResult deleteResult;
                 while (replicationFactor > 0)
                 {
                     var val = await WaitForValueAsync(async () => await GetMembersCount(store, databaseName), replicationFactor);
@@ -54,12 +53,11 @@ namespace RachisTests
 
                     var serverTagToBeDeleted = res.Topology.Members[0];
                     replicationFactor--;
-                    deleteResult = store.Admin.Server.Send(new DeleteDatabasesOperation(databaseName, hardDelete: true, fromNode: serverTagToBeDeleted, timeToWaitForConfirmation: TimeSpan.FromSeconds(30)));
+                    var deleteResult = store.Admin.Server.Send(new DeleteDatabasesOperation(databaseName, hardDelete: true, fromNode: serverTagToBeDeleted, timeToWaitForConfirmation: TimeSpan.FromSeconds(30)));
                     Assert.Empty(deleteResult.PendingDeletes);
                     await AssertNumberOfNodesContainingDatabase(deleteResult.RaftCommandIndex, databaseName, numberOfInstances, replicationFactor);
                 }
-                TransactionOperationContext context;
-                using (leader.ServerStore.ContextPool.AllocateOperationContext(out context))
+                using (leader.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
                 {
                     Assert.Null(leader.ServerStore.Cluster.ReadDatabase(context, databaseName));
@@ -69,6 +67,8 @@ namespace RachisTests
 
         private async Task AssertNumberOfNodesContainingDatabase(long eTag, string databaseName, int numberOfInstances, int replicationFactor)
         {
+            await Task.Delay(500);
+
             foreach (var server in Servers)
             {
                 await server.ServerStore.Cluster.WaitForIndexNotification(eTag);
@@ -79,6 +79,7 @@ namespace RachisTests
                 }
                 catch
                 {
+                    // ignored
                 }
             }
             Assert.True(numberOfInstances == replicationFactor, $"Expected replicationFactor={replicationFactor} but got {numberOfInstances}");

@@ -33,7 +33,7 @@ namespace RachisTests
         {
             public int MaxId;
         }
-        private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(60 * 10) : TimeSpan.FromSeconds(6);
+        private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(60 * 10) : TimeSpan.FromSeconds(10);
 
         [NightlyBuildTheory]
         [InlineData(1)]
@@ -62,17 +62,18 @@ namespace RachisTests
 
                 await GenerateDocuments(store);
 
-                Assert.True(await reachedMaxDocCountMre.WaitAsync(_reasonableWaitTime));
+                Assert.True(await reachedMaxDocCountMre.WaitAsync(_reasonableWaitTime), $"Reached {usersCount.Count}/10");
 
                 tag1 = subscription.CurrentNodeTag;
 
                 usersCount.Clear();
                 reachedMaxDocCountMre.Reset();
 
-                await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionName.ToString());
+                await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionName);
 
                 await GenerateDocuments(store);
-                Assert.True(await reachedMaxDocCountMre.WaitAsync(_reasonableWaitTime));
+
+                Assert.True(await reachedMaxDocCountMre.WaitAsync(_reasonableWaitTime), $"Reached {usersCount.Count}/10");
 
                 tag2 = subscription.CurrentNodeTag;
 
@@ -84,7 +85,7 @@ namespace RachisTests
 
                 await GenerateDocuments(store);
 
-                Assert.True(await reachedMaxDocCountMre.WaitAsync(_reasonableWaitTime));
+                Assert.True(await reachedMaxDocCountMre.WaitAsync(_reasonableWaitTime), $"Reached {usersCount.Count}/10");
 
                 tag3 = subscription.CurrentNodeTag;
                 // Assert.NotEqual(tag1, tag3);
@@ -196,8 +197,7 @@ namespace RachisTests
         [InlineData(5)]
         public async Task DistributedRevisionsSubscription(int nodesAmount)
         {
-            var leader = await this.CreateRaftClusterAndGetLeader(nodesAmount).ConfigureAwait(false);
-
+            var leader = await CreateRaftClusterAndGetLeader(nodesAmount).ConfigureAwait(false);
 
             var defaultDatabase = "DistributedRevisionsSubscription";
 
@@ -217,10 +217,7 @@ namespace RachisTests
 
                 var continueMre = new AsyncManualResetEvent();
 
-
                 GenerateDistributedRevisionsData(defaultDatabase);
-
-
 
                 var subscriptionId = await store.Subscriptions.CreateAsync<Revision<User>>().ConfigureAwait(false);
 
@@ -244,9 +241,7 @@ namespace RachisTests
                         {
                             continueMre.Reset();
                             ackSent.Set();
-
                         }
-
 
                         await continueMre.WaitAsync();
                     }
@@ -299,11 +294,9 @@ namespace RachisTests
 
                 expectedRevisionsCount = nodesAmount + 2;
                 continueMre.Set();
-                Assert.True(await task.WaitAsync(_reasonableWaitTime).ConfigureAwait(false));
+                //Assert.True(await task.WaitAsync(_reasonableWaitTime).ConfigureAwait(false), $"Doc count is {docsCount} with revesions {revisionsCount}/{expectedRevisionsCount}");
 
-
-
-                Assert.True(await ackSent.WaitAsync(_reasonableWaitTime).ConfigureAwait(false));
+                Assert.True(await ackSent.WaitAsync(_reasonableWaitTime).ConfigureAwait(false), $"Doc count is {docsCount} with revesions {revisionsCount}/{expectedRevisionsCount}");
                 ackSent.Reset(true);
 
                 await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionName).ConfigureAwait(false);
@@ -311,7 +304,7 @@ namespace RachisTests
                 expectedRevisionsCount += 2;
 
 
-                Assert.True(await ackSent.WaitAsync(_reasonableWaitTime).ConfigureAwait(false));
+                Assert.True(await ackSent.WaitAsync(_reasonableWaitTime).ConfigureAwait(false), $"Doc count is {docsCount} with revesions {revisionsCount}/{expectedRevisionsCount}");
                 ackSent.Reset(true);
                 continueMre.Set();
 
@@ -319,7 +312,7 @@ namespace RachisTests
                 if (nodesAmount == 5)
                     await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionName);
 
-                Assert.True(await reachedMaxDocCountMre.WaitAsync(_reasonableWaitTime).ConfigureAwait(false));
+                Assert.True(await reachedMaxDocCountMre.WaitAsync(_reasonableWaitTime).ConfigureAwait(false), $"Doc count is {docsCount} with revesions {revisionsCount}/{expectedRevisionsCount}");
 
             }
         }
@@ -440,7 +433,7 @@ namespace RachisTests
                 TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(500),
                 MaxDocsPerBatch = batchSize
             });
-            var subscripitonState = await store.Subscriptions.GetSubscriptionStateAsync(store.Database, subscriptionName);
+            var subscripitonState = await store.Subscriptions.GetSubscriptionStateAsync(subscriptionName, store.Database);
             var getDatabaseTopologyCommand = new GetDatabaseRecordOperation(defaultDatabase);
             var record = await store.Admin.Server.SendAsync(getDatabaseTopologyCommand).ConfigureAwait(false);
 
@@ -454,26 +447,16 @@ namespace RachisTests
                 foreach (var item in a.Items)
                 {
                     var x = item.Result;
-                    try
-                    {
-                        int curId = 0;
-                        var afterSlash = x.Id.Substring(x.Id.LastIndexOf("/", StringComparison.OrdinalIgnoreCase) + 1);
-                        curId = int.Parse(afterSlash.Substring(0, afterSlash.Length - 2));
-                        Assert.True(curId >= proggress.MaxId);// todo: change back to '>'
-                        usersCount.Add(x);
-                        proggress.MaxId = curId;
-
-                    }
-                    catch (Exception)
-                    {
-
-
-                    }
+                    int curId = 0;
+                    var afterSlash = x.Id.Substring(x.Id.LastIndexOf("/", StringComparison.OrdinalIgnoreCase) + 1);
+                    curId = int.Parse(afterSlash.Substring(0, afterSlash.Length - 2));
+                    Assert.True(curId >= proggress.MaxId);// todo: change back to '>'
+                    usersCount.Add(x);
+                    proggress.MaxId = curId;
                 }
             });
             subscription.AfterAcknowledgment += b =>
            {
-
                try
                {
                    if (usersCount.Count == 10)
@@ -504,9 +487,10 @@ namespace RachisTests
                 var databaseRecord = someServer.ServerStore.Cluster.ReadDatabase(context, defaultDatabase);
                 var db = await someServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(defaultDatabase).ConfigureAwait(false);
                 var subscriptionState = db.SubscriptionStorage.GetSubscriptionFromServerStore(subscriptionName);
-                tag = databaseRecord.Topology.WhoseTaskIsIt(subscriptionState, Server.ServerStore.IsPassive());
+                tag = databaseRecord.Topology.WhoseTaskIsIt(subscriptionState, someServer.ServerStore.IsPassive());
             }
-            Servers.FirstOrDefault(x => x.ServerStore.NodeTag == tag).Dispose();
+            Assert.NotNull(tag);
+            DisposeServerAndWaitForFinishOfDisposal(Servers.First(x => x.ServerStore.NodeTag == tag));
         }
 
         private static async Task GenerateDocuments(IDocumentStore store)
