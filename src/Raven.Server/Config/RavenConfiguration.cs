@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
@@ -108,10 +109,10 @@ namespace Raven.Server.Config
             {
                 if (File.Exists(customConfigPath) == false)
                     throw new FileNotFoundException("Custom configuration file has not been found.", customConfigPath);
-                    
+
                 _configBuilder.AddJsonFile(customConfigPath, optional: true);
-            } 
-            else 
+            }
+            else
             {
                 _configBuilder.AddJsonFile("settings.json", optional: true);
             }
@@ -119,7 +120,7 @@ namespace Raven.Server.Config
 
         private void AddEnvironmentVariables()
         {
-            _configBuilder.AddEnvironmentVariables("RAVEN.");
+            _configBuilder.Add(new EnvironmentVariablesConfigurationSource());
         }
 
         public LogsConfiguration Logs { get; set; }
@@ -327,6 +328,40 @@ namespace Raven.Server.Config
                 sb.AppendLine($"Key: '{result.Key}' Path: '{result.Value.Key}' Error: '{result.Value.Value}'");
 
             throw new InvalidOperationException(sb.ToString());
+        }
+
+        private class EnvironmentVariablesConfigurationSource : ConfigurationProvider, IConfigurationSource
+        {
+            private const string Prefix1 = "RAVEN.";
+
+            private const string Prefix2 = "RAVEN_";
+
+            public IConfigurationProvider Build(IConfigurationBuilder builder)
+            {
+                return this;
+            }
+
+            public override void Load()
+            {
+                Data = new Dictionary<string, string>();
+
+                var envs = Environment.GetEnvironmentVariables().Cast<DictionaryEntry>();
+                foreach (var env in envs)
+                {
+                    var key = env.Key as string;
+                    if (key == null)
+                        continue;
+
+                    if (key.StartsWith(Prefix1, StringComparison.OrdinalIgnoreCase) == false && key.StartsWith(Prefix2, StringComparison.OrdinalIgnoreCase) == false)
+                        continue;
+
+                    key = key
+                        .Substring(Prefix1.Length)
+                        .Replace("_", ".");
+
+                    Data[key] = env.Value as string;
+                }
+            }
         }
     }
 }
