@@ -232,5 +232,16 @@ namespace Raven.Client
                 public const string IncrementalBackupExtension = ".ravendb-incremental-backup";
             }
         }
+
+        internal class Schemas
+        {
+            public const int ServerVersion = 10;
+
+            public const int ConfigurationVersion = 10;
+
+            public const int DocumentsVersion = 10;
+
+            public const int IndexVersion = 10;
+        }
     }
 }

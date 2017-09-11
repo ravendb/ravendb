@@ -352,7 +352,7 @@ namespace Raven.Server.ServerWide
                     Logger.Info("An error occurred while trying to determine Is Swapping On Hdd Instead Of Ssd", e);
             }
 
-            options.SchemaVersion = 2;
+            options.SchemaVersion = Constants.Schemas.ServerVersion;
             options.ForceUsing32BitsPager = Configuration.Storage.ForceUsing32BitsPager;
             try
             {
