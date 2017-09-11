@@ -286,11 +286,6 @@ namespace Raven.Server.Commercial
             }
         }
 
-        private static string Pluralize(int count)
-        {
-            return count == 1 ? string.Empty : "s";
-        }
-
         public void CalculateLicenseLimits(
             string assignedNodeTag = null,
             int? assignedCores = null,
@@ -813,7 +808,7 @@ namespace Raven.Server.Commercial
 
         private static void SetAffinity(Process process, int cores)
         {
-            if (Environment.ProcessorCount < cores)
+            if (ProcessorInfo.ProcessorCount < cores)
                 return;
 
             try
@@ -994,11 +989,11 @@ namespace Raven.Server.Commercial
                     if (databaseRecord.Encrypted)
                         encryptedDatabasesCount++;
 
-                    if (HasValidExternalReplication(newLicenseStatus,
-                        databaseRecord.ExternalReplication))
+                    if (databaseRecord.ExternalReplication != null && 
+                        databaseRecord.ExternalReplication.Count > 0)
                         externalReplicationCount++;
 
-                    if (HasInvalidRavenEtl(newLicenseStatus, databaseRecord.RavenEtls,
+                    if (HasRavenEtl(databaseRecord.RavenEtls,
                         databaseRecord.RavenConnectionStrings))
                         ravenEtlCount++;
 
@@ -1017,9 +1012,7 @@ namespace Raven.Server.Commercial
             if (encryptedDatabasesCount > 0 &&
                 newLicenseStatus.HasEncryption == false)
             {
-                var details = "Cannot activate license because there are " +
-                              $"{encryptedDatabasesCount} encrypted database{Pluralize(encryptedDatabasesCount)}: " +
-                              "while the current license doesn't include the usage of encryption";
+                var details = GenerateDetails(encryptedDatabasesCount, "encryption");
                 licenseLimit = GenerateLicenseLimit(LimitType.Encryption, details);
                 return false;
             }
@@ -1027,10 +1020,7 @@ namespace Raven.Server.Commercial
             if (externalReplicationCount > 0 &&
                 newLicenseStatus.HasExternalReplication == false)
             {
-                var details = "Cannot activate license because there are " +
-                              $"{externalReplicationCount} database{Pluralize(externalReplicationCount)} " +
-                              "that use external replication " +
-                              "while the current license doesn't include the usage of external replication";
+                var details = GenerateDetails(externalReplicationCount, "external replication");
                 licenseLimit = GenerateLicenseLimit(LimitType.ExternalReplication, details);
                 return false;
             }
@@ -1038,9 +1028,7 @@ namespace Raven.Server.Commercial
             if (ravenEtlCount > 0 &&
                 newLicenseStatus.HasRavenEtl == false)
             {
-                var details = "Cannot activate license because there are " +
-                              $"{ravenEtlCount} database{Pluralize(ravenEtlCount)} that use Raven ETL " +
-                              "while the current license doesn't include the usage of Raven ETL!";
+                var details = GenerateDetails(ravenEtlCount, "Raven ETL");
                 licenseLimit = GenerateLicenseLimit(LimitType.RavenEtl, details);
                 return false;
             }
@@ -1048,9 +1036,7 @@ namespace Raven.Server.Commercial
             if (sqlEtlCount > 0 &&
                 newLicenseStatus.HasSqlEtl == false)
             {
-                var details = "Cannot activate license because there are " +
-                              $"{sqlEtlCount} database{Pluralize(sqlEtlCount)} that use SQL ETL " +
-                              "while the current license doesn't include the usage of SQL ETL";
+                var details = GenerateDetails(sqlEtlCount, "SQL ETL");
                 licenseLimit = GenerateLicenseLimit(LimitType.SqlEtl, details);
                 return false;
             }
@@ -1058,9 +1044,7 @@ namespace Raven.Server.Commercial
             if (snapshotBackupsCount > 0 &&
                 newLicenseStatus.HasSnapshotBackups == false)
             {
-                var details = "Cannot activate license because there are " +
-                              $"{snapshotBackupsCount} database{Pluralize(snapshotBackupsCount)} that use snapshot bakcups " +
-                              "while the current license doesn't include the usage of snapshot backups";
+                var details = GenerateDetails(cloudBackupsCount, "snapshot bakcups");
                 licenseLimit = GenerateLicenseLimit(LimitType.SnapshotBackup, details);
                 return false;
             }
@@ -1068,9 +1052,7 @@ namespace Raven.Server.Commercial
             if (cloudBackupsCount > 0 &&
                 newLicenseStatus.HasCloudBackups == false)
             {
-                var details = "Cannot activate license because there are " +
-                              $"{cloudBackupsCount} database{Pluralize(cloudBackupsCount)} that use cloud backups " +
-                              "while the current license doesn't include the usage of cloud backups";
+                var details = GenerateDetails(cloudBackupsCount, "cloud backups");
                 licenseLimit = GenerateLicenseLimit(LimitType.CloudBackup, details);
                 return false;
             }
@@ -1079,35 +1061,33 @@ namespace Raven.Server.Commercial
             return true;
         }
 
-        private static bool HasValidExternalReplication(
-            LicenseStatus licenseStatus,
-            List<ExternalReplication> externalReplications)
+        private static string GenerateDetails(int count, string feature)
         {
-            if (externalReplications == null)
-                return false;
-
-            return IsValidExternalReplication(licenseStatus) == false;
+            return $"Cannot activate license because there {Pluralize(count)} " +
+                   $"{count} database{(count == 1 ? string.Empty : "s")} that use {feature} " +
+                   $"while the current license doesn't include the usage of {feature}";
         }
 
-        private static bool HasInvalidRavenEtl(
-            LicenseStatus licenseStatus,
-            List<RavenEtlConfiguration> ravenEtls,
+        private static string Pluralize(int count)
+        {
+            return count == 1 ? string.Empty : "s";
+        }
+
+        private static bool HasRavenEtl(List<RavenEtlConfiguration> ravenEtls,
             Dictionary<string, RavenConnectionString> ravenConnectionStrings)
         {
             if (ravenEtls == null)
                 return false;
 
-            var hasInvalidRavenEtl = false;
-
             foreach (var ravenEtl in ravenEtls)
             {
-                if (ravenConnectionStrings.TryGetValue(ravenEtl.ConnectionStringName, out var value) == false)
+                if (ravenConnectionStrings.TryGetValue(ravenEtl.ConnectionStringName, out var _) == false)
                     continue;
 
-                hasInvalidRavenEtl |= IsValidRavenEtl(licenseStatus) == false;
+                return true;
             }
 
-            return hasInvalidRavenEtl;
+            return false;
         }
 
         private static (bool HasSnapshotBackup, bool HasCloudBackup) GetBackupTypes(
@@ -1179,7 +1159,6 @@ namespace Raven.Server.Commercial
                 if (hasCloudBackup && _licenseStatus.HasCloudBackups == false)
                 {
                     const string details = "Your current license doesn't include the backup to cloud feature!";
-                    //TODO
                     licenseLimit = GenerateLicenseLimit(LimitType.CloudBackup, details);
                     return false;
                 }
@@ -1194,7 +1173,7 @@ namespace Raven.Server.Commercial
             if (IsValid(out licenseLimit) == false)
                 return false;
 
-            if (IsValidExternalReplication(_licenseStatus) == false)
+            if (_licenseStatus.HasExternalReplication == false)
             {
                 var details = $"Your current license ({_licenseStatus.Type}) does not allow adding external replication";
                 licenseLimit = GenerateLicenseLimit(LimitType.ExternalReplication, details);
@@ -1205,17 +1184,12 @@ namespace Raven.Server.Commercial
             return true;
         }
 
-        private static bool IsValidExternalReplication(LicenseStatus licenseStatus)
-        {
-            return licenseStatus.HasExternalReplication;
-        }
-
         public bool CanAddRavenEtl(out LicenseLimit licenseLimit)
         {
             if (IsValid(out licenseLimit) == false)
                 return false;
 
-            if (IsValidRavenEtl(_licenseStatus) == false)
+            if (_licenseStatus.HasRavenEtl == false)
             {
                 const string details = "Your current license doesn't include the RavenDB ETL feature";
                 licenseLimit = GenerateLicenseLimit(LimitType.RavenEtl, details);
@@ -1224,11 +1198,6 @@ namespace Raven.Server.Commercial
 
             licenseLimit = null;
             return true;
-        }
-
-        private static bool IsValidRavenEtl(LicenseStatus licenseStatus)
-        {
-            return licenseStatus.HasRavenEtl;
         }
 
         public bool CanAddSqlEtl(out LicenseLimit licenseLimit)

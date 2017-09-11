@@ -315,13 +315,14 @@ namespace Raven.Server.Documents.Handlers.Admin
                                             $"than the available cores on that machine: {nodeInfo.NumberOfCores}");
             }
 
+            ServerStore.EnsureNotPassive();
+
             if (ServerStore.LicenseManager.CanAddNode(nodeUrl, assignedCores, out var licenseLimit) == false)
             {
                 SetLicenseLimitResponse(licenseLimit);
                 return;
             }
-
-            ServerStore.EnsureNotPassive();
+            
             if (ServerStore.IsLeader())
             {
                 using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
