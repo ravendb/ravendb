@@ -1,14 +1,15 @@
 using System.ComponentModel;
 using Raven.Server.Config.Attributes;
+using Raven.Server.Config.Settings;
 using Sparrow.Logging;
 
 namespace Raven.Server.Config.Categories
 {
     public class LogsConfiguration : ConfigurationCategory
     {
-        [DefaultValue("Logs")]
+        [DefaultValue("~/Logs")]
         [ConfigurationEntry("Logs.Path", ConfigurationEntryScope.ServerWideOnly)]
-        public string Path { get; set; }
+        public PathSetting Path { get; set; }
 
         [DefaultValue(LogMode.Operations)]
         [ConfigurationEntry("Logs.Mode", ConfigurationEntryScope.ServerWideOnly)]

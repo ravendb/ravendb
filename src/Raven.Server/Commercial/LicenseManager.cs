@@ -12,12 +12,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Raven.Client.Http;
-using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.ETL;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.PeriodicBackup;
 using Raven.Client.Util;
+using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
@@ -178,7 +178,7 @@ namespace Raven.Server.Commercial
             {
                 var licenseLimits = _serverStore.LoadLicenseLimits();
 
-                if (licenseLimits?.NodeLicenseDetails != null && 
+                if (licenseLimits?.NodeLicenseDetails != null &&
                     licenseLimits.NodeLicenseDetails.TryGetValue(_serverStore.NodeTag, out var detailsPerNode))
                 {
                     var cores = Math.Min(detailsPerNode.UtilizedCores, _licenseStatus.MaxCores);
@@ -301,7 +301,7 @@ namespace Raven.Server.Commercial
             try
             {
                 var licenseLimits = _serverStore.LoadLicenseLimits() ?? new LicenseLimits();
-                var detailsPerNode = licenseLimits.NodeLicenseDetails ?? 
+                var detailsPerNode = licenseLimits.NodeLicenseDetails ??
                     (licenseLimits.NodeLicenseDetails = new Dictionary<string, DetailsPerNode>());
 
                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -395,7 +395,7 @@ namespace Raven.Server.Commercial
             }
             catch (Exception e)
             {
-                if(Logger.IsOperationsEnabled)
+                if (Logger.IsOperationsEnabled)
                     Logger.Operations("Failed to set license limits", e);
             }
             finally
@@ -446,7 +446,7 @@ namespace Raven.Server.Commercial
                 return true;
 
             var licenseLimits = _serverStore.LoadLicenseLimits();
-            if (licenseLimits?.NodeLicenseDetails == null || 
+            if (licenseLimits?.NodeLicenseDetails == null ||
                 licenseLimits.NodeLicenseDetails.Count == 0)
                 return true;
 
@@ -542,20 +542,77 @@ namespace Raven.Server.Commercial
             if (_licenseStatus.Type != LicenseType.None)
                 return;
 
-            string licensePath = null;
+            if (TryGetLicenseFromString(out var license) == false)
+                TryGetLicenseFromPath(out license);
+
+            if (license == null)
+                return;
+
             try
             {
-                licensePath = _serverStore.Configuration.Licensing.LicensePath;
-                var license = GetLicenseFromPath(licensePath);
-                if (license == null)
-                    return;
-
                 AsyncHelpers.RunSync(() => Activate(license, skipLeaseLicense: false, ensureNotPassive: false));
             }
             catch (Exception e)
             {
                 if (Logger.IsInfoEnabled)
-                    Logger.Info($"Failed to activate license from license path: {licensePath}", e);
+                    Logger.Info("Failed to activate license", e);
+            }
+        }
+
+        private bool TryGetLicenseFromPath(out License license)
+        {
+            license = null;
+
+            var path = _serverStore.Configuration.Licensing.LicensePath;
+
+            try
+            {
+                using (var stream = File.Open(path.FullPath, FileMode.Open, FileAccess.Read))
+                {
+                    license = DeserializeLicense(stream);
+                    return true;
+                }
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Failed to read license from '{path.FullPath}' path", e);
+            }
+
+            return false;
+        }
+
+        private bool TryGetLicenseFromString(out License license)
+        {
+            license = null;
+
+            var l = _serverStore.Configuration.Licensing.License;
+            if (string.IsNullOrWhiteSpace(l))
+                return false;
+
+            try
+            {
+                using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(l)))
+                {
+                    license = DeserializeLicense(stream);
+                    return true;
+                }
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Failed to read license from '{RavenConfiguration.GetKey(x => x.Licensing.License)}' configuration", e);
+            }
+
+            return false;
+        }
+
+        private static License DeserializeLicense(Stream stream)
+        {
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                var json = context.Read(stream, "license/json");
+                return JsonDeserializationServer.License(json);
             }
         }
 
@@ -625,7 +682,7 @@ namespace Raven.Server.Commercial
                 if (hasMessage || licenseChanged)
                 {
                     var severity =
-                        leasedLicense.NotificationSeverity == NotificationSeverity.None ? 
+                        leasedLicense.NotificationSeverity == NotificationSeverity.None ?
                         NotificationSeverity.Info : leasedLicense.NotificationSeverity;
                     var alert = AlertRaised.Create(
                         "License was updated",
@@ -989,7 +1046,7 @@ namespace Raven.Server.Commercial
                     if (databaseRecord.Encrypted)
                         encryptedDatabasesCount++;
 
-                    if (databaseRecord.ExternalReplication != null && 
+                    if (databaseRecord.ExternalReplication != null &&
                         databaseRecord.ExternalReplication.Count > 0)
                         externalReplicationCount++;
 
@@ -1147,7 +1204,7 @@ namespace Raven.Server.Commercial
             {
                 var backupBlittable = readerObject.Clone(context);
                 var configuration = JsonDeserializationCluster.PeriodicBackupConfiguration(backupBlittable);
-                if (configuration.BackupType == BackupType.Snapshot && 
+                if (configuration.BackupType == BackupType.Snapshot &&
                     _licenseStatus.HasSnapshotBackups == false)
                 {
                     const string details = "Your current license doesn't include the snapshot backups feature";
@@ -1165,7 +1222,7 @@ namespace Raven.Server.Commercial
 
                 licenseLimit = null;
                 return true;
-            } 
+            }
         }
 
         public bool CanAddExternalReplication(out LicenseLimit licenseLimit)
@@ -1247,7 +1304,7 @@ namespace Raven.Server.Commercial
         }
 
         private LicenseLimit GenerateLicenseLimit(
-            LimitType limitType, 
+            LimitType limitType,
             string message,
             bool addNotification = false)
         {

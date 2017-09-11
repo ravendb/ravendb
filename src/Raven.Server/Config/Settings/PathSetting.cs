@@ -58,4 +58,9 @@ namespace Raven.Server.Config.Settings
             return path;
         }
     }
+
+    [AttributeUsage(AttributeTargets.Property)]
+    public class ReadOnlyPathAttribute : Attribute
+    {
+    }
 }

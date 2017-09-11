@@ -54,7 +54,7 @@ namespace Raven.Server
 
             configuration.Initialize();
 
-            LoggingSource.Instance.SetupLogMode(configuration.Logs.Mode, Path.Combine(AppContext.BaseDirectory, configuration.Logs.Path));
+            LoggingSource.Instance.SetupLogMode(configuration.Logs.Mode, configuration.Logs.Path.FullPath);
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Logging to { configuration.Logs.Path } set to {configuration.Logs.Mode} level.");
 
@@ -203,9 +203,7 @@ namespace Raven.Server
 
             //stop dumping logs
             LoggingSource.Instance.DisableConsoleLogging();
-            LoggingSource.Instance.SetupLogMode(LogMode.None,
-                Path.Combine(AppContext.BaseDirectory, configuration.Logs.Path));
-
+            LoggingSource.Instance.SetupLogMode(LogMode.None, configuration.Logs.Path.FullPath);
 
             return new RavenCli().Start(server, Console.Out, Console.In, true);
         }

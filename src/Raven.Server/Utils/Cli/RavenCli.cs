@@ -290,8 +290,7 @@ namespace Raven.Server.Utils.Cli
             Console.ResetColor();
 
             LoggingSource.Instance.DisableConsoleLogging();
-            LoggingSource.Instance.SetupLogMode(LogMode.None,
-                Path.Combine(AppContext.BaseDirectory, cli._server.Configuration.Logs.Path));
+            LoggingSource.Instance.SetupLogMode(LogMode.None, cli._server.Configuration.Logs.Path.FullPath);
 
             Program.WriteServerStatsAndWaitForEsc(cli._server);
 
@@ -400,12 +399,12 @@ namespace Raven.Server.Utils.Cli
             {
                 case "on":
                     LoggingSource.Instance.EnableConsoleLogging();
-                    LoggingSource.Instance.SetupLogMode(LogMode.Information, Path.Combine(AppContext.BaseDirectory, cli._server.Configuration.Logs.Path));
+                    LoggingSource.Instance.SetupLogMode(LogMode.Information, cli._server.Configuration.Logs.Path.FullPath);
                     WriteText("Logging set to ON", ConsoleColor.Green, cli);
                     break;
                 case "off":
                     LoggingSource.Instance.DisableConsoleLogging();
-                    LoggingSource.Instance.SetupLogMode(LogMode.None, Path.Combine(AppContext.BaseDirectory, cli._server.Configuration.Logs.Path));
+                    LoggingSource.Instance.SetupLogMode(LogMode.None, cli._server.Configuration.Logs.Path.FullPath);
                     WriteText("Logging set to OFF", ConsoleColor.DarkGreen, cli);
                     break;
                 case "http-off":
@@ -566,7 +565,7 @@ namespace Raven.Server.Utils.Cli
         public static string ConvertResultToString(ScriptRunnerResult result)
         {
             var ms = new MemoryStream();
-            using(var ctx = JsonOperationContext.ShortTermSingleUse())
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
             using (var writer = new BlittableJsonTextWriter(ctx, ms))
             {
                 writer.WriteStartObject();
@@ -789,7 +788,7 @@ namespace Raven.Server.Utils.Cli
                 }
                 parent.EnableRaisingEvents = true;
                 parent.Exited += OnParentProcessExit;
-                if(parent.HasExited)
+                if (parent.HasExited)
                     OnParentProcessExit(this, EventArgs.Empty);
             }
 
@@ -818,11 +817,11 @@ namespace Raven.Server.Utils.Cli
                             return true;
                         case "log":
                             LoggingSource.Instance.EnableConsoleLogging();
-                            LoggingSource.Instance.SetupLogMode(LogMode.Information, Path.Combine(AppContext.BaseDirectory, _server.Configuration.Logs.Path));
+                            LoggingSource.Instance.SetupLogMode(LogMode.Information, _server.Configuration.Logs.Path.FullPath);
                             break;
                         case "logoff":
                             LoggingSource.Instance.DisableConsoleLogging();
-                            LoggingSource.Instance.SetupLogMode(LogMode.None, Path.Combine(AppContext.BaseDirectory, _server.Configuration.Logs.Path));
+                            LoggingSource.Instance.SetupLogMode(LogMode.None, _server.Configuration.Logs.Path.FullPath);
                             break;
                         case "h":
                         case "help":

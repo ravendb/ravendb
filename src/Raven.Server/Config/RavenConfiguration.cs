@@ -287,6 +287,10 @@ namespace Raven.Server.Config
                     if (pathSettingValue == null)
                         continue;
 
+                    var readOnly = categoryProperty.GetCustomAttribute<ReadOnlyPathAttribute>();
+                    if (readOnly != null)
+                        continue;
+
                     var fileName = Guid.NewGuid().ToString("N");
                     var path = pathSettingValue.ToFullPath();
                     var fullPath = Path.Combine(path, fileName);

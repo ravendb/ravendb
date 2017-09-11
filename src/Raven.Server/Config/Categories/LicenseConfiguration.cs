@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using Raven.Server.Config.Attributes;
+using Raven.Server.Config.Settings;
 
 namespace Raven.Server.Config.Categories
 {
@@ -14,9 +15,10 @@ namespace Raven.Server.Config.Categories
         public string License { get; set; }
 
         [Description("The path to the license file for RavenDB, default for ~\\license.json")]
+        [ReadOnlyPath]
         [DefaultValue("~/license.json")]
         [ConfigurationEntry("License.Path", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public string LicensePath { get; set; }
+        public PathSetting LicensePath { get; set; }
 
         [Description("EXPERT ONLY. Skip logging of lease license errors")]
         [DefaultValue(false)]
