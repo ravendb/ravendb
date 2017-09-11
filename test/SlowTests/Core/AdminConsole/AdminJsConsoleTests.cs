@@ -126,6 +126,33 @@ namespace SlowTests.Core.AdminConsole
         }
 
         [Fact]
+        public async Task CanConvertAllJsonTypesToString()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var database = await GetDocumentDatabaseInstanceFor(store);
+
+                // Load the database and use it
+                using (var session = store.OpenSession())
+                {                    
+                    for (var i = 0; i < 10; i++)
+                    {
+                        session.Store(new object());
+                    }
+                    session.SaveChanges();
+                }
+
+                ExecuteScript(database, @"
+                                return {
+                                    server: server,
+                                    database: database
+                                };
+                             "
+                );
+            }
+        }
+
+        [Fact]
         public async Task CanModifyConfigurationOnTheFly()
         {
             using (var store = GetDocumentStore())

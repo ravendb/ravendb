@@ -117,6 +117,9 @@ namespace Raven.Server.Documents.Patch
                         .SetReferencesResolver(new NullPropgationReferenceResolver())
                         .MaxStatements(_configuration.Patching.MaxStepsForScript)
                         .Strict()
+                        .AddObjectConverter(new JintStringConverter())
+                        .AddObjectConverter(new JintEnumConverter())
+                        .AddObjectConverter(new JintDateTimeConverter())
                         .AddObjectConverter(new JintTimeSpanConverter());
                 });
                 ScriptEngine.SetValue("output", new ClrFunctionInstance(ScriptEngine, OutputDebug));
@@ -287,7 +290,7 @@ namespace Raven.Server.Documents.Patch
                 if (DebugMode)
                     DebugActions.PutDocument.Add(id);
 
-                using (var reader = JsBlittableBridge.Translate(_context, args[1].AsObject(), usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                using (var reader = JsBlittableBridge.Translate(_context, ScriptEngine, args[1].AsObject(), usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
                     var put = _database.DocumentsStorage.Put(_context, id, _context.GetLazyString(changeVector), reader);
                     return put.Id;
@@ -443,13 +446,13 @@ namespace Raven.Server.Documents.Patch
                 return new ScriptRunnerResult(this, result);
             }
 
-            private static Client.Exceptions.Documents.Patching.JavaScriptException CreateFullError(DocumentsOperationContext ctx, JavaScriptException e)
+            private Client.Exceptions.Documents.Patching.JavaScriptException CreateFullError(DocumentsOperationContext ctx, JavaScriptException e)
             {
                 string msg;
                 if (e.Error.IsString())
                     msg = e.Error.AsString();
                 else if (e.Error.IsObject())
-                    msg = JsBlittableBridge.Translate(ctx, e.Error.AsObject()).ToString();
+                    msg = JsBlittableBridge.Translate(ctx, ScriptEngine, e.Error.AsObject()).ToString();
                 else
                     msg = e.Error.ToString();
 

@@ -1,11 +1,15 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using Jint;
 using Jint.Native;
 using Jint.Native.Array;
 using Jint.Native.Function;
 using Jint.Native.Object;
 using Jint.Native.RegExp;
+using Jint.Runtime;
+using Jint.Runtime.Interop;
 using Raven.Client;
 using Sparrow.Json;
 
@@ -15,14 +19,16 @@ namespace Raven.Server.Documents.Patch
     {
         private readonly ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> _writer;
         private readonly BlittableJsonDocumentBuilder.UsageMode _usageMode;
+        private readonly Engine _scriptEngine;
 
         [ThreadStatic]
         private static HashSet<object> _recursive;
 
-        public JsBlittableBridge(ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> writer, BlittableJsonDocumentBuilder.UsageMode usageMode)
+        public JsBlittableBridge(ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> writer, BlittableJsonDocumentBuilder.UsageMode usageMode, Engine scriptEngine)
         {
             _writer = writer;
             _usageMode = usageMode;
+            _scriptEngine = scriptEngine;
         }
 
         public void WriteInstance(ObjectInstance jsObject, IResultModifier modifier = null)
@@ -55,6 +61,8 @@ namespace Raven.Server.Documents.Patch
                     _writer.WriteValueNull();
                 else if (js.IsString())
                     _writer.WriteValue(js.AsString());
+                else if (js.IsDate())
+                    _writer.WriteValue(js.AsDate().ToDateTime().ToString("O"));
                 else if (js.IsNumber())
                     WriteNumber(parent, propName, js.AsNumber());
                 else if (js.IsArray())
@@ -143,17 +151,47 @@ namespace Raven.Server.Documents.Patch
         {
             if (_recursive == null)
                 _recursive = new HashSet<object>();
+
+            if (obj is ObjectWrapper objectWrapper)
+            {
+                var target = objectWrapper.Target;
+
+                if (target is IDictionary dictionary)
+                {
+                    WriteValueInternal(target, obj);
+                }
+                else if (target is IEnumerable enumerable)
+                {
+                    var jsArray = (ArrayInstance)_scriptEngine.Array.Construct(Arguments.Empty);
+                    foreach (var item in enumerable)
+                    {
+                        var jsItem = JsValue.FromObject(_scriptEngine, item);
+                        _scriptEngine.Array.PrototypeObject.Push(jsArray, Arguments.From(jsItem));
+                    }
+                    WriteArray(jsArray);
+                }
+                else
+                    WriteValueInternal(target, obj);
+            }
+            else if (obj is FunctionInstance)
+                _writer.WriteValueNull();
+            else
+                WriteValueInternal(obj, obj);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void WriteValueInternal(object target, ObjectInstance obj)
+        {
             try
             {
-                if (_recursive.Add(obj)
-                    && obj is FunctionInstance == false)
+                if (_recursive.Add(target))
                     WriteInstance(obj);
                 else
                     _writer.WriteValueNull();
             }
             finally
             {
-                _recursive.Remove(obj);
+                _recursive.Remove(target);
             }
         }
 
@@ -287,7 +325,7 @@ namespace Raven.Server.Documents.Patch
                    property == Constants.Documents.Metadata.Flags;
         }
 
-        public static BlittableJsonReaderObject Translate(JsonOperationContext context, ObjectInstance objectInstance, IResultModifier modifier = null, BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
+        public static BlittableJsonReaderObject Translate(JsonOperationContext context, Engine scriptEngine, ObjectInstance objectInstance, IResultModifier modifier = null, BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
         {
             if (objectInstance == null)
                 return null;
@@ -300,7 +338,7 @@ namespace Raven.Server.Documents.Patch
                 writer.Reset(usageMode);
                 writer.StartWriteObjectDocument();
 
-                var blittableBridge = new JsBlittableBridge(writer, usageMode);
+                var blittableBridge = new JsBlittableBridge(writer, usageMode, scriptEngine);
                 blittableBridge.WriteInstance(objectInstance, modifier);
 
                 writer.FinalizeDocument();
