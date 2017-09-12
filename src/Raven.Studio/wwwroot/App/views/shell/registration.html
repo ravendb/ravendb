@@ -15,7 +15,7 @@
                     <p class="text-center lead">
                         <span data-bind="if: dismissVisible">
                             <strong class="text-warning" data-bind="text: daysToRegister"></strong>
-                            days left to register
+                            day<span data-bind="if: daysToRegister() > 1">s</span> left to register
                         </span>
                         <span data-bind="if: error">
                             <strong class="text-warning" data-bind="text: error"></strong>
