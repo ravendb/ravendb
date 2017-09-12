@@ -291,7 +291,7 @@
         </div>
         <div class="footer-item">
             <a title="Server Version" data-bind="attr: { href: urlForAbout }">
-                <i class="icon-server"></i> <span data-bind="text: $root.constructor.serverBuildVersion() ? $root.constructor.serverBuildVersion().FullVersion : ''"></span>
+                <i class="icon-server"></i> <span data-bind="text: $root.constructor.buildInfo.serverBuildVersion() ? $root.constructor.buildInfo.serverBuildVersion().FullVersion : ''"></span>
             </a>
         </div>
         <div class="footer-item">

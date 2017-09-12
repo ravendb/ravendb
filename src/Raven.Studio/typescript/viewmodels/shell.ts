@@ -56,6 +56,7 @@ class shell extends viewModelBase {
     footer = footer.default;
     clusterManager = clusterTopologyManager.default;
     continueTest = continueTest.default;
+    static buildInfo = buildInfo;
 
     clientBuildVersion = ko.observable<clientBuildVersionDto>();
 
