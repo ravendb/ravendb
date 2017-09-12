@@ -9,6 +9,7 @@ using Jint.Native.Function;
 using Jint.Native.Object;
 using Jint.Native.RegExp;
 using Jint.Runtime;
+using Jint.Runtime.Descriptors;
 using Jint.Runtime.Interop;
 using Raven.Client;
 using Sparrow.Json;
@@ -87,7 +88,7 @@ namespace Raven.Server.Documents.Patch
             {
                 if (property.Key == "length")
                     continue;
-                WriteJsonValue(arrayInstance, property.Key, property.Value.Value);
+                WriteJsonValue(arrayInstance, property.Key, SafelyGetJsValue(property.Value));
             }
             _writer.WriteArrayEnd();
         }
@@ -267,7 +268,19 @@ namespace Raven.Server.Documents.Patch
                     continue;
 
                 _writer.WritePropertyName(propertyName);
-                WriteJsonValue(jsObject, propertyName, value.Value);
+                WriteJsonValue(jsObject, propertyName, SafelyGetJsValue(value));
+            }
+        }
+
+        private JsValue SafelyGetJsValue(PropertyDescriptor property)
+        {
+            try
+            {
+                return property.Value;
+            }
+            catch (Exception e)
+            {
+                return new JsValue(e.ToString());
             }
         }
 
