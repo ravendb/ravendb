@@ -489,7 +489,7 @@ class appUrl {
     }
 
     static forExportCollectionCsv(collection: collection, db: database | databaseInfo, customColumns?: string[]): string {
-        if (collection.isAllDocuments || collection.isSystemDocuments) {
+        if (collection.isAllDocuments) {
             return null;
         }
         var args = {

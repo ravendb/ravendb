@@ -87,7 +87,7 @@ class collectionsTracker {
 
     getCollectionNames() {
         return this.collections()
-            .filter(x => !x.isAllDocuments && !x.isSystemDocuments)
+            .filter(x => !x.isAllDocuments)
             .map(x => x.name);
     }
 
@@ -97,10 +97,6 @@ class collectionsTracker {
 
     getAllDocumentsCollection() {
         return this.collections().find(x => x.isAllDocuments);
-    }
-
-    getSystemDocumentsCollection() {
-        return this.collections().find(x => x.isSystemDocuments);
     }
 
     registerOnCollectionCreatedHandler(handler: (collection: collection) => void): disposable {

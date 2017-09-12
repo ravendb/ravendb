@@ -6,7 +6,6 @@ import generalUtils = require("common/generalUtils");
 
 class collection {
     static readonly allDocumentsCollectionName = "All Documents";
-    static readonly systemDocumentsCollectionName = "@system";
     static readonly revisionsBinCollectionName = "Revisions Bin";
 
     documentCount: KnockoutObservable<number> = ko.observable(0);
@@ -41,10 +40,6 @@ class collection {
                 this.hasBounceClass(false);
             }, 420);
         });
-    }
-
-    get isSystemDocuments() {
-        return this.name === collection.systemDocumentsCollectionName;
     }
 
     get isAllDocuments() {

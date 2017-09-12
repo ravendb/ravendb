@@ -35,8 +35,7 @@ describe("RQL Autocomplete", () => {
         {caption: "Collection!", value: "'Collection!' ", score: 2, meta: "collection"},
         //TODO: {caption: "Collection With Space", value: "'Collection With ' And \" in name' ", score: 2, meta: "collection"},
         {caption: "index", value: "index ", score: 4, meta: "keyword"},
-        {caption: "@all_docs", value: "@all_docs ", score: 3, meta: "collection"},
-        {caption: "@system", value: "@system ", score: 1, meta: "collection"},
+        {caption: "@all_docs", value: "@all_docs ", score: 3, meta: "collection"}
     ];
     it('from should get collection names', done => {
         rqlTestUtils.autoComplete("from |", northwindProvider(),  ((errors, wordlist, prefix) => {
