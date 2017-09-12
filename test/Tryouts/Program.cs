@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using FastTests.Client;
 using FastTests.Smuggler;
 using SlowTests.Core.AdminConsole;
@@ -11,18 +12,25 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            using (var test = new RavenDB_6711_RavenEtl())
+            for (int i = 0; i < 100; i++)
             {
-                try
+                Console.WriteLine(i);
+                Parallel.For(0, 10, _ =>
                 {
-                    test.Script_defined_for_all_documents_with_filtering_and_loads_to_the_same_collection_for_some_docs();
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
-                    Console.WriteLine("-------------");
-                    throw;
-                }
+                    using (var test = new SlowTests.Tests.Linq.CanCallLastOnArray())
+                    {
+                        try
+                        {
+                            test.WillSupportLast();
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine(e);
+                            Console.WriteLine("-------------");
+                            throw;
+                        }
+                    }
+                });
             }
         }
     }

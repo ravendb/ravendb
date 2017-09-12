@@ -1152,16 +1152,19 @@ namespace Raven.Server.ServerWide
             while (true)
             {
                 // first get the task, then wait on it
-                var waitAsync = timeout.HasValue == false ? _notifiedListeners.WaitAsync() : _notifiedListeners.WaitAsync(timeout.Value);
+                var waitAsync = timeout.HasValue == false ? 
+                    _notifiedListeners.WaitAsync() : 
+                    _notifiedListeners.WaitAsync(timeout.Value);
 
                 if (index <= Volatile.Read(ref LastModifiedIndex))
                     break;
 
                 if (await waitAsync == false)
                 {
-                    if (index <= Volatile.Read(ref LastModifiedIndex))
+                    var copy = Volatile.Read(ref LastModifiedIndex);
+                    if (index <= copy)
                         break;
-                    ThrowTimeoutException(timeout ?? TimeSpan.MaxValue, index, LastModifiedIndex);
+                    ThrowTimeoutException(timeout ?? TimeSpan.MaxValue, index, copy);
                 }
             }
 
@@ -1212,7 +1215,7 @@ namespace Raven.Server.ServerWide
         public void RecordNotification(RecentLogIndexNotification notification)
         {
             RecentNotifications.Enqueue(notification);
-            while (RecentNotifications.Count > 200)
+            while (RecentNotifications.Count > 25)
                 RecentNotifications.TryDequeue(out _);
         }
 
@@ -1231,12 +1234,21 @@ namespace Raven.Server.ServerWide
                     Interlocked.Decrement(ref _numberOfErrors);
                 }
             }
-            var lastModified = LastModifiedIndex;
-            while (index > lastModified)
-            {
-                lastModified = Interlocked.CompareExchange(ref LastModifiedIndex, index, lastModified);
-            }
+            InterlockedExchangeMax(ref LastModifiedIndex, index);
             _notifiedListeners.SetAndResetAtomically();
+        }
+
+        private static bool InterlockedExchangeMax(ref long location, long newValue)
+        {
+            long initialValue;
+            do
+            {
+                initialValue = location;
+                if (initialValue >= newValue)
+                    return false;
+            }
+            while (Interlocked.CompareExchange(ref location, newValue, initialValue) != initialValue);
+            return true;
         }
     }
 
