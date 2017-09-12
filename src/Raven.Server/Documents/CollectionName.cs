@@ -124,6 +124,8 @@ namespace Raven.Server.Documents
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe bool IsHiLoCollection(LazyStringValue name)
         {
+            if (name == null)
+                return false;
             return IsHiLoCollection(name.Buffer, name.Length);
         }
 
