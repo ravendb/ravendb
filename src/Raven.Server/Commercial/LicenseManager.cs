@@ -329,7 +329,7 @@ namespace Raven.Server.Commercial
                     var allNodes = _serverStore.GetClusterTopology(context).AllNodes;
                     var allNodeTags = allNodes.Keys;
                     if (allNodeTags.Count == detailsPerNode.Count &&
-                        allNodeTags.SequenceEqual(detailsPerNode.Keys) &&
+                        allNodeTags.All(detailsPerNode.Keys.Contains) &&
                         hasChanges == false)
                     {
                         return;
