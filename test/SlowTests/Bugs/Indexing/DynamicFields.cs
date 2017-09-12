@@ -145,8 +145,8 @@ namespace SlowTests.Bugs.Indexing
 
                 using (var session = store.OpenSession())
                 {
-                    var products = session.Advanced.DocumentQuery<dynamic>()
-                        .RawQuery(@"from index 'Product/ByAttributeStored' as product
+                    var products = session.Advanced
+                        .RawQuery<dynamic>(@"from index 'Product/ByAttributeStored' as product
 where product.Color='Red'
 select {
 Color: product.Color

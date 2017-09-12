@@ -11,6 +11,7 @@ class recentError extends abstractNotification {
 
     details = ko.observable<string>();
     httpStatus = ko.observable<string>();
+    licenseLimitType = ko.observable<string>();
 
     shortMessage: KnockoutComputed<string>;
 

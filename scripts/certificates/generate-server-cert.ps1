@@ -44,6 +44,7 @@ if ($existingCert -eq $null) {
         -Subject "CN=ca.hrhinos.local,O=Hibernating Rhinos,OU=Ops" `
         -Type Custom `
         -KeySpec Signature `
+        -TextExtension '2.5.29.19={critical}{text}ca=1&pathlength=1' `
         -KeyUsageProperty All `
         -KeyUsage CertSign, CRLSign, DigitalSignature, KeyEncipherment `
         -KeyExportPolicy Exportable 
@@ -51,7 +52,6 @@ if ($existingCert -eq $null) {
     $rootStore.Add($existingCert);
     write-host "Added self signed certificate $SignerName to Trusted Root Certification Authorities collection: $($existingCert.Thumbprint)"
 }
-
 
 
 $subject = "O=operations.ravendb.local, CN=$CN"
@@ -73,7 +73,7 @@ $cert = New-SelfSignedCertificate `
         -KeySpec Signature `
         -KeyUsageProperty All `
         -KeyUsage CertSign, CRLSign, DigitalSignature, KeyEncipherment `
-        -TextExtension '2.5.29.37={text}1.3.6.1.5.5.7.3.2,1.3.6.1.5.5.7.3.1' `
+        -TextExtension '2.5.29.37={text}1.3.6.1.5.5.7.3.2,1.3.6.1.5.5.7.3.1','2.5.29.19={critical}{text}ca=1&pathlength=0' `
         -Signer $existingCert
 
 $certThumbprint = $cert.Thumbprint

@@ -48,25 +48,25 @@ namespace SlowTests.Verifications
 
                 using (var session = documentStore.OpenSession())
                 {
-                    var results = session.Advanced.DocumentQuery<dynamic>()
-                        .RawQuery(@"
+                    var results = session.Advanced
+                        .RawQuery<dynamic>(@"
 declare function fetch(r){
-	var g = load('users/'  + r.GiverId);
-	var t = load('users/'  + r.TakerId);
-	var p = load('places/' + r.PlaceId)
+    var g = load('users/'  + r.GiverId);
+    var t = load('users/'  + r.TakerId);
+    var p = load('places/' + r.PlaceId)
                                          
-	return {
-		Id: id(r),
-		Description: r.Description,
-		Start: r.Start,
-		End: r.End,
-		GiverId: r.GiverId,
-		GiverName: g.Name,
-		TakerId: r.TakerId,
-		TakerName: r.Name,
-		PlaceId: r.PlaceId,
-		PlaceName: p.Name
-	};
+    return {
+        Id: id(r),
+        Description: r.Description,
+        Start: r.Start,
+        End: r.End,
+        GiverId: r.GiverId,
+        GiverName: g.Name,
+        TakerId: r.TakerId,
+        TakerName: r.Name,
+        PlaceId: r.PlaceId,
+        PlaceName: p.Name
+    };
 }
 from index TaskSummaryIndex as r
 select fetch(r)

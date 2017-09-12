@@ -15,7 +15,7 @@ namespace SlowTests.Issues
             {
                 using (var session = store.OpenSession())
                 {
-                    var ex = Assert.Throws<InvalidQueryException>(() => session.Advanced.DocumentQuery<Order>().RawQuery("from Orders group by Lines[].ProductName").ToList());
+                    var ex = Assert.Throws<InvalidQueryException>(() => session.Advanced.RawQuery<Order>("from Orders group by Lines[].ProductName").ToList());
 
                     Assert.Contains("Grouping by collections in auto map reduce indexes is not supported", ex.Message);
                 }

@@ -206,9 +206,10 @@ class shell extends viewModelBase {
         setTimeout(() => {
             registration.showRegistrationDialogIfNeeded(license.licenseStatus());
             this.tryReopenRegistrationDialog();
-        }, random * 1000 * 60);
+                this.tryReopen();
+            });
     }
-
+  
     urlForCollection(coll: collection) {
         return appUrl.forDocuments(coll.name, this.activeDatabase());
     }

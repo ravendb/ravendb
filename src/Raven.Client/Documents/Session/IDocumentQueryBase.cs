@@ -9,17 +9,148 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
 {
-    /// <summary>
-    ///     A query against a Raven index
-    /// </summary>
-    public interface IDocumentQueryBase<T, out TSelf>
-        where TSelf : IDocumentQueryBase<T, TSelf>
+    public interface IQueryBase<T, out TSelf>
+        where TSelf : IQueryBase<T, TSelf>
     {
         /// <summary>
         ///     Gets the document convention from the query session
         /// </summary>
         DocumentConventions Conventions { get; }
 
+        /// <summary>
+        ///     Callback to get the results of the query
+        /// </summary>
+        void AfterQueryExecuted(Action<QueryResult> action);
+
+
+        /// <summary>
+        ///     Callback to get the results of the stream
+        /// </summary>
+        void AfterStreamExecuted(Action<BlittableJsonReaderObject> action);
+
+        /// <summary>
+        ///     Allows you to modify the index query before it is sent to the server
+        /// </summary>
+        TSelf BeforeQueryExecuted(Action<IndexQuery> beforeQueryExecuted);
+
+        /// <summary>
+        ///     Called externally to raise the after query executed callback
+        /// </summary>
+        void InvokeAfterQueryExecuted(QueryResult result);
+
+        /// <summary>
+        ///     Called externally to raise the after query executed callback
+        /// </summary>
+        void InvokeAfterStreamExecuted(BlittableJsonReaderObject result);
+
+        /// <summary>
+        ///     Disables caching for query results.
+        /// </summary>
+        TSelf NoCaching();
+
+        /// <summary>
+        ///     Disables tracking for queried entities by Raven's Unit of Work.
+        ///     Usage of this option will prevent holding query results in memory.
+        /// </summary>
+        TSelf NoTracking();
+
+        /// <summary>
+        ///     Enables calculation of timings for various parts of a query (Lucene search, loading documents, transforming
+        ///     results). Default: false
+        /// </summary>
+        TSelf ShowTimings();
+
+        /// <summary>
+        ///     Skips the specified count.
+        /// </summary>
+        /// <param name="count">Number of items to skip.</param>
+        TSelf Skip(int count);
+
+        /// <summary>
+        ///     Provide statistics about the query, such as total count of matching records
+        /// </summary>
+        TSelf Statistics(out QueryStatistics stats);
+
+        /// <summary>
+        ///     Takes the specified count.
+        /// </summary>
+        /// <param name="count">Maximum number of items to take.</param>
+        TSelf Take(int count);
+
+        /// <summary>
+        ///     Select the default operator to use for this query
+        /// </summary>
+        TSelf UsingDefaultOperator(QueryOperator queryOperator);
+
+        /// <summary>
+        ///     EXPERT ONLY: Instructs the query to wait for non stale results.
+        ///     This shouldn't be used outside of unit tests unless you are well aware of the implications
+        /// </summary>
+        TSelf WaitForNonStaleResults();
+
+        /// <summary>
+        ///     EXPERT ONLY: Instructs the query to wait for non stale results for the specified wait timeout.
+        ///     This shouldn't be used outside of unit tests unless you are well aware of the implications
+        /// </summary>
+        /// <param name="waitTimeout">Maximum time to wait for index query results to become non-stale before exception is thrown.</param>
+        TSelf WaitForNonStaleResults(TimeSpan waitTimeout);
+
+        /// <summary>
+        ///     Instructs the query to wait for non stale results as of the cutoff etag.
+        /// </summary>
+        /// <param name="cutOffEtag">
+        ///     <para>Cutoff etag is used to check if the index has already process a document with the given</para>
+        ///     <para>etag. Unlike Cutoff, which uses dates and is susceptible to clock synchronization issues between</para>
+        ///     <para>machines, cutoff etag doesn't rely on both the server and client having a synchronized clock and </para>
+        ///     <para>can work without it.</para>
+        ///     <para>However, when used to query map/reduce indexes, it does NOT guarantee that the document that this</para>
+        ///     <para>etag belong to is actually considered for the results. </para>
+        ///     <para>What it does it guarantee that the document has been mapped, but not that the mapped values has been reduced. </para>
+        ///     <para>Since map/reduce queries, by their nature, tend to be far less susceptible to issues with staleness, this is </para>
+        ///     <para>considered to be an acceptable trade-off.</para>
+        ///     <para>If you need absolute no staleness with a map/reduce index, you will need to ensure synchronized clocks and </para>
+        ///     <para>use the Cutoff date option, instead.</para>
+        /// </param>
+        TSelf WaitForNonStaleResultsAsOf(long cutOffEtag);
+
+        /// <summary>
+        ///     Instructs the query to wait for non stale results as of the cutoff etag for the specified timeout.
+        /// </summary>
+        /// <param name="cutOffEtag">
+        ///     <para>Cutoff etag is used to check if the index has already process a document with the given</para>
+        ///     <para>etag. Unlike Cutoff, which uses dates and is susceptible to clock synchronization issues between</para>
+        ///     <para>machines, cutoff etag doesn't rely on both the server and client having a synchronized clock and </para>
+        ///     <para>can work without it.</para>
+        ///     <para>However, when used to query map/reduce indexes, it does NOT guarantee that the document that this</para>
+        ///     <para>etag belong to is actually considered for the results. </para>
+        ///     <para>What it does it guarantee that the document has been mapped, but not that the mapped values has been reduced. </para>
+        ///     <para>Since map/reduce queries, by their nature, tend to be far less susceptible to issues with staleness, this is </para>
+        ///     <para>considered to be an acceptable trade-off.</para>
+        ///     <para>If you need absolute no staleness with a map/reduce index, you will need to ensure synchronized clocks and </para>
+        ///     <para>use the Cutoff date option, instead.</para>
+        /// </param>
+        /// <param name="waitTimeout">Maximum time to wait for index query results to become non-stale before exception is thrown.</param>
+        TSelf WaitForNonStaleResultsAsOf(long cutOffEtag, TimeSpan waitTimeout);
+
+        /// <summary>
+        ///     Instructs the query to wait for non stale results as of now.
+        /// </summary>
+        /// <returns></returns>
+        TSelf WaitForNonStaleResultsAsOfNow();
+
+        /// <summary>
+        ///     Instructs the query to wait for non stale results as of now for the specified timeout.
+        /// </summary>
+        /// <param name="waitTimeout">Maximum time to wait for index query results to become non-stale before exception is thrown.</param>
+        TSelf WaitForNonStaleResultsAsOfNow(TimeSpan waitTimeout);
+    }
+
+    /// <summary>
+    ///     A query against a Raven index
+    /// </summary>
+    public interface IDocumentQueryBase<T, out TSelf> : IQueryBase<T, TSelf>
+        where TSelf : IDocumentQueryBase<T, TSelf>
+    {
         /// <summary>
         ///  The last term that we asked the query to use equals on
         /// </summary>
@@ -47,25 +178,9 @@ namespace Raven.Client.Documents.Session
         TSelf AddOrder<TValue>(Expression<Func<T, TValue>> propertySelector, bool descending = false, OrderingType ordering = OrderingType.String);
 
         /// <summary>
-        ///     Callback to get the results of the query
-        /// </summary>
-        void AfterQueryExecuted(Action<QueryResult> action);
-
-
-        /// <summary>
-        ///     Callback to get the results of the stream
-        /// </summary>
-        void AfterStreamExecuted(Action<BlittableJsonReaderObject> action);
-
-        /// <summary>
         ///     Add an AND to the query
         /// </summary>
         TSelf AndAlso();
-
-        /// <summary>
-        ///     Allows you to modify the index query before it is sent to the server
-        /// </summary>
-        TSelf BeforeQueryExecuted(Action<IndexQuery> beforeQueryExecuted);
 
         /// <summary>
         ///     Specifies a boost weight to the last where clause.
@@ -238,31 +353,12 @@ If you really want to do in memory filtering on the data returned from the query
         /// </summary>
         TSelf Intersect();
 
-        /// <summary>
-        ///     Called externally to raise the after query executed callback
-        /// </summary>
-        void InvokeAfterQueryExecuted(QueryResult result);
 
-        /// <summary>
-        ///     Called externally to raise the after query executed callback
-        /// </summary>
-        void InvokeAfterStreamExecuted(BlittableJsonReaderObject result);
 
         /// <summary>
         ///     Negate the next operation
         /// </summary>
         void NegateNext();
-
-        /// <summary>
-        ///     Disables caching for query results.
-        /// </summary>
-        TSelf NoCaching();
-
-        /// <summary>
-        ///     Disables tracking for queried entities by Raven's Unit of Work.
-        ///     Usage of this option will prevent holding query results in memory.
-        /// </summary>
-        TSelf NoTracking();
 
         /// <summary>
         ///     Simplified method for opening a new clause within the query
@@ -372,96 +468,6 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name="preTags">Prefix tags.</param>
         /// <param name="postTags">Postfix tags.</param>
         TSelf SetHighlighterTags(string[] preTags, string[] postTags);
-
-        /// <summary>
-        ///     Enables calculation of timings for various parts of a query (Lucene search, loading documents, transforming
-        ///     results). Default: false
-        /// </summary>
-        TSelf ShowTimings();
-
-        /// <summary>
-        ///     Skips the specified count.
-        /// </summary>
-        /// <param name="count">Number of items to skip.</param>
-        TSelf Skip(int count);
-
-        /// <summary>
-        ///     Provide statistics about the query, such as total count of matching records
-        /// </summary>
-        TSelf Statistics(out QueryStatistics stats);
-
-        /// <summary>
-        ///     Takes the specified count.
-        /// </summary>
-        /// <param name="count">Maximum number of items to take.</param>
-        TSelf Take(int count);
-
-        /// <summary>
-        ///     Select the default operator to use for this query
-        /// </summary>
-        TSelf UsingDefaultOperator(QueryOperator queryOperator);
-
-        /// <summary>
-        ///     EXPERT ONLY: Instructs the query to wait for non stale results.
-        ///     This shouldn't be used outside of unit tests unless you are well aware of the implications
-        /// </summary>
-        TSelf WaitForNonStaleResults();
-
-        /// <summary>
-        ///     EXPERT ONLY: Instructs the query to wait for non stale results for the specified wait timeout.
-        ///     This shouldn't be used outside of unit tests unless you are well aware of the implications
-        /// </summary>
-        /// <param name="waitTimeout">Maximum time to wait for index query results to become non-stale before exception is thrown.</param>
-        TSelf WaitForNonStaleResults(TimeSpan waitTimeout);
-
-        /// <summary>
-        ///     Instructs the query to wait for non stale results as of the cutoff etag.
-        /// </summary>
-        /// <param name="cutOffEtag">
-        ///     <para>Cutoff etag is used to check if the index has already process a document with the given</para>
-        ///     <para>etag. Unlike Cutoff, which uses dates and is susceptible to clock synchronization issues between</para>
-        ///     <para>machines, cutoff etag doesn't rely on both the server and client having a synchronized clock and </para>
-        ///     <para>can work without it.</para>
-        ///     <para>However, when used to query map/reduce indexes, it does NOT guarantee that the document that this</para>
-        ///     <para>etag belong to is actually considered for the results. </para>
-        ///     <para>What it does it guarantee that the document has been mapped, but not that the mapped values has been reduced. </para>
-        ///     <para>Since map/reduce queries, by their nature, tend to be far less susceptible to issues with staleness, this is </para>
-        ///     <para>considered to be an acceptable trade-off.</para>
-        ///     <para>If you need absolute no staleness with a map/reduce index, you will need to ensure synchronized clocks and </para>
-        ///     <para>use the Cutoff date option, instead.</para>
-        /// </param>
-        TSelf WaitForNonStaleResultsAsOf(long cutOffEtag);
-
-        /// <summary>
-        ///     Instructs the query to wait for non stale results as of the cutoff etag for the specified timeout.
-        /// </summary>
-        /// <param name="cutOffEtag">
-        ///     <para>Cutoff etag is used to check if the index has already process a document with the given</para>
-        ///     <para>etag. Unlike Cutoff, which uses dates and is susceptible to clock synchronization issues between</para>
-        ///     <para>machines, cutoff etag doesn't rely on both the server and client having a synchronized clock and </para>
-        ///     <para>can work without it.</para>
-        ///     <para>However, when used to query map/reduce indexes, it does NOT guarantee that the document that this</para>
-        ///     <para>etag belong to is actually considered for the results. </para>
-        ///     <para>What it does it guarantee that the document has been mapped, but not that the mapped values has been reduced. </para>
-        ///     <para>Since map/reduce queries, by their nature, tend to be far less susceptible to issues with staleness, this is </para>
-        ///     <para>considered to be an acceptable trade-off.</para>
-        ///     <para>If you need absolute no staleness with a map/reduce index, you will need to ensure synchronized clocks and </para>
-        ///     <para>use the Cutoff date option, instead.</para>
-        /// </param>
-        /// <param name="waitTimeout">Maximum time to wait for index query results to become non-stale before exception is thrown.</param>
-        TSelf WaitForNonStaleResultsAsOf(long cutOffEtag, TimeSpan waitTimeout);
-
-        /// <summary>
-        ///     Instructs the query to wait for non stale results as of now.
-        /// </summary>
-        /// <returns></returns>
-        TSelf WaitForNonStaleResultsAsOfNow();
-
-        /// <summary>
-        ///     Instructs the query to wait for non stale results as of now for the specified timeout.
-        /// </summary>
-        /// <param name="waitTimeout">Maximum time to wait for index query results to become non-stale before exception is thrown.</param>
-        TSelf WaitForNonStaleResultsAsOfNow(TimeSpan waitTimeout);
 
         /// <summary>
         ///     This function exists solely to forbid in memory where clause on IDocumentQuery, because

@@ -32,7 +32,7 @@ class licenseLimitDetails extends dialogViewModelBase {
             if (status && status.Id) {
                 url += `&id=${btoa(status.Id)}`;
             }
-
+          
             return url;
         });
 

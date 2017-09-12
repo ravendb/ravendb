@@ -4,6 +4,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
 using Xunit;
 
 namespace SlowTests.Verifications
@@ -125,8 +126,8 @@ namespace SlowTests.Verifications
                     sw.Restart();
                     Assert.Throws<InvalidOperationException>(() =>
                     {
-                        var ravenQueryable = session.Advanced.DocumentQuery<Document>("DocumentName")
-                        .RawQuery(@"
+                        var ravenQueryable = (IRavenQueryable<Document>)session.Advanced
+                        .RawQuery<Document>(@"
 declare function get(d){
     if(d.Num == 0) {
         return {}.DoesNotExistsAndWillThrow();
@@ -174,9 +175,8 @@ select get(d)
                     using (var session = store.OpenSession())
                     {
                         sw.Restart();
-                        var query = session.Advanced.DocumentQuery<Document>("Document/Index")
-                            .RawQuery("from index 'Document/Index' as d select d.Id, d.Name");
-                        using (var enumerator = session.Advanced.Stream(query))
+                        var query = session.Advanced.RawQuery<Document>("from index 'Document/Index' as d select d.Id, d.Name");
+                        using (var enumerator = session.Advanced.Stream((IRavenQueryable<Document>)query))
                         {
                             enumerator.MoveNext();
                             sw.Stop();

@@ -68,7 +68,7 @@ class registration extends dialogViewModelBase {
     dismissVisible = ko.observable<boolean>(true);
     canBeClosed = ko.observable<boolean>(false);
     daysToRegister: KnockoutComputed<number>;
-    registrationUrl = ko.observable<string>();
+  registrationUrl = ko.observable<string>();
     error = ko.observable<string>();
 
     private licenseKeyModel = ko.validatedObservable(new licenseKeyModel());
@@ -85,7 +85,7 @@ class registration extends dialogViewModelBase {
         this.dismissVisible(canBeDismissed);
         this.canBeClosed(canBeClosed);
         this.error(error);
-
+      
         const firstStart = moment(licenseStatus.FirstServerStartDate)
             .add("1", "week").add("1", "day");
 

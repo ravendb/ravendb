@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session.Operations.Lazy;
 
 namespace Raven.Client.Documents.Session
@@ -28,5 +29,11 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name="entity">Instance of an entity that will be refreshed</param>
         void Refresh<T>(T entity);
+
+        /// <summary>
+        /// Query the specified index using provided raw query
+        /// </summary>
+        /// <typeparam name="T">The query result type</typeparam>
+        IRawDocumentQuery<T> RawQuery<T>(string query);
     }
 }

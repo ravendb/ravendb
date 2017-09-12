@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
@@ -34,25 +36,30 @@ namespace RachisTests
         public async Task RemoveNodeWithDb()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
-            var fromSeconds = TimeSpan.FromSeconds(5);
+            var fromSeconds = Debugger.IsAttached ? TimeSpan.FromSeconds(15) : TimeSpan.FromSeconds(5);
 
             var leader = await CreateRaftClusterAndGetLeader(5);
             var db = await CreateDatabaseInCluster("MainDB", 5, leader.WebUrl);
             var watcherDb = await CreateDatabaseInCluster("WatcherDB", 1, leader.WebUrl);
-            
+
+            var conventions = new DocumentConventions
+            {
+                DisableTopologyUpdates = true
+            };
+
             var leaderStore = new DocumentStore
             {
                 Database = "MainDB",
-                Urls = new[] {leader.WebUrl}
+                Urls = new[] {leader.WebUrl},
+                Conventions = conventions
             }.Initialize();
-            leaderStore.Conventions.DisableTopologyUpdates = true;
 
             var watcherStore = new DocumentStore
             {
                 Database = "WatcherDB",
-                Urls = new[] {watcherDb.Item2.Single().WebUrl}
+                Urls = new[] {watcherDb.Item2.Single().WebUrl},
+                Conventions = conventions
             }.Initialize();
-            watcherStore.Conventions.DisableTopologyUpdates = true;
 
             var watcher = new ExternalReplication
             {
@@ -69,13 +76,12 @@ namespace RachisTests
             Assert.True(await Task.WhenAll(tasks).WaitAsync(TimeSpan.FromSeconds(5)));
 
             var responsibleServer = Servers.Single(s => s.ServerStore.NodeTag == watcherRes.ResponsibleNode);
-
             var responsibleStore = new DocumentStore
             {
                 Database = "MainDB",
-                Urls = new[] {responsibleServer.WebUrl}
+                Urls = new[] {responsibleServer.WebUrl},
+                Conventions = conventions
             }.Initialize();
-            responsibleStore.Conventions.DisableTopologyUpdates = true;
 
             var serverNodes = db.Item2.Select(s => new ServerNode
             {
@@ -101,6 +107,9 @@ namespace RachisTests
             Assert.True(await leader.ServerStore.RemoveFromClusterAsync(watcherRes.ResponsibleNode).WaitAsync(fromSeconds));
             Assert.True(await responsibleServer.ServerStore.WaitForState(RachisConsensus.State.Passive).WaitAsync(fromSeconds));
 
+            var dbInstance = await responsibleServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore("MainDB");
+            await WaitForValueAsync(() => dbInstance.ReplicationLoader.OutgoingConnections.Count(), 0);
+
             // replication from the removed node should be suspended
             using (var session = responsibleStore.OpenAsyncSession())
             {
@@ -114,9 +123,9 @@ namespace RachisTests
             var nodeInClusterStore = new DocumentStore
             {
                 Database = "MainDB",
-                Urls = new []{nodeInCluster.Url }
+                Urls = new []{nodeInCluster.Url },
+                Conventions = conventions
             }.Initialize();
-            nodeInClusterStore.Conventions.DisableTopologyUpdates = true;
 
             Assert.False(WaitForDocument<User>(nodeInClusterStore, "users/2", u => u.Name == "Karmel2"));
             Assert.False(WaitForDocument<User>(watcherStore, "users/2", u => u.Name == "Karmel2"));
@@ -144,7 +153,6 @@ namespace RachisTests
                     Name = "Karmel4"
                 }, "users/4");
                 session.SaveChanges();
-                WaitForUserToContinueTheTest((DocumentStore)responsibleStore);
                 Assert.True(await WaitForDocumentInClusterAsync<User>(serverNodes, "users/4", u => u.Name == "Karmel4", fromSeconds * 5));
             }
 
