@@ -39,6 +39,18 @@ namespace Raven.Client.Documents.Session
             }
         }
 
+        public IEnumerator<StreamResult<T>> Stream<T>(IRawDocumentQuery<T> query)
+        {
+            var streamOperation = new StreamOperation(this);
+            var command = streamOperation.CreateRequest(query.GetIndexQuery());
+
+            RequestExecutor.Execute(command, Context, sessionInfo: SessionInfo);
+            using (var result = streamOperation.SetResult(command.Result))
+            {
+                return YieldResults(query, result);
+            }
+        }
+
         public IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query, out StreamQueryStatistics streamQueryStats)
         {
             var stats = new StreamQueryStatistics();
@@ -55,6 +67,19 @@ namespace Raven.Client.Documents.Session
         }
 
         private IEnumerator<StreamResult<T>> YieldResults<T>(IDocumentQuery<T> query, IEnumerator<BlittableJsonReaderObject> enumerator)
+        {
+            var projections = ((DocumentQuery<T>)query).FieldsToFetchToken?.Projections;
+
+            while (enumerator.MoveNext())
+            {
+                var json = enumerator.Current;
+                query.InvokeAfterStreamExecuted(json);
+
+                yield return CreateStreamResult<T>(json, projections);
+            }
+        }
+
+        private IEnumerator<StreamResult<T>> YieldResults<T>(IRawDocumentQuery<T> query, IEnumerator<BlittableJsonReaderObject> enumerator)
         {
             var projections = ((DocumentQuery<T>)query).FieldsToFetchToken?.Projections;
 
