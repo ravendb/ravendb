@@ -674,7 +674,7 @@ namespace Raven.Server.Commercial
                 var licenseChanged =
                     newLicense.Name != license.Name ||
                     newLicense.Id != license.Id ||
-                    newLicense.Keys.SequenceEqual(license.Keys) == false;
+                    newLicense.Keys.All(license.Keys.Contains) == false;
 
                 var hasMessage = string.IsNullOrWhiteSpace(leasedLicense.Message) == false;
                 if (hasMessage || licenseChanged)
