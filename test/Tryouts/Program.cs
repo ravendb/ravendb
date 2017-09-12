@@ -1,5 +1,4 @@
 using System;
-using System.Threading.Tasks;
 using FastTests.Client;
 using FastTests.Smuggler;
 using SlowTests.Core.AdminConsole;
@@ -12,25 +11,18 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            for (int i = 0; i < 100; i++)
+            using (var test = new SlowTests.Tests.Faceted.Aggregation())
             {
-                Console.WriteLine(i);
-                Parallel.For(0, 10, _ =>
+                try
                 {
-                    using (var test = new SlowTests.Tests.Linq.CanCallLastOnArray())
-                    {
-                        try
-                        {
-                            test.WillSupportLast();
-                        }
-                        catch (Exception e)
-                        {
-                            Console.WriteLine(e);
-                            Console.WriteLine("-------------");
-                            throw;
-                        }
-                    }
-                });
+                    test.CanCorrectlyAggregate_DateTimeDataType_WithRangeCounts_AndInOperator_BeforeOtherWhere();
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    Console.WriteLine("-------------");
+                    throw;
+                }
             }
         }
     }

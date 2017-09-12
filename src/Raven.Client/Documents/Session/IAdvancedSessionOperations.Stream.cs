@@ -90,5 +90,11 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         void StreamInto<T>(IDocumentQuery<T> query, Stream output);
 
+
+        /// <summary>
+        ///     Returns the results of a query directly into stream 
+        /// </summary>
+        void StreamInto<T>(IRawDocumentQuery<T> query, Stream output);
+
     }
 }

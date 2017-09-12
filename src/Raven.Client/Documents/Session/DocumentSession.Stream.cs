@@ -77,17 +77,9 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        private IEnumerator<StreamResult<T>> YieldResults<T>(IRawDocumentQuery<T> query, IEnumerator<BlittableJsonReaderObject> enumerator)
+        public void StreamInto<T>(IRawDocumentQuery<T> query, Stream output)
         {
-            var projections = ((DocumentQuery<T>)query).FieldsToFetchToken?.Projections;
-
-            while (enumerator.MoveNext())
-            {
-                var json = enumerator.Current;
-                query.InvokeAfterStreamExecuted(json);
-
-                yield return CreateStreamResult<T>(json, projections);
-            }
+            StreamInto((IDocumentQuery<T>)query, output);
         }
 
         public void StreamInto<T>(IDocumentQuery<T> query, Stream output)
