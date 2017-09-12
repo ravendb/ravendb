@@ -61,7 +61,8 @@ namespace Raven.Server.Web.Authentication
                         currentUserStore.Open(OpenFlags.ReadOnly);
                         if (currentUserStore.Certificates.Contains(Server.ClusterCertificateHolder.Certificate) == false)
                             throw new InvalidOperationException($"Cannot generate the client certificate '{certificate.Name}'. " +
-                                                                "First, you must register the server certificate in the trusted root store, on the server machine." +
+                                                                $"First, you must register the server certificate '{Server.ClusterCertificateHolder.Certificate.FriendlyName}' in the trusted root store, on the server machine." +
+                                                                $"The server certificate is located in one of the following locations: {ServerStore.Configuration.Security.CertificatePath ?? " "} / {ServerStore.Configuration.Security.ClusterCertificatePath ?? " "} / {ServerStore.Configuration.Security.CertificateExec ?? " "} / {ServerStore.Configuration.Security.ClusterCertificateExec ?? " "}." +
                                                                 "This step is required because you are using a self-signed server certificate.");
                     }
                 }
@@ -136,7 +137,7 @@ namespace Raven.Server.Web.Authentication
 
                         if (userCerts.Contains(x509Certificate) == false)
                             throw new InvalidOperationException($"Cannot save the client certificate '{certificate.Name}'. " +
-                                                                "First, you must register the issuer certificate in the trusted root store, on the server machine." +
+                                                                $"First, you must register the issuer certificate '{x509Certificate.IssuerName}' in the trusted root store, on the server machine." +
                                                                 "This step is required because you are using a self-signed certificate or one with unknown issuer.");
                     }
                 }
