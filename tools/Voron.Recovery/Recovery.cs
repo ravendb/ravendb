@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Client.Json;
@@ -94,7 +95,6 @@ namespace Voron.Recovery
             //making sure eof is page aligned
             var eof = mem + (fileSize / _pageSize) * _pageSize;
             DateTime lastProgressReport = DateTime.MinValue;
-            using (var destinationStreamAttachments = File.OpenWrite(Path.Combine(Path.GetDirectoryName(_output), Path.GetFileNameWithoutExtension(_output) + "-1-Attachments" + Path.GetExtension(_output))))
             using (var destinationStreamDocuments = File.OpenWrite(Path.Combine(Path.GetDirectoryName(_output), Path.GetFileNameWithoutExtension(_output) + "-2-Documents" + Path.GetExtension(_output))))
             using (var destinationStreamRevisions = File.OpenWrite(Path.Combine(Path.GetDirectoryName(_output), Path.GetFileNameWithoutExtension(_output) + "-3-Revisions" + Path.GetExtension(_output))))
             using (var destinationStreamConflicts = File.OpenWrite(Path.Combine(Path.GetDirectoryName(_output), Path.GetFileNameWithoutExtension(_output) + "-4-Conflicts" + Path.GetExtension(_output))))
@@ -102,14 +102,11 @@ namespace Voron.Recovery
             using (var gZipStreamDocuments = new GZipStream(destinationStreamDocuments, CompressionMode.Compress, true))
             using (var gZipStreamRevisions = new GZipStream(destinationStreamRevisions, CompressionMode.Compress, true))
             using (var gZipStreamConflicts = new GZipStream(destinationStreamConflicts, CompressionMode.Compress, true))
-            using (var gZipStreamAttachments = new GZipStream(destinationStreamAttachments, CompressionMode.Compress, true))
             using (var context = new JsonOperationContext(_initialContextSize, _initialContextLongLivedSize, SharedMultipleUseFlag.None))
             using (var documentsWriter = new BlittableJsonTextWriter(context, gZipStreamDocuments))
             using (var revisionsWriter = new BlittableJsonTextWriter(context, gZipStreamRevisions))
             using (var conflictsWriter = new BlittableJsonTextWriter(context, gZipStreamConflicts))
-            using (var attachmentWriter = new BlittableJsonTextWriter(context, gZipStreamAttachments))
             {
-                WriteSmugglerHeader(attachmentWriter, 40018, "Docs");
                 WriteSmugglerHeader(documentsWriter, 40018, "Docs");
                 WriteSmugglerHeader(revisionsWriter, 40018, "RevisionDocuments");
                 WriteSmugglerHeader(conflictsWriter, 40018, "ConflictDocuments");
@@ -253,7 +250,7 @@ namespace Voron.Recovery
                                         Debug.Assert(len == 44);
                                     }
 
-                                    WriteAttachment(attachmentWriter, totalSize, hash, tag);
+                                    WriteAttachment(documentsWriter, totalSize, hash, tag);
                                 }
                                 mem += numberOfPages * _pageSize;
                             }
@@ -348,16 +345,24 @@ namespace Voron.Recovery
                         mem = PrintErrorAndAdvanceMem(message, mem, logFile);
                     }
                 }
-                attachmentWriter.WriteEndArray();
+
+                ReportOrphanAttachmentsAndMissingAttachments(logFile, ct, documentsWriter);
+
+                //This will only be the case when we don't have orphan attachments and we wrote the last attachment after we wrote the 
+                //last document
+                if (_lastWriteIsDocument == false)
+                {
+                    WriteDummyDocumentForAttachment(documentsWriter, _lastAttachmentInfo.hash, _lastAttachmentInfo.size, _lastAttachmentInfo.tag);
+                }
+
                 documentsWriter.WriteEndArray();
                 conflictsWriter.WriteEndArray();
-                revisionsWriter.WriteEndArray();
-                attachmentWriter.WriteEndObject();
+                revisionsWriter.WriteEndArray();                
                 documentsWriter.WriteEndObject();
                 conflictsWriter.WriteEndObject();
                 revisionsWriter.WriteEndObject();
+                
 
-                ReportOrphanAttachmentsAndMissingAttachments(logFile, ct);
                 logFile.WriteLine(
                     $"Discovered a total of {_numberOfDocumentsRetrieved:#,#;00} documents within {sw.Elapsed.TotalSeconds::#,#.#;;00} seconds.");
                 logFile.WriteLine($"Discovered a total of {_attachmentsHashs.Count:#,#;00} attachments.");
@@ -383,7 +388,85 @@ namespace Voron.Recovery
             }
         }
 
-        private void ReportOrphanAttachmentsAndMissingAttachments(StreamWriter logFile, CancellationToken ct)
+        private const string EmptyCollection = "@empty";
+        private static readonly char[] TagSeparator = {(char)SpecialChars.RecordSeparator};
+        private void WriteDummyDocumentForAttachment(BlittableJsonTextWriter writer, string hash,long size, string tag)
+        {
+            writer.WriteComma();
+            //start metadata
+            writer.WriteStartObject();            
+            writer.WritePropertyName(Raven.Client.Constants.Documents.Metadata.Key);
+            writer.WriteStartObject();
+            //collection name
+            writer.WritePropertyName(Raven.Client.Constants.Documents.Metadata.Collection);
+            writer.WriteString(EmptyCollection);
+            writer.WriteComma();
+            //id
+            writer.WritePropertyName(Raven.Client.Constants.Documents.Metadata.Id);
+            writer.WriteString($"DummyDoc{_dummyDocNumber++}");
+            writer.WriteComma();
+            //change vector
+            writer.WritePropertyName(Raven.Client.Constants.Documents.Metadata.ChangeVector);
+            writer.WriteString(Empty);
+            writer.WriteComma();
+            //flags
+            writer.WritePropertyName(Raven.Client.Constants.Documents.Metadata.Flags);
+            writer.WriteString(DocumentFlags.HasAttachments.ToString());
+            writer.WriteComma();
+            //start attachment
+            writer.WritePropertyName(Raven.Client.Constants.Documents.Metadata.Attachments);
+            //start attachment array
+            writer.WriteStartArray();
+            //start attachment object
+            writer.WriteStartObject();
+            if (tag != null)
+            {
+                //doc id | type 'd' or 'r' | name | hash | content type
+                var tokens = tag.Split(TagSeparator);
+                if (tokens.Length == 5)
+                {
+                    WriteAttachmentMetadata(writer, hash, size, tokens[2], tokens[4]);
+                }
+                else
+                {
+                    WriteAttachmentMetadata(writer, hash, size, $"DummyAttachmentName{_dummyAttachmentNumber++}", Empty);
+                }
+            }
+            else
+            {
+                WriteAttachmentMetadata(writer, hash, size, $"DummyAttachmentName{_dummyAttachmentNumber++}", Empty);
+            }
+            //end attachment object
+            writer.WriteEndObject();
+            // end attachment array
+            writer.WriteEndArray();
+            //end attachment
+            writer.WriteEndObject();
+            //end metadata
+            writer.WriteEndObject();
+            _lastWriteIsDocument = true;
+        }
+
+        private static void WriteAttachmentMetadata(BlittableJsonTextWriter writer, string hash, long size, string name, string contentType)
+        {
+            //name
+            writer.WritePropertyName("Name");
+            writer.WriteString(name);
+            writer.WriteComma();
+            //hash
+            writer.WritePropertyName("Hash");
+            writer.WriteString(hash);
+            writer.WriteComma();
+            //content type
+            writer.WritePropertyName("ContentType");
+            writer.WriteString(contentType);
+            writer.WriteComma();
+            //size
+            writer.WritePropertyName("size");
+            writer.WriteInteger(size);
+        }
+
+        private void ReportOrphanAttachmentsAndMissingAttachments(StreamWriter logFile, CancellationToken ct, BlittableJsonTextWriter writer)
         {
             //No need to scare the user if there are no attachments in the dump
             if (_attachmentsHashs.Count == 0 && _documentsAttachments.Count == 0)
@@ -395,9 +478,9 @@ namespace Voron.Recovery
             }
             if (_documentsAttachments.Count == 0)
             {
-                foreach (var (hash, docId) in _attachmentsHashs)
+                foreach (var (hash, tag, size) in _attachmentsHashs)
                 {
-                    ReportOrphanAttachmentDocumentId(logFile, hash, docId);
+                    ReportOrphanAttachmentDocumentId(logFile, hash, size, tag, writer);
                 }
                 return;
             }
@@ -414,7 +497,7 @@ namespace Voron.Recovery
             _documentsAttachments.Sort((x,y)=>Compare(x.hash, y.hash, StringComparison.Ordinal));
             //We rely on the fact that the attachment hash are unqiue in the _attachmentsHashs list (no duplicated values).
             int index = 0;
-            foreach (var (hash, docId) in _attachmentsHashs)
+            foreach (var (hash, docId, size) in _attachmentsHashs)
             {
                 if (ct.IsCancellationRequested)
                 {
@@ -443,67 +526,64 @@ namespace Voron.Recovery
                 }
                 if (foundEqual == false)
                 {
-                    ReportOrphanAttachmentDocumentId(logFile, hash, docId);
+                    ReportOrphanAttachmentDocumentId(logFile, hash, size, docId, writer);
                 }
 
             }
         }
 
-        private static void ReportOrphanAttachmentDocumentId(StreamWriter logFile, string hash, string docId)
+        private void ReportOrphanAttachmentDocumentId(StreamWriter logFile, string hash,long size, string tag, BlittableJsonTextWriter writer)
         {
             var msg = new StringBuilder($"Found orphan attachment with hash {hash}");
-            if (docId != null)
-            {
-                msg.Append($" its tag indicates it was part of {docId}'s attachments");
-            }
-            logFile.WriteLine(msg.ToString());
-        }
-
-        private bool _firstAttachment = true;
-        private long _attachmentNumber = 0;
-        private readonly List<(string hash, string docId)> _attachmentsHashs = new List<(string, string)>();
-        private const string TagPrefix = "Recovered attachment #";
-        private void WriteAttachment(BlittableJsonTextWriter attachmentWriter, long totalSize, string hash,string tag = null)
-        {
-            if (_firstAttachment == false)
-            {
-                attachmentWriter.WriteComma();
-            }
-            _firstAttachment = false;
-
-            attachmentWriter.WriteStartObject();
-
-            attachmentWriter.WritePropertyName(Raven.Client.Constants.Documents.Metadata.Key);
-            attachmentWriter.WriteStartObject();
-
-            attachmentWriter.WritePropertyName(DocumentItem.ExportDocumentType.Key);
-            attachmentWriter.WriteString(DocumentItem.ExportDocumentType.Attachment);
-
-            attachmentWriter.WriteEndObject();
-            attachmentWriter.WriteComma();
-
-            attachmentWriter.WritePropertyName(nameof(AttachmentName.Hash));
-            attachmentWriter.WriteString(hash);
-            attachmentWriter.WriteComma();
-
-            attachmentWriter.WritePropertyName(nameof(AttachmentName.Size));
-            attachmentWriter.WriteInteger(totalSize);
-            attachmentWriter.WriteComma();
-
-            attachmentWriter.WritePropertyName(nameof(DocumentItem.AttachmentStream.Tag));
-            attachmentWriter.WriteString(tag??$"{TagPrefix}{++_attachmentNumber}");
-
-            attachmentWriter.WriteEndObject();
-            foreach (var chunk in _attachmentChunks)
-            {
-                attachmentWriter.WriteMemoryChunk(chunk.Ptr,chunk.Size);
-            }
-            string docId = null;
             if (tag != null)
             {
-                docId = tag.Substring(0,tag.IndexOf((char)SpecialChars.RecordSeparator));
+                msg.Append($" attachment tag = {tag}");
             }
-            _attachmentsHashs.Add((hash, docId));
+            logFile.WriteLine(msg.ToString());
+            WriteDummyDocumentForAttachment(writer, hash, size, tag);
+        }
+
+        private long _attachmentNumber = 0;
+        private readonly List<(string hash, string tag, long size)> _attachmentsHashs = new List<(string, string, long)>();
+        private const string TagPrefix = "Recovered attachment #";
+        private void WriteAttachment(BlittableJsonTextWriter writer, long totalSize, string hash,string tag = null)
+        {
+            if (_documentWritten)
+            {
+                writer.WriteComma();
+            }            
+
+            writer.WriteStartObject();
+
+            writer.WritePropertyName(Raven.Client.Constants.Documents.Metadata.Key);
+            writer.WriteStartObject();
+
+            writer.WritePropertyName(DocumentItem.ExportDocumentType.Key);
+            writer.WriteString(DocumentItem.ExportDocumentType.Attachment);
+
+            writer.WriteEndObject();
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(AttachmentName.Hash));
+            writer.WriteString(hash);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(AttachmentName.Size));
+            writer.WriteInteger(totalSize);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(DocumentItem.AttachmentStream.Tag));
+            writer.WriteString(tag??$"{TagPrefix}{++_attachmentNumber}");
+
+            writer.WriteEndObject();
+            foreach (var chunk in _attachmentChunks)
+            {
+                writer.WriteMemoryChunk(chunk.Ptr,chunk.Size);
+            }
+            _attachmentsHashs.Add((hash, tag, totalSize));
+            _lastWriteIsDocument = false;
+            _lastAttachmentInfo = (hash, totalSize, tag);
+            _documentWritten = true;
         }
 
 
@@ -619,7 +699,7 @@ namespace Voron.Recovery
                 _lastRecoveredDocumentKey = document.Id;
 
                 HandleDocumentAttachments(logWriter, document);
-                
+                _lastWriteIsDocument = true;
                 return true;
             }
             catch (Exception e)
@@ -768,7 +848,11 @@ namespace Voron.Recovery
         private readonly bool _copyOnWrite;
         private readonly Dictionary<string, long> _previouslyWrittenDocs;
         private readonly List<(string hash,string docId)> _documentsAttachments = new List<(string hash, string docId)>();
-        
+        private int _dummyDocNumber;
+        private int _dummyAttachmentNumber;
+        private bool _lastWriteIsDocument;
+        private (string hash, long size, string tag) _lastAttachmentInfo;
+
         public enum RecoveryStatus
         {
             Success,
