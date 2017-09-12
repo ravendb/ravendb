@@ -512,8 +512,7 @@ class queryCompleter {
 
             wordList.push(
                 {value: "index", score: 4, meta: "keyword"},
-                {value: "@all_docs", score: 3, meta: "collection"},
-                {value: "@system", score: 1, meta: "collection"}
+                {value: "@all_docs", score: 3, meta: "collection"}
             );
 
             this.completeWords(callback, wordList);

@@ -102,7 +102,7 @@ class revisions extends viewModelBase {
         return ko.pureComputed(() => {
             const key = item.collection();
             const options = this.collections()
-                .filter(x => !x.isAllDocuments && !x.isSystemDocuments && !x.name.startsWith("@"))
+                .filter(x => !x.isAllDocuments && !x.name.startsWith("@"))
                 .map(x => x.name);
             const usedOptions = this.perCollectionConfigurations().filter(f => f !== item).map(x => x.collection());
 

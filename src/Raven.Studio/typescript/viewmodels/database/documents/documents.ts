@@ -62,7 +62,7 @@ class documents extends viewModelBase {
     private initObservables() {
         this.inSpecificCollection = ko.pureComputed(() => {
             const currentCollection = this.currentCollection();
-            return currentCollection && !currentCollection.isAllDocuments && !currentCollection.isSystemDocuments;
+            return currentCollection && !currentCollection.isAllDocuments;
         });
         this.selectedItemsCount = ko.pureComputed(() => {
             let selectedDocsCount = 0;

@@ -69,7 +69,7 @@ class createSampleData extends viewModelBase {
     private onCollectionsFetched(stats: collectionsStats) {
         const nonEmptyNonSystemCollectionsCount = stats
             .collections
-            .filter(x => !x.isSystemDocuments && x.documentCount() > 0)
+            .filter(x => x.documentCount() > 0)
             .length;
         this.canCreateSampleData(nonEmptyNonSystemCollectionsCount === 0);
     }
