@@ -197,15 +197,15 @@ class shell extends viewModelBase {
         this.onBootstrapFinishedTask
             .done(() => {
                 registration.showRegistrationDialogIfNeeded(license.licenseStatus());
-                this.tryReopen();
+                this.tryReopenRegistrationDialog();
             });
     }
 
-    private tryReopen() {
-        const random = Math.random() * (3 - 1) + 1;
+    private tryReopenRegistrationDialog() {
+        const random = Math.random() * 5;
         setTimeout(() => {
             registration.showRegistrationDialogIfNeeded(license.licenseStatus());
-            this.tryReopen();
+            this.tryReopenRegistrationDialog();
         }, random * 1000 * 60);
     }
 
