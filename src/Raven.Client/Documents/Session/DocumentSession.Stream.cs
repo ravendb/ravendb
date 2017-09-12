@@ -41,16 +41,14 @@ namespace Raven.Client.Documents.Session
 
         public IEnumerator<StreamResult<T>> Stream<T>(IRawDocumentQuery<T> query)
         {
-            var streamOperation = new StreamOperation(this);
-            var command = streamOperation.CreateRequest(query.GetIndexQuery());
-
-            RequestExecutor.Execute(command, Context, sessionInfo: SessionInfo);
-            using (var result = streamOperation.SetResult(command.Result))
-            {
-                return YieldResults(query, result);
-            }
+            return Stream((IDocumentQuery<T>)query);
         }
 
+        public IEnumerator<StreamResult<T>> Stream<T>(IRawDocumentQuery<T> query, out StreamQueryStatistics streamQueryStats)
+        {
+            return Stream((IDocumentQuery<T>)query, out streamQueryStats);
+        }
+        
         public IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query, out StreamQueryStatistics streamQueryStats)
         {
             var stats = new StreamQueryStatistics();

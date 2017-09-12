@@ -35,6 +35,15 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name="query">Query to stream results for</param>
         /// <param name="token">The cancellation token.</param>
+        Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncRawDocumentQuery<T> query, CancellationToken token = default(CancellationToken));
+
+        /// <summary>
+        ///     Stream the results on the query to the client, converting them to
+        ///     CLR types along the way.
+        ///     <para>Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called</para>
+        /// </summary>
+        /// <param name="query">Query to stream results for</param>
+        /// <param name="token">The cancellation token.</param>
         Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query, CancellationToken token = default(CancellationToken));
 
         /// <summary>
@@ -59,6 +68,11 @@ namespace Raven.Client.Documents.Session
         ///     Returns the results of a query directly into stream 
         /// </summary>
         Task StreamIntoAsync<T>(IAsyncDocumentQuery<T> query, Stream output, CancellationToken token = default(CancellationToken));
+       
+        /// <summary>
+        ///     Returns the results of a query directly into stream 
+        /// </summary>
+        Task StreamIntoAsync<T>(IAsyncRawDocumentQuery<T> query, Stream output, CancellationToken token = default(CancellationToken));
 
     }
 }

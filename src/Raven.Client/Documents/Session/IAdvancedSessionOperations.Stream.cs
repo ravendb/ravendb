@@ -49,6 +49,16 @@ namespace Raven.Client.Documents.Session
         /// <param name="query">Query to stream results for</param>
         IEnumerator<StreamResult<T>> Stream<T>(IRawDocumentQuery<T> query);
 
+        
+        /// <summary>
+        ///     Stream the results on the query to the client, converting them to
+        ///     CLR types along the way.
+        ///     <para>Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called</para>
+        /// </summary>
+        /// <param name="query">Query to stream results for</param>
+        /// <param name="streamQueryStats">Information about the performed query</param>
+        IEnumerator<StreamResult<T>> Stream<T>(IRawDocumentQuery<T> query, out StreamQueryStatistics streamQueryStats);
+
         /// <summary>
         ///     Stream the results on the query to the client, converting them to
         ///     CLR types along the way.

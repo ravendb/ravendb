@@ -75,6 +75,16 @@ namespace Raven.Client.Documents.Session
             }
         }
 
+        public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncRawDocumentQuery<T> query, CancellationToken token = new CancellationToken())
+        {
+            return StreamAsync((IAsyncDocumentQuery<T>)query, token);
+        }
+
+        public Task StreamIntoAsync<T>(IAsyncRawDocumentQuery<T> query, Stream output, CancellationToken token = new CancellationToken())
+        {
+            return StreamIntoAsync((IAsyncDocumentQuery<T>)query, output, token);
+        }
+
         public async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query, CancellationToken token = default(CancellationToken))
         {
             var documentQuery = (AsyncDocumentQuery<T>)query;
