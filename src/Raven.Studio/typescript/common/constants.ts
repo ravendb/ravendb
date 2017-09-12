@@ -12,5 +12,3 @@ const enum checkbox {
     Checked = 2
 }
 const DEV_BUILD_NUMBER = 40;
-
-const documentReplicationConfiguration = "Raven/Replication/Documents/Configuration";

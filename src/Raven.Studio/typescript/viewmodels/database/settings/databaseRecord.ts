@@ -87,10 +87,6 @@ class databaseRecord extends viewModelBase {
             .done((document: document) => this.document(document));
     }
 
-    private getDatabaseSettingsDocumentId(db: database) {
-        return "Raven/Databases/" + db.name;
-    }
-
     private stringify(obj: any) {
         const prettifySpacing = 4;
         return JSON.stringify(obj, (key, val) => {

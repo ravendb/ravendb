@@ -3,11 +3,12 @@ import shell = require("viewmodels/shell");
 import license = require("models/auth/licenseModel");
 import registration = require("viewmodels/shell/registration");
 import deactivateLicenseCommand = require("commands/licensing/deactivateLicenseCommand");
+import buildInfo = require("models/resources/buildInfo");
 
 class about extends viewModelBase {
 
     clientVersion = shell.clientVersion;
-    serverVersion = shell.serverBuildVersion;
+    serverVersion = buildInfo.serverBuildVersion;
     licenseStatus = license.licenseStatus;
 
     spinners = {
