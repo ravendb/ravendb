@@ -91,7 +91,7 @@
             </li>
         </ul>
         <ul class="nav nav-pills nav-stacked document-collections" data-bind="foreach: collectionsExceptAllDocs, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }" style="padding-left: 0;">
-            <li data-bind="event: { click: $parent.selectCollection.bind($parent) }, css: { active: $data === $parent.selectedCollection() }, visible: documentCount() > 0 || isAllDocuments || isSystemDocuments">
+            <li data-bind="event: { click: $parent.selectCollection.bind($parent) }, css: { active: $data === $parent.selectedCollection() }, visible: documentCount() > 0 || isAllDocuments">
                 <a href="javascript:void(0)">
                     <div class="collection-name">
                         <div class="collection-text pull-left collection-color-strip" data-bind="css: colorClass"></div>
