@@ -22,7 +22,7 @@ namespace Raven.Server.Utils
         public static X509Certificate2 CreateSelfSignedCertificate(string commonNameValue, string issuerName)
         {
             CreateCertificateAuthorityCertificate(commonNameValue + " CA", out AsymmetricKeyParameter caPrivateKey, out var caSubjectName);
-            var selfSignedCertificateBasedOnPrivateKey = CreateSelfSignedCertificateBasedOnPrivateKey(commonNameValue, caSubjectName, caPrivateKey, false, 1);
+            var selfSignedCertificateBasedOnPrivateKey = CreateSelfSignedCertificateBasedOnPrivateKey(commonNameValue, caSubjectName, caPrivateKey, false, false, 1);
             selfSignedCertificateBasedOnPrivateKey.Verify();
             return selfSignedCertificateBasedOnPrivateKey;
         }
@@ -35,6 +35,7 @@ namespace Raven.Server.Utils
                 readCertificate.SubjectDN,
                 certificateHolder.PrivateKey.Key,
                 true,
+                false,
                 5);
         }
 
@@ -46,13 +47,16 @@ namespace Raven.Server.Utils
                 readCertificate.SubjectDN,
                 certificateHolder.PrivateKey.Key,
                 true,
+                false,
                 -1);
         }
 
-        private static X509Certificate2 CreateSelfSignedCertificateBasedOnPrivateKey(string commonNameValue, 
+        public static X509Certificate2 CreateSelfSignedCertificateBasedOnPrivateKey(string commonNameValue, 
             X509Name issuer, 
             AsymmetricKeyParameter issuerPrivKey,
-            bool isClientCertificate, int yearsUntilExpiration)
+            bool isClientCertificate,
+            bool isCaCertificate,
+            int yearsUntilExpiration)
         {
             const int keyStrength = 2048;
 
@@ -63,11 +67,22 @@ namespace Raven.Server.Utils
             // The Certificate Generator
             X509V3CertificateGenerator certificateGenerator = new X509V3CertificateGenerator();
 
-            var extendedKeyUsage = isClientCertificate
-                ? new ExtendedKeyUsage(KeyPurposeID.IdKPClientAuth)
-                : new ExtendedKeyUsage(KeyPurposeID.IdKPServerAuth, KeyPurposeID.IdKPClientAuth);
+            if (isClientCertificate)
+            {
+                certificateGenerator.AddExtension(X509Extensions.ExtendedKeyUsage.Id, true, new ExtendedKeyUsage(KeyPurposeID.IdKPClientAuth));
+            }
+            else
+            {
+                certificateGenerator.AddExtension(X509Extensions.ExtendedKeyUsage.Id, true,
+                    new ExtendedKeyUsage(KeyPurposeID.IdKPServerAuth, KeyPurposeID.IdKPClientAuth));
+            }
 
-            certificateGenerator.AddExtension(X509Extensions.ExtendedKeyUsage.Id, true, extendedKeyUsage);
+            if (isCaCertificate)
+            {
+                certificateGenerator.AddExtension(X509Extensions.BasicConstraints.Id, true, new BasicConstraints(0));
+                certificateGenerator.AddExtension(X509Extensions.KeyUsage.Id, false,
+                    new X509KeyUsage(X509KeyUsage.KeyCertSign | X509KeyUsage.CrlSign));
+            }
 
             // Serial Number
             BigInteger serialNumber = BigIntegers.CreateRandomInRange(BigInteger.One, BigInteger.ValueOf(Int64.MaxValue), random);
@@ -110,7 +125,7 @@ namespace Raven.Server.Utils
             return convertedCertificate;
         }
 
-        private static void CreateCertificateAuthorityCertificate(string commonNameValue, 
+        public static void CreateCertificateAuthorityCertificate(string commonNameValue, 
             [CanBeNull] out AsymmetricKeyParameter caPrivateKey,
             out X509Name name)
         {

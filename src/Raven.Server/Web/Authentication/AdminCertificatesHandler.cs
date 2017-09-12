@@ -15,6 +15,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web.System;
 using Sparrow.Json;
+using Sparrow.Platform;
 
 namespace Raven.Server.Web.Authentication
 {
@@ -49,6 +50,21 @@ namespace Raven.Server.Web.Authentication
                                                         $"'{RavenConfiguration.GetKey(x => x.Security.CertificatePath)}'/'{RavenConfiguration.GetKey(x => x.Security.CertificateExec)}'/" +
                                                         $"'{RavenConfiguration.GetKey(x => x.Security.ClusterCertificatePath)}'/'{RavenConfiguration.GetKey(x => x.Security.ClusterCertificateExec)}'. " +
                                                         $"For a more detailed explanation please read about authentication and certificates in the RavenDB documentation.");
+
+                
+                if (PlatformDetails.RunningOnPosix)
+                {
+                    // For the client certificate to work properly, we need that the issuer (our server certificate) will be registered in the trusted root store.
+                    // In Linux, when using SslStream AuthenticateAsServer, the server sends the list of allowed CAs to the client. So the client's CA must be in the list. See RavenDB-8524
+                    using (var currentUserStore = new X509Store(StoreName.Root, StoreLocation.CurrentUser))
+                    {
+                        currentUserStore.Open(OpenFlags.ReadOnly);
+                        if (currentUserStore.Certificates.Contains(Server.ClusterCertificateHolder.Certificate) == false)
+                            throw new InvalidOperationException($"Cannot generate the client certificate '{certificate.Name}'. " +
+                                                                "First, you must register the server certificate in the trusted root store, on the server machine." +
+                                                                "This step is required because you are using a self-signed server certificate.");
+                    }
+                }
 
                 // this creates a client certificate which is signed by the current server certificate
                 var selfSignedCertificate = CertificateUtils.CreateSelfSignedClientCertificate(certificate.Name, Server.ClusterCertificateHolder);
@@ -108,6 +124,23 @@ namespace Raven.Server.Web.Authentication
                     throw new ArgumentException($"Unable to parse the {nameof(certificate.Certificate)} property, expected a Base64 value", e);
                 }
                 var x509Certificate = new X509Certificate2(certBytes);
+
+                if (PlatformDetails.RunningOnPosix)
+                {
+                    // For the client certificate to work properly, we need that the issuer will be registered in the trusted root store.
+                    // In Linux, when using SslStream AuthenticateAsServer, the server sends the list of allowed CAs to the client. So the client's issuer CA must be in the list. See RavenDB-8524
+                    using (var currentUserStore = new X509Store(StoreName.Root, StoreLocation.CurrentUser))
+                    {
+                        currentUserStore.Open(OpenFlags.ReadOnly);
+                        var userCerts = currentUserStore.Certificates.Find(X509FindType.FindByIssuerDistinguishedName, x509Certificate.IssuerName, true);
+
+                        if (userCerts.Contains(x509Certificate) == false)
+                            throw new InvalidOperationException($"Cannot save the client certificate '{certificate.Name}'. " +
+                                                                "First, you must register the issuer certificate in the trusted root store, on the server machine." +
+                                                                "This step is required because you are using a self-signed certificate or one with unknown issuer.");
+                    }
+                }
+
                 if (x509Certificate.HasPrivateKey)
                 {
                     // avoid storing the private key
