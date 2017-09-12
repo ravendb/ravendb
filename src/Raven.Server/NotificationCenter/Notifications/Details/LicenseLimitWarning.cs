@@ -25,7 +25,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
         {
             return new DynamicJsonValue(GetType())
             {
-                [nameof(LimitType)] = Type,
+                [nameof(Type)] = Type,
                 [nameof(Message)] = Message
             };
         }

@@ -68,23 +68,25 @@ class registration extends dialogViewModelBase {
     dismissVisible = ko.observable<boolean>(true);
     canBeClosed = ko.observable<boolean>(false);
     daysToRegister: KnockoutComputed<number>;
-    url = ko.observable<string>();
+  registrationUrl = ko.observable<string>();
+    error = ko.observable<string>();
 
     private licenseKeyModel = ko.validatedObservable(new licenseKeyModel());
-    private license: Raven.Server.Commercial.LicenseStatus;
+    private licenseStatus: Raven.Server.Commercial.LicenseStatus;
 
     private hasInvalidLicense = ko.observable<boolean>(false);
 
-    constructor(license: Raven.Server.Commercial.LicenseStatus, canBeDismissed: boolean, canBeClosed: boolean) {
+    constructor(licenseStatus: Raven.Server.Commercial.LicenseStatus, canBeDismissed: boolean, canBeClosed: boolean, error: string) {
         super();
-        this.license = license;
+        this.licenseStatus = licenseStatus;
 
         this.bindToCurrentInstance("dismiss");
 
         this.dismissVisible(canBeDismissed);
         this.canBeClosed(canBeClosed);
-
-        const firstStart = moment(license.FirstServerStartDate)
+        this.error(error);
+      
+        const firstStart = moment(licenseStatus.FirstServerStartDate)
             .add("1", "week").add("1", "day");
 
         this.daysToRegister = ko.pureComputed(() => {
@@ -92,17 +94,17 @@ class registration extends dialogViewModelBase {
             return firstStart.diff(now, "days");
         });
 
-        let url = "https://ravendb.net/request-license?";
-        if (license && license.Id) {
-            url += `&id=${license.Id}`;
+        let url = license.baseUrl;
+        if (licenseStatus && licenseStatus.Id) {
+            url += `?id=${btoa(licenseStatus.Id)}`;
         }
-        this.url(url);
+        this.registrationUrl(url);
     }
 
     static showRegistrationDialogIfNeeded(license: Raven.Server.Commercial.LicenseStatus) {
         switch (license.Type) {
             case "Invalid":
-                registration.showRegistrationDialog(license, false, false);
+                registration.showRegistrationDialog(license, false, false, "Invalid license");
                 break;
             case "None":
                 const firstStart = moment(license.FirstServerStartDate);
@@ -132,18 +134,23 @@ class registration extends dialogViewModelBase {
                 }
             default:
                 if (license.Expired) {
-                    registration.showRegistrationDialog(license, false, false);
+                    const expiration = moment(license.Expiration);
+                    let error = "License expired";
+                    if (expiration.isValid()) {
+                        error += ` on ${expiration.format("Do of MMMM, YYYY")}`;
+                    }
+                    registration.showRegistrationDialog(license, false, false, error);
                 }
                 break;
         }
     }
 
-    static showRegistrationDialog(license: Raven.Server.Commercial.LicenseStatus, canBeDismissed: boolean, canBeClosed: boolean) {
+    static showRegistrationDialog(license: Raven.Server.Commercial.LicenseStatus, canBeDismissed: boolean, canBeClosed: boolean, error: string = null) {
         if ($("#licenseModal").is(":visible") && $("#enterLicenseKey").is(":visible")) {
             return;
         }
 
-        const vm = new registration(license, canBeDismissed, canBeClosed);
+        const vm = new registration(license, canBeDismissed, canBeClosed, error);
         app.showBootstrapDialog(vm);
     }
 

@@ -12,7 +12,8 @@ class licenseLimitDetails extends dialogViewModelBase {
     protected readonly licenseLimitNotification: recentError | alert;
     protected readonly dismissFunction: () => void;
     licenseStatus = license.licenseStatus;
-    url: KnockoutComputed<string>;
+    requestLicenseUrl: KnockoutComputed<string>;
+    licenseRequestType: KnockoutComputed<string>;
 
     constructor(licenseLimitNotification: alert | recentError, notificationCenter: notificationCenter) {
         super();
@@ -20,18 +21,28 @@ class licenseLimitDetails extends dialogViewModelBase {
 
         this.licenseLimitNotification = licenseLimitNotification;
 
-        this.url = ko.pureComputed(() => {
-            let url = "https://ravendb.net/request-license?";
-            const error = licenseLimitNotification as recentError;
-            if (error && error.licenseLimitType()) {
-                url += `limit=${error.licenseLimitType()}`;
-            }
-            const status = this.licenseStatus();
-            if (status && status.Id) {
-                url += `&id=${status.Id}`;
+        this.requestLicenseUrl = ko.pureComputed(() => {
+            let url = `${license.baseUrl}?`;
+            const limitType = licenseLimitNotification.licenseLimitType();
+            if (licenseLimitNotification && limitType) {
+                url += `limit=${btoa(limitType)}`;
             }
 
+            const status = this.licenseStatus();
+            if (status && status.Id) {
+                url += `&id=${btoa(status.Id)}`;
+            }
+          
             return url;
+        });
+
+        this.licenseRequestType = ko.pureComputed(() => {
+            const licenseStatus = license.licenseStatus();
+            if (!licenseStatus || licenseStatus.Type === "None") {
+                return "Request";
+            }
+
+            return "Upgrade";
         });
     }
 

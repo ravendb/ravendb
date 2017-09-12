@@ -257,6 +257,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/admin/cluster/demote", "OPTIONS", AuthorizationStatus.Operator)]
         [RavenAction("/admin/cluster/observer/suspend", "OPTIONS", AuthorizationStatus.Operator)]
         [RavenAction("/admin/cluster/observer/decisions", "OPTIONS", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/license/set-limit", "OPTIONS", AuthorizationStatus.Operator)]
         public Task AllowPreflightRequest()
         {
             SetupCORSHeaders();

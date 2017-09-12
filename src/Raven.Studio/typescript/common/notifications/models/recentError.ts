@@ -37,7 +37,7 @@ class recentError extends abstractNotification {
         this.shortMessage = ko.pureComputed(() => generalUtils.trimMessage(this.message()));
     }
 
-    static tryExtractMessageAndException(details: string): { message: string, error: string, licenseLimitType: string } {
+    static tryExtractMessageAndException(details: string): { message: string, error: string, licenseLimitType: Raven.Server.Commercial.LimitType } {
         try {
             const parsedDetails = JSON.parse(details);
 
