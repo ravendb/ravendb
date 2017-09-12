@@ -125,10 +125,10 @@ namespace Raven.Server.Documents
                 buffer[3] != (byte)'E' && buffer[3] != (byte)'e' ||
                 buffer[4] != (byte)'N' && buffer[4] != (byte)'n' ||
                 buffer[5] != (byte)'/' ||
-                buffer[6] != (byte)'H' && buffer[6] == (byte)'h' ||
-                buffer[7] != (byte)'I' && buffer[7] == (byte)'i' ||
-                buffer[8] != (byte)'L' && buffer[8] == (byte)'l' ||
-                buffer[9] != (byte)'O' && buffer[9] == (byte)'o' ||
+                buffer[6] != (byte)'H' && buffer[6] != (byte)'h' ||
+                buffer[7] != (byte)'I' && buffer[7] != (byte)'i' ||
+                buffer[8] != (byte)'L' && buffer[8] != (byte)'l' ||
+                buffer[9] != (byte)'O' && buffer[9] != (byte)'o' ||
                 buffer[10] != (byte)'/')
             {
                 return false;
