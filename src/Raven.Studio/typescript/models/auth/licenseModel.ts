@@ -23,7 +23,7 @@ class licenseModel {
         }
 
         if (limitType) {
-            url += `limit=${btoa(limitType)}`;
+            url += `&limit=${btoa(limitType)}`;
         }
 
         return url;
