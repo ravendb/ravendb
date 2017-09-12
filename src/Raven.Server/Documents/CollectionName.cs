@@ -34,6 +34,7 @@ namespace Raven.Server.Documents
     public class CollectionName
     {
         public const string EmptyCollection = "@empty";
+        public const string HiLoCollection = "@hilo";
 
         public static readonly StringSegment EmptyCollectionSegment;
         public static readonly StringSegment MetadataKeySegment;
@@ -44,6 +45,7 @@ namespace Raven.Server.Documents
 
         public readonly string Name;
         private readonly string _revisions;
+        private bool? _isHiLo;
 
         static CollectionName()
         {
@@ -60,6 +62,8 @@ namespace Raven.Server.Documents
             _tombstones = GetName(CollectionTableType.Tombstones);
             _revisions = GetName(CollectionTableType.Revisions);
         }
+
+        public bool IsHiLo => (bool)(_isHiLo ?? (_isHiLo = IsHiLoCollection(Name)));
 
         public string GetTableName(CollectionTableType type)
         {
@@ -112,24 +116,29 @@ namespace Raven.Server.Documents
             return Equals(left, right) == false;
         }
 
-        public static unsafe bool IsHiLoDocument(byte* buffer, int length)
+        public static bool IsHiLoCollection(string name)
         {
-            if (length < 11)
+            return string.Equals(name, HiLoCollection, StringComparison.OrdinalIgnoreCase);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static unsafe bool IsHiLoCollection(LazyStringValue name)
+        {
+            return IsHiLoCollection(name.Buffer, name.Length);
+        }
+
+        public static unsafe bool IsHiLoCollection(byte* buffer, int length)
+        {
+            if (length != 5)
                 return false;
 
-            // case insensitive 'Raven/Hilo/' match without doing allocations
+            // case insensitive '@hilo' match without doing allocations
 
-            if (buffer[0] != (byte)'R' && buffer[0] != (byte)'r' ||
-                buffer[1] != (byte)'A' && buffer[1] != (byte)'a' ||
-                buffer[2] != (byte)'V' && buffer[2] != (byte)'v' ||
-                buffer[3] != (byte)'E' && buffer[3] != (byte)'e' ||
-                buffer[4] != (byte)'N' && buffer[4] != (byte)'n' ||
-                buffer[5] != (byte)'/' ||
-                buffer[6] != (byte)'H' && buffer[6] != (byte)'h' ||
-                buffer[7] != (byte)'I' && buffer[7] != (byte)'i' ||
-                buffer[8] != (byte)'L' && buffer[8] != (byte)'l' ||
-                buffer[9] != (byte)'O' && buffer[9] != (byte)'o' ||
-                buffer[10] != (byte)'/')
+            if (buffer[0] != (byte)'@' ||
+                buffer[1] != (byte)'h' && buffer[1] != (byte)'H' ||
+                buffer[2] != (byte)'i' && buffer[2] != (byte)'I' ||
+                buffer[3] != (byte)'l' && buffer[3] != (byte)'L' ||
+                buffer[4] != (byte)'o' && buffer[4] != (byte)'O')
             {
                 return false;
             }

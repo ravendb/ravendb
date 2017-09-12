@@ -90,6 +90,11 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             }
         }
 
+        protected override bool ShouldFilterOutHiLoDocument()
+        {
+            return true;
+        }
+
         public SqlEtlSimulationResult Simulate(SimulateSqlEtl simulateSqlEtl, DocumentsOperationContext context, IEnumerable<SqlTableWithRecords> toWrite)
         {
             var summaries = new List<TableQuerySummary>();
@@ -172,7 +177,8 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             {
                 etl.EnsureThreadAllocationStats();
 
-                var transformed = etl.Transform(new[] {new ToSqlItem(document, simulateSqlEtl.Configuration.Transforms[0].Collections[0])}, context, new EtlStatsScope(new EtlRunStats()), new EtlProcessState());
+                var collection = simulateSqlEtl.Configuration.Transforms[0].Collections[0];
+                var transformed = etl.Transform(new[] {new ToSqlItem(document, collection)}, context, new EtlStatsScope(new EtlRunStats()), new EtlProcessState());
 
                 return etl.Simulate(simulateSqlEtl, context, transformed);
             }

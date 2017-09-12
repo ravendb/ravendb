@@ -1033,8 +1033,7 @@ namespace Raven.Server.Documents
                     etag = tombstoneEtag.Etag;
                 }
 
-                var isHiLoDocument = CollectionName.IsHiLoDocument(lowerId.Content.Ptr, lowerId.Size);
-                if (isHiLoDocument == false &&
+                if (collectionName.IsHiLo == false &&
                     (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
                 {
                     var revisionsStorage = _documentDatabase.DocumentsStorage.RevisionsStorage;

@@ -1,4 +1,5 @@
-﻿using Sparrow.Json;
+﻿using Raven.Client;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL
 {
@@ -16,6 +17,11 @@ namespace Raven.Server.Documents.ETL
             Document = document;
             Collection = collection;
             ChangeVector = document.ChangeVector;
+
+            if (collection == null &&
+                document.Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
+                metadata.TryGet(Constants.Documents.Metadata.Collection, out LazyStringValue docCollection))
+                CollectionFromMetadata = docCollection;
         }
 
         protected ExtractedItem(DocumentTombstone tombstone, string collection)
@@ -25,6 +31,9 @@ namespace Raven.Server.Documents.ETL
             IsDelete = true;
             Collection = collection;
             ChangeVector = tombstone.ChangeVector;
+
+            if (collection == null)
+                CollectionFromMetadata = tombstone.Collection;
         }
 
         public Document Document { get; protected set; }
@@ -38,5 +47,7 @@ namespace Raven.Server.Documents.ETL
         public bool IsDelete { get; protected set; }
 
         public string Collection { get; protected set; }
+
+        public LazyStringValue CollectionFromMetadata { get; }
     }
 }

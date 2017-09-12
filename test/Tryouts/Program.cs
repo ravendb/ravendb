@@ -1,7 +1,9 @@
 using System;
-using System.Threading.Tasks;
-using FastTests.Voron.Bugs;
-using SlowTests.Server.Documents.PeriodicBackup;
+using FastTests.Client;
+using FastTests.Smuggler;
+using SlowTests.Core.AdminConsole;
+using SlowTests.Server.Documents.ETL.Raven;
+using SlowTests.Server.Replication;
 
 namespace Tryouts
 {
@@ -9,26 +11,18 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-
-            for (int i = 0; i < 10000; i++)
+            using (var test = new RavenDB_6711_RavenEtl())
             {
-                Console.WriteLine(i);
-                Parallel.For(0, 1, _ =>
+                try
                 {
-                    using (var test = new SlowTests.Client.BulkInserts())
-                    {
-                        try
-                        {
-                            test.Simple_Bulk_Insert_With_Ssl().Wait();
-                        }
-                        catch (Exception e)
-                        {
-                            Console.WriteLine(e);
-                            Console.WriteLine("-------------");
-                            throw;
-                        }
-                    }
-                });
+                    test.Script_defined_for_all_documents_with_filtering_and_loads_to_the_same_collection_for_some_docs();
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    Console.WriteLine("-------------");
+                    throw;
+                }
             }
         }
     }

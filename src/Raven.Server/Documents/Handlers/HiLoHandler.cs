@@ -9,6 +9,7 @@ using System.Globalization;
 using System.IO;
 using System.Net;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -97,7 +98,6 @@ namespace Raven.Server.Documents.Handlers
                 var hiLoDocumentId = RavenIdGeneratorsHilo + Key;
                 var prefix = Key + Separator;
 
-                long oldMax = 0;
                 var newDoc = new DynamicJsonValue();
                 BlittableJsonReaderObject hiloDocReader = null;
                 try
@@ -113,30 +113,33 @@ namespace Raven.Server.Documents.Handlers
                                                        "This exception should not happen and is likely a bug.", e);
                     }
 
-                    if (hiloDocReader != null)
+                    if (hiloDocReader == null)
                     {
-                        var prop = new BlittableJsonReaderObject.PropertyDetails();
-                        foreach (var propertyId in hiloDocReader.GetPropertiesByInsertionOrder())
+                        OldMax = LastRangeMax;
+                        newDoc["Max"] = OldMax + Capacity;
+                        newDoc[Constants.Documents.Metadata.Key] = new DynamicJsonValue
                         {
-                            hiloDocReader.GetPropertyByIndex(propertyId, ref prop);
-                            if (prop.Name == "Max")
-                            {
-                                oldMax = (long)prop.Value;
-                                continue;
-                            }
+                            [Constants.Documents.Metadata.Collection] = CollectionName.HiLoCollection
+                        };
 
-                            newDoc[prop.Name] = prop.Value;
-                        }
+                        using (var freshHilo = context.ReadObject(newDoc, hiLoDocumentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                            Database.DocumentsStorage.Put(context, hiLoDocumentId, null, freshHilo);
+                    }
+                    else
+                    {
+
+                        hiloDocReader.TryGet("Max", out long oldMax);
+                        OldMax = Math.Max(oldMax, LastRangeMax);
+
+                        hiloDocReader.Modifications = new DynamicJsonValue(hiloDocReader)
+                        {
+                            ["Max"] = OldMax + Capacity
+                        };
+
+                        using (var freshHilo = context.ReadObject(hiloDocReader, hiLoDocumentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                            Database.DocumentsStorage.Put(context, hiLoDocumentId, null, freshHilo);
                     }
 
-                    oldMax = Math.Max(oldMax, LastRangeMax);
-
-                    newDoc["Max"] = oldMax + Capacity;
-
-                    using (var freshHilo = context.ReadObject(newDoc, hiLoDocumentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
-                        Database.DocumentsStorage.Put(context, hiLoDocumentId, null, freshHilo);
-
-                    OldMax = oldMax;
                     Prefix = prefix;
                 }
                 finally
