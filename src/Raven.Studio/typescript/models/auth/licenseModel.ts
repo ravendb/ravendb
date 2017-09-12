@@ -6,6 +6,8 @@ class licenseModel {
     static licenseStatus = ko.observable<Raven.Server.Commercial.LicenseStatus>();
     static supportCoverage = ko.observable<supportCoverageDto>();
 
+    static baseUrl = "https://ravendb.net/request-license";
+
     static fetchLicenseStatus(): JQueryPromise<Raven.Server.Commercial.LicenseStatus> {
         return new getLicenseStatusCommand()
             .execute()

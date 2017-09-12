@@ -27,6 +27,11 @@ class alert extends abstractNotification {
         this.alertType(incomingChanges.AlertType);
         this.key(incomingChanges.Key);
         this.details(incomingChanges.Details);
+        if (incomingChanges.AlertType === "LicenseManager_LicenseLimit") {
+            const limit = incomingChanges.Details as Raven.Server.NotificationCenter.Notifications.Details.LicenseLimitWarning;
+            this.licenseLimitType(limit.Type);
+        }
+
         this.severity(incomingChanges.Severity);
     }
 }

@@ -7,9 +7,9 @@
                 <div class="flex-separator"></div>
                 <div class="flex-end text-muted" data-bind="if: utilizedCores() > 0">
                     <small>Available resources: <strong data-bind="text: utilizedCores, css: cssCores" data-toggle="tooltip" title="Total Assigned CPU cores"></strong>
-                        / <strong data-bind="text: maxCores" data-toggle="tooltip" title="Licensed cores"></strong>
+                        / <strong data-bind="text: maxCores" data-toggle="tooltip" title="Total licensed cores"></strong>
                         <span data-bind="if: totalServersCores() > maxCores()">
-                            / <strong data-bind="text: totalServersCores" data-toggle="tooltip" title="Total number of available cores"></strong>
+                            / <strong data-bind="text: totalServersCores" data-toggle="tooltip" title="Total cores in the cluster"></strong>
                         </span> Cores
                     </small>
                 </div>
