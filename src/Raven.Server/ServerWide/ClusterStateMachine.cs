@@ -102,6 +102,8 @@ namespace Raven.Server.ServerWide
 
         public event EventHandler<(long Index, string Type)> ValueChanged;
 
+        private readonly RachisLogIndexNotifications _rachisLogIndexNotifications = new RachisLogIndexNotifications(CancellationToken.None);
+
         protected override void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore)
         {
             if (cmd.TryGet("Type", out string type) == false)
@@ -110,6 +112,7 @@ namespace Raven.Server.ServerWide
                 return;
             }
 
+            var sw = Stopwatch.StartNew();
             try
             {
                 string errorMessage;
@@ -209,6 +212,19 @@ namespace Raven.Server.ServerWide
             {
                 NotifyLeaderAboutError(index, leader, new CommandExecutionException($"Cannot execute command of type {type}", e));
             }
+            finally
+            {
+                var executionTime = sw.Elapsed;
+                _rachisLogIndexNotifications.RecordNotification(new RecentLogIndexNotification
+                {
+                    Type = type,
+                    ExecutionTime = executionTime,
+                    Index = index,
+                    LeaderErrorCount = leader?.ErrorsList.Count,
+                    Term = leader?.Term,
+                    LeaderShipDuration = leader?.LeaderShipDuration,
+                });
+            }
         }
 
         private void RemoveNodeFromCluster(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
@@ -246,8 +262,19 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        protected static void NotifyLeaderAboutError(long index, Leader leader, Exception e)
+        protected void NotifyLeaderAboutError(long index, Leader leader, Exception e)
         {
+            _rachisLogIndexNotifications.RecordNotification(new RecentLogIndexNotification
+            {
+                Type = "Error",
+                ExecutionTime = TimeSpan.Zero,
+                Index = index,
+                LeaderErrorCount = leader?.ErrorsList.Count,
+                Term = leader?.Term,
+                LeaderShipDuration = leader?.LeaderShipDuration,
+                Exception = e,
+            });
+
             // ReSharper disable once UseNullPropagation
             if (leader == null)
                 return;
@@ -299,9 +326,7 @@ namespace Raven.Server.ServerWide
                 NotifyDatabaseValueChanged(context, updateCommand?.DatabaseName, index, type);
             }
         }
-
-        private readonly RachisLogIndexNotifications _rachisLogIndexNotifications = new RachisLogIndexNotifications(CancellationToken.None);
-
+        
         public async Task WaitForIndexNotification(long index, TimeSpan? timeout = null)
         {
             await _rachisLogIndexNotifications.WaitForIndexNotification(index, timeout ?? _parent.OperationTimeout);
@@ -1109,6 +1134,8 @@ namespace Raven.Server.ServerWide
         private readonly ConcurrentQueue<ErrorHolder> _errors = new ConcurrentQueue<ErrorHolder>();
         private int _numberOfErrors;
 
+        public readonly Queue<RecentLogIndexNotification> RecentNotifications = new Queue<RecentLogIndexNotification>();
+
         private class ErrorHolder
         {
             public long Index;
@@ -1148,10 +1175,45 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private static void ThrowTimeoutException(TimeSpan value, long index, long lastModifiedIndex)
+        private void ThrowTimeoutException(TimeSpan value, long index, long lastModifiedIndex)
         {
             throw new TimeoutException($"Waited for {value} but didn't get index notification for {index}. " +
-                                       $"Last commit index is: {lastModifiedIndex}.");
+                                       $"Last commit index is: {lastModifiedIndex}. " +
+                                       $"Number of errors is: {_numberOfErrors}." + Environment.NewLine + 
+                                       PrintLastNotifications());
+        }
+
+        private string PrintLastNotifications()
+        {
+            var notifications = RecentNotifications.ToArray();
+            var builder = new StringBuilder(notifications.Length);
+            foreach (var notification in notifications)
+            {
+                builder
+                    .Append("Index: ")
+                    .Append(notification.Index)
+                    .Append(". Type: ")
+                    .Append(notification.Type)
+                    .Append(". ExecutionTime: ")
+                    .Append(notification.ExecutionTime)
+                    .Append(". Term: ")
+                    .Append(notification.Term)
+                    .Append(". LeaderErrorCount: ")
+                    .Append(notification.LeaderErrorCount)
+                    .Append(". LeaderShipDuration: ")
+                    .Append(notification.LeaderShipDuration)
+                    .Append(". Exception: ")
+                    .Append(notification.Exception)
+                    .AppendLine();
+            }
+            return builder.ToString();
+        }
+
+        public void RecordNotification(RecentLogIndexNotification notification)
+        {
+            RecentNotifications.Enqueue(notification);
+            while (RecentNotifications.Count > 200)
+                RecentNotifications.TryDequeue(out _);
         }
 
         public void NotifyListenersAbout(long index, Exception e)
@@ -1176,5 +1238,16 @@ namespace Raven.Server.ServerWide
             }
             _notifiedListeners.SetAndResetAtomically();
         }
+    }
+
+    public class RecentLogIndexNotification
+    {
+        public string Type;
+        public TimeSpan ExecutionTime;
+        public long Index;
+        public int? LeaderErrorCount;
+        public long? Term;
+        public long? LeaderShipDuration;
+        public Exception Exception;
     }
 }
