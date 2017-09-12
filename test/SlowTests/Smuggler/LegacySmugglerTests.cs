@@ -39,7 +39,7 @@ namespace SlowTests.Smuggler
                     Assert.Equal(4, collectionStats.Collections["Regions"]);
                     Assert.Equal(3, collectionStats.Collections["Shippers"]);
                     Assert.Equal(29, collectionStats.Collections["Suppliers"]);
-                    Assert.True(collectionStats.Collections.ContainsKey("@system"));
+                    Assert.True(collectionStats.Collections.ContainsKey("@empty"));
 
                     using (var session = store.OpenSession())
                     {
