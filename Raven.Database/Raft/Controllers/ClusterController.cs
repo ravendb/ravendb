@@ -210,7 +210,7 @@ namespace Raven.Database.Raft.Controllers
                 responseMessage = GetMessageWithString("prevLogIndex parameter is not a number! Long number expected.", HttpStatusCode.BadRequest);
                 return false;
             }
-            request.PrevLogIndex = prevLogTerm;
+            request.PrevLogIndex = prevLogIndex;
 
             Guid clusterTopologyId;
             if (!TryGetParamFromUri("clusterTopologyId", out clusterTopologyId))
