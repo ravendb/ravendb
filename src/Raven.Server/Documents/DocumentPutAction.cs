@@ -51,16 +51,15 @@ namespace Raven.Server.Documents
             AssertMetadataWasFiltered(document);
 #endif
 
-            var collectionName = _documentsStorage.ExtractCollectionName(context, document);
             var newEtag = _documentsStorage.GenerateNextEtag();
-
             var modifiedTicks = lastModifiedTicks ?? _documentDatabase.Time.GetUtcNow().Ticks;
-
-            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
 
             id = BuildDocumentId(id, newEtag, out bool knownNewId);
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr))
             {
+                var collectionName = _documentsStorage.ExtractCollectionName(context, document);
+                var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
+            
                 var oldValue = default(TableValueReader);
                 if (knownNewId == false)
                 {
@@ -106,8 +105,7 @@ namespace Raven.Server.Documents
                 changeVector = result.ChangeVector;
                 nonPersistentFlags |= result.NonPersistentFlags;
 
-                var isHiLoDocument = CollectionName.IsHiLoDocument(lowerId.Content.Ptr, lowerId.Size);
-                if (isHiLoDocument == false &&
+                if (collectionName.IsHiLo == false &&
                     (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
                 {
                     if (ShouldRecreateAttachments(context, lowerId, oldDoc, document, ref flags, nonPersistentFlags))
@@ -163,7 +161,7 @@ namespace Raven.Server.Documents
                     }
                 }
 
-                if (isHiLoDocument == false)
+                if (collectionName.IsHiLo == false)
                 {
                     _documentDatabase.ExpiredDocumentsCleaner?.Put(context, lowerId, document);
                 }

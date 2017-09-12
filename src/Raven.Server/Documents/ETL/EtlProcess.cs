@@ -103,11 +103,9 @@ namespace Raven.Server.Documents.ETL
                 if (Transformation.ApplyToAllDocuments)
                 {
                     var docs = Database.DocumentsStorage.GetDocumentsFrom(context, fromEtag, 0, int.MaxValue).GetEnumerator();
-
                     scope.EnsureDispose(docs);
 
                     var tombstones = Database.DocumentsStorage.GetTombstonesFrom(context, fromEtag, 0, int.MaxValue).GetEnumerator();
-
                     scope.EnsureDispose(tombstones);
 
                     enumerators.Add((docs, tombstones, null));
@@ -117,11 +115,9 @@ namespace Raven.Server.Documents.ETL
                     foreach (var collection in Transformation.Collections)
                     {
                         var docs = Database.DocumentsStorage.GetDocumentsFrom(context, collection, fromEtag, 0, int.MaxValue).GetEnumerator();
-
                         scope.EnsureDispose(docs);
 
                         var tombstones = Database.DocumentsStorage.GetTombstonesFrom(context, collection, fromEtag, 0, int.MaxValue).GetEnumerator();
-
                         scope.EnsureDispose(tombstones);
 
                         enumerators.Add((docs, tombstones, collection));
@@ -155,6 +151,16 @@ namespace Raven.Server.Documents.ETL
                 foreach (var item in items)
                 {
                     if (AlreadyLoadedByDifferentNode(item, state))
+                    {
+                        stats.RecordChangeVector(item.ChangeVector);
+                        stats.RecordLastFilteredOutEtag(stats.LastTransformedEtag);
+
+                        continue;
+                    }
+
+                    if (Transformation.ApplyToAllDocuments &&
+                        CollectionName.IsHiLoCollection(item.CollectionFromMetadata) &&
+                        ShouldFilterOutHiLoDocument())
                     {
                         stats.RecordChangeVector(item.ChangeVector);
                         stats.RecordLastFilteredOutEtag(stats.LastTransformedEtag);
@@ -475,6 +481,8 @@ namespace Raven.Server.Documents.ETL
                 }
             }
         }
+
+        protected abstract bool ShouldFilterOutHiLoDocument();
 
         private static bool AlreadyLoadedByDifferentNode(ExtractedItem item, EtlProcessState state)
         {

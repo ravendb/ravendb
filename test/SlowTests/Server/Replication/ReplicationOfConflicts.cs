@@ -2,6 +2,7 @@
 using FastTests;
 using FastTests.Server.Replication;
 using Raven.Client.Exceptions.Documents;
+using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -220,15 +221,15 @@ namespace SlowTests.Server.Replication
                 var db = await GetDocumentDatabaseInstanceFor(store1);
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 {
-                    long etag = -1;
+                    long etag;
                     using (ctx.OpenReadTransaction())
                     {
-                        etag = db.DocumentsStorage.GetLastDocumentEtag(ctx, "@system");
+                        etag = db.DocumentsStorage.GetLastDocumentEtag(ctx, CollectionName.HiLoCollection);
                     }
                     await Task.Delay(200); // twice the minimal heartbeat
                     using (ctx.OpenReadTransaction())
                     {
-                        Assert.Equal(etag, db.DocumentsStorage.GetLastDocumentEtag(ctx, "@system"));
+                        Assert.Equal(etag, db.DocumentsStorage.GetLastDocumentEtag(ctx, CollectionName.HiLoCollection));
                     }
                 }
             }

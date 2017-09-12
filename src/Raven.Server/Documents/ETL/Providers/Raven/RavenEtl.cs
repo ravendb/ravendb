@@ -78,6 +78,12 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             }
         }
 
+        protected override bool ShouldFilterOutHiLoDocument()
+        {
+            // if we transfer all documents to the same collections (no script specified) then don't exclude HiLo docs
+            return string.IsNullOrEmpty(Transformation.Script) == false;
+        }
+
         private static void ThrowTimeoutException(int numberOfCommands, Exception e)
         {
             var message = $"Load request applying {numberOfCommands} commands timed out.";
