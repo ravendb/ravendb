@@ -80,7 +80,7 @@ namespace Voron.Data.RawData
             {
                 var pageHeader = PageHeaderFor(_sectionHeader->PageNumber + i + 1);
                 var offset = sizeof(RawDataSmallPageHeader);
-                while (offset < Constants.Storage.PageSize)
+                while (offset + sizeof(RawDataEntrySizes) < Constants.Storage.PageSize)
                 {
                     var sizes = (RawDataEntrySizes*)((byte*)pageHeader + offset);
                     if (sizes->UsedSize != -1)
