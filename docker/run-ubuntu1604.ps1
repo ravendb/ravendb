@@ -105,7 +105,7 @@ if ($RemoveOnExit) {
 
 if ($AuthenticationDisabled) {
     $dockerArgs += '-e'
-    $dockerArgs += "UnsecuredAccessAllowed=PublicNetwork"
+    $dockerArgs += "UNSECURED_ACCESS_ALLOWED=PublicNetwork"
 }
 
 if ([string]::IsNullOrEmpty($DataDir) -eq $False) {
