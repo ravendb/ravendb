@@ -12,6 +12,7 @@ import favNodeBadge = require("common/shell/favNodeBadge");
 import searchBox = require("common/shell/searchBox");
 import database = require("models/resources/database");
 import license = require("models/auth/licenseModel");
+import buildInfo = require("models/resources/buildInfo");
 import environmentColor = require("models/resources/environmentColor");
 import changesContext = require("common/changesContext");
 import allRoutes = require("common/shell/routes");
@@ -56,9 +57,6 @@ class shell extends viewModelBase {
     clusterManager = clusterTopologyManager.default;
     continueTest = continueTest.default;
 
-    static serverBuildVersion = ko.observable<serverBuildVersionDto>();
-    static serverMainVersion = ko.observable<number>(4);
-    static serverMinorVersion = ko.observable<number>(0);
     clientBuildVersion = ko.observable<clientBuildVersionDto>();
 
     windowHeightObservable: KnockoutObservable<number>; //TODO: delete?
@@ -108,7 +106,7 @@ class shell extends viewModelBase {
         this.clientBuildVersion.subscribe(v =>
             viewModelBase.clientVersion(v.Version));
 
-        shell.serverBuildVersion.subscribe(buildVersionDto => {
+        buildInfo.serverBuildVersion.subscribe(buildVersionDto => {
             this.initAnalytics({ SendUsageStats: true }, [ buildVersionDto ]);
         });
 
@@ -277,11 +275,11 @@ class shell extends viewModelBase {
         new getServerBuildVersionCommand()
             .execute()
             .done((serverBuildResult: serverBuildVersionDto) => {
-                shell.serverBuildVersion(serverBuildResult);
+                buildInfo.serverBuildVersion(serverBuildResult);
 
                 const currentBuildVersion = serverBuildResult.BuildVersion;
                 if (currentBuildVersion !== DEV_BUILD_NUMBER) {
-                    shell.serverMainVersion(Math.floor(currentBuildVersion / 10000));
+                    buildInfo.serverMainVersion(Math.floor(currentBuildVersion / 10000));
                 }
             });
     }
@@ -345,18 +343,18 @@ class shell extends viewModelBase {
         const currentBuildVersion = buildVersionResult.BuildVersion;
         const shouldTrack = track && currentBuildVersion !== DEV_BUILD_NUMBER;
         if (currentBuildVersion !== DEV_BUILD_NUMBER) {
-            shell.serverMainVersion(Math.floor(currentBuildVersion / 10000));
+            buildInfo.serverMainVersion(Math.floor(currentBuildVersion / 10000));
         }
 
         const licenseStatus = license.licenseStatus();
         const env = licenseStatus ? licenseStatus.Type : "N/A";
         const version = buildVersionResult.FullVersion;
         eventsCollector.default.initialize(
-            shell.serverMainVersion() + "." + shell.serverMinorVersion(), currentBuildVersion, env, version, shouldTrack);
+            buildInfo.serverMainVersion() + "." + buildInfo.serverMinorVersion(), currentBuildVersion, env, version, shouldTrack);
     }
 
     static openFeedbackForm() {
-        const dialog = new feedback(shell.clientVersion(), shell.serverBuildVersion().FullVersion);
+        const dialog = new feedback(shell.clientVersion(), buildInfo.serverBuildVersion().FullVersion);
         app.showBootstrapDialog(dialog);
     }
     

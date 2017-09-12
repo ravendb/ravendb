@@ -1,15 +1,21 @@
 /// <reference path="../../../typings/tsd.d.ts" />
 
 import getLicenseStatusCommand = require("commands/auth/getLicenseStatusCommand");
+import buildInfo = require("models/resources/buildInfo");
 
 class licenseModel {
     static licenseStatus = ko.observable<Raven.Server.Commercial.LicenseStatus>();
     static supportCoverage = ko.observable<supportCoverageDto>();
 
-    private static baseUrl = "https://ravendb.net/request-license";
+    private static baseUrl = "https://ravendb.net/license/request";
 
     static generateLicenseRequestUrl(limitType: Raven.Server.Commercial.LimitType = null): string {
         let url = `${licenseModel.baseUrl}?`;
+
+        const build = buildInfo.serverBuildVersion();
+        if (build) {
+            url += `&build=${build.BuildVersion}`;
+        }
 
         const status = this.licenseStatus();
         if (status && status.Id) {
