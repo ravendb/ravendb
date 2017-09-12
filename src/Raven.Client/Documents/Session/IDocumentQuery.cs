@@ -99,11 +99,6 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         QueryResult QueryResult { get; }
 
-        /// <summary>
-        ///     Create the index query object for this query
-        /// </summary>
-        IndexQuery GetIndexQuery();
-
 
         /// <summary>
         ///     Selects the specified fields directly from the index if the are stored. If the field is not stored in index, value

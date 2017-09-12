@@ -105,11 +105,6 @@ namespace Raven.Client.Documents.Session
         Lazy<Task<FacetedQueryResult>> GetFacetsLazyAsync(List<Facet> facets, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken));
 
         /// <summary>
-        ///     Create the index query object for this query
-        /// </summary>
-        IndexQuery GetIndexQuery();
-
-        /// <summary>
         ///     Gets the query result. Executing this method for the first time will execute the query.
         /// </summary>
         Task<QueryResult> QueryResultAsync(CancellationToken token = default(CancellationToken));

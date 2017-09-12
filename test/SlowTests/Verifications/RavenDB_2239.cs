@@ -126,7 +126,7 @@ namespace SlowTests.Verifications
                     sw.Restart();
                     Assert.Throws<InvalidOperationException>(() =>
                     {
-                        var ravenQueryable = (IRavenQueryable<Document>)session.Advanced
+                        var ravenQueryable = session.Advanced
                         .RawQuery<Document>(@"
 declare function get(d){
     if(d.Num == 0) {
@@ -176,7 +176,7 @@ select get(d)
                     {
                         sw.Restart();
                         var query = session.Advanced.RawQuery<Document>("from index 'Document/Index' as d select d.Id, d.Name");
-                        using (var enumerator = session.Advanced.Stream((IRavenQueryable<Document>)query))
+                        using (var enumerator = session.Advanced.Stream(query))
                         {
                             enumerator.MoveNext();
                             sw.Stop();
