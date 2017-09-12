@@ -6,7 +6,22 @@ class licenseModel {
     static licenseStatus = ko.observable<Raven.Server.Commercial.LicenseStatus>();
     static supportCoverage = ko.observable<supportCoverageDto>();
 
-    static baseUrl = "https://ravendb.net/request-license";
+    private static baseUrl = "https://ravendb.net/request-license";
+
+    static generateLicenseRequestUrl(limitType: Raven.Server.Commercial.LimitType = null): string {
+        let url = `${licenseModel.baseUrl}?`;
+
+        const status = this.licenseStatus();
+        if (status && status.Id) {
+            url += `&id=${btoa(status.Id)}`;
+        }
+
+        if (limitType) {
+            url += `limit=${btoa(limitType)}`;
+        }
+
+        return url;
+    }
 
     static fetchLicenseStatus(): JQueryPromise<Raven.Server.Commercial.LicenseStatus> {
         return new getLicenseStatusCommand()
@@ -21,7 +36,7 @@ class licenseModel {
 
     static licenseShortDescription = ko.pureComputed(() => {
         const status = licenseModel.licenseStatus();
-        if (!status) {
+        if (!status || status.Type === "None") {
             return 'no-license';
         }
        
@@ -32,7 +47,7 @@ class licenseModel {
 
     static licenseCssClass = ko.pureComputed(() => {
         const status = licenseModel.licenseStatus();
-        if (!status) {
+        if (!status || status.Type === "None") {
             return 'no-license';
         }
         if (status.Status.includes("Expired")) {

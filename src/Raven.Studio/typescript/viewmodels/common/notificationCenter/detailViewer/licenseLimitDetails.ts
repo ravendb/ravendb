@@ -21,20 +21,9 @@ class licenseLimitDetails extends dialogViewModelBase {
 
         this.licenseLimitNotification = licenseLimitNotification;
 
-        this.requestLicenseUrl = ko.pureComputed(() => {
-            let url = `${license.baseUrl}?`;
-            const limitType = licenseLimitNotification.licenseLimitType();
-            if (licenseLimitNotification && limitType) {
-                url += `limit=${btoa(limitType)}`;
-            }
-
-            const status = this.licenseStatus();
-            if (status && status.Id) {
-                url += `&id=${btoa(status.Id)}`;
-            }
-
-            return url;
-        });
+        this.requestLicenseUrl = ko.pureComputed(() =>
+            license.generateLicenseRequestUrl(licenseLimitNotification.licenseLimitType())
+        );
 
         this.licenseRequestType = ko.pureComputed(() => {
             const licenseStatus = license.licenseStatus();

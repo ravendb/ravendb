@@ -204,7 +204,7 @@ class shell extends viewModelBase {
     private tryReopenRegistrationDialog() {
         const random = Math.random() * 5;
         setTimeout(() => {
-            registration.showRegistrationDialogIfNeeded(license.licenseStatus());
+            registration.showRegistrationDialogIfNeeded(license.licenseStatus(), true);
             this.tryReopenRegistrationDialog();
         }, random * 1000 * 60);
     }
