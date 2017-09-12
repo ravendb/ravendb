@@ -12,6 +12,8 @@ abstract class abstractNotification {
     title = ko.observable<string>();
     severity = ko.observable<Raven.Server.NotificationCenter.Notifications.NotificationSeverity>();
     type: Raven.Server.NotificationCenter.Notifications.NotificationType;
+    licenseLimitType = ko.observable<Raven.Server.Commercial.LimitType>();
+
     hasDetails: KnockoutComputed<boolean>;
     canBePostponed: KnockoutComputed<boolean>;
 
