@@ -117,6 +117,7 @@ namespace Raven.Server.Documents.Patch
                         .SetReferencesResolver(new NullPropgationReferenceResolver())
                         .MaxStatements(_configuration.Patching.MaxStepsForScript)
                         .Strict()
+                        .AddObjectConverter(new JintGuidConverter())
                         .AddObjectConverter(new JintStringConverter())
                         .AddObjectConverter(new JintEnumConverter())
                         .AddObjectConverter(new JintDateTimeConverter())
