@@ -18,6 +18,14 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
+        [RavenAction("/test/delay", "GET", AuthorizationStatus.ValidUser)]
+        public Task Delay()
+        {
+            var delay = GetIntValueQueryString("value") ?? 0;
+
+            return Task.Delay(delay);
+        }
+
         [RavenAction("/test/sized-message", "GET", AuthorizationStatus.ValidUser)]
         public async Task GetBuffer()
         {
