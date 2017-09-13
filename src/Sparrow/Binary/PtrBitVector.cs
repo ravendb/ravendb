@@ -8,7 +8,10 @@ namespace Sparrow.Binary
 {
     public unsafe struct PtrBitVector
     {
-        public const uint BitsPerByte = 8;
+        public const int BitsPerByte = 8;
+        public const int BitsPerWord = sizeof(ulong) * BitsPerByte; // 64
+        public const int BytesPerWord = sizeof(ulong) / sizeof(byte); // 8
+
         public const uint Log2BitsPerByte = 3; // Math.Log( BitsPerByte, 2 )
 
         public readonly byte* Bits;
@@ -29,7 +32,9 @@ namespace Sparrow.Binary
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static byte BitInByte(int idx)
         {
-            return (byte)(0x80 >> (idx % (int)BitsPerByte));
+            // PERF: Will do the same thing using less bytes.
+            //       For reference this is equivalent to [ 0x80 >> (idx % (int)BitsPerByte) ]
+            return (byte)(0x80 >> (idx & (int)(BitsPerByte - 1)));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -100,19 +105,19 @@ namespace Sparrow.Binary
 
             ulong* ptr = (ulong*)Bits;
             int count = Count;
-            int words = count / BitVector.BitsPerWord;
+            int words = count / BitsPerWord;
 
             ulong value;
             int i;
             int idx;
 
-            int accumulator = BitVector.BitsPerWord;            
+            int accumulator = BitsPerWord;            
             for (i = 0; i < words; i++)
             {
                 value = ptr[i];
                 if (value == 0)
                 {
-                    accumulator += BitVector.BitsPerWord;
+                    accumulator += BitsPerWord;
                     continue;
                 }
 
@@ -124,12 +129,12 @@ namespace Sparrow.Binary
             }
 
             value = 0;
-            byte* bytePtr = Bits + words * BitVector.BytesPerWord;
+            byte* bytePtr = Bits + words * BytesPerWord;
 
             // We want to know how many bytes we have left. 
-            int bitsLeft = (count % BitVector.BitsPerWord);
-            int rotations = bitsLeft / BitVector.BitsPerByte;
-            if (bitsLeft % BitVector.BitsPerByte != 0)
+            int bitsLeft = (count % BitsPerWord);
+            int rotations = bitsLeft / BitsPerByte;
+            if (bitsLeft % BitsPerByte != 0)
                 rotations++;
 
             // TODO: Can we just write it in Little Endian Format (aka in reverse order)?
@@ -137,12 +142,12 @@ namespace Sparrow.Binary
             // We write the value and shift
             for (i = 0; i < rotations; i++)
             {
-                value <<= BitVector.BitsPerByte; // We shift first, because shifting 0 is still 0
+                value <<= BitsPerByte; // We shift first, because shifting 0 is still 0
                 value |= bytePtr[i];
             }
 
             // We move the value as many places as we need to fill with zeroes.
-            value <<= (BitVector.BitsPerByte * (BitVector.BytesPerWord - rotations));
+            value <<= (BitsPerByte * (BytesPerWord - rotations));
 
             idx = accumulator - Binary.Bits.MostSignificantBit(value) - 1;
             return idx < count ? idx : -1;
