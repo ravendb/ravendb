@@ -8,11 +8,11 @@ namespace Raven.Server.SqlMigration
     public class JsPatch
     {
         private const string FunctionName = "Execute";
-        private const string ExecutionStr = "function " + FunctionName + "(document) {{(function Foo() {{ {0} }}).apply(document)}}";
+        private const string ExecutionStr = "function " + FunctionName + "(document) {{(function () {{ {0} }}).apply(document)}}";
         private readonly Engine _engine;
         private readonly bool _hasScript;
 
-        public JsPatch(string patchScript, RavenConfiguration config)
+        public JsPatch(string patchScript)
         {
             if (string.IsNullOrEmpty(patchScript))
                 return;
@@ -21,7 +21,6 @@ namespace Raven.Server.SqlMigration
             {
                 options.LimitRecursion(64)
                     .SetReferencesResolver(new JintPreventResolvingTasksReferenceResolver())
-                    .MaxStatements(config.Patching.MaxStepsForScript)
                     .Strict();
             });
 
@@ -30,7 +29,7 @@ namespace Raven.Server.SqlMigration
             _hasScript = true;
         }
 
-        public void PatchDocument(RavenDocument document)
+        public void PatchDocument(SqlMigrationDocument document)
         {
             if (!_hasScript)
                 return;
@@ -41,7 +40,7 @@ namespace Raven.Server.SqlMigration
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException($"Error patching document of table '{document.TableName}'", e);
+                throw new InvalidOperationException($"Error patching document of table '{document.TableName}'. Document id: {document.Id}", e);
             }
         }
     }

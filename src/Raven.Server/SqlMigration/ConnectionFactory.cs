@@ -6,13 +6,13 @@ namespace Raven.Server.SqlMigration
 {
     public class ConnectionFactory
     {
-        public static IDbConnection OpenConnection(string connectionString)
+        public static IDbConnection OpenConnection(string connectionString, string sqlDatabaseName = null)
         {
             SqlConnection con;
             
             try
             {
-                con = new SqlConnection(connectionString);
+                con = new SqlConnection(connectionString + (sqlDatabaseName == null ? string.Empty : $";Initial Catalog={sqlDatabaseName}"));
             }
             catch (Exception e)
             {
