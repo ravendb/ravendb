@@ -108,9 +108,10 @@ namespace Sparrow.LowMemory
             var memoryAvailableHandles = new WaitHandle[] { _simulatedLowMemory, _shutdownRequested };
             var paranoidModeHandles = new WaitHandle[] { _simulatedLowMemory, _shutdownRequested, _warnAllocation };
             var timeout = 5 * 1000;
-            long totalUnmanagedAllocations = 0;
             while (true)
             {
+                long totalUnmanagedAllocations = 0;
+
                 var handles = MemoryInformation.GetMemoryInfo().AvailableMemory.GetValue(SizeUnit.Bytes) < _lowMemoryThreshold * 2 ?
                     paranoidModeHandles :
                     memoryAvailableHandles;
