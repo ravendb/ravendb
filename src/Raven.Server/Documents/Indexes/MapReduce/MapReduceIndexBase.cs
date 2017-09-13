@@ -202,6 +202,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         {
             var entries = new Queue<MapEntry>((int)documentMapEntries.NumberOfEntries);
 
+            if (documentMapEntries.NumberOfEntries == 0)
+                return entries;
+
             using (var it = documentMapEntries.Iterate())
             {
                 if (it.Seek(long.MinValue) == false)
