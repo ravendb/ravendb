@@ -10,12 +10,75 @@ using Raven.Server.Web;
 using Sparrow.Collections.LockFree;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.LowMemory;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Handlers.Debugging
 {
     public class MemoryStatsHandler : RequestHandler
     {
+        [RavenAction("/admin/debug/memory/low-mem-log", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
+        public Task LowMemLog()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                var djv = LowMemLogInternal();
+
+                using (var write = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(write, djv);
+                }
+                return Task.CompletedTask;
+            }
+        }
+
+        public static DynamicJsonValue LowMemLogInternal()
+        {
+            var lowMemLog = LowMemoryNotification.Instance.LowMemEventDetailsStack;
+            var dja = new DynamicJsonArray();
+
+            foreach (var item in lowMemLog.OrderByDescending(x =>
+            {
+                if (x!=null)
+                    return x.Time;
+                return DateTime.MinValue;
+            }))
+            {
+                if (item == null || item.Reason == LowMemoryNotification.LowMemReason.None)
+                    continue;
+
+                var humanSizes = new DynamicJsonValue
+                {
+                    ["FreeMem"] = Size.Humane(item.FreeMem),
+                    ["TotalUnmanaged"] = Size.Humane(item.TotalUnmanaged),
+                    ["PhysicalMem"] = Size.Humane(item.PhysicalMem),
+                    ["Threshold"] = Size.Humane(item.LowMemThreshold)
+                };
+
+                var json = new DynamicJsonValue
+                {
+                    ["Event"] = item.Reason,
+                    ["FreeMem"] = item.FreeMem,
+                    ["TotalUnmanaged"] = item.TotalUnmanaged,
+                    ["PhysicalMem"] = item.PhysicalMem,
+                    ["RatioFactor"] = item.LowMemRatio,
+                    ["TimeOfEvent"] = item.Time,
+                    ["HumanlyReadSizes"] = humanSizes
+                };
+
+                dja.Add(json);
+            }
+
+            var djv = new DynamicJsonValue
+            {
+                ["Low Memory Events"] = dja
+            };
+
+            return djv;
+        }
+
+
+
         [RavenAction("/admin/debug/memory/stats", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public Task MemoryStats()
         {
