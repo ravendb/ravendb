@@ -493,9 +493,9 @@ namespace Sparrow.Json
 
             _position += WriteVariableSizeInt(str.CompressedSize);
 
-            // compressed size include escape positions
-            _unmanagedWriteBuffer.Write(str.Buffer, str.CompressedSize);
-            _position += str.CompressedSize;
+            var escapeSequencePos = GetSizeIncludingEscapeSequences(str.Buffer, str.CompressedSize);
+            _unmanagedWriteBuffer.Write(str.Buffer, escapeSequencePos);
+            _position += escapeSequencePos;
             return startPos;
         }
 
