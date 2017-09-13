@@ -1,172 +1,182 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client.ServerWide;
 using Raven.Server.Documents;
+using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.SqlMigration;
 using Sparrow.Json;
 
+// ReSharper disable InconsistentNaming
+
 namespace Raven.Server.Web.Studio
 {
     public class SqlMigrationHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/admin/sql-schema", "POST", AuthorizationStatus.DatabaseAdmin)]
+        [RavenAction("/databases/*/admin/sql-migration/schema", "POST", AuthorizationStatus.DatabaseAdmin)]
         public Task SqlSchema()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                var sqlImportDoc = context.ReadForDisk(RequestBodyStream(), null);
-                if (sqlImportDoc.TryGet("ConnectionString", out string connectionString) == false)
-                    throw new InvalidOperationException("ConnectionString is a required field when asking for sql-schema");
-
-                if (!ValidateConnection(connectionString))
+                DatabaseRecord databaseRecord;
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
+                using (transactionOperationContext.OpenReadTransaction())
                 {
-                    WriteRespone(new List<string>{ "Cannot open connection using the given connection string" }, context);
-                    return Task.CompletedTask;
+                    databaseRecord = Server.ServerStore.Cluster.ReadDatabase(transactionOperationContext, Database.Name);
                 }
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                using (var sqlImportDoc = context.ReadForDisk(RequestBodyStream(), null))
                 {
-                    writer.WriteStartObject();
+                    string ConnectionStringName;
+                    if (sqlImportDoc.TryGet(nameof(ConnectionStringName), out ConnectionStringName) == false)
+                        throw new InvalidOperationException($"'{nameof(ConnectionStringName)}' is a required field when asking for sql-migration");
 
-                    writer.WritePropertyName("Tables");
-                    writer.WriteStartArray();
+                    if (databaseRecord.SqlConnectionStrings.TryGetValue(ConnectionStringName, out var ConnectionString) == false)
+                        throw new InvalidOperationException($"{nameof(ConnectionString)} with the name '{ConnectionStringName}' not found");
 
-                    var first = true;
+                    string SqlDatabaseName;
+                    if (sqlImportDoc.TryGet(nameof(SqlDatabaseName), out SqlDatabaseName) == false)
+                        throw new InvalidOperationException($"'{nameof(SqlDatabaseName)}' is a required field when asking for sql-migration");
 
-                    var connection = ConnectionFactory.OpenConnection(connectionString);
+                    SqlConnection connection;
 
-                    foreach (var item in SqlDatabase.GetAllTablesNamesFromDatabase(connection))
+                    try
                     {
-                        if (first == false)
-                            writer.WriteComma();
-                        else
-                            first = false;
-
-                        writer.WriteString(item);
+                        connection = (SqlConnection)ConnectionFactory.OpenConnection(ConnectionString.ConnectionString, SqlDatabaseName);
+                    }
+                    catch (Exception e)
+                    {
+                        WriteResponse(context, Errors: "Cannot open connection using the given connection string. Error: " + e.Message);
+                        return Task.CompletedTask;
                     }
 
-                    writer.WriteEndArray();
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        writer.WriteStartObject();
 
-                    writer.WriteEndObject();
+                        var Tables = SqlDatabase.GetAllTablesNamesFromDatabase(connection);
+
+                        writer.WriteArray(nameof(Tables), Tables);
+                        
+                        writer.WriteEndObject();
+                    }
                 }
             }
             return Task.CompletedTask;
         }
 
-
-        [RavenAction("/databases/*/admin/sql-migration", "POST", AuthorizationStatus.DatabaseAdmin)]
+        [RavenAction("/databases/*/admin/sql-migration/import", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task ImportSql()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                var sqlImportDoc = context.ReadForDisk(RequestBodyStream(), null);
-
-                if (sqlImportDoc.TryGet("ConnectionString", out string connectionString) == false)
-                    throw new InvalidOperationException("'ConnectionString' is a required field when asking for sql-migration");
-
-                if (!ValidateConnection(connectionString))
+                DatabaseRecord databaseRecord;
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
+                using (transactionOperationContext.OpenReadTransaction())
                 {
-                    WriteRespone(new List<string> { "Cannot open connection using the given connection string" }, context);
-                    return;
+                    databaseRecord = Server.ServerStore.Cluster.ReadDatabase(transactionOperationContext, Database.Name);
                 }
 
-                if (sqlImportDoc.TryGet("Tables", out BlittableJsonReaderArray tablesFromUser) == false)
-                    throw new InvalidOperationException("'Tables' is a required field when asking for sql-migration");
-
-                var options = new RavenDocumentFactory.WriteOptions();
-
-                if (sqlImportDoc.TryGet("BinaryToAttachment", out bool binaryToAttachment))
-                    options.BinaryToAttachment = binaryToAttachment;
-
-                if (sqlImportDoc.TryGet("IncludeSchema", out bool includeSchema))
-                    options.IncludeSchema = includeSchema;
-
-                if (sqlImportDoc.TryGet("TrimStrings", out bool trimStrings))
-                    options.TrimStrings = trimStrings;
-
-                if (sqlImportDoc.TryGet("SkipUnsupportedTypes", out bool skipUnsopportedTypes))
-                    options.SkipUnsopportedTypes = skipUnsopportedTypes;
-
-                var factory = new RavenDocumentFactory(options);
-
-                var database = new SqlDatabase(connectionString, Database, factory, tablesFromUser);
-
-                database.Validate(out var errors);
-
-                if (database.IsValid())
+                using (var sqlImportDoc = context.ReadForDisk(RequestBodyStream(), null))
                 {
-                    using (var writer = new RavenWriter(context, database))
-                    {
-                        writer.OnTableWritten += OnTableWritten;
+                    string ConnectionStringName;
+                    if (sqlImportDoc.TryGet(nameof(ConnectionStringName), out ConnectionStringName) == false)
+                        throw new InvalidOperationException($"'{nameof(ConnectionStringName)}' is a required field when asking for sql-migration");
 
-                        try
+                    if (databaseRecord.SqlConnectionStrings.TryGetValue(ConnectionStringName, out var ConnectionString) == false)
+                        throw new InvalidOperationException($"{nameof(ConnectionString)} with the name '{ConnectionStringName}' not found");
+
+                    string SqlDatabaseName;
+                    if (sqlImportDoc.TryGet(nameof(SqlDatabaseName), out SqlDatabaseName) == false)
+                        throw new InvalidOperationException($"'{nameof(SqlDatabaseName)}' is a required field when asking for sql-migration");
+
+                    SqlConnection connection;
+                    
+                    try
+                    {
+                        connection = (SqlConnection)ConnectionFactory.OpenConnection(ConnectionString.ConnectionString, SqlDatabaseName);
+                    }
+                    catch (Exception e)
+                    {
+                        WriteResponse(context, Errors: "Cannot open connection using the given connection string. Error: " + e.Message);
+                        return;
+                    }
+
+                    BlittableJsonReaderArray Tables;
+                    if (sqlImportDoc.TryGet(nameof(Tables), out Tables) == false)
+                        throw new InvalidOperationException($"'{nameof(Tables)}' is a required field when asking for sql-migration");
+
+                    var sqlMigrationTables = (from BlittableJsonReaderObject table in Tables.Items select JsonDeserializationServer.SqlMigrationTable(table)).ToList();
+                    
+                    var options = new SqlMigrationDocumentFactory.FactoryOptions();
+
+                    bool BinaryToAttachment;
+                    if (sqlImportDoc.TryGet(nameof(BinaryToAttachment), out BinaryToAttachment))
+                        options.BinaryToAttachment = BinaryToAttachment;
+
+                    bool IncludeSchema;
+                    if (sqlImportDoc.TryGet(nameof(IncludeSchema), out IncludeSchema))
+                        options.IncludeSchema = IncludeSchema;
+
+                    bool TrimStrings;
+                    if (sqlImportDoc.TryGet(nameof(TrimStrings), out TrimStrings))
+                        options.TrimStrings = TrimStrings;
+
+                    bool SkipUnsupportedTypes;
+                    if (sqlImportDoc.TryGet(nameof(SkipUnsupportedTypes), out SkipUnsupportedTypes))
+                        options.SkipUnsupportedTypes = SkipUnsupportedTypes;
+
+                    int BatchSize;
+                    if (sqlImportDoc.TryGet(nameof(BatchSize), out BatchSize))
+                        options.BatchSize = BatchSize;
+
+                    var factory = new SqlMigrationDocumentFactory(options);
+
+                    var database = new SqlDatabase(connection, factory, sqlMigrationTables);
+
+                    database.Validate(out var errors);
+
+                    if (database.IsValid())
+                    {
+                        using (var writer = new SqlMigrationWriter(context, database))
                         {
-                            await writer.WriteDatabase();
-                        }
-                        catch (Exception e)
-                        {
-                            errors.Add(e.Message);
+                            try
+                            {
+                                await writer.WriteDatabase();
+                            }
+                            catch (Exception e)
+                            {
+                                errors.Add(e.Message);
+                            }
                         }
                     }
+
+                    WriteResponse(context, factory.ColumnsSkipped.ToArray(), errors.ToArray());
                 }
-
-                WriteRespone(errors, context);
             }
         }
 
-        private bool ValidateConnection(string connectionString)
-        {
-            SqlConnection connection;
-
-            try
-            {
-                connection = (SqlConnection) ConnectionFactory.OpenConnection(connectionString);
-            }
-            catch
-            {
-                return false;
-            }
-
-            connection.Dispose();
-            return true;
-        }
-
-        private void WriteRespone(List<string> errors, DocumentsOperationContext context)
+        private void WriteResponse(DocumentsOperationContext context, string[] ColumnsSkipped = null, params string[] Errors)
         {
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
 
-                writer.WritePropertyName("Errors");
-                writer.WriteStartArray();
-
-                var first = true;
-
-                foreach (var item in errors)
-                {
-                    if (!first)
-                        writer.WriteComma();
-                    else
-                        first = false;
-
-                    writer.WriteString(item);
-                }
-
-                writer.WriteEndArray();
+                writer.WriteArray(nameof(Errors), Errors);
+                writer.WriteArray(nameof(ColumnsSkipped), ColumnsSkipped);
+              
                 writer.WriteComma();
 
-                writer.WritePropertyName("Success");
-                writer.WriteBool(errors.Count == 0);
+                var Success = Errors.Length == 0;
+
+                writer.WritePropertyName(nameof(Success));
+                writer.WriteBool(Success);
 
                 writer.WriteEndObject();
             }
-        }
-
-        private void OnTableWritten(string tableName, double time)
-        {
         }
     }
 }

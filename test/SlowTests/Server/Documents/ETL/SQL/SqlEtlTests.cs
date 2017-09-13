@@ -32,7 +32,7 @@ namespace SlowTests.Server.Documents.ETL.SQL
 {
     public class SqlEtlTests : EtlTestBase
     {
-        private static readonly Lazy<string> _masterDatabaseConnection = new Lazy<string>(() =>
+        public static readonly Lazy<string> MasterDatabaseConnection = new Lazy<string>(() =>
         {
             var local = @"Data Source=localhost\sqlexpress;Integrated Security=SSPI;Connection Timeout=3";
             try
@@ -185,7 +185,7 @@ CREATE TABLE [dbo].[Orders]
 
             using (var con = new SqlConnection())
             {
-                con.ConnectionString = _masterDatabaseConnection.Value;
+                con.ConnectionString = MasterDatabaseConnection.Value;
                 con.Open();
 
                 foreach (var dbName in _dbNames)
@@ -205,7 +205,7 @@ DROP DATABASE [SqlReplication-{dbName}]";
         {
             using (var con = new SqlConnection())
             {
-                con.ConnectionString = _masterDatabaseConnection.Value;
+                con.ConnectionString = MasterDatabaseConnection.Value;
                 con.Open();
 
                 using (var dbCommand = con.CreateCommand())
@@ -989,7 +989,7 @@ loadToOrders(orderData);
 
         public static string GetConnectionString(DocumentStore store)
         {
-            return _masterDatabaseConnection.Value + $";Initial Catalog=SqlReplication-{store.Database};";
+            return MasterDatabaseConnection.Value + $";Initial Catalog=SqlReplication-{store.Database};";
         }
 
         private class Order
