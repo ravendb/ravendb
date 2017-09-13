@@ -123,16 +123,18 @@ class visualizer extends viewModelBase {
             new getIndexMapReduceTreeCommand(this.activeDatabase(), this.currentIndex(), documentsToFetch)
                 .execute()
                 .done((mapReduceTrees) => {
-                    documentsToFetch.forEach(docId => {
-                        if (!_.includes(this.documents.documentIds(), docId)) {
-                            this.documents.documentIds.push(docId);
-                            this.addDocument(docId);
-                        }
-                    });
+                    if (mapReduceTrees.length) {
+                        documentsToFetch.forEach(docId => {
+                            if (!_.includes(this.documents.documentIds(), docId)) {
+                                this.documents.documentIds.push(docId);
+                                this.addDocument(docId);
+                            }
+                        });
 
-                    this.addTrees(mapReduceTrees);
+                        this.addTrees(mapReduceTrees);
 
-                    this.globalGraph.zoomToDocument(documentsToFetch[0]);
+                        this.globalGraph.zoomToDocument(documentsToFetch[0]);
+                    }
                 })
                 .always(() => this.spinners.addDocument(false));
         } else {
