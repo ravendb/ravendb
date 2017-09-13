@@ -16,6 +16,9 @@
     <Configurations>Debug;Release;Validate</Configurations>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="Binary\BitVector.cs" />
+  </ItemGroup>
+  <ItemGroup>
     <Compile Include="..\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
   </ItemGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'MemGuard'">

@@ -9,19 +9,6 @@ namespace FastTests.Sparrow
 {
     public unsafe class PtrBitVectorTests : NoDisposalNeeded
     {
-        [Fact(Skip = "We will skip compatibility for now, but we want this to happen before RTM")]
-        public void Compatibility()
-        {
-            var original = BitVector.Of(0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00);
-            fixed (ulong* storage = original.Bits)
-            {
-                var ptr = new PtrBitVector((byte*)storage, 64);
-                for (int i = 0; i < 64; i++)
-                    Assert.Equal(original[i], ptr[i]);
-            };
-        }
-
-
         [Fact]
         public void SetIndex()
         {
