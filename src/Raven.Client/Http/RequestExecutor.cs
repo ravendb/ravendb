@@ -374,7 +374,19 @@ namespace Raven.Client.Http
             if (time - _lastReturnedResponse <= TimeSpan.FromMinutes(5))
                 return;
 
-            var (_, serverNode) = _nodeSelector.GetPreferredNode();
+            ServerNode serverNode;
+
+            try
+            {
+                var preferredNode = _nodeSelector.GetPreferredNode();
+                serverNode = preferredNode.Node;
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info("Couldn't get preferred node Topology from _updateTopologyTimer task", e);
+                return;
+            }
             GC.KeepAlive(Task.Run(async () =>
             {
                 try

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using Raven.Client.Exceptions;
 
 namespace Raven.Client.Http
 {
@@ -64,10 +65,15 @@ namespace Raven.Client.Http
         public (int Index, ServerNode Node) GetPreferredNode()
         {
             var state = _state;
-            for (int i = 0; i < state.Failures.Length; i++)
+            var stateFailures = state.Failures;
+            var serverNodes = state.Nodes;
+            var len = Math.Min(serverNodes.Count, stateFailures.Length);
+            for (int i = 0; i < len; i++)
             {
-                if (state.Failures[i] == 0)
-                    return (i, state.Nodes[i]);
+                if (stateFailures[i] == 0)
+                {
+                    return (i, serverNodes[i]);
+                }
             }
 
             return UnlikelyEveryoneFaultedChoice(state);
@@ -77,6 +83,9 @@ namespace Raven.Client.Http
         {
             // if there are all marked as failed, we'll chose the first
             // one so the user will get an error (or recover :-) );
+            if(state.Nodes.Count == 0)
+                throw new AllTopologyNodesDownException("There are no nodes in the topology at all");
+
             return (0, state.Nodes[0]);
         }
 
