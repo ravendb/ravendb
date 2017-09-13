@@ -11,7 +11,7 @@ class collection {
     documentCount: KnockoutObservable<number> = ko.observable(0);
     name: string;
     sizeClass: KnockoutComputed<string>;
-    countPrefix: KnockoutComputed<number>;
+    countPrefix: KnockoutComputed<string>;
     hasBounceClass = ko.observable<boolean>(false);
 
     private db: database;
