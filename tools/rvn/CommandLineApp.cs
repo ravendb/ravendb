@@ -56,7 +56,7 @@ namespace rvn
 
         private static void ConfigureLogsCommand()
         {
-            _app.Command("log-stream", cmd =>
+            _app.Command("logstream", cmd =>
             {
                 cmd.ExtendedHelpText = cmd.Description = "Tail server logs.";
                 cmd.HelpOption(HelpOptionString);
