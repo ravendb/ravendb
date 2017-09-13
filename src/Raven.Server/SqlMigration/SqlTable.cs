@@ -1,6 +1,9 @@
 ﻿using System.Collections.Generic;
 using System.Data;
 using Raven.Server.Config;
+using Raven.Server.Config.Categories;
+using Raven.Server.Documents;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.SqlMigration
 {
@@ -8,18 +11,17 @@ namespace Raven.Server.SqlMigration
     {
         public readonly string Name;
         public readonly List<string> PrimaryKeys;
-        public Dictionary<string, string> ForeignKeys { get; private set; }
+        public Dictionary<string, string> ForeignKeys;
         public readonly string InitialQuery;
         public readonly List<SqlEmbeddedTable> EmbeddedTables;
-
-        protected readonly string PatchScript;
-        protected readonly IDbConnection Connection;
-        protected readonly RavenConfiguration RavenConfiguration;
-        protected JsPatch Patcher;
-        protected SqlReader Reader;
         public bool IsEmbedded;
 
-        public SqlTable(string tableName, string query, string patch, IDbConnection connection, RavenConfiguration config)
+        protected JsPatch Patcher;
+        protected readonly string PatchScript;
+        protected readonly IDbConnection Connection;
+        protected SqlReader Reader;
+
+        public SqlTable(string tableName, string query, string patch, IDbConnection connection)
         {
             Name = tableName;
             PrimaryKeys = new List<string>();
@@ -29,14 +31,13 @@ namespace Raven.Server.SqlMigration
 
             PatchScript = string.IsNullOrEmpty(patch) ? null : patch;
             Connection = connection;
-            RavenConfiguration = config;
 
             IsEmbedded = false;
         }
 
-        public JsPatch GetJsPatcher()
+        public JsPatch GetJsPatch()
         {
-            return Patcher ?? (Patcher = new JsPatch(PatchScript, RavenConfiguration));
+            return Patcher ?? (Patcher = new JsPatch(PatchScript));
         }
 
         public SqlReader GetReader()

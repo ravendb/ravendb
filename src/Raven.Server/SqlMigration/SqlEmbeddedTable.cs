@@ -1,6 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Data;
-using Raven.Server.Config;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.SqlMigration
 {
@@ -8,11 +9,11 @@ namespace Raven.Server.SqlMigration
     {
         private List<string> _parentColumns;
         private readonly string _parentTableName;
-        public readonly string Property;
+        public readonly string PropertyName;
 
-        public SqlEmbeddedTable(string tableName, string query, string patch, IDbConnection connection, RavenConfiguration config, string parentTable, string property) : base(tableName, query, patch, connection, config)
+        public SqlEmbeddedTable(string tableName, string query, string patch, string parentTable, string property, IDbConnection connection) : base(tableName, query, patch, connection)
         {
-            Property = string.IsNullOrWhiteSpace(property) ? tableName : property;
+            PropertyName = string.IsNullOrWhiteSpace(property) ? tableName : property;
             _parentTableName = parentTable;
 
             IsEmbedded = true;
@@ -40,6 +41,7 @@ namespace Raven.Server.SqlMigration
 
             var query = InitialQuery + SqlQueries.OrderByColumns(GetColumnsReferencingParentTable());
             Reader = new SqlReader(Connection, query, true);
+            Reader.ExecuteReader();
             return Reader;
         }
 
@@ -54,7 +56,13 @@ namespace Raven.Server.SqlMigration
             }
 
             Reader = new SqlReader(Connection, query, true);
+            Reader.ExecuteReader();
             return Reader;
+        }
+
+        public static explicit operator SqlEmbeddedTable(List<string> v)
+        {
+            throw new NotImplementedException();
         }
     }
 }
