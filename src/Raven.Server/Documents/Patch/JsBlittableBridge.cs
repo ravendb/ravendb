@@ -177,7 +177,7 @@ namespace Raven.Server.Documents.Patch
             else if (obj is FunctionInstance)
                 _writer.WriteValueNull();
             else
-                WriteObjectType(obj);
+                WriteValueInternal(obj, obj);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
