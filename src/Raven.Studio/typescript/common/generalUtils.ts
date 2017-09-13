@@ -162,14 +162,14 @@ class genUtils {
         return "mega";
     }
 
-    static getCountPrefix(count: number): number {
+    static getCountPrefix(count: number): string {
         if (count < 100000) {
-            return count;
+            return count.toLocaleString();
         }
         if (count < 1000 * 1000) {
-            return _.floor(count / 1000, 2);
+            return _.floor(count / 1000, 2).toLocaleString();
         }
-        return _.floor(count / 1000000, 2);
+        return _.floor(count / 1000000, 2).toLocaleString();
     }
 
     /***  String Methods ***/
