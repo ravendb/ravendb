@@ -61,7 +61,7 @@
     <PackageReference Include="DasMulli.Win32.ServiceUtils" Version="1.0.1" />
     <PackageReference Include="Esprima" Version="1.0.0-beta-002-ravendb" />
     <PackageReference Include="JetBrains.Annotations" Version="11.0.0" />
-    <PackageReference Include="Jint" Version="3.0.4-ravendb" />
+    <PackageReference Include="Jint" Version="3.0.5-ravendb" />
     <PackageReference Include="Lucene.Net" Version="3.0.12" />
     <PackageReference Include="Lucene.Net.Contrib.Spatial.NTS" Version="3.0.12" />
     <PackageReference Include="Microsoft.AspNetCore.Server.Kestrel" Version="2.0.0" />
