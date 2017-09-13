@@ -172,12 +172,18 @@ namespace Raven.Server.Documents.Patch
                     WriteArray(jsArray);
                 }
                 else
-                    WriteValueInternal(target, obj);
+                    WriteObjectType(target);
             }
             else if (obj is FunctionInstance)
                 _writer.WriteValueNull();
             else
-                WriteValueInternal(obj, obj);
+                WriteObjectType(obj);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void WriteObjectType(object target)
+        {
+            _writer.WriteValue('[' + target.GetType().Name + ']');
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
