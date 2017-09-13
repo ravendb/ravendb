@@ -75,6 +75,7 @@ class query extends viewModelBase {
 
     hasEditableIndex: KnockoutComputed<boolean>;
     queryCompleter: queryCompleter;
+    queryHasFocus = ko.observable<boolean>();
 
     editIndexUrl: KnockoutComputed<string>;
     indexPerformanceUrl: KnockoutComputed<string>;
@@ -316,6 +317,8 @@ class query extends viewModelBase {
                 }
             }
         });
+        
+        this.queryHasFocus(true);
     }
 
     private loadRecentQueries() {

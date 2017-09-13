@@ -144,10 +144,12 @@ namespace SlowTests.Core.AdminConsole
                 }
 
                 ExecuteScript(database, @"
-                                return {
-                                    server: server,
-                                    database: database
-                                };
+                                return server;
+                             "
+                );
+
+                ExecuteScript(database, @"
+                                return database;
                              "
                 );
             }

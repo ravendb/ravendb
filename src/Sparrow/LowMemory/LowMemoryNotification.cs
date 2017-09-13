@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Threading;
 using Sparrow.Collections;
 using Sparrow.Logging;
-using Sparrow.Threading;
 using Sparrow.Utils;
 
 namespace Sparrow.LowMemory
@@ -20,15 +19,39 @@ namespace Sparrow.LowMemory
         private readonly Logger _logger;
         private readonly ConcurrentSet<WeakReference<ILowMemoryHandler>> _lowMemoryHandlers = new ConcurrentSet<WeakReference<ILowMemoryHandler>>();
 
+        public enum LowMemReason
+        {
+            None = 0,
+            LowMemOnTimeoutChk,
+            BackToNormal,
+            BackToNormalSimulation,
+            LowMemStateSimulation,
+            BackToNormalHandler,
+            LowMemHandler
+        }
+
+        public class LowMemEventDetails
+        {
+            public LowMemReason Reason;
+            public long FreeMem;
+            public DateTime Time;
+            public double LowMemRatio { get; set; }
+            public long PhysicalMem { get; set; }
+            public long TotalUnmanaged { get; set; }
+            public long LowMemThreshold { get; set; }
+        }
+
+        public LowMemEventDetails[] LowMemEventDetailsStack = new LowMemEventDetails[256];
+        private int _lowMemEventDetailsIndex;
+
         private void RunLowMemoryHandlers(bool isLowMemory)
         {
             var inactiveHandlers = new List<WeakReference<ILowMemoryHandler>>();
 
             foreach (var lowMemoryHandler in _lowMemoryHandlers)
             {
-                ILowMemoryHandler handler;
-                if (lowMemoryHandler.TryGetTarget(out handler))
-                {
+                if (lowMemoryHandler.TryGetTarget(out var handler))
+                {                    
                     try
                     {
                         if (isLowMemory)
@@ -55,8 +78,7 @@ namespace Sparrow.LowMemory
 
             foreach (var lowMemoryHandler in _lowMemoryHandlers)
             {
-                ILowMemoryHandler handler;
-                if (lowMemoryHandler.TryGetTarget(out handler) == false)
+                if (lowMemoryHandler.TryGetTarget(out _) == false)
                     inactiveHandlers.Add(lowMemoryHandler);
             }
 
@@ -108,9 +130,10 @@ namespace Sparrow.LowMemory
             var memoryAvailableHandles = new WaitHandle[] { _simulatedLowMemory, _shutdownRequested };
             var paranoidModeHandles = new WaitHandle[] { _simulatedLowMemory, _shutdownRequested, _warnAllocation };
             var timeout = 5 * 1000;
-            long totalUnmanagedAllocations = 0;
             while (true)
             {
+                long totalUnmanagedAllocations = 0;
+
                 var handles = MemoryInformation.GetMemoryInfo().AvailableMemory.GetValue(SizeUnit.Bytes) < _lowMemoryThreshold * 2 ?
                     paranoidModeHandles :
                     memoryAvailableHandles;
@@ -136,8 +159,13 @@ namespace Sparrow.LowMemory
                         if (availableMem < _lowMemoryThreshold && 
                             totalUnmanagedAllocations > memInfo.TotalPhysicalMemory.GetValue(SizeUnit.Bytes) * _physicalRatioForLowMemDetection)
                         {
-                            if (LowMemoryState == false && _logger.IsInfoEnabled)
-                                _logger.Info("Low memory detected, will try to reduce memory usage...");
+                            if (LowMemoryState == false)
+                            {
+                                if (_logger.IsInfoEnabled)
+                                    _logger.Info("Low memory detected, will try to reduce memory usage...");
+                                AddLowMemEvent(LowMemReason.LowMemOnTimeoutChk, availableMem, totalUnmanagedAllocations,
+                                    memInfo.TotalPhysicalMemory.GetValue(SizeUnit.Bytes));
+                            }
                             LowMemoryState = true;
                             clearInactiveHandlersCounter = 0;
                             RunLowMemoryHandlers(true);
@@ -145,8 +173,12 @@ namespace Sparrow.LowMemory
                         }
                         else
                         {
-                            if (LowMemoryState && _logger.IsInfoEnabled)
-                                _logger.Info("Back to normal memory usage detected");
+                            if (LowMemoryState)
+                            {
+                                if (_logger.IsInfoEnabled)
+                                    _logger.Info("Back to normal memory usage detected");
+                                AddLowMemEvent(LowMemReason.BackToNormal, availableMem, totalUnmanagedAllocations, memInfo.TotalPhysicalMemory.GetValue(SizeUnit.Bytes));
+                            }
                             LowMemoryState = false;
                             RunLowMemoryHandlers(false);
                             timeout = availableMem < _lowMemoryThreshold * 2 ? 1000 : 5000;
@@ -155,6 +187,10 @@ namespace Sparrow.LowMemory
                     case 0:
                         _simulatedLowMemory.Reset();
                         LowMemoryState = !LowMemoryState;
+                        var memInfoForLog = MemoryInformation.GetMemoryInfo();
+                        var availableMemForLog = memInfoForLog.AvailableMemory.GetValue(SizeUnit.Bytes);
+                        AddLowMemEvent(LowMemoryState ? LowMemReason.LowMemStateSimulation : LowMemReason.BackToNormalSimulation, availableMemForLog,
+                            totalUnmanagedAllocations, memInfoForLog.TotalPhysicalMemory.GetValue(SizeUnit.Bytes));
                         if (_logger.IsInfoEnabled)
                             _logger.Info("Simulating : " + (LowMemoryState ? "Low memory event" : "Back to normal memory usage"));
                         RunLowMemoryHandlers(LowMemoryState);
@@ -168,6 +204,24 @@ namespace Sparrow.LowMemory
                         return;
                 }
             }
+        }
+
+        private void AddLowMemEvent(LowMemReason reason, long availableMem, long totalUnmanaged, long physicalMem)
+        {
+            var lowMemEventDetails = new LowMemEventDetails
+            {
+                Reason = reason,
+                FreeMem = availableMem,
+                TotalUnmanaged = totalUnmanaged,
+                PhysicalMem = physicalMem,
+                LowMemRatio = _physicalRatioForLowMemDetection,
+                LowMemThreshold = _lowMemoryThreshold,
+                Time = DateTime.UtcNow
+            };
+
+            LowMemEventDetailsStack[_lowMemEventDetailsIndex++] = lowMemEventDetails;
+            if (_lowMemEventDetailsIndex == LowMemEventDetailsStack.Length)
+                _lowMemEventDetailsIndex = 0;
         }
 
         public static void NotifyAllocationPending()

@@ -349,6 +349,7 @@ namespace Raven.Server.Documents
                                 result = ExecutePendingOperationsInTransaction(
                                     currentPendingOps, context,
                                     previous.InnerTransaction.LowLevelTransaction.AsyncCommit, ref transactionMeter);
+                                UpdateGlobalReplicationInfoBeforeCommit(context);
                             }
                             finally
                             {
