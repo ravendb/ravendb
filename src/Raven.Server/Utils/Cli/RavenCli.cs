@@ -696,7 +696,7 @@ namespace Raven.Server.Utils.Cli
                 new[] {"addServerCert <path> [password]", "Register the certificate as a trusted certificate of a cluster member"},
                 new[] {"timer <on|off|fire>", "enable or disable candidate selection timer (Rachis), or fire timeout immediately"},
                 new[] {"experimental <on|off>", "Set if to allow experimental cli commands. WARNING: Use with care!"},
-                new[] {"sript <server|database> [database]", "Execute script on server or specified database. WARNING: Use with care!"},
+                new[] {"script <server|database> [database]", "Execute script on server or specified database. WARNING: Use with care!"},
                 new[] {"logout", "Logout (applicable only on piped connection)"},
                 new[] {"resetServer", "Restarts the server (shutdown and re-run)"},
                 new[] {"shutdown", "Shutdown the server"},
