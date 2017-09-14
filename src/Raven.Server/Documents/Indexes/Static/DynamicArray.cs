@@ -262,9 +262,19 @@ namespace Raven.Server.Documents.Indexes.Static
             return new DynamicArray(Enumerable.OrderBy(this, comparable));
         }
 
+        public IEnumerable<dynamic> OrderBy(Func<IGrouping<dynamic, dynamic>, dynamic> comparable)
+        {
+            return new DynamicArray(_inner.Cast<DynamicGrouping>().OrderBy(comparable));
+        }
+
         public IEnumerable<dynamic> OrderByDescending(Func<dynamic, dynamic> comparable)
         {
             return new DynamicArray(Enumerable.OrderByDescending(this, comparable));
+        }
+
+        public IEnumerable<dynamic> OrderByDescending(Func<IGrouping<dynamic, dynamic>, dynamic> comparable)
+        {
+            return new DynamicArray(_inner.Cast<DynamicGrouping>().OrderByDescending(comparable));
         }
 
         public dynamic GroupBy(Func<dynamic, dynamic> keySelector)
