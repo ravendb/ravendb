@@ -1597,13 +1597,13 @@ namespace Voron.Data.Fixed
 
             var count = GetRemainingNumberOfEntriesFor(page);
 
-            if (_cursor.TryPop(out page) == false)
-                return count;
+            while (_cursor.TryPop(out page))
+            {
+                System.Diagnostics.Debug.Assert(page.IsBranch);
 
-            System.Diagnostics.Debug.Assert(page.IsBranch);
-
-            page.LastSearchPosition++;
-            count += GetRemainingNumberOfEntriesFor(page);
+                page.LastSearchPosition++;
+                count += GetRemainingNumberOfEntriesFor(page);
+            }
 
             return count;
         }
@@ -1616,7 +1616,7 @@ namespace Voron.Data.Fixed
             if (page.IsBranch)
             {
                 long count = 0;
-                while (page.LastSearchPosition <= page.NumberOfEntries)
+                while (page.LastSearchPosition < page.NumberOfEntries)
                 {
                     var entry = page.GetEntry(page.LastSearchPosition);
                     var childPage = GetReadOnlyPage(entry->PageNumber);
