@@ -206,7 +206,7 @@ namespace Raven.Server.Documents.Indexes
             public const int PtrSize = 32 * 1024;
             public const int MaxCapacity = 25000;
 
-            private const ulong M = PtrSize * BitVector.BitsPerByte;
+            private const ulong M = PtrSize * PtrBitVector.BitsPerByte;
 
             public BloomFilter32(int key, Tree tree, bool writeable, ByteStringContext allocator)
                 : base(key, tree, writeable, M, PtrSize, MaxCapacity, allocator)
@@ -219,7 +219,7 @@ namespace Raven.Server.Documents.Indexes
             public const int PtrSize = 16 * 1024 * 1024;
             public const int MaxCapacity = 10000000;
 
-            private const ulong M = PtrSize * BitVector.BitsPerByte;
+            private const ulong M = PtrSize * PtrBitVector.BitsPerByte;
 
             public BloomFilter64(int key, Tree tree, bool writeable, ByteStringContext allocator)
                 : base(key, tree, writeable, M, PtrSize, MaxCapacity, allocator)
@@ -286,8 +286,8 @@ namespace Raven.Server.Documents.Indexes
                     // Dillinger and Manolios double hashing
                     var finalHash = (primaryHash + (i * secondaryHash)) % _m;
 
-                    var ptrPosition = finalHash / BitVector.BitsPerByte;
-                    var bitPosition = (int)(finalHash % BitVector.BitsPerByte);
+                    var ptrPosition = finalHash / PtrBitVector.BitsPerByte;
+                    var bitPosition = (int)(finalHash % PtrBitVector.BitsPerByte);
 
                     var partition = GetPartition(ptrPosition, out ulong partitionPtrPosition);
                     var bitValue = GetBit(partition, partitionPtrPosition, bitPosition);
@@ -319,8 +319,8 @@ namespace Raven.Server.Documents.Indexes
                     // Dillinger and Manolios double hashing
                     var finalHash = (primaryHash + (i * secondaryHash)) % _m;
 
-                    var ptrPosition = finalHash / BitVector.BitsPerByte;
-                    var bitPosition = (int)(finalHash % BitVector.BitsPerByte);
+                    var ptrPosition = finalHash / PtrBitVector.BitsPerByte;
+                    var bitPosition = (int)(finalHash % PtrBitVector.BitsPerByte);
 
                     var partition = GetPartition(ptrPosition, out ulong partitionPtrPosition);
                     var bitValue = GetBit(partition, partitionPtrPosition, bitPosition);
