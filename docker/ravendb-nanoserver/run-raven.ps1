@@ -82,4 +82,6 @@ if ($service -eq $null) {
 Invoke-Expression -Command "$command $commandArgs"
 CheckLastExitCode
 
+Start-Sleep -Seconds 5
+
 .\rvn.exe logstream

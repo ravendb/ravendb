@@ -77,5 +77,5 @@ fi
 echo "Starting RavenDB server: ${COMMAND/"$CERT_PASSWORD"/"*******"}"
 
 eval $COMMAND &
-
+sleep 5
 ./rvn logstream
