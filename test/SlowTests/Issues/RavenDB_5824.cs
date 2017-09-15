@@ -29,9 +29,9 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                var progress = store.Admin.Send(new GetIndexStalenessOperation(new Index().IndexName));
-                Assert.False(progress.IsStale);
-                Assert.Empty(progress.StalenessReasons);
+                var staleness = store.Admin.Send(new GetIndexStalenessOperation(new Index().IndexName));
+                Assert.False(staleness.IsStale);
+                Assert.Empty(staleness.StalenessReasons);
 
                 store.Admin.Send(new StopIndexingOperation());
 
@@ -47,12 +47,22 @@ namespace SlowTests.Issues
                     product.PricePerUnit = 10;
                     supplier.Fax = "1234";
 
+                    session.Delete("orders/2");
+
                     session.SaveChanges();
                 }
 
-                progress = store.Admin.Send(new GetIndexStalenessOperation(new Index().IndexName));
-                Assert.True(progress.IsStale);
-                Assert.Equal(4, progress.StalenessReasons.Count);
+                staleness = store.Admin.Send(new GetIndexStalenessOperation(new Index().IndexName));
+                Assert.True(staleness.IsStale);
+                Assert.Equal(5, staleness.StalenessReasons.Count);
+
+                store.Admin.Send(new StartIndexingOperation());
+
+                WaitForIndexing(store);
+
+                staleness = store.Admin.Send(new GetIndexStalenessOperation(new Index().IndexName));
+                Assert.False(staleness.IsStale);
+                Assert.Empty(staleness.StalenessReasons);
             }
         }
 

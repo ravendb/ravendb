@@ -653,6 +653,28 @@ namespace Raven.Server.Documents
             return doc;
         }
 
+        public Document GetByEtag(DocumentsOperationContext context, long etag)
+        {
+            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
+            var index = DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice];
+
+            if (table.Read(context.Allocator, index, etag, out var tvr) == false)
+                return null;
+
+            return TableValueToDocument(context, ref tvr);
+        }
+
+        public DocumentTombstone GetTombstoneByEtag(DocumentsOperationContext context, long etag)
+        {
+            var table = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
+            var index = TombstonesSchema.FixedSizeIndexes[AllTombstonesEtagsSlice];
+
+            if (table.Read(context.Allocator, index, etag, out var tvr) == false)
+                return null;
+
+            return TableValueToTombstone(context, ref tvr);
+        }
+
         public IEnumerable<LazyStringValue> GetAllIds(DocumentsOperationContext context)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
