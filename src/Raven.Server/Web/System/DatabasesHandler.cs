@@ -222,7 +222,7 @@ namespace Raven.Server.Web.System
         {
             var key = GetStringQueryString("key");
             // ReSharper disable once PossibleInvalidOperationException
-            var index = GetLongQueryString("index",true).Value;
+            var index = GetLongQueryString("index", true).Value;
 
             ServerStore.EnsureNotPassive();
 
@@ -363,10 +363,9 @@ namespace Raven.Server.Web.System
 
             var indexingStatus = db?.IndexStore.Status ?? IndexRunningStatus.Running;
             // Looking for disabled indexing flag inside the database settings for offline database status
-            if (dbRecord.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Indexing.Disabled), out var val) && val == "true")
-            {
+            if (dbRecord.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Indexing.Disabled), out var val) && bool.TryParse(val, out var indexingDisabled) && indexingDisabled)
                 indexingStatus = IndexRunningStatus.Disabled;
-            }
+
             var disabled = dbRecord.Disabled;
             var topology = dbRecord.Topology;
             var clusterTopology = ServerStore.GetClusterTopology(context);
