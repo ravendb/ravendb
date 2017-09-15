@@ -130,6 +130,25 @@ namespace Voron.Data.Tables
             return true;
         }
 
+        public bool Read(ByteStringContext context, TableSchema.FixedSizeSchemaIndexDef index, long value, out TableValueReader reader)
+        {
+            var fst = GetFixedSizeTree(index);
+
+            using (fst.Read(value, out var read))
+            {
+                if (read.HasValue == false)
+                {
+                    reader = default(TableValueReader);
+                    return false;
+                }
+
+                var storageId = read.CreateReader().ReadLittleEndianInt64();
+
+                ReadById(storageId, out reader);
+                return true;
+            }
+        }
+
         public bool VerifyKeyExists(Slice key)
         {
             var pkTree = GetTree(_schema.Key);
