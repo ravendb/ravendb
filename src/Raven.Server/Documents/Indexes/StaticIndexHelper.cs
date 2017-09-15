@@ -74,7 +74,7 @@ namespace Raven.Server.Documents.Indexes
 
                             var lastDoc = databaseContext.DocumentDatabase.DocumentsStorage.GetByEtag(databaseContext, lastDocEtag);
 
-                            stalenessReasons.Add($"There are still some document references to process from collection '{referencedCollection}'. The last document etag in that collection is '{lastDocEtag}' ({Constants.Documents.Metadata.Id}: '{lastDoc.Id}', {Constants.Documents.Metadata.LastModified}: '{lastDoc.LastModified}'), but last processed document etag for that collection is '{lastProcessedReferenceEtag}'.");
+                            stalenessReasons.Add($"There are still some document references to process from collection '{referencedCollection.Name}'. The last document etag in that collection is '{lastDocEtag}' ({Constants.Documents.Metadata.Id}: '{lastDoc.Id}', {Constants.Documents.Metadata.LastModified}: '{lastDoc.LastModified}'), but last processed document etag for that collection is '{lastProcessedReferenceEtag}'.");
                         }
 
                         var lastTombstoneEtag = databaseContext.DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(databaseContext, referencedCollection.Name);
@@ -87,7 +87,7 @@ namespace Raven.Server.Documents.Indexes
 
                             var lastTombstone = databaseContext.DocumentDatabase.DocumentsStorage.GetTombstoneByEtag(databaseContext, lastTombstoneEtag);
 
-                            stalenessReasons.Add($"There are still some tombstone references to process from collection '{referencedCollection}'. The last tombstone etag in that collection is '{lastTombstoneEtag}' ({Constants.Documents.Metadata.Id}: '{lastTombstone.LowerId}', {Constants.Documents.Metadata.LastModified}: '{lastTombstone.LastModified}'), but last processed tombstone etag for that collection is '{lastProcessedTombstoneEtag}'.");
+                            stalenessReasons.Add($"There are still some tombstone references to process from collection '{referencedCollection.Name}'. The last tombstone etag in that collection is '{lastTombstoneEtag}' ({Constants.Documents.Metadata.Id}: '{lastTombstone.LowerId}', {Constants.Documents.Metadata.LastModified}: '{lastTombstone.LastModified}'), but last processed tombstone etag for that collection is '{lastProcessedTombstoneEtag}'.");
                         }
                     }
                     else
@@ -100,7 +100,7 @@ namespace Raven.Server.Documents.Indexes
 
                             var lastDoc = databaseContext.DocumentDatabase.DocumentsStorage.GetByEtag(databaseContext, lastDocEtag);
 
-                            stalenessReasons.Add($"There are still some document references to process from collection '{referencedCollection}'. The last document etag in that collection is '{lastDocEtag}' ({Constants.Documents.Metadata.Id}: '{lastDoc.Id}', {Constants.Documents.Metadata.LastModified}: '{lastDoc.LastModified}') with cutoff set to '{cutoff.Value}', but last processed document etag for that collection is '{lastProcessedReferenceEtag}'.");
+                            stalenessReasons.Add($"There are still some document references to process from collection '{referencedCollection.Name}'. The last document etag in that collection is '{lastDocEtag}' ({Constants.Documents.Metadata.Id}: '{lastDoc.Id}', {Constants.Documents.Metadata.LastModified}: '{lastDoc.LastModified}') with cutoff set to '{cutoff.Value}', but last processed document etag for that collection is '{lastProcessedReferenceEtag}'.");
                         }
 
                         var numberOfTombstones = databaseContext.DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesWithDocumentEtagLowerThan(databaseContext, referencedCollection.Name, cutoff.Value);
@@ -109,7 +109,7 @@ namespace Raven.Server.Documents.Indexes
                             if (stalenessReasons == null)
                                 return true;
 
-                            stalenessReasons.Add($"There are still '{numberOfTombstones}' tombstone references to process from collection '{referencedCollection}' with document etag lower than '{cutoff.Value}'.");
+                            stalenessReasons.Add($"There are still '{numberOfTombstones}' tombstone references to process from collection '{referencedCollection.Name}' with document etag lower than '{cutoff.Value}'.");
                         }
                     }
                 }
