@@ -608,7 +608,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public virtual bool IsStale(DocumentsOperationContext databaseContext, long? cutoff = null)
+        public virtual bool IsStale(DocumentsOperationContext databaseContext, long? cutoff = null, List<string> stalenessReasons = null)
         {
             Debug.Assert(databaseContext.Transaction != null);
 
@@ -621,7 +621,7 @@ namespace Raven.Server.Documents.Indexes
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
             using (indexContext.OpenReadTransaction())
             {
-                return IsStale(databaseContext, indexContext, cutoff);
+                return IsStale(databaseContext, indexContext, cutoff, stalenessReasons);
             }
         }
 
@@ -1470,7 +1470,7 @@ namespace Raven.Server.Documents.Indexes
                     Type = Type
                 };
 
-                progress.IsStale = IsStale(documentsContext, context, stalenessReasons: progress.StalenessReasons);
+                progress.IsStale = IsStale(documentsContext, context);
 
                 var stats = _indexStorage.ReadStats(tx);
 

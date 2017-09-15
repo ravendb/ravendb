@@ -4,11 +4,6 @@ namespace Raven.Client.Documents.Indexes
 {
     public class IndexProgress
     {
-        public IndexProgress()
-        {
-            StalenessReasons = new List<string>();
-        }
-
         public long Etag { get; set; }
 
         public string Name { get; set; }
@@ -18,8 +13,6 @@ namespace Raven.Client.Documents.Indexes
         public Dictionary<string, CollectionStats> Collections { get; set; }
 
         public bool IsStale { get; set; }
-
-        public List<string> StalenessReasons { get; set; }
 
         public class CollectionStats
         {
