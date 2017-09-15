@@ -712,6 +712,9 @@ namespace Raven.Server.Json
             writer.WriteBool(progress.IsStale);
             writer.WriteComma();
 
+            writer.WriteArray(nameof(progress.StalenessReasons), progress.StalenessReasons);
+            writer.WriteComma();
+
             writer.WritePropertyName(nameof(progress.Collections));
             if (progress.Collections != null)
             {
