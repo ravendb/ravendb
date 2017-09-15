@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using FastTests;
@@ -28,7 +29,7 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                var progress = store.Admin.Send(new GetIndexProgressOperation(new Index().IndexName));
+                var progress = store.Admin.Send(new GetIndexStalenessOperation(new Index().IndexName));
                 Assert.False(progress.IsStale);
                 Assert.Empty(progress.StalenessReasons);
 
@@ -49,7 +50,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                progress = store.Admin.Send(new GetIndexProgressOperation(new Index().IndexName));
+                progress = store.Admin.Send(new GetIndexStalenessOperation(new Index().IndexName));
                 Assert.True(progress.IsStale);
                 Assert.Equal(4, progress.StalenessReasons.Count);
             }
@@ -82,26 +83,26 @@ namespace SlowTests.Issues
             }
         }
 
-        private class GetIndexProgressOperation : IAdminOperation<IndexProgress>
+        private class GetIndexStalenessOperation : IAdminOperation<IndexStaleness>
         {
             private readonly string _indexName;
 
-            public GetIndexProgressOperation([NotNull] string indexName)
+            public GetIndexStalenessOperation([NotNull] string indexName)
             {
                 _indexName = indexName ?? throw new ArgumentNullException(nameof(indexName));
             }
 
-            public RavenCommand<IndexProgress> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+            public RavenCommand<IndexStaleness> GetCommand(DocumentConventions conventions, JsonOperationContext context)
             {
-                return new GetIndexProgressCommand(conventions, _indexName);
+                return new GetIndexStalenessCommand(conventions, _indexName);
             }
 
-            private class GetIndexProgressCommand : RavenCommand<IndexProgress>
+            private class GetIndexStalenessCommand : RavenCommand<IndexStaleness>
             {
                 private readonly DocumentConventions _conventions;
                 private readonly string _indexName;
 
-                public GetIndexProgressCommand(DocumentConventions conventions, string indexName)
+                public GetIndexStalenessCommand(DocumentConventions conventions, string indexName)
                 {
                     _conventions = conventions;
                     _indexName = indexName;
@@ -111,7 +112,7 @@ namespace SlowTests.Issues
 
                 public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
                 {
-                    url = $"{node.Url}/databases/{node.Database}/indexes/progress?name={_indexName}";
+                    url = $"{node.Url}/databases/{node.Database}/indexes/staleness?name={_indexName}";
 
                     return new HttpRequestMessage
                     {
@@ -121,9 +122,16 @@ namespace SlowTests.Issues
 
                 public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
                 {
-                    Result = (IndexProgress)_conventions.DeserializeEntityFromBlittable(typeof(IndexProgress), response);
+                    Result = (IndexStaleness)_conventions.DeserializeEntityFromBlittable(typeof(IndexStaleness), response);
                 }
             }
+        }
+
+        private class IndexStaleness
+        {
+            public bool IsStale { get; set; }
+
+            public List<string> StalenessReasons { get; set; }
         }
     }
 }
