@@ -13,7 +13,7 @@ import shiftSelectionPreview = require("widgets/virtualGrid/shiftSelectionPrevie
 
 class virtualGrid<T> {
 
-    private items: T[] = []; // The items loaded asynchronously.
+    private items = new Map<number, T>(); // The items loaded asynchronously.
     private totalItemCount: number | null = null;
     private virtualRows: virtualRow[] = []; // These are the fixed number of elements that get displayed on screen. Each virtual row displays an element from .items array. As the user scrolls, rows will be recycled to represent different items.
     private gridId: string;
@@ -39,7 +39,6 @@ class virtualGrid<T> {
     private selection = ko.observable<virtualGridSelection<T>>();
     private shiftSelection: shiftSelectionPreview;
 
-    private renderHandle = 0;
     private settings = new virtualGridConfig();
     private controller: virtualGridController<T>;
     private previousScroll: [number, number] = [0, 0];
@@ -124,7 +123,7 @@ class virtualGrid<T> {
         }
         const items = this.items;
         for (let i = start; i < end; i++) {
-            if (!items[i])
+            if (!items.has(i))
                 return false;
         }
         return true;
@@ -213,7 +212,7 @@ class virtualGrid<T> {
         }
     }
 
-    private render(isRetry = false) {
+    private render() {
         // The grid may not be visible if the results returned quickly and we haven't finished initializing the UI.
         // In such a case, we queue up a render to occur later.
         if (this.checkGridVisibility()) {
@@ -254,7 +253,7 @@ class virtualGrid<T> {
                             this.isLoading(false);
                             this.runQueuedFetch();
                         });
-                }
+                };
 
                 if (fetcherTask.state() === "resolved" && !this.checkGridVisibility()) {
                     // look like fetcher works in synchronous mode, but grid is not yet visibile. Use setTimeout, to postpone value provider.
@@ -285,7 +284,7 @@ class virtualGrid<T> {
         let firstMissingIdx = null as number;
 
         for (let i = skip; i < skip + take; i++) {
-            if (!this.items[i]) {
+            if (!this.items.has(i)) {
                 firstMissingIdx = i;
                 break;
             }
@@ -362,7 +361,7 @@ class virtualGrid<T> {
                 // Populate it with data.
                 const rowIndex = Math.floor(positionCheck / virtualRow.height);
                 const isChecked = this.isSelected(rowIndex);
-                rowAtPosition.populate(this.items[rowIndex], rowIndex, isChecked, columns);
+                rowAtPosition.populate(this.items.get(rowIndex), rowIndex, isChecked, columns);
             }
 
             const newPositionCheck = rowAtPosition.top + virtualRow.height;
@@ -390,7 +389,7 @@ class virtualGrid<T> {
 
                 // Fill it with the data we've got loaded. If there's no data, it will display the loading indicator.
                 const isRowChecked = this.isSelected(row.index);
-                row.populate(this.items[row.index], row.index, isRowChecked, columns);
+                row.populate(this.items.get(row.index), row.index, isRowChecked, columns);
             }
         }
 
@@ -398,7 +397,7 @@ class virtualGrid<T> {
         let needsToFetch = false;
         if (firstVisibleRowIndex !== null) {
             for (let i = firstVisibleRowIndex; i < firstVisibleRowIndex + totalVisible; i++) {
-                if (!this.items[i]) {
+                if (!this.items.has(i)) {
                     needsToFetch = true;
                     break;
                 }
@@ -484,15 +483,14 @@ class virtualGrid<T> {
         this.updateResultEtag(results.resultEtag);
 
         // Add these results to the .items array as necessary.
-        const oldTotalCount = this.items.length;
-        this.items.length = results.totalResultCount;
+        const oldTotalCount = this.items.size;
         this.totalItemCount = results.totalResultCount;
         this.virtualHeight(results.totalResultCount * virtualRow.height);
         const endIndex = skip + results.items.length;
         for (let i = 0; i < results.items.length; i++) {
             const rowIndex = i + skip;
-            if (!this.items[rowIndex]) { // newer override existing items, to avoid issues with selected items and jumps
-                this.items[rowIndex] = results.items[i];
+            if (!this.items.has(rowIndex)) { // newer override existing items, to avoid issues with selected items and jumps
+                this.items.set(rowIndex, results.items[i]);
             }
         }
 
@@ -592,7 +590,7 @@ class virtualGrid<T> {
             throw new Error("No fetcher defined, call init() method on virtualGridController");
         }
 
-        this.items.length = 0;
+        this.items.clear();
         this.totalItemCount = null;
         this.queuedFetch = null;
         this.isLoading(false);
@@ -615,7 +613,7 @@ class virtualGrid<T> {
 
     private refreshSelection(): void {
         const mappedDiff = this.selectionDiff
-            .map(idx => this.items[idx]);
+            .map(idx => this.items.get(idx));
 
         const selected = this.getSelectionCount();
         const totalCount = this.totalItemCount;
@@ -641,7 +639,20 @@ class virtualGrid<T> {
     }
 
     private findItem(predicate: (item: T, idx: number) => boolean): T {
-        return this.items.find(predicate);
+        // since map doesn't guarantee keys order 
+        // but we want to simulate that virtual grid holds array
+        // let's scan entire cache and get minimum index
+        let result: T = undefined;
+        let resultIdx = -1;
+        
+        this.items.forEach((v, i) => {
+            if ((resultIdx === -1 || i < resultIdx) && predicate(v, i)) {
+                result = v;
+                resultIdx = i;
+            }
+        });
+        
+        return result;
     }
 
     private getSelectedItems(): T[] {
@@ -654,13 +665,25 @@ class virtualGrid<T> {
                 throw new Error("Can't provide list of selected items!");
             }
 
-            return this.items.filter(x => !_.includes(excluded, x));
+            const result = [] as T[];
+            this.items.forEach(item => {
+                if (!_.includes(excluded, item)) {
+                    result.push(item);
+                }
+            });
+            return result;
         }
     }
 
     private setSelectedItems(selection: Array<T>) {
         this.inIncludeSelectionMode = true;
-        this.selectionDiff = selection.map(x => this.items.indexOf(x)).filter(x => x !== -1);
+        const selectedIdx = [] as Array<number>;
+        this.items.forEach((v, i) => {
+           if (_.includes(selection, v)) {
+               selectedIdx.push(i);
+           } 
+        });
+        this.selectionDiff = selectedIdx;
 
         this.syncSelectAll();
         this.refreshSelection();
