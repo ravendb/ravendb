@@ -33,6 +33,7 @@ class exportDatabase extends viewModelBase {
     collections = ko.observableArray<string>();
     filter = ko.observable<string>("");
     filteredCollections: KnockoutComputed<Array<string>>;
+    hasRevisionsConfiguration: KnockoutComputed<boolean>;
 
     exportCommand: KnockoutComputed<string>;
 
@@ -64,7 +65,8 @@ class exportDatabase extends viewModelBase {
 
     compositionComplete() {
         super.compositionComplete();
-        
+
+        $('[data-toggle="tooltip"]').tooltip();
         this.model.includeRevisionDocuments(this.canExportDocumentRevisions());
     }
 
@@ -99,6 +101,15 @@ class exportDatabase extends viewModelBase {
             return collections.filter(x => x.toLowerCase().includes(filterLowerCase));
         });
 
+        this.hasRevisionsConfiguration = ko.pureComputed(() => {
+            const db = this.activeDatabase();
+            if (!db) {
+                return false;
+            }
+            
+            return db.hasRevisionsConfiguration();
+        });
+        
         this.exportCommand = ko.pureComputed<string>(() => {
             //TODO: review for smuggler.exe!
             const db = this.activeDatabase();

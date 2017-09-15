@@ -34,6 +34,7 @@ class importDatabase extends viewModelBase {
     uploadStatus = ko.observable<number>();
 
     importCommand: KnockoutComputed<string>;
+    hasRevisionsConfiguration: KnockoutComputed<boolean>;
 
     validationGroup = ko.validatedObservable({
         importedFileName: this.importedFileName,
@@ -58,6 +59,15 @@ class importDatabase extends viewModelBase {
             } else {
                 this.model.transformScript("");
             }
+        });
+
+        this.hasRevisionsConfiguration = ko.pureComputed(() => {
+            const db = this.activeDatabase();
+            if (!db) {
+                return false;
+            }
+
+            return db.hasRevisionsConfiguration();
         });
 
         //TODO: change input file name to be full document path
@@ -176,6 +186,12 @@ class importDatabase extends viewModelBase {
         ];
     }
 
+    compositionComplete() {
+        super.compositionComplete();
+
+        $('[data-toggle="tooltip"]').tooltip();
+    }
+    
     fileSelected(fileName: string) {
         const isFileSelected = fileName ? !!fileName.trim() : false;
         this.hasFileSelected(isFileSelected);
