@@ -21,6 +21,7 @@ type indexNameAndCount = {
 class indexErrors extends viewModelBase {
 
     private allIndexErrors: IndexErrorPerDocument[] = null;
+    private filteredIndexErrors: IndexErrorPerDocument[] = null;
     private gridController = ko.observable<virtualGridController<IndexErrorPerDocument>>();
     private columnPreview = new columnPreviewPlugin<IndexErrorPerDocument>();
 
@@ -113,7 +114,7 @@ class indexErrors extends viewModelBase {
     }
 
     private showErrorDetails(errorIdx: number) {
-        const view = new indexErrorDetails(this.allIndexErrors, errorIdx);
+        const view = new indexErrorDetails(this.filteredIndexErrors, errorIdx);
         app.showBootstrapDialog(view);
     }
 
@@ -172,6 +173,9 @@ class indexErrors extends viewModelBase {
             filteredItems = filteredItems.filter(error => error.Document.toLowerCase().includes(searchText) ||
                 error.Error.toLowerCase().includes(searchText));
         }
+        
+        // save copy used for details viewer
+        this.filteredIndexErrors = filteredItems;
         
         return deferred.resolve({
             items: filteredItems,
