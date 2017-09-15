@@ -19,7 +19,7 @@ namespace SlowTests.Issues
     public class RavenDB_5824 : RavenTestBase
     {
         [Fact]
-        public void IndexProgressShouldReturnStalenessReasons()
+        public void ShouldBeAbleToReturnIndexStalenessReasons()
         {
             using (var store = GetDocumentStore())
             {
