@@ -43,17 +43,28 @@ class messagePublisher {
         const toastrMethod = messagePublisher.getDisplayMethod(type);
 
         const messageAndOptionalException = recentError.tryExtractMessageAndException(details);
-        
-        toastrMethod(generalUtils.trimMessage(messageAndOptionalException.message), title, {
-            showDuration: messagePublisher.getDisplayDuration(type),
-            closeButton: true
-        });
 
+        let error: recentError;
+        
         if (displayInRecentErrors) {
-            const error = recentError.create(type, title, details, httpStatusText);
+            error = recentError.create(type, title, details, httpStatusText);
 
             ko.postbox.publish(EVENTS.NotificationCenter.RecentError, error);
         }
+        
+        let message = generalUtils.trimMessage(messageAndOptionalException.message);
+        if (error && error.hasDetails()) {
+            const extraHtml = "<br /><small>show details</small>";
+            message = message ? message + extraHtml : extraHtml;
+        }
+        
+        toastrMethod(message, title, {
+            showDuration: messagePublisher.getDisplayDuration(type),
+            closeButton: true,
+            onclick: (error && error.hasDetails()) ? () => {
+                ko.postbox.publish(EVENTS.NotificationCenter.OpenNotification, error);
+            }: undefined 
+        });
     }
 
     private static getDisplayDuration(type: Raven.Server.NotificationCenter.Notifications.NotificationSeverity): number {

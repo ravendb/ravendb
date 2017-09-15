@@ -164,4 +164,3 @@ interface DurandalAppModule {
 
     showBootstrapMessage(message: string, title?: string, options?: string[], autoclose?: boolean, settings?: Object): DurandalPromise<string>;
 }
-

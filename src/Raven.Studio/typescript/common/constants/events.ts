@@ -12,15 +12,16 @@ const SearchBox = {
 
 const ChangesApi = {
     Reconnected: 'ChangesApi.Reconnected'
-}
+};
 
 const Database = {
     Disconnect: 'Database.Disconnect'
 };
 
 const NotificationCenter = {
-    RecentError: 'NotificationCenter.RecentError'
-}
+    RecentError: 'NotificationCenter.RecentError',
+    OpenNotification: 'NotificationCenter.OpenNotification'
+};
 
 export = {
     Menu,
