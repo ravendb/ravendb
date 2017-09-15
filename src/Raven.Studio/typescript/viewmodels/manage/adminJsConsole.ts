@@ -151,7 +151,7 @@ class adminJsConsole extends viewModelBase {
             new adminJsScriptCommand(this.model().script(), this.model().patchOption() === "Database" ? this.model().selectedDatabase() : undefined)
                 .execute()
                 .done((response) => {
-                    this.executionResult(response || "Response was empty");
+                    this.executionResult(JSON.stringify(response.Result, null, 4));
                 })
                 .always(() => this.spinners.execute(false));
         }
