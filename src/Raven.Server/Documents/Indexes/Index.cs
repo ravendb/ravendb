@@ -160,8 +160,8 @@ namespace Raven.Server.Documents.Indexes
         private bool _isCompactionInProgress;
 
         private readonly ReaderWriterLockSlim _currentlyRunningQueriesLock = new ReaderWriterLockSlim();
-        private MultipleUseFlag _priorityChanged = new MultipleUseFlag();
-        private MultipleUseFlag _hadRealIndexingWorkToDo = new MultipleUseFlag();
+        private readonly MultipleUseFlag _priorityChanged = new MultipleUseFlag();
+        private readonly MultipleUseFlag _hadRealIndexingWorkToDo = new MultipleUseFlag();
         private Func<bool> _indexValidationStalenessCheck = () => true;
         protected readonly StorageOperationWrapper _storageOperation;
 
@@ -608,15 +608,23 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public virtual bool IsStale(DocumentsOperationContext databaseContext, long? cutoff = null, List<string> stalenessReasons = null)
+        public bool IsStale(DocumentsOperationContext databaseContext, long? cutoff = null, List<string> stalenessReasons = null)
         {
             Debug.Assert(databaseContext.Transaction != null);
 
             if (_storageOperation.IsRunning)
+            {
+                stalenessReasons?.Add("Storage operation is running.");
+
                 return true;
+            }
 
             if (Type == IndexType.Faulty)
+            {
+                stalenessReasons?.Add("Index is faulty.");
+
                 return true;
+            }
 
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
             using (indexContext.OpenReadTransaction())
