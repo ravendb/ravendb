@@ -181,7 +181,6 @@ class conflicts extends viewModelBase {
             const item = this.gridController().findItem(x => x.Id === documentId);
             this.gridController().setSelectedItems([item]);
         }
-        
     }
 
     private loadConflictItemsForDocument(documentId: string) {
