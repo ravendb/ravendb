@@ -80,13 +80,13 @@ namespace Raven.Server.Documents.Indexes.Static
             base.HandleDelete(tombstone, collection, writer, indexContext, stats);
         }
 
-        protected override bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? cutoff = null)
+        protected override bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? cutoff = null, List<string> stalenessReasons = null)
         {
-            var isStale = base.IsStale(databaseContext, indexContext, cutoff);
-            if (isStale || _referencedCollections.Count == 0)
+            var isStale = base.IsStale(databaseContext, indexContext, cutoff, stalenessReasons);
+            if (isStale && stalenessReasons == null || _referencedCollections.Count == 0)
                 return isStale;
 
-            return StaticIndexHelper.IsStale(this, databaseContext, indexContext, cutoff);
+            return StaticIndexHelper.IsStale(this, databaseContext, indexContext, cutoff, stalenessReasons) || isStale;
         }
 
         protected override void HandleDocumentChange(DocumentChange change)
