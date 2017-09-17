@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Json
 {
-    internal class MetadataAsDictionary : IMetadataDictionary
+    public class MetadataAsDictionary : IMetadataDictionary
     {
         private IDictionary<string, object> _metadata;
         private readonly BlittableJsonReaderObject _source;
