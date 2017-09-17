@@ -352,27 +352,30 @@ namespace Raven.Server.Documents.Handlers.Admin
                     if (remoteIsHttps)
                     {
                         if (nodeInfo.Certificate == null)
-                            throw  new InvalidOperationException($"Cannot add node {nodeTag} to cluster because it has no certificate while trying to use HTTPS");
+                            throw  new InvalidOperationException($"Cannot add node {nodeTag} with url {nodeUrl} to cluster because it has no certificate while trying to use HTTPS");
 
                         var certificate = new X509Certificate2(Convert.FromBase64String(nodeInfo.Certificate));
                             
                         if (certificate.NotBefore > DateTime.UtcNow)
-                            throw new InvalidOperationException($"Cannot add node {nodeTag} to cluster because its certificate '{certificate.FriendlyName}' is not yet valid. It starts on {certificate.NotBefore}");
+                            throw new InvalidOperationException($"Cannot add node {nodeTag} with url {nodeUrl} to cluster because its certificate '{certificate.FriendlyName}' is not yet valid. It starts on {certificate.NotBefore}");
 
                         if (certificate.NotAfter < DateTime.UtcNow)
-                            throw new InvalidOperationException($"Cannot add node {nodeTag} to cluster because its certificate '{certificate.FriendlyName}' expired on {certificate.NotAfter}");
+                            throw new InvalidOperationException($"Cannot add node {nodeTag} with url {nodeUrl} to cluster because its certificate '{certificate.FriendlyName}' expired on {certificate.NotAfter}");
 
                         var expected = GetStringQueryString("expectedThumbrpint", required: false);
                         if (expected != null)
                         {
                             if (certificate.Thumbprint != expected)
-                                throw new InvalidOperationException($"Cannot add node {nodeTag} to cluster because its certificate thumbprint '{certificate.Thumbprint}' doesn't match the expected thumbprint '{expected}'.");
+                                throw new InvalidOperationException($"Cannot add node {nodeTag} with url {nodeUrl} to cluster because its certificate thumbprint '{certificate.Thumbprint}' doesn't match the expected thumbprint '{expected}'.");
                         }
 
+                        var nodeName = nodeTag == null ? "" : $"(Node {nodeTag})";
                         var certificateDefinition = new CertificateDefinition
                         {
                             Certificate = nodeInfo.Certificate,
-                            Thumbprint = certificate.Thumbprint
+                            Thumbprint = certificate.Thumbprint,
+                            Name = $"Server Certificate {certificate.GetNameInfo(X509NameType.SimpleName, false)} {nodeName}",
+                            SecurityClearance = SecurityClearance.ClusterAdmin
                         };
 
                         var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + certificate.Thumbprint, certificateDefinition));
