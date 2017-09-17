@@ -17,7 +17,7 @@ namespace SlowTests.Cluster
         {
             var db = "ReorderDatabaseNodes";
             var leader = await CreateRaftClusterAndGetLeader(3);
-            var res = await CreateDatabaseInCluster(db, 3, leader.WebUrl);
+            await CreateDatabaseInCluster(db, 3, leader.WebUrl);
             using (var store = new DocumentStore
             {
                 Database = db,
@@ -33,7 +33,7 @@ namespace SlowTests.Cluster
         {
             var ex = await Assert.ThrowsAsync<RavenException>(async () =>
             {
-                await store.Admin.Server.SendAsync(new ReorderOperation(db, new List<string>()
+                await store.Admin.Server.SendAsync(new ReorderDatabaseMembersOperation(db, new List<string>()
                 {
                     "A",
                     "B"
@@ -42,7 +42,7 @@ namespace SlowTests.Cluster
             Assert.True(ex.InnerException is ArgumentException);
             ex = await Assert.ThrowsAsync<RavenException>(async () =>
             {
-                await store.Admin.Server.SendAsync(new ReorderOperation(db, new List<string>()
+                await store.Admin.Server.SendAsync(new ReorderDatabaseMembersOperation(db, new List<string>()
                 {
                     "D",
                     "E",
@@ -57,7 +57,7 @@ namespace SlowTests.Cluster
             var record = await store.Admin.Server.SendAsync(new GetDatabaseRecordOperation(db));
             record.Topology.Members.Reverse();
             var copy = new List<string>(record.Topology.Members);
-            await store.Admin.Server.SendAsync(new ReorderOperation(db, record.Topology.Members));
+            await store.Admin.Server.SendAsync(new ReorderDatabaseMembersOperation(db, record.Topology.Members));
             record = await store.Admin.Server.SendAsync(new GetDatabaseRecordOperation(db));
             Assert.True(copy.All(record.Topology.Members.Contains));
         }

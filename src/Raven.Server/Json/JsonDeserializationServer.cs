@@ -120,7 +120,7 @@ namespace Raven.Server.Json
 
             public static readonly Func<BlittableJsonReaderObject, DeleteDatabasesOperation.Parameters> DeleteDatabasesParameters = GenerateJsonDeserializationRoutine<DeleteDatabasesOperation.Parameters>();
 
-            public static readonly Func<BlittableJsonReaderObject, ReorderOperation.Parameters> MembersOrder = GenerateJsonDeserializationRoutine<ReorderOperation.Parameters>();
+            public static readonly Func<BlittableJsonReaderObject, ReorderDatabaseMembersOperation.Parameters> MembersOrder = GenerateJsonDeserializationRoutine<ReorderDatabaseMembersOperation.Parameters>();
 
             public static readonly Func<BlittableJsonReaderObject, ToggleDatabasesStateOperation.Parameters> DisableDatabaseToggleParameters = GenerateJsonDeserializationRoutine<ToggleDatabasesStateOperation.Parameters>();
 

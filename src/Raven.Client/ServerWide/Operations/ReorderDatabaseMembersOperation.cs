@@ -1,18 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net.Http;
-using System.Text;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
-using Raven.Client.Json.Converters;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide.Operations
 {
-    class ReorderOperation : IServerOperation
+    class ReorderDatabaseMembersOperation : IServerOperation
     {
         public class Parameters
         {
@@ -22,7 +19,7 @@ namespace Raven.Client.ServerWide.Operations
         private readonly string _database;
         private readonly Parameters _parameters;
 
-        public ReorderOperation(string database, List<string> order)
+        public ReorderDatabaseMembersOperation(string database, List<string> order)
         {
             if (order == null || order.Count == 0)
                 throw new ArgumentException("Order list must contain values");
@@ -37,15 +34,15 @@ namespace Raven.Client.ServerWide.Operations
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             var order = EntityToBlittable.ConvertEntityToBlittable(_parameters, conventions, context);
-            return new ReorderCommand(_database, order);
+            return new ReorderDatabaseMembersCommand(_database, order);
         }
 
-        private class ReorderCommand : RavenCommand
+        private class ReorderDatabaseMembersCommand : RavenCommand
         {
             private readonly string _databaseName;
             private readonly BlittableJsonReaderObject _orderBlittable;
 
-            public ReorderCommand(string databaseName, BlittableJsonReaderObject orderBlittable)
+            public ReorderDatabaseMembersCommand(string databaseName, BlittableJsonReaderObject orderBlittable)
             {
                 if (string.IsNullOrEmpty(databaseName))
                     throw new ArgumentNullException(databaseName);
