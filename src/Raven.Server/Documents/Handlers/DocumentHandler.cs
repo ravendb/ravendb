@@ -551,37 +551,37 @@ namespace Raven.Server.Documents.Handlers
                 return Task.CompletedTask;
             }
         }
+    }
 
-        private class MergedPutCommand : TransactionOperationsMerger.MergedTransactionCommand
+    public class MergedPutCommand : TransactionOperationsMerger.MergedTransactionCommand
+    {
+        private readonly string _id;
+        private readonly LazyStringValue _expectedChangeVector;
+        private readonly BlittableJsonReaderObject _document;
+        private readonly DocumentDatabase _database;
+
+        public ExceptionDispatchInfo ExceptionDispatchInfo;
+        public DocumentsStorage.PutOperationResults PutResult;
+
+        public MergedPutCommand(BlittableJsonReaderObject doc, string id, LazyStringValue changeVector, DocumentDatabase database)
         {
-            private readonly string _id;
-            private readonly LazyStringValue _expectedChangeVector;
-            private readonly BlittableJsonReaderObject _document;
-            private readonly DocumentDatabase _database;
+            _document = doc;
+            _id = id;
+            _expectedChangeVector = changeVector;
+            _database = database;
+        }
 
-            public ExceptionDispatchInfo ExceptionDispatchInfo;
-            public DocumentsStorage.PutOperationResults PutResult;
-
-            public MergedPutCommand(BlittableJsonReaderObject doc, string id, LazyStringValue changeVector, DocumentDatabase database)
+        public override int Execute(DocumentsOperationContext context)
+        {
+            try
             {
-                _document = doc;
-                _id = id;
-                _expectedChangeVector = changeVector;
-                _database = database;
+                PutResult = _database.DocumentsStorage.Put(context, _id, _expectedChangeVector, _document);
             }
-
-            public override int Execute(DocumentsOperationContext context)
+            catch (ConcurrencyException e)
             {
-                try
-                {
-                    PutResult = _database.DocumentsStorage.Put(context, _id, _expectedChangeVector, _document);
-                }
-                catch (ConcurrencyException e)
-                {
-                    ExceptionDispatchInfo = ExceptionDispatchInfo.Capture(e);
-                }
-                return 1;
+                ExceptionDispatchInfo = ExceptionDispatchInfo.Capture(e);
             }
+            return 1;
         }
     }
 }
