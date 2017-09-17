@@ -95,6 +95,12 @@ class createDatabase extends dialogViewModelBase {
 
     private onTopologyLoaded(topology: clusterTopology) {
         this.clusterNodes = topology.nodes();
+        
+        if (this.clusterNodes.length === 1 && this.clusterNodes[0].tag() === "?") {
+            // passive cluster - let's assume node tag is A
+            this.clusterNodes[0].tag("A");
+        }
+        
         const defaultReplicationFactor = this.clusterNodes.length > 1 ? 2 : 1;
         this.databaseModel.replication.replicationFactor(defaultReplicationFactor);
     }
