@@ -59,10 +59,8 @@ namespace Raven.Server.Smuggler.Migration
                     configuration.Domain);
 
             _client = new HttpClient(httpClientHandler);
-            while (configuration.ServerUrl.EndsWith("/"))
-                configuration.ServerUrl = configuration.ServerUrl.Remove(configuration.ServerUrl.Length - 1);
 
-            _serverUrl = configuration.ServerUrl.ToLower();
+            _serverUrl = configuration.ServerUrl.TrimEnd('/');
             _migrationStateKey = $"{MigrationStateKeyBase}/{_serverUrl}";
             _serverStore = serverStore;
             _operations = operations;
@@ -174,9 +172,12 @@ namespace Raven.Server.Smuggler.Migration
                     if (operationStatus == null)
                         return;
 
-                    if (operationStatus.TryGet("Completed", out bool completed) == false || completed == false)
+                    if (operationStatus.TryGet("Completed", out bool completed) == false)
+                        return;
+
+                    if (completed == false)
                     {
-                        Thread.Sleep(1000);
+                        await Task.Delay(1000, _cancellationToken);
                         continue;
                     }
 
