@@ -1,19 +1,18 @@
 using System.Linq;
-
-using Raven.Tests.Common;
-
+using FastTests;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace Raven.Tests.Bugs
+namespace SlowTests.Bugs.Queries
 {
-    public class QueryingOnMetadata : RavenTest
+    public class QueryingOnMetadata : RavenTestBase
     {
         [Fact]
         public void CanQueryOnNullableProperty()
         {
-            using(var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                using(var session = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     var u1 = new User();
                     session.Store(u1);
@@ -39,11 +38,11 @@ namespace Raven.Tests.Bugs
                 using (var session = store.OpenSession())
                 {
                     var users = session.Advanced.DocumentQuery<User>()
-                            .WaitForNonStaleResultsAsOfNow()
-                            .WhereEquals("@metadata.JobId", "12cd80f2-34b0-4dd9-8464-d1cefad07256")
-                            .AndAlso()
-                            .WhereEquals("@metadata.Errored", false)
-                            .ToArray();
+                        .WaitForNonStaleResultsAsOfNow()
+                        .WhereEquals("@metadata.JobId", "12cd80f2-34b0-4dd9-8464-d1cefad07256")
+                        .AndAlso()
+                        .WhereEquals("@metadata.Errored", false)
+                        .ToArray();
 
                     Assert.Equal(1, users.Length);
                 }

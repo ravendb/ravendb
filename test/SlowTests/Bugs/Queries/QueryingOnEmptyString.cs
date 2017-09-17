@@ -1,17 +1,16 @@
-using Raven.Tests.Common;
-
-using Xunit;
 using System.Linq;
+using FastTests;
+using Raven.Client.Documents.Linq;
+using Xunit;
 
-namespace Raven.Tests.Bugs
+namespace SlowTests.Bugs.Queries
 {
-    public class QueryingOnEmptyString : RavenTest
+    public class QueryingOnEmptyString : RavenTestBase
     {
-
         [Fact]
         public void ShouldNotSelectAllDocs()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -22,17 +21,16 @@ namespace Raven.Tests.Bugs
                 using (var session = store.OpenSession())
                 {
                     Assert.Empty(session.Query<User>()
-                                        .Where(x => x.Name == string.Empty)
-                                        .ToList());
+                        .Where(x => x.Name == string.Empty)
+                        .ToList());
                 }
             }
         }
 
-
         [Fact]
         public void CanFindByemptyStringMatch()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -43,10 +41,15 @@ namespace Raven.Tests.Bugs
                 using (var session = store.OpenSession())
                 {
                     Assert.NotEmpty(session.Query<User>()
-                                        .Where(x => x.Name == string.Empty)
-                                        .ToList());
+                        .Where(x => x.Name == string.Empty)
+                        .ToList());
                 }
             }
+        }
+
+        private class User
+        {
+            public string Name { get; set; }
         }
     }
 }

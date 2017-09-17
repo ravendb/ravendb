@@ -3,21 +3,22 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using Raven.Tests.Common;
-using Raven.Tests.Document;
-using Xunit;
-using System.Linq;
 
-namespace Raven.Tests.Bugs
+using System.Linq;
+using FastTests;
+using SlowTests.Core.Utils.Entities;
+using Xunit;
+
+namespace SlowTests.Bugs.Queries
 {
-    public class QueryingOnEqualToNull : RavenTest
+    public class QueryingOnEqualToNull : RavenTestBase
     {
         [Fact]
         public void QueryingOnEqNull()
         {
-            using(var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                using(var s = store.OpenSession())
+                using (var s = store.OpenSession())
                 {
                     s.Store(new Company
                     {
