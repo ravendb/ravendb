@@ -552,7 +552,7 @@ namespace Raven.Server.Web.System
                 {
                     // no folders in directory
                     // will scan the directory for backup files
-                    Restore.FetchRestorePoints(restorePathJson.Path, restorePoints.List);
+                    Restore.FetchRestorePoints(restorePathJson.Path, restorePoints.List, assertLegacyBackups: true);
                 }
 
                 foreach (var directory in directories)
