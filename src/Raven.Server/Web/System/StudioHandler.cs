@@ -386,7 +386,7 @@ namespace Raven.Server.Web.System
             if (File.Exists(e.FullPath) || Directory.Exists(e.FullPath) == false)
             {
                 // It is a file, or it does not exist any more
-                string relativePath = Path.GetRelativePath(_wwwRootBasePath, e.FullPath);
+                string relativePath = Path.GetRelativePath(_wwwRootBasePath, e.FullPath).Replace('\\','/');
                 StaticContentCache.TryRemove(relativePath, out var value);
             }
             else
@@ -410,7 +410,7 @@ namespace Raven.Server.Web.System
             {
                 // It is a file, or it does not exist any more. Notice we
                 // clear the old version.
-                string relativePath = Path.GetRelativePath(_wwwRootBasePath, e.OldFullPath);
+                string relativePath = Path.GetRelativePath(_wwwRootBasePath, e.OldFullPath).Replace('\\','/');
                 StaticContentCache.TryRemove(relativePath, out var value);
             }
             else
