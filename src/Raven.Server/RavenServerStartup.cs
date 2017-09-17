@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
+using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Raven.Client.Documents.Changes;
@@ -47,12 +48,24 @@ namespace Raven.Server
             _router = app.ApplicationServices.GetService<RequestRouter>();
             _server = app.ApplicationServices.GetService<RavenServer>();
 
+            if (_server.Configuration.Http.UseResponseCompression)
+            {
+                // Enable automatic response compression for all routes that
+                // are not studio's statics. The studio takes care of its own
+                // compression.
+                app.UseWhen(
+                    context => context.Request.Path.StartsWithSegments("/studio") == false,
+                    appBuilder => appBuilder.UseResponseCompression());
+            }
+
+
             if (IsServerRunningInASafeManner() == false)
             {
-                app.Run(UnsafeRequestHandler);
+                app.Use(_ => UnsafeRequestHandler);
                 return;
             }
-            app.Run(RequestHandler);
+
+            app.Use(_ => RequestHandler);
         }
 
         private bool IsServerRunningInASafeManner()

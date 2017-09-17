@@ -132,8 +132,7 @@ namespace Raven.Server.Documents.Handlers
                                 Database = Database,
                                 RavenServer = Server,
                                 RouteMatch = localMatch,
-                                HttpContext = httpContext,
-                                AllowResponseCompression = false
+                                HttpContext = httpContext
                             });
 
                             if (bytesWrittenBeforeRequest == responseStream.BytesWritten)
