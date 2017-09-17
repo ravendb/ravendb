@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
@@ -27,6 +28,7 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
+using Raven.Server.Smuggler.Migration;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
@@ -273,6 +275,30 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     var result = smuggler.Execute();
 
                     WriteImportResult(context, result, ResponseBodyStream());
+                }
+            }
+        }
+
+        [RavenAction("/databases/*/smuggler/migrate", "POST", AuthorizationStatus.ValidUser)]
+        public async Task Migrate()
+        {
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                var migrationConfiguration = await context.ReadForMemoryAsync(RequestBodyStream(), "migration-configuration");
+                var migrationConfigurationJson = JsonDeserializationServer.SingleDatabaseMigrationConfiguration(migrationConfiguration);
+
+                if (string.IsNullOrWhiteSpace(migrationConfigurationJson.ServerUrl))
+                    throw new ArgumentException("Url cannot be null or empty");
+
+                if (string.IsNullOrWhiteSpace(migrationConfigurationJson.DatabaseName))
+                    throw new ArgumentException("Database name cannot be null or empty");
+
+                var migrator = new Migrator(migrationConfigurationJson, ServerStore, Database.Operations, ServerStore.ServerShutdown);
+                var operationId = migrator.StartMigrateSingleDatabase(migrationConfigurationJson.DatabaseName, Database);
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteOperationId(context, operationId);
                 }
             }
         }
