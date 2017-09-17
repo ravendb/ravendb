@@ -100,7 +100,9 @@ namespace Raven.Client.Documents.Session
         {
             var metadata = json.GetMetadata();
             var changeVector = BlittableJsonExtensions.GetChangeVector(metadata);
-            var id = metadata.GetId();
+            string id;
+            //MapReduce indexes return reduce results that don't have @id property
+            metadata.TryGetId(out id);
 
             //TODO - Investigate why ConvertToEntity fails if we don't call ReadObject before
             json = Context.ReadObject(json, id);
