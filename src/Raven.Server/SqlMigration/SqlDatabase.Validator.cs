@@ -23,27 +23,37 @@ namespace Raven.Server.SqlMigration
                 _errors.Add(message);
             }
 
+            private void AddErrors(IEnumerable<string> messages)
+            {
+                _errors.AddRange(messages);
+            }
+
             public void Validate(out List<string> errs)
             {
                 _errors.Clear();
 
-                var tableToValidate = _database.Tables.ToList();
+                var tablesToValidate = _database.Tables.ToList();
 
-                ValidateExistanceOfTables(ref tableToValidate);
-                ValidateEmbeddedTables(tableToValidate);
-                ValidateDuplicateTables(tableToValidate);
+                ValidateExistanceOfTables(tablesToValidate);
+                ValidateEmbeddedTables(tablesToValidate);
+                ValidateDuplicateTables(tablesToValidate);
 
-                foreach (var table in tableToValidate)
+                foreach (var table in tablesToValidate)
                 {
                     ValidateHasPrimaryKeys(table);
-                    
-                    ValidateQuery(table, out var document);
+
+                    var reader = ValidateQuery(table);
+
+                    if (reader == null)
+                        continue;
+
+                    var document = ValidateCanCreateDocument(table, reader);
 
                     if (document == null)
                         continue;
 
+                    ValidateQueryContainsAllKeys(document, table);
                     ValidatePatch(table, document);
-                    ValidateQueryContainsAllPrimaryKeys(document.Id, table);
                 }
 
                 errs = _errors;
@@ -51,7 +61,7 @@ namespace Raven.Server.SqlMigration
                 IsValid = _errors.Count == 0;
             }
 
-            private void ValidateExistanceOfTables(ref List<SqlTable> tables)
+            private void ValidateExistanceOfTables(List<SqlTable> tables)
             {
                 var allTables = GetAllTablesNamesFromDatabase(_database.Connection);
 
@@ -67,7 +77,7 @@ namespace Raven.Server.SqlMigration
                         tables.Remove(table);
                     }
 
-                    else if (!allTables.Contains(table.Name))
+                    else if (allTables.Contains(table.Name) == false)
                     {
                         AddError($"Couldn't find table '{table.Name}' in the sql database (Table name must include schema name)");
                         tables.Remove(table);
@@ -78,33 +88,27 @@ namespace Raven.Server.SqlMigration
 
             private void ValidateEmbeddedTables(List<SqlTable> tables)
             {
-                foreach (var table in tables)
-                {
-                    foreach (var embeddedTable in table.EmbeddedTables)
-                    {
-                        if (!embeddedTable.ForeignKeys.ContainsValue(table.Name) && tables.Contains(embeddedTable))
-                            AddError($"Table '{embeddedTable.Name}' cannot embed into '{table.Name}'");
-                    }
-                }
+                AddErrors(
+
+                    from sqlTable in tables
+                    from embeddedTable in sqlTable.EmbeddedTables
+
+                    where embeddedTable.ForeignKeys.ContainsValue(sqlTable.Name) == false && tables.Contains(embeddedTable)
+
+                    select $"Table '{embeddedTable.Name}' cannot embed into '{sqlTable.Name}'"
+
+                );
             }
 
             private void ValidateDuplicateTables(List<SqlTable> tables)
             {
-                var names = new List<string>();
 
-                foreach (var table in tables)
-                {
-                    if (table.IsEmbedded)
-                        continue;
-
-                    if (names.Contains(table.Name))
-                        AddError($"Duplicate table '{table.Name}'");
-
-                    else 
-                        names.Add(table.Name);
-
-                    ValidateDuplicateEmbeddedTables(table.EmbeddedTables);
-                }
+                AddErrors(tables.Where(table => !table.IsEmbedded).GroupBy(table =>
+                    {
+                        ValidateDuplicateEmbeddedTables(table.EmbeddedTables);
+                        return table.Name;
+                    })
+                    .Where(g => g.Count() > 1).Select(y => $"Duplicate table '{y.Key}'"));
             }
 
             private void ValidateDuplicateEmbeddedTables(List<SqlEmbeddedTable> tableEmbeddedTables)
@@ -114,11 +118,11 @@ namespace Raven.Server.SqlMigration
 
                 foreach (var embeddedTable in tableEmbeddedTables)
                 {
-                    if (properties.Contains(embeddedTable.Property))
-                        AddError($"Duplicate property name '{embeddedTable.Property}'");
+                    if (properties.Contains(embeddedTable.PropertyName))
+                        AddError($"Duplicate property name '{embeddedTable.PropertyName}'");
 
                     else
-                        properties.Add(embeddedTable.Property);
+                        properties.Add(embeddedTable.PropertyName);
 
                     if (tables.Contains(embeddedTable))
                         AddError($"Duplicate table '{embeddedTable.Name}' (try give them property name)");
@@ -130,15 +134,15 @@ namespace Raven.Server.SqlMigration
                 }
             }
 
-            private void ValidatePatch(SqlTable table, RavenDocument document)
+            private void ValidatePatch(SqlTable table, SqlMigrationDocument document)
             {
                 try
                 {
-                    table.GetJsPatcher()?.PatchDocument(document);
+                    table.GetJsPatch().PatchDocument(document);
                 }
-                catch
+                catch (Exception e)
                 {
-                    AddError($"Cannot patch table '{table.Name}' using the given script");
+                    AddError($"Cannot patch table '{table.Name}' using the given script. Error: " + e.Message);
                 }
             }
 
@@ -148,14 +152,16 @@ namespace Raven.Server.SqlMigration
                     AddError($"Table '{table.Name}' must have at list 1 primary key");
             }
 
-            private void ValidateQuery(SqlTable table, out RavenDocument document)
+            private SqlReader ValidateQuery(SqlTable table)
             {
-                document = null;
 
-                if (table.InitialQuery.ToLower().Contains(" order by "))
+                if (table.InitialQuery.IndexOf("order by", StringComparison.OrdinalIgnoreCase) != -1)
+                {
                     AddError($"Query cannot contain an 'ORDER BY' clause ({table.Name})");
+                    return null;
+                }
 
-                var reader = new SqlReader(_database.Connection, SqlQueries.SelectSingleRowFromQuery(table.InitialQuery));
+                SqlReader reader = new SqlReader(_database.Connection, SqlQueries.SelectSingleRowFromQuery(table.InitialQuery));
 
                 try
                 {
@@ -164,16 +170,21 @@ namespace Raven.Server.SqlMigration
                 catch
                 {
                     AddError($"Failed to read table '{table.Name}' using the given query");
-                    return;
+                    return null;
                 }
 
+                return reader;
+            }
+
+            private SqlMigrationDocument ValidateCanCreateDocument(SqlTable table, SqlReader reader)
+            {
                 using (reader)
                 {
                     while (reader.Read())
                     {
                         try
                         {
-                            document = _database.Factory.FromReader(reader, table, true);
+                            return  _database.Factory.FromReader(reader, table, out _, true);
                         }
                         catch (Exception e)
                         {
@@ -181,17 +192,22 @@ namespace Raven.Server.SqlMigration
                         }
                     }
                 }
+                return null;
             }
 
-            private void ValidateQueryContainsAllPrimaryKeys(string id, SqlTable table)
+            private void ValidateQueryContainsAllKeys(SqlMigrationDocument document, SqlTable table)
             {
-                var count = 0;
-                foreach (var c in id)
-                    if (c == '/')
-                        count++;
+                var id = document.Id;
+
+                var count = id.Count(c => c == '/');
 
                 if (count < table.PrimaryKeys.Count)
                     AddError($"Query for table '{table.Name}' must select all primary keys");
+
+                if (!(table is SqlEmbeddedTable embeddedTable)) return;
+
+                if (embeddedTable.GetColumnsReferencingParentTable().Any(column => document.Properties.All(property => property.Name != column)))
+                    AddError($"Query for table '{embeddedTable.Name}' must select all referential keys");
             }
         }
     }

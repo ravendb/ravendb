@@ -9,7 +9,7 @@ namespace Raven.Server.SqlMigration
         public const string SelectKeyColumnUsageWhereConstraintName = "select TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME from information_schema.KEY_COLUMN_USAGE where CONSTRAINT_NAME = @constraintName";
         public const string SelectPrimaryKeys = "select tc.TABLE_SCHEMA, tc.TABLE_NAME, COLUMN_NAME from information_schema.TABLE_CONSTRAINTS as tc inner join information_schema.KEY_COLUMN_USAGE as ku on tc.CONSTRAINT_TYPE = 'PRIMARY KEY' and tc.constraint_name = ku.CONSTRAINT_NAME";
 
-        private const string DefualtTableQuery = "select * from {0}";
+        private const string DefaultTableQuery = "select * from {0}";
         private const string SelectSingleRow = "select top 1 * from ({0}) a";
         private const string SelectQueryWhere = "select * from ({0}) a where {1}";
         private const string And = " and ";
@@ -19,14 +19,14 @@ namespace Raven.Server.SqlMigration
 
         public static string SelectTable(string tableName)
         {
-            return string.Format(DefualtTableQuery, TableQuote(tableName));
+            return string.Format(DefaultTableQuery, TableQuote(tableName));
         }
 
         private static string TableQuote(string s)
         {
             s = $"[{s}]";
 
-            if (!s.Contains("."))
+            if (s.Contains(".") == false)
                 return s;
 
             s = s.Insert(s.IndexOf('.'), "]");

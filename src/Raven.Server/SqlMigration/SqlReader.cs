@@ -12,6 +12,7 @@ namespace Raven.Server.SqlMigration
         private readonly bool _oneTimeConnection;
         private IDataReader _reader;
         private bool _executed;
+        public static int RowsRead;
 
         private static readonly List<SqlReader> AllReaders = new List<SqlReader>();
 
@@ -65,10 +66,15 @@ namespace Raven.Server.SqlMigration
 
         public bool Read()
         {
-            if (!_executed)
+            if (_executed == false)
                 ExecuteReader();
 
-            return _reader.Read();
+            var read = _reader.Read();
+
+            if (read)
+                RowsRead++;
+
+            return read;
         }
 
         public void Dispose()

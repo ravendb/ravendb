@@ -1,24 +1,25 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
-using Raven.Server.Documents;
-using Sparrow.Json;
+using System.Data.SqlClient;
+using System.Linq;
+using Raven.Client.Documents.Operations;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.SqlMigration
 {
     public partial class SqlDatabase
     {
-        public readonly DocumentDatabase DocumentDatabase;
         public List<SqlTable> Tables;
         public readonly IDbConnection Connection;
-        public readonly RavenDocumentFactory Factory;
+        public readonly SqlMigrationDocumentFactory Factory;
 
         private readonly Validator _validator;
 
-        public SqlDatabase(string connectionString, DocumentDatabase documentDatabase, RavenDocumentFactory factory, BlittableJsonReaderArray tablesToWrite)
+        public SqlDatabase(SqlConnection connection, SqlMigrationDocumentFactory factory, List<SqlMigrationImportOperation.SqlMigrationTable> tablesToWrite)
         {
-            Connection = ConnectionFactory.OpenConnection(connectionString);
-            DocumentDatabase = documentDatabase;
+            Connection = connection;
+            Tables = new List<SqlTable>();
             SetTablesFromBlittableArray(tablesToWrite);
 
             Factory = factory;
@@ -28,33 +29,21 @@ namespace Raven.Server.SqlMigration
             SetForeignKeys();
         }
 
-        private void SetTablesFromBlittableArray(BlittableJsonReaderArray tablesToWrite, SqlTable parentTable = null)
+        private void SetTablesFromBlittableArray(List<SqlMigrationImportOperation.SqlMigrationTable> tablesToWrite, SqlTable parentTable = null)
         {
-            if (tablesToWrite == null)
-                return;
-
-            if (Tables == null)
-                Tables = new List<SqlTable>();
-
-            foreach (BlittableJsonReaderObject item in tablesToWrite.Items)
+            foreach (var item in tablesToWrite)
             {
-                item.TryGet("Name", out string name);
-                item.TryGet("Query", out string childQuery);
-                item.TryGet("Patch", out string patchScript);
-                item.TryGet("Property", out string propertyName);
-
                 SqlTable table;
 
                 if (parentTable != null)
                 {
-                    table = new SqlEmbeddedTable(name, childQuery, patchScript, Connection, DocumentDatabase.Configuration, parentTable.Name, propertyName);
+                    table = new SqlEmbeddedTable(item.Name, item.Query, item.Patch, parentTable.Name, item.Property, Connection);
                     parentTable.EmbeddedTables.Add((SqlEmbeddedTable) table);
                 }
-                else table = new SqlTable(name, childQuery, patchScript, Connection, DocumentDatabase.Configuration);
+                else table = new SqlTable(item.Name, item.Query, item.Patch, Connection);
 
-
-                if (item.TryGet("Embedded", out BlittableJsonReaderArray childEmbeddedTables))
-                    SetTablesFromBlittableArray(childEmbeddedTables, table);
+                if (item.EmbeddedTables != null)
+                    SetTablesFromBlittableArray(item.EmbeddedTables, table);
 
                 Tables.Add(table);
             }
@@ -115,7 +104,7 @@ namespace Raven.Server.SqlMigration
                 {
                     reader.AddParameter("constraintName", kvp.Key);
 
-                    if (!reader.Read())
+                    if (reader.Read() == false)
                         continue;
 
                     do
@@ -130,7 +119,7 @@ namespace Raven.Server.SqlMigration
                 {
                     reader.AddParameter("constraintName", kvp.Value);
 
-                    if (!reader.Read())
+                    if (reader.Read() == false)
                         continue;
 
                     do
@@ -140,12 +129,8 @@ namespace Raven.Server.SqlMigration
 
                 var temp = GetAllTablesByName(parentTableName);
 
-
-
-                foreach (var table in temp)
-                    for (var i = 0; i < parentColumnName.Count; i++)
-                        if (!table.ForeignKeys.TryAdd(parentColumnName[i], childTableName[i]))
-                            throw new InvalidOperationException($"Column '{parentColumnName}' cannot reference multiple tables.");
+                if (temp.Any(table => parentColumnName.Where((t, i) => table.ForeignKeys.TryAdd(t, childTableName[i]) == false).Any()))
+                    throw new InvalidOperationException($"Column '{parentColumnName}' cannot reference multiple tables.");
             }
         }
 

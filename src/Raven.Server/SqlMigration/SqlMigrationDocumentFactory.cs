@@ -1,43 +1,44 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Raven.Server.SqlMigration
 {
-    public class RavenDocumentFactory
+
+    public class SqlMigrationDocumentFactory
     {
-        public WriteOptions Options { get;}
+        public FactoryOptions Options { get; }
+        private readonly Dictionary<string, byte[]> _currentAttachments = new Dictionary<string, byte[]>();
+        public HashSet<string> ColumnsSkipped;
 
-        public RavenDocumentFactory() : this(new WriteOptions()) {}
-
-        public RavenDocumentFactory(WriteOptions options)
+        public SqlMigrationDocumentFactory(FactoryOptions options)
         {
             Options = options;
+            ColumnsSkipped = new HashSet<string>();
         }
 
-        public RavenDocument FromReader(SqlReader reader, SqlTable table, bool valuesOnly = false)
+        public SqlMigrationDocument FromReader(SqlReader reader, SqlTable table, out Dictionary<string, byte[]> attachments, bool toValidate = false)
         {
-            return FromReader(reader, table, out _, valuesOnly);
-        }
-
-        public RavenDocument FromReader(SqlReader reader, SqlTable table, out Dictionary<string, byte[]> attachments, bool valuesOnly = false)
-        {
-            attachments = new Dictionary<string, byte[]>();
-            var document = FromReaderInternal(reader, table, ref attachments, valuesOnly);
+            _currentAttachments?.Clear();
+            var document =  FromReaderInternal(reader, table, toValidate);
+            attachments = _currentAttachments.ToDictionary(entry => entry.Key, entry => entry.Value);
             return document;
         }
 
-        private RavenDocument FromReaderInternal(SqlReader reader, SqlTable table, ref Dictionary<string, byte[]> attachments, bool valuesOnly = false)
+        private SqlMigrationDocument FromReaderInternal(SqlReader reader, SqlTable table, bool toValidate = false)
         {
-            var document = new RavenDocument(table.Name);
+            var document = new SqlMigrationDocument(table.Name);
 
             var id = GetName(table.Name);
 
-            if (!table.IsEmbedded)
+            if (table.IsEmbedded == false)
                 document.SetCollection(id);
 
             for (var i = 0; i < reader.FieldCount; i++)
             {
                 var columnName = reader.GetName(i);
+                var isPrimaryKey = table.PrimaryKeys.Contains(columnName);
+                var isForeignKey = table.ForeignKeys.TryGetValue(columnName, out var foreignKeyTableName);
 
                 object value;
 
@@ -47,50 +48,54 @@ namespace Raven.Server.SqlMigration
                 }
                 catch (Exception e)
                 {
-                    if (Options.SkipUnsopportedTypes)
-                        continue;
+                    if (Options.SkipUnsupportedTypes == false)
+                        throw new InvalidOperationException($"Cannot read column '{columnName}' in table '{table.Name}'. (Unsupported type: {reader.GetDataTypeName(i)})", e);
 
-                    throw new InvalidOperationException($"Cannot read column '{columnName}' in table '{table.Name}'. (Unsupported type: {reader.GetDataTypeName(i)})", e);
+                    if (isPrimaryKey || isForeignKey)
+                        throw new InvalidOperationException($"Cannot skip unsupported KEY column '{columnName}' in table '{table.Name}'. (Unsupported type: {reader.GetDataTypeName(i)})", e);
+
+                    if (!toValidate)
+                        ColumnsSkipped.Add($"{table.Name}: {columnName}");
+
+                    continue;
                 }
 
-                var isForeignKey = table.ForeignKeys.TryGetValue(columnName, out var foreignKeyTable);
                 var isNullOrEmpty = value is DBNull || string.IsNullOrWhiteSpace(value.ToString());
 
-                if (table.PrimaryKeys.Contains(columnName))
+                if (isPrimaryKey)
                 {
                     id += $"/{value}";
 
-                    if (!isForeignKey && !table.IsEmbedded)
+                    if (isForeignKey == false && table.IsEmbedded == false)
                         continue;
                 }
 
                 if (Options.BinaryToAttachment && reader.GetFieldType(i) == typeof(byte[]))
                 {
-                    if (!isNullOrEmpty)
-                        attachments.Add($"{columnName}_{attachments.Count}", (byte[]) value);
+                    if (isNullOrEmpty == false)
+                        _currentAttachments.Add($"{columnName}_{_currentAttachments.Count}", (byte[]) value);
                 }
 
                 else
                 {
-                    if (isForeignKey && !isNullOrEmpty)
-                        value = $"{GetName(foreignKeyTable)}/{value}";
+                    if (isForeignKey && isNullOrEmpty == false)
+                        value = $"{GetName(foreignKeyTableName)}/{value}";
 
                     document.Set(columnName, value, Options.TrimStrings);
                 }
             }
 
-            if (!valuesOnly)
-            {
-                SetEmbeddedDocuments(document, table, ref attachments);
-                table.GetJsPatcher()?.PatchDocument(document);
-            }
-            
             document.Id = id;
+
+            if (toValidate) return document;
+
+            SetEmbeddedDocuments(document, table);
+            table.GetJsPatch().PatchDocument(document);
 
             return document;
         }
 
-        private void SetEmbeddedDocuments(RavenDocument document, SqlTable parentTable, ref Dictionary<string, byte[]> attachments)
+        private void SetEmbeddedDocuments(SqlMigrationDocument document, SqlTable parentTable)
         {
             foreach (var childTable in parentTable.EmbeddedTables)
             {
@@ -106,16 +111,16 @@ namespace Raven.Server.SqlMigration
                 else
                     childReader = childTable.GetReader();
 
-                if (!childReader.HasValue() && !childReader.Read())
+                if (childReader.HasValue() == false && childReader.Read() == false)
                     continue;
 
                 var continueLoop = false;
 
-                while (!CompareValues(parentValues, GetValuesFromColumns(childReader, childColumns), out var isBigger))
+                while (CompareValues(parentValues, GetValuesFromColumns(childReader, childColumns), out var isBigger) == false)
                 {
-                    if (!isBigger && childReader.Read()) continue;
+                    if (isBigger == false && childReader.Read()) continue;
 
-                    continueLoop = true;
+                    continueLoop = true; // If parent value is greater than child value => childReader move to next, otherwise, parentReader move to next
                     break;
                 }
 
@@ -124,11 +129,11 @@ namespace Raven.Server.SqlMigration
 
                 do
                 {
-                    var innerDocument = FromReaderInternal(childReader, childTable, ref attachments);
+                    var innerDocument = FromReaderInternal(childReader, childTable);
 
-                    document.Append(childTable.Property, innerDocument);
+                    document.Append(childTable.PropertyName, innerDocument);
 
-                    if (!childReader.Read()) break;
+                    if (childReader.Read() == false) break;
 
                 } while (CompareValues(parentValues, GetValuesFromColumns(childReader, childColumns), out _));
             }
@@ -179,15 +184,16 @@ namespace Raven.Server.SqlMigration
 
         private string GetName(string tableName)
         {
-            return Options.IncludeSchema ? tableName : tableName.Substring(tableName.IndexOf('.') + 1);
+            return Options.IncludeSchema ? tableName : tableName.Substring(tableName.LastIndexOf('.') + 1);
         }
 
-        public class WriteOptions
+        public class FactoryOptions
         {
             public bool IncludeSchema { get; set; } = true;
             public bool BinaryToAttachment { get; set; } = true;
             public bool TrimStrings { get; set; } = true;
-            public bool SkipUnsopportedTypes { get; set; } = false;
+            public bool SkipUnsupportedTypes { get; set; } = false;
+            public int BatchSize { get; set; } = 1000;
         }
     }
 }

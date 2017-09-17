@@ -1,5 +1,6 @@
 ﻿using System;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Smuggler;
@@ -110,6 +111,8 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, FacetQueryServerSide> FacetQuery = GenerateJsonDeserializationRoutine<FacetQueryServerSide>();
 
         public static readonly Func<BlittableJsonReaderObject, SuggestionQueryServerSide> SuggestionQuery = GenerateJsonDeserializationRoutine<SuggestionQueryServerSide>();
+
+		public static readonly Func<BlittableJsonReaderObject, SqlMigrationImportOperation.SqlMigrationTable> SqlMigrationTable = SqlMigrationImportOperation.SqlMigrationTable.ManualDeserializationFunc;
 
         public class Parameters
         {
