@@ -491,8 +491,7 @@ class queryCompleter {
     private completeEmpty(callback: (errors: any[], wordList: autoCompleteWordList[]) => void) {
         const keywords = [
             {value: "from", score: 2, meta: "keyword"},
-            {value: "declare", score: 1, meta: "keyword"},
-            {value: "select", score: 0, meta: "keyword"}
+            {value: "declare", score: 1, meta: "keyword"}
         ];
         this.completeWords(callback, keywords);
     }

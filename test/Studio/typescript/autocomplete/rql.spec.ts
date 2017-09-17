@@ -9,13 +9,12 @@ const emptyProvider = rqlTestUtils.emptyProvider;
 const northwindProvider = rqlTestUtils.northwindProvider;
 
 describe("RQL Autocomplete", () => {
-    it('empty query should start with from or declare or select', done => {
+    it('empty query should start with from or declare', done => {
         rqlTestUtils.autoComplete("|", northwindProvider(), ((errors, wordlist, prefix) => {
             assert.equal(prefix, "");
             assert.deepEqual(wordlist, [
                 {caption: "from", value: "from ", score: 2, meta: "keyword"},
-                {caption: "declare", value: "declare ", score: 1, meta: "keyword"},
-                {caption: "select", value: "select ", score: 0, meta: "keyword"},
+                {caption: "declare", value: "declare ", score: 1, meta: "keyword"}
             ]);
 
             done();
