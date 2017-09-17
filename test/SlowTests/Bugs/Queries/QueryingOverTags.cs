@@ -1,23 +1,19 @@
-using System;
 using System.Linq;
-using Raven.Client.Linq;
-using Raven.Tests.Common;
-
+using FastTests;
 using Xunit;
 
-namespace Raven.Tests.Bugs
+namespace SlowTests.Bugs.Queries
 {
-    public class QueryingOverTags : RavenTest
+    public class QueryingOverTags : RavenTestBase
     {
         [Fact]
         public void Can_chain_wheres_when_querying_collection_with_any()
         {
-            var entity = new EntityWithTags()
+            var entity = new EntityWithTags
             {
-                Id = Guid.NewGuid(),
-                Tags = new [] { "FOO", "BAR" }
+                Tags = new[] { "FOO", "BAR" }
             };
-            using(var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 using (var session = documentStore.OpenSession())
                 {
@@ -28,7 +24,7 @@ namespace Raven.Tests.Bugs
                 using (var session = documentStore.OpenSession())
                 {
                     IQueryable<EntityWithTags> query = session.Query<EntityWithTags>()
-                        .Customize(x=>x.WaitForNonStaleResultsAsOfLastWrite());
+                        .Customize(x => x.WaitForNonStaleResultsAsOfNow());
 
                     foreach (var tag in new string[] { "FOO", "BAR" })
                     {
@@ -41,9 +37,8 @@ namespace Raven.Tests.Bugs
             }
         }
 
-        public class EntityWithTags
+        private class EntityWithTags
         {
-            public Guid Id { get; set; }
             public System.Collections.Generic.IEnumerable<string> Tags
             {
                 get;

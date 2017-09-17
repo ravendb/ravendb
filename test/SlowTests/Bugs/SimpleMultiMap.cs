@@ -1,48 +1,48 @@
 using System;
 using System.Linq;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
+using FastTests;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 
-namespace Raven.Tests.Bugs.MultiMap
+namespace SlowTests.Bugs
 {
-    public class SimpleMultiMap : RavenTest
+    public class SimpleMultiMap : RavenTestBase
     {
         [Fact]
         public void CanCreateMultiMapIndex()
         {
-            using(var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                store.Conventions.PrettifyGeneratedLinqExpressions = false;
+                //store.Conventions.PrettifyGeneratedLinqExpressions = false;
                 new CatsAndDogs().Execute(store);
 
-                var indexDefinition = store.DatabaseCommands.GetIndex("CatsAndDogs");
+                var indexDefinition = store.Admin.Send(new GetIndexOperation("CatsAndDogs"));
                 Assert.Equal(2, indexDefinition.Maps.Count);
                 Assert.Equal(@"docs.Cats.Select(cat => new {
     Name = cat.Name
 })", indexDefinition.Maps.First());
                 Assert.Equal(@"docs.Dogs.Select(dog => new {
     Name = dog.Name
-})", indexDefinition.Maps.Skip(1).First());   
+})", indexDefinition.Maps.Skip(1).First());
             }
         }
 
         [Fact]
         public void CanQueryUsingMultiMap()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new CatsAndDogs().Execute(store);
 
-                using(var documentSession = store.OpenSession())
+                using (var documentSession = store.OpenSession())
                 {
-                    documentSession.Store(new Cat{Name = "Tom"});
-                    documentSession.Store(new Dog{Name = "Oscar"});
+                    documentSession.Store(new Cat { Name = "Tom" });
+                    documentSession.Store(new Dog { Name = "Oscar" });
                     documentSession.SaveChanges();
                 }
 
-                using(var session = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     var haveNames = session.Query<IHaveName, CatsAndDogs>()
                         .Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(5)))
@@ -61,10 +61,10 @@ namespace Raven.Tests.Bugs.MultiMap
             public CatsAndDogs()
             {
                 AddMap<Cat>(cats => from cat in cats
-                                 select new {cat.Name});
+                                    select new { cat.Name });
 
                 AddMap<Dog>(dogs => from dog in dogs
-                                 select new { dog.Name });
+                                    select new { dog.Name });
             }
         }
 
@@ -84,5 +84,5 @@ namespace Raven.Tests.Bugs.MultiMap
         }
     }
 
-    
+
 }

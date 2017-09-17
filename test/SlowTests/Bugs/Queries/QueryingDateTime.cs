@@ -1,19 +1,17 @@
 using System;
 using System.Globalization;
 using System.Linq;
-
-using Raven.Tests.Common;
-
+using FastTests;
 using Xunit;
 
-namespace Raven.Tests.Bugs
+namespace SlowTests.Bugs.Queries
 {
-    public class QueryingDateTime : RavenTest
+    public class QueryingDateTime : RavenTestBase
     {
         [Fact]
         public void QueryingNonUtcTime()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var dateTime1 = DateTime.ParseExact("2011-04-08T22:00:00.0000000+02:00", new[] { "r", "o" }, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
                 var dateTime2 = dateTime1.AddHours(-2);
@@ -34,7 +32,7 @@ namespace Raven.Tests.Bugs
             }
         }
 
-        public class Foo
+        private class Foo
         {
             public string Id { get; set; }
             public DateTime UtcTime { get; set; }

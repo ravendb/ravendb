@@ -1,18 +1,15 @@
 using System.Linq;
-using Raven.Client.Document;
-using Raven.Tests.Common;
-
+using FastTests;
 using Xunit;
 
-namespace Raven.Tests.Bugs
+namespace SlowTests.Bugs.Queries
 {
-    public class QueryingOnValueWithMinusRemote : RavenTest
+    public class QueryingOnValueWithMinus : RavenTestBase
     {
         [Fact]
         public void CanQueryOnValuesContainingMinus()
         {
-            using(GetNewServer())
-            using (var store = new DocumentStore{Url = "http://localhost:8079"}.Initialize())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -22,9 +19,9 @@ namespace Raven.Tests.Bugs
 
                 using (var session = store.OpenSession())
                 {
-                    var list = session.Advanced.DocumentQuery<object>()
+                    var list = session.Advanced.DocumentQuery<dynamic>()
                         .WhereEquals("Name", "Bruce-Lee")
-                        .ToList<object>();
+                        .ToList();
 
                     Assert.Equal(1, list.Count);
                 }

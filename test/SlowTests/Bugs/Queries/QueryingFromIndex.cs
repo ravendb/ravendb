@@ -3,23 +3,23 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System.Linq;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
-using Raven.Tests.Document;
+using FastTests;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 
-namespace Raven.Tests.Bugs
+namespace SlowTests.Bugs.Queries
 {
-    public class QueryingFromIndex : RavenTest
+    public class QueryingFromIndex : RavenTestBase
     {
         [Fact]
         public void LuceneQueryWithIndexIsCaseInsensitive()
         {
-            using (var store = this.NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                var definition = new IndexDefinitionBuilder<Company>
+                var definition = new IndexDefinitionBuilder<Company>("CompanyByName")
                 {
                     Map = docs => from doc in docs
                                   select new
@@ -27,8 +27,8 @@ namespace Raven.Tests.Bugs
                                       doc.Name
                                   }
                 }.ToIndexDefinition(store.Conventions);
-                store.DatabaseCommands.PutIndex("CompanyByName",
-                                                definition);
+
+                store.Admin.Send(new PutIndexesOperation(definition));
 
                 using (var session = store.OpenSession())
                 {
@@ -42,7 +42,7 @@ namespace Raven.Tests.Bugs
 
                     var company =
                         session.Advanced.DocumentQuery<Company>("CompanyByName")
-                            .Where("Name:Google")
+                            .WhereEquals("Name", "Google")
                             .WaitForNonStaleResults()
                             .FirstOrDefault();
 
@@ -54,9 +54,9 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void LinqQueryWithIndexIsCaseInsensitive()
         {
-            using (var store = this.NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                var definition = new IndexDefinitionBuilder<Company>
+                var definition = new IndexDefinitionBuilder<Company>("CompanyByName")
                 {
                     Map = docs => from doc in docs
                                   select new
@@ -64,8 +64,8 @@ namespace Raven.Tests.Bugs
                                       doc.Name
                                   }
                 }.ToIndexDefinition(store.Conventions);
-                store.DatabaseCommands.PutIndex("CompanyByName",
-                                                definition);
+                store.Admin.Send(new PutIndexesOperation(definition));
+
 
                 using (var session = store.OpenSession())
                 {
@@ -79,13 +79,24 @@ namespace Raven.Tests.Bugs
 
                     var company =
                         session.Query<Company>("CompanyByName")
-                            .Customize(x=>x.WaitForNonStaleResults())
-                            .Where(x=>x.Name == "Google")
+                            .Customize(x => x.WaitForNonStaleResults())
+                            .Where(x => x.Name == "Google")
                             .FirstOrDefault();
 
                     Assert.NotNull(company);
                 }
             }
+        }
+
+        private class Company
+        {
+            public decimal AccountsReceivable { get; set; }
+            public string Id { get; set; }
+            public string Name { get; set; }
+            public string Address1 { get; set; }
+            public string Address2 { get; set; }
+            public string Address3 { get; set; }
+            public int Phone { get; set; }
         }
     }
 }
