@@ -11,6 +11,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Logging;
 
 namespace Rachis.Transport
@@ -86,9 +87,15 @@ namespace Rachis.Transport
             var sc = requestMessageContent as HttpTransportSender.SnapshotContent;
             if (sc != null)
                 return sc.ToString();
+
+            var jsonContent = requestMessageContent as JsonContent;
+            if (jsonContent != null)
+                return jsonContent.Data.ToString();
+
             var readAsStringAsync = requestMessageContent?.ReadAsStringAsync();
             if (readAsStringAsync != null)
                 return await readAsStringAsync.ConfigureAwait(false);
+
             return string.Empty;
         }
 
@@ -130,20 +137,22 @@ namespace Rachis.Transport
 
         public async Task<HttpResponseMessage> WriteAsync(Func<HttpContent> content, Dictionary<string,string> headers = null)
         {
-            var message = new HttpRequestMessage(HttpMethod, Url)
+            await SendRequestInternal(() =>
             {
-                Content = content()
-            };
-
-            if (headers != null)
-            {
-                foreach (var kvp in headers)
+                var message = new HttpRequestMessage(HttpMethod, Url)
                 {
-                    message.Headers.Add(kvp.Key,kvp.Value);
-                }
-            }
+                    Content = content()
+                };
 
-            await SendRequestInternal(() => message).ConfigureAwait(false);
+                if (headers != null)
+                {
+                    foreach (var kvp in headers)
+                    {
+                        message.Headers.Add(kvp.Key, kvp.Value);
+                    }
+                }
+                return message;
+            }).ConfigureAwait(false);
 
             return Response;
         }
@@ -213,8 +222,8 @@ namespace Rachis.Transport
         {
             if (Response != null)
             {
-                Response.Dispose();
-                Response = null;
+                //Response.Dispose();
+                //Response = null;
             }
 
             if (HttpClient != null)

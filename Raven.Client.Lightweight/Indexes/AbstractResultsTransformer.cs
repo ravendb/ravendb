@@ -181,7 +181,6 @@ namespace Raven.Client.Indexes
                 {
                     replicateTransformerRequest.ExecuteRawResponseAsync().ContinueWith(t =>
                     {
-                        t.Result.Content.Dispose();
                         t.Result.Dispose();
                     }).Wait();
                 }
@@ -205,7 +204,6 @@ namespace Raven.Client.Indexes
                 {
                     await replicateTransformerRequest.ExecuteRawResponseAsync().ContinueWith(t =>
                     {
-                        t.Result.Content.Dispose();
                         t.Result.Dispose();
                     }).ConfigureAwait(false);
                 }
