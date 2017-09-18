@@ -4,8 +4,7 @@ import aceEditorBindingHandler = require("src/Raven.Studio/typescript/common/bin
 class rqlTestUtils {
     static autoComplete(query: string, 
                         queryCompleterProvider: () => queryCompleter, 
-                        callback: (errors: any[], worldlist: autoCompleteWordList[], prefix: string) => void,
-                        lastKeywordCallback: (lastKeyword: autoCompleteLastKeyword) => void = null): void {
+                        callback: (errors: any[], worldlist: autoCompleteWordList[], prefix: string, lastKeyword: autoCompleteLastKeyword) => void): void {
         const queryWoPosition = query.replace("|", "");
         const element = $("<div></div>").html(queryWoPosition)[0];
         const aceEditor: AceAjax.Editor = ace.edit(element);
@@ -38,14 +37,12 @@ class rqlTestUtils {
 
             const prefix = util.getCompletionPrefix(aceEditor);
             
-            const lastKeyword = completer.complete(aceEditor, aceEditor.getSession(), aceEditor.getCursorPosition(), prefix, (errors: any[], wordlist: autoCompleteWordList[]) =>  {
-                callback(errors, wordlist, prefix);
+            const lastKeyword = completer.getLastKeyword(aceEditor.getSession(), aceEditor.getCursorPosition());
+            
+            completer.complete(aceEditor, aceEditor.getSession(), aceEditor.getCursorPosition(), prefix, (errors: any[], wordlist: autoCompleteWordList[]) => {
+                callback(errors, wordlist, prefix, lastKeyword);
                 aceEditor.destroy();
             });
-            
-            if (lastKeywordCallback) {
-                lastKeywordCallback(lastKeyword);
-            }
         });
 
         setTimeout(() => {
@@ -128,6 +125,54 @@ class rqlTestUtils {
                                     "With Space": "Object",
                                     "With ' and \" quotes": "Object",
                                     "@metadata": "Object"
+                                });
+                                break;
+                        }
+                
+                        break;
+                    case "@all_docs":
+                        
+                        switch (prefix) {
+                            default:
+                                callback({
+                                    "Max": "Number",
+                                    "@metadata": "Object",
+                                    "Name": "String",
+                                    "Description": "String",
+                                    "ExternalId": "String",
+                                    "Contact": "Object",
+                                    "Address": "Object",
+                                    "Phone": "String",
+                                    "Fax": "String",
+                                    "LastName": "String",
+                                    "FirstName": "String",
+                                    "Title": "String",
+                                    "HiredAt": "String",
+                                    "Birthday": "String",
+                                    "HomePhone": "String",
+                                    "Extension": "String",
+                                    "ReportsTo": "String",
+                                    "Notes": "Null",
+                                    "Territories": "ArrayObject, ArrayString",
+                                    "Company": "String",
+                                    "Employee": "String",
+                                    "OrderedAt": "String",
+                                    "RequireAt": "String",
+                                    "ShippedAt": "Null",
+                                    "ShipTo": "Object",
+                                    "ShipVia": "String",
+                                    "Freight": "Number",
+                                    "Lines": "ArrayObject",
+                                    "Na.me": "String",
+                                    "Supplier": "String",
+                                    "Category": "String",
+                                    "QuantityPerUnit": "String",
+                                    "PricePerUnit": "Number",
+                                    "UnitsInStock": "Number",
+                                    "UnitsOnOrder": "Number",
+                                    "Discontinued": "Boolean",
+                                    "ReorderLevel": "Number",
+                                    "HomePage": "Null"
                                 });
                                 break;
                         }

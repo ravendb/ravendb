@@ -133,7 +133,7 @@ class queryCompleter {
         return keywords;
     }
     
-    private getLastKeyword(session: AceAjax.IEditSession, pos: AceAjax.Position): autoCompleteLastKeyword {
+    getLastKeyword(session: AceAjax.IEditSession, pos: AceAjax.Position): autoCompleteLastKeyword {
         const mode = session.getMode();
         const rules = <AceAjax.RqlHighlightRules>mode.$highlightRules;
         
@@ -289,34 +289,41 @@ class queryCompleter {
              session: AceAjax.IEditSession,
              pos: AceAjax.Position,
              prefix: string,
-             callback: (errors: any[], wordList: autoCompleteWordList[]) => void) : autoCompleteLastKeyword {
+             callback: (errors: any[], wordList: autoCompleteWordList[]) => void) {
 
         const lastKeyword = this.getLastKeyword(session, pos);
         if (!lastKeyword || !lastKeyword.keyword || lastKeyword.tokenDivider === 0) {
             this.completeEmpty(callback);
-            return lastKeyword;
+            return;
         }
         
         switch (lastKeyword.keyword) {
             case "from": {
-                if (lastKeyword.identifiers.length > 0 && lastKeyword.tokenDivider >= 2) {
+                if (lastKeyword.tokenDivider === 2) {
                     if (lastKeyword.parentheses > 0) {
                         // from (Collection, {show fields here})
                         this.completeFields(session, lastKeyword.getFieldPrefix, callback);
-                        return lastKeyword;
+                        return;
                     }
 
                     this.completeFromAfter(callback, false, lastKeyword);
-                    return lastKeyword;
+                    return;
+                }
+                if (lastKeyword.tokenDivider > 2) {
+                    return;
                 }
 
                 this.completeFrom(callback);
                 break;
             }
             case "from index": {
-                if (lastKeyword.identifiers.length > 0 && lastKeyword.tokenDivider >= 2) { // index name already specified
+                if (lastKeyword.tokenDivider === 2) { // index name already specified
                     this.completeFromAfter(callback, true, lastKeyword);
-                    return lastKeyword;
+                    return;
+                }
+                if (lastKeyword.tokenDivider > 2) {
+                    callback(["empty completion"], null);
+                    return;
                 }
 
                 this.providers.indexNames(names => {
@@ -331,7 +338,7 @@ class queryCompleter {
             }
             case "__function":
                 if (lastKeyword.identifiers.length > 0 && lastKeyword.text) { // field already specified
-                    return lastKeyword;
+                    return;
                 }
                 
                 this.completeFields(session, lastKeyword.getFieldPrefix, callback);
@@ -352,14 +359,14 @@ class queryCompleter {
                         this.completeWords(callback, [{value: "as", score: 3, meta: "keyword"}]);
                     }
                     
-                    return lastKeyword;
+                    return;
                 }
                 
                 this.completeFields(session, lastKeyword.getFieldPrefix, callback);
                 break;
             case "group by":
                 if (lastKeyword.identifiers.length > 0 && lastKeyword.text) { // field already specified
-                    return lastKeyword;
+                    return;
                 }
                 this.completeFields(session, lastKeyword.getFieldPrefix, callback);
                 break;
@@ -374,7 +381,7 @@ class queryCompleter {
                         this.completeWords(callback, keywords);
                     }
                     
-                    return lastKeyword;
+                    return;
                 }
                 
                 this.completeFields(session, lastKeyword.getFieldPrefix, callback, [
@@ -388,19 +395,19 @@ class queryCompleter {
                     // first, calculate and validate the column name
                     let currentField = _.last(lastKeyword.identifiers);
                     if (!currentField) {
-                        return lastKeyword;
+                        return;
                     }
 
                     // TODO: remove extractIndexOrCollectionName and extract in getLastKeyword
                     const queryIndexName = queryCompleter.extractIndexOrCollectionName(session);
                     if (!queryIndexName) {
-                        return lastKeyword;
+                        return;
                     }
 
                     this.getIndexFields(queryIndexName.name, queryIndexName.type, prefix)
                         .done((wordList) => {
                             if (!wordList.find(x => x.value === currentField)) {
-                                return lastKeyword;
+                                return;
                             }
 
                             let currentValue: string = "";
@@ -416,7 +423,7 @@ class queryCompleter {
                             // for non dynamic indexes query index terms, for dynamic indexes, try perform general auto complete
                             const queryIndexName = queryCompleter.extractIndexOrCollectionName(session);
                             if (!queryIndexName) {
-                                return lastKeyword; // todo: try to callback with error
+                                return; // todo: try to callback with error
                             }
                             
                             if (queryIndexName.type === "index") {
@@ -448,7 +455,7 @@ class queryCompleter {
                                 }*/
                             }
                         });
-                    return lastKeyword;
+                    return;
                 }
                 
                 this.completeFields(session, lastKeyword.getFieldPrefix, callback);
@@ -462,7 +469,7 @@ class queryCompleter {
                 break;
         }
         
-        return lastKeyword;
+        return;
     }
 
     private completeWords(callback: (errors: any[], wordList: autoCompleteWordList[]) => void, keywords: autoCompleteWordList[]) {
@@ -521,10 +528,6 @@ class queryCompleter {
     }
 
     private completeFromAfter(callback: (errors: any[], wordList: autoCompleteWordList[]) => void, isStaticIndex: boolean, lastKeyword: autoCompleteLastKeyword) {
-        if (lastKeyword.keywordModifier && lastKeyword.identifiers.length < 2) {
-            return;
-        }
-
         const keywords = [
             {value: "where", score: 6, meta: "keyword"},
             {value: "load", score: 4, meta: "keyword"},
