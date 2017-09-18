@@ -92,7 +92,7 @@ class queryCompleter {
         if (queryIndexType === "index") {
             this.providers.indexFields(queryIndexName, fields => {
                 fields.map(field => {
-                    wordList.push({caption: field, value: this.escapeCollectionOrFieldName(field), score: 1, meta: "field"});
+                    wordList.push({caption: field, value: queryCompleter.escapeCollectionOrFieldName(field), score: 1, meta: "field"});
                 });
                 
                 this.indexOrCollectionFieldsCache.set(key, wordList);
@@ -108,7 +108,7 @@ class queryCompleter {
                         return fieldType;
                     }).join(" | ");
 
-                    wordList.push({caption: key, value: this.escapeCollectionOrFieldName(key), score: 1, meta: formattedFieldType + " field"});
+                    wordList.push({caption: key, value: queryCompleter.escapeCollectionOrFieldName(key), score: 1, meta: formattedFieldType + " field"});
                 });
                 
                 this.indexOrCollectionFieldsCache.set(key, wordList);
@@ -322,7 +322,7 @@ class queryCompleter {
                 this.providers.indexNames(names => {
                     this.completeWords(callback, names.map(name => ({
                         caption: name,
-                        value: this.escapeCollectionOrFieldName(name),
+                        value: queryCompleter.escapeCollectionOrFieldName(name),
                         score: 1, 
                         meta: "index"
                     })));
@@ -423,7 +423,7 @@ class queryCompleter {
                                 this.providers.terms(queryIndexName.name, currentField, 20, terms => {
                                     if (terms && terms.length) {
                                         this.completeWords(callback,
-                                            terms.map(term => ({caption: term, value: this.escapeCollectionOrFieldName(term), score: 1, meta: "value"})));
+                                            terms.map(term => ({caption: term, value: queryCompleter.escapeCollectionOrFieldName(term), score: 1, meta: "value"})));
                                     }
                                 })
                             } else {
@@ -479,7 +479,7 @@ class queryCompleter {
         }))
     }
 
-    private escapeCollectionOrFieldName(name: string) : string {
+    private static escapeCollectionOrFieldName(name: string) : string {
         // wrap collection name in 'collection name' if it has spaces.
         if (/^[0-9a-zA-Z_@]+$/.test(name)){
             return name;
@@ -505,7 +505,7 @@ class queryCompleter {
             const wordList = collections.map(name => {
                 return {
                     caption: name, 
-                    value: this.escapeCollectionOrFieldName(name),
+                    value: queryCompleter.escapeCollectionOrFieldName(name),
                     score: 2,
                     meta: "collection"
                 };
