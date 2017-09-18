@@ -1,6 +1,6 @@
 namespace Raven.Server.Smuggler.Migration
 {
-    public class SmugglerDatabaseOptions
+    public class DatabaseMigrationOptions
     {
         public ItemType OperateOnTypes { get; set; }
 
