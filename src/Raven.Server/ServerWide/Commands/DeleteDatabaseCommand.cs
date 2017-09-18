@@ -9,10 +9,11 @@ namespace Raven.Server.ServerWide.Commands
 {
     public class DeleteDatabaseCommand : UpdateDatabaseCommand
     {
-        public string[] _clusterNodes;
+        public string[] ClusterNodes;
         public bool HardDelete;
         public string[] FromNodes;
         public bool UpdateReplicationFactor = true;
+        public Dictionary<string, string> MentorChangeVector;
 
         public DeleteDatabaseCommand() : base(null)
         {
@@ -26,13 +27,30 @@ namespace Raven.Server.ServerWide.Commands
 
         public override void Initialize(ServerStore serverStore, TransactionOperationContext context)
         {
-            _clusterNodes = serverStore.GetClusterTopology(context).AllNodes.Keys.ToArray();
+            ClusterNodes = serverStore.GetClusterTopology(context).AllNodes.Keys.ToArray();
         }
 
         public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             var deletionInProgressStatus = HardDelete ? DeletionInProgressStatus.HardDelete
                 : DeletionInProgressStatus.SoftDelete;
+
+            if (MentorChangeVector != null)
+            {
+                if (record.DeletionInProgressChangeVector == null)
+                {
+                    record.DeletionInProgressChangeVector = new Dictionary<string, string>();
+                }
+
+                foreach (var entry in MentorChangeVector)
+                {
+                    var key = entry.Key;
+                    var value = entry.Value;
+
+                    record.DeletionInProgressChangeVector[key] = value;
+                }
+            }
+
             if (record.DeletionInProgress == null)
             {
                 record.DeletionInProgress = new Dictionary<string, DeletionInProgressStatus>();
@@ -45,12 +63,12 @@ namespace Raven.Server.ServerWide.Commands
                     {
                         DatabaseDoesNotExistException.ThrowWithMessage(record.DatabaseName, $"Request to delete database from node '{node}' failed.");
                     }
-                    record.Topology.RemoveFromTopology(node);
                     if (UpdateReplicationFactor)
                     {
+                        record.Topology.RemoveFromTopology(node);
                         record.Topology.ReplicationFactor--;
                     }
-                    if(_clusterNodes.Contains(node))
+                    if (ClusterNodes.Contains(node))
                         record.DeletionInProgress[node] = deletionInProgressStatus;
                 }
             }
@@ -62,7 +80,7 @@ namespace Raven.Server.ServerWide.Commands
 
                 foreach (var node in allNodes)
                 {
-                    if (_clusterNodes.Contains(node))
+                    if (ClusterNodes.Contains(node))
                         record.DeletionInProgress[node] = deletionInProgressStatus;
                 }
 
@@ -83,6 +101,10 @@ namespace Raven.Server.ServerWide.Commands
             if (FromNodes != null)
             {
               json[nameof(FromNodes)] = new DynamicJsonArray(FromNodes);
+            }
+            if (MentorChangeVector != null)
+            {
+              json[nameof(MentorChangeVector)] = DynamicJsonValue.Convert(MentorChangeVector);
             }
         }
     }

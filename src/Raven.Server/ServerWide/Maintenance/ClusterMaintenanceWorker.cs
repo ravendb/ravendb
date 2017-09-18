@@ -139,7 +139,15 @@ namespace Raven.Server.ServerWide.Maintenance
                         report.LastTombstoneEtag = DocumentsStorage.ReadLastTombstoneEtag(tx.InnerTransaction);
                         report.NumberOfConflicts = documentsStorage.ConflictsStorage.ConflictsCount;
                         report.NumberOfDocuments = documentsStorage.GetNumberOfDocuments(context);
-                        report.LastChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
+                        report.DatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
+                        foreach (var outgoing in dbInstance.ReplicationLoader.OutgoingHandlers)
+                        {
+                            var node = outgoing.GetNode();
+                            if (node != null)
+                            {
+                                report.LastSentEtag.Add(node, outgoing._lastSentDocumentEtag);
+                            }
+                        }
 
                         if (indexStorage != null)
                         {
