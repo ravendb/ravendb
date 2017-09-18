@@ -142,7 +142,7 @@ namespace Raven.Server.SqlMigration
                 }
                 catch (Exception e)
                 {
-                    AddError($"Cannot patch table '{table.Name}' using the given script. Error: " + e.Message);
+                    AddError($"Cannot patch table '{table.Name}' using the given script. Error: " + e);
                 }
             }
 
@@ -161,15 +161,15 @@ namespace Raven.Server.SqlMigration
                     return null;
                 }
 
-                SqlReader reader = new SqlReader(_database.Connection, SqlQueries.SelectSingleRowFromQuery(table.InitialQuery));
+                var reader = new SqlReader(_database.Connection, SqlQueries.SelectSingleRowFromQuery(table.InitialQuery));
 
                 try
                 {
                     reader.ExecuteReader();
                 }
-                catch
+                catch (Exception e)
                 {
-                    AddError($"Failed to read table '{table.Name}' using the given query");
+                    AddError($"Failed to read table '{table.Name}' using the given query. Error: {e}");
                     return null;
                 }
 

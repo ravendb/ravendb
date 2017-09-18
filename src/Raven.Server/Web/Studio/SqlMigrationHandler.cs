@@ -16,7 +16,7 @@ namespace Raven.Server.Web.Studio
 {
     public class SqlMigrationHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/admin/sql-migration/schema", "POST", AuthorizationStatus.DatabaseAdmin)]
+        [RavenAction("/databases/*/admin/sql-migration/schema", "GET", AuthorizationStatus.DatabaseAdmin)]
         public Task SqlSchema()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -28,42 +28,27 @@ namespace Raven.Server.Web.Studio
                     databaseRecord = Server.ServerStore.Cluster.ReadDatabase(transactionOperationContext, Database.Name);
                 }
 
-                using (var sqlImportDoc = context.ReadForDisk(RequestBodyStream(), null))
+                string ConnectionStringName;
+                ConnectionStringName = GetStringQueryString(nameof(ConnectionStringName));
+
+                if (databaseRecord.SqlConnectionStrings.TryGetValue(ConnectionStringName, out var ConnectionString) == false)
+                    throw new InvalidOperationException($"{nameof(ConnectionString)} with the name '{ConnectionStringName}' not found");
+
+                SqlConnection connection;
+
+                try
                 {
-                    string ConnectionStringName;
-                    if (sqlImportDoc.TryGet(nameof(ConnectionStringName), out ConnectionStringName) == false)
-                        throw new InvalidOperationException($"'{nameof(ConnectionStringName)}' is a required field when asking for sql-migration");
-
-                    if (databaseRecord.SqlConnectionStrings.TryGetValue(ConnectionStringName, out var ConnectionString) == false)
-                        throw new InvalidOperationException($"{nameof(ConnectionString)} with the name '{ConnectionStringName}' not found");
-
-                    string SqlDatabaseName;
-                    if (sqlImportDoc.TryGet(nameof(SqlDatabaseName), out SqlDatabaseName) == false)
-                        throw new InvalidOperationException($"'{nameof(SqlDatabaseName)}' is a required field when asking for sql-migration");
-
-                    SqlConnection connection;
-
-                    try
-                    {
-                        connection = (SqlConnection)ConnectionFactory.OpenConnection(ConnectionString.ConnectionString, SqlDatabaseName);
-                    }
-                    catch (Exception e)
-                    {
-                        WriteResponse(context, Errors: "Cannot open connection using the given connection string. Error: " + e.Message);
-                        return Task.CompletedTask;
-                    }
-
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                    {
-                        writer.WriteStartObject();
-
-                        var Tables = SqlDatabase.GetAllTablesNamesFromDatabase(connection);
-
-                        writer.WriteArray(nameof(Tables), Tables);
-                        
-                        writer.WriteEndObject();
-                    }
+                    connection = (SqlConnection)ConnectionFactory.OpenConnection(ConnectionString.ConnectionString);
                 }
+                catch (Exception e)
+                {
+                    WriteSchemaResponse(context, Error: "Cannot open connection using the given connection string. Error: " + e);
+                    return Task.CompletedTask;
+                }
+
+                var Tables = SqlDatabase.GetAllTablesNamesFromDatabase(connection);
+                WriteSchemaResponse(context, Tables.ToArray());
+
             }
             return Task.CompletedTask;
         }
@@ -89,19 +74,15 @@ namespace Raven.Server.Web.Studio
                     if (databaseRecord.SqlConnectionStrings.TryGetValue(ConnectionStringName, out var ConnectionString) == false)
                         throw new InvalidOperationException($"{nameof(ConnectionString)} with the name '{ConnectionStringName}' not found");
 
-                    string SqlDatabaseName;
-                    if (sqlImportDoc.TryGet(nameof(SqlDatabaseName), out SqlDatabaseName) == false)
-                        throw new InvalidOperationException($"'{nameof(SqlDatabaseName)}' is a required field when asking for sql-migration");
-
                     SqlConnection connection;
                     
                     try
                     {
-                        connection = (SqlConnection)ConnectionFactory.OpenConnection(ConnectionString.ConnectionString, SqlDatabaseName);
+                        connection = (SqlConnection)ConnectionFactory.OpenConnection(ConnectionString.ConnectionString);
                     }
                     catch (Exception e)
                     {
-                        WriteResponse(context, Errors: "Cannot open connection using the given connection string. Error: " + e.Message);
+                        WriteImportResponse(context, Errors: "Cannot open connection using the given connection string. Error: " + e);
                         return;
                     }
 
@@ -154,12 +135,32 @@ namespace Raven.Server.Web.Studio
                         }
                     }
 
-                    WriteResponse(context, factory.ColumnsSkipped.ToArray(), errors.ToArray());
+                    WriteImportResponse(context, factory.ColumnsSkipped.ToArray(), errors.ToArray());
                 }
             }
         }
 
-        private void WriteResponse(DocumentsOperationContext context, string[] ColumnsSkipped = null, params string[] Errors)
+
+        private void WriteSchemaResponse(DocumentsOperationContext context, string[] Tables = null, string Error = null)
+        {
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteStartObject();
+
+                writer.WriteArray(nameof(Tables), Tables);
+
+                writer.WritePropertyName(nameof(Error));
+                writer.WriteString(Error);
+
+                var Success = Error == null;
+                writer.WritePropertyName(nameof(Success));
+                writer.WriteBool(Success);
+
+                writer.WriteEndObject();
+            }
+        }
+
+        private void WriteImportResponse(DocumentsOperationContext context, string[] ColumnsSkipped = null, params string[] Errors)
         {
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
@@ -178,5 +179,6 @@ namespace Raven.Server.Web.Studio
                 writer.WriteEndObject();
             }
         }
+
     }
 }
