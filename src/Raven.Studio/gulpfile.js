@@ -82,6 +82,7 @@ gulp.task('z_generate-typings', function (cb) {
 
 gulp.task('z_compile:test', ['z_generate-ts'], function() {
      return gulp.src([PATHS.test.tsSource])
+        .pipe(plugins.naturalSort())
         .pipe(plugins.sourcemaps.init())
         .pipe(testTsProject())
         .js

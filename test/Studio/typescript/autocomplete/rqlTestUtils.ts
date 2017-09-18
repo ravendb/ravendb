@@ -2,10 +2,15 @@ import queryCompleter = require("src/Raven.Studio/typescript/common/queryComplet
 import aceEditorBindingHandler = require("src/Raven.Studio/typescript/common/bindingHelpers/aceEditorBindingHandler");
 
 class rqlTestUtils {
-    static autoComplete(query: string, queryCompleterProvider: () => queryCompleter, callback: (errors: any[], worldlist: autoCompleteWordList[], prefix: string) => void): void {
+    static autoComplete(query: string, 
+                        queryCompleterProvider: () => queryCompleter, 
+                        callback: (errors: any[], worldlist: autoCompleteWordList[], prefix: string) => void,
+                        lastKeywordCallback: (lastKeyword: autoCompleteLastKeyword) => void = null): void {
         const queryWoPosition = query.replace("|", "");
-        const lines = query.split("\r\n");
+        const element = $("<div></div>").html(queryWoPosition)[0];
+        const aceEditor: AceAjax.Editor = ace.edit(element);
 
+        const lines = query.split("\n");
         const lineWithCursor = lines.findIndex(x => x.includes("|"));
         if (lineWithCursor === -1) {
             throw new Error("Unable to find | in input query");
@@ -14,9 +19,6 @@ class rqlTestUtils {
         if (rowWithCursor < 0) {
             throw "RQL test must include the position"
         }
-
-        const element = $("<div></div>").html(queryWoPosition)[0];
-        const aceEditor: AceAjax.Editor = ace.edit(element);
 
         const langTools = ace.require("ace/ext/language_tools");
         const util = ace.require("ace/autocomplete/util");
@@ -36,10 +38,14 @@ class rqlTestUtils {
 
             const prefix = util.getCompletionPrefix(aceEditor);
             
-            completer.complete(aceEditor, aceEditor.getSession(), aceEditor.getCursorPosition(), prefix, (errors: any[], wordlist: autoCompleteWordList[]) =>  {
+            const lastKeyword = completer.complete(aceEditor, aceEditor.getSession(), aceEditor.getCursorPosition(), prefix, (errors: any[], wordlist: autoCompleteWordList[]) =>  {
                 callback(errors, wordlist, prefix);
                 aceEditor.destroy();
             });
+            
+            if (lastKeywordCallback) {
+                lastKeywordCallback(lastKeyword);
+            }
         });
 
         setTimeout(() => {
@@ -73,8 +79,8 @@ class rqlTestUtils {
                     "Companies", 
                     "Orders", 
                     "Collection With Space",
-                    "Collection!"
-                    //TODO: "Collection With ' And \" in name"
+                    "Collection!",
+                    "Collection With ' And \" in name"
                 ]);
             },
             indexFields: (indexName, callback) => {
@@ -104,6 +110,10 @@ class rqlTestUtils {
                             "ShipVia": "String",
                             "Freight": "Number",
                             "Lines": "ArrayObject",
+                            "With.Dot": "Object",
+                            "With*Star": "Object",
+                            "With Space": "Object",
+                            "With ' and \" quotes": "Object",
                             "@metadata": "Object"
                         });
                         break;
@@ -117,7 +127,7 @@ class rqlTestUtils {
                 "Orders/ByCompany", 
                 "Product/Sales", 
                 "Orders/Totals", 
-                // TODO: "Index With ' And \" in name"
+                "Index With ' And \" in name"
                 ])
         });
 
