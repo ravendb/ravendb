@@ -88,7 +88,7 @@ namespace Raven.Server.Web
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private Stream GetDecompressedStream(Stream stream, IDictionary<string, StringValues> headers)
         {
-            if (HeadersAllowGzip(headers, "Content-Encoding") == false)
+            if (HeadersAllowGzip(headers, Constants.Headers.ContentEncoding) == false)
                 return stream;
             return GetGzipStream(stream, CompressionMode.Decompress);
         }

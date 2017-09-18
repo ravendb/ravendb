@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
@@ -53,7 +55,10 @@ namespace Raven.Client.Documents.BulkInsert
 
                 var currentTcs = _outputStreamTcs;
 
-                Task.Factory.StartNew(s => ((TaskCompletionSource<Stream>)s).TrySetResult(stream), currentTcs, CancellationToken.None, TaskCreationOptions.PreferFairness | TaskCreationOptions.RunContinuationsAsynchronously, TaskScheduler.Default);
+                Task.Factory.StartNew(s => ((TaskCompletionSource<Stream>)s).TrySetResult(stream),
+                    currentTcs, CancellationToken.None,
+                    TaskCreationOptions.PreferFairness | TaskCreationOptions.RunContinuationsAsynchronously,
+                    TaskScheduler.Default);
 
                 currentTcs.Task.Wait();
 
@@ -91,21 +96,29 @@ namespace Raven.Client.Documents.BulkInsert
             public override bool IsReadRequest => false;
             private readonly StreamExposerContent _stream;
             private readonly long _id;
-            public BulkInsertCommand(long id, StreamExposerContent stream)
+            private readonly bool _useGzipCompression;
+
+            public BulkInsertCommand(long id, StreamExposerContent stream, bool useGzipCompression)
             {
                 _stream = stream;
                 _id = id;
                 Timeout = TimeSpan.FromHours(12); // global max timeout
+                _useGzipCompression = useGzipCompression;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/bulk_insert?id={_id}";
-                return new HttpRequestMessage
+                var message = new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
                     Content = _stream
                 };
+
+                if (_useGzipCompression)
+                    message.Headers.Add(Constants.Headers.ContentEncoding, new[] { "gzip" });
+
+                return message;
             }
 
             public override async Task<HttpResponseMessage> SendAsync(HttpClient client, HttpRequestMessage request, CancellationToken token)
@@ -138,6 +151,8 @@ namespace Raven.Client.Documents.BulkInsert
 
         private bool _first = true;
         private long _operationId = -1;
+
+        public CompressionLevel UseGzipCompressionLevel = CompressionLevel.Fastest;
 
         public BulkInsertOperation(string database, IDocumentStore store, CancellationToken token = default(CancellationToken))
         {
@@ -260,13 +275,27 @@ namespace Raven.Client.Documents.BulkInsert
             return new BulkInsertAbortedException(error.Error);
         }
 
+
+        private GZipStream _compressedStream = null;
+
         private async Task EnsureStream()
         {
-            var bulkCommand = new BulkInsertCommand(_operationId, _streamExposerContent);
+            var bulkCommand = new BulkInsertCommand(
+                _operationId,
+                _streamExposerContent,
+                UseGzipCompressionLevel != CompressionLevel.NoCompression);
             _bulkInsertExecuteTask = _requestExecutor.ExecuteAsync(bulkCommand, _context, _token);
 
             _stream = await _streamExposerContent.OutputStream.ConfigureAwait(false);
-            _jsonWriter = new BlittableJsonTextWriter(_context, _stream);
+
+            var requestBodyStream = _stream;
+            if (UseGzipCompressionLevel != CompressionLevel.NoCompression)
+            {
+                _compressedStream = new GZipStream(_stream, UseGzipCompressionLevel, leaveOpen: true);
+                requestBodyStream = _compressedStream;
+            }
+
+            _jsonWriter = new BlittableJsonTextWriter(_context, requestBodyStream);
             _jsonWriter.WriteStartArray();
         }
 
@@ -314,6 +343,7 @@ namespace Raven.Client.Documents.BulkInsert
                     {
                         _jsonWriter.WriteEndArray();
                         _jsonWriter.Flush();
+                        _compressedStream?.Dispose();
                         await _stream.FlushAsync(_token).ConfigureAwait(false);
                     }
                     catch (Exception e)
