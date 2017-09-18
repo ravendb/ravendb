@@ -43,6 +43,16 @@ Invoke-WebRequest `
     -Body $payload `
     -ContentType "application/json" `
     -OutFile "$ClientCertName.pfx" `
+    -ErrorVariable RestError `
+    -ErrorAction SilentlyContinue `
     $url
 
-write-host "Generate client certificate $ClientCertName.pfx for $SecurityClearance"
+if ($RestError)
+{
+    $HttpStatusCode = $RestError.ErrorRecord.Exception.Response.StatusCode.value__
+    $HttpStatusDescription = $RestError.ErrorRecord.Exception.Response.StatusDescription
+    
+    Throw "Http Status Code: $($HttpStatusCode) `nHttp Status Description: $($HttpStatusDescription)"
+}
+
+write-host "Generate client certificate $ClientCertName.pfx with $SecurityClearance security clearance"
