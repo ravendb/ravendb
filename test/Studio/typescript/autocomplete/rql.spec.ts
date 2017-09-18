@@ -224,6 +224,34 @@ select ShipTo.City |`, northwindProvider(), (errors, wordlist, prefix, lastKeywo
         });
     });
 
+    it('from Collection select nested field | after comma should show more fields', done => {
+        rqlTestUtils.autoComplete(`from Orders 
+select ShipTo.City, |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, fieldsList);
+
+            assert.equal(lastKeyword.keyword, "select");
+            assert.equal(lastKeyword.dividersCount, 1);
+            assert.isUndefined(lastKeyword.fieldPrefix);
+
+            done();
+        });
+    });
+
+    it('from Collection select nested field | right after comma should show more fields', done => {
+        rqlTestUtils.autoComplete(`from Orders 
+select ShipTo.City,|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, fieldsList);
+
+            assert.equal(lastKeyword.keyword, "select");
+            assert.equal(lastKeyword.dividersCount, 1);
+            assert.isUndefined(lastKeyword.fieldPrefix);
+
+            done();
+        });
+    });
+
     it('from AllDocs select nested field | after should list as keyword only', done => {
         rqlTestUtils.autoComplete(`from @all_docs
 select |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
