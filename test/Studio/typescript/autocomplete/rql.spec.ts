@@ -168,6 +168,27 @@ describe("RQL Autocomplete", () => {
         });
     });
 
+    it('from Collection select nested field | should list nested fields with in prefix', done => {
+        rqlTestUtils.autoComplete(`from Orders 
+select ShipTo.in|`, northwindProvider(),  (errors, wordlist, prefix) => {
+            assert.equal(prefix, "in");
+            assert.deepEqual(wordlist, [
+                {caption: "Line1", value: "Line1", score: 1, meta: "string field"},
+                {caption: "Line2", value: "Line2", score: 1, meta: "null field"},
+                {caption: "City", value: "City", score: 1, meta: "string field"},
+                {caption: "Region", value: "Region", score: 1, meta: "string field"},
+                {caption: "PostalCode", value: "PostalCode", score: 1, meta: "string field"},
+                {caption: "Country", value: "Country", score: 1, meta: "string field"}
+            ]);
+        }, (lastKeyword) => {
+            assert.equal(lastKeyword.keyword, "select");
+            assert.equal(lastKeyword.tokenDivider, 1);
+            assert.deepEqual(lastKeyword.fieldPrefix, ["ShipTo"]);
+
+            done();
+        });
+    });
+
     it('from Collection where | should list fields', done => {
         rqlTestUtils.autoComplete("from Orders where |", northwindProvider(),  (errors, wordlist, prefix) => {
             assert.equal(prefix, "");
@@ -236,6 +257,18 @@ describe("RQL Autocomplete", () => {
         });
     });
 
+    it('from index as', done => {
+        rqlTestUtils.autoComplete("from index 'Orders/Totals' as |", northwindProvider(),  (errors, wordlist, prefix) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, []);
+        }, (lastKeyword) => {
+            assert.equal(lastKeyword.keyword, "from index");
+            assert.equal(lastKeyword.keywordModifier, "as");
+            assert.equal(lastKeyword.tokenDivider, 3);
+            done();
+        });
+    });
+
     it('show fields of index', done => {
         rqlTestUtils.autoComplete("from index 'Orders/Totals' select |", northwindProvider(),  (errors, wordlist, prefix) => {
             assert.equal(prefix, "");
@@ -247,6 +280,7 @@ describe("RQL Autocomplete", () => {
         }, (lastKeyword) => {
             assert.equal(lastKeyword.keyword, "select");
             assert.equal(lastKeyword.tokenDivider, 1);
+            assert.isUndefined(lastKeyword.fieldPrefix);
 
             done();
         });

@@ -100,22 +100,38 @@ class rqlTestUtils {
             collectionFields: (collectionName, prefix, callback) => {
                 switch (collectionName){
                     case "Orders":
-                        callback({
-                            "Company": "String",
-                            "Employee": "String",
-                            "OrderedAt": "String",
-                            "RequireAt": "String",
-                            "ShippedAt": "String",
-                            "ShipTo": "Object",
-                            "ShipVia": "String",
-                            "Freight": "Number",
-                            "Lines": "ArrayObject",
-                            "With.Dot": "Object",
-                            "With*Star": "Object",
-                            "With Space": "Object",
-                            "With ' and \" quotes": "Object",
-                            "@metadata": "Object"
-                        });
+                        
+                        switch (prefix) {
+                            case "ShipTo":
+                                callback({
+                                    "Line1": "String",
+                                    "Line2": "Null",
+                                    "City": "String",
+                                    "Region": "String",
+                                    "PostalCode": "String",
+                                    "Country": "String"
+                                });
+                                break;
+                            default:
+                                callback({
+                                    "Company": "String",
+                                    "Employee": "String",
+                                    "OrderedAt": "String",
+                                    "RequireAt": "String",
+                                    "ShippedAt": "String",
+                                    "ShipTo": "Object",
+                                    "ShipVia": "String",
+                                    "Freight": "Number",
+                                    "Lines": "ArrayObject",
+                                    "With.Dot": "Object",
+                                    "With*Star": "Object",
+                                    "With Space": "Object",
+                                    "With ' and \" quotes": "Object",
+                                    "@metadata": "Object"
+                                });
+                                break;
+                        }
+                
                         break;
                     default:
                         callback({});
