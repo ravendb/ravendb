@@ -81,7 +81,7 @@ describe("RQL Autocomplete", () => {
             assert.deepEqual(wordlist, emptyList);
 
             assert.equal(lastKeyword.keyword, "from");
-            assert.equal(lastKeyword.tokenDivider, 0);
+            assert.equal(lastKeyword.dividersCount, 0);
 
             done();
         });
@@ -93,7 +93,7 @@ describe("RQL Autocomplete", () => {
             assert.deepEqual(wordlist, collectionsList);
 
             assert.equal(lastKeyword.keyword, "from");
-            assert.equal(lastKeyword.tokenDivider, 1);
+            assert.equal(lastKeyword.dividersCount, 1);
 
             done();
         });
@@ -108,7 +108,7 @@ describe("RQL Autocomplete", () => {
             assert.deepEqual(wordlist, collectionsList);
 
             assert.equal(lastKeyword.keyword, "from");
-            assert.equal(lastKeyword.tokenDivider, 1);
+            assert.equal(lastKeyword.dividersCount, 1);
 
             done();
         });
@@ -128,7 +128,7 @@ describe("RQL Autocomplete", () => {
             assert.deepEqual(wordlist, collectionsList);
 
             assert.equal(lastKeyword.keyword, "from");
-            assert.equal(lastKeyword.tokenDivider, 1);
+            assert.equal(lastKeyword.dividersCount, 1);
             
             done();
         });
@@ -140,7 +140,7 @@ describe("RQL Autocomplete", () => {
             assert.deepEqual(wordlist, collectionsList);
 
             assert.equal(lastKeyword.keyword, "from");
-            assert.equal(lastKeyword.tokenDivider, 1);
+            assert.equal(lastKeyword.dividersCount, 1);
 
             done();
         });
@@ -162,7 +162,7 @@ describe("RQL Autocomplete", () => {
             assert.deepEqual(_.sortBy(wordlist, [(x: autoCompleteWordList) => x.score]).reverse(), afterFromList);
 
             assert.equal(lastKeyword.keyword, "from");
-            assert.equal(lastKeyword.tokenDivider, 2);
+            assert.equal(lastKeyword.dividersCount, 2);
 
             done();
         });
@@ -174,7 +174,7 @@ describe("RQL Autocomplete", () => {
             assert.deepEqual(wordlist, fieldsList);
 
             assert.equal(lastKeyword.keyword, "select");
-            assert.equal(lastKeyword.tokenDivider, 1);
+            assert.equal(lastKeyword.dividersCount, 1);
 
             done();
         });
@@ -187,7 +187,7 @@ select ShipTo.in|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword)
             assert.deepEqual(wordlist, fieldsShipToList);
 
             assert.equal(lastKeyword.keyword, "select");
-            assert.equal(lastKeyword.tokenDivider, 1);
+            assert.equal(lastKeyword.dividersCount, 1);
             assert.deepEqual(lastKeyword.fieldPrefix, ["ShipTo"]);
 
             done();
@@ -201,7 +201,7 @@ select ShipTo.City|`, northwindProvider(), (errors, wordlist, prefix, lastKeywor
             assert.deepEqual(wordlist, fieldsShipToList);
 
             assert.equal(lastKeyword.keyword, "select");
-            assert.equal(lastKeyword.tokenDivider, 1);
+            assert.equal(lastKeyword.dividersCount, 1);
             assert.deepEqual(lastKeyword.fieldPrefix, ["ShipTo"]);
 
             done();
@@ -217,7 +217,7 @@ select ShipTo.City |`, northwindProvider(), (errors, wordlist, prefix, lastKeywo
                 ]);
 
             assert.equal(lastKeyword.keyword, "select");
-            assert.equal(lastKeyword.tokenDivider, 2);
+            assert.equal(lastKeyword.dividersCount, 2);
             assert.deepEqual(lastKeyword.fieldPrefix, ["ShipTo"]);
 
             done();
@@ -270,7 +270,7 @@ select |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             ]);
 
             assert.equal(lastKeyword.keyword, "select");
-            assert.equal(lastKeyword.tokenDivider, 1);
+            assert.equal(lastKeyword.dividersCount, 1);
 
             done();
         });
@@ -282,7 +282,7 @@ select |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.deepEqual(wordlist, collectionsList);
 
             assert.equal(lastKeyword.keyword, "from");
-            assert.equal(lastKeyword.tokenDivider, 1);
+            assert.equal(lastKeyword.dividersCount, 1);
 
             done();
         });
@@ -294,7 +294,7 @@ select |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.deepEqual(wordlist, collectionsList);
 
             assert.equal(lastKeyword.keyword, "from");
-            assert.equal(lastKeyword.tokenDivider, 1);
+            assert.equal(lastKeyword.dividersCount, 1);
 
             done();
         });
@@ -306,7 +306,7 @@ select |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.deepEqual(wordlist, fieldsList);
 
             assert.equal(lastKeyword.keyword, "where");
-            assert.equal(lastKeyword.tokenDivider, 1);
+            assert.equal(lastKeyword.dividersCount, 1);
 
             done();
         });
@@ -318,7 +318,7 @@ select |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.deepEqual(wordlist, indexesList);
 
             assert.equal(lastKeyword.keyword, "from index");
-            assert.equal(lastKeyword.tokenDivider, 1);
+            assert.equal(lastKeyword.dividersCount, 1);
 
             done();
         });
@@ -330,7 +330,7 @@ select |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.deepEqual(wordlist, indexesList);
 
             assert.equal(lastKeyword.keyword, "from index");
-            assert.equal(lastKeyword.tokenDivider, 1);
+            assert.equal(lastKeyword.dividersCount, 1);
 
             done();
         });
@@ -342,7 +342,7 @@ select |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.deepEqual(wordlist, indexesList);
 
             assert.equal(lastKeyword.keyword, "from index");
-            assert.equal(lastKeyword.tokenDivider, 1);
+            assert.equal(lastKeyword.dividersCount, 1);
 
             done();
         });
@@ -363,7 +363,7 @@ select |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.deepEqual(_.sortBy(wordlist, [(x: autoCompleteWordList) => x.score]).reverse(), afterFromList);
 
             assert.equal(lastKeyword.keyword, "from index");
-            assert.equal(lastKeyword.tokenDivider, 2);
+            assert.equal(lastKeyword.dividersCount, 2);
             done();
         });
     });
@@ -376,7 +376,7 @@ select |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
 
             assert.equal(lastKeyword.keyword, "from index");
             assert.equal(lastKeyword.keywordModifier, "as");
-            assert.equal(lastKeyword.tokenDivider, 3);
+            assert.equal(lastKeyword.dividersCount, 3);
             
             done();
         });
@@ -392,7 +392,7 @@ select |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             ]);
 
             assert.equal(lastKeyword.keyword, "select");
-            assert.equal(lastKeyword.tokenDivider, 1);
+            assert.equal(lastKeyword.dividersCount, 1);
             assert.isUndefined(lastKeyword.fieldPrefix);
 
             done();
@@ -407,7 +407,7 @@ select |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             ]);
 
             assert.equal(lastKeyword.keyword, "declare");
-            assert.equal(lastKeyword.tokenDivider, 1);
+            assert.equal(lastKeyword.dividersCount, 1);
 
             done();
         });
@@ -421,7 +421,7 @@ select |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.deepEqual(wordlist, emptyList);
 
             assert.equal(lastKeyword.keyword, "declare function");
-            assert.equal(lastKeyword.tokenDivider, 2);
+            assert.equal(lastKeyword.dividersCount, 2);
 
             done();
         });
@@ -435,7 +435,7 @@ select |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.deepEqual(wordlist, emptyList);
 
             assert.equal(lastKeyword.keyword, "declare function");
-            assert.equal(lastKeyword.tokenDivider, 1);
+            assert.equal(lastKeyword.dividersCount, 1);
 
             done();
         });
