@@ -870,16 +870,31 @@ namespace Raven.Server.Commercial
             {
                 var bitMask = 1L;
                 var processAffinityMask = _serverStore.Configuration.Server.ProcessAffinityMask;
-                if (processAffinityMask != null && NumberOfSetBits(processAffinityMask.Value) <= cores)
+                if (processAffinityMask == null)
                 {
-                    bitMask = processAffinityMask.Value;
+                    for (var i = 0; i < cores; i++)
+                    {
+                        bitMask |= 1L << i;
+                    }
+                }
+                else if (NumberOfSetBits(processAffinityMask.Value) > cores)
+                {
+                    var affinityMask = processAffinityMask.Value;
+                    var bitNumber = 0;
+                    while (cores > 0)
+                    {
+                        if ((affinityMask & 1) != 0)
+                        {
+                            bitMask |= 1L << bitNumber;
+                            cores--;
+                        }
+                        affinityMask = affinityMask >> 1;
+                        bitNumber++;
+                    }
                 }
                 else
                 {
-                    for (var i = 1; i <= cores; i++)
-                    {
-                        bitMask |= 1L << (i - 1);
-                    }
+                    bitMask = processAffinityMask.Value;
                 }
 
                 process.ProcessorAffinity = new IntPtr(bitMask);
