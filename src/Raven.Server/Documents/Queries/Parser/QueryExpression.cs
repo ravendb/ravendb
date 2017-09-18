@@ -239,7 +239,8 @@ namespace Raven.Server.Documents.Queries.Parser
                 case OperatorType.GreaterThan:
                 case OperatorType.LessThanEqual:
                 case OperatorType.GreaterThanEqual:
-                    writer.Write(Extract(Field));
+                    if (Field != null)
+                        writer.Write(Extract(Field));
                     switch (Type)
                     {
                         case OperatorType.Equal:
@@ -275,7 +276,8 @@ namespace Raven.Server.Documents.Queries.Parser
                     break;
                 case OperatorType.In:
                 case OperatorType.AllIn:
-                    writer.Write(Extract(Field));
+                    if (Field != null)
+                        writer.Write(Extract(Field));
                     writer.Write(Type != OperatorType.AllIn ? " IN (" : " ALL IN (");
                     for (var i = 0; i < Values.Count; i++)
                     {
@@ -311,29 +313,40 @@ namespace Raven.Server.Documents.Queries.Parser
                     writer.Write(")");
                     break;
                 case OperatorType.Method:
-                    writer.Write(Extract(Field));
+                    var methodName = Extract(Field);
+                    var methodType = QueryMethod.GetMethodType(methodName);
+                    writer.Write(methodName);
                     writer.Write("(");
-
-                    for (int i = 0; i < Arguments.Count; i++)
+                    switch (methodType)
                     {
-                        var arg = Arguments[i];
-                        if (i != 0)
-                            writer.Write(", ");
-                        if (arg is QueryExpression qe)
-                        {
-                            qe.ToString(query, writer);
-                        }
-                        else if (arg is FieldToken field)
-                        {
-                            writer.Write(Extract(field));
-                        }
-                        else
-                        {
-                            var val = (ValueToken)arg;
-                            writer.Write(Extract(val));
-                        }
+                        case MethodType.Id:
+                            writer.Write(")");
+                            var idCall = (QueryExpression)Arguments[0];
+                            idCall.ToString(query, writer);
+                            break;
+                        default:
+                            for (int i = 0; i < Arguments.Count; i++)
+                            {
+                                var arg = Arguments[i];
+                                if (i != 0)
+                                    writer.Write(", ");
+                                if (arg is QueryExpression qe)
+                                {
+                                    qe.ToString(query, writer);
+                                }
+                                else if (arg is FieldToken field)
+                                {
+                                    writer.Write(Extract(field));
+                                }
+                                else
+                                {
+                                    var val = (ValueToken)arg;
+                                    writer.Write(Extract(val));
+                                }
+                            }
+                            writer.Write(")");
+                            break;
                     }
-                    writer.Write(")");
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
