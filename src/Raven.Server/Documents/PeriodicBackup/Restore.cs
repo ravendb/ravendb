@@ -9,14 +9,28 @@ namespace Raven.Server.Documents.PeriodicBackup
 {
     public class Restore
     {
-        public static void FetchRestorePoints(string directoryPath, List<RestorePoint> restorePoints)
+        public static void FetchRestorePoints(string directoryPath, List<RestorePoint> restorePoints, bool assertLegacyBackups = false)
         {
             const string legacyIncrementalBackupExtension = "ravendb-incremental-dump";
             const string legacyFullBackupExtension = "ravendb-full-dump";
+            const string legacyEsentBackupFile = "RavenDB.Backup";
+            const string legacyVoronBackupFile = "RavenDB.Voron.Backup";
 
             var files = Directory.GetFiles(directoryPath)
                 .Where(filePath =>
                 {
+                    if (assertLegacyBackups)
+                    {
+                        var fileName = Path.GetFileName(filePath);
+                        if (fileName.Equals(legacyEsentBackupFile, StringComparison.OrdinalIgnoreCase) ||
+                            fileName.Equals(legacyVoronBackupFile, StringComparison.OrdinalIgnoreCase))
+                        {
+                            throw new InvalidOperationException("Cannot restore a legacy backup (v3.x and below). " +
+                                                                "You can restore a v3.x periodic export backup or " +
+                                                                "use an export from v3.x and import it using the studio");
+                        }
+                    }
+                    
                     var extension = Path.GetExtension(filePath);
                     return
                         Constants.Documents.PeriodicBackup.IncrementalBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||

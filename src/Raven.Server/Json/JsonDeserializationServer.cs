@@ -31,6 +31,8 @@ using Sparrow.Json;
 using Facet = Raven.Client.Documents.Queries.Facets.Facet;
 using FacetSetup = Raven.Client.Documents.Queries.Facets.FacetSetup;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Smuggler.Migration;
+using Raven.Server.Web.System;
 
 namespace Raven.Server.Json
 {
@@ -55,6 +57,7 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, SubscriptionConnectionOptions> SubscriptionConnectionOptions = GenerateJsonDeserializationRoutine<SubscriptionConnectionOptions>();
 
         public static readonly Func<BlittableJsonReaderObject, ConflictSolver> ConflictSolver = GenerateJsonDeserializationRoutine<ConflictSolver>();
+
         public static readonly Func<BlittableJsonReaderObject, ScriptResolver> ScriptResolver = GenerateJsonDeserializationRoutine<ScriptResolver>();
 
         public static readonly Func<BlittableJsonReaderObject, EtlProcessState> EtlProcessStatus = GenerateJsonDeserializationRoutine<EtlProcessState>();
@@ -111,6 +114,12 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, SuggestionQueryServerSide> SuggestionQuery = GenerateJsonDeserializationRoutine<SuggestionQueryServerSide>();
 
+        public static readonly Func<BlittableJsonReaderObject, SingleDatabaseMigrationConfiguration> SingleDatabaseMigrationConfiguration = GenerateJsonDeserializationRoutine<SingleDatabaseMigrationConfiguration>();
+
+        public static readonly Func<BlittableJsonReaderObject, DatabasesMigrationConfiguration> DatabasesMigrationConfiguration = GenerateJsonDeserializationRoutine<DatabasesMigrationConfiguration>();
+
+        public static readonly Func<BlittableJsonReaderObject, LastEtagsInfo> OperationState = GenerateJsonDeserializationRoutine<LastEtagsInfo>();
+
         public class Parameters
         {
             private Parameters()
@@ -118,6 +127,8 @@ namespace Raven.Server.Json
             }
 
             public static readonly Func<BlittableJsonReaderObject, DeleteDatabasesOperation.Parameters> DeleteDatabasesParameters = GenerateJsonDeserializationRoutine<DeleteDatabasesOperation.Parameters>();
+
+            public static readonly Func<BlittableJsonReaderObject, ReorderDatabaseMembersOperation.Parameters> MembersOrder = GenerateJsonDeserializationRoutine<ReorderDatabaseMembersOperation.Parameters>();
 
             public static readonly Func<BlittableJsonReaderObject, ToggleDatabasesStateOperation.Parameters> DisableDatabaseToggleParameters = GenerateJsonDeserializationRoutine<ToggleDatabasesStateOperation.Parameters>();
 

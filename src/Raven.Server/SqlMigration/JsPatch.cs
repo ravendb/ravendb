@@ -18,12 +18,13 @@ namespace Raven.Server.SqlMigration
                 return;
 
             _engine = new Engine(options =>
-                {
-                    options.LimitRecursion(64)
-                        .SetReferencesResolver(new ScriptRunner.SingleRun.NullPropgationReferenceResolver())
-                        .MaxStatements(config.Patching.MaxStepsForScript)
-                        .Strict();
-                });
+            {
+                options.LimitRecursion(64)
+                    .SetReferencesResolver(new JintNullPropgationReferenceResolver())
+                    .SetReferencesResolver(new JintPreventResolvingTasksReferenceResolver())
+                    .MaxStatements(config.Patching.MaxStepsForScript)
+                    .Strict();
+            });
 
             _engine.Execute(string.Format(ExecutionStr, patchScript));
 

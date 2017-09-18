@@ -11,11 +11,11 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            using (var test = new SlowTests.Tests.Faceted.Aggregation())
+            using (var test = new AdminJsConsoleTests())
             {
                 try
                 {
-                    test.CanCorrectlyAggregate_DateTimeDataType_WithRangeCounts_AndInOperator_BeforeOtherWhere();
+                    test.CanConvertAllJsonTypesToString().Wait();
                 }
                 catch (Exception e)
                 {

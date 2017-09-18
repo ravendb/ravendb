@@ -94,7 +94,7 @@ namespace Raven.Server.Web
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected GZipStream GetGzipStream(Stream stream, CompressionMode mode, CompressionLevel level = CompressionLevel.Fastest)
+        protected static GZipStream GetGzipStream(Stream stream, CompressionMode mode, CompressionLevel level = CompressionLevel.Fastest)
         {
             GZipStream gZipStream =
                 mode == CompressionMode.Compress ?
@@ -102,11 +102,16 @@ namespace Raven.Server.Web
                     new GZipStream(stream, mode, true);
             return gZipStream;
         }
-
+        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected bool AcceptsGzipResponse()
+        protected bool ClientAcceptsGzipResponse()
         {
-            return _context.AllowResponseCompression && HeadersAllowGzip(HttpContext.Request.Headers, "Accept-Encoding");
+
+            return
+                Server.Configuration.Http.UseResponseCompression &&
+                (HttpContext.Request.IsHttps == false ||
+                    (HttpContext.Request.IsHttps && Server.Configuration.Http.AllowResponseCompressionOverHttps)) &&
+                HeadersAllowGzip(HttpContext.Request.Headers, "Accept-Encoding");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -118,7 +123,7 @@ namespace Raven.Server.Web
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var encoding in acceptedContentEncodings)
             {
-                if (encoding.Contains("gzip") || encoding.Contains("deflate"))
+                if (encoding.Contains("gzip"))
                     return true;
             }
 
@@ -126,29 +131,6 @@ namespace Raven.Server.Web
         }
 
         protected Stream ResponseBodyStream() => HttpContext.Response.Body;
-
-        /// <summary>
-        /// Using this method requires disposing or closing of the returned
-        /// compressed stream. Otherwise, the response will not be sent to
-        /// the user
-        /// </summary>
-        /// <returns>A GZip-compressing stream</returns>
-        protected GZipStream CompressedResponseBodyStream()
-        {
-            var responseBodyStream = HttpContext.Response.Body;
-
-            if (AcceptsGzipResponse() == false)
-                // We disable compression when the client does not accept it,
-                // but the user of this function is expected to dispose the 
-                // stream anyways
-                return GetGzipStream(
-                    responseBodyStream,
-                    CompressionMode.Compress,
-                    CompressionLevel.NoCompression);
-
-            HttpContext.Response.Headers["Content-Encoding"] = "gzip";
-            return GetGzipStream(responseBodyStream, CompressionMode.Compress);
-        }
 
         protected bool IsWebsocketRequest()
         {

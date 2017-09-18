@@ -38,6 +38,9 @@ using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Azure;
+using Raven.Server.Rachis;
+using Raven.Server.Smuggler.Migration;
+using Raven.Server.ServerWide.Commands;
 using Sparrow.Utils;
 using Constants = Raven.Client.Constants;
 
@@ -251,6 +254,38 @@ namespace Raven.Server.Web.System
                     });
                     writer.Flush();
                 }
+            }
+        }
+
+        [RavenAction("/admin/databases/reorder","POST",AuthorizationStatus.Operator)]
+        public async Task Reorder()
+        {
+            var name = GetStringQueryString("name");
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var record = ServerStore.LoadDatabaseRecord(name, out var _);
+                if (record == null)
+                {
+                    DatabaseDoesNotExistException.Throw(name);
+                }
+                var json = await context.ReadForMemoryAsync(RequestBodyStream(), "nodes");
+                var parameters = JsonDeserializationServer.Parameters.MembersOrder(json);
+
+                if (record.Topology.Members.Count != parameters.MembersOrder.Count 
+                    || record.Topology.Members.All(parameters.MembersOrder.Contains) == false)
+                {
+                    throw new ArgumentException("The reordered list doesn't correspond to the existing members of the database group.");
+                }
+                record.Topology.Members = parameters.MembersOrder;
+
+                var reorder = new UpdateTopologyCommand
+                {
+                    DatabaseName = name,
+                    Topology = record.Topology
+                };
+
+                var res = await ServerStore.SendToLeaderAsync(reorder);
+                await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, res.Index);
             }
         }
 
@@ -552,7 +587,7 @@ namespace Raven.Server.Web.System
                 {
                     // no folders in directory
                     // will scan the directory for backup files
-                    Restore.FetchRestorePoints(restorePathJson.Path, restorePoints.List);
+                    Restore.FetchRestorePoints(restorePathJson.Path, restorePoints.List, assertLegacyBackups: true);
                 }
 
                 foreach (var directory in directories)
@@ -1247,6 +1282,24 @@ namespace Raven.Server.Web.System
             }
 
             return Task.CompletedTask;
+        }
+
+        [RavenAction("/admin/migrate", "POST", AuthorizationStatus.ClusterAdmin)]
+        public async Task MigrateDatabases()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var migrationConfiguration = await context.ReadForMemoryAsync(RequestBodyStream(), "migration-configuration");
+                var migrationConfigurationJson = JsonDeserializationServer.DatabasesMigrationConfiguration(migrationConfiguration);
+
+                if (string.IsNullOrWhiteSpace(migrationConfigurationJson.ServerUrl))
+                    throw new ArgumentException("Url cannot be null or empty");
+
+                var migrator = new Migrator(migrationConfigurationJson, ServerStore, ServerStore.Operations, ServerStore.ServerShutdown);
+                await migrator.MigrateDatabases(migrationConfigurationJson.DatabasesNames);
+
+                NoContentStatus();
+            }
         }
     }
 }
