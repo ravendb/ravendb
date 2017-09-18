@@ -217,8 +217,6 @@ class importDatabase extends viewModelBase {
             .done((operationId: number) => {
                 notificationCenter.instance.openDetailsForOperationById(db, operationId);
 
-                notificationCenter.instance.monitorOperation(db, operationId);
-
                 new importDatabaseCommand(db, operationId, fileInput.files[0], this.model)
                     .execute()
                     .always(() => this.isUploading(false));

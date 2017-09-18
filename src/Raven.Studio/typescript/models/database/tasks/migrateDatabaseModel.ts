@@ -24,24 +24,9 @@ class migrateDatabaseModel {
     }
 
     private initValidation() {
-        const urlError = ko.observable<string>();
         this.serverUrl.extend({
             required: true,
-            validation: [
-                {
-                    validator: (nodeUrl: string) => {
-                        try {
-                            new URL(nodeUrl);
-                            return true;
-                        } catch (e) {
-                            urlError((e as Error).message);
-                            return false;
-                        }
-                    },
-                    message: `{0}`,
-                    params: urlError
-                }
-            ]
+            validUrl: true
         });
 
         this.databaseName.extend({

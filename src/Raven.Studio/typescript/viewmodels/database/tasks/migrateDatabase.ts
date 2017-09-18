@@ -41,10 +41,8 @@ class migrateDatabase extends viewModelBase {
             .done((operationIdDto: operationIdDto) => {
                 const operationId = operationIdDto.OperationId;
                 notificationCenter.instance.openDetailsForOperationById(db, operationId);
-                notificationCenter.instance.monitorOperation(db, operationId);
-                this.startingMigration(false);
             })
-            .fail(() => this.startingMigration(false));
+            .always(() => this.startingMigration(false));
     }
 }
 
