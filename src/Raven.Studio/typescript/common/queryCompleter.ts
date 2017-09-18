@@ -342,12 +342,12 @@ class queryCompleter {
                 ]);
                 break;
             case "declare function":
-                if (lastKeyword.parentheses === 0 && lastKeyword.identifiers.length > 0 && lastKeyword.text && !lastKeyword.text.trim()) {
+                if (lastKeyword.parentheses === 0 && lastKeyword.tokenDivider >= 1) {
                     this.completeEmpty(callback);
                 }
                 break;
             case "select":
-                if (lastKeyword.identifiers.length > 0 && lastKeyword.text && !lastKeyword.text.trim()) {
+                if (lastKeyword.identifiers.length > 0 && lastKeyword.tokenDivider >= 2) {
                     if (!lastKeyword.keywordModifier) {
                         this.completeWords(callback, [{value: "as", score: 3, meta: "keyword"}]);
                     }
