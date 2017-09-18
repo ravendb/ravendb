@@ -18,7 +18,7 @@ using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries.LuceneIntegration;
 using Sparrow.Json;
 using Spatial4n.Core.Shapes;
-using Query = Raven.Server.Documents.Queries.Parser.Query;
+using Query = Raven.Server.Documents.Queries.AST.Query;
 using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Server.Documents.Queries

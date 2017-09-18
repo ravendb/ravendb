@@ -14,6 +14,7 @@ using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
 using Voron;
+using Query = Raven.Server.Documents.Queries.AST.Query;
 
 namespace Raven.Server.Documents.Queries
 {
@@ -301,7 +302,7 @@ namespace Raven.Server.Documents.Queries
 
             private class RetrieveDocumentIdsVisitor : WhereExpressionVisitor
             {
-                private readonly Parser.Query _query;
+                private readonly Query _query;
                 private readonly QueryMetadata _metadata;
                 private readonly ByteStringContext _allocator;
 

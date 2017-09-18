@@ -2,16 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using Raven.Client.Documents.Linq;
+using Raven.Server.Documents.Queries.AST;
 using Sparrow;
 
 namespace Raven.Server.Documents.Queries.Parser
 {
-    public enum QueryType
-    {
-        Select,
-        Update
-    }
-
     public class QueryParser
     {
         private static readonly string[] OperatorStartMatches = { ">=", "<=", "<>", "<", ">",  "==", "=", "!=",  "BETWEEN", "IN", "ALL IN", "(" };
@@ -45,7 +40,7 @@ namespace Raven.Server.Documents.Queries.Parser
             {
                 var (name, func) = DeclaredFunction();
 
-                if (q.TryAddFunction(name, QueryExpression.Extract(func)) == false)
+                if (q.TryAddFunction(name, func) == false)
                     ThrowParseException(name + " function was declared multiple times");
             }
 
@@ -79,11 +74,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     if (Scanner.FunctionBody() == false)
                         ThrowParseException("Update clause must have a single function body");
 
-                    q.UpdateBody = new ValueToken
-                    {
-                        Type = ValueTokenType.String,
-                        Token = new StringSegment(Scanner.Input, functionStart, Scanner.Position - functionStart)
-                    };
+                    q.UpdateBody = new StringSegment(Scanner.Input, functionStart, Scanner.Position - functionStart);
                     break;
                 default:
                     ThrowUnknownQueryType(queryType);
@@ -109,19 +100,11 @@ namespace Raven.Server.Documents.Queries.Parser
             {
                 if (Value(out var val))
                 {
-                    includes.Add(new QueryExpression
-                    {
-                        Type = OperatorType.Value,
-                        Value = val
-                    });
+                    includes.Add(val);
                 }
                 else if (Field(out var field))
                 {
-                    includes.Add(new QueryExpression
-                    {
-                        Type = OperatorType.Field,
-                        Field = field
-                    });
+                    includes.Add(field);
                 }
                 else
                 {
@@ -131,7 +114,7 @@ namespace Raven.Server.Documents.Queries.Parser
             return includes;
         }
 
-        private (StringSegment Name, ValueToken FunctionText) DeclaredFunction()
+        private (StringSegment Name, StringSegment FunctionText) DeclaredFunction()
         {
             // becuase of how we are processing them, we don't actually care for
             // parsing the function directly. We have implemented a minimal parser
@@ -162,16 +145,12 @@ namespace Raven.Server.Documents.Queries.Parser
             if (Scanner.FunctionBody() == false)
                 ThrowParseException("Unable to get function body for " + name);
 
-            return (name, new ValueToken
-            {
-                Type = ValueTokenType.String,
-                Token = new StringSegment(Scanner.Input, functionStart, Scanner.Position - functionStart)
-            });
+            return (name, new StringSegment(Scanner.Input, functionStart, Scanner.Position - functionStart));
         }
 
-        private List<FieldToken> GroupBy()
+        private List<FieldExpression> GroupBy()
         {
-            var fields = new List<FieldToken>();
+            var fields = new List<FieldExpression>();
             do
             {
                 if (Field(out var field) == false)
@@ -193,21 +172,18 @@ namespace Raven.Server.Documents.Queries.Parser
                 if (Field(out var field) == false)
                     ThrowParseException("Unable to get field for ORDER BY");
 
-                OrderByFieldType type = OrderByFieldType.Implicit;
+                var type = OrderByFieldType.Implicit;
 
                 QueryExpression op;
                 if (Scanner.TryScan('('))
                 {
-                    if (Method(field, out op) == false)
-                        ThrowParseException($"Unable to parse method call {QueryExpression.Extract(field)}for ORDER BY");
+                    if (Method(field, out var method) == false)
+                        ThrowParseException($"Unable to parse method call {field} for ORDER BY");
+                    op = method;
                 }
                 else
                 {
-                    op = new QueryExpression
-                    {
-                        Field = field,
-                        Type = OperatorType.Field
-                    };
+                    op = field;
                 }
 
                 if (Scanner.TryScan("AS") && Scanner.TryScan(OrderByAsOptions, out var asMatch))
@@ -245,7 +221,7 @@ namespace Raven.Server.Documents.Queries.Parser
             return orderBy;
         }
 
-        private List<(QueryExpression, FieldToken)> SelectClause(string clause, Query query)
+        private List<(QueryExpression, StringSegment?)> SelectClause(string clause, Query query)
         {
             query.IsDistinct = Scanner.TryScan("DISTINCT");
 
@@ -255,21 +231,18 @@ namespace Raven.Server.Documents.Queries.Parser
             var functionStart = Scanner.Position;
             if (Scanner.FunctionBody())
             {
-                query.SelectFunctionBody = new ValueToken
-                {
-                    Type = ValueTokenType.String,
-                    Token = new StringSegment(Scanner.Input, functionStart, Scanner.Position - functionStart)
-                };
+                query.SelectFunctionBody = new StringSegment(Scanner.Input, 
+                    functionStart, Scanner.Position - functionStart);
 
-                return new List<(QueryExpression, FieldToken)>();
+                return new List<(QueryExpression, StringSegment?)>();
             }
 
             return SelectClauseExpressions(clause, true);
         }
 
-        private List<(QueryExpression, FieldToken)> SelectClauseExpressions(string clause, bool aliasAsRequired)
+        private List<(QueryExpression, StringSegment?)> SelectClauseExpressions(string clause, bool aliasAsRequired)
         {
-            var select = new List<(QueryExpression Expr, FieldToken Id)>();
+            var select = new List<(QueryExpression Expr, StringSegment? Alias)>();
 
             do
             {
@@ -278,25 +251,18 @@ namespace Raven.Server.Documents.Queries.Parser
                 {
                     if (Scanner.TryScan('('))
                     {
-                        if (Method(field, op: out expr) == false)
+                        if (Method(field, out var method) == false)
                             ThrowParseException("Expected method call in " + clause);
+                        expr = method;
                     }
                     else
                     {
-                        expr = new QueryExpression
-                        {
-                            Field = field,
-                            Type = OperatorType.Field
-                        };
+                        expr = field;
                     }
                 }
                 else if (Value(out var v))
                 {
-                    expr = new QueryExpression
-                    {
-                        Value = v,
-                        Type = OperatorType.Value
-                    };
+                    expr = v;
                 }
                 else
                 {
@@ -304,14 +270,9 @@ namespace Raven.Server.Documents.Queries.Parser
                     return null; // never callsed
                 }
 
-                if (Alias(aliasAsRequired, out var alias) == false && expr.Type == OperatorType.Value)
+                if (Alias(aliasAsRequired, out var alias) == false && expr is ValueExpression ve)
                 {
-                    alias = new FieldToken
-                    {
-                        EscapeChars = expr.Value.EscapeChars,
-                        IsQuoted = expr.Value.Type == ValueTokenType.String,
-                        Token = expr.Value.Token,
-                    };
+                    alias = ve.Token;
                 }
 
                 @select.Add((expr, alias));
@@ -324,12 +285,12 @@ namespace Raven.Server.Documents.Queries.Parser
 
 
 
-        private (FieldToken From, FieldToken Alias, QueryExpression Filter, bool Index) FromClause()
+        private (FieldExpression From, StringSegment? Alias, QueryExpression Filter, bool Index) FromClause()
         {
             if (Scanner.TryScan("FROM") == false)
                 ThrowParseException("Expected FROM clause");
 
-            FieldToken field;
+            FieldExpression field;
             QueryExpression filter = null;
             bool index = false;
             bool isQuoted;
@@ -339,12 +300,12 @@ namespace Raven.Server.Documents.Queries.Parser
                 if (!Scanner.Identifier() && !(isQuoted = Scanner.String()))
                     ThrowParseException("Expected FROM INDEX source");
 
-                field = new FieldToken
-                {
-                    Token = new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength),
-                    EscapeChars = Scanner.EscapeChars,
-                    IsQuoted = isQuoted
-                };
+                field = new FieldExpression(
+                    isQuoted
+                        ? new StringSegment(Scanner.Input, Scanner.TokenStart + 1, Scanner.TokenLength - 2)
+                        : new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength),
+                    Scanner.EscapeChars != 0
+                );
 
                 index = true;
             }
@@ -354,13 +315,13 @@ namespace Raven.Server.Documents.Queries.Parser
                 if (!Scanner.Identifier() && !(isQuoted = Scanner.String()))
                     ThrowParseException("Expected FROM source");
 
-                field = new FieldToken
-                {
-                    Token = new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength),
-                    EscapeChars = Scanner.EscapeChars,
-                    IsQuoted = isQuoted
-                };
-
+                field = new FieldExpression(
+                    isQuoted
+                        ? new StringSegment(Scanner.Input, Scanner.TokenStart + 1, Scanner.TokenLength - 2)
+                        : new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength),
+                    Scanner.EscapeChars != 0
+                );
+                
                 if (Scanner.TryScan('(')) // FROM  Collection ( filter )
                 {
                     if (Expression(out filter) == false)
@@ -391,7 +352,7 @@ namespace Raven.Server.Documents.Queries.Parser
             "UPDATE"
         };
 
-        private bool Alias(bool aliasAsRequired, out FieldToken alias)
+        private bool Alias(bool aliasAsRequired, out StringSegment? alias)
         {
             bool required = false;
             if (Scanner.TryScan(AliasKeywords, out var match))
@@ -411,14 +372,17 @@ namespace Raven.Server.Documents.Queries.Parser
                 return false;
             }
 
-            if (Field(out alias))
+            if (Field(out var f))
+            {
+                alias = f.Field;
                 return true;
+            }
 
             if (required)
                 ThrowParseException("Expected field alias after AS in SELECT");
 
+            alias = null;
             return false;
-            ;
         }
 
         internal bool Parameter(out int tokenStart, out int tokenLength)
@@ -497,19 +461,16 @@ namespace Raven.Server.Documents.Queries.Parser
                 {
                     case OperatorType.And:
                     case OperatorType.AndNot:
-                        switch (right.Type)
+                        var rightOp = (BinaryExpression)right;
+
+                        switch (rightOp.Operator)
                         {
                             case OperatorType.AndNot:
                             case OperatorType.OrNot:
                             case OperatorType.Or:
                             case OperatorType.And:
 
-                                right.Left = new QueryExpression
-                                {
-                                    Left = op,
-                                    Right = right.Left,
-                                    Type = type
-                                };
+                                rightOp.Left = new BinaryExpression(op, rightOp.Left, type);
                                 op = right;
                                 return true;
                         }
@@ -519,12 +480,7 @@ namespace Raven.Server.Documents.Queries.Parser
             }
 
 
-            op = new QueryExpression
-            {
-                Type = type,
-                Left = op,
-                Right = right
-            };
+            op = new BinaryExpression(op, right, type);
 
             return true;
         }
@@ -548,10 +504,13 @@ namespace Raven.Server.Documents.Queries.Parser
         private bool Operator(bool fieldRequired, out QueryExpression op)
         {
             OperatorType type;
-            FieldToken field = null;
+            FieldExpression field = null;
 
             if (Scanner.TryScan("true"))
-                type = OperatorType.True;
+            {
+                op = new TrueExpression();
+                return true;
+            }
             else
             {
                 if (fieldRequired && Field(out field) == false)
@@ -569,6 +528,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     }
                     ThrowParseException("Invalid operator expected any of (In, Between, =, <, >, <=, >=)");
                 }
+
 
                 switch (match)
                 {
@@ -593,114 +553,77 @@ namespace Raven.Server.Documents.Queries.Parser
                         type = OperatorType.NotEqual;
                         break;
                     case "BETWEEN":
-                        type = OperatorType.Between;
-                        break;
+                        if (Value(out var fst) == false)
+                            ThrowParseException("parsing Between, expected value (1st)");
+                        if (Scanner.TryScan("AND") == false)
+                            ThrowParseException("parsing Between, expected AND");
+                        if (Value(out var snd) == false)
+                            ThrowParseException("parsing Between, expected value (2nd)");
+
+                        if (fst.Type != snd.Type)
+                            ThrowQueryException(
+                                $"Invalid Between expression, values must have the same type but got {fst.Type} and {snd.Type}");
+
+                        op = new BetweenExpression(field, fst, snd);
+                        return true;
                     case "IN":
-                        type = OperatorType.In;
-                        break;
                     case "ALL IN":
-                        type = OperatorType.AllIn;
-                        break;
+                        if (Scanner.TryScan('(') == false)
+                            ThrowParseException("parsing In, expected '('");
+
+                        var list = new List<QueryExpression>();
+                        do
+                        {
+                            if (Scanner.TryScan(')'))
+                                break;
+
+                            if (list.Count != 0)
+                                if (Scanner.TryScan(',') == false)
+                                    ThrowParseException("parsing In expression, expected ','");
+
+                            if (Value(out var inVal) == false)
+                                ThrowParseException("parsing In, expected a value");
+
+                            if (list.Count > 0)
+                                if (list[0].Type != inVal.Type)
+                                    ThrowQueryException(
+                                        $"Invalid In expression, all values must have the same type, expected {list[0].Type} but got {inVal.Type}");
+                            list.Add(inVal);
+                        } while (true);
+
+                        op = new InExpression(field, list, match == "ALL IN");
+
+                        return true;
                     case "(":
-                        type = OperatorType.Method;
-                        break;
+                        var isMethod = Method(field, out var method);
+                        op = method;
+
+                        if (isMethod && Operator(false, out var methodOperator))
+                        {
+                            if (method.Arguments == null)
+                                method.Arguments = new List<QueryExpression>();
+
+                            method.Arguments.Add(methodOperator);
+                            return true;
+                        }
+
+                        return isMethod;
                     default:
                         op = null;
                         return false;
                 }
             }
+            
+            if (Value(out var val) == false)
+                ThrowParseException($"parsing {type} expression, expected a value (operators only work on scalar / parameters values)");
 
-            switch (type)
-            {
-                case OperatorType.True:
-                    op = new QueryExpression
-                    {
-                        Type = type
-                    };
-                    return true;
-                case OperatorType.Method:
-                    var method = Method(field, op: out op);
-
-                    if (method && Operator(false, out var methodOperator))
-                    {
-                        if (op.Arguments == null)
-                            op.Arguments = new List<object>();
-
-                        op.Arguments.Add(methodOperator);
-                        return true;
-                    }
-
-                    return method;
-                case OperatorType.Between:
-                    if (Value(out var fst) == false)
-                        ThrowParseException("parsing Between, expected value (1st)");
-                    if (Scanner.TryScan("AND") == false)
-                        ThrowParseException("parsing Between, expected AND");
-                    if (Value(out var snd) == false)
-                        ThrowParseException("parsing Between, expected value (2nd)");
-
-                    if (fst.Type != snd.Type)
-                        ThrowQueryException(
-                            $"Invalid Between expression, values must have the same type but got {fst.Type} and {snd.Type}");
-
-                    op = new QueryExpression
-                    {
-                        Field = field,
-                        Type = OperatorType.Between,
-                        First = fst,
-                        Second = snd
-                    };
-                    return true;
-                case OperatorType.In:
-                case OperatorType.AllIn:
-                    if (Scanner.TryScan('(') == false)
-                        ThrowParseException("parsing In, expected '('");
-
-                    var list = new List<ValueToken>();
-                    do
-                    {
-                        if (Scanner.TryScan(')'))
-                            break;
-
-                        if (list.Count != 0)
-                            if (Scanner.TryScan(',') == false)
-                                ThrowParseException("parsing In expression, expected ','");
-
-                        if (Value(out var inVal) == false)
-                            ThrowParseException("parsing In, expected a value");
-
-                        if (list.Count > 0)
-                            if (list[0].Type != inVal.Type)
-                                ThrowQueryException(
-                                    $"Invalid In expression, all values must have the same type, expected {list[0].Type} but got {inVal.Type}");
-                        list.Add(inVal);
-                    } while (true);
-
-                    op = new QueryExpression
-                    {
-                        Field = field,
-                        Type = type,
-                        Values = list
-                    };
-
-                    return true;
-                default:
-                    if (Value(out var val) == false)
-                        ThrowParseException($"parsing {type} expression, expected a value (operators only work on scalar / parameters values)");
-
-                    op = new QueryExpression
-                    {
-                        Field = field,
-                        Type = type,
-                        Value = val
-                    };
-                    return true;
-            }
+            op = new BinaryExpression(field, val, type);
+            return true;
         }
 
-        private bool Method(FieldToken field, out QueryExpression op)
+        private bool Method(FieldExpression field, out MethodExpression op)
         {
-            var args = new List<object>();
+            var args = new List<QueryExpression>();
             do
             {
                 if (Scanner.TryScan(')'))
@@ -722,7 +645,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     {
                         // this is not a simple field ref, let's parse as full expression
 
-                        Scanner.Reset(fieldRef.Token.Offset);
+                        Scanner.Reset(fieldRef.Field.Offset);
                     }
                     else
                     {
@@ -737,12 +660,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     ThrowParseException("parsing method, expected an argument");
             } while (true);
 
-            op = new QueryExpression
-            {
-                Field = field,
-                Type = OperatorType.Method,
-                Arguments = args
-            };
+            op = new MethodExpression(field.Field, args);
             return true;
         }
 
@@ -782,64 +700,64 @@ namespace Raven.Server.Documents.Queries.Parser
             throw new ParseException(sb.ToString());
         }
 
-        private bool Value(out ValueToken val)
+        private bool Value(out ValueExpression val)
         {
             var numberToken = Scanner.TryNumber();
             if (numberToken != null)
             {
-                val = new ValueToken
-                {
-                    Token = new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength),
-                    Type = numberToken.Value == NumberToken.Long ? ValueTokenType.Long : ValueTokenType.Double
-                };
+                val = new ValueExpression(
+                    new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength),
+                    numberToken.Value == NumberToken.Long ? ValueTokenType.Long : ValueTokenType.Double
+                );
                 return true;
             }
             if (Scanner.String())
             {
-                val = new ValueToken
-                {
-                    Token = new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength),
-                    Type = ValueTokenType.String,
-                    EscapeChars = Scanner.EscapeChars
-                };
+                val = new ValueExpression(
+                    new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength),
+                    ValueTokenType.String,
+                    Scanner.EscapeChars != 0
+                );
                 return true;
             }
             if (Scanner.TryScan(StaticValues, out var match))
             {
-                val = new ValueToken
-                {
-                    Token = new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength),
-                };
+                ValueTokenType type;
                 switch (match)
                 {
                     case "true":
-                        val.Type = ValueTokenType.True;
+                        type  = ValueTokenType.True;
                         break;
                     case "false":
-                        val.Type = ValueTokenType.False;
+                        type  = ValueTokenType.False;
                         break;
                     case "null":
-                        val.Type = ValueTokenType.Null;
+                        type  = ValueTokenType.Null;
+                        break;
+                    default:
+                        type = ValueTokenType.String;
                         break;
                 }
 
+                val = new ValueExpression(
+                    new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength),
+                    type);
                 return true;
             }
 
             if (Parameter(out int tokenStart, out int tokenLength))
             {
-                val = new ValueToken
-                {
-                    Token = new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength),
-                    Type = ValueTokenType.Parameter
-                };
+                val = new ValueExpression(
+                    new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength),
+                    ValueTokenType.Parameter
+                );
                 return true;
             }
             val = null;
             return false;
         }
 
-        internal bool Field(out FieldToken token)
+        internal bool Field(out FieldExpression token)
         {
             var tokenStart = -1;
             var tokenLength = 0;
@@ -898,12 +816,12 @@ namespace Raven.Server.Documents.Queries.Parser
                 tokenLength += 1;
             }
 
-            token = new FieldToken
-            {
-                EscapeChars = escapeChars,
-                Token = new StringSegment(Scanner.Input, tokenStart, tokenLength),
-                IsQuoted = isQuoted
-            };
+            token = new FieldExpression(
+                isQuoted ? 
+                    new StringSegment(Scanner.Input, tokenStart + 1, tokenLength -2 ) : 
+                    new StringSegment(Scanner.Input, tokenStart, tokenLength),
+                escapeChars != 0
+            );
             return true;
         }
 
