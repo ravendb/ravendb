@@ -1,6 +1,5 @@
 ﻿using System;
 using Jint;
-using Raven.Server.Config;
 using Raven.Server.Documents.Patch;
 
 namespace Raven.Server.SqlMigration

@@ -12,67 +12,40 @@ namespace Raven.Client.Documents.Operations
     public class SqlMigrationSchemaOperation : IOperation<SqlMigrationSchemaResult>
     {
         private readonly string _connectionStringName;
-        private readonly string _sqlDatabaseName;
 
-        public SqlMigrationSchemaOperation(string connectionStringName, string sqlDatabaseName)
+        public SqlMigrationSchemaOperation(string connectionStringName)
         {
             if (string.IsNullOrWhiteSpace(connectionStringName))
                 throw new ArgumentNullException(nameof(connectionStringName));
 
-            if (string.IsNullOrWhiteSpace(sqlDatabaseName))
-                throw new ArgumentNullException(nameof(sqlDatabaseName));
-
             _connectionStringName = connectionStringName;
-            _sqlDatabaseName = sqlDatabaseName;
         }
 
         public RavenCommand<SqlMigrationSchemaResult> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new SqlMigrationSchemaCommand(_connectionStringName, _sqlDatabaseName);
+            return new SqlMigrationSchemaCommand(_connectionStringName);
         }
 
         public class SqlMigrationSchemaCommand : RavenCommand<SqlMigrationSchemaResult>
         {
             public readonly string ConnectionStringName;
-            public readonly string SqlDatabaseName;
             public override bool IsReadRequest => false;
 
-            public SqlMigrationSchemaCommand(string connectionStringName, string sqlDatabaseName)
+            public SqlMigrationSchemaCommand(string connectionStringName)
             {
                 if (string.IsNullOrWhiteSpace(connectionStringName))
                     throw new ArgumentNullException(nameof(connectionStringName));
 
-                if (string.IsNullOrWhiteSpace(sqlDatabaseName))
-                    throw new ArgumentNullException(nameof(sqlDatabaseName));
-
                 ConnectionStringName = connectionStringName;
-                SqlDatabaseName = sqlDatabaseName;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/admin/sql-migration/schema";
+                url = $"{node.Url}/databases/{node.Database}/admin/sql-migration/schema?{nameof(ConnectionStringName)}={ConnectionStringName}";
 
                 var request = new HttpRequestMessage
                 {
-                    Method = HttpMethods.Post,
-
-                    Content = new BlittableJsonContent(stream =>
-                    {
-                        using (var writer = new BlittableJsonTextWriter(ctx, stream))
-                        {
-                            writer.WriteStartObject();
-
-                            writer.WritePropertyName(nameof(ConnectionStringName));
-                            writer.WriteString(ConnectionStringName);
-                            writer.WriteComma();
-
-                            writer.WritePropertyName(nameof(SqlDatabaseName));
-                            writer.WriteString(SqlDatabaseName);
-
-                            writer.WriteEndObject();
-                        }
-                    })
+                    Method = HttpMethods.Get
                 };
             
                 return request;

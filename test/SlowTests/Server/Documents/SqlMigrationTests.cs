@@ -34,8 +34,8 @@ namespace SlowTests.Server.Documents
             var connectionString = new SqlConnectionString
             {   
             Name = ConnectionStringName,
-            ConnectionString = SqlEtlTests.MasterDatabaseConnection.Value
-            };
+            ConnectionString = SqlEtlTests.MasterDatabaseConnection.Value + $";Initial Catalog={SqlDatabaseName}"
+        };
 
             var putConnectionStringOperation = new PutConnectionStringOperation<SqlConnectionString>(connectionString, store.Database);
             store.Admin.Server.Send(putConnectionStringOperation);
@@ -49,7 +49,7 @@ namespace SlowTests.Server.Documents
 
             _connectionString = record.SqlConnectionStrings[ConnectionStringName].ConnectionString;
             
-            using (var con = new SqlConnection(_connectionString))
+            using (var con = new SqlConnection(SqlEtlTests.MasterDatabaseConnection.Value))
             {
                 con.Open();
 
@@ -59,10 +59,10 @@ namespace SlowTests.Server.Documents
                     dbCommand.ExecuteNonQuery();
                 }
             }
-           
+
             var assembly = Assembly.GetExecutingAssembly();
 
-            using (var con = new SqlConnection(_connectionString + $";Initial Catalog={SqlDatabaseName}"))
+            using (var con = new SqlConnection(_connectionString))
             {
                 con.Open();
 
@@ -112,7 +112,7 @@ namespace SlowTests.Server.Documents
                         }
                     }
                 };
-                var operation = new SqlMigrationImportOperation(ConnectionStringName, SqlDatabaseName, tablesToWrite, binaryToAttachment:true, includeSchema: true, trimStrings: true, skipUnsupportedTypes: false, batchSize: 5);
+                var operation = new SqlMigrationImportOperation(ConnectionStringName, tablesToWrite, binaryToAttachment:true, includeSchema: true, trimStrings: true, skipUnsupportedTypes: false, batchSize: 5);
 
                 var result = store.Operations.Send(operation);
 
@@ -153,7 +153,7 @@ namespace SlowTests.Server.Documents
                     }
                 };
 
-                var operation = new SqlMigrationImportOperation(ConnectionStringName, SqlDatabaseName, tablesToWrite, binaryToAttachment: true, includeSchema: true, trimStrings: true, skipUnsupportedTypes: false, batchSize: 5);
+                var operation = new SqlMigrationImportOperation(ConnectionStringName, tablesToWrite, binaryToAttachment: true, includeSchema: true, trimStrings: true, skipUnsupportedTypes: false, batchSize: 5);
 
                 var result = store.Operations.Send(operation);
 
@@ -184,7 +184,7 @@ namespace SlowTests.Server.Documents
                     }
                 };
 
-                var operation = new SqlMigrationImportOperation(ConnectionStringName, SqlDatabaseName, tablesToWrite, binaryToAttachment: true, includeSchema: true, trimStrings: true, skipUnsupportedTypes: false, batchSize: 5);
+                var operation = new SqlMigrationImportOperation(ConnectionStringName, tablesToWrite, binaryToAttachment: true, includeSchema: true, trimStrings: true, skipUnsupportedTypes: false, batchSize: 5);
 
                 var result = store.Operations.Send(operation);
 
@@ -210,7 +210,7 @@ namespace SlowTests.Server.Documents
                     new SqlMigrationImportOperation.SqlMigrationTable("dbo.UnsupportedTable")
                 };
 
-                var operation = new SqlMigrationImportOperation(ConnectionStringName, SqlDatabaseName, tablesToWrite, binaryToAttachment: true, includeSchema: true, trimStrings: true, skipUnsupportedTypes: true, batchSize: 5);
+                var operation = new SqlMigrationImportOperation(ConnectionStringName, tablesToWrite, binaryToAttachment: true, includeSchema: true, trimStrings: true, skipUnsupportedTypes: true, batchSize: 5);
 
                 var result = store.Operations.Send(operation);
 
@@ -279,7 +279,7 @@ namespace SlowTests.Server.Documents
                     }
                 };
 
-                var operation = new SqlMigrationImportOperation(ConnectionStringName, SqlDatabaseName, tablesToWrite, binaryToAttachment: true, includeSchema: true, trimStrings: true, skipUnsupportedTypes: false, batchSize: 5);
+                var operation = new SqlMigrationImportOperation(ConnectionStringName, tablesToWrite, binaryToAttachment: true, includeSchema: true, trimStrings: true, skipUnsupportedTypes: false, batchSize: 5);
 
                 var result = store.Operations.Send(operation);
 
@@ -295,7 +295,7 @@ namespace SlowTests.Server.Documents
                 Assert.True(result.Errors.Contains("Query for table 'dbo.Photo' must select all primary keys"));
                 Assert.True(result.Errors.Contains("Table 'dbo.NoPkTable' must have at list 1 primary key"));
                 Assert.True(result.Errors.Contains($"Cannot read column 'Node' in table 'dbo.UnsupportedTable'. (Unsupported type: {SqlDatabaseName}.sys.hierarchyid)"));
-                Assert.True(result.Errors.Contains("Cannot patch table 'dbo.OrderItem' using the given script. Error: Line 1': Unexpected identifier"));
+                Assert.True(result.Errors.Contains("Cannot patch table 'dbo.OrderItem' using the given script. Error: Esprima.ParserException: Line 1': Unexpected identifier\r\n   at Esprima.JavaScriptParser.ThrowUnexpectedToken(Token token, String message)\r\n   at Esprima.JavaScriptParser.ConsumeSemicolon()\r\n   at Esprima.JavaScriptParser.ParseLabelledStatement()\r\n   at Esprima.JavaScriptParser.ParseStatement()\r\n   at Esprima.JavaScriptParser.ParseStatementListItem()\r\n   at Esprima.JavaScriptParser.ParseFunctionSourceElements()\r\n   at Esprima.JavaScriptParser.ParseFunctionExpression()\r\n   at Esprima.JavaScriptParser.ParsePrimaryExpression()\r\n   at Esprima.JavaScriptParser.InheritCoverGrammar[T](Func`1 parseFunction)\r\n   at Esprima.JavaScriptParser.ParseLeftHandSideExpressionAllowCall()\r\n   at Esprima.JavaScriptParser.InheritCoverGrammar[T](Func`1 parseFunction)\r\n   at Esprima.JavaScriptParser.ParseUpdateExpression()\r\n   at Esprima.JavaScriptParser.ParseUnaryExpression()\r\n   at Esprima.JavaScriptParser.InheritCoverGrammar[T](Func`1 parseFunction)\r\n   at Esprima.JavaScriptParser.ParseExponentiationExpression()\r\n   at Esprima.JavaScriptParser.InheritCoverGrammar[T](Func`1 parseFunction)\r\n   at Esprima.JavaScriptParser.ParseBinaryExpression()\r\n   at Esprima.JavaScriptParser.InheritCoverGrammar[T](Func`1 parseFunction)\r\n   at Esprima.JavaScriptParser.ParseConditionalExpression()\r\n   at Esprima.JavaScriptParser.ParseAssignmentExpression()\r\n   at Esprima.JavaScriptParser.InheritCoverGrammar[T](Func`1 parseFunction)\r\n   at Esprima.JavaScriptParser.ParseGroupExpression()\r\n   at Esprima.JavaScriptParser.InheritCoverGrammar[T](Func`1 parseFunction)\r\n   at Esprima.JavaScriptParser.ParsePrimaryExpression()\r\n   at Esprima.JavaScriptParser.InheritCoverGrammar[T](Func`1 parseFunction)\r\n   at Esprima.JavaScriptParser.ParseLeftHandSideExpressionAllowCall()\r\n   at Esprima.JavaScriptParser.InheritCoverGrammar[T](Func`1 parseFunction)\r\n   at Esprima.JavaScriptParser.ParseUpdateExpression()\r\n   at Esprima.JavaScriptParser.ParseUnaryExpression()\r\n   at Esprima.JavaScriptParser.InheritCoverGrammar[T](Func`1 parseFunction)\r\n   at Esprima.JavaScriptParser.ParseExponentiationExpression()\r\n   at Esprima.JavaScriptParser.InheritCoverGrammar[T](Func`1 parseFunction)\r\n   at Esprima.JavaScriptParser.ParseBinaryExpression()\r\n   at Esprima.JavaScriptParser.InheritCoverGrammar[T](Func`1 parseFunction)\r\n   at Esprima.JavaScriptParser.ParseConditionalExpression()\r\n   at Esprima.JavaScriptParser.ParseAssignmentExpression()\r\n   at Esprima.JavaScriptParser.IsolateCoverGrammar[T](Func`1 parseFunction)\r\n   at Esprima.JavaScriptParser.ParseExpression()\r\n   at Esprima.JavaScriptParser.ParseExpressionStatement()\r\n   at Esprima.JavaScriptParser.ParseStatement()\r\n   at Esprima.JavaScriptParser.ParseStatementListItem()\r\n   at Esprima.JavaScriptParser.ParseFunctionSourceElements()\r\n   at Esprima.JavaScriptParser.ParseFunctionDeclaration(Boolean identifierIsOptional)\r\n   at Esprima.JavaScriptParser.ParseStatementListItem()\r\n   at Esprima.JavaScriptParser.ParseProgram(Boolean strict)\r\n   at Jint.Engine.Execute(String source, ParserOptions parserOptions)\r\n   at Raven.Server.SqlMigration.JsPatch..ctor(String patchScript) in C:\\Ariel\\ravendb-4.0-new-backup\\src\\Raven.Server\\SqlMigration\\JsPatch.cs:line 27\r\n   at Raven.Server.SqlMigration.SqlTable.GetJsPatch() in C:\\Ariel\\ravendb-4.0-new-backup\\src\\Raven.Server\\SqlMigration\\SqlTable.cs:line 40\r\n   at Raven.Server.SqlMigration.SqlDatabase.Validator.ValidatePatch(SqlTable table, SqlMigrationDocument document) in C:\\Ariel\\ravendb-4.0-new-backup\\src\\Raven.Server\\SqlMigration\\SqlDatabase.Validator.cs:line 141"));
                 Assert.True(result.Errors.Contains("Query cannot contain an 'ORDER BY' clause (dbo.Details)"));
                 Assert.True(result.Errors.Contains("Query for table 'dbo.Photo' must select all referential keys"));
             }
@@ -307,7 +307,7 @@ namespace SlowTests.Server.Documents
             using (var store = GetDocumentStore())
             {
                 Initialize(store);
-                var operation = new SqlMigrationSchemaOperation(ConnectionStringName, SqlDatabaseName);
+                var operation = new SqlMigrationSchemaOperation(ConnectionStringName);
 
                 var result = store.Operations.Send(operation);
 
@@ -324,7 +324,7 @@ namespace SlowTests.Server.Documents
 
         private void DropDatabase()
         {
-            using (var con = new SqlConnection(_connectionString))
+            using (var con = new SqlConnection(SqlEtlTests.MasterDatabaseConnection.Value))
             {
                 con.Open();
 
