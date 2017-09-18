@@ -2,14 +2,14 @@
 #Requires -RunAsAdministrator
 param(
     $CertName = $null,
-    $CertPassphrase = "test",
+    [Parameter(Mandatory=$true)]
+    [SecureString]$CertificatePassword,
     $CN = $null,
     $DNS = $null,
     $CertFile = "server.pfx",
-    $SignerName = "RavenDB Server CA"
+    $SignerName = "RavenDB Server CA",
+    $SubjectCA = "CN=$env:UserDomain Certificate Authority,O=$env:UserDomain,OU=$env:UserDomain's RavenDB Operations"
 )
-
-$ErrorActionPreference = "Stop"
 
 $rootStore = new-object System.Security.Cryptography.X509Certificates.X509Store(
     [System.Security.Cryptography.X509Certificates.StoreName]::AuthRoot,
@@ -41,7 +41,7 @@ if ($existingCert -eq $null) {
         -NotAfter ([DateTime]::Today).AddYears(3) `
         -NotBefore ([DateTime]::Today).AddDays(-1) `
         -FriendlyName $SignerName `
-        -Subject "CN=ca.hrhinos.local,O=Hibernating Rhinos,OU=Ops" `
+        -Subject $SubjectCA `
         -Type Custom `
         -KeySpec Signature `
         -TextExtension '2.5.29.19={critical}{text}ca=1&pathlength=1' `
@@ -54,7 +54,7 @@ if ($existingCert -eq $null) {
 }
 
 
-$subject = "O=operations.ravendb.local, CN=$CN"
+$subject = "O=ravendb.$env:UserDnsDomain, CN=$CN"
 
 Write-Host "Remember to make your Common Name (CN) match the server url."
 Write-Host
@@ -80,8 +80,6 @@ $certThumbprint = $cert.Thumbprint
 $pfxPath = [io.path]::combine(".", $CertFile)
 $certStorePath = "cert:\LocalMachine\My\$certThumbprint";
 
-$passphrase = $CertPassphrase | ConvertTo-SecureString -AsPlainText -Force
-
-Export-PfxCertificate -cert $certStorePath -FilePath $pfxPath -Password $passphrase -Force -Verbose
+Export-PfxCertificate -cert $certStorePath -FilePath $pfxPath -Password $CertificatePassword -Force -Verbose
 
 Write-Host "Done."

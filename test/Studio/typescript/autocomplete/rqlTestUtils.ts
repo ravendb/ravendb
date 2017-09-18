@@ -2,10 +2,14 @@ import queryCompleter = require("src/Raven.Studio/typescript/common/queryComplet
 import aceEditorBindingHandler = require("src/Raven.Studio/typescript/common/bindingHelpers/aceEditorBindingHandler");
 
 class rqlTestUtils {
-    static autoComplete(query: string, queryCompleterProvider: () => queryCompleter, callback: (errors: any[], worldlist: autoCompleteWordList[], prefix: string) => void): void {
+    static autoComplete(query: string, 
+                        queryCompleterProvider: () => queryCompleter, 
+                        callback: (errors: any[], worldlist: autoCompleteWordList[], prefix: string, lastKeyword: autoCompleteLastKeyword) => void): void {
         const queryWoPosition = query.replace("|", "");
-        const lines = query.split("\r\n");
+        const element = $("<div></div>").html(queryWoPosition)[0];
+        const aceEditor: AceAjax.Editor = ace.edit(element);
 
+        const lines = query.split("\n");
         const lineWithCursor = lines.findIndex(x => x.includes("|"));
         if (lineWithCursor === -1) {
             throw new Error("Unable to find | in input query");
@@ -14,9 +18,6 @@ class rqlTestUtils {
         if (rowWithCursor < 0) {
             throw "RQL test must include the position"
         }
-
-        const element = $("<div></div>").html(queryWoPosition)[0];
-        const aceEditor: AceAjax.Editor = ace.edit(element);
 
         const langTools = ace.require("ace/ext/language_tools");
         const util = ace.require("ace/autocomplete/util");
@@ -36,8 +37,10 @@ class rqlTestUtils {
 
             const prefix = util.getCompletionPrefix(aceEditor);
             
-            completer.complete(aceEditor, aceEditor.getSession(), aceEditor.getCursorPosition(), prefix, (errors: any[], wordlist: autoCompleteWordList[]) =>  {
-                callback(errors, wordlist, prefix);
+            const lastKeyword = completer.getLastKeyword(aceEditor.getSession(), aceEditor.getCursorPosition());
+            
+            completer.complete(aceEditor, aceEditor.getSession(), aceEditor.getCursorPosition(), prefix, (errors: any[], wordlist: autoCompleteWordList[]) => {
+                callback(errors, wordlist, prefix, lastKeyword);
                 aceEditor.destroy();
             });
         });
@@ -73,8 +76,8 @@ class rqlTestUtils {
                     "Companies", 
                     "Orders", 
                     "Collection With Space",
-                    "Collection!"
-                    //TODO: "Collection With ' And \" in name"
+                    "Collection!",
+                    "Collection With ' And \" in name"
                 ]);
             },
             indexFields: (indexName, callback) => {
@@ -94,18 +97,86 @@ class rqlTestUtils {
             collectionFields: (collectionName, prefix, callback) => {
                 switch (collectionName){
                     case "Orders":
-                        callback({
-                            "Company": "String",
-                            "Employee": "String",
-                            "OrderedAt": "String",
-                            "RequireAt": "String",
-                            "ShippedAt": "String",
-                            "ShipTo": "Object",
-                            "ShipVia": "String",
-                            "Freight": "Number",
-                            "Lines": "ArrayObject",
-                            "@metadata": "Object"
-                        });
+                        
+                        switch (prefix) {
+                            case "ShipTo":
+                                callback({
+                                    "Line1": "String",
+                                    "Line2": "Null",
+                                    "City": "String",
+                                    "Region": "String",
+                                    "PostalCode": "String",
+                                    "Country": "String"
+                                });
+                                break;
+                            default:
+                                callback({
+                                    "Company": "String",
+                                    "Employee": "String",
+                                    "OrderedAt": "String",
+                                    "RequireAt": "String",
+                                    "ShippedAt": "String",
+                                    "ShipTo": "Object",
+                                    "ShipVia": "String",
+                                    "Freight": "Number",
+                                    "Lines": "ArrayObject",
+                                    "With.Dot": "Object",
+                                    "With*Star": "Object",
+                                    "With Space": "Object",
+                                    "With ' and \" quotes": "Object",
+                                    "@metadata": "Object"
+                                });
+                                break;
+                        }
+                
+                        break;
+                    case "@all_docs":
+                        
+                        switch (prefix) {
+                            default:
+                                callback({
+                                    "Max": "Number",
+                                    "@metadata": "Object",
+                                    "Name": "String",
+                                    "Description": "String",
+                                    "ExternalId": "String",
+                                    "Contact": "Object",
+                                    "Address": "Object",
+                                    "Phone": "String",
+                                    "Fax": "String",
+                                    "LastName": "String",
+                                    "FirstName": "String",
+                                    "Title": "String",
+                                    "HiredAt": "String",
+                                    "Birthday": "String",
+                                    "HomePhone": "String",
+                                    "Extension": "String",
+                                    "ReportsTo": "String",
+                                    "Notes": "Null",
+                                    "Territories": "ArrayObject, ArrayString",
+                                    "Company": "String",
+                                    "Employee": "String",
+                                    "OrderedAt": "String",
+                                    "RequireAt": "String",
+                                    "ShippedAt": "Null",
+                                    "ShipTo": "Object",
+                                    "ShipVia": "String",
+                                    "Freight": "Number",
+                                    "Lines": "ArrayObject",
+                                    "Na.me": "String",
+                                    "Supplier": "String",
+                                    "Category": "String",
+                                    "QuantityPerUnit": "String",
+                                    "PricePerUnit": "Number",
+                                    "UnitsInStock": "Number",
+                                    "UnitsOnOrder": "Number",
+                                    "Discontinued": "Boolean",
+                                    "ReorderLevel": "Number",
+                                    "HomePage": "Null"
+                                });
+                                break;
+                        }
+                
                         break;
                     default:
                         callback({});
@@ -117,7 +188,7 @@ class rqlTestUtils {
                 "Orders/ByCompany", 
                 "Product/Sales", 
                 "Orders/Totals", 
-                // TODO: "Index With ' And \" in name"
+                "Index With ' And \" in name"
                 ])
         });
 

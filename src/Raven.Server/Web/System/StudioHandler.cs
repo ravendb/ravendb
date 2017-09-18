@@ -7,6 +7,8 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Net;
@@ -14,27 +16,318 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Raven.Server.Routing;
 using System.Linq;
-using System.Net.Http.Headers;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Primitives;
+using System.Runtime.CompilerServices;
+using System.Threading;
 using Raven.Client;
 using Raven.Client.Extensions.Streams;
-using Raven.Client.Util;
+using Sparrow.Collections;
+using Sparrow.Threading;
 using StringSegment = Sparrow.StringSegment;
 
 namespace Raven.Server.Web.System
 {
     public class StudioHandler : RequestHandler
     {
-        private static readonly ConcurrentDictionary<string, long> ZipLastChangedDate = new ConcurrentDictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+        /// <summary>
+        /// Control structure for a cached file
+        /// </summary>
+        class CachedStaticFile
+        {
+            public string ETag;
+            public byte[] Contents;
+            public byte[] CompressedContents;
+        }
 
-        private static DateTime _lastFileNamesUpdate = DateTime.MinValue;
+        /// <summary>
+        /// Minimum number of pending entries to compress in order to start a cache processing task
+        /// </summary>
+        private const int PendingEntriesToProcess = 5;
 
-        private static Dictionary<string, FileInfo> _fileNamesCaseInsensitive = new Dictionary<string, FileInfo>(StringComparer.OrdinalIgnoreCase);
+        /// <summary>
+        /// The actual cache
+        /// </summary>
+        private static readonly ConcurrentDictionary<string, CachedStaticFile> StaticContentCache = new ConcurrentDictionary<string, CachedStaticFile>(StringComparer.OrdinalIgnoreCase);
 
-        public static readonly string[] LookupPaths = {
+        /// <summary>
+        /// Queue of files pending compression in the server
+        /// </summary>
+        private static readonly ConcurrentQueue<string> EntriesToCompress = new ConcurrentQueue<string>();
+
+        /// <summary>
+        /// Number of entries pending compression. Done this way to avoid queue fragmentation
+        /// </summary>
+        private static int _pendingEntriesToCompress = 0;
+
+        /// <summary>
+        /// A flag that is raised only when the cache is unavailable for processing.
+        /// </summary>
+        private static readonly MultipleUseFlag CacheProcessingHappening = new MultipleUseFlag();
+
+        private const int BufferSize = 16 * 1024;
+
+        private static string _wwwRootBasePath;
+
+        private static FileSystemWatcher _fileWatcher;
+        private static FileSystemWatcher _zipFileWatcher;
+
+        public const string ZipFileName = "Raven.Studio.zip";
+
+        private static string _zipFilePath;
+        private static long _zipFileLastChangeTicks;
+
+        private const string ETagZipFileSource = "Z";
+        private const string ETagFileSystemFileSource = "F";
+
+        private static readonly ConcurrentSet<string> ZipFileEntries = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
+        private static readonly MultipleUseFlag ZipFileProcessingHappening = new MultipleUseFlag();
+        private static readonly MultipleUseFlag ZipFileInitialized = new MultipleUseFlag();
+
+        private static byte[] CompressFile(byte[] rawMemory, CompressionLevel level = CompressionLevel.Fastest)
+        {
+            using (var gZippedMemory = new MemoryStream())
+            {
+                using (var gZipStream = GetGzipStream(gZippedMemory, CompressionMode.Compress, level))
+                {
+                    gZipStream.Write(rawMemory, 0, rawMemory.Length);
+                }
+
+                return gZippedMemory.ToArray();
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool ShouldSkipCache(FileInfo fileInfo)
+        {
+            return false;
+        }
+
+        private static readonly string[] ExtensionsToSkipCompression = {
+            ".png",
+            ".jpg",
+            ".gif",
+            ".ico",
+            ".svg",
+            ".woff",
+            ".woff2",
+            ".ttf",
+            ".appcache"
+        };
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool ShouldSkipCompression(string filePath)
+        {
+            return ExtensionsToSkipCompression.Contains(Path.GetExtension(filePath));
+        }
+
+        private static readonly Dictionary<string, string> FileExtensionToContentTypeMapping = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            // HTML does not have charset because the HTML is expected to declare the charset itself
+            {".html", "text/html"},
+            {".htm", "text/html"},
+            {".css", "text/css; charset=utf-8"},
+            {".js", "text/javascript; charset=utf-8"},
+            {".ico", "image/vnd.microsoft.icon"},
+            {".jpg", "image/jpeg"},
+            {".gif", "image/gif"},
+            {".png", "image/png"},
+            {".xap", "application/x-silverlight-2"},
+            {".json", "application/json; charset=utf-8"},
+            {".eot", "application/vnd.ms-fontobject"},
+            {".svg", "image/svg+xml"},
+            {".ttf", "application/octet-stream"},
+            {".woff", "application/font-woff"},
+            {".woff2", "application/font-woff2"},
+            {".appcache", "text/cache-manifest; charset=utf-8"}
+        };
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static string GetContentType(string fileExtension)
+        {
+            return FileExtensionToContentTypeMapping.TryGetValue(fileExtension, out string contentType) ?
+                contentType :
+                "text/plain; charset=utf-8";
+        }
+
+        [RavenAction("/studio/$", "GET", AuthorizationStatus.UnauthenticatedClients)]
+        public async Task GetStudioFile()
+        {
+            // This is casted to string on purpose here. Everything else works
+            // with strings, so reifying this now is good.
+            string serverRelativeFileName = new StringSegment(
+                RouteMatch.Url, RouteMatch.MatchLength, RouteMatch.Url.Length - RouteMatch.MatchLength);
+
+            HttpContext.Response.Headers["Raven-Static-Served-From"] = "Cache";
+            if (await ServeFromCache(serverRelativeFileName))
+                return;
+
+            if (Server.Configuration.Http.UseResponseCompression)
+            {
+                // We may create a cache compression task if it is needed
+                if (_pendingEntriesToCompress > PendingEntriesToProcess && CacheProcessingHappening.Raise())
+                {
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                    Task.Run(() => CacheCompress()).ConfigureAwait(false);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                }
+            }
+
+            var env = (IHostingEnvironment)HttpContext.RequestServices.GetService(typeof(IHostingEnvironment));
+            var basePath = Server.Configuration.Studio.Path ?? env.ContentRootPath;
+
+            HttpContext.Response.Headers["Raven-Static-Served-From"] = "ZipFile";
+            if (await ServeFromZipFile(basePath, serverRelativeFileName))
+                return;
+
+            HttpContext.Response.Headers["Raven-Static-Served-From"] = "FileSystem";
+            if (await ServeFromFileSystem(basePath, serverRelativeFileName))
+                return;
+
+            // If nothing worked, just inform that the page was not found.
+            HttpContext.Response.Headers["Raven-Static-Served-From"] = "Unserved";
+            var message =
+                $"The following file was not available: " +
+                $"{serverRelativeFileName}.Please make sure that the Raven" +
+                $".Studio.zip file exist in the main directory (near the " +
+                $"Raven.Server.exe).";
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+            HttpContext.Response.Body.Write(message);
+        }
+
+        private void CacheCompress()
+        {
+            Debug.Assert(CacheProcessingHappening);
+
+            // Avoid fragmenting the queue more than necessary
+            int dispatch = EntriesToCompress.Count;
+
+            // Notice that this is not always consistent. However, it is 
+            // eventually consistent.
+            Interlocked.Add(ref _pendingEntriesToCompress, -dispatch);
+
+            for (; dispatch > 0; dispatch--)
+            {
+                if (!EntriesToCompress.TryDequeue(out var relativeServerFileName))
+                    break;
+
+                // The cache entry should already be there in the static cache
+                // unless it has been removed by the pruning process, in which
+                // case we just skip it.
+                if (!StaticContentCache.TryGetValue(relativeServerFileName, out var uncompressedCachedStaticFile))
+                    continue;
+
+                // The cache may attempt to read compressed contents, so this
+                // assignment has to happen atomically. It is also possible
+                // that the file has been removed from the cache in between,
+                // in which case the compression would be pointless. We can't
+                // avoid such cases.
+                Interlocked.Exchange(ref uncompressedCachedStaticFile.CompressedContents,
+                    CompressFile(uncompressedCachedStaticFile.Contents, Server.Configuration.Http.StaticFilesResponseCompressionLevel));
+            }
+
+            CacheProcessingHappening.LowerOrDie();
+        }
+
+        private async Task<bool> ServeFromCache(string serverRelativeFileName)
+        {
+
+            if (StaticContentCache.TryGetValue(serverRelativeFileName, out var metadata) == false)
+                return false;
+
+            if (metadata.ETag == HttpContext.Request.Headers[Constants.Headers.IfNoneMatch])
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+                return true;
+            }
+
+            HttpContext.Response.ContentType = GetContentType(Path.GetExtension(serverRelativeFileName));
+            HttpContext.Response.Headers[Constants.Headers.Etag] = metadata.ETag;
+            // Disable chunked responses
+            HttpContext.Response.Headers[Constants.Headers.TransferEncoding] = "identity";
+
+            byte[] contentsToServe;
+            if (ClientAcceptsGzipResponse() && metadata.CompressedContents != null)
+            {
+                HttpContext.Response.Headers[Constants.Headers.ContentEncoding] = "gzip";
+                contentsToServe = metadata.CompressedContents;
+            }
+            else
+            {
+                contentsToServe = metadata.Contents;
+            }
+
+            // Set the content length accordingly
+            HttpContext.Response.Headers[Constants.Headers.ContentLength] = contentsToServe.Length.ToString();
+            await HttpContext.Response.Body.WriteAsync(contentsToServe, 0, contentsToServe.Length);
+
+            return true;
+        }
+
+        /// <summary>
+        /// Retrieves a file from the filesystem and serves it to a client.
+        /// 
+        /// This should only be called when the cache can not find the file,
+        /// or when it is disabled.
+        /// </summary>
+        private async Task<bool> ServeFromFileSystem(string reportedBasePath, string serverRelativeFileName)
+        {
+            FileInfo staticFileInfo;
+            if (_wwwRootBasePath != null)
+                staticFileInfo = new FileInfo(Path.Combine(_wwwRootBasePath, serverRelativeFileName));
+            else
+                staticFileInfo = FindRootBasePath(reportedBasePath, serverRelativeFileName);
+
+            if (staticFileInfo == null || staticFileInfo.Exists == false)
+                return false;
+
+            var fileETag = GenerateETagFor(ETagFileSystemFileSource, serverRelativeFileName.GetHashCode(), staticFileInfo.LastWriteTimeUtc.Ticks);
+            if (fileETag == HttpContext.Request.Headers[Constants.Headers.IfNoneMatch])
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+                return true;
+            }
+
+            HttpContext.Response.ContentType = GetContentType(staticFileInfo.Extension);
+            HttpContext.Response.Headers[Constants.Headers.Etag] = fileETag;
+
+            using (var handle = File.OpenRead(staticFileInfo.FullName))
+            {
+                using (var responseStream = ResponseBodyStream())
+                    await handle.CopyToAsync(responseStream, BufferSize);
+
+                handle.Seek(0, SeekOrigin.Begin);
+
+                await AddToCache(serverRelativeFileName, fileETag, staticFileInfo, handle);
+            }
+
+            return true;
+        }
+
+        private async Task AddToCache(string cacheKey, string eTag, FileInfo fileInfo, Stream inputStream)
+        {
+            if (ShouldSkipCache(fileInfo))
+                return;
+
+            using (var staticFileContents = new MemoryStream())
+            {
+                await inputStream.CopyToAsync(staticFileContents, BufferSize);
+
+                StaticContentCache.TryAdd(cacheKey, new CachedStaticFile
+                {
+                    Contents = staticFileContents.ToArray(),
+                    ETag = eTag
+                });
+
+                if (ShouldSkipCompression(fileInfo.FullName))
+                    return;
+
+                EntriesToCompress.Enqueue(cacheKey);
+                Interlocked.Increment(ref _pendingEntriesToCompress);
+            }
+        }
+
+        private static readonly string[] FileSystemLookupPaths = {
             "src/Raven.Studio/wwwroot",
-             "wwwroot",
+            "wwwroot",
             "../Raven.Studio/wwwroot",
             "../src/Raven.Studio/wwwroot",
             "../../../../src/Raven.Studio/wwwroot",
@@ -42,121 +335,235 @@ namespace Raven.Server.Web.System
             "../../../../../../src/Raven.Studio/wwwroot"
         };
 
-        public static readonly Dictionary<string, string> FileExtensionToContentTypeMapping = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        private FileInfo FindRootBasePath(string reportedBasePath, string serverRelativeFileName)
         {
-            // HTML does not have charset because the HTML is expected to declare the charset itself
-            {".html", "text/html"},
-            {".htm", "text/html"},
-            {".css", "text/css"},
-            {".js", "text/javascript"},
-            {".ico", "image/vnd.microsoft.icon"},
-            {".jpg", "image/jpeg"},
-            {".gif", "image/gif"},
-            {".png", "image/png"},
-            {".xap", "application/x-silverlight-2"},
-            {".json", "application/json"},
-            {".eot", "application/vnd.ms-fontobject"},
-            {".svg", "image/svg+xml"},
-            {".ttf", "application/octet-stream"},
-            {".woff", "application/font-woff"},
-            {".woff2", "application/font-woff2"},
-            {".appcache", "text/cache-manifest"}
-        };
+            Debug.Assert(FileSystemLookupPaths.Length > 0);
 
-        private static FileInfo TryGetFileName(string basePath, string fileName)
-        {
-            // this is expected to run concurrently
-            if (_fileNamesCaseInsensitive.TryGetValue(fileName, out FileInfo value))
-                return value;
-
-            if ((SystemTime.UtcNow - _lastFileNamesUpdate).TotalSeconds < 3)
-                return null;
-
-            var files = new Dictionary<string, FileInfo>(StringComparer.OrdinalIgnoreCase);
-            foreach (var lookupPathDir in LookupPaths)
+            FileInfo staticFileInfo = null;
+            string wwwRootBasePath = null;
+            foreach (string lookupPath in FileSystemLookupPaths)
             {
-                var lookupPath = Path.Combine(basePath, lookupPathDir);
-                if (Directory.Exists(lookupPath) == false)
+                wwwRootBasePath = Path.Combine(reportedBasePath, lookupPath);
+                staticFileInfo = new FileInfo(Path.Combine(wwwRootBasePath, serverRelativeFileName));
+
+                if (staticFileInfo.Exists)
+                    break;
+            }
+
+            // Many threads may find the path at once, only one stands
+            wwwRootBasePath = Path.GetFullPath(wwwRootBasePath);
+            if (Interlocked.CompareExchange(ref _wwwRootBasePath, wwwRootBasePath, null) == null)
+            {
+                // When the thread that finds the root path (the first request
+                // ever to be handled by the server) changes it, it also
+                // starts the process to check if files change and invalidate
+                // cache entries.
+                _fileWatcher = new FileSystemWatcher();
+                _fileWatcher.Path = _wwwRootBasePath;
+                _fileWatcher.Filter = "*.*";
+                StartFileSystemWatcher(_fileWatcher, CacheEvictEntryEventHandler, CacheEvictRenamedEntryEventHandler);
+            }
+
+            return staticFileInfo;
+        }
+
+        private static void StartFileSystemWatcher(FileSystemWatcher watcher, FileSystemEventHandler createChangeDeleteHandler, RenamedEventHandler renameHandler)
+        {
+            watcher.IncludeSubdirectories = true;
+            watcher.NotifyFilter = NotifyFilters.DirectoryName |
+                           NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Size;
+
+            watcher.Changed += createChangeDeleteHandler;
+            watcher.Created += createChangeDeleteHandler;
+            watcher.Deleted += createChangeDeleteHandler;
+            watcher.Renamed += renameHandler;
+
+            watcher.EnableRaisingEvents = true;
+        }
+
+        private void CacheEvictEntryEventHandler(object sender, FileSystemEventArgs e)
+        {
+            if (File.Exists(e.FullPath) || Directory.Exists(e.FullPath) == false)
+            {
+                // It is a file, or it does not exist any more
+                string relativePath = Path.GetRelativePath(_wwwRootBasePath, e.FullPath).Replace('\\','/');
+                StaticContentCache.TryRemove(relativePath, out var value);
+            }
+            else
+            {
+                // It is not a file, clear the cache
+                ClearCache();
+            }
+        }
+
+        private void ClearCache()
+        {
+            // We clear this first because the process tolerates missing
+            // content cache entries
+            EntriesToCompress.Clear();
+            StaticContentCache.Clear();
+        }
+
+        private void CacheEvictRenamedEntryEventHandler(object sender, RenamedEventArgs e)
+        {
+            if (File.Exists(e.FullPath) || Directory.Exists(e.FullPath) == false)
+            {
+                // It is a file, or it does not exist any more. Notice we
+                // clear the old version.
+                string relativePath = Path.GetRelativePath(_wwwRootBasePath, e.OldFullPath).Replace('\\','/');
+                StaticContentCache.TryRemove(relativePath, out var value);
+            }
+            else
+            {
+                // It is not a file, clear the cache
+                ClearCache();
+            }
+        }
+
+        private bool ParseETag(out string hierarchyTag, out long fileVersion)
+        {
+            string clientETag = HttpContext.Request.Headers[Constants.Headers.IfNoneMatch];
+            var clientETagParts = clientETag?.Split('@');
+
+            if (clientETagParts?.Length != 3)
+            {
+                hierarchyTag = "Unknown";
+                fileVersion = -1;
+                return false;
+            }
+
+            hierarchyTag = clientETagParts[0];
+
+            if (long.TryParse(clientETagParts[2], NumberStyles.Integer, null, out fileVersion) == false)
+                return false;
+
+            return true;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private string GenerateETagFor(string hierarchyTag, int resourceId, long fileVersion = -1)
+        {
+            return $"{hierarchyTag}@{resourceId}@{fileVersion}";
+        }
+
+        private async Task<bool> ServeFromZipFile(string reportedBasePath, string serverRelativeFileName)
+        {
+            if (_zipFilePath == null)
+            {
+                var zipFilePath = Path.Combine(reportedBasePath, ZipFileName);
+                if (File.Exists(zipFilePath) == false)
+                    return false;
+
+                // Many threads may find the path at once, only one stands
+                if (Interlocked.CompareExchange(ref _zipFilePath, zipFilePath, null) == null)
                 {
-                    lookupPath = Path.Combine(Directory.GetCurrentDirectory(), lookupPathDir);
-                    if (Directory.Exists(lookupPath) == false)
-                        continue;
+#pragma warning disable 4014
+                    Task.Run(() => { InitializeZipFileServing(reportedBasePath); });
+#pragma warning restore 4014
+                }
+            }
+
+            // The ETag has to be different for every file in the Zip file,
+            // and different across different versions of the file.
+            if (ParseETag(out string eTagFileSource, out long eTagFileVersion) && eTagFileSource == ETagZipFileSource && eTagFileVersion == _zipFileLastChangeTicks)
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+                return true;
+            }
+
+            // ETag answering failed. Check if we have the file in the current
+            // version of the zip file. The index may be unavailable due to
+            // recent changes.
+            if (ZipFileProcessingHappening == false)
+            {
+                // The index is available, but we may not have started loading
+                if (ZipFileEntries.Contains(serverRelativeFileName) == false && ZipFileInitialized)
+                    return false;
+            }
+
+            // We have the file in the zip, so fetch it
+            using (var fileStream = new FileStream(_zipFilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+            using (var zipArchive = new ZipArchive(fileStream, ZipArchiveMode.Read, false))
+            {
+                var zipEntry = zipArchive.Entries.FirstOrDefault(a => a.FullName.Equals(serverRelativeFileName, StringComparison.OrdinalIgnoreCase));
+                if (zipEntry == null)
+                    return false;
+
+                // This does not represent an actual file, just the metadata
+                // in the file name
+                var fileInfo = new FileInfo(serverRelativeFileName);
+                string fileETag = GenerateETagFor(ETagZipFileSource, serverRelativeFileName.GetHashCode(), _zipFileLastChangeTicks);
+
+                HttpContext.Response.ContentType = GetContentType(fileInfo.Extension);
+                HttpContext.Response.Headers[Constants.Headers.Etag] = fileETag;
+
+                using (var entry = zipEntry.Open())
+                using (var responseStream = ResponseBodyStream())
+                {
+                    await entry.CopyToAsync(responseStream, BufferSize);
                 }
 
-                foreach (var file in Directory.GetFiles(lookupPath, "*", SearchOption.AllDirectories))
+                // The zip entry stream is not seekable, so we have to reopen it
+                using (var entry = zipEntry.Open())
+                    await AddToCache(serverRelativeFileName, fileETag, fileInfo, entry);
+            }
+
+            return true;
+        }
+
+        private static void InitializeZipFileServing(string reportedBasePath)
+        {
+            Debug.Assert(_zipFilePath != null);
+
+            // We need to invalidate the cache if the zip file changes
+            _zipFileWatcher = new FileSystemWatcher();
+            _zipFileWatcher.Path = reportedBasePath;
+            _zipFileWatcher.Filter = ZipFileName;
+            StartFileSystemWatcher(_zipFileWatcher, ZipFileChangedEventHandler, ZipFileChangedEventHandler);
+            ReprocessZipFile();
+        }
+
+        private static void ZipFileChangedEventHandler(object sender, FileSystemEventArgs e)
+        {
+            // Do not change the order of these instructions. We want to avoid 
+            // polluting the ETags in the new cache with old ones.
+            Interlocked.Increment(ref _zipFileLastChangeTicks);
+            StaticContentCache.Clear();
+            ReprocessZipFile();
+        }
+
+        private static void ReprocessZipFile()
+        {
+            Debug.Assert(_zipFilePath != null);
+
+            // Make sure to keep the relative order between the flags,  this
+            // code runs in multiple threads
+            if (ZipFileProcessingHappening.Raise() == false)
+                return;
+
+            ZipFileInitialized.Lower();
+            ZipFileEntries.Clear();
+
+            try
+            {
+                using (var fileStream = new FileStream(_zipFilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                using (var zipArchive = new ZipArchive(fileStream, ZipArchiveMode.Read, false))
                 {
-                    files[file.Substring(lookupPath.Length + 1).Replace("\\", "/")] = new FileInfo(file);
+                    foreach (var entry in zipArchive.Entries)
+                    {
+                        ZipFileEntries.Add(entry.FullName);
+                    }
                 }
             }
-
-            _lastFileNamesUpdate = DateTime.UtcNow;
-            if (files.TryGetValue(fileName, out value))
+            catch (Exception)
             {
-                // only replace the value if there is a point to it, note that concurrent threads
-                // may create it multiple times, until it is settled
-                _fileNamesCaseInsensitive = files;
-                return value;
-            }
-            return null;
-        }
-
-        public async Task WriteFile(FileInfo file)
-        {
-#if DEBUG
-            HttpContext.Response.Headers["File-Path"] = file.FullName;
-#endif
-            var etagValue = HttpContext.Request.Headers["If-None-Match"];
-
-            var fileEtag = '"' + file.LastWriteTimeUtc.ToString("G") + '"';
-            if (etagValue == fileEtag)
-            {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified; // Not Modified
-                return;
+                // Supressing this exception is reasonable: there are many 
+                // reasons for which the file may not be available right now.
+                // The watcher will let us know whenever we can try again.
             }
 
-            HttpContext.Response.ContentType = GetContentType(file.Extension);
-            HttpContext.Response.Headers["ETag"] = fileEtag;
-
-            using (var data = File.OpenRead(file.FullName))
-            {
-                await data.CopyToAsync(HttpContext.Response.Body, 16 * 1024);
-            }
-        }
-
-        [RavenAction("/studio/$", "GET", AuthorizationStatus.UnauthenticatedClients)]
-        public async Task GetStudioFile()
-        {
-            var fileName = new StringSegment(
-                RouteMatch.Url, RouteMatch.MatchLength, RouteMatch.Url.Length - RouteMatch.MatchLength);
-
-            var env = (IHostingEnvironment)HttpContext.RequestServices.GetService(typeof(IHostingEnvironment));
-
-            var basePath = Server.Configuration.Studio.Path ?? env.ContentRootPath;
-
-            var file = TryGetFileName(basePath, fileName);
-            if (file != null)
-            {
-                await WriteFile(file);
-                return;
-            }
-
-            var zipFilePath = Path.Combine(basePath, "Raven.Studio.zip");
-
-            if (File.Exists(zipFilePath) == false)
-            {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                return;
-            }
-
-            await WriteFileFromZip(zipFilePath, fileName);
-        }
-        
-        [RavenAction("/studio-auth-error.html", "GET", AuthorizationStatus.UnauthenticatedClients)]
-        public Task StudioAuthError()
-        {
-            var error = GetStringQueryString("err");
-            HttpContext.Response.Headers["Content-Type"] = "text/html; charset=utf-8";
-            return HttpContext.Response.WriteAsync(HtmlUtil.RenderStudioAuthErrorPage(error));
+            ZipFileInitialized.RaiseOrDie();
+            ZipFileProcessingHappening.LowerOrDie();
         }
 
         [RavenAction("/", "GET", AuthorizationStatus.UnauthenticatedClients)]
@@ -165,72 +572,6 @@ namespace Raven.Server.Web.System
             HttpContext.Response.Headers["Location"] = "/studio/index.html";
             HttpContext.Response.StatusCode = (int)HttpStatusCode.MovedPermanently;
             return Task.CompletedTask;
-        }
-
-        private async Task WriteFileFromZip(string zipPath, string fileName)
-        {
-            var etagValue = GetLongFromHeaders("If-None-Match") ??
-                GetLongFromHeaders("If-Match");
-            var currentFileEtag = ZipLastChangedDate.GetOrAdd(
-                zipPath,
-                f => File.GetLastWriteTime(f).Ticks);
-
-            if (etagValue == currentFileEtag)
-            {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                return;
-            }
-
-            var fileStream = new FileStream(zipPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            var zipArchive = new ZipArchive(fileStream, ZipArchiveMode.Read, false);
-
-            var zipEntry = zipArchive.Entries.FirstOrDefault(a => a.FullName.Equals(fileName, StringComparison.OrdinalIgnoreCase));
-            if (zipEntry == null)
-            {
-                WriteEmbeddedFileNotFound(fileName);
-                return;
-            }
-
-            using (var responseStream = ResponseBodyStream())
-            {
-                var file = new FileInfo(fileName);
-                var type = GetContentType(file.Extension);
-                HttpContext.Response.ContentType = new MediaTypeHeaderValue(type).ToString();
-                WriteETag(currentFileEtag);
-                using (var entry = zipEntry.Open())
-                {
-                    await entry.CopyToAsync(responseStream);
-                    await entry.FlushAsync();
-                }
-            }
-        }
-
-        private static string GetContentType(string fileExtension)
-        {
-            return FileExtensionToContentTypeMapping.TryGetValue(fileExtension, out string contentType)
-                ? contentType
-                : "text/plain";
-        }
-
-        public string GetHeader(string key)
-        {
-            var requestHeaders = HttpContext.Request.Headers;
-            if (requestHeaders.TryGetValue(key, out StringValues values))
-                return values.FirstOrDefault();
-            return null;
-        }
-
-        protected void WriteETag(long etag)
-        {
-            HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + etag + "\"";
-        }
-
-        private void WriteEmbeddedFileNotFound(string docPath)
-        {
-            var message = "The following embedded file was not available: " + docPath +
-                          ". Please make sure that the Raven.Studio.zip file exist in the main directory (near the Raven.Server.exe).";
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-            HttpContext.Response.Body.Write(message);
         }
     }
 }

@@ -605,13 +605,13 @@ namespace Raven.Server.Commercial
         {
             license = null;
 
-            var l = _serverStore.Configuration.Licensing.License;
-            if (string.IsNullOrWhiteSpace(l))
+            var licenseString = _serverStore.Configuration.Licensing.License;
+            if (string.IsNullOrWhiteSpace(licenseString))
                 return false;
 
             try
             {
-                using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(l)))
+                using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(licenseString)))
                 {
                     license = DeserializeLicense(stream);
                     return true;
@@ -861,17 +861,25 @@ namespace Raven.Server.Commercial
             _serverStore.NotificationCenter.Add(alert);
         }
 
-        private static void SetAffinity(Process process, int cores)
+        private void SetAffinity(Process process, int cores)
         {
             if (ProcessorInfo.ProcessorCount < cores)
                 return;
 
             try
             {
-                var bitMask = 1;
-                for (var i = 1; i <= cores; i++)
+                var bitMask = 1L;
+                var processAffinityMask = _serverStore.Configuration.Server.ProcessAffinityMask;
+                if (processAffinityMask != null && NumberOfSetBits(processAffinityMask.Value) <= cores)
                 {
-                    bitMask |= 1 << (i - 1);
+                    bitMask = processAffinityMask.Value;
+                }
+                else
+                {
+                    for (var i = 1; i <= cores; i++)
+                    {
+                        bitMask |= 1L << (i - 1);
+                    }
                 }
 
                 process.ProcessorAffinity = new IntPtr(bitMask);
@@ -880,6 +888,14 @@ namespace Raven.Server.Commercial
             {
                 Logger.Info($"Failed to set affinity for {cores} cores, error code: {Marshal.GetLastWin32Error()}", e);
             }
+        }
+
+        //https://stackoverflow.com/questions/2709430/count-number-of-bits-in-a-64-bit-long-big-integer
+        private static long NumberOfSetBits(long i)
+        {
+            i = i - ((i >> 1) & 0x5555555555555555);
+            i = (i & 0x3333333333333333) + ((i >> 2) & 0x3333333333333333);
+            return (((i + (i >> 4)) & 0xF0F0F0F0F0F0F0F) * 0x101010101010101) >> 56;
         }
 
         [return: MarshalAs(UnmanagedType.Bool)]

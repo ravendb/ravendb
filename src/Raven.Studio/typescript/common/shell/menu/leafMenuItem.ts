@@ -19,7 +19,7 @@ class leafMenuItem implements menuItem {
     itemRouteToHighlight: string;
 
     badgeData: KnockoutObservable<number>;
-    countPrefix: KnockoutComputed<number>;
+    countPrefix: KnockoutComputed<string>;
     sizeClass: KnockoutComputed<string>;
 
     constructor({ title, tooltip, route, moduleId, nav, hash, css, dynamicHash, enabled, openAsDialog, itemRouteToHighlight, badgeData }: {

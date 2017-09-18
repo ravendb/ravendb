@@ -89,7 +89,7 @@ namespace Raven.Server.Commercial
                 ms.SetLength(attributesLen);
 
                 using (var binaryWriter = new BinaryWriter(ms))
-                using (var rsa = new RSACryptoServiceProvider())
+                using (var rsa = RSA.Create())
                 {
                     binaryWriter.Write(licenseKey.Id.ToByteArray());
                     binaryWriter.Write(licenseKey.Name);

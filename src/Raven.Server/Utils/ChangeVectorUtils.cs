@@ -243,5 +243,15 @@ namespace Raven.Server.Utils
                 .Append(_dbIdBuffer)
                 .ToString();
         }
+
+        public static long GetEtagByNodeTag(string changeVector, string nodeTag)
+        {
+            var index = changeVector.IndexOf(nodeTag + ":", StringComparison.Ordinal);
+            var offset = nodeTag.Length + 1;
+            if (index == -1)
+                return 0;
+            var etag = changeVector.IndexOf('-', index);
+            return long.Parse(changeVector.Substring(index + offset, etag - index - offset));
+        }
     }
 }

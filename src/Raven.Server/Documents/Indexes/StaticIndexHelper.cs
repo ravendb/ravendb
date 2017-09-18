@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using Raven.Client;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide.Context;
@@ -21,15 +22,15 @@ namespace Raven.Server.Documents.Indexes
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool IsStale(MapIndex index, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? cutoff)
+        public static bool IsStale(MapIndex index, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? cutoff, List<string> stalenessReasons)
         {
-            return IsStale(index, index._compiled, databaseContext, indexContext, cutoff);
+            return IsStale(index, index._compiled, databaseContext, indexContext, cutoff, stalenessReasons);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool IsStale(MapReduceIndex index, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? cutoff)
+        public static bool IsStale(MapReduceIndex index, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? cutoff, List<string> stalenessReasons)
         {
-            return IsStale(index, index._compiled, databaseContext, indexContext, cutoff);
+            return IsStale(index, index._compiled, databaseContext, indexContext, cutoff, stalenessReasons);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -45,7 +46,7 @@ namespace Raven.Server.Documents.Indexes
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool IsStale(Index index, StaticIndexBase compiled, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? cutoff)
+        private static bool IsStale(Index index, StaticIndexBase compiled, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? cutoff, List<string> stalenessReasons)
         {
             foreach (var collection in index.Collections)
             {
@@ -67,26 +68,54 @@ namespace Raven.Server.Documents.Indexes
                     if (cutoff == null)
                     {
                         if (lastDocEtag > lastProcessedReferenceEtag)
-                            return true;
+                        {
+                            if (stalenessReasons == null)
+                                return true;
+
+                            var lastDoc = databaseContext.DocumentDatabase.DocumentsStorage.GetByEtag(databaseContext, lastDocEtag);
+
+                            stalenessReasons.Add($"There are still some document references to process from collection '{referencedCollection.Name}'. The last document etag in that collection is '{lastDocEtag}' ({Constants.Documents.Metadata.Id}: '{lastDoc.Id}', {Constants.Documents.Metadata.LastModified}: '{lastDoc.LastModified}'), but last processed document etag for that collection is '{lastProcessedReferenceEtag}'.");
+                        }
 
                         var lastTombstoneEtag = databaseContext.DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(databaseContext, referencedCollection.Name);
                         var lastProcessedTombstoneEtag = index._indexStorage.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, collection, referencedCollection);
 
                         if (lastTombstoneEtag > lastProcessedTombstoneEtag)
-                            return true;
+                        {
+                            if (stalenessReasons == null)
+                                return true;
+
+                            var lastTombstone = databaseContext.DocumentDatabase.DocumentsStorage.GetTombstoneByEtag(databaseContext, lastTombstoneEtag);
+
+                            stalenessReasons.Add($"There are still some tombstone references to process from collection '{referencedCollection.Name}'. The last tombstone etag in that collection is '{lastTombstoneEtag}' ({Constants.Documents.Metadata.Id}: '{lastTombstone.LowerId}', {Constants.Documents.Metadata.LastModified}: '{lastTombstone.LastModified}'), but last processed tombstone etag for that collection is '{lastProcessedTombstoneEtag}'.");
+                        }
                     }
                     else
                     {
-                        if (Math.Min(cutoff.Value, lastDocEtag) > lastProcessedReferenceEtag)
-                            return true;
+                        var minDocEtag = Math.Min(cutoff.Value, lastDocEtag);
+                        if (minDocEtag > lastProcessedReferenceEtag)
+                        {
+                            if (stalenessReasons == null)
+                                return true;
 
-                        if (databaseContext.DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesWithDocumentEtagLowerThan(databaseContext, referencedCollection.Name, cutoff.Value) > 0)
-                            return true;
+                            var lastDoc = databaseContext.DocumentDatabase.DocumentsStorage.GetByEtag(databaseContext, lastDocEtag);
+
+                            stalenessReasons.Add($"There are still some document references to process from collection '{referencedCollection.Name}'. The last document etag in that collection is '{lastDocEtag}' ({Constants.Documents.Metadata.Id}: '{lastDoc.Id}', {Constants.Documents.Metadata.LastModified}: '{lastDoc.LastModified}') with cutoff set to '{cutoff.Value}', but last processed document etag for that collection is '{lastProcessedReferenceEtag}'.");
+                        }
+
+                        var numberOfTombstones = databaseContext.DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesWithDocumentEtagLowerThan(databaseContext, referencedCollection.Name, cutoff.Value);
+                        if (numberOfTombstones > 0)
+                        {
+                            if (stalenessReasons == null)
+                                return true;
+
+                            stalenessReasons.Add($"There are still '{numberOfTombstones}' tombstone references to process from collection '{referencedCollection.Name}' with document etag lower than '{cutoff.Value}'.");
+                        }
                     }
                 }
             }
 
-            return false;
+            return stalenessReasons?.Count > 0;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

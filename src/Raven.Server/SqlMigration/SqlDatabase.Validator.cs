@@ -167,9 +167,9 @@ namespace Raven.Server.SqlMigration
                 {
                     reader.ExecuteReader();
                 }
-                catch
+                catch (Exception e)
                 {
-                    AddError($"Failed to read table '{table.Name}' using the given query");
+                    AddError($"Failed to read table '{table.Name}' using the given query. Error: " + e);
                     return null;
                 }
 

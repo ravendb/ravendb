@@ -16,7 +16,7 @@ import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import subscriptionConnectionDetailsCommand = require("commands/database/tasks/getSubscriptionConnectionDetailsCommand");
 import queryCompleter = require("common/queryCompleter");
-import subscriptionRqlSyntax = require("viewmodels/database/tasks/SubscriptionRqlSyntax");
+import subscriptionRqlSyntax = require("viewmodels/database/tasks/subscriptionRqlSyntax");
 
 type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<documentObject>>;
 

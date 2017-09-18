@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.IO.Pipes;
 using System.Linq;
 using System.Net;
@@ -30,7 +31,9 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http.Features.Authentication;
+using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Adapter.Internal;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
@@ -43,6 +46,7 @@ using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Web.ResponseCompression;
 using Sparrow;
 
 namespace Raven.Server
@@ -170,6 +174,28 @@ namespace Raven.Server
                     .UseShutdownTimeout(TimeSpan.FromSeconds(1))
                     .ConfigureServices(services =>
                     {
+                        if (Configuration.Http.UseResponseCompression)
+                        {
+                            services.Configure<ResponseCompressionOptions>(options =>
+                            {
+                                options.EnableForHttps = Configuration.Http.AllowResponseCompressionOverHttps;
+                                options.Providers.Add(typeof(GzipCompressionProvider));
+                                options.Providers.Add(typeof(DeflateCompressionProvider));
+                            });
+
+                            services.Configure<GzipCompressionProviderOptions>(options =>
+                            {
+                                options.Level = Configuration.Http.GzipResponseCompressionLevel;
+                            });
+
+                            services.Configure<DeflateCompressionProviderOptions>(options =>
+                            {
+                                options.Level = Configuration.Http.DeflateResponseCompressionLevel;
+                            });
+
+                            services.AddResponseCompression();
+                        }
+
                         services.AddSingleton(Router);
                         services.AddSingleton(this);
                         services.Configure<FormOptions>(options =>

@@ -158,10 +158,10 @@ namespace Raven.Server.Documents.Indexes
         private NativeMemory.ThreadStats _threadAllocations;
         private string _errorStateReason;
         private bool _isCompactionInProgress;
-        
+
         private readonly ReaderWriterLockSlim _currentlyRunningQueriesLock = new ReaderWriterLockSlim();
-        private MultipleUseFlag _priorityChanged = new MultipleUseFlag();
-        private MultipleUseFlag _hadRealIndexingWorkToDo = new MultipleUseFlag();
+        private readonly MultipleUseFlag _priorityChanged = new MultipleUseFlag();
+        private readonly MultipleUseFlag _hadRealIndexingWorkToDo = new MultipleUseFlag();
         private Func<bool> _indexValidationStalenessCheck = () => true;
         protected readonly StorageOperationWrapper _storageOperation;
 
@@ -608,20 +608,28 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public virtual bool IsStale(DocumentsOperationContext databaseContext, long? cutoff = null)
+        public bool IsStale(DocumentsOperationContext databaseContext, long? cutoff = null, List<string> stalenessReasons = null)
         {
             Debug.Assert(databaseContext.Transaction != null);
 
             if (_storageOperation.IsRunning)
+            {
+                stalenessReasons?.Add("Storage operation is running.");
+
                 return true;
+            }
 
             if (Type == IndexType.Faulty)
+            {
+                stalenessReasons?.Add("Index is faulty.");
+
                 return true;
+            }
 
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
             using (indexContext.OpenReadTransaction())
             {
-                return IsStale(databaseContext, indexContext, cutoff);
+                return IsStale(databaseContext, indexContext, cutoff, stalenessReasons);
             }
         }
 
@@ -660,8 +668,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        protected virtual bool IsStale(DocumentsOperationContext databaseContext,
-            TransactionOperationContext indexContext, long? cutoff = null)
+        protected virtual bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? cutoff = null, List<string> stalenessReasons = null)
         {
             if (Type == IndexType.Faulty)
                 return true;
@@ -675,7 +682,14 @@ namespace Raven.Server.Documents.Indexes
                 if (cutoff == null)
                 {
                     if (lastDocEtag > lastProcessedDocEtag)
-                        return true;
+                    {
+                        if (stalenessReasons == null)
+                            return true;
+
+                        var lastDoc = DocumentDatabase.DocumentsStorage.GetByEtag(databaseContext, lastDocEtag);
+
+                        stalenessReasons.Add($"There are still some documents to process from collection '{collection}'. The last document etag in that collection is '{lastDocEtag}' ({Constants.Documents.Metadata.Id}: '{lastDoc.Id}', {Constants.Documents.Metadata.LastModified}: '{lastDoc.LastModified}'), but last processed document etag for that collection is '{lastProcessedDocEtag}'.");
+                    }
 
                     var lastTombstoneEtag = GetLastTombstoneEtagInCollection(databaseContext, collection);
 
@@ -683,21 +697,40 @@ namespace Raven.Server.Documents.Indexes
                         _indexStorage.ReadLastProcessedTombstoneEtag(indexContext.Transaction, collection);
 
                     if (lastTombstoneEtag > lastProcessedTombstoneEtag)
-                        return true;
+                    {
+                        if (stalenessReasons == null)
+                            return true;
+
+                        var lastTombstone = DocumentDatabase.DocumentsStorage.GetTombstoneByEtag(databaseContext, lastTombstoneEtag);
+
+                        stalenessReasons.Add($"There are still some tombstones to process from collection '{collection}'. The last tombstone etag in that collection is '{lastTombstoneEtag}' ({Constants.Documents.Metadata.Id}: '{lastTombstone.LowerId}', {Constants.Documents.Metadata.LastModified}: '{lastTombstone.LastModified}'), but last processed tombstone etag for that collection is '{lastProcessedTombstoneEtag}'.");
+                    }
                 }
                 else
                 {
-                    if (Math.Min(cutoff.Value, lastDocEtag) > lastProcessedDocEtag)
-                        return true;
+                    var minDocEtag = Math.Min(cutoff.Value, lastDocEtag);
+                    if (minDocEtag > lastProcessedDocEtag)
+                    {
+                        if (stalenessReasons == null)
+                            return true;
 
-                    if (
-                        DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesWithDocumentEtagLowerThan(
-                            databaseContext, collection, cutoff.Value) > 0)
-                        return true;
+                        var lastDoc = DocumentDatabase.DocumentsStorage.GetByEtag(databaseContext, lastDocEtag);
+
+                        stalenessReasons.Add($"There are still some documents to process from collection '{collection}'. The last document etag in that collection is '{lastDocEtag}' ({Constants.Documents.Metadata.Id}: '{lastDoc.Id}', {Constants.Documents.Metadata.LastModified}: '{lastDoc.LastModified}') with cutoff set to '{cutoff.Value}', but last processed document etag for that collection is '{lastProcessedDocEtag}'.");
+                    }
+
+                    var numberOfTombstones = DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesWithDocumentEtagLowerThan(databaseContext, collection, cutoff.Value);
+                    if (numberOfTombstones > 0)
+                    {
+                        if (stalenessReasons == null)
+                            return true;
+
+                        stalenessReasons.Add($"There are still '{numberOfTombstones}' tombstones to process from collection '{collection}' with document etag lower than '{cutoff.Value}'.");
+                    }
                 }
             }
 
-            return false;
+            return stalenessReasons?.Count > 0;
         }
 
         public long GetLastMappedEtagFor(string collection)
@@ -2626,7 +2659,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     @lock = ExitReadLock.Default;
                     return false;
-                    
+
                 }
 
                 @lock = new ExitReadLock(_lock);

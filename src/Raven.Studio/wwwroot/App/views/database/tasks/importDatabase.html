@@ -27,7 +27,7 @@
                                 <input id="toggle1" type="checkbox" data-bind="checked: includeDocuments">
                                 <label for="toggle1">Include Documents</label>
                             </div>
-                            <div class="toggle" data-bind="attr: { title: $root.activeDatabase().hasRevisionsConfiguration() ? '' : 'Revisions Configuration must be set in order to use this option' }">
+                            <div class="toggle" data-toggle="tooltip" data-placement="top"  data-bind="attr: { title: $root.hasRevisionsConfiguration() ? '' : 'Revisions Configuration must be set in order to use this option' }">
                                 <input id="toggle6" type="checkbox" data-bind="checked: includeRevisionDocuments, disable: !$root.activeDatabase().hasRevisionsConfiguration()"/>
                                 <label for="toggle6">Include Document Revisions</label>
                             </div>

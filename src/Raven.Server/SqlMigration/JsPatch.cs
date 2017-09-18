@@ -19,7 +19,7 @@ namespace Raven.Server.SqlMigration
             _engine = new Engine(options =>
             {
                 options.LimitRecursion(64)
-                    .SetReferencesResolver(new ScriptRunner.SingleRun.NullPropgationReferenceResolver())
+                    .SetReferencesResolver(new JintNullPropgationReferenceResolver())
                     .Strict();
             });
 

@@ -1,7 +1,9 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using Jint;
 using Jint.Native;
 using Jint.Native.Array;
@@ -10,6 +12,7 @@ using Jint.Native.Object;
 using Jint.Native.RegExp;
 using Jint.Runtime;
 using Jint.Runtime.Descriptors;
+using Jint.Runtime.Descriptors.Specialized;
 using Jint.Runtime.Interop;
 using Raven.Client;
 using Sparrow.Json;
@@ -172,12 +175,18 @@ namespace Raven.Server.Documents.Patch
                     WriteArray(jsArray);
                 }
                 else
-                    WriteValueInternal(target, obj);
+                    WriteObjectType(target);
             }
             else if (obj is FunctionInstance)
                 _writer.WriteValueNull();
             else
                 WriteValueInternal(obj, obj);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void WriteObjectType(object target)
+        {
+            _writer.WriteValue('[' + target.GetType().Name + ']');
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -257,7 +266,11 @@ namespace Raven.Server.Documents.Patch
 
         private void WriteJsInstance(ObjectInstance jsObject)
         {
-            foreach (var property in jsObject.GetOwnProperties())
+            var properties = jsObject is ObjectWrapper objectWrapper
+                ? GetObjectProperties(objectWrapper)
+                : jsObject.GetOwnProperties();
+
+            foreach (var property in properties)
             {
                 var propertyName = property.Key;
                 if (ShouldFilterProperty(propertyName))
@@ -269,6 +282,60 @@ namespace Raven.Server.Documents.Patch
 
                 _writer.WritePropertyName(propertyName);
                 WriteJsonValue(jsObject, propertyName, SafelyGetJsValue(value));
+            }
+        }
+
+        private IEnumerable<KeyValuePair<string, PropertyDescriptor>> GetObjectProperties(ObjectWrapper objectWrapper)
+        {
+            var target = objectWrapper.Target;
+            if (target is IDictionary dictionary)
+            {
+                foreach (DictionaryEntry entry in dictionary)
+                {
+                    var jsValue = JsValue.FromObject(_scriptEngine, entry.Value);
+                    var descriptor = new PropertyDescriptor(jsValue, false, false, false);
+                    yield return new KeyValuePair<string, PropertyDescriptor>(entry.Key.ToString(), descriptor);
+                }
+                yield break;
+            }
+
+            var type = target.GetType();
+            if (target is Task task &&
+                task.IsCompleted == false)
+            {
+                foreach (var property in type.GetProperties(BindingFlags.Instance | BindingFlags.Public))
+                {
+                    if (property.CanRead == false)
+                        continue;
+
+                    if (property.Name == nameof(Task<int>.Result))
+                    {
+                        var taskResultDescriptor = JintPreventResolvingTasksReferenceResolver.GetRunningTaskResult(task);
+                        yield return new KeyValuePair<string, PropertyDescriptor>(property.Name, taskResultDescriptor);
+                        continue;
+                    }
+
+                    var descriptor = new PropertyInfoDescriptor(_scriptEngine, property, target);
+                    yield return new KeyValuePair<string, PropertyDescriptor>(property.Name, descriptor);
+                }
+                yield break;
+            }
+
+            // look for properties
+            foreach (var property in type.GetProperties(BindingFlags.Instance | BindingFlags.Public))
+            {
+                if (property.CanRead == false)
+                    continue;
+
+                var descriptor = new PropertyInfoDescriptor(_scriptEngine, property, target);
+                yield return new KeyValuePair<string, PropertyDescriptor>(property.Name, descriptor);
+            }
+
+            // look for fields
+            foreach (var field in type.GetFields(BindingFlags.Instance | BindingFlags.Public))
+            {
+                var descriptor = new FieldInfoDescriptor(_scriptEngine, field, target);
+                yield return new KeyValuePair<string, PropertyDescriptor>(field.Name, descriptor);
             }
         }
 

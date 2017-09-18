@@ -162,7 +162,7 @@ namespace Sparrow.Json
         {
             int size = value.GetDefaultRavenFormat(_dateTimeMemory, isUtc);
 
-            var strBuffer = _dateTimeMemory.Address;       
+            var strBuffer = _dateTimeMemory.Address;
 
             WriteRawStringWhichMustBeWithoutEscapeChars(strBuffer, size);
         }
@@ -216,7 +216,7 @@ namespace Sparrow.Json
                 size -= bytesToSkip + 1 /*for the escaped char we skip*/;
                 var b = *(strBuffer++);
                 EnsureBuffer(2);
-                _buffer[_pos++] = (byte) '\\';
+                _buffer[_pos++] = (byte)'\\';
                 _buffer[_pos++] = GetEscapeCharacter(b);
             }
             // write remaining (or full string) to the buffer in one shot
@@ -285,7 +285,7 @@ namespace Sparrow.Json
             }
             finally
             {
-                if(allocated != null) //precaution
+                if (allocated != null) //precaution
                     _context.ReturnMemory(allocated);
             }
         }
@@ -295,7 +295,7 @@ namespace Sparrow.Json
         {
             EnsureBuffer(size + 2);
             _buffer[_pos++] = Quote;
-            WriteRawString(buffer, size);            
+            WriteRawString(buffer, size);
             _buffer[_pos++] = Quote;
         }
 

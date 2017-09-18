@@ -317,10 +317,31 @@ interface layoutable {
 
 
 interface autoCompleteWordList {
-    caption: string; 
+    caption?: string; 
     value: string; 
     score: number; 
     meta: string 
+}
+
+interface autoCompleteLastKeyword {
+    keywordsBefore: string[],
+    keyword: string,
+    keywordModifier: string,
+    operator: string,
+    fieldPrefix: string[],
+    readonly getFieldPrefix: string,
+    identifiers: string[],
+    text: string,
+    dividersCount: number,
+    parentheses: number
+}
+
+interface queryCompleterProviders {
+    terms: (indexName: string, field: string, pageSize: number, callback: (terms: string[]) => void) => void;
+    indexFields: (indexName: string, callback: (fields: string[]) => void) => void;
+    collectionFields: (collectionName: string, prefix: string, callback: (fields: dictionary<string>) => void) => void;
+    collections: (callback: (collectionNames: string[]) => void) => void;
+    indexNames: (callback: (indexNames: string[]) => void) => void;
 }
 
 type autoCompleteCompleter = (editor: AceAjax.Editor, session: AceAjax.IEditSession, pos: AceAjax.Position, prefix: string, callback: (errors: any[], wordlist: autoCompleteWordList[]) => void) => void;

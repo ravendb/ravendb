@@ -87,6 +87,7 @@ class notificationCenter {
         this.initializeObservables();
 
         ko.postbox.subscribe(EVENTS.NotificationCenter.RecentError, (error: recentError) => this.onRecentError(error));
+        ko.postbox.subscribe(EVENTS.NotificationCenter.OpenNotification, (error: recentError) => this.openDetails(error));
 
         _.bindAll(this, "dismiss", "postpone", "killOperation", "openDetails");
     }

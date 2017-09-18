@@ -58,7 +58,7 @@ namespace rvn
         {
             _app.Command("logstream", cmd =>
             {
-                cmd.ExtendedHelpText = "Tail server logs.";
+                cmd.ExtendedHelpText = cmd.Description = "Tail server logs.";
                 cmd.HelpOption(HelpOptionString);
 
                 var pidArg = cmd.Argument("[pid]", "RavenDB Server process ID", cmdWithArg => { });
@@ -96,7 +96,7 @@ namespace rvn
         {
             _app.Command("admin-channel", cmd =>
             {
-                cmd.ExtendedHelpText = cmd.Description = "Open Named Pipe Connection to RavenDB with PID. If PID ommited - will try auto pid discovery.";
+                cmd.ExtendedHelpText = cmd.Description = "Open RavenDB CLI session on local machine (using piped name connection). If PID ommited - will try auto pid discovery.";
                 cmd.HelpOption(HelpOptionString);
                 var pidArg = cmd.Argument("[pid]", "RavenDB Server process ID", cmdWithArg => { });
                 cmd.OnExecute(() =>
@@ -133,7 +133,8 @@ namespace rvn
 
             _app.Command("windows-service", cmd =>
             {
-                cmd.Description = "Allows to perform an operation on RavenDB Server run as Windows Service";
+                var serviceString = PlatformDetails.RunningOnPosix ? "daemon" : "Windows Service";
+                cmd.Description = $"Allows to perform an operation on RavenDB Server which is running as {serviceString}";
                 cmd.HelpOption(HelpOptionString);
                 ConfigureServiceNameOption(cmd);
 

@@ -22,6 +22,9 @@
     <EmbeddedResource Include="Blittable\BlittableJsonWriterTests\Jsons\*.json" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Remove="Sparrow\BitVectors.cs" />
+  </ItemGroup>
+  <ItemGroup>
     <Content Include="..\xunit.runner.json" Link="xunit.runner.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

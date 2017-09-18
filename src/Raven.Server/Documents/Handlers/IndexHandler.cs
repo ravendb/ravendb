@@ -324,6 +324,36 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
+        [RavenAction("/databases/*/indexes/staleness", "GET", AuthorizationStatus.ValidUser)]
+        public Task Stale()
+        {
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            using (context.OpenReadTransaction())
+            {
+                var index = Database.IndexStore.GetIndex(name);
+                if (index == null)
+                    IndexDoesNotExistException.ThrowFor(name);
+
+                var stalenessReasons = new List<string>();
+                var isStale = index.IsStale(context, stalenessReasons: stalenessReasons);
+
+                writer.WriteStartObject();
+
+                writer.WritePropertyName("IsStale");
+                writer.WriteBool(isStale);
+                writer.WriteComma();
+
+                writer.WriteArray("StalenessReasons", stalenessReasons);
+
+                writer.WriteEndObject();
+            }
+
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/databases/*/indexes/progress", "GET", AuthorizationStatus.ValidUser)]
         public Task Progress()
         {

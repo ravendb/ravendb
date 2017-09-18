@@ -10,7 +10,7 @@ namespace SlowTests.Bugs
 {
     public class DynamicQuerySorting : RavenTestBase
     {
-        public class GameServer
+        private class GameServer
         {
             public string Id { get; set; }
             public string Name { get; set; }

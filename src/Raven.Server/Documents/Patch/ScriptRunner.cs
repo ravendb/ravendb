@@ -9,7 +9,6 @@ using Jint;
 using Jint.Native;
 using Jint.Native.Object;
 using Jint.Runtime.Interop;
-using Jint.Runtime.References;
 using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Client.Exceptions.Documents.Patching;
@@ -81,31 +80,6 @@ namespace Raven.Server.Documents.Patch
             private HashSet<string> _documentIds;
             public bool ReadOnly;
 
-            public class NullPropgationReferenceResolver : IReferenceResolver
-            {
-                public bool TryUnresolvableReference(Engine engine, Reference reference, out JsValue value)
-                {
-                    value = Null.Instance;
-                    return true;
-                }
-
-                public bool TryPropertyReference(Engine engine, Reference reference, ref JsValue value)
-                {
-                    return value.IsNull() || value.IsUndefined();
-                }
-
-                public bool TryGetCallable(Engine engine, object callee, out JsValue value)
-                {
-                    value = new JsValue(new ClrFunctionInstance(engine, (thisObj, values) => thisObj));
-                    return true;
-                }
-
-                public bool CheckCoercible(JsValue value)
-                {
-                    return true;
-                }
-            }
-
             public SingleRun(DocumentDatabase database, RavenConfiguration configuration, ScriptRunner runner, List<string> scriptsSource)
             {
                 _database = database;
@@ -114,9 +88,11 @@ namespace Raven.Server.Documents.Patch
                 ScriptEngine = new Engine(options =>
                 {
                     options.LimitRecursion(64)
-                        .SetReferencesResolver(new NullPropgationReferenceResolver())
+                        .SetReferencesResolver(new JintNullPropgationReferenceResolver())
+                        .SetReferencesResolver(new JintPreventResolvingTasksReferenceResolver())
                         .MaxStatements(_configuration.Patching.MaxStepsForScript)
                         .Strict()
+                        .AddObjectConverter(new JintGuidConverter())
                         .AddObjectConverter(new JintStringConverter())
                         .AddObjectConverter(new JintEnumConverter())
                         .AddObjectConverter(new JintDateTimeConverter())

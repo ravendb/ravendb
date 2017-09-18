@@ -117,6 +117,14 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             dynamicHash: appUrls.exportDatabaseUrl
         }),
         new leafMenuItem({
+            route: 'databases/tasks/migrateDatabase',
+            moduleId: 'viewmodels/database/tasks/migrateDatabase',
+            title: 'Migrate Database',
+            nav: true,
+            css: 'icon-import-database', //TODO-new icon
+            dynamicHash: appUrls.migrateDatabaseUrl
+        }),
+        new leafMenuItem({
             route: 'databases/tasks/sampleData',
             moduleId: 'viewmodels/database/tasks/createSampleData',
             title: 'Create Sample Data',
