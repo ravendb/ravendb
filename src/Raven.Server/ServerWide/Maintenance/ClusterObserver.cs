@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions;
@@ -149,16 +150,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         var updateReason = UpdateDatabaseTopology(database, databaseRecord.Topology, clusterTopology, newStats, prevStats, ref deletions);
                         if (updateReason != null)
                         {
-                            if (_decisionsLog.Count > 99)
-                                _decisionsLog.Take();
-
-                            _decisionsLog.Add(new ClusterObserverLogEntry
-                            {
-                                Database = database,
-                                Iteration = _iteration,
-                                Message = updateReason,
-                                Date = DateTime.UtcNow 
-                            });
+                            AddToDecisionLog(database, updateReason);
 
                             var cmd = new UpdateTopologyCommand(database)
                             {
@@ -195,10 +187,27 @@ namespace Raven.Server.ServerWide.Maintenance
                 {
                     foreach (var command in deletions)
                     {
+                        AddToDecisionLog(command.DatabaseName, 
+                            $"We reached the replication factor on '{command.DatabaseName}', so we remove promotables/rehabs from: {string.Join(", ", command.FromNodes)}");
+                       
                         await Delete(command);
                     }
                 }
             }
+        }
+
+        private void AddToDecisionLog(string database, string updateReason)
+        {
+            if (_decisionsLog.Count > 99)
+                _decisionsLog.Take();
+
+            _decisionsLog.Add(new ClusterObserverLogEntry
+            {
+                Database = database,
+                Iteration = _iteration,
+                Message = updateReason,
+                Date = DateTime.UtcNow
+            });
         }
 
         private void RaiseNoLivingNodesAlert(string alertMsg)
@@ -274,6 +283,9 @@ namespace Raven.Server.ServerWide.Maintenance
                 RaiseNoLivingNodesAlert($"It appears that all nodes of the {dbName} database are not responding to the supervisor, the database is not reachable");
             }
 
+            var shouldUpdateTopologyStatus = false;
+            var updateTopologyStatusReason = new StringBuilder();
+
             foreach (var promotable in topology.Promotables)
             {
                 if (FailedDatabaseInstanceOrNode(clusterTopology, promotable, dbName, current) == DatabaseHealth.Bad)
@@ -333,12 +345,16 @@ namespace Raven.Server.ServerWide.Maintenance
                 {
                     topology.Promotables.Remove(promotable);
                     topology.Members.Add(promotable);
+                    RemoveOtherNodesIfNeeded(dbName, topology, current, ref deletions);
                     return $"Promoting node {promotable} to member";
                 }
                 if (tryPromote.UpdateTopologyReason != null)
-                    return tryPromote.UpdateTopologyReason;
+                {
+                    shouldUpdateTopologyStatus = true;
+                    updateTopologyStatusReason.AppendLine(tryPromote.UpdateTopologyReason);
+                }
             }
-
+            
             var goodMembers = GetNumberOfRespondingNodes(clusterTopology, dbName, topology, current);
 
             foreach (var rehab in topology.Rehabs)
@@ -375,15 +391,24 @@ namespace Raven.Server.ServerWide.Maintenance
                             }
                             topology.Members.Add(rehab);
                             topology.Rehabs.Remove(rehab);
+                            RemoveOtherNodesIfNeeded(dbName, topology, current, ref deletions);
                             return $"Node {rehab} was recovered from rehabilitation and promoted back to member";
                         }
                         if (tryPromote.UpdateTopologyReason != null)
-                            return tryPromote.UpdateTopologyReason;
+                        {
+                            shouldUpdateTopologyStatus = true;
+                            updateTopologyStatusReason.AppendLine(tryPromote.UpdateTopologyReason);
+                        }
                         break;
                 }
             }
+            RemoveOtherNodesIfNeeded(dbName, topology, current, ref deletions);
 
-            RemoveOtherNodesIfNeeded(dbName, topology, ref deletions);
+            if (shouldUpdateTopologyStatus)
+            {
+                return updateTopologyStatusReason.ToString();
+            }
+
             return null;
         }
 
@@ -476,86 +501,106 @@ namespace Raven.Server.ServerWide.Maintenance
                 promotableClusterStats.Report.TryGetValue(dbName, out var promotableDbStats) == false)
                 return (false, null);
 
-            var status = ChangeVectorUtils.GetConflictStatus(mentorPrevDbStats.LastChangeVector, promotableDbStats.LastChangeVector);
-            if (status == ConflictStatus.AlreadyMerged)
+            DatabasePromotionStatus currentStatus;
+
+            foreach (var changeVectorByCollection in mentorPrevDbStats.LastChangeVectorByCollection)
             {
-                if (previous.TryGetValue(promotable, out var promotablePrevClusterStats) == false ||
-                    promotablePrevClusterStats.Report.TryGetValue(dbName, out var promotablePrevDbStats) == false)
-                    return (false, null);
-
-                var indexesCatchedUp = CheckIndexProgress(promotablePrevDbStats.LastEtag, promotablePrevDbStats.LastIndexStats, promotableDbStats.LastIndexStats);
-                if (indexesCatchedUp)
+                var collection = changeVectorByCollection.Key;
+                var mentorslastChangeVector = changeVectorByCollection.Value;
+                if (promotableDbStats.LastChangeVectorByCollection.TryGetValue(collection, out var myLastChangeVector) == false)
                 {
-                    if (_logger.IsOperationsEnabled)
+                    if (_logger.IsInfoEnabled)
                     {
-                        _logger.Operations($"We promoted the database {dbName} on {promotable} to be a full member");
+                        _logger.Info($"The database {dbName} on {promotable} not ready to be promoted, because the collection '{collection}' does not exists.");
                     }
-                    topology.PromotablesStatus.Remove(promotable);
-                    topology.DemotionReasons.Remove(promotable);
-
-                    return (true, $"Node {promotable} is up-to-date so promoting it to be member");
+                    if (topology.PromotablesStatus.TryGetValue(promotable, out currentStatus) == false
+                        || currentStatus != DatabasePromotionStatus.ChangeVectorNotMerged)
+                    {
+                        topology.DemotionReasons[promotable] = $"Node is not ready to be promoted, because the collection '{collection}' does not exists.";
+                        topology.PromotablesStatus[promotable] = DatabasePromotionStatus.ChangeVectorNotMerged;
+                        return (false, $"Node {promotable} not ready to be a member, because the collection '{collection}' does not exists.");
+                    }
+                    return (false, null);
                 }
-                if (_logger.IsInfoEnabled)
+                var status = ChangeVectorUtils.GetConflictStatus(mentorslastChangeVector, myLastChangeVector);
+                if (status != ConflictStatus.AlreadyMerged)
                 {
-                    _logger.Info($"The database {dbName} on {promotable} not ready to be promoted, because the indexes are not up-to-date.\n");
-                }
-
-                if (topology.PromotablesStatus.TryGetValue(promotable, out var currentStatus) == false
-                    || currentStatus != DatabasePromotionStatus.IndexNotUpToDate)
-                {
-                    topology.PromotablesStatus[promotable] = DatabasePromotionStatus.IndexNotUpToDate;
-                    return (false, $"Node {promotable} not ready to be a member, because the indexes are not up-to-date");
+                    if (_logger.IsInfoEnabled)
+                    {
+                        _logger.Info($"The database {dbName} on {promotable} not ready to be promoted, because the last change vectors in the collection '{collection}' are in status: '{status}'.\n" +
+                                     $"mentor's change vector : {mentorslastChangeVector}, node's change vector : {myLastChangeVector}");
+                    }
+                    topology.DemotionReasons[promotable] = $"Node is not ready to be promoted, because the last change vectors in the collection '{collection}' are in status: '{status}'.\n" +
+                                                           $"mentor's change vector : {mentorslastChangeVector},\n" +
+                                                           $"node's change vector : {myLastChangeVector}";
+                    topology.PromotablesStatus[promotable] = DatabasePromotionStatus.ChangeVectorNotMerged;
+                    return (false, $"Node {promotable} not ready to be a member, because the last change vectors in the collection '{collection}' are in status: '{status}' (should be AlreadyMerged)");
                 }
             }
-            else
+            if (previous.TryGetValue(promotable, out var promotablePrevClusterStats) == false ||
+                promotablePrevClusterStats.Report.TryGetValue(dbName, out var promotablePrevDbStats) == false)
+                return (false, null);
+
+            var indexesCatchedUp = CheckIndexProgress(promotablePrevDbStats.LastEtag, promotablePrevDbStats.LastIndexStats, promotableDbStats.LastIndexStats);
+            if (indexesCatchedUp)
             {
-                if (_logger.IsInfoEnabled)
+                if (_logger.IsOperationsEnabled)
                 {
-                    _logger.Info($"The database {dbName} on {promotable} not ready to be promoted, because the change vectors are in status: '{status}'.\n" +
-                                 $"mentor's change vector : {mentorPrevDbStats.LastChangeVector}, node's change vector : {promotableDbStats.LastChangeVector}");
+                    _logger.Operations($"We promoted the database {dbName} on {promotable} to be a full member");
                 }
+                topology.PromotablesStatus.Remove(promotable);
+                topology.DemotionReasons.Remove(promotable);
 
+                return (true, $"Node {promotable} is up-to-date so promoting it to be member");
+            }
+            if (_logger.IsInfoEnabled)
+            {
+                _logger.Info($"The database {dbName} on {promotable} not ready to be promoted, because the indexes are not up-to-date.\n");
+            }
 
-                if (topology.PromotablesStatus.TryGetValue(promotable, out var currentStatus) == false
-                    || currentStatus != DatabasePromotionStatus.ChangeVectorNotMerged)
-                {
-                    topology.DemotionReasons[promotable] = $"Node is not ready to be promoted, because the change vectors are in status: '{status}'.\n" +
-                                                           $"mentor's change vector : {mentorPrevDbStats.LastChangeVector},\n" +
-                                                           $"node's change vector : {promotableDbStats.LastChangeVector}";
-                    topology.PromotablesStatus[promotable] = DatabasePromotionStatus.ChangeVectorNotMerged;
-                    return (false, $"Node {promotable} not ready to be a member, because the change vector is in status: '{status}' (should be AlreadyMerged)");
-                }
+            if (topology.PromotablesStatus.TryGetValue(promotable, out currentStatus) == false
+                || currentStatus != DatabasePromotionStatus.IndexNotUpToDate)
+            {
+                topology.PromotablesStatus[promotable] = DatabasePromotionStatus.IndexNotUpToDate;
+                return (false, $"Node {promotable} not ready to be a member, because the indexes are not up-to-date");
             }
             return (false, null);
         }
 
-        private void RemoveOtherNodesIfNeeded(string dbName, DatabaseTopology topology, ref List<DeleteDatabaseCommand> deletions)
+        private void RemoveOtherNodesIfNeeded(string dbName, DatabaseTopology topology, 
+            Dictionary<string, ClusterNodeStatusReport> current, ref List<DeleteDatabaseCommand> deletions)
         {
             if (topology.Members.Count < topology.ReplicationFactor)
                 return;
 
-            if (topology.Promotables.Count == 0 &&
-                topology.Rehabs.Count == 0)
-                return;
-
             if (_logger.IsOperationsEnabled)
             {
-                _logger.Operations("We reached the replication factor, so we remove all other rehab/promotable nodes.");
+                _logger.Operations("We reached the replication factor, so we remove redundant nodes.");
+            }
+            // We let the rehabs to recover before removing them from the topology, since it could be a network partition between the rehab node and the rest of the group.
+            // While this partition the user kept updating the rehab node, so by removing it we could potentially lose data. 
+            var nodesToDelete = new List<string>(topology.Promotables);
+
+            if (topology.Members.Count > topology.ReplicationFactor)
+            {
+                nodesToDelete.Add(FindLeastUpdatedNode(topology.Members, dbName, current));
             }
 
-            var nodesToDelete = topology.Promotables.Concat(topology.Rehabs);
-            var deletionCmd = new DeleteDatabaseCommand
+            if (nodesToDelete.Count > 0)
             {
-                ErrorOnDatabaseDoesNotExists = false,
-                DatabaseName = dbName,
-                FromNodes = nodesToDelete.ToArray(),
-                HardDelete = _hardDeleteOnReplacement,
-                UpdateReplicationFactor = false
-            };
+                var deletionCmd = new DeleteDatabaseCommand
+                {
+                    ErrorOnDatabaseDoesNotExists = false,
+                    DatabaseName = dbName,
+                    FromNodes = nodesToDelete.ToArray(),
+                    HardDelete = _hardDeleteOnReplacement,
+                    UpdateReplicationFactor = false
+                };
 
-            if (deletions == null)
-                deletions = new List<DeleteDatabaseCommand>();
-            deletions.Add(deletionCmd);
+                if (deletions == null)
+                    deletions = new List<DeleteDatabaseCommand>();
+                deletions.Add(deletionCmd);
+            }
         }
 
         private enum DatabaseHealth
@@ -646,16 +691,30 @@ namespace Raven.Server.ServerWide.Maintenance
             return true;
         }
 
+        private string FindLeastUpdatedNode(List<string> nodes, string database, Dictionary<string, ClusterNodeStatusReport> current)
+        {
+            //TODO: correct this funciton so it will be more efficient and sometimes we can't really decide which node is the least up-to-dated, so it should be ok to return null
+            var candidates = new List<string>(nodes);
+
+            while (candidates.Count > 1)
+            {
+                var node = FindMostUpToDateNode(candidates, database, current);
+                candidates.Remove(node);
+            }
+
+            return candidates[0];
+        }
+
         private string FindMostUpToDateNode(List<string> nodes, string database, Dictionary<string, ClusterNodeStatusReport> current)
         {
             var updated = nodes[0];
-            var highestChangeVectors = current[updated].Report[database].LastChangeVector;
+            var highestChangeVectors = current[updated].Report[database].DatabaseChangeVector;
             var maxDocsCount = current[updated].Report[database].NumberOfDocuments;
             for (var index = 1; index < nodes.Count; index++)
             {
                 var node = nodes[index];
                 var report = current[node].Report[database];
-                var cv = report.LastChangeVector;
+                var cv = report.DatabaseChangeVector;
                 var status = ChangeVectorUtils.GetConflictStatus(cv, highestChangeVectors);
                 if (status == ConflictStatus.Update)
                 {
