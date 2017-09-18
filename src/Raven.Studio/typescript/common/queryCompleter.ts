@@ -161,8 +161,9 @@ class queryCompleter {
         const iterator: AceAjax.TokenIterator = new this.tokenIterator(session, pos.row, pos.column);
         do {
             const row = iterator.getCurrentTokenRow();
-            if (lastRow && lastToken && row - lastRow < -1) {
+            if (lastRow && lastToken && lastToken.type !== "space" && row - lastRow < 0) {
                 result.dividersCount++;
+                lastToken.type = "space";
             }
             lastRow = row;
             
@@ -176,11 +177,13 @@ class queryCompleter {
             } else if (!liveAutoCompleteSkippedTriggerToken){
                 liveAutoCompleteSkippedTriggerToken = true;
                 if (token.type === "identifier") {
+                    lastToken = token;
                     continue;
                 }
                 else if (token.type === "text") {
                     const firstToken = token.value.trim();
                     if (firstToken !== "" && firstToken !== "," && firstToken !== "." && firstToken !== "[].") {
+                        lastToken = token;
                         continue;
                     }
                 }
