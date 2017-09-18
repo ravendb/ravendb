@@ -54,6 +54,15 @@ describe("RQL Autocomplete", () => {
         {caption: "With ' and \" quotes", value: "'With '' and \" quotes'", score: 1, meta: "object field"},
         {caption: "@metadata", value: "@metadata", score: 1, meta: "object field"}
     ];
+
+    const fieldsShipToList = [
+        {caption: "Line1", value: "Line1", score: 1, meta: "string field"},
+        {caption: "Line2", value: "Line2", score: 1, meta: "null field"},
+        {caption: "City", value: "City", score: 1, meta: "string field"},
+        {caption: "Region", value: "Region", score: 1, meta: "string field"},
+        {caption: "PostalCode", value: "PostalCode", score: 1, meta: "string field"},
+        {caption: "Country", value: "Country", score: 1, meta: "string field"}
+    ];
     
     it('empty query should start with from or declare', done => {
         rqlTestUtils.autoComplete("|", northwindProvider(), (errors, wordlist, prefix) => {
@@ -172,17 +181,40 @@ describe("RQL Autocomplete", () => {
         rqlTestUtils.autoComplete(`from Orders 
 select ShipTo.in|`, northwindProvider(),  (errors, wordlist, prefix) => {
             assert.equal(prefix, "in");
-            assert.deepEqual(wordlist, [
-                {caption: "Line1", value: "Line1", score: 1, meta: "string field"},
-                {caption: "Line2", value: "Line2", score: 1, meta: "null field"},
-                {caption: "City", value: "City", score: 1, meta: "string field"},
-                {caption: "Region", value: "Region", score: 1, meta: "string field"},
-                {caption: "PostalCode", value: "PostalCode", score: 1, meta: "string field"},
-                {caption: "Country", value: "Country", score: 1, meta: "string field"}
-            ]);
+            assert.deepEqual(wordlist, fieldsShipToList);
         }, (lastKeyword) => {
             assert.equal(lastKeyword.keyword, "select");
             assert.equal(lastKeyword.tokenDivider, 1);
+            assert.deepEqual(lastKeyword.fieldPrefix, ["ShipTo"]);
+
+            done();
+        });
+    });
+
+    it('from Collection select nested field | without sapce should list fields with the City prefix', done => {
+        rqlTestUtils.autoComplete(`from Orders 
+select ShipTo.City|`, northwindProvider(),  (errors, wordlist, prefix) => {
+            assert.equal(prefix, "City");
+            assert.deepEqual(wordlist, fieldsShipToList);
+        }, (lastKeyword) => {
+            assert.equal(lastKeyword.keyword, "select");
+            assert.equal(lastKeyword.tokenDivider, 1);
+            assert.deepEqual(lastKeyword.fieldPrefix, ["ShipTo"]);
+
+            done();
+        });
+    });
+
+    it('from Collection select nested field | after should list as keyword only', done => {
+        rqlTestUtils.autoComplete(`from Orders 
+select ShipTo.City |`, northwindProvider(),  (errors, wordlist, prefix) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, [
+                    {caption: "as", value: "as ", score: 3, meta: "keyword"},
+                ]);
+        }, (lastKeyword) => {
+            assert.equal(lastKeyword.keyword, "select");
+            assert.equal(lastKeyword.tokenDivider, 2);
             assert.deepEqual(lastKeyword.fieldPrefix, ["ShipTo"]);
 
             done();
@@ -294,6 +326,34 @@ select ShipTo.in|`, northwindProvider(),  (errors, wordlist, prefix) => {
             ]);
         }, (lastKeyword) => {
             assert.equal(lastKeyword.keyword, "declare");
+            assert.equal(lastKeyword.tokenDivider, 1);
+
+            done();
+        });
+    });
+
+    it('decalre function should list empty list', done => {
+        rqlTestUtils.autoComplete(`declare function CustomFunctionName(){}
+
+|`, northwindProvider(),  (errors, wordlist, prefix) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, emptyList);
+        }, (lastKeyword) => {
+            assert.equal(lastKeyword.keyword, "declare function");
+            assert.equal(lastKeyword.tokenDivider, 2);
+
+            done();
+        });
+    });
+
+    it('decalre function without name should list empty list', done => {
+        rqlTestUtils.autoComplete(`declare function(){}
+
+|`, northwindProvider(),  (errors, wordlist, prefix) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, emptyList);
+        }, (lastKeyword) => {
+            assert.equal(lastKeyword.keyword, "declare function");
             assert.equal(lastKeyword.tokenDivider, 1);
 
             done();
