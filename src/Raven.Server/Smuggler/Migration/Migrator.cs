@@ -138,7 +138,7 @@ namespace Raven.Server.Smuggler.Migration
             var state = GetLastMigrationState(database);
             const ItemType types = ItemType.Documents | ItemType.Indexes | ItemType.Transformers;
             //TODO: ItemType.Attachments;
-            var smugglerDatabaseOptions = new SmugglerDatabaseOptions
+            var databaseMigrationOptions = new DatabaseMigrationOptions
             {
                 BatchSize = 1024,
                 OperateOnTypes = types,
@@ -152,7 +152,7 @@ namespace Raven.Server.Smuggler.Migration
             var operationId = await GetOperationId(databaseName);
             var exportData = new ExportData
             {
-                DownloadOptions = JsonConvert.SerializeObject(smugglerDatabaseOptions),
+                DownloadOptions = JsonConvert.SerializeObject(databaseMigrationOptions),
                 ProgressTaskId = operationId
             };
 
