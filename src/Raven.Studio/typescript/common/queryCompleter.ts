@@ -148,7 +148,7 @@ class queryCompleter {
             },
             identifiers: [],
             text: undefined,
-            tokenDivider: 0,
+            dividersCount: 0,
             parentheses: 0
         };
             
@@ -161,12 +161,12 @@ class queryCompleter {
         do {
             const row = iterator.getCurrentTokenRow();
             if (lastRow && lastToken && row - lastRow < -1) {
-                result.tokenDivider++;
+                result.dividersCount++;
             }
             lastRow = row;
             
             if (iterator.$tokenIndex < 0) {
-                result.tokenDivider++;
+                result.dividersCount++;
                 continue;
             }
             const token = iterator.getCurrentToken();
@@ -238,7 +238,7 @@ class queryCompleter {
                 case "space":
                     if (!result.keyword) {
                         if (!lastToken || lastToken.type !== "space") {
-                            result.tokenDivider++;
+                            result.dividersCount++;
                         }
                     }
                     break;
@@ -248,7 +248,7 @@ class queryCompleter {
                         isFieldPrefixMode = 1;
                         result.fieldPrefix = [];
                     }
-                    else if (isFieldPrefixMode === 1 && !token.value.trim()) { // todo: use tokenDivider here
+                    else if (isFieldPrefixMode === 1 && !token.value.trim()) { // todo: use dividersCount here
                         isFieldPrefixMode = 2;
                     }
                     
@@ -292,14 +292,14 @@ class queryCompleter {
              callback: (errors: any[], wordList: autoCompleteWordList[]) => void) {
 
         const lastKeyword = this.getLastKeyword(session, pos);
-        if (!lastKeyword || !lastKeyword.keyword || lastKeyword.tokenDivider === 0) {
+        if (!lastKeyword || !lastKeyword.keyword || lastKeyword.dividersCount === 0) {
             this.completeEmpty(callback);
             return;
         }
         
         switch (lastKeyword.keyword) {
             case "from": {
-                if (lastKeyword.tokenDivider === 2) {
+                if (lastKeyword.dividersCount === 2) {
                     if (lastKeyword.parentheses > 0) {
                         // from (Collection, {show fields here})
                         this.completeFields(session, lastKeyword.getFieldPrefix, callback);
@@ -309,7 +309,7 @@ class queryCompleter {
                     this.completeFromAfter(callback, false, lastKeyword);
                     return;
                 }
-                if (lastKeyword.tokenDivider > 2) {
+                if (lastKeyword.dividersCount > 2) {
                     return;
                 }
 
@@ -317,11 +317,11 @@ class queryCompleter {
                 break;
             }
             case "from index": {
-                if (lastKeyword.tokenDivider === 2) { // index name already specified
+                if (lastKeyword.dividersCount === 2) { // index name already specified
                     this.completeFromAfter(callback, true, lastKeyword);
                     return;
                 }
-                if (lastKeyword.tokenDivider > 2) {
+                if (lastKeyword.dividersCount > 2) {
                     callback(["empty completion"], null);
                     return;
                 }
@@ -349,12 +349,12 @@ class queryCompleter {
                 ]);
                 break;
             case "declare function":
-                if (lastKeyword.parentheses === 0 && lastKeyword.tokenDivider >= 1) {
+                if (lastKeyword.parentheses === 0 && lastKeyword.dividersCount >= 1) {
                     this.completeEmpty(callback);
                 }
                 break;
             case "select":
-                if (lastKeyword.identifiers.length > 0 && lastKeyword.tokenDivider >= 2) {
+                if (lastKeyword.identifiers.length > 0 && lastKeyword.dividersCount >= 2) {
                     if (!lastKeyword.keywordModifier) {
                         this.completeWords(callback, [{value: "as", score: 3, meta: "keyword"}]);
                     }

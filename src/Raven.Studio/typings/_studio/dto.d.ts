@@ -332,7 +332,7 @@ interface autoCompleteLastKeyword {
     readonly getFieldPrefix: string,
     identifiers: string[],
     text: string,
-    tokenDivider: number,
+    dividersCount: number,
     parentheses: number
 }
 
