@@ -235,7 +235,9 @@ namespace Raven.Server.Documents.Queries.Parser
                 case OperatorType.GreaterThan:
                 case OperatorType.LessThanEqual:
                 case OperatorType.GreaterThanEqual:
-                    writer.Write(Extract(query, Field.TokenStart, Field.TokenLength, Field.EscapeChars));
+                    if (Field != null)
+                        writer.Write(Extract(query, Field.TokenStart, Field.TokenLength, Field.EscapeChars));
+
                     switch (Type)
                     {
                         case OperatorType.Equal:
@@ -271,7 +273,9 @@ namespace Raven.Server.Documents.Queries.Parser
                     break;
                 case OperatorType.In:
                 case OperatorType.AllIn:
-                    writer.Write(Extract(query, Field.TokenStart, Field.TokenLength, Field.EscapeChars));
+                    if (Field != null)
+                        writer.Write(Extract(query, Field.TokenStart, Field.TokenLength, Field.EscapeChars));
+
                     writer.Write(Type != OperatorType.AllIn ? " IN (" : " ALL IN (");
                     for (var i = 0; i < Values.Count; i++)
                     {
@@ -307,29 +311,46 @@ namespace Raven.Server.Documents.Queries.Parser
                     writer.Write(")");
                     break;
                 case OperatorType.Method:
-                    writer.Write(Extract(query, Field.TokenStart, Field.TokenLength, Field.EscapeChars));
+                    var methodName = Extract(query, Field.TokenStart, Field.TokenLength, Field.EscapeChars);
+                    var methodType = QueryMethod.GetMethodType(methodName);
+
+                    writer.Write(methodName);
                     writer.Write("(");
 
-                    for (int i = 0; i < Arguments.Count; i++)
+                    switch (methodType)
                     {
-                        var arg = Arguments[i];
-                        if (i != 0)
-                            writer.Write(", ");
-                        if (arg is QueryExpression qe)
-                        {
-                            qe.ToString(query, writer);
-                        }
-                        else if (arg is FieldToken field)
-                        {
-                            writer.Write(Extract(query, field.TokenStart, field.TokenLength, field.EscapeChars));
-                        }
-                        else
-                        {
-                            var val = (ValueToken)arg;
-                            writer.Write(Extract(query, val));
-                        }
+                        case MethodType.Id:
+                            writer.Write(")");
+                            var idCall = (QueryExpression)Arguments[0];
+                            
+                            idCall.ToString(query, writer);
+
+                            break;
+                        default:
+                            for (int i = 0; i < Arguments.Count; i++)
+                            {
+                                var arg = Arguments[i];
+                                if (i != 0)
+                                    writer.Write(", ");
+                                if (arg is QueryExpression qe)
+                                {
+                                    qe.ToString(query, writer);
+                                }
+                                else if (arg is FieldToken field)
+                                {
+                                    writer.Write(Extract(query, field.TokenStart, field.TokenLength, field.EscapeChars));
+                                }
+                                else
+                                {
+                                    var val = (ValueToken)arg;
+                                    writer.Write(Extract(query, val));
+                                }
+                            }
+                            writer.Write(")");
+                            break;
+
                     }
-                    writer.Write(")");
+                    
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
