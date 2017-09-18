@@ -249,6 +249,16 @@ namespace Raven.Server.Documents
                         ThrowExpectedFieldTypeOfString(Constants.Documents.Metadata.Id, state);
                     Id = CreateLazyStringValueFromParserState(state);
                     break;
+                case 5: // @etag
+                    if (state.StringBuffer[0] != (byte)'@' ||
+                        *(int*)(state.StringBuffer + 1) != 1734440037)
+                    {
+                        aboutToReadPropertyName = true;
+                        return true;
+                    }
+
+                    goto case -1;
+
                 case 6: // @flags
                     if (state.StringBuffer[0] != (byte)'@' ||
                         *(int*)(state.StringBuffer + 1) != 1734437990 ||
