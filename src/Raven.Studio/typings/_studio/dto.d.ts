@@ -327,6 +327,7 @@ interface autoCompleteLastKeyword {
     keywordsBefore: string[],
     keyword: string,
     keywordModifier: string,
+    binaryOperation: string,
     operator: string,
     fieldPrefix: string[],
     readonly getFieldPrefix: string,
