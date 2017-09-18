@@ -15,5 +15,10 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(null)]
         [ConfigurationEntry("Server.Name", ConfigurationEntryScope.ServerWideOnly)]
         public string Name { get; set; }
+
+        [Description("The process affinity mask")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Server.ProcessAffinityMask", ConfigurationEntryScope.ServerWideOnly)]
+        public long? ProcessAffinityMask { get; set; }
     }
 }
