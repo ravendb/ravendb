@@ -18,7 +18,8 @@ namespace Raven.Server.ServerWide.Commands
         public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             record.Topology.RemoveFromTopology(NodeTag);
-            record.DeletionInProgress.Remove(NodeTag);
+            record.DeletionInProgress?.Remove(NodeTag);
+            record.DeletionInProgressChangeVector?.Remove(NodeTag);
 
             return null;
         }

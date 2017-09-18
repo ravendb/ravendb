@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -71,46 +72,48 @@ namespace Raven.Server.Documents
                     return;
                 }
 
-                if (record.DeletionInProgress != null &&
-                    record.DeletionInProgress.TryGetValue(_serverStore.NodeTag, out DeletionInProgressStatus deletionInProgress) &&
-                    deletionInProgress != DeletionInProgressStatus.No)
+                var deletionInProgress = DeletionInProgressStatus.No;
+                var directDelete = record.DeletionInProgress != null &&
+                                   record.DeletionInProgress.TryGetValue(_serverStore.NodeTag, out deletionInProgress) &&
+                                   deletionInProgress != DeletionInProgressStatus.No;
+
+                string mentorsChangeVector = "";
+                var conditionalDelete = record.DeletionInProgressChangeVector != null &&
+                                    record.DeletionInProgressChangeVector.TryGetValue(_serverStore.NodeTag, out mentorsChangeVector);
+
+                if (directDelete)
                 {
-                    UnloadDatabase(t.DatabaseName);
+                    DeleteDatabase(t, deletionInProgress, record);
+                    return;
+                }
 
-                    if (deletionInProgress == DeletionInProgressStatus.HardDelete)
+                if (conditionalDelete)
+                {
+                    // A delete command was issued while we were in rehabilitation. We need to check if we recieved any new documents while we were in that state.
+                    // If so, we can't simply delete the database.
+
+                    DatabasesCache.TryGetValue(t.DatabaseName, out var dbTask);
+                    var db = dbTask.Result;
+                    using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
                     {
-                        RavenConfiguration configuration;
-                        try
+                        var dbChangeVector = DocumentsStorage.GetDatabaseChangeVector(ctx);
+                        var status = ChangeVectorUtils.GetConflictStatus(mentorsChangeVector, dbChangeVector);
+                        if (mentorsChangeVector.Equals(dbChangeVector) == false && status != ConflictStatus.Update)
                         {
-                            configuration = CreateDatabaseConfiguration(t.DatabaseName, ignoreDisabledDatabase: true, ignoreBeenDeleted: true, databaseRecord: record);
-                        }
-                        catch (Exception ex)
-                        {
-                            configuration = null;
-                            if (_logger.IsInfoEnabled)
-                                _logger.Info("Could not create database configuration", ex);
-                        }
-                        // this can happen if the database record was already deleted
-                        if (configuration != null)
-                        {
-                            DatabaseHelper.DeleteDatabaseFiles(configuration);
-                        }
-
-                        // At this point the db record still exists but the db was effectively deleted 
-                        // from this node so we can also remove its secret key from this node.
-                        if (record.Encrypted)
-                        {
-                            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                            using (var tx = context.OpenWriteTransaction())
-                            {
-                                _serverStore.DeleteSecretKey(context, t.DatabaseName);
-                                tx.Commit();
-                            }
+                            // raise alert
+                            _serverStore.NotificationCenter.Add(AlertRaised.Create(
+                                $"Database '{t.DatabaseName}' cannot be deleted in order to maintain the replication factor",
+                                "This node was recently recovered from rehabilitation and should be deleted to maintain the replication factor, " +
+                                "but it may contain documents that are not existing in the rest of the database-group.\n" +
+                                $"The current change-vector is {dbChangeVector}, while issued change-vector for the deletion is {mentorsChangeVector}",
+                                AlertType.DatabaseTopologyWarning,
+                                NotificationSeverity.Error
+                            ));
+                            return;
                         }
                     }
-
-                    NotifyLeaderAboutRemoval(t.DatabaseName);
-
+                    DeleteDatabase(t, DeletionInProgressStatus.HardDelete, record);
                     return;
                 }
 
@@ -176,6 +179,45 @@ namespace Raven.Server.Documents
             {
                 _disposing.ExitReadLock();
             }
+        }
+
+        private void DeleteDatabase((string DatabaseName, long Index, string Type) t, DeletionInProgressStatus deletionInProgress, DatabaseRecord record)
+        {
+            UnloadDatabase(t.DatabaseName);
+
+            if (deletionInProgress == DeletionInProgressStatus.HardDelete)
+            {
+                RavenConfiguration configuration;
+                try
+                {
+                    configuration = CreateDatabaseConfiguration(t.DatabaseName, ignoreDisabledDatabase: true, ignoreBeenDeleted: true, databaseRecord: record);
+                }
+                catch (Exception ex)
+                {
+                    configuration = null;
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info("Could not create database configuration", ex);
+                }
+                // this can happen if the database record was already deleted
+                if (configuration != null)
+                {
+                    DatabaseHelper.DeleteDatabaseFiles(configuration);
+                }
+
+                // At this point the db record still exists but the db was effectively deleted 
+                // from this node so we can also remove its secret key from this node.
+                if (record.Encrypted)
+                {
+                    using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (var tx = context.OpenWriteTransaction())
+                    {
+                        _serverStore.DeleteSecretKey(context, t.DatabaseName);
+                        tx.Commit();
+                    }
+                }
+            }
+
+            NotifyLeaderAboutRemoval(t.DatabaseName);
         }
 
         private static void ThrowUnknownClusterDatabaseChangeType(ClusterDatabaseChangeType type)
