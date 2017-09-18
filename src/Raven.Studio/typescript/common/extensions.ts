@@ -15,6 +15,24 @@ class extensions {
         // Go to extensionInterfaces.ts and add the function signature there.
     }
 
+    private static validateUrl(url: string): string {
+        if (!url) {
+            return null;
+        }
+
+        const urlRegex = /^(https?:\/\/)([^\s]+)$/; // allow any char, exclude white space
+        if (!urlRegex.test(url)) {
+            return "Url format expected: 'http(s)://hostName'";
+        }
+
+        try {
+            new URL(url);
+        } catch (e) {
+            return (e as Error).message;
+        }
+
+        return null;
+    }
 
     private static validateDatabaseName(databaseName: string): string {
         if (!databaseName) {
@@ -50,11 +68,10 @@ class extensions {
 
         //Validate that url is in the following format: http(s)://hostName (e.g. http://localhost)
         (ko.validation.rules as any)['validUrl'] = {
-            validator: (url: string) => {
-                const urlRegex = /^(https?:\/\/)([^\s]+)$/; // allow any char, exclude white space
-                return (urlRegex.test(url));
-            },
-            message: "Url format expected: 'http(s)://hostName'"
+            validator: (val: string) => !extensions.validateUrl(val),
+            message: (params: any, url: KnockoutObservable<string>) => {
+                return extensions.validateUrl(url());
+            }
         };  
 
         (ko.validation.rules as any)['validDatabaseName'] = {
