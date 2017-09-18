@@ -44,25 +44,25 @@ namespace Raven.Server.Documents.Queries.Parser
             if (From.Index)
             {
                 writer.Write("INDEX ");
-                writer.Write(QueryExpression.Extract(QueryText, From.From.TokenStart, From.From.TokenLength, From.From.EscapeChars));
+                writer.Write(QueryExpression.Extract(From.From.Token, From.From.EscapeChars));
             }
             else if (From.Filter != null)
             {
                 writer.Write("(");
-                writer.Write(QueryExpression.Extract(QueryText, From.From.TokenStart, From.From.TokenLength, From.From.EscapeChars));
+                writer.Write(QueryExpression.Extract(From.From));
                 writer.Write(", ");
                 From.Filter.ToString(QueryText, writer);
                 writer.Write(")");
             }
             else
             {
-                writer.Write(QueryExpression.Extract(QueryText, From.From.TokenStart, From.From.TokenLength, From.From.EscapeChars));
+                writer.Write(QueryExpression.Extract(From.From));
             }
 
             if (From.Alias != null)
             {
                 writer.Write(" AS ");
-                writer.Write(QueryExpression.Extract(QueryText, From.Alias.TokenStart, From.Alias.TokenLength, From.Alias.EscapeChars));
+                writer.Write(QueryExpression.Extract( From.Alias));
             }
 
             writer.WriteLine();
@@ -75,7 +75,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     if (index != 0)
                         writer.Write(", ");
                     var field = GroupBy[index];
-                    writer.Write(QueryExpression.Extract(QueryText, field.TokenStart, field.TokenLength, field.EscapeChars));
+                    writer.Write(QueryExpression.Extract(field));
                 }
                 writer.WriteLine();
             }
@@ -157,8 +157,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 if (item.Alias != null)
                 {
                     writer.Write("AS ");
-                    writer.Write(QueryExpression.Extract(QueryText, item.Alias.TokenStart, item.Alias.TokenLength,
-                        item.Alias.EscapeChars));
+                    writer.Write(QueryExpression.Extract( item.Alias));
                 }
             }
             writer.WriteLine();
@@ -201,8 +200,7 @@ namespace Raven.Server.Documents.Queries.Parser
             writer.WritePropertyName("Index");
             writer.WriteValue(From.Index);
             writer.WritePropertyName("Source");
-            QueryExpression.WriteValue(QueryText, writer, From.From.TokenStart, From.From.TokenLength,
-                      From.From.EscapeChars);
+            QueryExpression.WriteValue(writer, From.From);
             if (From.Filter != null)
             {
                 writer.WritePropertyName("Filter");
@@ -211,8 +209,7 @@ namespace Raven.Server.Documents.Queries.Parser
             if (From.Alias != null)
             {
                 writer.WritePropertyName("Alias");
-                QueryExpression.WriteValue(QueryText, writer, From.Alias.TokenStart, From.Alias.TokenLength,
-                    From.Alias.EscapeChars);
+                QueryExpression.WriteValue(writer, From.Alias);
             }
             writer.WriteEndObject();
 
@@ -222,7 +219,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 writer.WriteStartArray();
                 foreach (var field in GroupBy)
                 {
-                    QueryExpression.WriteValue(QueryText, writer, field.TokenStart, field.TokenLength, field.EscapeChars);
+                    QueryExpression.WriteValue(writer, field);
                 }
                 writer.WriteEndArray();
             }
@@ -270,8 +267,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 if (field.Alias != null)
                 {
                     writer.WritePropertyName("Alias");
-                    QueryExpression.WriteValue(queryText, writer, field.Alias.TokenStart, field.Alias.TokenLength,
-                        field.Alias.EscapeChars);
+                    QueryExpression.WriteValue(writer, field.Alias);
                 }
                 writer.WriteEndObject();
             }

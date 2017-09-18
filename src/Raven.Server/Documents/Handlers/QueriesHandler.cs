@@ -338,7 +338,7 @@ namespace Raven.Server.Documents.Handlers
                     return Task.CompletedTask;
                 }
 
-                var docId = QueryExpression.Extract(query.Metadata.QueryText, whereValueToken, stripQuotes: true);
+                var docId = QueryExpression.Extract(whereValueToken, stripQuotes: true);
 
                 PatchDocumentCommand command;
                 if (query.Metadata.IsDynamic == false)

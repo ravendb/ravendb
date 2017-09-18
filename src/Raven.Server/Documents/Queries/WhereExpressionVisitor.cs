@@ -37,14 +37,14 @@ namespace Raven.Server.Documents.Queries
                 case OperatorType.GreaterThan:
                 case OperatorType.LessThanEqual:
                 case OperatorType.GreaterThanEqual:
-                    VisitFieldToken(QueryExpression.Extract(QueryText, expression.Field), expression.Value ?? expression.First, parameters);
+                    VisitFieldToken(QueryExpression.Extract(expression.Field), expression.Value ?? expression.First, parameters);
                     return;
                 case OperatorType.Between:
-                    VisitFieldTokens(QueryExpression.Extract(QueryText, expression.Field), expression.First, expression.Second, parameters);
+                    VisitFieldTokens(QueryExpression.Extract(expression.Field), expression.First, expression.Second, parameters);
                     return;
                 case OperatorType.In:
                 case OperatorType.AllIn:
-                    VisitFieldTokens(QueryExpression.Extract(QueryText, expression.Field), expression.Values, parameters);
+                    VisitFieldTokens(QueryExpression.Extract(expression.Field), expression.Values, parameters);
                     return;
                 case OperatorType.Method:
                     VisitMethodTokens(expression, parameters);
@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.Queries
 
             if (valueType == ValueTokenType.Parameter)
             {
-                var parameterName = QueryExpression.Extract(QueryText, value);
+                var parameterName = QueryExpression.Extract(value);
 
                 if (parameters == null)
                     QueryBuilder.ThrowParametersWereNotProvided(QueryText);

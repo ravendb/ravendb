@@ -132,7 +132,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (query.Metadata.Query.Where.Type != OperatorType.Method)
                 throw new InvalidQueryException($"Invalid intersect query. WHERE clause must contains just an intersect() method call while it got {query.Metadata.Query.Where.Type} expression", query.Metadata.QueryText, query.QueryParameters);
 
-            var methodName = QueryExpression.Extract(query.Metadata.QueryText, query.Metadata.Query.Where.Field);
+            var methodName = QueryExpression.Extract(query.Metadata.Query.Where.Field);
 
             if (string.Equals("intersect", methodName) == false)
                 throw new InvalidQueryException($"Invalid intersect query. WHERE clause must contains just a single intersect() method call while it got '{methodName}' method", query.Metadata.QueryText, query.QueryParameters);

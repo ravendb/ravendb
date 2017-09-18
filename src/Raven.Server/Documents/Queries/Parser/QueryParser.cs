@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Raven.Client.Documents.Linq;
 using Sparrow;
 
 namespace Raven.Server.Documents.Queries.Parser
@@ -44,7 +45,7 @@ namespace Raven.Server.Documents.Queries.Parser
             {
                 var (name, func) = DeclaredFunction();
 
-                if (q.TryAddFunction(name, QueryExpression.Extract(Scanner.Input, func)) == false)
+                if (q.TryAddFunction(name, QueryExpression.Extract(func)) == false)
                     ThrowParseException(name + " function was declared multiple times");
             }
 
@@ -81,8 +82,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     q.UpdateBody = new ValueToken
                     {
                         Type = ValueTokenType.String,
-                        TokenStart = functionStart,
-                        TokenLength = Scanner.Position - functionStart
+                        Token = new StringSegment(Scanner.Input, functionStart, Scanner.Position - functionStart)
                     };
                     break;
                 default:
@@ -165,8 +165,7 @@ namespace Raven.Server.Documents.Queries.Parser
             return (name, new ValueToken
             {
                 Type = ValueTokenType.String,
-                TokenStart = functionStart,
-                TokenLength = Scanner.Position - functionStart
+                Token = new StringSegment(Scanner.Input, functionStart, Scanner.Position - functionStart)
             });
         }
 
@@ -200,7 +199,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 if (Scanner.TryScan('('))
                 {
                     if (Method(field, out op) == false)
-                        ThrowParseException($"Unable to parse method call {QueryExpression.Extract(Scanner.Input, field)}for ORDER BY");
+                        ThrowParseException($"Unable to parse method call {QueryExpression.Extract(field)}for ORDER BY");
                 }
                 else
                 {
@@ -259,8 +258,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 query.SelectFunctionBody = new ValueToken
                 {
                     Type = ValueTokenType.String,
-                    TokenStart = functionStart,
-                    TokenLength = Scanner.Position - functionStart
+                    Token = new StringSegment(Scanner.Input, functionStart, Scanner.Position - functionStart)
                 };
 
                 return new List<(QueryExpression, FieldToken)>();
@@ -312,8 +310,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     {
                         EscapeChars = expr.Value.EscapeChars,
                         IsQuoted = expr.Value.Type == ValueTokenType.String,
-                        TokenStart = expr.Value.TokenStart,
-                        TokenLength = expr.Value.TokenLength
+                        Token = expr.Value.Token,
                     };
                 }
 
@@ -344,8 +341,7 @@ namespace Raven.Server.Documents.Queries.Parser
 
                 field = new FieldToken
                 {
-                    TokenLength = Scanner.TokenLength,
-                    TokenStart = Scanner.TokenStart,
+                    Token = new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength),
                     EscapeChars = Scanner.EscapeChars,
                     IsQuoted = isQuoted
                 };
@@ -360,8 +356,7 @@ namespace Raven.Server.Documents.Queries.Parser
 
                 field = new FieldToken
                 {
-                    TokenLength = Scanner.TokenLength,
-                    TokenStart = Scanner.TokenStart,
+                    Token = new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength),
                     EscapeChars = Scanner.EscapeChars,
                     IsQuoted = isQuoted
                 };
@@ -727,7 +722,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     {
                         // this is not a simple field ref, let's parse as full expression
 
-                        Scanner.Reset(fieldRef.TokenStart);
+                        Scanner.Reset(fieldRef.Token.Offset);
                     }
                     else
                     {
@@ -794,8 +789,7 @@ namespace Raven.Server.Documents.Queries.Parser
             {
                 val = new ValueToken
                 {
-                    TokenStart = Scanner.TokenStart,
-                    TokenLength = Scanner.TokenLength,
+                    Token = new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength),
                     Type = numberToken.Value == NumberToken.Long ? ValueTokenType.Long : ValueTokenType.Double
                 };
                 return true;
@@ -804,8 +798,7 @@ namespace Raven.Server.Documents.Queries.Parser
             {
                 val = new ValueToken
                 {
-                    TokenStart = Scanner.TokenStart,
-                    TokenLength = Scanner.TokenLength,
+                    Token = new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength),
                     Type = ValueTokenType.String,
                     EscapeChars = Scanner.EscapeChars
                 };
@@ -815,8 +808,7 @@ namespace Raven.Server.Documents.Queries.Parser
             {
                 val = new ValueToken
                 {
-                    TokenStart = Scanner.TokenStart,
-                    TokenLength = Scanner.TokenLength
+                    Token = new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength),
                 };
                 switch (match)
                 {
@@ -838,8 +830,7 @@ namespace Raven.Server.Documents.Queries.Parser
             {
                 val = new ValueToken
                 {
-                    TokenStart = tokenStart,
-                    TokenLength = tokenLength,
+                    Token = new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength),
                     Type = ValueTokenType.Parameter
                 };
                 return true;
@@ -910,8 +901,7 @@ namespace Raven.Server.Documents.Queries.Parser
             token = new FieldToken
             {
                 EscapeChars = escapeChars,
-                TokenLength = tokenLength,
-                TokenStart = tokenStart,
+                Token = new StringSegment(Scanner.Input, tokenStart, tokenLength),
                 IsQuoted = isQuoted
             };
             return true;

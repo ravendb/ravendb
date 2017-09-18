@@ -212,7 +212,7 @@ namespace Raven.Server.Documents.Queries
                 case OperatorType.True:
                     return new MatchAllDocsQuery();
                 case OperatorType.Method:
-                    var methodName = QueryExpression.Extract(query.QueryText, expression.Field);
+                    var methodName = QueryExpression.Extract(expression.Field);
                     var methodType = QueryMethod.GetMethodType(methodName);
 
                     switch (methodType)
@@ -297,12 +297,12 @@ namespace Raven.Server.Documents.Queries
 
         private static string ExtractIndexFieldName(string queryText, FieldToken field, QueryMetadata metadata)
         {
-            return metadata.GetIndexFieldName(QueryExpression.Extract(queryText, field));
+            return metadata.GetIndexFieldName(QueryExpression.Extract(field));
         }
 
         private static string ExtractIndexFieldName(string queryText, ValueToken field, QueryMetadata metadata)
         {
-            return metadata.GetIndexFieldName(QueryExpression.Extract(queryText, field));
+            return metadata.GetIndexFieldName(QueryExpression.Extract(field));
         }
 
         private static Lucene.Net.Search.Query HandleId(JsonOperationContext context, Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, bool exact)
@@ -417,7 +417,7 @@ namespace Raven.Server.Documents.Queries
 
         private static Lucene.Net.Search.Query HandleBoost(JsonOperationContext context, Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer, Func<string, SpatialField> getSpatialField, bool exact)
         {
-            var boost = float.Parse(QueryExpression.Extract(query.QueryText, (ValueToken)expression.Arguments[1]));
+            var boost = float.Parse(QueryExpression.Extract((ValueToken)expression.Arguments[1]));
             expression = (QueryExpression)expression.Arguments[0];
 
             var q = ToLuceneQuery(context, query, expression, metadata, parameters, analyzer, getSpatialField, exact);
@@ -458,7 +458,7 @@ namespace Raven.Server.Documents.Queries
             var occur = Occur.SHOULD;
             if (expression.Arguments.Count == 3)
             {
-                var op = QueryExpression.Extract(query.QueryText, (FieldToken)expression.Arguments[2]);
+                var op = QueryExpression.Extract((FieldToken)expression.Arguments[2]);
                 if (string.Equals("AND", op, StringComparison.OrdinalIgnoreCase))
                     occur = Occur.MUST;
             }
@@ -503,7 +503,7 @@ namespace Raven.Server.Documents.Queries
 
             var spatialField = getSpatialField(fieldName);
 
-            var methodName = QueryExpression.Extract(metadata.Query.QueryText, shapeExpression.Field);
+            var methodName = QueryExpression.Extract(shapeExpression.Field);
             var methodType = QueryMethod.GetMethodType(methodName);
 
             Shape shape = null;
@@ -630,7 +630,7 @@ namespace Raven.Server.Documents.Queries
         {
             if (value.Type == ValueTokenType.Parameter)
             {
-                var parameterName = QueryExpression.Extract(query.QueryText, value);
+                var parameterName = QueryExpression.Extract(value);
 
                 if (parameters == null)
                     ThrowParametersWereNotProvided(metadata.QueryText);
@@ -667,15 +667,15 @@ namespace Raven.Server.Documents.Queries
             switch (value.Type)
             {
                 case ValueTokenType.String:
-                    var valueAsString = QueryExpression.Extract(query.QueryText, value.TokenStart + 1, value.TokenLength - 2, value.EscapeChars);
+                    var valueAsString = QueryExpression.Extract(value, stripQuotes:true);
                     yield return (valueAsString, ValueTokenType.String);
                     yield break;
                 case ValueTokenType.Long:
-                    var valueAsLong = long.Parse(QueryExpression.Extract(query.QueryText, value));
+                    var valueAsLong = long.Parse(QueryExpression.Extract(value));
                     yield return (valueAsLong, ValueTokenType.Long);
                     yield break;
                 case ValueTokenType.Double:
-                    var valueAsDouble = double.Parse(QueryExpression.Extract(query.QueryText, value), CultureInfo.InvariantCulture);
+                    var valueAsDouble = double.Parse(QueryExpression.Extract(value), CultureInfo.InvariantCulture);
                     yield return (valueAsDouble, ValueTokenType.Double);
                     yield break;
                 case ValueTokenType.True:
@@ -696,7 +696,7 @@ namespace Raven.Server.Documents.Queries
         {
             if (value.Type == ValueTokenType.Parameter)
             {
-                var parameterName = QueryExpression.Extract(query.QueryText, value);
+                var parameterName = QueryExpression.Extract(value);
 
                 if (parameters == null)
                     ThrowParametersWereNotProvided(metadata.QueryText);
@@ -712,13 +712,13 @@ namespace Raven.Server.Documents.Queries
             switch (value.Type)
             {
                 case ValueTokenType.String:
-                    var valueAsString = QueryExpression.Extract(query.QueryText, value.TokenStart + 1, value.TokenLength - 2, value.EscapeChars);
+                    var valueAsString = QueryExpression.Extract(value, stripQuotes:true);
                     return (valueAsString, ValueTokenType.String);
                 case ValueTokenType.Long:
-                    var valueAsLong = long.Parse(QueryExpression.Extract(query.QueryText, value));
+                    var valueAsLong = long.Parse(QueryExpression.Extract(value));
                     return (valueAsLong, ValueTokenType.Long);
                 case ValueTokenType.Double:
-                    var valueAsDouble = double.Parse(QueryExpression.Extract(query.QueryText, value), CultureInfo.InvariantCulture);
+                    var valueAsDouble = double.Parse(QueryExpression.Extract(value), CultureInfo.InvariantCulture);
                     return (valueAsDouble, ValueTokenType.Double);
                 case ValueTokenType.True:
                     return (LuceneDocumentConverterBase.TrueString, ValueTokenType.String);

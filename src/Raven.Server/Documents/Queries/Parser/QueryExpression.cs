@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using Newtonsoft.Json;
+using Sparrow;
 
 namespace Raven.Server.Documents.Queries.Parser
 {
@@ -22,7 +23,7 @@ namespace Raven.Server.Documents.Queries.Parser
         [ThreadStatic]
         private static StringBuilder _tempBuffer;
 
-        internal static string Extract(string q, ValueToken val, bool stripQuotes = false)
+        internal static string Extract(ValueToken val, bool stripQuotes = false)
         {
             switch (val.Type)
             {
@@ -34,64 +35,67 @@ namespace Raven.Server.Documents.Queries.Parser
                     return "true";
             }
             if (stripQuotes && val.Type == ValueTokenType.String)
-                return Extract(q, val.TokenStart + 1, val.TokenLength - 2, val.EscapeChars);
+                return val.Token.Subsegment(1, val.Token.Length - 2).ToString();
 
-            return Extract(q, val.TokenStart, val.TokenLength, val.EscapeChars);
+            return val.Token.ToString();
         }
 
-        internal static string Extract(string q, FieldToken field)
+        internal static string Extract(FieldToken field)
         {
             if (field.IsQuoted)
-                return Extract(q, field.TokenStart + 1, field.TokenLength - 2, field.EscapeChars);
-            return Extract(q, field.TokenStart, field.TokenLength, field.EscapeChars);
+                return field.Token.Subsegment(1, field.Token.Length - 2).ToString();
+            return field.Token.ToString();
         }
 
-        internal static string Extract(string q, int tokenStart, int tokenLength, int escapeChars)
+        internal static string Extract(StringSegment token, int escapeChars)
         {
-            if (escapeChars == 0)
-            {
-                return q.Substring(tokenStart, tokenLength);
-            }
-            var tmp = _tempBuffer ?? (_tempBuffer = new StringBuilder());
-            tmp.Capacity = Math.Max(tmp.Capacity, tokenLength);
-            var qouteChar = q[tokenStart];
-            for (int i = tokenStart; i < tokenLength; i++)
-            {
-                if (q[i] != qouteChar)
-                    tmp.Append(q[i]);
-            }
-            return tmp.ToString();
+            return token.ToString();
         }
 
-        internal static void WriteValue(string q, JsonWriter writer, int tokenStart, int tokenLength, int escapeChars,
+        internal static void WriteValue(JsonWriter writer, ValueToken token,
             bool raw = false)
         {
-            if (escapeChars == 0)
+            if (token.EscapeChars == 0)
             {
-                if (tokenLength != 0)
+                if (token.Token.Length != 0)
                 {
-                    if (q[tokenStart] == '"' || q[tokenStart] == '\'')
+                    if (token.Token[0] == '"' || token.Token[0] == '\'')
                     {
                         // skip quotes
-                        writer.WriteValue(q.Substring(tokenStart + 1, tokenLength - 1));
+                        writer.WriteValue(token.Token.Subsegment(1, token.Token.Length-2));
                         return;
                     }
                 }
                 if (raw)
-                    writer.WriteRawValue(q.Substring(tokenStart, tokenLength));
+                    writer.WriteRawValue(token.Token.ToString());
                 else
-                    writer.WriteValue(q.Substring(tokenStart, tokenLength));
+                    writer.WriteValue(token.Token.ToString());
                 return;
             }
-            var tmp = _tempBuffer ?? (_tempBuffer = new StringBuilder());
-            tmp.Capacity = Math.Max(tmp.Capacity, tokenLength);
-            var qouteChar = q[tokenStart];
-            for (int i = tokenStart + 1; i < tokenLength - 1; i++)
+            writer.WriteValue(Extract(token));
+        }
+        
+        internal static void WriteValue(JsonWriter writer, FieldToken token,
+            bool raw = false)
+        {
+            if (token.EscapeChars == 0)
             {
-                if (q[i] != qouteChar)
-                    tmp.Append(q[i]);
+                if (token.Token.Length != 0)
+                {
+                    if (token.Token[0] == '"' || token.Token[0] == '\'')
+                    {
+                        // skip quotes
+                        writer.WriteValue(token.Token.Subsegment(1, token.Token.Length-2));
+                        return;
+                    }
+                }
+                if (raw)
+                    writer.WriteRawValue(token.Token.ToString());
+                else
+                    writer.WriteValue(token.Token.ToString());
+                return;
             }
-            writer.WriteValue(tmp.ToString());
+            writer.WriteValue(Extract(token));
         }
 
         public void ToJavaScript(string query, string alias, TextWriter writer)
@@ -104,7 +108,7 @@ namespace Raven.Server.Documents.Queries.Parser
                         writer.Write(alias);
                         writer.Write(".");
                     }
-                    writer.Write(Extract(query, Field.TokenStart, Field.TokenLength, Field.EscapeChars));
+                    writer.Write(Extract(Field));
                     break;
                 case OperatorType.Equal:
                 case OperatorType.NotEqual:
@@ -112,7 +116,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 case OperatorType.GreaterThan:
                 case OperatorType.LessThanEqual:
                 case OperatorType.GreaterThanEqual:
-                    var fieldName = Extract(query, Field.TokenStart, Field.TokenLength, Field.EscapeChars);
+                    var fieldName = Extract(Field);
                     WriteSimpleOperatorJavaScript(query, writer, fieldName, alias, Type, Value);
                     break;
                 case OperatorType.Between:
@@ -149,7 +153,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     writer.Write(")");
                     break;
                 case OperatorType.Method:
-                    var method = Extract(query, Field.TokenStart, Field.TokenLength, Field.EscapeChars);
+                    var method = Extract(Field);
                     var methodType = QueryMethod.GetMethodType(method, throwIfNoMatch: false);
                     if (methodType == MethodType.Id && Arguments.Count == 1 && Arguments[0] is QueryExpression idExpression)
                     {
@@ -171,12 +175,12 @@ namespace Raven.Server.Documents.Queries.Parser
                         }
                         else if (arg is FieldToken field)
                         {
-                            writer.Write(Extract(query, field.TokenStart, field.TokenLength, field.EscapeChars));
+                            writer.Write(Extract(field));
                         }
                         else
                         {
                             var val = (ValueToken)arg;
-                            writer.Write(Extract(query, val));
+                            writer.Write(Extract(val));
                         }
                     }
                     writer.Write(")");
@@ -218,7 +222,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     ThrowInvalidType(type);
                     break;
             }
-            writer.Write(Extract(query, value));
+            writer.Write(Extract(value));
         }
 
         public void ToString(string query, TextWriter writer)
@@ -226,7 +230,7 @@ namespace Raven.Server.Documents.Queries.Parser
             switch (Type)
             {
                 case OperatorType.Field:
-                    writer.Write(Extract(query, Field.TokenStart, Field.TokenLength, Field.EscapeChars));
+                    writer.Write(Extract(Field));
                     writer.Write(" ");
                     break;
                 case OperatorType.Equal:
@@ -235,7 +239,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 case OperatorType.GreaterThan:
                 case OperatorType.LessThanEqual:
                 case OperatorType.GreaterThanEqual:
-                    writer.Write(Extract(query, Field.TokenStart, Field.TokenLength, Field.EscapeChars));
+                    writer.Write(Extract(Field));
                     switch (Type)
                     {
                         case OperatorType.Equal:
@@ -260,25 +264,25 @@ namespace Raven.Server.Documents.Queries.Parser
                             ThrowInvalidType(Type);
                             break;
                     }
-                    writer.Write(Extract(query, Value));
+                    writer.Write(Extract(Value));
                     break;
                 case OperatorType.Between:
-                    writer.Write(Extract(query, Field.TokenStart, Field.TokenLength, Field.EscapeChars));
+                    writer.Write(Extract(Field));
                     writer.Write(" BETWEEN ");
-                    writer.Write(Extract(query, First.TokenStart, First.TokenLength, First.EscapeChars));
+                    writer.Write(Extract(First));
                     writer.Write(" AND ");
-                    writer.Write(Extract(query, Second.TokenStart, Second.TokenLength, Second.EscapeChars));
+                    writer.Write(Extract(Second));
                     break;
                 case OperatorType.In:
                 case OperatorType.AllIn:
-                    writer.Write(Extract(query, Field.TokenStart, Field.TokenLength, Field.EscapeChars));
+                    writer.Write(Extract(Field));
                     writer.Write(Type != OperatorType.AllIn ? " IN (" : " ALL IN (");
                     for (var i = 0; i < Values.Count; i++)
                     {
                         var value = Values[i];
                         if (i != 0)
                             writer.Write(", ");
-                        writer.Write(Extract(query, value));
+                        writer.Write(Extract(value));
                     }
                     writer.Write(")");
                     break;
@@ -307,7 +311,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     writer.Write(")");
                     break;
                 case OperatorType.Method:
-                    writer.Write(Extract(query, Field.TokenStart, Field.TokenLength, Field.EscapeChars));
+                    writer.Write(Extract(Field));
                     writer.Write("(");
 
                     for (int i = 0; i < Arguments.Count; i++)
@@ -321,12 +325,12 @@ namespace Raven.Server.Documents.Queries.Parser
                         }
                         else if (arg is FieldToken field)
                         {
-                            writer.Write(Extract(query, field.TokenStart, field.TokenLength, field.EscapeChars));
+                            writer.Write(Extract(field));
                         }
                         else
                         {
                             var val = (ValueToken)arg;
-                            writer.Write(Extract(query, val));
+                            writer.Write(Extract(val));
                         }
                     }
                     writer.Write(")");
@@ -340,7 +344,7 @@ namespace Raven.Server.Documents.Queries.Parser
         {
             if (Type == OperatorType.Field)
             {
-                WriteValue(query, writer, Field.TokenStart, Field.TokenLength, Field.EscapeChars);
+                WriteValue(writer, Field);
                 return;
             }
             writer.WriteStartObject();
@@ -360,7 +364,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     writer.WritePropertyName("Field");
 
                     if (Field != null)
-                        WriteValue(query, writer, Field.TokenStart, Field.TokenLength, Field.EscapeChars);
+                        WriteValue(writer, Field);
                     else
                         writer.WriteValue((string)null);
 
@@ -377,31 +381,30 @@ namespace Raven.Server.Documents.Queries.Parser
                             writer.WriteValue(true);
                             break;
                         default:
-                            WriteValue(query, writer, Value.TokenStart, Value.TokenLength, Value.EscapeChars,
-                                Value.Type == ValueTokenType.String);
+                            WriteValue(writer, Value, Value.Type == ValueTokenType.String);
                             break;
                     }
 
                     break;
                 case OperatorType.Between:
                     writer.WritePropertyName("Field");
-                    WriteValue(query, writer, Field.TokenStart, Field.TokenLength, Field.EscapeChars);
+                    WriteValue( writer, Field);
                     writer.WritePropertyName("Min");
-                    WriteValue(query, writer, First.TokenStart, First.TokenLength, First.EscapeChars,
+                    WriteValue( writer, First,
                         First.Type == ValueTokenType.Double || First.Type == ValueTokenType.Long);
                     writer.WritePropertyName("Max");
-                    WriteValue(query, writer, Second.TokenStart, Second.TokenLength, Second.EscapeChars,
+                    WriteValue( writer, Second,
                         Second.Type == ValueTokenType.Double || Second.Type == ValueTokenType.Long);
                     break;
                 case OperatorType.In:
                 case OperatorType.AllIn:
                     writer.WritePropertyName("Field");
-                    WriteValue(query, writer, Field.TokenStart, Field.TokenLength, Field.EscapeChars);
+                    WriteValue(writer, Field);
                     writer.WritePropertyName("Values");
                     writer.WriteStartArray();
                     foreach (var value in Values)
                     {
-                        WriteValue(query, writer, value.TokenStart, value.TokenLength, value.EscapeChars,
+                        WriteValue(writer, value,
                             value.Type == ValueTokenType.Double || value.Type == ValueTokenType.Long);
                     }
                     writer.WriteEndArray();
@@ -417,7 +420,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     break;
                 case OperatorType.Method:
                     writer.WritePropertyName("Method");
-                    WriteValue(query, writer, Field.TokenStart, Field.TokenLength, Field.EscapeChars);
+                    WriteValue(writer, Field);
                     writer.WritePropertyName("Arguments");
                     writer.WriteStartArray();
                     foreach (var arg in Arguments)
@@ -430,13 +433,13 @@ namespace Raven.Server.Documents.Queries.Parser
                         {
                             writer.WriteStartObject();
                             writer.WritePropertyName("Field");
-                            WriteValue(query, writer, field.TokenStart, field.TokenLength, field.EscapeChars);
+                            WriteValue(writer, field);
                             writer.WriteEndObject();
                         }
                         else
                         {
                             var val = (ValueToken)arg;
-                            WriteValue(query, writer, val.TokenStart, val.TokenLength, val.EscapeChars,
+                            WriteValue(writer, val,
                                 val.Type == ValueTokenType.Double || val.Type == ValueTokenType.Long);
                         }
                     }

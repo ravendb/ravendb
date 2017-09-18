@@ -40,9 +40,9 @@ namespace Raven.Server.Documents.Queries
             var fromToken = Query.From.From;
 
             if (IsDynamic)
-                CollectionName = QueryExpression.Extract(Query.QueryText, fromToken);
+                CollectionName = QueryExpression.Extract( fromToken);
             else
-                IndexName = QueryExpression.Extract(Query.QueryText, fromToken);
+                IndexName = QueryExpression.Extract(fromToken);
 
             if (IsDynamic == false || IsGroupBy)
                 IsCollectionQuery = false;
@@ -110,7 +110,7 @@ namespace Raven.Server.Documents.Queries
             string fromAlias = null;
             if (Query.From.Alias != null)
             {
-                fromAlias = QueryExpression.Extract(QueryText, Query.From.Alias);
+                fromAlias = QueryExpression.Extract(Query.From.Alias);
                 RootAliasPaths[fromAlias] = (null, false);
             }
 
@@ -120,7 +120,7 @@ namespace Raven.Server.Documents.Queries
 
                 for (var i = 0; i < Query.GroupBy.Count; i++)
                 {
-                    var name = QueryExpression.Extract(QueryText, Query.GroupBy[i]);
+                    var name = QueryExpression.Extract( Query.GroupBy[i]);
 
                     EnsureValidGroupByField(name, parameters);
 
@@ -145,7 +145,7 @@ namespace Raven.Server.Documents.Queries
                 for (var i = 0; i < Query.OrderBy.Count; i++)
                 {
                     var order = Query.OrderBy[i];
-                    var indexFieldName = GetIndexFieldName(QueryExpression.Extract(QueryText, order.Expression.Field));
+                    var indexFieldName = GetIndexFieldName(QueryExpression.Extract( order.Expression.Field));
 
                     switch (order.Expression.Type)
                     {
@@ -179,10 +179,10 @@ namespace Raven.Server.Documents.Queries
                 switch (include.Type)
                 {
                     case OperatorType.Field:
-                        path = QueryExpression.Extract(QueryText, include.Field);
+                        path = QueryExpression.Extract(include.Field);
                         break;
                     case OperatorType.Value:
-                        path = QueryExpression.Extract(QueryText, include.Value, stripQuotes: true);
+                        path = QueryExpression.Extract(include.Value, stripQuotes: true);
                         break;
                     default:
                         throw new InvalidOperationException("Unable to figure out how to deal with include of type " + include.Type);
@@ -234,7 +234,7 @@ namespace Raven.Server.Documents.Queries
             }
             sb.Append("    return ");
 
-            sb.Append(QueryExpression.Extract(Query.QueryText, Query.SelectFunctionBody));
+            sb.Append(QueryExpression.Extract(Query.SelectFunctionBody));
 
             sb.AppendLine(";").AppendLine("}");
 
@@ -271,10 +271,11 @@ namespace Raven.Server.Documents.Queries
             if (Query.From.Alias == null)
                 ThrowInvalidWith(expr, "LOAD clause is trying to use an alias but the from clause hasn't specified one: ", parameters);
             Debug.Assert(Query.From.Alias != null);
-            if (Query.From.Alias.TokenLength != indexOf)
+            if (Query.From.Alias.Token.Length != indexOf)
                 ThrowInvalidWith(expr, "LOAD clause is trying to use an alias that isn't specified in the from clause: ", parameters);
             var compare = string.Compare(
-                QueryText, Query.From.Alias.TokenStart,
+                Query.From.Alias.Token.Buffer, 
+                Query.From.Alias.Token.Offset,
                 path, 0, indexOf, StringComparison.OrdinalIgnoreCase);
             if (compare != 0)
                 ThrowInvalidWith(expr, "LOAD clause is trying to use an alias that isn't specified in the from clause: ", parameters);
@@ -288,16 +289,16 @@ namespace Raven.Server.Documents.Queries
                 if (load.Alias == null)
                     ThrowInvalidWith(load.Expression, "LOAD clause requires an alias but got: ", parameters);
 
-                var alias = QueryExpression.Extract(QueryText, load.Alias);
+                var alias = QueryExpression.Extract(load.Alias);
 
                 string path;
                 switch (load.Expression.Type)
                 {
                     case OperatorType.Field:
-                        path = QueryExpression.Extract(QueryText, load.Expression.Field);
+                        path = QueryExpression.Extract(load.Expression.Field);
                         break;
                     case OperatorType.Value:
-                        path = QueryExpression.Extract(QueryText, load.Expression.Value);
+                        path = QueryExpression.Extract(load.Expression.Value);
                         break;
                     default:
                         ThrowInvalidWith(load.Expression, "LOAD clause require a field or value refereces", parameters);
@@ -340,7 +341,7 @@ namespace Raven.Server.Documents.Queries
                 if (token == null)
                     throw new InvalidQueryException("Invalid ORDER BY 'random()' call, expected value token , got " + order.Expression.Arguments[0], QueryText, parameters);
 
-                var value = QueryExpression.Extract(QueryText, token);
+                var value = QueryExpression.Extract(token);
 
                 return new OrderByField(
                     null,
@@ -374,8 +375,8 @@ namespace Raven.Server.Documents.Queries
                 if (expression == null)
                     throw new InvalidQueryException("Invalid ORDER BY 'distance()' call, expected expression, got " + order.Expression.Arguments[1], QueryText, parameters);
 
-                var fieldName = QueryExpression.Extract(Query.QueryText, fieldToken);
-                var methodName = QueryExpression.Extract(Query.QueryText, expression.Field);
+                var fieldName = QueryExpression.Extract(fieldToken);
+                var methodName = QueryExpression.Extract(expression.Field);
                 var methodType = QueryMethod.GetMethodType(methodName);
 
                 switch (methodType)
@@ -398,7 +399,7 @@ namespace Raven.Server.Documents.Queries
                 for (var i = 0; i < expression.Arguments.Count; i++)
                 {
                     var argument = (ValueToken)expression.Arguments[i];
-                    var argumentValue = QueryExpression.Extract(Query.QueryText, argument);
+                    var argumentValue = QueryExpression.Extract(argument);
                     arguments[i] = new OrderByField.Argument(argumentValue, argument.Type);
                 }
 
@@ -430,7 +431,7 @@ namespace Raven.Server.Documents.Queries
 
                     var sumFieldToken = order.Expression.Arguments[0] as FieldToken;
 
-                    var fieldName = QueryExpression.Extract(Query.QueryText, sumFieldToken);
+                    var fieldName = QueryExpression.Extract(sumFieldToken);
 
                     var orderingType = order.FieldType;
 
@@ -455,7 +456,7 @@ namespace Raven.Server.Documents.Queries
                 string alias = null;
 
                 if (fieldInfo.Alias != null)
-                    alias = QueryExpression.Extract(QueryText, fieldInfo.Alias);
+                    alias = QueryExpression.Extract(fieldInfo.Alias);
 
                 var expression = fieldInfo.Expression;
 
@@ -493,12 +494,12 @@ namespace Raven.Server.Documents.Queries
                 case OperatorType.Field:
                     if (expression.Field.IsQuoted)
                     {
-                        var value = QueryExpression.Extract(QueryText, expression.Field);
+                        var value = QueryExpression.Extract(expression.Field);
                         return SelectField.CreateValue(value, alias, ValueTokenType.String);
                     }
                     return GetSelectValue(alias, expression.Field);
                 case OperatorType.Method:
-                    var methodName = QueryExpression.Extract(QueryText, expression.Field);
+                    var methodName = QueryExpression.Extract(expression.Field);
                     if (Enum.TryParse(methodName, ignoreCase: true, result: out AggregationOperation aggregation) == false)
                     {
                         if (Query.DeclaredFunctions != null && Query.DeclaredFunctions.TryGetValue(methodName, out var funcToken))
@@ -553,7 +554,7 @@ namespace Raven.Server.Documents.Queries
 
                                 var sumFieldToken = expression.Arguments[0] as FieldToken;
 
-                                fieldName = QueryExpression.Extract(Query.QueryText, sumFieldToken);
+                                fieldName = QueryExpression.Extract(sumFieldToken);
                                 break;
                         }
 
@@ -575,7 +576,7 @@ namespace Raven.Server.Documents.Queries
 
         private SelectField GetSelectValue(string alias, FieldToken expressionField)
         {
-            var name = QueryExpression.Extract(QueryText, expressionField);
+            var name = QueryExpression.Extract( expressionField);
             var indexOf = name.IndexOf('.');
             (string Path, bool Array) sourceAlias;
 
@@ -613,7 +614,7 @@ namespace Raven.Server.Documents.Queries
 
         private SelectField GetSelectValue(string alias, ValueToken expressionValue)
         {
-            var val = QueryExpression.Extract(QueryText, expressionValue);
+            var val = QueryExpression.Extract(expressionValue);
             return SelectField.CreateValue(val, alias, expressionValue.Type);
         }
 
@@ -763,7 +764,7 @@ namespace Raven.Server.Documents.Queries
 
                 string fieldName;
 
-                var methodName = QueryExpression.Extract(_metadata.Query.QueryText, expression.Field);
+                var methodName = QueryExpression.Extract( expression.Field);
 
                 var methodType = QueryMethod.GetMethodType(methodName);
 
@@ -786,7 +787,7 @@ namespace Raven.Server.Documents.Queries
                             if (idAliasToken == null)
                                 throw new InvalidQueryException($"Method 'id()' expects field token as a first argument, got {arguments[0]} type", QueryText, parameters);
 
-                            var idAliasTokenValue = QueryExpression.Extract(QueryText, idAliasToken);
+                            var idAliasTokenValue = QueryExpression.Extract(idAliasToken);
 
                             if (_fromAlias != idAliasTokenValue)
                                 throw new InvalidQueryException($"Alias passed to method 'id({idAliasTokenValue})' does not match specified document alias ('{_fromAlias}').", QueryText, parameters);
@@ -882,7 +883,7 @@ namespace Raven.Server.Documents.Queries
                         throw new InvalidQueryException($"Method {methodName}() expects value token as third argument, got {arguments[1]} type", QueryText, parameters);
                 }
 
-                methodName = QueryExpression.Extract(_metadata.Query.QueryText, shapeExpression.Field);
+                methodName = QueryExpression.Extract(shapeExpression.Field);
 
                 var methodType = QueryMethod.GetMethodType(methodName);
                 switch (methodType)
@@ -943,7 +944,7 @@ namespace Raven.Server.Documents.Queries
                 if (fieldArgument == null)
                     throw new InvalidQueryException($"Method {methodName}() expects a field name as its first argument", QueryText, parameters);
 
-                return QueryExpression.Extract(_metadata.Query.QueryText, fieldArgument);
+                return QueryExpression.Extract(fieldArgument);
             }
         }
 
@@ -952,7 +953,7 @@ namespace Raven.Server.Documents.Queries
             if (Query.UpdateBody == null)
                 throw new InvalidOperationException("UPDATE cluase was not specified");
 
-            var updateBody = QueryExpression.Extract(QueryText, Query.UpdateBody);
+            var updateBody = QueryExpression.Extract(Query.UpdateBody);
 
             if (Query.From.Alias == null) // will have to use this 
             {
@@ -961,7 +962,7 @@ namespace Raven.Server.Documents.Queries
                 return updateBody;
             }
             
-            var fromAlias = QueryExpression.Extract(QueryText, Query.From.Alias);
+            var fromAlias = QueryExpression.Extract(Query.From.Alias);
             // patch is sending this, but we can also specify the alias.
             // this is so we can more easily share the code between query patch
             // and per document patch
@@ -972,13 +973,13 @@ namespace Raven.Server.Documents.Queries
                 
                 foreach (var load in Query.Load)
                 {
-                    var fullFieldPath = QueryExpression.Extract(QueryText, load.Expression.Field);
+                    var fullFieldPath = QueryExpression.Extract(load.Expression.Field);
                     if (fullFieldPath.StartsWith(fromAlias) == false)
                         throw new InvalidOperationException("Load clause can only load paths starting from the from alias: " + fromAlias);
                     var indexOfDot = fullFieldPath.IndexOf('.', fromAlias.Length);
                     fullFieldPath = fullFieldPath.Substring(indexOfDot + 1);
 
-                    sb.Append("var ").Append(QueryExpression.Extract(QueryText, load.Alias))
+                    sb.Append("var ").Append(QueryExpression.Extract( load.Alias))
                         .Append(" = loadPath(")
                         .Append(fromAlias)
                         .Append(", '")

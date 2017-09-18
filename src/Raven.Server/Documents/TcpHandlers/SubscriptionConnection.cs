@@ -703,7 +703,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 {
                     case OperatorType.Equal:
                     case OperatorType.NotEqual:
-                        var field = QueryExpression.Extract(query, q.From.Filter.Field);
+                        var field = QueryExpression.Extract(q.From.Filter.Field);
                         if (string.Equals(field, "Revisions", StringComparison.OrdinalIgnoreCase) == false)
                             throw new NotSupportedException("Subscription collection filter can only specify 'Revisions = true'");
                         if (q.From.Filter.Value.Type != ValueTokenType.True)
@@ -716,7 +716,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
             }
 
-            var collectionName = QueryExpression.Extract(query, q.From.From);
+            var collectionName = QueryExpression.Extract(q.From.From);
             if (q.Where == null && q.Select == null && q.SelectFunctionBody == null)
                 return (collectionName, (null, null), revisions);
 
@@ -725,7 +725,7 @@ namespace Raven.Server.Documents.TcpHandlers
             if (q.From.Alias != null)
             {
                 writer.Write("var ");
-                writer.Write(QueryExpression.Extract(query, q.From.Alias));
+                writer.Write(QueryExpression.Extract( q.From.Alias));
                 writer.WriteLine(" = this;");
             }
             else if(q.Select != null || q.SelectFunctionBody != null || q.Load != null)
@@ -734,13 +734,13 @@ namespace Raven.Server.Documents.TcpHandlers
             }
             if (q.Load != null)
             {
-                var fromAlias = QueryExpression.Extract(query, q.From.Alias);
+                var fromAlias = QueryExpression.Extract( q.From.Alias);
                 foreach (var tuple in q.Load)
                 {
                     writer.Write("var ");
-                    writer.Write(QueryExpression.Extract(query, tuple.Alias));
+                    writer.Write(QueryExpression.Extract( tuple.Alias));
                     writer.Write(" = loadPath(this,'");
-                    var fullFieldPath = QueryExpression.Extract(query, tuple.Expression.Field);
+                    var fullFieldPath = QueryExpression.Extract( tuple.Expression.Field);
                     if (fullFieldPath.StartsWith(fromAlias) == false)
                         throw new InvalidOperationException("Load clause can only load paths starting from the from alias: " + fromAlias);
                     var indexOfDot = fullFieldPath.IndexOf('.', fromAlias.Length);
@@ -761,7 +761,7 @@ namespace Raven.Server.Documents.TcpHandlers
             if (q.SelectFunctionBody != null)
             {
                 writer.Write(" return ");
-                writer.Write(QueryExpression.Extract(query, q.SelectFunctionBody));
+                writer.Write(QueryExpression.Extract(q.SelectFunctionBody));
                 writer.WriteLine(";");
             }
             else if (q.Select != null)

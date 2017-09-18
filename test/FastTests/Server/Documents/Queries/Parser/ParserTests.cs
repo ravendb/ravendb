@@ -95,19 +95,19 @@ namespace FastTests.Server.Documents.Queries.Parser
         }
         
         [Theory]
-        [InlineData("Name =     'Oren'", "{\"Type\":\"Equal\",\"Field\":\"Name\",\"Value\":\"Oren'\"}")]
-        [InlineData("Name between \n'Oren' AND 'Phoebe'", "{\"Type\":\"Between\",\"Field\":\"Name\",\"Min\":\"Oren'\",\"Max\":\"Phoebe'\"}")]
-        [InlineData("( Name between 'Oren' AND 'Phoebe' )", "{\"Type\":\"Between\",\"Field\":\"Name\",\"Min\":\"Oren'\",\"Max\":\"Phoebe'\"}")]
+        [InlineData("Name =     'Oren'", "{\"Type\":\"Equal\",\"Field\":\"Name\",\"Value\":\"Oren\"}")]
+        [InlineData("Name between \n'Oren' AND 'Phoebe'", "{\"Type\":\"Between\",\"Field\":\"Name\",\"Min\":\"Oren\",\"Max\":\"Phoebe\"}")]
+        [InlineData("( Name between 'Oren' AND 'Phoebe' )", "{\"Type\":\"Between\",\"Field\":\"Name\",\"Min\":\"Oren\",\"Max\":\"Phoebe\"}")]
         [InlineData("Name IN ()", "{\"Type\":\"In\",\"Field\":\"Name\",\"Values\":[]}")]
         [InlineData("(Name IN ())", "{\"Type\":\"In\",\"Field\":\"Name\",\"Values\":[]}")]
         [InlineData("Age in (23,48)", "{\"Type\":\"In\",\"Field\":\"Age\",\"Values\":[23,48]}")]
-        [InlineData("(Status in ('Active', 'Passive'))", "{\"Type\":\"In\",\"Field\":\"Status\",\"Values\":[\"Active'\",\"Passive'\"]}")]
-        [InlineData("State = 2 AND Act = 'Wait'", "{\"Type\":\"And\",\"Left\":{\"Type\":\"Equal\",\"Field\":\"State\",\"Value\":\"2\"},\"Right\":{\"Type\":\"Equal\",\"Field\":\"Act\",\"Value\":\"Wait'\"}}")]
-        [InlineData("(State = 2 OR Act = 'Wait') OR NOT User = 'Admin'", "{\"Type\":\"OrNot\",\"Left\":{\"Type\":\"Or\",\"Left\":{\"Type\":\"Equal\",\"Field\":\"State\",\"Value\":\"2\"},\"Right\":{\"Type\":\"Equal\",\"Field\":\"Act\",\"Value\":\"Wait'\"}},\"Right\":{\"Type\":\"Equal\",\"Field\":\"User\",\"Value\":\"Admin'\"}}")]
-        [InlineData("State = 2 AND NOT (User = 'Admin' OR User = 'Root')", "{\"Type\":\"AndNot\",\"Left\":{\"Type\":\"Equal\",\"Field\":\"State\",\"Value\":\"2\"},\"Right\":{\"Type\":\"Or\",\"Left\":{\"Type\":\"Equal\",\"Field\":\"User\",\"Value\":\"Admin'\"},\"Right\":{\"Type\":\"Equal\",\"Field\":\"User\",\"Value\":\"Root'\"}}}")]
+        [InlineData("(Status in ('Active', 'Passive'))", "{\"Type\":\"In\",\"Field\":\"Status\",\"Values\":[\"Active\",\"Passive\"]}")]
+        [InlineData("State = 2 AND Act = 'Wait'", "{\"Type\":\"And\",\"Left\":{\"Type\":\"Equal\",\"Field\":\"State\",\"Value\":\"2\"},\"Right\":{\"Type\":\"Equal\",\"Field\":\"Act\",\"Value\":\"Wait\"}}")]
+        [InlineData("(State = 2 OR Act = 'Wait') OR NOT User = 'Admin'", "{\"Type\":\"OrNot\",\"Left\":{\"Type\":\"Or\",\"Left\":{\"Type\":\"Equal\",\"Field\":\"State\",\"Value\":\"2\"},\"Right\":{\"Type\":\"Equal\",\"Field\":\"Act\",\"Value\":\"Wait\"}},\"Right\":{\"Type\":\"Equal\",\"Field\":\"User\",\"Value\":\"Admin\"}}")]
+        [InlineData("State = 2 AND NOT (User = 'Admin' OR User = 'Root')", "{\"Type\":\"AndNot\",\"Left\":{\"Type\":\"Equal\",\"Field\":\"State\",\"Value\":\"2\"},\"Right\":{\"Type\":\"Or\",\"Left\":{\"Type\":\"Equal\",\"Field\":\"User\",\"Value\":\"Admin\"},\"Right\":{\"Type\":\"Equal\",\"Field\":\"User\",\"Value\":\"Root\"}}}")]
         [InlineData("boost()", "{\"Type\":\"Method\",\"Method\":\"boost\",\"Arguments\":[]}")]
-        [InlineData("boost( User = 'Admin' )", "{\"Type\":\"Method\",\"Method\":\"boost\",\"Arguments\":[{\"Type\":\"Equal\",\"Field\":\"User\",\"Value\":\"Admin'\"}]}")]
-        [InlineData("boost(User = 'Admin' OR User = 'Root', 2)", "{\"Type\":\"Method\",\"Method\":\"boost\",\"Arguments\":[{\"Type\":\"Or\",\"Left\":{\"Type\":\"Equal\",\"Field\":\"User\",\"Value\":\"Admin'\"},\"Right\":{\"Type\":\"Equal\",\"Field\":\"User\",\"Value\":\"Root'\"}},2]}")]
+        [InlineData("boost( User = 'Admin' )", "{\"Type\":\"Method\",\"Method\":\"boost\",\"Arguments\":[{\"Type\":\"Equal\",\"Field\":\"User\",\"Value\":\"Admin\"}]}")]
+        [InlineData("boost(User = 'Admin' OR User = 'Root', 2)", "{\"Type\":\"Method\",\"Method\":\"boost\",\"Arguments\":[{\"Type\":\"Or\",\"Left\":{\"Type\":\"Equal\",\"Field\":\"User\",\"Value\":\"Admin\"},\"Right\":{\"Type\":\"Equal\",\"Field\":\"User\",\"Value\":\"Root\"}},2]}")]
         public void ParseAndWriteAst(string q, string o)
         {
             var parser = new QueryParser();
