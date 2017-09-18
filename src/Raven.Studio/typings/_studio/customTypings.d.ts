@@ -133,6 +133,10 @@ declare module AceAjax {
         type: string;
     }
 
+    interface TokenIterator {
+        $tokenIndex: number;
+    }
+
     interface TextMode {
         prefixRegexps: RegExp[];
         $highlightRules: HighlightRules;
