@@ -65,10 +65,10 @@ describe("RQL Autocomplete", () => {
     ];
     
     it('empty query should start with from or declare', done => {
-        rqlTestUtils.autoComplete("|", northwindProvider(), (errors, wordlist, prefix) => {
+        rqlTestUtils.autoComplete("|", northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
             assert.deepEqual(wordlist, emptyList);
-        }, (lastKeyword) => {
+
             assert.isNull(lastKeyword);
             
             done();
@@ -76,10 +76,10 @@ describe("RQL Autocomplete", () => {
     });
     
     it('from without space should complete the from itself', done => {
-        rqlTestUtils.autoComplete("from|", northwindProvider(),  (errors, wordlist, prefix) => {
+        rqlTestUtils.autoComplete("from|", northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "from");
             assert.deepEqual(wordlist, emptyList);
-        }, (lastKeyword) => {
+
             assert.equal(lastKeyword.keyword, "from");
             assert.equal(lastKeyword.tokenDivider, 0);
 
@@ -88,10 +88,10 @@ describe("RQL Autocomplete", () => {
     });
     
     it('from should get collection names', done => {
-        rqlTestUtils.autoComplete("from |", northwindProvider(),  (errors, wordlist, prefix) => {
+        rqlTestUtils.autoComplete("from |", northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
             assert.deepEqual(wordlist, collectionsList);
-        }, (lastKeyword) => {
+
             assert.equal(lastKeyword.keyword, "from");
             assert.equal(lastKeyword.tokenDivider, 1);
 
@@ -103,10 +103,10 @@ describe("RQL Autocomplete", () => {
         rqlTestUtils.autoComplete(`from
 
 
-|`, northwindProvider(),  (errors, wordlist, prefix) => {
+|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
             assert.deepEqual(wordlist, collectionsList);
-        }, (lastKeyword) => {
+
             assert.equal(lastKeyword.keyword, "from");
             assert.equal(lastKeyword.tokenDivider, 1);
 
@@ -123,10 +123,10 @@ describe("RQL Autocomplete", () => {
            
             
              
-             Orders|`, northwindProvider(),  (errors, wordlist, prefix) => {
+             Orders|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "Orders");
             assert.deepEqual(wordlist, collectionsList);
-        }, (lastKeyword) => {
+
             assert.equal(lastKeyword.keyword, "from");
             assert.equal(lastKeyword.tokenDivider, 1);
             
@@ -135,16 +135,19 @@ describe("RQL Autocomplete", () => {
     });
 
     it('from Orders| should not list anything but have the Orders prefix', done => {
-        rqlTestUtils.autoComplete("from Orders|", northwindProvider(),  (errors, wordlist, prefix) => {
+        rqlTestUtils.autoComplete("from Orders|", northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "Orders");
             assert.deepEqual(wordlist, collectionsList);
+
+            assert.equal(lastKeyword.keyword, "from");
+            assert.equal(lastKeyword.tokenDivider, 1);
 
             done();
         });
     });
 
     it('from Collection | should list collections', done => {
-        rqlTestUtils.autoComplete("from Orders |", northwindProvider(),  (errors, wordlist, prefix) => {
+        rqlTestUtils.autoComplete("from Orders |", northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
 
             const afterFromList = [
@@ -157,7 +160,7 @@ describe("RQL Autocomplete", () => {
                 {caption: "include", value: "include ", score: 1, meta: "keyword"}
             ];
             assert.deepEqual(_.sortBy(wordlist, [(x: autoCompleteWordList) => x.score]).reverse(), afterFromList);
-        }, (lastKeyword) => {
+
             assert.equal(lastKeyword.keyword, "from");
             assert.equal(lastKeyword.tokenDivider, 2);
 
@@ -166,10 +169,10 @@ describe("RQL Autocomplete", () => {
     });
 
     it('from Collection select | should list fields', done => {
-        rqlTestUtils.autoComplete("from Orders select |", northwindProvider(),  (errors, wordlist, prefix) => {
+        rqlTestUtils.autoComplete("from Orders select |", northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
             assert.deepEqual(wordlist, fieldsList);
-        }, (lastKeyword) => {
+
             assert.equal(lastKeyword.keyword, "select");
             assert.equal(lastKeyword.tokenDivider, 1);
 
@@ -179,10 +182,10 @@ describe("RQL Autocomplete", () => {
 
     it('from Collection select nested field | should list nested fields with in prefix', done => {
         rqlTestUtils.autoComplete(`from Orders 
-select ShipTo.in|`, northwindProvider(),  (errors, wordlist, prefix) => {
+select ShipTo.in|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "in");
             assert.deepEqual(wordlist, fieldsShipToList);
-        }, (lastKeyword) => {
+
             assert.equal(lastKeyword.keyword, "select");
             assert.equal(lastKeyword.tokenDivider, 1);
             assert.deepEqual(lastKeyword.fieldPrefix, ["ShipTo"]);
@@ -193,10 +196,10 @@ select ShipTo.in|`, northwindProvider(),  (errors, wordlist, prefix) => {
 
     it('from Collection select nested field | without sapce should list fields with the City prefix', done => {
         rqlTestUtils.autoComplete(`from Orders 
-select ShipTo.City|`, northwindProvider(),  (errors, wordlist, prefix) => {
+select ShipTo.City|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "City");
             assert.deepEqual(wordlist, fieldsShipToList);
-        }, (lastKeyword) => {
+
             assert.equal(lastKeyword.keyword, "select");
             assert.equal(lastKeyword.tokenDivider, 1);
             assert.deepEqual(lastKeyword.fieldPrefix, ["ShipTo"]);
@@ -207,12 +210,12 @@ select ShipTo.City|`, northwindProvider(),  (errors, wordlist, prefix) => {
 
     it('from Collection select nested field | after should list as keyword only', done => {
         rqlTestUtils.autoComplete(`from Orders 
-select ShipTo.City |`, northwindProvider(),  (errors, wordlist, prefix) => {
+select ShipTo.City |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
             assert.deepEqual(wordlist, [
                     {caption: "as", value: "as ", score: 3, meta: "keyword"},
                 ]);
-        }, (lastKeyword) => {
+
             assert.equal(lastKeyword.keyword, "select");
             assert.equal(lastKeyword.tokenDivider, 2);
             assert.deepEqual(lastKeyword.fieldPrefix, ["ShipTo"]);
@@ -221,11 +224,63 @@ select ShipTo.City |`, northwindProvider(),  (errors, wordlist, prefix) => {
         });
     });
 
+    it('from AllDocs select nested field | after should list as keyword only', done => {
+        rqlTestUtils.autoComplete(`from @all_docs
+select |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, [
+                {caption: "Max", value: "Max", score: 1, meta: "number field"},
+                {caption: "@metadata", value: "@metadata", score: 1, meta: "object field"},
+                {caption: "Name", value: "Name", score: 1, meta: "string field"},
+                {caption: "Description", value: "Description", score: 1, meta: "string field"},
+                {caption: "ExternalId", value: "ExternalId", score: 1, meta: "string field"},
+                {caption: "Contact", value: "Contact", score: 1, meta: "object field"},
+                {caption: "Address", value: "Address", score: 1, meta: "object field"},
+                {caption: "Phone", value: "Phone", score: 1, meta: "string field"},
+                {caption: "Fax", value: "Fax", score: 1, meta: "string field"},
+                {caption: "LastName", value: "LastName", score: 1, meta: "string field"},
+                {caption: "FirstName", value: "FirstName", score: 1, meta: "string field"},
+                {caption: "Title", value: "Title", score: 1, meta: "string field"},
+                {caption: "HiredAt", value: "HiredAt", score: 1, meta: "string field"},
+                {caption: "Birthday", value: "Birthday", score: 1, meta: "string field"},
+                {caption: "HomePhone", value: "HomePhone", score: 1, meta: "string field"},
+                {caption: "Extension", value: "Extension", score: 1, meta: "string field"},
+                {caption: "ReportsTo", value: "ReportsTo", score: 1, meta: "string field"},
+                {caption: "Notes", value: "Notes", score: 1, meta: "null field"},
+                {caption: "Territories", value: "Territories", score: 1, meta: "object[] | string[] field"},
+                {caption: "Company", value: "Company", score: 1, meta: "string field"},
+                {caption: "Employee", value: "Employee", score: 1, meta: "string field"},
+                {caption: "OrderedAt", value: "OrderedAt", score: 1, meta: "string field"},
+                {caption: "RequireAt", value: "RequireAt", score: 1, meta: "string field"},
+                {caption: "ShippedAt", value: "ShippedAt", score: 1, meta: "null field"},
+                {caption: "ShipTo", value: "ShipTo", score: 1, meta: "object field"},
+                {caption: "ShipVia", value: "ShipVia", score: 1, meta: "string field"},
+                {caption: "Freight", value: "Freight", score: 1, meta: "number field"},
+                {caption: "Lines", value: "Lines", score: 1, meta: "object[] field"},
+                {caption: "Na.me", value: "'Na.me'", score: 1, meta: "string field"},
+                {caption: "Supplier", value: "Supplier", score: 1, meta: "string field"},
+                {caption: "Category", value: "Category", score: 1, meta: "string field"},
+                {caption: "QuantityPerUnit", value: "QuantityPerUnit", score: 1, meta: "string field"},
+                {caption: "PricePerUnit", value: "PricePerUnit", score: 1, meta: "number field"},
+                {caption: "UnitsInStock", value: "UnitsInStock", score: 1, meta: "number field"},
+                {caption: "UnitsOnOrder", value: "UnitsOnOrder", score: 1, meta: "number field"},
+                {caption: "Discontinued", value: "Discontinued", score: 1, meta: "boolean field"},
+                {caption: "ReorderLevel", value: "ReorderLevel", score: 1, meta: "number field"},
+                {caption: "HomePage", value: "HomePage", score: 1, meta: "null field"}
+            ]);
+
+            assert.equal(lastKeyword.keyword, "select");
+            assert.equal(lastKeyword.tokenDivider, 1);
+
+            done();
+        });
+    });
+
     it('from Collection where | should list fields', done => {
-        rqlTestUtils.autoComplete("from Orders where |", northwindProvider(),  (errors, wordlist, prefix) => {
+        rqlTestUtils.autoComplete("from Orders where |", northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
             assert.deepEqual(wordlist, fieldsList);
-        }, (lastKeyword) => {
+
             assert.equal(lastKeyword.keyword, "where");
             assert.equal(lastKeyword.tokenDivider, 1);
 
@@ -234,10 +289,10 @@ select ShipTo.City |`, northwindProvider(),  (errors, wordlist, prefix) => {
     });
     
     it('from index should get index names', done => {
-        rqlTestUtils.autoComplete("from index |", northwindProvider(),  (errors, wordlist, prefix) => {
+        rqlTestUtils.autoComplete("from index |", northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
             assert.deepEqual(wordlist, indexesList);
-        }, (lastKeyword) => {
+
             assert.equal(lastKeyword.keyword, "from index");
             assert.equal(lastKeyword.tokenDivider, 1);
 
@@ -246,10 +301,10 @@ select ShipTo.City |`, northwindProvider(),  (errors, wordlist, prefix) => {
     });
 
     it('from index inside index name should complete with prefix', done => {
-        rqlTestUtils.autoComplete("from index 'Orders/Tot|", northwindProvider(),  (errors, wordlist, prefix) => {
+        rqlTestUtils.autoComplete("from index 'Orders/Tot|", northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "'Orders/Tot");
             assert.deepEqual(wordlist, indexesList);
-        }, (lastKeyword) => {
+
             assert.equal(lastKeyword.keyword, "from index");
             assert.equal(lastKeyword.tokenDivider, 1);
 
@@ -258,10 +313,10 @@ select ShipTo.City |`, northwindProvider(),  (errors, wordlist, prefix) => {
     });
 
     it('from index after index name without space should complete with prefix', done => {
-        rqlTestUtils.autoComplete("from index 'Orders/Totals'|", northwindProvider(),  (errors, wordlist, prefix) => {
+        rqlTestUtils.autoComplete("from index 'Orders/Totals'|", northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "'Orders/Totals'");
             assert.deepEqual(wordlist, indexesList);
-        }, (lastKeyword) => {
+
             assert.equal(lastKeyword.keyword, "from index");
             assert.equal(lastKeyword.tokenDivider, 1);
 
@@ -270,7 +325,7 @@ select ShipTo.City |`, northwindProvider(),  (errors, wordlist, prefix) => {
     });
 
     it('from index after index name should complete with after from', done => {
-        rqlTestUtils.autoComplete("from index 'Orders/Totals' |", northwindProvider(),  (errors, wordlist, prefix) => {
+        rqlTestUtils.autoComplete("from index 'Orders/Totals' |", northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
 
             const afterFromList = [
@@ -282,7 +337,7 @@ select ShipTo.City |`, northwindProvider(),  (errors, wordlist, prefix) => {
                 {caption: "include", value: "include ", score: 1, meta: "keyword"}
             ];
             assert.deepEqual(_.sortBy(wordlist, [(x: autoCompleteWordList) => x.score]).reverse(), afterFromList);
-        }, (lastKeyword) => {
+
             assert.equal(lastKeyword.keyword, "from index");
             assert.equal(lastKeyword.tokenDivider, 2);
             done();
@@ -290,26 +345,28 @@ select ShipTo.City |`, northwindProvider(),  (errors, wordlist, prefix) => {
     });
 
     it('from index as', done => {
-        rqlTestUtils.autoComplete("from index 'Orders/Totals' as |", northwindProvider(),  (errors, wordlist, prefix) => {
+        rqlTestUtils.autoComplete("from index 'Orders/Totals' as |", northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
-            assert.deepEqual(wordlist, []);
-        }, (lastKeyword) => {
+            assert.deepEqual(errors, ["empty completion"]);
+            assert.isNull(wordlist);
+
             assert.equal(lastKeyword.keyword, "from index");
             assert.equal(lastKeyword.keywordModifier, "as");
             assert.equal(lastKeyword.tokenDivider, 3);
+            
             done();
         });
     });
 
     it('show fields of index', done => {
-        rqlTestUtils.autoComplete("from index 'Orders/Totals' select |", northwindProvider(),  (errors, wordlist, prefix) => {
+        rqlTestUtils.autoComplete("from index 'Orders/Totals' select |", northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
             assert.deepEqual(wordlist, [
                 {caption: "Employee", value: "Employee", score: 1, meta: "field"},
                 {caption: "Company", value: "Company", score: 1, meta: "field"},
                 {caption: "Total", value: "Total", score: 1, meta: "field"}
             ]);
-        }, (lastKeyword) => {
+
             assert.equal(lastKeyword.keyword, "select");
             assert.equal(lastKeyword.tokenDivider, 1);
             assert.isUndefined(lastKeyword.fieldPrefix);
@@ -319,12 +376,12 @@ select ShipTo.City |`, northwindProvider(),  (errors, wordlist, prefix) => {
     });
 
     it('declare should suggest function', done => {
-        rqlTestUtils.autoComplete("declare |", northwindProvider(),  (errors, wordlist, prefix) => {
+        rqlTestUtils.autoComplete("declare |", northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
             assert.deepEqual(wordlist, [
                 {caption: "function", value: "function ", score: 0, meta: "keyword"},
             ]);
-        }, (lastKeyword) => {
+
             assert.equal(lastKeyword.keyword, "declare");
             assert.equal(lastKeyword.tokenDivider, 1);
 
@@ -335,10 +392,10 @@ select ShipTo.City |`, northwindProvider(),  (errors, wordlist, prefix) => {
     it('decalre function should list empty list', done => {
         rqlTestUtils.autoComplete(`declare function CustomFunctionName(){}
 
-|`, northwindProvider(),  (errors, wordlist, prefix) => {
+|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
             assert.deepEqual(wordlist, emptyList);
-        }, (lastKeyword) => {
+
             assert.equal(lastKeyword.keyword, "declare function");
             assert.equal(lastKeyword.tokenDivider, 2);
 
@@ -349,10 +406,10 @@ select ShipTo.City |`, northwindProvider(),  (errors, wordlist, prefix) => {
     it('decalre function without name should list empty list', done => {
         rqlTestUtils.autoComplete(`declare function(){}
 
-|`, northwindProvider(),  (errors, wordlist, prefix) => {
+|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
             assert.deepEqual(wordlist, emptyList);
-        }, (lastKeyword) => {
+
             assert.equal(lastKeyword.keyword, "declare function");
             assert.equal(lastKeyword.tokenDivider, 1);
 
