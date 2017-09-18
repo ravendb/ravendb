@@ -117,7 +117,7 @@ var RqlHighlightRules = require("./rql_highlight_rules").RqlHighlightRules;
 var Mode = function() {
     this.HighlightRules = RqlHighlightRules;
     this.$behaviour = this.$defaultBehaviour;
-    this.prefixRegexps = [/[a-zA-Z_0-9'"\\\/\$\-\u00A2-\uFFFF]/]
+    this.prefixRegexps = [/[a-zA-Z_0-9@'"\\\/\$\-\u00A2-\uFFFF]/]
 };
 oop.inherits(Mode, TextMode);
 
