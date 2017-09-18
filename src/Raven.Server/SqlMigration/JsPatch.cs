@@ -20,7 +20,6 @@ namespace Raven.Server.SqlMigration
             _engine = new Engine(options =>
             {
                 options.LimitRecursion(64)
-                    .SetReferencesResolver(new JintNullPropgationReferenceResolver())
                     .SetReferencesResolver(new JintPreventResolvingTasksReferenceResolver())
                     .MaxStatements(config.Patching.MaxStepsForScript)
                     .Strict();

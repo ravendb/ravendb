@@ -8,15 +8,10 @@ using Jint.Runtime.References;
 
 namespace Raven.Server.Documents.Patch
 {
-    public class JintPreventResolvingTasksReferenceResolver : IReferenceResolver
+    public class JintPreventResolvingTasksReferenceResolver : JintNullPropgationReferenceResolver
     {
-        public bool TryUnresolvableReference(Engine engine, Reference reference, out JsValue value)
-        {
-            value = Null.Instance;
-            return true;
-        }
-
-        public bool TryPropertyReference(Engine engine, Reference reference, ref JsValue value)
+      
+        public override bool TryPropertyReference(Engine engine, Reference reference, ref JsValue value)
         {
             if (value.IsObject() &&
                 value.AsObject() is ObjectWrapper objectWrapper &&
@@ -29,7 +24,7 @@ namespace Raven.Server.Documents.Patch
                 return true;
             }
 
-            return false;
+            return base.TryPropertyReference(engine, reference, ref value);
         }
 
         public static PropertyDescriptor GetRunningTaskResult(Task task)
@@ -40,17 +35,6 @@ namespace Raven.Server.Documents.Patch
             var jsValue = new JsValue(value);
             var descriptor = new PropertyDescriptor(jsValue, false, false, false);
             return descriptor;
-        }
-
-        public bool TryGetCallable(Engine engine, object callee, out JsValue value)
-        {
-            value = new JsValue(new ClrFunctionInstance(engine, (thisObj, values) => thisObj));
-            return true;
-        }
-
-        public bool CheckCoercible(JsValue value)
-        {
-            return true;
         }
     }
 }

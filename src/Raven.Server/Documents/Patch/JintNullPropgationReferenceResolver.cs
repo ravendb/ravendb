@@ -5,7 +5,7 @@ using Jint.Runtime.References;
 
 namespace Raven.Server.Documents.Patch
 {
-    public class JintNullPropgationReferenceResolver : IReferenceResolver
+    public abstract class JintNullPropgationReferenceResolver : IReferenceResolver
     {
         public bool TryUnresolvableReference(Engine engine, Reference reference, out JsValue value)
         {
@@ -13,7 +13,7 @@ namespace Raven.Server.Documents.Patch
             return true;
         }
 
-        public bool TryPropertyReference(Engine engine, Reference reference, ref JsValue value)
+        public virtual bool TryPropertyReference(Engine engine, Reference reference, ref JsValue value)
         {
             return value.IsNull() || value.IsUndefined();
         }

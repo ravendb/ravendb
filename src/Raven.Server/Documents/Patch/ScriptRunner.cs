@@ -88,7 +88,6 @@ namespace Raven.Server.Documents.Patch
                 ScriptEngine = new Engine(options =>
                 {
                     options.LimitRecursion(64)
-                        .SetReferencesResolver(new JintNullPropgationReferenceResolver())
                         .SetReferencesResolver(new JintPreventResolvingTasksReferenceResolver())
                         .MaxStatements(_configuration.Patching.MaxStepsForScript)
                         .Strict()
