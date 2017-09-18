@@ -10,7 +10,7 @@ class migrateDatabaseCommand extends commandBase {
     }
 
     execute(): JQueryPromise<operationIdDto> {
-        const url = endpoints.databases.smuggler.smugglerMigrate;
+        const url = endpoints.databases.smuggler.adminSmugglerMigrate;
         
         return this.post(url, JSON.stringify(this.model.toDto()), this.db)
             .fail((response: JQueryXHR) => this.reportError("Failed to migrate database", response.responseText, response.statusText));
