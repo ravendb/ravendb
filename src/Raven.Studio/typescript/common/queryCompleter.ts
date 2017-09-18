@@ -154,6 +154,7 @@ class queryCompleter {
             
         let liveAutoCompleteSkippedTriggerToken = false;
         let isFieldPrefixMode = 0;
+        let isBeforeComma = false;
 
         let lastRow: number;
         let lastToken: AceAjax.TokenInfo;
@@ -212,10 +213,12 @@ class queryCompleter {
                     result.operator = token.value;
                     break;
                 case "identifier":
-                    if (isFieldPrefixMode === 1) {
-                        result.fieldPrefix.push(token.value);
-                    } else {
-                        result.identifiers.push(token.value);
+                    if (!isBeforeComma) {
+                        if (isFieldPrefixMode === 1) {
+                            result.fieldPrefix.push(token.value);
+                        } else {
+                            result.identifiers.push(token.value);
+                        }
                     }
                     break;
                 case "string":
@@ -236,23 +239,34 @@ class queryCompleter {
                     result.parentheses--;
                     break;
                 case "space":
-                    if (!result.keyword) {
+                    if (!result.keyword && !isBeforeComma) {
                         if (!lastToken || lastToken.type !== "space") {
                             result.dividersCount++;
+                        }
+
+                        if (isFieldPrefixMode === 1) {
+                            isFieldPrefixMode = 2;
                         }
                     }
                     break;
                 case "text":
                     const text = token.value;
-                    if (isFieldPrefixMode === 0 && (text === "." || text === "[].")) {
+                    const isComma = text === ",";
+                    
+                    if (isComma && !isBeforeComma) {
+                        isBeforeComma = true;
+
+                        if (!lastToken || lastToken.type !== "space") {
+                            result.dividersCount++;
+                        }
+                    }
+                    
+                    if (!isBeforeComma && isFieldPrefixMode === 0 && (text === "." || text === "[].")) {
                         isFieldPrefixMode = 1;
                         result.fieldPrefix = [];
                     }
-                    else if (isFieldPrefixMode === 1 && !token.value.trim()) { // todo: use dividersCount here
-                        isFieldPrefixMode = 2;
-                    }
                     
-                    if (result.identifiers.length > 0 && result.text !== ",") {
+                    if (result.identifiers.length > 0 && !isComma) {
                         if (text === ",") {
                             result.text = ",";
                         }
