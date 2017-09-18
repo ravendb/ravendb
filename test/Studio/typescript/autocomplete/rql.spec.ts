@@ -276,6 +276,30 @@ select |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
         });
     });
 
+    it('from a should get @all_docs', done => {
+        rqlTestUtils.autoComplete("from a|", northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "a");
+            assert.deepEqual(wordlist, collectionsList);
+
+            assert.equal(lastKeyword.keyword, "from");
+            assert.equal(lastKeyword.tokenDivider, 1);
+
+            done();
+        });
+    });
+
+    it('from @ should get @all_docs', done => {
+        rqlTestUtils.autoComplete("from @|", northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "@");
+            assert.deepEqual(wordlist, collectionsList);
+
+            assert.equal(lastKeyword.keyword, "from");
+            assert.equal(lastKeyword.tokenDivider, 1);
+
+            done();
+        });
+    });
+
     it('from Collection where | should list fields', done => {
         rqlTestUtils.autoComplete("from Orders where |", northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
