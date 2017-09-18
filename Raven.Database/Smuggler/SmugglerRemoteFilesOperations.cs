@@ -205,7 +205,6 @@ namespace Raven.Smuggler
                 return new DisposableStream(await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false), () =>
                 {
                     request.Dispose();
-                    response.Content.Dispose();
                     response.Dispose();
                 });
                 
