@@ -141,6 +141,7 @@ class queryCompleter {
             keywordsBefore: undefined,
             keyword: undefined,
             keywordModifier: undefined,
+            binaryOperation: undefined,
             operator: undefined,
             fieldPrefix: undefined,
             get getFieldPrefix():string {
@@ -154,7 +155,7 @@ class queryCompleter {
             
         let liveAutoCompleteSkippedTriggerToken = false;
         let isFieldPrefixMode = 0;
-        let isBeforeComma = false;
+        let isBeforeCommaOrBinaryOperation = false;
 
         let lastRow: number;
         let lastToken: AceAjax.TokenInfo;
@@ -208,15 +209,23 @@ class queryCompleter {
                         result.keywordModifier = token.value.toLowerCase();
                     }
                     break;
+                case "operations.type.binary":
+                    if (!isBeforeCommaOrBinaryOperation && !result.binaryOperation) {
+                        result.binaryOperation = token.value.toLowerCase();
+                        isBeforeCommaOrBinaryOperation = true;
+                    }
+                    break;
                 case "function":
                     result.keywordsBefore = this.getKeywordsBefore(iterator);
                     result.keyword = "__function";
                     return result;
                 case "keyword.operator":
-                    result.operator = token.value;
+                    if (!isBeforeCommaOrBinaryOperation) {
+                        result.operator = token.value;
+                    }
                     break;
                 case "identifier":
-                    if (!isBeforeComma) {
+                    if (!isBeforeCommaOrBinaryOperation) {
                         if (isFieldPrefixMode === 1) {
                             result.fieldPrefix.push(token.value);
                         } else {
@@ -225,14 +234,16 @@ class queryCompleter {
                     }
                     break;
                 case "string":
-                    const lastChar = token.value[token.value.length - 1];
-                    if (lastChar === "'" || 
-                        lastChar === '"') {
-                        const indexName = token.value.substr(1, token.value.length - 2);
-                        result.identifiers.push(indexName);
-                    } else {
-                        // const partialIndexName = token.value.substr(1);
-                        // do nothing with it as of now
+                    if (!isBeforeCommaOrBinaryOperation) {
+                        const lastChar = token.value[token.value.length - 1];
+                        if (lastChar === "'" ||
+                            lastChar === '"') {
+                            const indexName = token.value.substr(1, token.value.length - 2);
+                            result.identifiers.push(indexName);
+                        } else {
+                            // const partialIndexName = token.value.substr(1);
+                            // do nothing with it as of now
+                        }
                     }
                     break;
                 case "paren.lparen":
@@ -242,7 +253,7 @@ class queryCompleter {
                     result.parentheses--;
                     break;
                 case "space":
-                    if (!result.keyword && !isBeforeComma) {
+                    if (!isBeforeCommaOrBinaryOperation && !result.keyword) {
                         if (!lastToken || lastToken.type !== "space") {
                             result.dividersCount++;
                         }
@@ -253,31 +264,32 @@ class queryCompleter {
                     }
                     break;
                 case "text":
-                    const text = token.value;
-                    const isComma = text === ",";
-                    
-                    if (isComma && !isBeforeComma) {
-                        isBeforeComma = true;
+                    if (!isBeforeCommaOrBinaryOperation) {
+                        const text = token.value;
+                        const isComma = text === ",";
 
-                        if (!lastToken || lastToken.type !== "space") {
-                            result.dividersCount++;
+                        if (isComma) {
+                            isBeforeCommaOrBinaryOperation = true;
+
+                            if (!lastToken || lastToken.type !== "space") {
+                                result.dividersCount++;
+                            }
+                        }
+
+                        if (isFieldPrefixMode === 0 && (text === "." || text === "[].")) {
+                            isFieldPrefixMode = 1;
+                            result.fieldPrefix = [];
+                        }
+
+                        if (result.identifiers.length > 0 && !isComma) {
+                            if (text === ",") {
+                                result.text = ",";
+                            }
+                            else {
+                                result.text = token.value;
+                            }
                         }
                     }
-                    
-                    if (!isBeforeComma && isFieldPrefixMode === 0 && (text === "." || text === "[].")) {
-                        isFieldPrefixMode = 1;
-                        result.fieldPrefix = [];
-                    }
-                    
-                    if (result.identifiers.length > 0 && !isComma) {
-                        if (text === ",") {
-                            result.text = ",";
-                        }
-                        else {
-                            result.text = token.value;
-                        }
-                    }
-                    
                     break;
             }
             

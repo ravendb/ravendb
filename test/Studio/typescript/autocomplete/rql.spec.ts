@@ -374,6 +374,19 @@ w|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             done();
         });
     });
+
+    it('WHERE and than AND should list fields', done => {
+        rqlTestUtils.autoComplete(`from Orders
+where ShipTo.Country = 'France' and |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, fieldsList);
+
+            assert.equal(lastKeyword.keyword, "where");
+            assert.equal(lastKeyword.dividersCount, 1);
+
+            done();
+        });
+    });
     
     it('from index should get index names', done => {
         rqlTestUtils.autoComplete("from index |", northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
