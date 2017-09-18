@@ -19,9 +19,10 @@ namespace Raven.Server.ServerWide.Maintenance
         public string Name;
         public string NodeName;
 
-        public string LastChangeVector;
+        public string DatabaseChangeVector;
 
         public Dictionary<string, ObservedIndexStatus> LastIndexStats = new Dictionary<string, ObservedIndexStatus>();
+        public Dictionary<string, string> LastChangeVectorByCollection = new Dictionary<string, string>();
 
         public class ObservedIndexStatus
         {
@@ -49,11 +50,11 @@ namespace Raven.Server.ServerWide.Maintenance
                 [nameof(LastTombstoneEtag)] = LastTombstoneEtag,
                 [nameof(NumberOfConflicts)] = NumberOfConflicts,
                 [nameof(NumberOfDocuments)] = NumberOfDocuments,
-                [nameof(LastChangeVector)] = LastChangeVector,
+                [nameof(DatabaseChangeVector)] = DatabaseChangeVector,
+                [nameof(LastChangeVectorByCollection)] = DynamicJsonValue.Convert(LastChangeVectorByCollection),
                 [nameof(Error)] = Error
             };
             var indexStats = new DynamicJsonValue();
-
             foreach (var stat in LastIndexStats)
             {
                 indexStats[stat.Key] = new DynamicJsonValue
@@ -63,8 +64,8 @@ namespace Raven.Server.ServerWide.Maintenance
                     [nameof(stat.Value.IsStale)] = stat.Value.IsStale
                 };
             }
-
             dynamicJsonValue[nameof(LastIndexStats)] = indexStats;
+
             return dynamicJsonValue;
         }
     }

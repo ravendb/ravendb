@@ -9,6 +9,7 @@ namespace Raven.Server.ServerWide.Maintenance
         public long Iteration { get ; set; }
         public string Database { get; set; }
         public string Message { get; set; }
+        public bool HasTopologyChanged { get; set; }
 
         public DynamicJsonValue ToJson()
         {
@@ -17,7 +18,8 @@ namespace Raven.Server.ServerWide.Maintenance
                     [nameof(Date)] = Date,
                     [nameof(Iteration)] = Iteration,
                     [nameof(Database)] = Database,
-                    [nameof(Message)] = Message
+                    [nameof(Message)] = Message,
+                    [nameof(HasTopologyChanged)] = HasTopologyChanged
                 };
         }
     }
