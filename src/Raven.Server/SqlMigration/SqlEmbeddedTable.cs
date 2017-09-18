@@ -59,10 +59,5 @@ namespace Raven.Server.SqlMigration
             Reader.ExecuteReader();
             return Reader;
         }
-
-        public static explicit operator SqlEmbeddedTable(List<string> v)
-        {
-            throw new NotImplementedException();
-        }
     }
 }

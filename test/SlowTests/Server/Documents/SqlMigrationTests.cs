@@ -32,9 +32,9 @@ namespace SlowTests.Server.Documents
         public void Initialize(DocumentStore store)
         {
             var connectionString = new SqlConnectionString
-            {   
-            Name = ConnectionStringName,
-            ConnectionString = SqlEtlTests.MasterDatabaseConnection.Value
+            {
+                Name = ConnectionStringName,
+                ConnectionString = SqlEtlTests.MasterDatabaseConnection.Value + $";Initial Catalog={SqlDatabaseName}"
             };
 
             var putConnectionStringOperation = new PutConnectionStringOperation<SqlConnectionString>(connectionString, store.Database);
@@ -48,8 +48,8 @@ namespace SlowTests.Server.Documents
             }
 
             _connectionString = record.SqlConnectionStrings[ConnectionStringName].ConnectionString;
-            
-            using (var con = new SqlConnection(_connectionString))
+
+            using (var con = new SqlConnection(SqlEtlTests.MasterDatabaseConnection.Value))
             {
                 con.Open();
 
@@ -59,10 +59,10 @@ namespace SlowTests.Server.Documents
                     dbCommand.ExecuteNonQuery();
                 }
             }
-           
+
             var assembly = Assembly.GetExecutingAssembly();
 
-            using (var con = new SqlConnection(_connectionString + $";Initial Catalog={SqlDatabaseName}"))
+            using (var con = new SqlConnection(_connectionString))
             {
                 con.Open();
 
@@ -112,18 +112,18 @@ namespace SlowTests.Server.Documents
                         }
                     }
                 };
-                var operation = new SqlMigrationImportOperation(ConnectionStringName, SqlDatabaseName, tablesToWrite, binaryToAttachment:true, includeSchema: true, trimStrings: true, skipUnsupportedTypes: false, batchSize: 5);
+                var operation = new SqlMigrationImportOperation(ConnectionStringName, tablesToWrite, binaryToAttachment: true, includeSchema: true, trimStrings: true, skipUnsupportedTypes: false, batchSize: 5);
 
                 var result = store.Operations.Send(operation);
 
                 Assert.True(result.Success);
-                
+
                 using (var session = store.OpenSession())
                 {
                     var customer = session.Load<Customer>("dbo.Customer/5");
 
                     Assert.NotNull(customer);
-                    
+
                     var attachmentsCount = session.Advanced.GetAttachmentNames(customer).Length;
                     Assert.Equal(attachmentsCount, 2);
 
@@ -153,7 +153,7 @@ namespace SlowTests.Server.Documents
                     }
                 };
 
-                var operation = new SqlMigrationImportOperation(ConnectionStringName, SqlDatabaseName, tablesToWrite, binaryToAttachment: true, includeSchema: true, trimStrings: true, skipUnsupportedTypes: false, batchSize: 5);
+                var operation = new SqlMigrationImportOperation(ConnectionStringName, tablesToWrite, binaryToAttachment: true, includeSchema: true, trimStrings: true, skipUnsupportedTypes: false, batchSize: 5);
 
                 var result = store.Operations.Send(operation);
 
@@ -184,7 +184,7 @@ namespace SlowTests.Server.Documents
                     }
                 };
 
-                var operation = new SqlMigrationImportOperation(ConnectionStringName, SqlDatabaseName, tablesToWrite, binaryToAttachment: true, includeSchema: true, trimStrings: true, skipUnsupportedTypes: false, batchSize: 5);
+                var operation = new SqlMigrationImportOperation(ConnectionStringName, tablesToWrite, binaryToAttachment: true, includeSchema: true, trimStrings: true, skipUnsupportedTypes: false, batchSize: 5);
 
                 var result = store.Operations.Send(operation);
 
@@ -210,7 +210,7 @@ namespace SlowTests.Server.Documents
                     new SqlMigrationImportOperation.SqlMigrationTable("dbo.UnsupportedTable")
                 };
 
-                var operation = new SqlMigrationImportOperation(ConnectionStringName, SqlDatabaseName, tablesToWrite, binaryToAttachment: true, includeSchema: true, trimStrings: true, skipUnsupportedTypes: true, batchSize: 5);
+                var operation = new SqlMigrationImportOperation(ConnectionStringName, tablesToWrite, binaryToAttachment: true, includeSchema: true, trimStrings: true, skipUnsupportedTypes: true, batchSize: 5);
 
                 var result = store.Operations.Send(operation);
 
@@ -246,7 +246,7 @@ namespace SlowTests.Server.Documents
                             },
                             new SqlMigrationImportOperation.SqlMigrationTable("dbo.NotExists"),
                             new SqlMigrationImportOperation.SqlMigrationTable("dbo.Product"), // cannot embed into 'Order'
-                            new SqlMigrationImportOperation.SqlMigrationTable("")                            
+                            new SqlMigrationImportOperation.SqlMigrationTable("")
                         }
                     },
                     new SqlMigrationImportOperation.SqlMigrationTable("dbo.Product"),
@@ -279,25 +279,25 @@ namespace SlowTests.Server.Documents
                     }
                 };
 
-                var operation = new SqlMigrationImportOperation(ConnectionStringName, SqlDatabaseName, tablesToWrite, binaryToAttachment: true, includeSchema: true, trimStrings: true, skipUnsupportedTypes: false, batchSize: 5);
+                var operation = new SqlMigrationImportOperation(ConnectionStringName, tablesToWrite, binaryToAttachment: true, includeSchema: true, trimStrings: true, skipUnsupportedTypes: false, batchSize: 5);
 
                 var result = store.Operations.Send(operation);
 
                 Assert.False(result.Success);
                 Assert.Equal(result.Errors.Length, 13);
-                Assert.True(result.Errors.Contains("Couldn't find table 'dbo.NotExists' in the sql database (Table name must include schema name)"));
-                Assert.True(result.Errors.Contains("A table is missing a name"));
-                Assert.True(result.Errors.Contains("Table 'dbo.Product' cannot embed into 'dbo.Order'"));
-                Assert.True(result.Errors.Contains("Duplicate property name 'Foo'"));
-                Assert.True(result.Errors.Contains("Duplicate table 'dbo.Product'"));
-                Assert.True(result.Errors.Contains("Duplicate property name 'dbo.Order'"));
-                Assert.True(result.Errors.Contains("Failed to read table 'dbo.OrderItem' using the given query"));
-                Assert.True(result.Errors.Contains("Query for table 'dbo.Photo' must select all primary keys"));
-                Assert.True(result.Errors.Contains("Table 'dbo.NoPkTable' must have at list 1 primary key"));
-                Assert.True(result.Errors.Contains($"Cannot read column 'Node' in table 'dbo.UnsupportedTable'. (Unsupported type: {SqlDatabaseName}.sys.hierarchyid)"));
-                Assert.True(result.Errors.Contains("Cannot patch table 'dbo.OrderItem' using the given script. Error: Line 1': Unexpected identifier"));
-                Assert.True(result.Errors.Contains("Query cannot contain an 'ORDER BY' clause (dbo.Details)"));
-                Assert.True(result.Errors.Contains("Query for table 'dbo.Photo' must select all referential keys"));
+                Assert.True(result.Errors[0].Contains("Couldn't find table 'dbo.NotExists' in the sql database (Table name must include schema name)"));
+                Assert.True(result.Errors[1].Contains("A table is missing a name"));
+                Assert.True(result.Errors[2].Contains("Table 'dbo.Product' cannot embed into 'dbo.Order'"));
+                Assert.True(result.Errors[3].Contains("Duplicate property name 'Foo'"));
+                Assert.True(result.Errors[4].Contains("Duplicate property name 'dbo.Order'"));
+                Assert.True(result.Errors[5].Contains("Duplicate table 'dbo.Product'"));
+                Assert.True(result.Errors[6].Contains("Failed to read table 'dbo.OrderItem' using the given query"));
+                Assert.True(result.Errors[7].Contains("Query cannot contain an 'ORDER BY' clause (dbo.Details)"));
+                Assert.True(result.Errors[8].Contains("Query for table 'dbo.Photo' must select all primary keys"));
+                Assert.True(result.Errors[9].Contains("Query for table 'dbo.Photo' must select all referential keys"));
+                Assert.True(result.Errors[10].Contains("Table 'dbo.NoPkTable' must have at list 1 primary key"));
+                Assert.True(result.Errors[11].Contains($"Cannot read column 'Node' in table 'dbo.UnsupportedTable'. (Unsupported type: {SqlDatabaseName}.sys.hierarchyid)"));
+                Assert.True(result.Errors[12].Contains("Cannot patch table 'dbo.OrderItem' using the given script."));
             }
         }
 
@@ -307,14 +307,14 @@ namespace SlowTests.Server.Documents
             using (var store = GetDocumentStore())
             {
                 Initialize(store);
-                var operation = new SqlMigrationSchemaOperation(ConnectionStringName, SqlDatabaseName);
+                var operation = new SqlMigrationSchemaOperation(ConnectionStringName);
 
                 var result = store.Operations.Send(operation);
 
                 Assert.Equal(result.Tables.Length, 8);
             }
         }
-      
+
         public override void Dispose()
         {
             base.Dispose();
@@ -324,7 +324,7 @@ namespace SlowTests.Server.Documents
 
         private void DropDatabase()
         {
-            using (var con = new SqlConnection(_connectionString))
+            using (var con = new SqlConnection(SqlEtlTests.MasterDatabaseConnection.Value))
             {
                 con.Open();
 
@@ -369,7 +369,7 @@ namespace SlowTests.Server.Documents
             public double TotalAmount { get; set; }
 
             [DataMember(Name = "dbo.OrderItem")]
-            public List<OrderItem> OrderItems{ get; set; }
+            public List<OrderItem> OrderItems { get; set; }
 
         }
 
