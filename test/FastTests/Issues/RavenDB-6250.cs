@@ -32,6 +32,7 @@ namespace FastTests.Issues
                 Operations.OperationType.DeleteByCollection,
                 Operations.OperationType.DatabaseExport,
                 Operations.OperationType.DatabaseImport,
+                Operations.OperationType.DatabaseMigration,
                 Operations.OperationType.DatabaseRestore,
                 Operations.OperationType.BulkInsert,
                 Operations.OperationType.IndexCompact,
