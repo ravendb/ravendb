@@ -13,7 +13,7 @@ class queryCompleter {
     private tokenIterator: new(session : AceAjax.IEditSession, initialRow: number, initialColumn: number) => AceAjax.TokenIterator = ace.require("ace/token_iterator").TokenIterator;
     private indexOrCollectionFieldsCache = new Map<string, autoCompleteWordList[]>();
     
-    constructor(private providers: queryCompleterProviders, private queryType: RqlQueryType) {
+    constructor(private providers: queryCompleterProviders, private queryType: rqlQueryType) {
         _.bindAll(this, "complete");
     }
 
@@ -309,9 +309,7 @@ class queryCompleter {
         this.getIndexFields(queryIndexName.name, queryIndexName.type, prefix)
             .done((wordList) => {
                 if (functions) {
-                    functions.forEach(f => {
-                        wordList.push(f);
-                    });
+                    wordList.push(...functions);
                 }
                 callback(null, wordList);
             });
@@ -589,10 +587,10 @@ class queryCompleter {
 
         const keywords: autoCompleteWordList[] = this.rules.clausesKeywords.filter(keyword => {
             if (keyword === "select" || keyword === "include") {
-                return this.queryType === RqlQueryType.Select;
+                return this.queryType === "Select";
             }
             if (keyword === "update") {
-                return this.queryType === RqlQueryType.Update;
+                return this.queryType === "Update";
             }
             
             if (lastKeywordWithoutFromIndex === keyword) {
@@ -610,15 +608,13 @@ class queryCompleter {
         });
 
         if (additions) {
-            additions.forEach(addition => {
-                keywords.push(addition);
-            });
+            keywords.push(...additions);
         }
 
         this.completeWords(callback, keywords);
     }
     
-    static remoteCompleter(activeDatabase: KnockoutObservable<database>, indexes: KnockoutObservableArray<Raven.Client.Documents.Operations.IndexInformation>, queryType: RqlQueryType) {
+    static remoteCompleter(activeDatabase: KnockoutObservable<database>, indexes: KnockoutObservableArray<Raven.Client.Documents.Operations.IndexInformation>, queryType: rqlQueryType) {
         const providers: queryCompleterProviders = {
             terms: (indexName, field, pageSize, callback) => {
                 new getIndexTermsCommand(indexName, field, activeDatabase(), pageSize)

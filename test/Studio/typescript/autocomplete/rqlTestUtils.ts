@@ -57,7 +57,7 @@ class rqlTestUtils {
             indexFields: (indexName, callback) => callback([]),
             collectionFields: (collectionName, prefix, callback) => callback({}),
             indexNames: callback => callback([])
-        }, RqlQueryType.Select);
+        }, "Select");
         
         return () => completer;
     }
@@ -191,7 +191,7 @@ class rqlTestUtils {
                 "Index With ' And \" in name"
             ])
         };
-        const completer = new queryCompleter(providers, RqlQueryType.Select);
+        const completer = new queryCompleter(providers, "Select");
 
         return () => completer;
     }
