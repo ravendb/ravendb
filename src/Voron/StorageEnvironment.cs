@@ -480,7 +480,7 @@ namespace Voron
                 $"Could not dispose the environment {Options.BasePath} after {Options.DisposeWaitTime} because there are running transaction.{Environment.NewLine}" +
                 $"Either you have long running transactions or hung transactions. Can\'t dispose the environment because that would invalid memory regions{Environment.NewLine}" +
                 $"that those transactions are still looking at.{Environment.NewLine}" +
-                $"There are {activeTxs.Count:#,#} transactions ({string.Join(", ", activeTxs)})"
+                $"There are {activeTxs.Count:#,#0} transactions ({string.Join(", ", activeTxs)})"
             );
         }
 
