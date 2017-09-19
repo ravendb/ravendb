@@ -29,8 +29,8 @@ class recentError extends abstractNotification {
     }
 
     private initObservables() {
-        this.hasDetails = ko.pureComputed(() => !!this.details());
         this.shortMessage = ko.pureComputed(() => generalUtils.trimMessage(this.message()));
+        this.hasDetails = ko.pureComputed(() => !!this.details() || this.shortMessage() !== this.message());
     }
 
     static tryExtractMessageAndException(details: string): { message: string, error: string } {
