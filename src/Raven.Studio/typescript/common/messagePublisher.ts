@@ -1,6 +1,7 @@
 import EVENTS = require("common/constants/events");
 import toastr = require("toastr");
 import recentError = require("common/notifications/models/recentError");
+import recentLicenseLimitError = require("common/notifications/models/recentLicenseLimitError");
 import generalUtils = require("common/generalUtils");
 
 class messagePublisher {
@@ -47,7 +48,7 @@ class messagePublisher {
         let error: recentError;
         
         if (displayInRecentErrors) {
-            error = recentError.create(type, title, details, httpStatusText);
+            error = messagePublisher.createRecentError(type, title, details, httpStatusText);
 
             ko.postbox.publish(EVENTS.NotificationCenter.RecentError, error);
         }
@@ -65,6 +66,29 @@ class messagePublisher {
                 ko.postbox.publish(EVENTS.NotificationCenter.OpenNotification, error);
             }: undefined 
         });
+    }
+
+    static createRecentError(severity: Raven.Server.NotificationCenter.Notifications.NotificationSeverity, title: string, details: string, httpStatus: string) {
+        const messageAndException = recentError.tryExtractMessageAndException(details);
+
+        const dto = {
+            CreatedAt: null,
+            IsPersistent: false,
+            Title: title,
+            Message: messageAndException.message,
+            Id: "RecentError/" + (recentError.currentErrorId++),
+            Type: "RecentError",
+            Details: messageAndException.error,
+            HttpStatus: httpStatus,
+            Severity: severity,
+        } as recentErrorDto;
+
+        if (httpStatus === "Payment Required") {
+            const licenseType = recentLicenseLimitError.tryExtractLicenseLimitType(details);
+            return new recentLicenseLimitError(dto, licenseType);
+        } else {
+            return new recentError(dto);
+        }
     }
 
     private static getDisplayDuration(type: Raven.Server.NotificationCenter.Notifications.NotificationSeverity): number {

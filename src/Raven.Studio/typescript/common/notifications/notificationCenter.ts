@@ -6,6 +6,7 @@ import viewHelpers = require("common/helpers/view/viewHelpers");
 import alert = require("common/notifications/models/alert");
 import performanceHint = require("common/notifications/models/performanceHint");
 import recentError = require("common/notifications/models/recentError");
+import recentLicenseLimitError = require("common/notifications/models/recentLicenseLimitError");
 import operation = require("common/notifications/models/operation");
 
 import databaseNotificationCenterClient = require("common/databaseNotificationCenterClient");
@@ -195,8 +196,7 @@ class notificationCenter {
     }
 
     private onRecentError(error: recentError) {
-        if (error.httpStatus() === "Payment Required") {
-            error.details(recentError.licenceLimitMarker);
+        if (error instanceof recentLicenseLimitError) {
             this.openDetails(error);
         }
         

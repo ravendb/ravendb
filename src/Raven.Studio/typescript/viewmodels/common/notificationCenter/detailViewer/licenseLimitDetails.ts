@@ -1,7 +1,7 @@
 import app = require("durandal/app");
 import abstractNotification = require("common/notifications/models/abstractNotification");
 import notificationCenter = require("common/notifications/notificationCenter");
-import recentError = require("common/notifications/models/recentError");
+import recentLicenseLimitError = require("common/notifications/models/recentLicenseLimitError");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import alert = require("common/notifications/models/alert");
 import license = require("models/auth/licenseModel");
@@ -9,20 +9,20 @@ import registration = require("viewmodels/shell/registration");
 
 class licenseLimitDetails extends dialogViewModelBase {
 
-    protected readonly licenseLimitNotification: recentError | alert;
+    protected readonly licenseLimitNotification: recentLicenseLimitError | alert;
     protected readonly dismissFunction: () => void;
     licenseStatus = license.licenseStatus;
     requestLicenseUrl: KnockoutComputed<string>;
     licenseRequestType: KnockoutComputed<string>;
 
-    constructor(licenseLimitNotification: alert | recentError, notificationCenter: notificationCenter) {
+    constructor(licenseLimitNotification: alert | recentLicenseLimitError, notificationCenter: notificationCenter) {
         super();
         this.bindToCurrentInstance("close");
 
         this.licenseLimitNotification = licenseLimitNotification;
 
         this.requestLicenseUrl = ko.pureComputed(() =>
-            license.generateLicenseRequestUrl(licenseLimitNotification.licenseLimitType())
+            license.generateLicenseRequestUrl(licenseLimitDetails.extractLimitType(licenseLimitNotification))
         );
 
         this.licenseRequestType = ko.pureComputed(() => {
@@ -34,6 +34,19 @@ class licenseLimitDetails extends dialogViewModelBase {
             return "Upgrade";
         });
     }
+    
+    private static extractLimitType(notification: alert | recentLicenseLimitError) {
+        if (notification instanceof alert && notification.alertType() === "LicenseManager_LicenseLimit") {
+            const limit = notification.details() as Raven.Server.NotificationCenter.Notifications.Details.LicenseLimitWarning;
+            return limit.Type;
+        }
+        
+        if (notification instanceof recentLicenseLimitError) {
+            return notification.licenseLimitType();
+        }
+        
+        return null;
+    }
 
     register(): boolean {
         this.close();
@@ -43,12 +56,12 @@ class licenseLimitDetails extends dialogViewModelBase {
 
     static supportsDetailsFor(notification: abstractNotification) {
         const isLicenceAlert = (notification instanceof alert) && notification.isLicenseAlert(); 
-        const isRecentLicenseError = (notification instanceof recentError) && notification.details() === recentError.licenceLimitMarker;
+        const isRecentLicenseError = (notification instanceof recentLicenseLimitError);
         
         return isLicenceAlert || isRecentLicenseError;
     }
 
-    static showDetailsFor(licenseError: recentError | alert, center: notificationCenter) {
+    static showDetailsFor(licenseError: recentLicenseLimitError | alert, center: notificationCenter) {
         return app.showBootstrapDialog(new licenseLimitDetails(licenseError, center));
     }
 }
