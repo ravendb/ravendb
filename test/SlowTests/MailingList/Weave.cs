@@ -57,7 +57,7 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var allSystems = session.Query<CalcSystem>()
-                        .Customize(x => x.WaitForNonStaleResultsAsOfNow())
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(c => c.Server != "");
                     var distinctSystems = allSystems.Select(m => m.Server).Distinct();
                     Assert.Equal(distinctSystems.ToList().Count, 2);

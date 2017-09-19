@@ -28,7 +28,7 @@ namespace SlowTests.MailingList
                 {
                     var sampleData = session.Query<SampleData, SampleData_Index>()
                                             .Include<SampleData, IncludedData>(x => x.IncludedId)
-                                            .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
+                                            .Customize(customization => customization.WaitForNonStaleResults())
                                             .Single(x => x.Name == name);
                     //// This works, but by issuing another query
                     //session.Load<IncludedData>(sampleData.IncludedIdWithPrefix);

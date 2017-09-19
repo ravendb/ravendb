@@ -47,7 +47,7 @@ namespace SlowTests.Tests.Track
                 using (var session = store.OpenSession())
                 {
                     var q = session.Query<Summary>("TestObjs/Summary")
-                        .Customize(x => x.WaitForNonStaleResultsAsOfNow())
+                        .Customize(x => x.WaitForNonStaleResults())
                         .ProjectFromIndexFieldsInto<Summary>()
                         .ToList();
 
@@ -66,7 +66,7 @@ namespace SlowTests.Tests.Track
                 using (var session = store.OpenAsyncSession())
                 {
                     var q = session.Query<Summary>("TestObjs/Summary")
-                        .Customize(x => x.WaitForNonStaleResultsAsOfNow())
+                        .Customize(x => x.WaitForNonStaleResults())
                         .ProjectFromIndexFieldsInto<Summary>()
                         .ToListAsync();
 

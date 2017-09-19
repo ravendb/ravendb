@@ -62,7 +62,7 @@ namespace FastTests.Server.Documents.Queries
 
                 using (var session = store.OpenSession())
                 {
-                    var users = session.Query<User>().Customize(x => x.WaitForNonStaleResultsAsOfNow()).OrderBy(x => x.Name).ToList();
+                    var users = session.Query<User>().Customize(x => x.WaitForNonStaleResults()).OrderBy(x => x.Name).ToList();
 
                     Assert.Equal(2, users.Count);
                 }
@@ -89,7 +89,7 @@ namespace FastTests.Server.Documents.Queries
                     var sp = Stopwatch.StartNew();
                     Assert.Throws<TimeoutException>(() =>
                         session.Query<Address>()
-                        .Customize(x => x.WaitForNonStaleResultsAsOfNow(TimeSpan.FromMilliseconds(1)))
+                        .Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMilliseconds(1)))
                         .OrderBy(x => x.City)
                         .ToList()
                     );

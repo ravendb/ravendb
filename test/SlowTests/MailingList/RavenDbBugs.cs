@@ -26,7 +26,7 @@ namespace SlowTests.MailingList
                 {
                     var result = session.Query<Animal, TestIndex>()
                         .ProjectFromIndexFieldsInto<Animal>()
-                        .Customize(t => t.WaitForNonStaleResultsAsOfNow())
+                        .Customize(t => t.WaitForNonStaleResults())
                         .ToList();
                     Assert.NotEmpty(result);
                 }

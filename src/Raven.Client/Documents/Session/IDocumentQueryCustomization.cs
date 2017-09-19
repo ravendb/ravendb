@@ -124,16 +124,5 @@ namespace Raven.Client.Documents.Session
         /// </param>
         /// <param name="waitTimeout">Maximum time to wait for index query results to become non-stale before exception is thrown.</param>
         IDocumentQueryCustomization WaitForNonStaleResultsAsOf(long cutOffEtag, TimeSpan waitTimeout);
-
-        /// <summary>
-        ///     Instructs the query to wait for non stale results as of now.
-        /// </summary>
-        IDocumentQueryCustomization WaitForNonStaleResultsAsOfNow();
-
-        /// <summary>
-        ///     Instructs the query to wait for non stale results as of now for the specified timeout.
-        /// </summary>
-        /// <param name="waitTimeout">Maximum time to wait for index query results to become non-stale before exception is thrown.</param>
-        IDocumentQueryCustomization WaitForNonStaleResultsAsOfNow(TimeSpan waitTimeout);
     }
 }

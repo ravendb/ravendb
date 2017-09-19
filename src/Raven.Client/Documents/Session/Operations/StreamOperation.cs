@@ -32,7 +32,7 @@ namespace Raven.Client.Documents.Session.Operations
         {
             _isQueryStream = true;
 
-            if (query.WaitForNonStaleResults || query.WaitForNonStaleResultsAsOfNow)
+            if (query.WaitForNonStaleResults)
                 throw new NotSupportedException(
                     "Since Stream() does not wait for indexing (by design), streaming query with WaitForNonStaleResults is not supported.");
 

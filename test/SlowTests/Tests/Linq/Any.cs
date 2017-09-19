@@ -164,7 +164,7 @@ namespace SlowTests.Tests.Linq
                 {
                     DateTime dateTime = SystemTime.UtcNow;
                     var query = from a in session.Query<OrderableEntity>()
-                                                    .Customize(x => x.WaitForNonStaleResultsAsOfNow())
+                                                    .Customize(x => x.WaitForNonStaleResults())
                                 where dateTime < a.Order
                                 select a;
 

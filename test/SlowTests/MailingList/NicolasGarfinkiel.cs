@@ -77,7 +77,7 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var laboratoryTrials = session.Advanced.DocumentQuery<LaboratoryTrial>("Foos/TestIndex")
-                        .WaitForNonStaleResultsAsOfNow(TimeSpan.FromHours(1))
+                        .WaitForNonStaleResults(TimeSpan.FromHours(1))
                         .WhereEquals("Read", "Yes")
                         .ToList();
                     Assert.NotEmpty(laboratoryTrials);

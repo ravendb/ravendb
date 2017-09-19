@@ -71,7 +71,7 @@ namespace SlowTests.MailingList
                 using (IDocumentSession session = store.OpenSession())
                 {
                     var query = session.Advanced.DocumentQuery<IListItem>(typeof(ListItemIndex).Name)
-                        .WaitForNonStaleResultsAsOfNow();
+                        .WaitForNonStaleResults();
                     query.WhereEquals("AccountId", accountId);
                     var results = query.ToList();
 

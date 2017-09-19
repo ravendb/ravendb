@@ -75,7 +75,7 @@ namespace SlowTests.Tests.Bugs
                 {
                     var result = session.Query<Blog>()
                             .Statistics(out stats)
-                            .Customize(x => x.WaitForNonStaleResultsAsOfNow())
+                            .Customize(x => x.WaitForNonStaleResults())
                             .FirstOrDefault(x => x.Title == "one"); // NonSortingCollector
 
                     var metadata = session.Advanced.GetMetadataFor(result);
@@ -86,7 +86,7 @@ namespace SlowTests.Tests.Bugs
                 using (var session = store.OpenSession())
                 {
                     var results = session.Query<Blog>(stats.IndexName)
-                        .Customize(x => x.WaitForNonStaleResultsAsOfNow())
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Take(int.MaxValue)
                         .ToList(); // GathetrAllCollector
 
@@ -100,7 +100,7 @@ namespace SlowTests.Tests.Bugs
                 using (var session = store.OpenSession())
                 {
                     var result = session.Query<Blog>()
-                        .Customize(x => x.WaitForNonStaleResultsAsOfNow())
+                        .Customize(x => x.WaitForNonStaleResults())
                         .OrderBy(x => x.Category)
                         .FirstOrDefault(x => x.Title == "one");
 

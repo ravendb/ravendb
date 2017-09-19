@@ -31,7 +31,7 @@ namespace SlowTests.MailingList
 
                     var result = session.Query<OrderIndex.IndexResult, OrderIndex>()
                         .Where(p => p.Id.In(elements))
-                        .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
+                        .Customize(customization => customization.WaitForNonStaleResults())
                         .FirstOrDefault();
                 }
             }

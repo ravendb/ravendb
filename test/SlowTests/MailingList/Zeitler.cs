@@ -49,7 +49,7 @@ namespace SlowTests.MailingList
                 using (var session = documentStore.OpenSession())
                 {
                     key = session.Query<PersistentCacheKey>()
-                        .Customize(x => x.WaitForNonStaleResultsAsOfNow())
+                        .Customize(x => x.WaitForNonStaleResults())
                         .FirstOrDefault(p => p.Hash == hash);
                 }
 

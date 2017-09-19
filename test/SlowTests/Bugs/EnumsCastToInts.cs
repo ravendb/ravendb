@@ -37,7 +37,7 @@ namespace SlowTests.Bugs
                     var kind = SampleClassKind.Nothing;
 
                     var query = from r in session.Query<SampleClass>()
-                                    .Customize(x => x.WaitForNonStaleResultsAsOfNow())
+                                    .Customize(x => x.WaitForNonStaleResults())
                                 where r.To == entityId && r.Kind == (int) kind
                                 select r;
 
@@ -65,7 +65,7 @@ namespace SlowTests.Bugs
                     var kind = (int)SampleClassKind.Nothing;
 
                     var query = from r in session.Query<SampleClass>()
-                                                 .Customize(x => x.WaitForNonStaleResultsAsOfNow())
+                                                 .Customize(x => x.WaitForNonStaleResults())
                                 where r.To == entityId && r.Kind == kind
                                 select r.To;
 

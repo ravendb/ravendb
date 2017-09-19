@@ -31,12 +31,12 @@ namespace SlowTests.Bugs
                             session.Store(doc);
                         }
                         session.SaveChanges();
-                        var deletes = session.Query<Document>().Customize(x => x.WaitForNonStaleResultsAsOfNow()).ToList();
+                        var deletes = session.Query<Document>().Customize(x => x.WaitForNonStaleResults()).ToList();
                         deletes.ForEach(session.Delete);
                         session.SaveChanges();
 
 
-                        var count = session.Query<Document>().Customize(x => x.WaitForNonStaleResultsAsOfNow()).Count();
+                        var count = session.Query<Document>().Customize(x => x.WaitForNonStaleResults()).Count();
                         Assert.Equal(0, count);
                     }
                 }
@@ -63,11 +63,11 @@ namespace SlowTests.Bugs
                         }
 
                         session.SaveChanges();
-                        var deletes = session.Query<Document>().Customize(x => x.WaitForNonStaleResultsAsOfNow()).ToList();
+                        var deletes = session.Query<Document>().Customize(x => x.WaitForNonStaleResults()).ToList();
                         deletes.ForEach(session.Delete);
                         session.SaveChanges();
 
-                        deletes = session.Query<Document>().Customize(x => x.WaitForNonStaleResultsAsOfNow()).ToList();
+                        deletes = session.Query<Document>().Customize(x => x.WaitForNonStaleResults()).ToList();
                         Assert.Equal(0, deletes.Count);
                     }
                 }

@@ -56,7 +56,7 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var result = session.Query<Lead, Leads_Index>()
-                        .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
+                        .Customize(customization => customization.WaitForNonStaleResults())
                         .Where(x => x.Status.Value != 0)
                         .ToList();
 

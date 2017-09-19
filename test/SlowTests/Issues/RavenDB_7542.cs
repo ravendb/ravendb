@@ -51,7 +51,7 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var objects = session.Advanced.DocumentQuery<Product>("Testing_Sort").WhereIn(x => x.uid, new int[] {4, 6, 90})
-                        .WaitForNonStaleResultsAsOfNow().ToList();
+                        .WaitForNonStaleResults().ToList();
                     
                     Assert.Equal(3, objects.Count);
                 }

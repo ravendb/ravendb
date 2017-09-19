@@ -53,7 +53,7 @@ namespace SlowTests.MailingList
                 {
                     var result = session.Query<SampleData, SampleData_Index>()
                         .Search(a => a.Name, "A*", options: SearchOptions.And)
-                        .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
+                        .Customize(customization => customization.WaitForNonStaleResults())
                         .FirstOrDefault();
 
                     Assert.NotNull(result);

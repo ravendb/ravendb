@@ -56,7 +56,7 @@ namespace SlowTests.MailingList
                         //WaitForUserToContinueTheTest(store);
 
                         var results2 = session.Advanced.DocumentQuery<Person, Person_IdCopy_Index>()
-                            .WaitForNonStaleResultsAsOfNow()
+                            .WaitForNonStaleResults()
                             .SelectFields<PersonIndexItem>()
                             .ToArray();
 
@@ -80,7 +80,7 @@ namespace SlowTests.MailingList
                         //WaitForUserToContinueTheTest(store);
 
                         var results = session.Advanced.DocumentQuery<Person, Person_IdCopy_Index>()
-                            .WaitForNonStaleResultsAsOfNow()
+                            .WaitForNonStaleResults()
                             .WhereEquals("Family_Dad_Id", "people/Dad")
                             .ToArray();
 
@@ -135,7 +135,7 @@ namespace SlowTests.MailingList
                         //WaitForUserToContinueTheTest(store);
 
                         var results2 = session.Advanced.DocumentQuery<Person, Person_Id_Index>()
-                            .WaitForNonStaleResultsAsOfNow()
+                            .WaitForNonStaleResults()
                             .SelectFields<PersonIndexItem>()
                             .ToArray();
 
@@ -159,7 +159,7 @@ namespace SlowTests.MailingList
                         //WaitForUserToContinueTheTest(store);
 
                         var results = session.Advanced.DocumentQuery<Person, Person_Id_Index>()
-                            .WaitForNonStaleResultsAsOfNow()
+                            .WaitForNonStaleResults()
                             .WhereEquals("Family_Dad_Id", "people/Dad")
                             .ToArray();
 

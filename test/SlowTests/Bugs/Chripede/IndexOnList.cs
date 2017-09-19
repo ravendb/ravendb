@@ -53,7 +53,7 @@ namespace SlowTests.Bugs.Chripede
                 using (var session = store.OpenSession())
                 {
                     var result = session.Query<Document, Document_Index>()
-                        .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
+                        .Customize(customization => customization.WaitForNonStaleResults())
                         .Where(x => x.List.Any(s => s == "test1"))
                         .ToList();
 
@@ -64,7 +64,7 @@ namespace SlowTests.Bugs.Chripede
                 //using (var session = store.OpenSession())
                 //{
                 //    var result = session.Query<Document>()
-                //        .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
+                //        .Customize(customization => customization.WaitForNonStaleResults())
                 //        .Where(x => x.List.Any(s => s == "test1"))
                 //        .ToList();
 

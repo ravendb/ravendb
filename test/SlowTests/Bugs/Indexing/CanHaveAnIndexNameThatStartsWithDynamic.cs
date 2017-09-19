@@ -52,7 +52,7 @@ namespace SlowTests.Bugs.Indexing
                     s.Store(other);
                     s.SaveChanges();
                     new DynamicIndex().Execute(store);
-                    var list = s.Query<Result, DynamicIndex>().Customize(x => x.WaitForNonStaleResultsAsOfNow()).ToList();
+                    var list = s.Query<Result, DynamicIndex>().Customize(x => x.WaitForNonStaleResults()).ToList();
                     Assert.NotEqual(0, list.Count());
                 }
             }

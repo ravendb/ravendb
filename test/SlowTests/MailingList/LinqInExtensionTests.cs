@@ -30,7 +30,7 @@ namespace SlowTests.MailingList
                     session.SaveChanges();
 
                     var foundDocs = session.Query<TestDoc>()
-                                           .Customize(x => x.WaitForNonStaleResultsAsOfNow())
+                                           .Customize(x => x.WaitForNonStaleResults())
                                            .Where(doc => doc.Name.In(nameList)).ToList();
 
                     Assert.Equal(nameList.Count, foundDocs.Count);
@@ -61,7 +61,7 @@ namespace SlowTests.MailingList
                     WaitForIndexing(store);
 
                     var foundDocs = session.Query<TestDoc>()
-                                           .Customize(x => x.WaitForNonStaleResultsAsOfNow())
+                                           .Customize(x => x.WaitForNonStaleResults())
                                            .Where(doc => doc.Name.In(nameList)).ToList();
 
                     Assert.Equal(nameList.Count, foundDocs.Count);

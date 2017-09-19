@@ -20,7 +20,7 @@ namespace SlowTests.Tests.Linq
                 {
                     Assert.Throws<NotSupportedException>(() =>
                         session.Query<MyEntity>()
-                            .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
+                            .Customize(customization => customization.WaitForNonStaleResults())
                             .Count(o => string.Equals(o.StringData, "Some data", StringComparison.Ordinal)));
                 }
             }
@@ -36,7 +36,7 @@ namespace SlowTests.Tests.Linq
                 using (var session = store.OpenSession())
                 {
                     var count = session.Query<MyEntity>()
-                        .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
+                        .Customize(customization => customization.WaitForNonStaleResults())
                         .Count(o => string.Equals(o.StringData, "Some data", StringComparison.OrdinalIgnoreCase));
 
                     Assert.Equal(2, count);
@@ -54,7 +54,7 @@ namespace SlowTests.Tests.Linq
                 using (var session = store.OpenSession())
                 {
                     var count = session.Query<MyEntity>()
-                        .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
+                        .Customize(customization => customization.WaitForNonStaleResults())
                         .Count(o => string.Equals(o.StringData, "Some data"));
 
                     Assert.Equal(2, count);
@@ -72,7 +72,7 @@ namespace SlowTests.Tests.Linq
                 using (var session = store.OpenSession())
                 {
                     var count = session.Query<MyEntity>()
-                        .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
+                        .Customize(customization => customization.WaitForNonStaleResults())
                         .Count(o => string.Equals("Some data", o.StringData));
 
                     Assert.Equal(2, count);
@@ -90,7 +90,7 @@ namespace SlowTests.Tests.Linq
                 using (var session = store.OpenSession())
                 {
                     var count = session.Query<MyEntity>()
-                        .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
+                        .Customize(customization => customization.WaitForNonStaleResults())
                         .Count(o => "Some data" == o.StringData);
 
                     Assert.Equal(2, count);
@@ -108,7 +108,7 @@ namespace SlowTests.Tests.Linq
                 using (var session = store.OpenSession())
                 {
                     var count = session.Query<MyEntity>()
-                        .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
+                        .Customize(customization => customization.WaitForNonStaleResults())
                         .Count(o => "Some data".Equals(o.StringData));
 
                     Assert.Equal(2, count);
@@ -126,7 +126,7 @@ namespace SlowTests.Tests.Linq
                 using (var session = store.OpenSession())
                 {
                     var count = session.Query<MyEntity>()
-                        .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
+                        .Customize(customization => customization.WaitForNonStaleResults())
                         .Count(o => o.StringData.Equals("Some data"));
 
                     Assert.Equal(2, count);
@@ -144,7 +144,7 @@ namespace SlowTests.Tests.Linq
                 using (var session = store.OpenSession())
                 {
                     var count = session.Query<MyEntity>()
-                        .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
+                        .Customize(customization => customization.WaitForNonStaleResults())
                         .Count(o => "Some data".Equals(o.StringData, StringComparison.OrdinalIgnoreCase));
 
                     Assert.Equal(2, count);
@@ -163,7 +163,7 @@ namespace SlowTests.Tests.Linq
                 {
                     Assert.Throws<NotSupportedException>(() =>
                         session.Query<MyEntity>()
-                        .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
+                        .Customize(customization => customization.WaitForNonStaleResults())
                         .Count(o => "Some data".Equals(o.StringData, StringComparison.Ordinal)));
 
                 }
@@ -181,7 +181,7 @@ namespace SlowTests.Tests.Linq
                 {
                     Assert.Throws<NotSupportedException>(() =>
                         session.Query<MyEntity>()
-                        .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
+                        .Customize(customization => customization.WaitForNonStaleResults())
                         .Count(o => o.StringData.Equals("Some data", StringComparison.Ordinal)));
                 }
             }

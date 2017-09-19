@@ -102,10 +102,6 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         protected bool TheWaitForNonStaleResults;
         /// <summary>
-        /// Should we wait for non stale results as of now?
-        /// </summary>
-        protected bool TheWaitForNonStaleResultsAsOfNow;
-        /// <summary>
         /// The paths to include when loading the query
         /// </summary>
         protected HashSet<string> Includes = new HashSet<string>();
@@ -843,26 +839,6 @@ If you really want to do in memory filtering on the data returned from the query
             OrderByTokens.AddLast(OrderByToken.ScoreDescending);
         }
 
-        /// <inheritdoc />
-        public void WaitForNonStaleResultsAsOfNow()
-        {
-            TheWaitForNonStaleResults = true;
-            TheWaitForNonStaleResultsAsOfNow = true;
-            Timeout = DefaultTimeout;
-        }
-
-        /// <summary>
-        ///   Instructs the query to wait for non stale results as of now for the specified timeout.
-        /// </summary>
-        /// <param name = "waitTimeout">The wait timeout.</param>
-        /// <returns></returns>
-        public void WaitForNonStaleResultsAsOfNow(TimeSpan waitTimeout)
-        {
-            TheWaitForNonStaleResults = true;
-            TheWaitForNonStaleResultsAsOfNow = true;
-            Timeout = waitTimeout;
-        }
-
         /// <summary>
         /// Instructs the query to wait for non stale results as of the cutoff etag.
         /// </summary>
@@ -928,7 +904,6 @@ If you really want to do in memory filtering on the data returned from the query
                 Query = query,
                 Start = Start,
                 CutoffEtag = CutoffEtag,
-                WaitForNonStaleResultsAsOfNow = TheWaitForNonStaleResultsAsOfNow,
                 WaitForNonStaleResults = TheWaitForNonStaleResults,
                 WaitForNonStaleResultsTimeout = Timeout,
                 QueryParameters = QueryParameters,

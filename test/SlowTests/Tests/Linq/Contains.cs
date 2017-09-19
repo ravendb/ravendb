@@ -47,7 +47,7 @@ namespace SlowTests.Tests.Linq
                     session.Store(doc);
                     session.SaveChanges();
 
-                    session.Query<TestDoc>().Customize(x => x.WaitForNonStaleResultsAsOfNow()).ToList();
+                    session.Query<TestDoc>().Customize(x => x.WaitForNonStaleResults()).ToList();
 
                     var items = new[] { "a", "b", "c" };
                     var test = session.Query<TestDoc>()
@@ -82,7 +82,7 @@ namespace SlowTests.Tests.Linq
                     session.Store(doc);
                     session.SaveChanges();
 
-                    session.Query<TestDoc>().Customize(x => x.WaitForNonStaleResultsAsOfNow()).ToList();
+                    session.Query<TestDoc>().Customize(x => x.WaitForNonStaleResults()).ToList();
 
                     var items = new[] { "a", "b", "c" };
                     var test = session.Query<TestDoc>()

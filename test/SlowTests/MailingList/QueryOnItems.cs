@@ -39,7 +39,7 @@ namespace SlowTests.MailingList
             {
                 QueryStatistics stats;
                 session.Query<FeedItem>()
-                       .Customize(x => x.WaitForNonStaleResultsAsOfNow())
+                       .Customize(x => x.WaitForNonStaleResults())
                        .Statistics(out stats)
                        .Where(fi => fi.RelatedProfiles.Any(rp => rp.In(profiles)))
                        .ToArray();

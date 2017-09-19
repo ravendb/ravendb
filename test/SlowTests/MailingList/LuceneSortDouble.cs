@@ -70,7 +70,7 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var results = session.Query<ClassWithDouble, ClassWithDouble_Index>()
-                        .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
+                        .Customize(customization => customization.WaitForNonStaleResults())
                         .OrderBy(x => x.Rating)
                         .ToList();
 
@@ -123,7 +123,7 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.DocumentQuery<ClassWithDouble, ClassWithDouble_Index>()
-                        .WaitForNonStaleResultsAsOfNow()
+                        .WaitForNonStaleResults()
                         .OrderByDescending(x => x.Rating)
                         .ToList();
 
@@ -176,7 +176,7 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.DocumentQuery<ClassWithDouble, ClassWithDouble_Index>()
-                        .WaitForNonStaleResultsAsOfNow()
+                        .WaitForNonStaleResults()
                         .OrderBy(x => x.Rating)
                         .ToList();
 

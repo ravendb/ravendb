@@ -196,13 +196,6 @@ namespace Raven.Client.Extensions
                 writer.WriteComma();
             }
 
-            if (query.WaitForNonStaleResultsAsOfNow)
-            {
-                writer.WritePropertyName(nameof(query.WaitForNonStaleResultsAsOfNow));
-                writer.WriteBool(query.WaitForNonStaleResultsAsOfNow);
-                writer.WriteComma();
-            }
-
             if (query.CutoffEtag.HasValue)
             {
                 writer.WritePropertyName(nameof(query.CutoffEtag));

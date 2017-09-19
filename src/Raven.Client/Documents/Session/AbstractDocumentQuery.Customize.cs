@@ -103,13 +103,6 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IDocumentQueryCustomization IDocumentQueryCustomization.WaitForNonStaleResultsAsOfNow(TimeSpan waitTimeout)
-        {
-            WaitForNonStaleResultsAsOfNow(waitTimeout);
-            return this;
-        }
-
-        /// <inheritdoc />
         IDocumentQueryCustomization IDocumentQueryCustomization.WaitForNonStaleResultsAsOf(long cutOffEtag)
         {
             WaitForNonStaleResultsAsOf(cutOffEtag);
@@ -120,13 +113,6 @@ namespace Raven.Client.Documents.Session
         IDocumentQueryCustomization IDocumentQueryCustomization.WaitForNonStaleResultsAsOf(long cutOffEtag, TimeSpan waitTimeout)
         {
             WaitForNonStaleResultsAsOf(cutOffEtag, waitTimeout);
-            return this;
-        }
-
-        /// <inheritdoc />
-        IDocumentQueryCustomization IDocumentQueryCustomization.WaitForNonStaleResultsAsOfNow()
-        {
-            WaitForNonStaleResultsAsOfNow();
             return this;
         }
     }

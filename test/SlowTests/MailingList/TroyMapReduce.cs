@@ -38,7 +38,7 @@ namespace SlowTests.MailingList
 
                     var query = session.Query<LogEntryCountByDate.SearchResult>("LogEntry/CountByDate")
                       //.Where( x => x.EntryDate == DateTime.Today )
-                      .Customize(x => x.WaitForNonStaleResultsAsOfNow());
+                      .Customize(x => x.WaitForNonStaleResults());
 
                     Assert.Equal(4, query.Count());
                     Assert.Equal(1, query.First().EntryCount);

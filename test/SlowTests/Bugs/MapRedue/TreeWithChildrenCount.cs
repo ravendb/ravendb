@@ -83,7 +83,7 @@ namespace SlowTests.Bugs.MapRedue
 
                     
                     var results = session.Query<CategoriesWithChildrenCount.ReduceResult, CategoriesWithChildrenCount>()
-                        .Customize(x => x.WaitForNonStaleResultsAsOfNow())
+                        .Customize(x => x.WaitForNonStaleResults())
                         .ToList();
 
                     Assert.NotEmpty(results);

@@ -40,7 +40,7 @@ namespace SlowTests.MailingList
                     FieldHighlightings highlightings;
 
                     var goodResult = session.Advanced.DocumentQuery<Question, QuestionIndex>()
-                        .WaitForNonStaleResultsAsOfNow()
+                        .WaitForNonStaleResults()
                         .Highlight(x => x.QuestionText, 100, 1, out highlightings)
                         .Search(x => x.QuestionText, goodSearchTerm)
                         .OrderByScore()

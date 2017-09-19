@@ -26,8 +26,8 @@ namespace SlowTests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    var good = session.Query<TestView>().Customize(x => x.WaitForNonStaleResultsAsOfNow()).Select(x => new { x.TestField }).ToArray();
-                    var error = session.Query<TestView>().Customize(x => x.WaitForNonStaleResultsAsOfNow()).Select(x => x.TestField).ToArray();
+                    var good = session.Query<TestView>().Customize(x => x.WaitForNonStaleResults()).Select(x => new { x.TestField }).ToArray();
+                    var error = session.Query<TestView>().Customize(x => x.WaitForNonStaleResults()).Select(x => x.TestField).ToArray();
                     var error2 = session.Query<TestView>().Select(x => (Guid)x.TestField).ToArray();
                 }
             }

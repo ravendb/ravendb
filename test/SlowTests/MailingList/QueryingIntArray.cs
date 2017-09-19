@@ -42,7 +42,7 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var results = session.Query<IndexEntry, FooIndex>()
-                        .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
+                        .Customize(customization => customization.WaitForNonStaleResults())
                         .Search(o => o.Name, "Test")
                         .Where(o => o.Resolutions.Any(x => x >= 5 && x <= 9))
                         .ProjectFromIndexFieldsInto<IndexEntry>()

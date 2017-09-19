@@ -48,7 +48,7 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var result = session.Query<IdentityUser>()
-                        .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
+                        .Customize(customization => customization.WaitForNonStaleResults())
                         .FirstOrDefault();
 
                     Assert.Equal("Marcus", result.UserName);

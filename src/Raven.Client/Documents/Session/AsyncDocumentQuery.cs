@@ -376,34 +376,6 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IAsyncDocumentQuery<T> IQueryBase<T, IAsyncDocumentQuery<T>>.WaitForNonStaleResultsAsOfNow()
-        {
-            WaitForNonStaleResultsAsOfNow();
-            return this;
-        }
-
-        /// <inheritdoc />
-        IAsyncRawDocumentQuery<T> IQueryBase<T, IAsyncRawDocumentQuery<T>>.WaitForNonStaleResultsAsOfNow()
-        {
-            WaitForNonStaleResultsAsOfNow();
-            return this;
-        }
-
-        /// <inheritdoc />
-        IAsyncDocumentQuery<T> IQueryBase<T, IAsyncDocumentQuery<T>>.WaitForNonStaleResultsAsOfNow(TimeSpan waitTimeout)
-        {
-            WaitForNonStaleResultsAsOfNow(waitTimeout);
-            return this;
-        }
-
-        /// <inheritdoc />
-        IAsyncRawDocumentQuery<T> IQueryBase<T, IAsyncRawDocumentQuery<T>>.WaitForNonStaleResultsAsOfNow(TimeSpan waitTimeout)
-        {
-            WaitForNonStaleResultsAsOfNow(waitTimeout);
-            return this;
-        }
-
-        /// <inheritdoc />
         IAsyncDocumentQuery<T> IQueryBase<T, IAsyncDocumentQuery<T>>.WaitForNonStaleResultsAsOf(long cutOffEtag)
         {
             WaitForNonStaleResultsAsOf(cutOffEtag);
@@ -842,7 +814,6 @@ namespace Raven.Client.Documents.Session
                 CutoffEtag = CutoffEtag,
                 QueryStats = QueryStats,
                 TheWaitForNonStaleResults = TheWaitForNonStaleResults,
-                TheWaitForNonStaleResultsAsOfNow = TheWaitForNonStaleResultsAsOfNow,
                 Negate = Negate,
                 Includes = new HashSet<string>(Includes),
                 RootTypes = { typeof(T) },

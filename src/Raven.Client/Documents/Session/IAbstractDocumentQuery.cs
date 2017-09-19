@@ -274,19 +274,6 @@ namespace Raven.Client.Documents.Session
         void SetHighlighterTags(string[] preTags, string[] postTags);
 
         /// <summary>
-        ///   Instructs the query to wait for non stale results as of now.
-        /// </summary>
-        /// <returns></returns>
-        void WaitForNonStaleResultsAsOfNow();
-
-        /// <summary>
-        ///   Instructs the query to wait for non stale results as of now for the specified timeout.
-        /// </summary>
-        /// <param name = "waitTimeout">The wait timeout.</param>
-        /// <returns></returns>
-        void WaitForNonStaleResultsAsOfNow(TimeSpan waitTimeout);
-
-        /// <summary>
         ///   EXPERT ONLY: Instructs the query to wait for non stale results.
         ///   This shouldn't be used outside of unit tests unless you are well aware of the implications
         /// </summary>
