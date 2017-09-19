@@ -118,7 +118,7 @@ namespace Raven.Server.Documents.Queries.AST
             _sb.Append("DECLARE function ").Append(name).AppendLine(func).AppendLine();
         }
 
-        public override void VisitWhereClause(BinaryExpression where)
+        public override void VisitWhereClause(QueryExpression where)
         {
             EnsureSpace();
             _sb.Append("WHERE ");

@@ -110,7 +110,7 @@ namespace Raven.Server.Documents.Queries.AST
             _writer.WriteEndObject();
         }
 
-        public override void VisitWhereClause(BinaryExpression @where)
+        public override void VisitWhereClause(QueryExpression @where)
         {
             _writer.WritePropertyName("Where");
             base.VisitWhereClause(where);

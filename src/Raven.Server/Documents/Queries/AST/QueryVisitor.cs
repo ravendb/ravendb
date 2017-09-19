@@ -22,9 +22,9 @@ namespace Raven.Server.Documents.Queries.AST
                 VisitGroupByExpression(q.GroupBy);
             }
 
-            if (q.Where is BinaryExpression be)
+            if (q.Where != null)
             {
-                VisitWhereClause(be);
+                VisitWhereClause(q.Where);
             }
 
             if (q.OrderBy != null)
@@ -108,9 +108,9 @@ namespace Raven.Server.Documents.Queries.AST
             }
         }
 
-        public virtual void VisitWhereClause(BinaryExpression where)
+        public virtual void VisitWhereClause(QueryExpression where)
         {
-            VisitBinaryExpression(@where);
+            VisitExpression(where);
         }
 
         private void VisitBinaryExpression(BinaryExpression @where)
