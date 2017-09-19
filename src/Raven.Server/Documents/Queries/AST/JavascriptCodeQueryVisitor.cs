@@ -9,10 +9,12 @@ namespace Raven.Server.Documents.Queries.AST
     public class JavascriptCodeQueryVisitor : QueryVisitor
     {
         private readonly StringBuilder _sb;
+        private readonly string _alias;
 
-        public JavascriptCodeQueryVisitor(StringBuilder sb)
+        public JavascriptCodeQueryVisitor(StringBuilder sb, string alias)
         {
             _sb = sb;
+            _alias = alias;
         }
 
         public override void VisitInclude(List<QueryExpression> includes)
@@ -132,6 +134,8 @@ namespace Raven.Server.Documents.Queries.AST
 
         public override void VisitField(FieldExpression field)
         {
+            if (_alias != null)
+                _sb.Append("this.");
             _sb.Append(field.Field);
         }
 
@@ -147,10 +151,10 @@ namespace Raven.Server.Documents.Queries.AST
             switch (expr.Operator)
             {
                 case OperatorType.Equal:
-                    _sb.Append(" = ");
+                    _sb.Append(" === ");
                     break;
                 case OperatorType.NotEqual:
-                    _sb.Append(" ~= ");
+                    _sb.Append(" !== ");
                     break;
                 case OperatorType.LessThan:
                     _sb.Append(" < ");

@@ -767,7 +767,7 @@ namespace Raven.Server.Documents.TcpHandlers
             if (q.Where != null)
             {
                 writer.Write("if (");
-                new JavascriptCodeQueryVisitor(writer.GetStringBuilder()).VisitExpression(q.Where);
+                new JavascriptCodeQueryVisitor(writer.GetStringBuilder(), "this").VisitExpression(q.Where);
                 writer.WriteLine(" )");
                 writer.WriteLine("{");
             }
@@ -784,7 +784,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     throw new NotSupportedException("Subscription select clause must specify an object literal");
                 writer.WriteLine();
                 writer.Write(" return ");
-                new JavascriptCodeQueryVisitor(writer.GetStringBuilder()).VisitExpression(q.Select[0].Expression);
+                new JavascriptCodeQueryVisitor(writer.GetStringBuilder(), "this").VisitExpression(q.Select[0].Expression);
                 writer.WriteLine(";");
             }
             else
