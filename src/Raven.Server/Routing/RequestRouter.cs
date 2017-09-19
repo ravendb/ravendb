@@ -13,6 +13,7 @@ using Raven.Server.Documents;
 using System.Threading;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.Extensions.Primitives;
+using Raven.Client.Util;
 using Raven.Server.Utils;
 using Raven.Server.Web;
 using Sparrow.Json;
@@ -75,6 +76,8 @@ namespace Raven.Server.Routing
             _serverMetrics.RequestsMeter.Mark();
 
             Interlocked.Increment(ref _serverMetrics.ConcurrentRequestsCount);
+            _ravenServer.Statistics.LastRequestTime = SystemTime.UtcNow;
+
             if (handler == null)
             {
                 context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
