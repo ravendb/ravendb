@@ -480,7 +480,7 @@ namespace Voron
                 $"Could not dispose the environment {Options.BasePath} after {Options.DisposeWaitTime} because there are running transaction.{Environment.NewLine}" +
                 $"Either you have long running transactions or hung transactions. Can\'t dispose the environment because that would invalid memory regions{Environment.NewLine}" +
                 $"that those transactions are still looking at.{Environment.NewLine}" +
-                $"There are {activeTxs.Count:#,#0} transactions ({string.Join(", ", activeTxs)})"
+                $"There are {activeTxs.Count:#,#} transactions ({string.Join(", ", activeTxs)})"
             );
         }
 
@@ -525,15 +525,23 @@ namespace Voron
                     var wait = timeout ?? (Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(30));
 
                     if (FlushInProgressLock.IsWriteLockHeld == false)
+                    {
                         flushInProgressReadLockTaken = FlushInProgressLock.TryEnterReadLock(wait);
+                        if (flushInProgressReadLockTaken == false)
+                        {
+                            GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
+                            ThrowOnTimeoutWaitingForReadFlushingInProgressLock(wait);
+                        }
+                    }
 
                     txLockTaken = _transactionWriter.Wait(wait);
-                    if (txLockTaken == false || (flushInProgressReadLockTaken == false &&
-                        FlushInProgressLock.IsWriteLockHeld == false))
+
+                    if (txLockTaken == false)
                     {
                         GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
                         ThrowOnTimeoutWaitingForWriteTxLock(wait);
                     }
+
                     _cancellationTokenSource.Token.ThrowIfCancellationRequested();
 
                     _currentTransactionHolder = NativeMemory.ThreadAllocations.Value;
@@ -632,6 +640,21 @@ namespace Voron
             var message = $"Waited for {wait} for transaction write lock, but could not get it";
             if (copy != null)
                 message += $", the tx is currently owned by thread {copy.Id} - {copy.Name}";
+
+            throw new TimeoutException(message);
+        }
+
+        private void ThrowOnTimeoutWaitingForReadFlushingInProgressLock(TimeSpan wait)
+        {
+            var copy = Journal.CurrentFlushingInProgressHolder;
+            if (copy == NativeMemory.ThreadAllocations.Value)
+            {
+                throw new InvalidOperationException("Flushing is already being performed by this thread");
+            }
+
+            var message = $"Waited for {wait} for read access of the flushing in progress lock, but could not get it";
+            if (copy != null)
+                message += $", the flushing in progress lock is currently owned by thread {copy.Id} - {copy.Name}";
 
             throw new TimeoutException(message);
         }
