@@ -1047,7 +1047,7 @@ namespace Raven.Server.Documents.Indexes
             var beforeFree = NativeMemory.ThreadAllocations.Value.TotalAllocated;
             if (_logger.IsInfoEnabled)
                 _logger.Info(
-                    $"{beforeFree / 1024:#,#} kb is used by '{Name} ({Etag})', reducing memory utilization.");
+                    $"{beforeFree / 1024:#,#0} kb is used by '{Name} ({Etag})', reducing memory utilization.");
 
             DocumentDatabase.DocumentsStorage.ContextPool.Clean();
             _contextPool.Clean();
@@ -1058,7 +1058,7 @@ namespace Raven.Server.Documents.Indexes
 
             var afterFree = NativeMemory.ThreadAllocations.Value.TotalAllocated;
             if (_logger.IsInfoEnabled)
-                _logger.Info($"After cleanup, using {afterFree / 1024:#,#} Kb by '{Name} ({Etag})'.");
+                _logger.Info($"After cleanup, using {afterFree / 1024:#,#0} kb by '{Name} ({Etag})'.");
         }
 
         internal void ResetErrors()
@@ -2356,7 +2356,7 @@ namespace Raven.Server.Documents.Indexes
                 var total32BitsMappedSize = pagerLevelTransactionState?.GetTotal32BitsMappedSize();
                 if (total32BitsMappedSize > 8 * Voron.Global.Constants.Size.Megabyte)
                 {
-                    stats.RecordMapCompletedReason($"Running in 32 bits and have {total32BitsMappedSize / 1024:#,#} kb mapped in docs ctx");
+                    stats.RecordMapCompletedReason($"Running in 32 bits and have {total32BitsMappedSize / 1024:#,#0} kb mapped in docs ctx");
                     return false;
                 }
 
@@ -2364,7 +2364,7 @@ namespace Raven.Server.Documents.Indexes
                 total32BitsMappedSize = pagerLevelTransactionState?.GetTotal32BitsMappedSize();
                 if (total32BitsMappedSize > 8 * Voron.Global.Constants.Size.Megabyte)
                 {
-                    stats.RecordMapCompletedReason($"Running in 32 bits and have {total32BitsMappedSize / 1024:#,#} kb mapped in index ctx");
+                    stats.RecordMapCompletedReason($"Running in 32 bits and have {total32BitsMappedSize / 1024:#,#0} kb mapped in index ctx");
                     return false;
                 }
             }

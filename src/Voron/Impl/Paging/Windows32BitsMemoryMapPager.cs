@@ -185,7 +185,7 @@ namespace Voron.Impl.Paging
                 if (result == null)
                 {
                     var lastWin32Error = Marshal.GetLastWin32Error();
-                    throw new Win32Exception($"Unable to map (default view size) {AllocationGranularity / Constants.Size.Kilobyte:#,#} kb for page {pageNumber} starting at {allocationStartPosition} on {FileName}",
+                    throw new Win32Exception($"Unable to map (default view size) {AllocationGranularity / Constants.Size.Kilobyte:#,#0} kb for page {pageNumber} starting at {allocationStartPosition} on {FileName}",
                         new Win32Exception(lastWin32Error));
                 }
 
@@ -210,7 +210,7 @@ namespace Voron.Impl.Paging
                     if (result == null)
                     {
                         var lastWin32Error = Marshal.GetLastWin32Error();
-                        throw new Win32Exception($"Unable to map {newSize / Constants.Size.Kilobyte:#,#} kb for page {pageNumber} starting at {allocationStartPosition} on {FileName}",
+                        throw new Win32Exception($"Unable to map {newSize / Constants.Size.Kilobyte:#,#0} kb for page {pageNumber} starting at {allocationStartPosition} on {FileName}",
                             new Win32Exception(lastWin32Error));
                     }
 
@@ -309,7 +309,7 @@ namespace Voron.Impl.Paging
                 {
                     var lastWin32Error = Marshal.GetLastWin32Error();
                     throw new Win32Exception(
-                        $"Unable to map {size / Constants.Size.Kilobyte:#,#} kb starting at {startPage} on {FileName}",
+                        $"Unable to map {size / Constants.Size.Kilobyte:#,#0} kb starting at {startPage} on {FileName}",
                         new Win32Exception(lastWin32Error));
                 }
 
@@ -349,7 +349,7 @@ namespace Voron.Impl.Paging
         private void ThrowInvalidMappingRequested(long startPage, long size)
         {
             throw new InvalidOperationException(
-                $"Was asked to map page {startPage} + {size / 1024:#,#} kb, but the file size is only {_fileStreamLength}, can't do that.");
+                $"Was asked to map page {startPage} + {size / 1024:#,#0} kb, but the file size is only {_fileStreamLength}, can't do that.");
         }
 
         private TransactionState GetTransactionState(IPagerLevelTransactionState tx)

@@ -199,7 +199,7 @@ namespace Sparrow
                 return $"{Math.Round(_valueInBytes / (double)OneMb, 2):#,#.##} MBytes";
             if (Math.Abs(_valueInBytes) > OneKb)
                 return $"{Math.Round(_valueInBytes / (double)OneKb, 2):#,#.##} KBytes";
-            return $"{_valueInBytes:#,#} Bytes";
+            return $"{_valueInBytes:#,#0} Bytes";
         }
     }
 

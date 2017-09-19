@@ -277,7 +277,7 @@ namespace Raven.Server.Smuggler.Documents
             public override int Execute(DocumentsOperationContext context)
             {
                 if (_log.IsInfoEnabled)
-                    _log.Info($"Importing {Documents.Count:#,#} documents");
+                    _log.Info($"Importing {Documents.Count:#,#0} documents");
 
                 foreach (var documentType in Documents)
                 {
