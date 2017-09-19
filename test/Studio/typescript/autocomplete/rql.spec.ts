@@ -54,6 +54,11 @@ describe("RQL Autocomplete", () => {
         {caption: "With ' and \" quotes", value: "'With '' and \" quotes'", score: 1, meta: "object field"},
         {caption: "@metadata", value: "@metadata", score: 1, meta: "object field"}
     ];
+    
+    const orderByFieldsList = fieldsList.concat([
+        {caption: "score", value: "score(", score: 22, meta: "function"},
+        {caption: "random", value: "random(", score: 21, meta: "function"}
+    ]);
 
     const fieldsShipToList = [
         {caption: "Line1", value: "Line1", score: 1, meta: "string field"},
@@ -502,6 +507,32 @@ order |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
         });
     });
 
+    it('After order by| without space should has BY prefix and should complete itself', done => {
+        rqlTestUtils.autoComplete(`from Orders
+order by|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "by");
+            assert.deepEqual(wordlist, afterOrderOrGroupList);
+
+            assert.equal(lastKeyword.keyword, "order by");
+            assert.equal(lastKeyword.dividersCount, 0);
+
+            done();
+        });
+    });
+
+    it('After order by | should list fields and functions', done => {
+        rqlTestUtils.autoComplete(`from Orders
+order by |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, orderByFieldsList);
+
+            assert.equal(lastKeyword.keyword, "order by");
+            assert.equal(lastKeyword.dividersCount, 1);
+
+            done();
+        });
+    });
+
     it('After group| without space should has group prefix and should complete itself', done => {
         rqlTestUtils.autoComplete(`from Orders
 group|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
@@ -520,10 +551,36 @@ group|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
         rqlTestUtils.autoComplete(`from Orders
 group |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
+            assert.deepEqual(wordlist, afterOrderOrGroupList);
+
+            assert.equal(lastKeyword.keyword, "group");
+            assert.equal(lastKeyword.dividersCount, 1);
+
+            done();
+        });
+    });
+
+    it('After group by| without space should has BY prefix and should complete itself', done => {
+        rqlTestUtils.autoComplete(`from Orders
+group by|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "by");
             const sortedList = _.sortBy(wordlist, [(x: autoCompleteWordList) => x.score]).reverse();
             assert.deepEqual(sortedList, afterOrderOrGroupList);
 
-            assert.equal(lastKeyword.keyword, "group");
+            assert.equal(lastKeyword.keyword, "group by");
+            assert.equal(lastKeyword.dividersCount, 0);
+
+            done();
+        });
+    });
+
+    it('After group by | should list fields', done => {
+        rqlTestUtils.autoComplete(`from Orders
+group by |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, fieldsList);
+
+            assert.equal(lastKeyword.keyword, "group by");
             assert.equal(lastKeyword.dividersCount, 1);
 
             done();
