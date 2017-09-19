@@ -718,6 +718,23 @@ namespace Raven.Server.Documents.Queries
             {
                 if (fieldName is FieldExpression fe)
                     _metadata.AddWhereField(fe.Field, exact: _insideExact > 0);
+                if (fieldName is MethodExpression me)
+                {
+                    var methodType = QueryMethod.GetMethodType(me.Name);
+                    switch (methodType)
+                    {
+                        case MethodType.Id:
+                            _metadata.AddWhereField(Constants.Documents.Indexing.Fields.DocumentIdFieldName, exact: _insideExact > 0);
+                            break;
+                        case MethodType.Count:
+                            _metadata.AddWhereField(Constants.Documents.Indexing.Fields.CountFieldName, exact: _insideExact > 0);
+                            break;
+                        case MethodType.Sum:
+                            if(me.Arguments != null && me.Arguments[0] is FieldExpression f)
+                                VisitFieldToken(f, value, parameters);
+                            break;
+                    }
+                }
             }
 
             public override void VisitBetween(QueryExpression fieldName, QueryExpression firstValue, QueryExpression secondValue, BlittableJsonReaderObject parameters)

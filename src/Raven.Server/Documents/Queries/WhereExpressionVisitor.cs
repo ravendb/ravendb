@@ -22,19 +22,22 @@ namespace Raven.Server.Documents.Queries
             if (expression is TrueExpression)
                 return;
 
-            if (expression is FieldExpression)
+            if (expression is FieldExpression f)
+            {
+                VisitFieldToken(f, null, parameters);
                 return;
+            }
 
             if (expression is BetweenExpression between)
             {
-                Visit(between.Source, parameters);
+                VisitFieldToken(between.Source, null, parameters);
                 VisitBetween(between.Source, between.Min, between.Max, parameters);
                 return;
             }
 
             if (expression is InExpression ie)
             {
-                Visit(ie.Source, parameters);
+                VisitFieldToken(ie.Source, null, parameters);
                 VisitIn(ie.Source, ie.Values, parameters);
                 return;
             }
