@@ -332,14 +332,8 @@ namespace Raven.Server.Documents.Queries
                 {
                     if (fieldName is MethodExpression me && me.Name.Equals("id") && firstValue is ValueExpression fv && secondValue is ValueExpression sv)
                     {
-                        var first = QueryBuilder.GetValue(Constants.Documents.Indexing.Fields.DocumentIdFieldName, _query, _metadata, parameters, fv);
-                        var second = QueryBuilder.GetValue(Constants.Documents.Indexing.Fields.DocumentIdFieldName, _query, _metadata, parameters, sv);
-
-                        Debug.Assert(first.Type == ValueTokenType.String);
-                        Debug.Assert(second.Type == ValueTokenType.String);
-
-                        AddId(first.Value.ToString());
-                        AddId(second.Value.ToString());
+                        throw new InvalidQueryException("Collection query does not support filtering by id() using Between operator. Supported operators are: =, IN",
+                            QueryText, parameters);
                     }
                 }
 

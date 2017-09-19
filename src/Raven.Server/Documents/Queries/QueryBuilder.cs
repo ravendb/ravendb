@@ -65,17 +65,7 @@ namespace Raven.Server.Documents.Queries
                         switch (fieldType)
                         {
                             case LuceneFieldType.String:
-                                if (!(value is string valueAsString))
-                                {
-                                    if (value is StringSegment s)
-                                    {
-                                        valueAsString= s.Value;
-                                    }
-                                    else
-                                    {
-                                        valueAsString = value?.ToString();
-                                    }
-                                }
+                                var valueAsString = GetValueAsString(value);
 
 
                                 if (exact && metadata.IsDynamic)
@@ -263,6 +253,22 @@ namespace Raven.Server.Documents.Queries
             throw new InvalidQueryException("Unable to understand query", query.QueryText, parameters);
         }
 
+        private static string GetValueAsString(object value)
+        {
+            if (!(value is string valueAsString))
+            {
+                if (value is StringSegment s)
+                {
+                    valueAsString = s.Value;
+                }
+                else
+                {
+                    valueAsString = value?.ToString();
+                }
+            }
+            return valueAsString;
+        }
+
         private static IEnumerable<(string Value, ValueTokenType Type)> GetValuesForIn(
             JsonOperationContext context,
             Query query,
@@ -381,7 +387,7 @@ namespace Raven.Server.Documents.Queries
             if (valueType != ValueTokenType.String)
                 ThrowMethodExpectsArgumentOfTheFollowingType("startsWith", ValueTokenType.String, valueType, metadata.QueryText, parameters);
 
-            var valueAsString = value as string;
+            var valueAsString = GetValueAsString(value);
             if (string.IsNullOrEmpty(valueAsString))
                 valueAsString = LuceneQueryHelper.Asterisk;
             else
@@ -398,7 +404,7 @@ namespace Raven.Server.Documents.Queries
             if (valueType != ValueTokenType.String)
                 ThrowMethodExpectsArgumentOfTheFollowingType("endsWith", ValueTokenType.String, valueType, metadata.QueryText, parameters);
 
-            var valueAsString = value as string;
+            var valueAsString = GetValueAsString(value);
             valueAsString = string.IsNullOrEmpty(valueAsString)
                 ? LuceneQueryHelper.Asterisk
                 : valueAsString.Insert(0, LuceneQueryHelper.Asterisk);
@@ -435,7 +441,7 @@ namespace Raven.Server.Documents.Queries
 
             Debug.Assert(metadata.IsDynamic == false || metadata.WhereFields[fieldName].IsFullTextSearch);
 
-            var valueAsString = (string)value;
+            var valueAsString = GetValueAsString(value);
             var values = valueAsString.Split(' ');
 
             if (metadata.IsDynamic)
