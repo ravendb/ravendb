@@ -525,7 +525,12 @@ class queryCompleter {
                 break;
             case "group":
             case "order":
-                this.completeWords(callback, [{value: "by", score: 0, meta: "keyword"}]);
+                if (lastKeyword.dividersCount === 0) {
+                    this.completeKeywordEnd(callback, lastKeyword);
+                    return;
+                }
+                
+                this.completeWords(callback, [{value: "by", score: 21, meta: "keyword"}]);
                 break;
             default:
                 break;
