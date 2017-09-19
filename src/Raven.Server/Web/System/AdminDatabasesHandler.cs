@@ -228,7 +228,10 @@ namespace Raven.Server.Web.System
                     ValidateClusterMembers(context, topology, databaseRecord);
                     foreach (var member in topology.Members)
                     {
-                        nodeUrlsAddedTo.Add(clusterTopology.GetUrlFromTag(member));
+                        var nodeUrl = clusterTopology.GetUrlFromTag(member);
+                        if(nodeUrl == null)
+                            throw new ArgumentException($"Failed to add node {member}, becasue we don't have it in the cluster.");
+                        nodeUrlsAddedTo.Add(nodeUrl);
                     }
                 }
                 else
