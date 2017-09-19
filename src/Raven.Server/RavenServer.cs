@@ -45,6 +45,7 @@ using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Monitoring.Snmp;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.ResponseCompression;
 using Sparrow;
@@ -71,6 +72,8 @@ namespace Raven.Server
 
         public event Action AfterDisposal;
 
+        public readonly ServerStatistics Statistics;
+
         public RavenServer(RavenConfiguration configuration)
         {
             JsonDeserializationValidator.Validate();
@@ -78,6 +81,8 @@ namespace Raven.Server
             Configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             if (Configuration.Initialized == false)
                 throw new InvalidOperationException("Configuration must be initialized");
+
+            Statistics = new ServerStatistics();
 
             AdminScripts = new ScriptRunnerCache(null, Configuration)
             {
@@ -229,7 +234,10 @@ namespace Raven.Server
                     Logger.Info($"Initialized Server... {WebUrl}");
 
                 ServerStore.TriggerDatabases();
+
                 _tcpListenerStatus = StartTcpListener();
+
+                StartSnmp();
             }
             catch (Exception e)
             {
@@ -445,6 +453,12 @@ namespace Raven.Server
         {
             public readonly List<TcpListener> Listeners = new List<TcpListener>();
             public int Port;
+        }
+
+        private void StartSnmp()
+        {
+            _snmpWatcher = new SnmpWatcher(this);
+            _snmpWatcher.Execute();
         }
 
         private TcpListenerStatus StartTcpListener()
@@ -740,6 +754,7 @@ namespace Raven.Server
         public readonly ScriptRunnerCache AdminScripts;
 
         private TcpListenerStatus _tcpListenerStatus;
+        private SnmpWatcher _snmpWatcher;
 
         private async Task<bool> DispatchServerWideTcpConnection(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header)
         {

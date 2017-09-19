@@ -526,7 +526,7 @@ namespace Raven.Server.ServerWide
 
         private void OnTopologyChanged(object sender, ClusterTopology topologyJson)
         {
-            NotificationCenter.Add(ClusterTopologyChanged.Create(topologyJson, LeaderTag, 
+            NotificationCenter.Add(ClusterTopologyChanged.Create(topologyJson, LeaderTag,
                 NodeTag, _engine.CurrentTerm, GetNodesStatuses(), LoadLicenseLimits()?.NodeLicenseDetails));
         }
 
@@ -847,7 +847,7 @@ namespace Raven.Server.ServerWide
             return await SendToLeaderAsync(modifyPeriodicBackup);
         }
 
-        public async Task<(long, object)> AddEtl(TransactionOperationContext context, 
+        public async Task<(long, object)> AddEtl(TransactionOperationContext context,
             string databaseName, BlittableJsonReaderObject etlConfiguration)
         {
             UpdateDatabaseCommand command;
@@ -1211,7 +1211,8 @@ namespace Raven.Server.ServerWide
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Updating license id: {license.Id}");
 
-            await WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index);        }
+            await WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index);
+        }
 
         public void PutLicenseLimits(LicenseLimits licenseLimits)
         {
@@ -1463,7 +1464,7 @@ namespace Raven.Server.ServerWide
                     return _nodeTcpServerUrl;
 
                 var ravenServerWebUrl = _ravenServer.WebUrl;
-                if(ravenServerWebUrl == null)
+                if (ravenServerWebUrl == null)
                     ThrowInvalidTcpUrlOnStartup();
                 var status = _ravenServer.GetTcpServerStatus();
                 return _nodeTcpServerUrl = Configuration.Core.GetNodeTcpServerUrl(ravenServerWebUrl, status.Port);
@@ -1508,7 +1509,6 @@ namespace Raven.Server.ServerWide
                 [nameof(LogSummary.Entries)] = entries
             };
             return json;
-
         }
     }
 }
