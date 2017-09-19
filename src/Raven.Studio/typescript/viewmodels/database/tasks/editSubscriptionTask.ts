@@ -22,7 +22,7 @@ type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<doc
 
 class editSubscriptionTask extends viewModelBase {
 
-    queryCompleter = queryCompleter.remoteCompleter(this.activeDatabase, ko.observableArray([]), RqlQueryType.Select); // we intentionally pass empty indexes here as subscriptions works only on collections
+    queryCompleter = queryCompleter.remoteCompleter(this.activeDatabase, ko.observableArray([]), "Select"); // we intentionally pass empty indexes here as subscriptions works only on collections
     editedSubscription = ko.observable<ongoingTaskSubscriptionEdit>();
     isAddingNewSubscriptionTask = ko.observable<boolean>(true);
 
