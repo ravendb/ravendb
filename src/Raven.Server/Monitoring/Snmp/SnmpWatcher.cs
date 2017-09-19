@@ -4,6 +4,7 @@ using System.Text;
 using Lextm.SharpSnmpLib;
 using Lextm.SharpSnmpLib.Messaging;
 using Lextm.SharpSnmpLib.Pipeline;
+using Raven.Server.Monitoring.Snmp.Objects.Documents;
 using Raven.Server.Monitoring.Snmp.Objects.Server;
 using Sparrow.Logging;
 
@@ -78,24 +79,24 @@ namespace Raven.Server.Monitoring.Snmp
             store.Add(new ServerTcpUrl(server.Configuration));
             store.Add(new ServerPublicTcpUrl(server.Configuration));
 
-            store.Add(new Objects.Server.ServerVersion());
+            store.Add(new ServerVersion());
             store.Add(new ServerFullVersion());
 
-            store.Add(new ServerUpTime(server));
-            store.Add(new ServerUpTimeGlobal(server));
+            store.Add(new ServerUpTime(server.Statistics));
+            store.Add(new ServerUpTimeGlobal(server.Statistics));
 
             store.Add(new ServerPid());
 
-            store.Add(new ServerConcurrentRequests(server));
-            store.Add(new ServerTotalRequests(server));
+            store.Add(new ServerConcurrentRequests(server.Metrics));
+            store.Add(new ServerTotalRequests(server.Metrics));
 
             store.Add(new ServerCpu());
             store.Add(new ServerTotalMemory());
 
-            store.Add(new ServerLastRequestTime(server));
+            store.Add(new ServerLastRequestTime(server.Statistics));
 
-            //store.Add(new DatabaseLoadedCount(serverOptions.DatabaseLandlord));
-            //store.Add(new DatabaseTotalCount(serverOptions.SystemDatabase));
+            store.Add(new DatabaseLoadedCount(server.ServerStore.DatabasesLandlord));
+            store.Add(new DatabaseTotalCount(server.ServerStore));
 
             return store;
         }
@@ -113,28 +114,28 @@ namespace Raven.Server.Monitoring.Snmp
             {
 #if DEBUG
                 if (_logger.IsInfoEnabled)
+                    return;
+
+                var builder = new StringBuilder();
+                builder.AppendLine("SNMP:");
+                var requestedOids = context.Request.Scope.Pdu.Variables.Select(x => x.Id);
+                foreach (var oid in requestedOids)
                 {
-                    var builder = new StringBuilder();
-                    builder.AppendLine("SNMP:");
-                    var requestedOids = context.Request.Scope.Pdu.Variables.Select(x => x.Id);
-                    foreach (var oid in requestedOids)
+                    if (context.Response == null)
                     {
-                        if (context.Response == null)
-                        {
-                            builder.AppendLine(string.Format("OID: {0}. Response: null", oid));
-                            continue;
-                        }
-
-                        var responseData = context.Response.Scope.Pdu.Variables
-                            .Where(x => x.Id == oid)
-                            .Select(x => x.Data)
-                            .FirstOrDefault();
-
-                        builder.AppendLine(string.Format("OID: {0}. Response: {1}", oid, responseData != null ? responseData.ToString() : null));
+                        builder.AppendLine(string.Format("OID: {0}. Response: null", oid));
+                        continue;
                     }
 
-                    _logger.Info(builder.ToString());
+                    var responseData = context.Response.Scope.Pdu.Variables
+                        .Where(x => x.Id == oid)
+                        .Select(x => x.Data)
+                        .FirstOrDefault();
+
+                    builder.AppendLine(string.Format("OID: {0}. Response: {1}", oid, responseData != null ? responseData.ToString() : null));
                 }
+
+                _logger.Info(builder.ToString());
 #endif
             }
         }

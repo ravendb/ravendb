@@ -5,22 +5,23 @@
 // -----------------------------------------------------------------------
 
 using Lextm.SharpSnmpLib;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
     public class ServerTotalRequests : ScalarObjectBase<Integer32>
     {
-        private readonly RavenServer _server;
+        private readonly MetricsCountersManager _metrics;
 
-        public ServerTotalRequests(RavenServer server)
+        public ServerTotalRequests(MetricsCountersManager metrics)
             : base("1.7.2")
         {
-            _server = server;
+            _metrics = metrics;
         }
 
         protected override Integer32 GetData()
         {
-            return new Integer32((int)_server.Metrics.RequestsMeter.Count);
+            return new Integer32((int)_metrics.RequestsMeter.Count);
         }
     }
 }

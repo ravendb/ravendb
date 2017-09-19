@@ -1,22 +1,23 @@
 using Lextm.SharpSnmpLib;
 using Raven.Client.Util;
+using Raven.Server.ServerWide;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
     internal class ServerLastRequestTime : ScalarObjectBase<TimeTicks>
     {
-        private readonly RavenServer _server;
+        private readonly ServerStatistics _statistics;
 
-        public ServerLastRequestTime(RavenServer server)
+        public ServerLastRequestTime(ServerStatistics statistics)
             : base("1.8")
         {
-            _server = server;
+            _statistics = statistics;
         }
 
         protected override TimeTicks GetData()
         {
-            if (_server.Statistics.LastRequestTime.HasValue)
-                return new TimeTicks(SystemTime.UtcNow - _server.Statistics.LastRequestTime.Value);
+            if (_statistics.LastRequestTime.HasValue)
+                return new TimeTicks(SystemTime.UtcNow - _statistics.LastRequestTime.Value);
 
             return null;
         }
