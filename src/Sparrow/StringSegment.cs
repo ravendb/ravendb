@@ -247,6 +247,9 @@ namespace Sparrow
 
         public unsafe bool Equals(string other)
         {
+            if (other == null)
+                return Buffer == null;
+
             if (Length != other.Length)
                 return false;
 
@@ -260,6 +263,9 @@ namespace Sparrow
 
         public bool Equals(string other, StringComparison stringComparison)
         {
+            if (other == null)
+                return Buffer == null;
+
             if (Length != other.Length)
                 return false;
             return string.Compare(Buffer, Offset, other, 0, Length, stringComparison) == 0;

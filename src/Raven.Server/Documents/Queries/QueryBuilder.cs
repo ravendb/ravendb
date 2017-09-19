@@ -56,7 +56,7 @@ namespace Raven.Server.Documents.Queries
                     case OperatorType.LessThanEqual:
                     case OperatorType.GreaterThanEqual:
                     {
-                        var fieldName = ExtractIndexFieldName(query.QueryText, parameters, where.Left, metadata);
+                        var fieldName = ExtractIndexFieldName(query, parameters, where.Left, metadata);
                         var (value, valueType) = GetValue(fieldName, query, metadata, parameters, where.Right);
 
                         var (luceneFieldName, fieldType, termType) = GetLuceneField(fieldName, valueType);
@@ -149,7 +149,7 @@ namespace Raven.Server.Documents.Queries
             }
             if (expression is BetweenExpression be)
             {
-                var fieldName = ExtractIndexFieldName(query.QueryText, parameters, be.Source, metadata);
+                var fieldName = ExtractIndexFieldName(query, parameters, be.Source, metadata);
                 var (valueFirst, valueFirstType) = GetValue(fieldName, query, metadata, parameters, be.Min);
                 var (valueSecond, _) = GetValue(fieldName, query, metadata, parameters, be.Max);
 
@@ -175,7 +175,7 @@ namespace Raven.Server.Documents.Queries
             }
             if (expression is InExpression ie)
             {
-                var fieldName = ExtractIndexFieldName(query.QueryText, parameters, ie.Source, metadata);
+                var fieldName = ExtractIndexFieldName(query, parameters, ie.Source, metadata);
                 LuceneTermType termType = LuceneTermType.Null;
                 bool hasGotTheRealType = false;
 
@@ -223,8 +223,6 @@ namespace Raven.Server.Documents.Queries
 
                 switch (methodType)
                 {
-                    case MethodType.Id:
-                        return HandleId(context, query, me, metadata, parameters, exact);
                     case MethodType.Search:
                         return HandleSearch(query, me, metadata, parameters, analyzer);
                     case MethodType.Boost:
@@ -239,10 +237,6 @@ namespace Raven.Server.Documents.Queries
                         return HandleExists(query, parameters, me, metadata);
                     case MethodType.Exact:
                         return HandleExact(context, query, me, metadata, parameters, analyzer, getSpatialField);
-                    case MethodType.Count:
-                        return HandleCount(context, query, me, metadata, parameters, analyzer, getSpatialField);
-                    case MethodType.Sum:
-                        return HandleSum(context, query, me, metadata, parameters, analyzer, getSpatialField);
                     case MethodType.Within:
                     case MethodType.Contains:
                     case MethodType.Disjoint:
@@ -303,12 +297,42 @@ namespace Raven.Server.Documents.Queries
             throw new InvalidQueryException("Expected in argument to be value, but was: " + val, query.QueryText, parameters);
         }
 
-        private static string ExtractIndexFieldName(string queryText, BlittableJsonReaderObject parameters, QueryExpression field, QueryMetadata metadata)
+        private static string ExtractIndexFieldName(Query query, BlittableJsonReaderObject parameters, QueryExpression field, QueryMetadata metadata)
         {
             if (field is FieldExpression fe)
                 return metadata.GetIndexFieldName(fe.Field.Value);
 
-            throw new InvalidQueryException("Expected field, got: " + field, queryText, parameters);
+            if (field is MethodExpression me)
+            {
+                var methodType = QueryMethod.GetMethodType(me.Name.Value);
+                switch (methodType)
+                {
+                    case MethodType.Id:
+                        if (me.Arguments == null || me.Arguments.Count == 0)
+                            return Constants.Documents.Indexing.Fields.DocumentIdFieldName;
+                        if(me.Arguments[0] is FieldExpression docAlias && docAlias.Field.Equals(query.From.Alias))
+                            return Constants.Documents.Indexing.Fields.DocumentIdFieldName;
+                        throw new InvalidQueryException("id() can only be used on the root query alias but got: " + me.Arguments[0], query.QueryText, parameters);
+                    case MethodType.Count:
+                        if (me.Arguments == null || me.Arguments.Count == 0)
+                            return Constants.Documents.Indexing.Fields.CountFieldName;
+                        if (me.Arguments[0] is FieldExpression countAlias && countAlias.Field.Equals(query.From.Alias))
+                            return Constants.Documents.Indexing.Fields.CountFieldName;
+
+                        throw new InvalidQueryException("count() can only be used on the root query alias but got: " + me.Arguments[0], query.QueryText, parameters);
+                    case MethodType.Sum:
+                        if (me.Arguments != null && me.Arguments.Count == 1 &&
+                            me.Arguments[0] is FieldExpression f)
+                            return f.Field.Value;
+
+                        throw new InvalidQueryException("sum() must be called with a single field name, but was called: " + me, query.QueryText, parameters);
+
+                    default:
+                        throw new InvalidQueryException("Method " + me.Name.Value + " cannot be used in an expression in this manner", query.QueryText, parameters);
+                }
+            }
+
+            throw new InvalidQueryException("Expected field, got: " + field, query.QueryText, parameters);
         }
 
         private static string ExtractIndexFieldName(string queryText, ValueExpression field, QueryMetadata metadata)
@@ -316,83 +340,10 @@ namespace Raven.Server.Documents.Queries
             return metadata.GetIndexFieldName(field.Token.Value);
         }
 
-        private static Lucene.Net.Search.Query HandleId(JsonOperationContext context, Query query, MethodExpression expression, QueryMetadata metadata,
-            BlittableJsonReaderObject parameters, bool exact)
-        {
-            var arg = expression.Arguments[expression.Arguments.Count - 1];
-            if (arg is BinaryExpression be)
-            {
-                switch (be.Operator)
-                {
-                    case OperatorType.Equal:
-                        var equal = GetValue(Constants.Documents.Indexing.Fields.DocumentIdFieldName, query, metadata, parameters, be.Right);
-                        AssertValueIsString(Constants.Documents.Indexing.Fields.DocumentIdFieldName, equal.Type);
-
-                        return LuceneQueryHelper.Equal(Constants.Documents.Indexing.Fields.DocumentIdFieldName, LuceneTermType.String, equal.Value as string, exact);
-                    case OperatorType.LessThan:
-                        var lessThan = GetValue(Constants.Documents.Indexing.Fields.DocumentIdFieldName, query, metadata, parameters, be.Right);
-                        AssertValueIsString(Constants.Documents.Indexing.Fields.DocumentIdFieldName, lessThan.Type);
-
-                        return LuceneQueryHelper.LessThan(Constants.Documents.Indexing.Fields.DocumentIdFieldName, LuceneTermType.String, lessThan.Value as string,
-                            exact);
-                    case OperatorType.GreaterThan:
-                        var greaterThan = GetValue(Constants.Documents.Indexing.Fields.DocumentIdFieldName, query, metadata, parameters, be.Right);
-                        AssertValueIsString(Constants.Documents.Indexing.Fields.DocumentIdFieldName, greaterThan.Type);
-
-                        return LuceneQueryHelper.GreaterThan(Constants.Documents.Indexing.Fields.DocumentIdFieldName, LuceneTermType.String, greaterThan.Value as string,
-                            exact);
-                    case OperatorType.LessThanEqual:
-                        var lessThanEqual = GetValue(Constants.Documents.Indexing.Fields.DocumentIdFieldName, query, metadata, parameters, be.Right);
-                        AssertValueIsString(Constants.Documents.Indexing.Fields.DocumentIdFieldName, lessThanEqual.Type);
-
-                        return LuceneQueryHelper.LessThanOrEqual(Constants.Documents.Indexing.Fields.DocumentIdFieldName, LuceneTermType.String,
-                            lessThanEqual.Value as string, exact);
-                    case OperatorType.GreaterThanEqual:
-                        var greaterThanEqual = GetValue(Constants.Documents.Indexing.Fields.DocumentIdFieldName, query, metadata, parameters, be.Right);
-                        AssertValueIsString(Constants.Documents.Indexing.Fields.DocumentIdFieldName, greaterThanEqual.Type);
-
-                        return LuceneQueryHelper.GreaterThanOrEqual(Constants.Documents.Indexing.Fields.DocumentIdFieldName, LuceneTermType.String,
-                            greaterThanEqual.Value as string, exact);
-                }
-            }
-            if (arg is BetweenExpression between)
-            {
-                var valueFirst = GetValue(Constants.Documents.Indexing.Fields.DocumentIdFieldName, query, metadata, parameters, between.Min);
-                AssertValueIsString(Constants.Documents.Indexing.Fields.DocumentIdFieldName, valueFirst.Type);
-
-                var valueSecond = GetValue(Constants.Documents.Indexing.Fields.DocumentIdFieldName, query, metadata, parameters, between.Max);
-                AssertValueIsString(Constants.Documents.Indexing.Fields.DocumentIdFieldName, valueSecond.Type);
-                return LuceneQueryHelper.Between(Constants.Documents.Indexing.Fields.DocumentIdFieldName, LuceneTermType.String, valueFirst.Value as string,
-                    valueSecond.Value as string, exact);
-            }
-
-            if (arg is InExpression ie)
-            {
-                if (ie.All)
-                {
-                    var allInQuery = new BooleanQuery();
-                    foreach (var value in GetValuesForIn(context, query, ie, metadata, parameters, Constants.Documents.Indexing.Fields.DocumentIdFieldName))
-                        allInQuery.Add(LuceneQueryHelper.Equal(Constants.Documents.Indexing.Fields.DocumentIdFieldName, LuceneTermType.String, value.Value, exact),
-                            Occur.MUST);
-
-                    return allInQuery;
-                }
-                var matches = new List<string>();
-                foreach (var value in GetValuesForIn(context, query, ie, metadata, parameters, Constants.Documents.Indexing.Fields.DocumentIdFieldName))
-                    matches.Add(LuceneQueryHelper.GetTermValue(value.Value, LuceneTermType.String, exact));
-
-                return new TermsMatchQuery(Constants.Documents.Indexing.Fields.DocumentIdFieldName, matches);
-            }
-
-            ThrowUnhandledExpressionOperatorType(arg.Type.ToString(), metadata.QueryText, parameters);
-
-
-            return null; // not reachable
-        }
 
         private static Lucene.Net.Search.Query HandleExists(Query query, BlittableJsonReaderObject parameters, MethodExpression expression, QueryMetadata metadata)
         {
-            var fieldName = ExtractIndexFieldName(query.QueryText, parameters,  (FieldExpression)expression.Arguments[0], metadata);
+            var fieldName = ExtractIndexFieldName(query, parameters,  (FieldExpression)expression.Arguments[0], metadata);
 
             return LuceneQueryHelper.Term(fieldName, LuceneQueryHelper.Asterisk, LuceneTermType.WildCard);
         }
@@ -400,7 +351,7 @@ namespace Raven.Server.Documents.Queries
         private static Lucene.Net.Search.Query HandleLucene(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters,
             Analyzer analyzer)
         {
-            var fieldName = ExtractIndexFieldName(query.QueryText, parameters , (FieldExpression)expression.Arguments[0], metadata);
+            var fieldName = ExtractIndexFieldName(query, parameters , (FieldExpression)expression.Arguments[0], metadata);
             var (value, valueType) = GetValue(fieldName, query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
 
             if (valueType != ValueTokenType.String)
@@ -412,7 +363,7 @@ namespace Raven.Server.Documents.Queries
 
         private static Lucene.Net.Search.Query HandleStartsWith(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters)
         {
-            var fieldName = ExtractIndexFieldName(query.QueryText, parameters, (FieldExpression)expression.Arguments[0], metadata);
+            var fieldName = ExtractIndexFieldName(query, parameters, (FieldExpression)expression.Arguments[0], metadata);
             var (value, valueType) = GetValue(fieldName, query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
 
             if (valueType != ValueTokenType.String)
@@ -429,7 +380,7 @@ namespace Raven.Server.Documents.Queries
 
         private static Lucene.Net.Search.Query HandleEndsWith(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters)
         {
-            var fieldName = ExtractIndexFieldName(query.QueryText, parameters, (FieldExpression)expression.Arguments[0], metadata);
+            var fieldName = ExtractIndexFieldName(query, parameters, (FieldExpression)expression.Arguments[0], metadata);
             var (value, valueType) = GetValue(fieldName, query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
 
             if (valueType != ValueTokenType.String)
@@ -459,7 +410,7 @@ namespace Raven.Server.Documents.Queries
         {
             string fieldName;
             if (expression.Arguments[0] is FieldExpression ft)
-                fieldName = ExtractIndexFieldName(query.QueryText, parameters, ft, metadata);
+                fieldName = ExtractIndexFieldName(query, parameters, ft, metadata);
             else if (expression.Arguments[0] is ValueExpression vt)
                 fieldName = ExtractIndexFieldName(query.QueryText, vt, metadata);
             else
@@ -519,7 +470,7 @@ namespace Raven.Server.Documents.Queries
         private static Lucene.Net.Search.Query HandleSpatial(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters,
             MethodType spatialMethod, Func<string, SpatialField> getSpatialField)
         {
-            var fieldName = ExtractIndexFieldName(query.QueryText,parameters, (FieldExpression)expression.Arguments[0], metadata);
+            var fieldName = ExtractIndexFieldName(query,parameters, (FieldExpression)expression.Arguments[0], metadata);
             var shapeExpression = (MethodExpression)expression.Arguments[1];
 
             var distanceErrorPct = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct;
@@ -634,38 +585,6 @@ namespace Raven.Server.Documents.Queries
             BlittableJsonReaderObject parameters, Analyzer analyzer, Func<string, SpatialField> getSpatialField)
         {
             return ToLuceneQuery(context, query, expression.Arguments[0], metadata, parameters, analyzer, getSpatialField, exact: true);
-        }
-
-        private static Lucene.Net.Search.Query HandleCount(JsonOperationContext context, Query query, MethodExpression expression, QueryMetadata metadata,
-            BlittableJsonReaderObject parameters, Analyzer analyzer, Func<string, SpatialField> getSpatialField)
-        {
-            if (expression.Arguments == null || expression.Arguments.Count == 0)
-            {
-                ThrowMethodExpectsOperatorAfterInvocation("count", metadata.QueryText, parameters);
-                return null;// never hit
-            }
-
-            var queryExpression = (QueryExpression)expression.Arguments[0];
-
-//            queryExpression.Field = expression.Field;
-
-            return ToLuceneQuery(context, query, queryExpression, metadata, parameters, analyzer, getSpatialField);
-        }
-
-        private static Lucene.Net.Search.Query HandleSum(JsonOperationContext context, Query query, MethodExpression expression, QueryMetadata metadata,
-            BlittableJsonReaderObject parameters, Analyzer analyzer, Func<string, SpatialField> getSpatialField)
-        {
-            if (expression.Arguments == null || expression.Arguments.Count != 2)
-            {
-                ThrowMethodExpectsOperatorAfterInvocation("sum", metadata.QueryText, parameters);
-                return null;// never his
-            }
-
-            var queryExpression = (QueryExpression)expression.Arguments[1];
-
-//            queryExpression.Field = expression.Arguments[0] as FieldToken;
-
-            return ToLuceneQuery(context, query, queryExpression, metadata, parameters, analyzer, getSpatialField);
         }
 
         public static IEnumerable<(object Value, ValueTokenType Type)> GetValues(string fieldName, Query query, QueryMetadata metadata,

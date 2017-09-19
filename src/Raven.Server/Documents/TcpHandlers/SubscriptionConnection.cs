@@ -708,9 +708,16 @@ namespace Raven.Server.Documents.TcpHandlers
                         var field = (filter.Left as FieldExpression)?.Field;
                         if (field == null || string.Equals(field, "Revisions", StringComparison.OrdinalIgnoreCase) == false)
                             throw new NotSupportedException("Subscription collection filter can only specify 'Revisions = true'");
-                        if (filter.Right is TrueExpression == false)
+                        if (filter.Right is ValueExpression ve)
+                        {
+                            revisions = filter.Operator == OperatorType.Equal && ve.Value == ValueTokenType.True;
+                            if(ve.Value != ValueTokenType.True && ve.Value != ValueTokenType.False)
+                                throw new NotSupportedException("Subscription collection filter can only specify 'Revisions = true'");
+                        }
+                        else
+                        {
                             throw new NotSupportedException("Subscription collection filter can only specify 'Revisions = true'");
-                        revisions = filter.Operator == OperatorType.Equal;
+                        }
                         break;
                     default:
                         throw new NotSupportedException("Subscription must not specify a collection filter (move it to the where clause)");

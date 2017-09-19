@@ -9,11 +9,11 @@ namespace Raven.Server.Documents.Queries.Parser
 {
     public class QueryParser
     {
-        private static readonly string[] OperatorStartMatches = { ">=", "<=", "<>", "<", ">",  "==", "=", "!=",  "BETWEEN", "IN", "ALL IN", "(" };
-        private static readonly string[] BinaryOperators = { "OR", "AND" };
-        private static readonly string[] StaticValues = { "true", "false", "null" };
-        private static readonly string[] OrderByOptions = { "ASC", "DESC", "ASCENDING", "DESCENDING" };
-        private static readonly string[] OrderByAsOptions = { "string", "long", "double", "alphaNumeric" };
+        private static readonly string[] OperatorStartMatches = {">=", "<=", "<>", "<", ">", "==", "=", "!=", "BETWEEN", "IN", "ALL IN", "("};
+        private static readonly string[] BinaryOperators = {"OR", "AND"};
+        private static readonly string[] StaticValues = {"true", "false", "null"};
+        private static readonly string[] OrderByOptions = {"ASC", "DESC", "ASCENDING", "DESCENDING"};
+        private static readonly string[] OrderByAsOptions = {"string", "long", "double", "alphaNumeric"};
 
 
         private int _depth;
@@ -139,7 +139,7 @@ namespace Raven.Server.Documents.Queries.Parser
             if (Scanner.TryScan('(') == false)
                 ThrowParseException("Unable to parse function " + name + " signature");
 
-            if (Method(null, out _) == false)
+            if (Method(new FieldExpression(name, false), out _) == false)
                 ThrowParseException("Unable to parse function " + name + " signature");
 
             if (Scanner.FunctionBody() == false)
@@ -231,7 +231,7 @@ namespace Raven.Server.Documents.Queries.Parser
             var functionStart = Scanner.Position;
             if (Scanner.FunctionBody())
             {
-                query.SelectFunctionBody = new StringSegment(Scanner.Input, 
+                query.SelectFunctionBody = new StringSegment(Scanner.Input,
                     functionStart, Scanner.Position - functionStart);
 
                 return new List<(QueryExpression, StringSegment?)>();
@@ -284,7 +284,6 @@ namespace Raven.Server.Documents.Queries.Parser
         }
 
 
-
         private (FieldExpression From, StringSegment? Alias, QueryExpression Filter, bool Index) FromClause()
         {
             if (Scanner.TryScan("FROM") == false)
@@ -321,7 +320,7 @@ namespace Raven.Server.Documents.Queries.Parser
                         : new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength),
                     isQuoted
                 );
-                
+
                 if (Scanner.TryScan('(')) // FROM  Collection ( filter )
                 {
                     if (Expression(out filter) == false)
@@ -330,8 +329,6 @@ namespace Raven.Server.Documents.Queries.Parser
                     if (Scanner.TryScan(')') == false)
                         ThrowParseException("Expected closing parenthesis in filtered FORM clause after filter");
                 }
-
-
             }
 
 
@@ -461,20 +458,20 @@ namespace Raven.Server.Documents.Queries.Parser
                 {
                     case OperatorType.And:
                     case OperatorType.AndNot:
-                        var rightOp = (BinaryExpression)right;
-
-                        switch (rightOp.Operator)
+                        if (right is BinaryExpression rightOp)
                         {
-                            case OperatorType.AndNot:
-                            case OperatorType.OrNot:
-                            case OperatorType.Or:
-                            case OperatorType.And:
+                            switch (rightOp.Operator)
+                            {
+                                case OperatorType.AndNot:
+                                case OperatorType.OrNot:
+                                case OperatorType.Or:
+                                case OperatorType.And:
 
-                                rightOp.Left = new BinaryExpression(op, rightOp.Left, type);
-                                op = right;
-                                return true;
+                                    rightOp.Left = new BinaryExpression(op, rightOp.Left, type);
+                                    op = right;
+                                    return true;
+                            }
                         }
-
                         break;
                 }
             }
@@ -600,11 +597,27 @@ namespace Raven.Server.Documents.Queries.Parser
 
                         if (isMethod && Operator(false, out var methodOperator))
                         {
-                            if (method.Arguments == null)
-                                method.Arguments = new List<QueryExpression>();
+                            if (methodOperator is BinaryExpression be)
+                            {
+                                be.Left = method;
+                                op = be;
+                                return true;
+                            }
 
-                            method.Arguments.Add(methodOperator);
-                            return true;
+                            if (methodOperator is InExpression ie)
+                            {
+                                ie.Source = method;
+                                op = ie;
+                                return true;
+                            }
+                            if (methodOperator is BetweenExpression between)
+                            {
+                                between.Source = method;
+                                op = between;
+                                return true;
+                            }
+
+                            ThrowParseException("Unexpected operator after method call: " + methodOperator);
                         }
 
                         return isMethod;
@@ -613,7 +626,7 @@ namespace Raven.Server.Documents.Queries.Parser
                         return false;
                 }
             }
-            
+
             if (Value(out var val) == false)
                 ThrowParseException($"parsing {type} expression, expected a value (operators only work on scalar / parameters values)");
 
@@ -714,7 +727,7 @@ namespace Raven.Server.Documents.Queries.Parser
             if (Scanner.String())
             {
                 val = new ValueExpression(
-                    new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength),
+                    new StringSegment(Scanner.Input, Scanner.TokenStart + 1, Scanner.TokenLength - 2),
                     ValueTokenType.String,
                     Scanner.EscapeChars != 0
                 );
@@ -726,13 +739,13 @@ namespace Raven.Server.Documents.Queries.Parser
                 switch (match)
                 {
                     case "true":
-                        type  = ValueTokenType.True;
+                        type = ValueTokenType.True;
                         break;
                     case "false":
-                        type  = ValueTokenType.False;
+                        type = ValueTokenType.False;
                         break;
                     case "null":
-                        type  = ValueTokenType.Null;
+                        type = ValueTokenType.Null;
                         break;
                     default:
                         type = ValueTokenType.String;
@@ -817,9 +830,7 @@ namespace Raven.Server.Documents.Queries.Parser
             }
 
             token = new FieldExpression(
-                isQuoted ? 
-                    new StringSegment(Scanner.Input, tokenStart + 1, tokenLength -2 ) : 
-                    new StringSegment(Scanner.Input, tokenStart, tokenLength),
+                isQuoted ? new StringSegment(Scanner.Input, tokenStart + 1, tokenLength - 2) : new StringSegment(Scanner.Input, tokenStart, tokenLength),
                 isQuoted
             );
             return true;

@@ -9,36 +9,33 @@ namespace FastTests.Server.Documents.Queries.Parser
     public class ComplexQueries : NoDisposalNeeded
     {
         [Theory]
-        [InlineData("FROM Users", "{\"From\":{\"Index\":false,\"Source\":\"Users\"}}")]
-        [InlineData("FROM Users AS u", "{\"From\":{\"Index\":false,\"Source\":\"Users\",\"Alias\":\"u\"}}")]
-        [InlineData("FROM Users WHERE search(Name, 'oren')", "{\"From\":{\"Index\":false,\"Source\":\"Users\"},\"Where\":{\"Type\":\"Method\",\"Method\":\"search\",\"Arguments\":[{\"Field\":\"Name\"},\"oren\"]}}")]
-        [InlineData(@"FROM Users (IsActive = null)
-GROUP BY Country
-WHERE Age BETWEEN 21 AND 30
-ORDER BY Age DESC, Name ASC", "{\"From\":{\"Index\":false,\"Source\":\"Users\",\"Filter\":{\"Type\":\"Equal\",\"Field\":\"IsActive\",\"Value\":null}},\"GroupBy\":[\"Country\"],\"Where\":{\"Type\":\"Between\",\"Field\":\"Age\",\"Min\":21,\"Max\":30},\"OrderBy\":[{\"Field\":\"Age\",\"Ascending\":false},{\"Field\":\"Name\",\"Ascending\":true}]}")]
+        [InlineData("FROM Users", "{\"From\":\"Users\"}")]
+        [InlineData("FROM Users (IsActive =false)", "{\"From\":\"Users\"}")]
+        [InlineData("FROM Users AS u", "{\"From\":\"Users\",\"Alias\":\"u\"}")]
+        [InlineData("FROM Users (IsActive = true) SELECT Age ", "{\"From\":\"Users\",\"Select\":[{\"Expression\":\"Age\"}]}")]
         [InlineData(@"FROM Users (IsActive = true)
 GROUP BY Country
 WHERE Age BETWEEN 21 AND 30
-ORDER BY Age DESC, Name ASC", "{\"From\":{\"Index\":false,\"Source\":\"Users\",\"Filter\":{\"Type\":\"Equal\",\"Field\":\"IsActive\",\"Value\":true}},\"GroupBy\":[\"Country\"],\"Where\":{\"Type\":\"Between\",\"Field\":\"Age\",\"Min\":21,\"Max\":30},\"OrderBy\":[{\"Field\":\"Age\",\"Ascending\":false},{\"Field\":\"Name\",\"Ascending\":true}]}")]
-        [InlineData("FROM Users (IsActive =false)", "{\"From\":{\"Index\":false,\"Source\":\"Users\",\"Filter\":{\"Type\":\"Equal\",\"Field\":\"IsActive\",\"Value\":false}}}")]
-        [InlineData(@"FROM Users (IsActive = true) SELECT Age ", "{\"Select\":[{\"Expression\":\"Age\"}],\"From\":{\"Index\":false,\"Source\":\"Users\",\"Filter\":{\"Type\":\"Equal\",\"Field\":\"IsActive\",\"Value\":true}}}")]
-        [InlineData(@"FROM Users (IsActive = true)
-WHERE Age BETWEEN 21 AND 30", "{\"From\":{\"Index\":false,\"Source\":\"Users\",\"Filter\":{\"Type\":\"Equal\",\"Field\":\"IsActive\",\"Value\":true}},\"Where\":{\"Type\":\"Between\",\"Field\":\"Age\",\"Min\":21,\"Max\":30}}")]
-        [InlineData(@"FROM Users (IsActive = true)
-WHERE Age BETWEEN 21 AND 30
-ORDER BY Age DESC, Name ASC", "{\"From\":{\"Index\":false,\"Source\":\"Users\",\"Filter\":{\"Type\":\"Equal\",\"Field\":\"IsActive\",\"Value\":true}},\"Where\":{\"Type\":\"Between\",\"Field\":\"Age\",\"Min\":21,\"Max\":30},\"OrderBy\":[{\"Field\":\"Age\",\"Ascending\":false},{\"Field\":\"Name\",\"Ascending\":true}]}")]
+ORDER BY Age DESC, Name ASC", "{\"From\":\"Users\",\"GroupBy\":[\"Country\"],\"OrderBy\":[{\"Field\":\"Age\",\"Ascending\":false},{\"Field\":\"Name\",\"Ascending\":true}]}")]
+        [InlineData("FROM Posts WHERE Tags[].Name = 'Any'", "{\"From\":\"Posts\",\"Where\":{\"Type\":\"Equal\",\"Left\":\"Tags[].Name\",\"Right\":\"Any\"}}")]
+        [InlineData("FROM Users GROUP BY Country WHERE sum(Weight) > 100 SELECT sum(Weight) ", "{\"From\":\"Users\",\"GroupBy\":[\"Country\"],\"Select\":[{\"Expression\":{\"Method\":\"sum\",\"Arguments\":[\"Weight\"]}}]}")]
+        [InlineData(@"FROM Users
+ORDER BY Age AS double DESC, Name ASC", "{\"From\":\"Users\",\"OrderBy\":[{\"Field\":\"Age\",\"FieldType\":\"Double\",\"Ascending\":false},{\"Field\":\"Name\",\"Ascending\":true}]}")]
         [InlineData(@"
 FROM Users
 WHERE boost(Age > 15, 2) 
 ORDER BY LastName
 SELECT sum(Age), Name as Username
-", "{\"Select\":[{\"Expression\":{\"Type\":\"Method\",\"Method\":\"sum\",\"Arguments\":[{\"Field\":\"Age\"}]}},{\"Expression\":\"Name\",\"Alias\":\"Username\"}],\"From\":{\"Index\":false,\"Source\":\"Users\"},\"Where\":{\"Type\":\"Method\",\"Method\":\"boost\",\"Arguments\":[{\"Type\":\"GreaterThan\",\"Field\":\"Age\",\"Value\":\"15\"},2]},\"OrderBy\":[{\"Field\":\"LastName\",\"Ascending\":true}]}")]
-        [InlineData(@"FROM Users
-ORDER BY Age AS double DESC, Name ASC", "{\"From\":{\"Index\":false,\"Source\":\"Users\"},\"OrderBy\":[{\"Field\":\"Age\",\"FieldType\":\"Double\",\"Ascending\":false},{\"Field\":\"Name\",\"Ascending\":true}]}")]
-        [InlineData("FROM Posts WHERE Tags[].Name = 'Any'", "{\"From\":{\"Index\":false,\"Source\":\"Posts\"},\"Where\":{\"Type\":\"Equal\",\"Field\":\"Tags[].Name\",\"Value\":\"Any\"}}")]
-        [InlineData("FROM Users GROUP BY Country WHERE count() > 100 SELECT count()", "{\"Select\":[{\"Expression\":{\"Type\":\"Method\",\"Method\":\"count\",\"Arguments\":[]}}],\"From\":{\"Index\":false,\"Source\":\"Users\"},\"GroupBy\":[\"Country\"],\"Where\":{\"Type\":\"Method\",\"Method\":\"count\",\"Arguments\":[{\"Type\":\"GreaterThan\",\"Field\":null,\"Value\":\"100\"}]}}")]
-        [InlineData("FROM Users GROUP BY Country WHERE sum(Weight) > 100 SELECT sum(Weight) ", "{\"Select\":[{\"Expression\":{\"Type\":\"Method\",\"Method\":\"sum\",\"Arguments\":[{\"Field\":\"Weight\"}]}}],\"From\":{\"Index\":false,\"Source\":\"Users\"},\"GroupBy\":[\"Country\"],\"Where\":{\"Type\":\"Method\",\"Method\":\"sum\",\"Arguments\":[{\"Field\":\"Weight\"},{\"Type\":\"GreaterThan\",\"Field\":null,\"Value\":\"100\"}]}}")]
-
+", "{\"From\":\"Users\",\"OrderBy\":[{\"Field\":\"LastName\",\"Ascending\":true}],\"Select\":[{\"Expression\":{\"Method\":\"sum\",\"Arguments\":[\"Age\"]}},{\"Expression\":\"Name\",\"Alias\":\"Username\"}]}")]
+        [InlineData(@"FROM Users (IsActive = null)
+GROUP BY Country
+WHERE Age BETWEEN 21 AND 30
+ORDER BY Age DESC, Name ASC", "{\"From\":\"Users\",\"GroupBy\":[\"Country\"],\"OrderBy\":[{\"Field\":\"Age\",\"Ascending\":false},{\"Field\":\"Name\",\"Ascending\":true}]}")]
+        [InlineData("FROM Users GROUP BY Country WHERE count() > 100 SELECT count()", "{\"From\":\"Users\",\"GroupBy\":[\"Country\"],\"Select\":[{\"Expression\":{\"Method\":\"count\",\"Arguments\":[]}}]}")]
+        [InlineData(@"FROM Users (IsActive = true)
+WHERE Age BETWEEN 21 AND 30
+ORDER BY Age DESC, Name ASC", "{\"From\":\"Users\",\"OrderBy\":[{\"Field\":\"Age\",\"Ascending\":false},{\"Field\":\"Name\",\"Ascending\":true}]}")]
+        [InlineData("FROM Users WHERE search(Name, 'oren')", "{\"From\":\"Users\"}")]
         public void CanParseFullQueries(string q, string json)
         {
             var parser = new QueryParser();
@@ -46,9 +43,12 @@ ORDER BY Age AS double DESC, Name ASC", "{\"From\":{\"Index\":false,\"Source\":\
 
             var query = parser.Parse();
             var output = new StringWriter();
-            new JsonQueryVisitor(new JsonTextWriter(output)).Visit(query);
+            var jsonTextWriter = new JsonTextWriter(output);
+            jsonTextWriter.WriteStartObject();
+            new JsonQueryVisitor(jsonTextWriter).Visit(query);
+            jsonTextWriter.WriteEndObject();
             var actual = output.GetStringBuilder().ToString();
-            //Console.WriteLine(actual.Replace("\"", "\\\""));
+            //File.AppendAllText("out.txt", $"[InlineData(\"{q}\", \"{actual.Replace("\"", "\\\"")}\")]\r\n");
             Assert.Equal(json, actual);
         }
     }

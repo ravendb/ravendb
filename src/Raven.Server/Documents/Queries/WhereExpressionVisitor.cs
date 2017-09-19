@@ -22,14 +22,19 @@ namespace Raven.Server.Documents.Queries
             if (expression is TrueExpression)
                 return;
 
+            if (expression is FieldExpression)
+                return;
+
             if (expression is BetweenExpression between)
             {
+                Visit(between.Source, parameters);
                 VisitBetween(between.Source, between.Min, between.Max, parameters);
                 return;
             }
 
             if (expression is InExpression ie)
             {
+                Visit(ie.Source, parameters);
                 VisitIn(ie.Source, ie.Values, parameters);
                 return;
             }
@@ -38,9 +43,8 @@ namespace Raven.Server.Documents.Queries
                 VisitMethodTokens(me.Name, me.Arguments, parameters);
                 return;
             }
-            
-            var be = expression as BinaryExpression;
-            if (be == null)
+
+            if (!(expression is BinaryExpression be))
             {
                 ThrowUnexpectedExpression(expression);
                 return;// never hit

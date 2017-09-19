@@ -180,15 +180,15 @@ namespace Raven.Server.Documents.Queries.AST
         {
             EnsureSpace();
             if (expr.Value == ValueTokenType.String)
-                _sb.Append('"');
+                _sb.Append("'");
 
             if (expr.Value == ValueTokenType.Parameter)
                 _sb.Append("$");
             
-            _sb.Append(expr.Token.Value.Replace("\"", "\\\""));
+            _sb.Append(expr.Token.Value.Replace("'", "\\'"));
 
             if (expr.Value == ValueTokenType.String)
-                _sb.Append('"');
+                _sb.Append("'");
         }
 
         public override void VisitIn(InExpression expr)
@@ -197,7 +197,7 @@ namespace Raven.Server.Documents.Queries.AST
 
             VisitExpression(expr.Source);
 
-            _sb.Append("(");
+            _sb.Append(" IN (");
 
             for (var index = 0; index < expr.Values.Count; index++)
             {
@@ -226,11 +226,21 @@ namespace Raven.Server.Documents.Queries.AST
 
         private void EnsureSpace()
         {
+            if (_sb.Length == 0)
+                return;
+            var c = _sb[_sb.Length - 1];
+            if (char.IsWhiteSpace(c) || c == '(')
+                return;
             _sb.Append(" ");
         }
 
         private void EnsureLine()
         {
+            if (_sb.Length == 0)
+                return;
+            if (_sb[_sb.Length - 1] == '\n')
+                return;
+            
             _sb.AppendLine();
         }
 
@@ -319,9 +329,9 @@ namespace Raven.Server.Documents.Queries.AST
 
             if (quote)
             {
-                _sb.Append("\"");
-                _sb.Append(from.Field.Value.Replace("\"", "\\\""));
-                _sb.Append("\"");
+                _sb.Append("'");
+                _sb.Append(from.Field.Value.Replace("'", "\\'"));
+                _sb.Append("'");
             }
             else
             {

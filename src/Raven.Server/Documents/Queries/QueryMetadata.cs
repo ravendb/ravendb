@@ -19,7 +19,6 @@ namespace Raven.Server.Documents.Queries
 {
     public class QueryMetadata
     {
-        private const string CountFieldName = "Count";
 
         private readonly Dictionary<string, string> _aliasToName = new Dictionary<string, string>();
 
@@ -424,7 +423,7 @@ namespace Raven.Server.Documents.Queries
                 if (me.Name.Equals("count", StringComparison.OrdinalIgnoreCase))
                 {
                     if (me.Arguments == null || me.Arguments.Count == 0)
-                        return new OrderByField(CountFieldName, OrderByFieldType.Long, asc);
+                        return new OrderByField(Constants.Documents.Indexing.Fields.CountFieldName, OrderByFieldType.Long, asc);
 
                     throw new InvalidQueryException("Invalid ORDER BY 'count()' call, expected zero arguments, got " + me.Arguments.Count, QueryText,
                         parameters);
@@ -439,8 +438,7 @@ namespace Raven.Server.Documents.Queries
                         throw new InvalidQueryException("Invalid ORDER BY 'sum()' call, expected one argument, got " + me.Arguments.Count, QueryText,
                             parameters);
 
-                    var sumFieldToken = me.Arguments[0] as FieldExpression;
-                    if (sumFieldToken == null)
+                    if (!(me.Arguments[0] is FieldExpression sumFieldToken))
                         throw new InvalidQueryException("Invalid ORDER BY sum call, expected field value, go " + me.Arguments[0], QueryText, parameters);
 
 
@@ -551,7 +549,7 @@ namespace Raven.Server.Documents.Queries
                 switch (aggregation)
                 {
                     case AggregationOperation.Count:
-                        fieldName = CountFieldName;
+                        fieldName = Constants.Documents.Indexing.Fields.CountFieldName;
                         break;
                     case AggregationOperation.Sum:
                         if (me.Arguments == null)
@@ -562,8 +560,7 @@ namespace Raven.Server.Documents.Queries
                         if (me.Arguments.Count != 1)
                             ThrowIncorrectNumberOfArgumentsOfSumMethod(me.Arguments.Count, QueryText, parameters);
 
-                        var sumFieldToken = me.Arguments[0] as FieldExpression;
-                        if (sumFieldToken == null)
+                        if (!(me.Arguments[0] is FieldExpression sumFieldToken))
                         {
                             ThrowMissingFieldNameArgumentOfSumMethod(QueryText, parameters);
                             return null; //never hit
@@ -648,14 +645,14 @@ namespace Raven.Server.Documents.Queries
             throw new InvalidQueryException("Between must have a source that is a field expression.", queryText, parameters);
         }
 
-        private static void ThrowIncompatibleTypesOfVariables(string fieldName, string queryText, BlittableJsonReaderObject parameters,
+        private static void ThrowIncompatibleTypesOfVariables(object fieldName, string queryText, BlittableJsonReaderObject parameters,
             params QueryExpression[] valueTokens)
         {
             throw new InvalidQueryException($"Incompatible types of variables in WHERE clause on '{fieldName}' field. It got values of the following types: " +
                                             $"{string.Join(",", valueTokens.Select(x => x.Type.ToString()))}", queryText, parameters);
         }
 
-        private static void ThrowIncompatibleTypesOfParameters(string fieldName, string queryText, BlittableJsonReaderObject parameters,
+        private static void ThrowIncompatibleTypesOfParameters(object fieldName, string queryText, BlittableJsonReaderObject parameters,
             params QueryExpression[] valueTokens)
         {
             throw new InvalidQueryException($"Incompatible types of parameters in WHERE clause on '{fieldName}' field. It got parameters of the following types:   " +
@@ -725,8 +722,15 @@ namespace Raven.Server.Documents.Queries
 
             public override void VisitBetween(QueryExpression fieldName, QueryExpression firstValue, QueryExpression secondValue, BlittableJsonReaderObject parameters)
             {
-                var fieldExpression = fieldName as FieldExpression;
-                if (fieldExpression == null)
+                if (fieldName is FieldExpression fe)
+                {
+                    _metadata.AddWhereField(fe.Field, exact: _insideExact > 0);
+                }
+                else if (fieldName is MethodExpression me)
+                {
+                    VisitMethodTokens(me.Name, me.Arguments, parameters);
+                }
+                else
                 {
                     ThrowBetweenMustHaveFieldSource(QueryText, parameters);
                     return; // never hit
@@ -736,15 +740,14 @@ namespace Raven.Server.Documents.Queries
                 var sv = secondValue as ValueExpression;
 
                 if (fv == null || sv == null || fv.Value != sv.Value)
-                    ThrowIncompatibleTypesOfVariables(fieldExpression.Field, QueryText, parameters, firstValue, secondValue);
+                    ThrowIncompatibleTypesOfVariables(fieldName, QueryText, parameters, firstValue, secondValue);
 
                 var valueType1 = GetValueTokenType(parameters, fv, unwrapArrays: false);
                 var valueType2 = GetValueTokenType(parameters, sv, unwrapArrays: false);
 
                 if (QueryBuilder.AreValueTokenTypesValid(valueType1, valueType2) == false)
-                    ThrowIncompatibleTypesOfParameters(fieldExpression.Field, QueryText, parameters, firstValue, secondValue);
+                    ThrowIncompatibleTypesOfParameters(fieldName, QueryText, parameters, firstValue, secondValue);
 
-                _metadata.AddWhereField(fieldExpression.Field, exact: _insideExact > 0);
             }
 
             public override void VisitIn(QueryExpression fieldName, List<QueryExpression> values, BlittableJsonReaderObject parameters)
@@ -752,18 +755,10 @@ namespace Raven.Server.Documents.Queries
                 if (values.Count == 0)
                     return;
 
-                var fieldExpression = fieldName as FieldExpression;
-                if (fieldExpression == null)
-                {
-                    ThrowInvalidInSource(parameters);
-                    return; // never hit
-                }
-
                 var previousType = ValueTokenType.Null;
                 for (var i = 0; i < values.Count; i++)
                 {
-                    var value = values[i] as ValueExpression;
-                    if (value == null)
+                    if (!(values[i] is ValueExpression value))
                     {
                         ThrowInvalidInValue(parameters);
                         return; // never hit
@@ -774,23 +769,18 @@ namespace Raven.Server.Documents.Queries
                         var previousValue = (ValueExpression)values[i - 1];
 
                         if (QueryBuilder.AreValueTokenTypesValid(previousValue.Value, value.Value) == false)
-                            ThrowIncompatibleTypesOfVariables(fieldExpression.Field, QueryText, parameters, values.ToArray());
+                            ThrowIncompatibleTypesOfVariables(fieldName, QueryText, parameters, values.ToArray());
                     }
 
                     var valueType = GetValueTokenType(parameters, value, unwrapArrays: true);
                     if (i > 0 && QueryBuilder.AreValueTokenTypesValid(previousType, valueType) == false)
-                        ThrowIncompatibleTypesOfParameters(fieldExpression.Field, QueryText, parameters, values.ToArray());
+                        ThrowIncompatibleTypesOfParameters(fieldName, QueryText, parameters, values.ToArray());
 
                     if (valueType != ValueTokenType.Null)
                         previousType = valueType;
                 }
-
-                _metadata.AddWhereField(fieldExpression.Field, exact: _insideExact > 0);
-            }
-
-            private void ThrowInvalidInSource(BlittableJsonReaderObject parameters)
-            {
-                throw new InvalidQueryException("In source must be a field", QueryText, parameters);
+                if (fieldName is FieldExpression fieldExpression)
+                    _metadata.AddWhereField(fieldExpression.Field, exact: _insideExact > 0);
             }
 
             private void ThrowInvalidInValue(BlittableJsonReaderObject parameters)
@@ -822,8 +812,7 @@ namespace Raven.Server.Documents.Queries
                             if (_fromAlias == null)
                                 throw new InvalidQueryException("Alias was passed to method 'id()' but query does not specify document alias.", QueryText, parameters);
 
-                            var idAliasToken = arguments[0] as FieldExpression;
-                            if (idAliasToken == null)
+                            if (!(arguments[0] is FieldExpression idAliasToken))
                                 throw new InvalidQueryException($"Method 'id()' expects field token as a first argument, got {arguments[0]} type", QueryText, parameters);
 
                             if (idAliasToken.Field.Equals(_fromAlias) == false)
@@ -886,7 +875,7 @@ namespace Raven.Server.Documents.Queries
                         }
                         return;
                     case MethodType.Count:
-                        HandleCount(methodName, arguments, parameters);
+                        // nothing needs to be done here
                         return;
                     case MethodType.Sum:
                         HandleSum(arguments, parameters);
@@ -942,46 +931,21 @@ namespace Raven.Server.Documents.Queries
                 _metadata.AddWhereField(fieldName, exact: _insideExact > 0);
             }
 
-            private void HandleCount(string providedCountMethodName, List<QueryExpression> arguments, BlittableJsonReaderObject parameters)
-            {
-                if (arguments.Count != 1)
-                    throw new InvalidQueryException("Method count() expects no argument", QueryText, parameters);
-
-                if (arguments[0] is FieldExpression countExpression)
-                {
-                    _metadata._aliasToName[providedCountMethodName] = CountFieldName;
-//                    countExpression.Field = methodNameToken;
-
-                    Visit(countExpression, parameters);
-                }
-                else
-                    throw new InvalidQueryException($"Method count() expects expression after its invocation, got {arguments[0]}", QueryText, parameters);
-            }
 
             private void HandleSum(List<QueryExpression> arguments, BlittableJsonReaderObject parameters)
             {
-                if (arguments.Count != 2)
-                    throw new InvalidQueryException("Method sum() expects one argument and operator after its invocation", QueryText, parameters);
+                if (arguments.Count != 1)
+                    throw new InvalidQueryException("Method sum() expects one argument only", QueryText, parameters);
 
-                var fieldToken = arguments[0] as FieldExpression;
-
-                if (fieldToken == null)
+                if (!(arguments[0] is FieldExpression f))
                     throw new InvalidQueryException($"Method sum() expects first argument to be field token, got {arguments[0]}", QueryText, parameters);
 
-                var sumExpression = arguments[1];
-
-                if (sumExpression == null)
-                    throw new InvalidQueryException($"Method sum() expects expression after sum(), got {arguments[1]}", QueryText, parameters);
-
-//                sumExpression.Field = fieldToken;
-                Visit(sumExpression, parameters);
+                _metadata.AddWhereField(f.Field.Value);
             }
 
             private string ExtractFieldNameFromFirstArgument(List<QueryExpression> arguments, string methodName, BlittableJsonReaderObject parameters)
             {
-                var fieldArgument = arguments[0] as FieldExpression;
-
-                if (fieldArgument == null)
+                if (!(arguments[0] is FieldExpression fieldArgument))
                     throw new InvalidQueryException($"Method {methodName}() expects a field name as its first argument", QueryText, parameters);
 
                 return fieldArgument.Field;

@@ -168,6 +168,8 @@ namespace Raven.Client
                     {
                     }
 
+                    public const string CountFieldName = "Count";
+
                     public const string CustomSortFieldName = "__customSort";
 
                     public const string DocumentIdFieldName = "id()";
