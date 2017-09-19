@@ -69,7 +69,7 @@ namespace SlowTests.Bugs
                 using (var session = store.OpenSession())
                 {
                     var orders = session.Query<Orders_Search.ReduceResult, Orders_Search>()
-                        .Customize(x => x.WaitForNonStaleResultsAsOfNow())
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(x => x.Query == "oren")
                         .As<Order>()
                         .ToList();

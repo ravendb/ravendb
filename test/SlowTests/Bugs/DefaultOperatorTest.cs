@@ -107,7 +107,7 @@ namespace SlowTests.Bugs
                 {
                     var result = s.Advanced.DocumentQuery<Blog, BlogIndex>()
                         .Search(x => x.Title, "one two", SearchOperator.And)
-                        .WaitForNonStaleResultsAsOfNow(TimeSpan.FromSeconds(5))
+                        .WaitForNonStaleResults(TimeSpan.FromSeconds(5))
                         .ToList();
 
                     Assert.True(result.Count == 1);
@@ -125,7 +125,7 @@ namespace SlowTests.Bugs
                     var result = s.Advanced.DocumentQuery<Blog, BlogIndex>()
                         .Search(x => x.Title, "one two", SearchOperator.And)
                         .SelectFields<Blog>("Title")
-                        .WaitForNonStaleResultsAsOfNow(TimeSpan.FromSeconds(5))
+                        .WaitForNonStaleResults(TimeSpan.FromSeconds(5))
                         .ToList();
 
                     Assert.True(result.Count == 1);

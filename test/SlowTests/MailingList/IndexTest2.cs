@@ -45,7 +45,7 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var result = session.Query<SampleData, SampleData_Index>()
-                        .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
+                        .Customize(customization => customization.WaitForNonStaleResults())
                         .FirstOrDefault();
 
                     var test = session.Query<SampleData, SampleData_Index>().OrderBy(x => x.Name).ToList();

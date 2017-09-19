@@ -61,7 +61,7 @@ namespace SlowTests.MailingList
                     };
 
                     var query1 = session.Query<ShortUrlMap, ShortUrlMapIndex>()
-                                        .Customize(x => x.WaitForNonStaleResultsAsOfNow())
+                                        .Customize(x => x.WaitForNonStaleResults())
                                         .Where(x => x.LongUrl.In(longUrls))
                                         .ToList();
                     Assert.Equal(1, query1.Count);

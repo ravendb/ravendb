@@ -84,7 +84,7 @@ namespace SlowTests.Bugs.Indexing
                 using (var s = store.OpenSession())
                 {
                     var result = s.Query<ContainerObject, NestedObjectIndex>()
-                        .Customize(q => q.WaitForNonStaleResultsAsOfNow())
+                        .Customize(q => q.WaitForNonStaleResults())
                         .Count();
 
                     Assert.Equal(2, result);
@@ -93,11 +93,11 @@ namespace SlowTests.Bugs.Indexing
                 //  and the index can be queried
                 using (var s = store.OpenSession())
                 {
-                    var result = s.Query<ContainerObject, NestedObjectIndex>()
-                        .Customize(q => q.WaitForNonStaleResultsAsOfNow())
+                    var result = s
+                        .Query<ContainerObject, NestedObjectIndex>()
+                        .Customize(q => q.WaitForNonStaleResults())
                         .ProjectFromIndexFieldsInto<IndexEntry>()
-                        .Where(o => o.Name == expectedItemName)
-                        .Single();
+                        .Single(o => o.Name == expectedItemName);
 
                     Assert.Equal(expectedContainerName, result.ContainerName);
                     Assert.Equal(expectedItemName, result.Name);

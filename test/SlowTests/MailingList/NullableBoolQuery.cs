@@ -25,7 +25,7 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     Assert.NotEmpty(session.Query<Item>()
-                        .Customize(x => x.WaitForNonStaleResultsAsOfNow())
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(x => x.Active == true)
                         .ToList());
                 }
@@ -46,7 +46,7 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var collection = session.Query<Item>()
-                        .Customize(x => x.WaitForNonStaleResultsAsOfNow())
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(x => x.Active != null && x.Active.Value)
                         .ToList();
                     Assert.NotEmpty(collection);

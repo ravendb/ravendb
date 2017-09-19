@@ -466,10 +466,6 @@ namespace Raven.Server.Json
             writer.WriteBool(query.WaitForNonStaleResults);
             writer.WriteComma();
 
-            writer.WritePropertyName(nameof(query.WaitForNonStaleResultsAsOfNow));
-            writer.WriteBool(query.WaitForNonStaleResultsAsOfNow);
-            writer.WriteComma();
-
             writer.WritePropertyName(nameof(query.WaitForNonStaleResultsTimeout));
             if (query.WaitForNonStaleResultsTimeout.HasValue)
                 writer.WriteString(query.WaitForNonStaleResultsTimeout.Value.ToString());

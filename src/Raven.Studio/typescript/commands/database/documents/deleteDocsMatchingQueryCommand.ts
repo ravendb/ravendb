@@ -10,7 +10,7 @@ class deleteDocsMatchingQueryCommand extends commandBase {
     execute(): JQueryPromise<operationIdDto> {
         const args = {
             Query: this.queryText,
-            WaitForNonStaleResultsAsOfNow: true
+            WaitForNonStaleResults: true
         };
 
         const url = endpoints.databases.queries.queries;

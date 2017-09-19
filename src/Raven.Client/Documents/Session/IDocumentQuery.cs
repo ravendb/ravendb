@@ -167,6 +167,5 @@ namespace Raven.Client.Documents.Session
         IDocumentQuery<TResult> OfType<TResult>();
 
         IGroupByDocumentQuery<T> GroupBy(string fieldName, params string[] fieldNames);
-
     }
 }

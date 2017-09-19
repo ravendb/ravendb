@@ -27,7 +27,7 @@ namespace SlowTests.Bugs.Metadata
                 using (var session = store.OpenSession())
                 {
                     var result = session.Advanced.DocumentQuery<User>()
-                        .WaitForNonStaleResultsAsOfNow()
+                        .WaitForNonStaleResults()
                         .WhereEquals("@metadata." + propertyName1, propertyValue1)
                         .ToList();
 
@@ -57,12 +57,12 @@ namespace SlowTests.Bugs.Metadata
                 using (var session = store.OpenSession())
                 {
                     Assert.Empty(session.Advanced.DocumentQuery<User>()
-                                    .WaitForNonStaleResultsAsOfNow()
+                                    .WaitForNonStaleResults()
                                     .WhereEquals("@metadata." + "Test-Property1", "Test-Value-1")
                                     .ToList());
 
                     var result = session.Advanced.DocumentQuery<User>()
-                        .WaitForNonStaleResultsAsOfNow()
+                        .WaitForNonStaleResults()
                         .WhereEquals("@metadata." + "Test-Property-1", "Test-Value-1")
                         .ToList();
 

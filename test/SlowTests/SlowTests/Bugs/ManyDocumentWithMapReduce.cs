@@ -22,7 +22,7 @@ namespace SlowTests.SlowTests.Bugs
                 {
                     // Create the temp index before we populate the db.
                     session.Query<TestDocument>()
-                           .Customize(x => x.WaitForNonStaleResultsAsOfNow())
+                           .Customize(x => x.WaitForNonStaleResults())
                            .Count();
                 }
 

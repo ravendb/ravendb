@@ -47,7 +47,7 @@ namespace SlowTests.MailingList.Everett
                 {
                     session
                         .Query<DesignResources>()
-                        .Customize(x => x.WaitForNonStaleResultsAsOfNow())
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(x => x.DesignId == "designs/123")
                         .ToList();
                 }
@@ -75,7 +75,7 @@ namespace SlowTests.MailingList.Everett
                 {
                     session
                         .Query<DesignResources>()
-                        .Customize(x => x.WaitForNonStaleResultsAsOfNow())
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(x => x.DesignId == "designs/123")
                         .ToList();
                 }

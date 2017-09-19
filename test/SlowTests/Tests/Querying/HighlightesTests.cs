@@ -84,7 +84,7 @@ namespace SlowTests.Tests.Querying
                 {
                     FieldHighlightings titleHighlighting, slugHighlighting, contentHighlighting;
                     var results = session.Advanced.DocumentQuery<ISearchable>("ContentSearchIndex")
-                        .WaitForNonStaleResultsAsOfNow()
+                        .WaitForNonStaleResults()
                         .Highlight("Title", 128, 2, out titleHighlighting)
                         .Highlight("Slug", 128, 2, out slugHighlighting)
                         .Highlight("Content", 128, 2, out contentHighlighting)

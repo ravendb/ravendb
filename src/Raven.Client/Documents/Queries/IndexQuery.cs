@@ -25,7 +25,6 @@ namespace Raven.Client.Documents.Queries
             {
                 hasher.Write(Query);
                 hasher.Write(WaitForNonStaleResults);
-                hasher.Write(WaitForNonStaleResultsAsOfNow);
                 hasher.Write(SkipDuplicateChecking);
                 hasher.Write(ShowTimings);
                 hasher.Write(ExplainScores);
@@ -166,12 +165,7 @@ namespace Raven.Client.Documents.Queries
         }
 
         /// <summary>
-        /// Used to calculate index staleness. When set to <c>true</c> CutOff will be set to DateTime.UtcNow on server side.
-        /// </summary>
-        public bool WaitForNonStaleResultsAsOfNow { get; set; }
-
-        /// <summary>
-        /// CAUTION. Used by IDocumentSession ONLY. It will have NO effect if used with IDatabaseCommands or IAsyncDatabaseCommands.
+        /// When set to <c>true</c>> server side will wait until result are non stale or until timeout
         /// </summary>
         public bool WaitForNonStaleResults { get; set; }
 
@@ -210,7 +204,6 @@ namespace Raven.Client.Documents.Queries
                    string.Equals(Query, other.Query) &&
                    Start == other.Start &&
                    WaitForNonStaleResultsTimeout == other.WaitForNonStaleResultsTimeout &&
-                   WaitForNonStaleResultsAsOfNow.Equals(other.WaitForNonStaleResultsAsOfNow) &&
                    WaitForNonStaleResults.Equals(other.WaitForNonStaleResults) &&
                    Equals(CutoffEtag, other.CutoffEtag);
         }
@@ -233,7 +226,6 @@ namespace Raven.Client.Documents.Queries
                 hashCode = (hashCode * 397) ^ (Query?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ Start;
                 hashCode = (hashCode * 397) ^ (WaitForNonStaleResultsTimeout != null ? WaitForNonStaleResultsTimeout.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ WaitForNonStaleResultsAsOfNow.GetHashCode();
                 hashCode = (hashCode * 397) ^ (CutoffEtag != null ? CutoffEtag.GetHashCode() : 0);
                 return hashCode;
             }

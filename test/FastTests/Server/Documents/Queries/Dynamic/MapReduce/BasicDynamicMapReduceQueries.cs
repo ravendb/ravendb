@@ -298,7 +298,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                     var command = new QueryCommand(store.Conventions, new IndexQuery
                     {
                         Query = "FROM Addresses GROUP BY City SELECT count() as TotalCount ",
-                        WaitForNonStaleResultsAsOfNow = true
+                        WaitForNonStaleResults = true
                     });
 
                     commands.RequestExecutor.Execute(command, commands.Context);
@@ -307,7 +307,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                     command = new QueryCommand(store.Conventions, new IndexQuery
                     {
                         Query = "FROM Addresses GROUP BY City SELECT City ",
-                        WaitForNonStaleResultsAsOfNow = true
+                        WaitForNonStaleResults = true
                     });
 
                     commands.RequestExecutor.Execute(command, commands.Context);

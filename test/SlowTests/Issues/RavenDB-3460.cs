@@ -107,7 +107,7 @@ namespace SlowTests.Issues
             using (var session = store.OpenSession())
             {
                 var customers = session.Query<Customer, CustomersIndex>()
-                                .Customize(c => c.WaitForNonStaleResultsAsOfNow())
+                                .Customize(c => c.WaitForNonStaleResults())
                                 .Where(x => x.Number == 1).ToList();
 
                 return customers;

@@ -40,7 +40,7 @@ namespace SlowTests.Tests.Spatial
                 using (var session = store.OpenSession())
                 {
                     var matchingEvents = session.Advanced.DocumentQuery<EventWithLocation, EventsBySimpleLocation>()
-                                    .WaitForNonStaleResultsAsOfNow(TimeSpan.FromMinutes(5))
+                                    .WaitForNonStaleResults(TimeSpan.FromMinutes(5))
                                     .ToList();
                     Assert.Equal(1, matchingEvents.Count);
                     Assert.Equal("Some event", matchingEvents.First().EventName);

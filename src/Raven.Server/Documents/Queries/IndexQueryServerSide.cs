@@ -81,8 +81,8 @@ namespace Raven.Server.Documents.Queries
                         case "cutOffEtag":
                             result.CutoffEtag = long.Parse(item.Value[0]);
                             break;
-                        case "waitForNonStaleResultsAsOfNow":
-                            result.WaitForNonStaleResultsAsOfNow = bool.Parse(item.Value[0]);
+                        case "waitForNonStaleResults":
+                            result.WaitForNonStaleResults = bool.Parse(item.Value[0]);
                             break;
                         case "waitForNonStaleResultsTimeoutInMs":
                             result.WaitForNonStaleResultsTimeout = TimeSpan.FromMilliseconds(long.Parse(item.Value[0]));

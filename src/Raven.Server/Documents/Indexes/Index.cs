@@ -1708,7 +1708,7 @@ namespace Raven.Server.Documents.Indexes
                         documentsContext.OpenReadTransaction();
                         // we have to open read tx for mapResults _after_ we open index tx
 
-                        if (query.WaitForNonStaleResultsAsOfNow && query.CutoffEtag == null)
+                        if (query.WaitForNonStaleResults && query.CutoffEtag == null)
                         {
                             query.CutoffEtag = 0;
                             foreach (var collection in Collections)
@@ -1833,7 +1833,7 @@ namespace Raven.Server.Documents.Indexes
                             documentsContext.OpenReadTransaction();
                             // we have to open read tx for mapResults _after_ we open index tx
 
-                            if (query.WaitForNonStaleResultsAsOfNow && query.CutoffEtag == null)
+                            if (query.WaitForNonStaleResults && query.CutoffEtag == null)
                                 query.CutoffEtag =
                                     Collections.Max(
                                         x => DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, x));
@@ -2163,8 +2163,15 @@ namespace Raven.Server.Documents.Indexes
 
         private static bool WillResultBeAcceptable(bool isStale, IndexQueryBase<BlittableJsonReaderObject> query, AsyncWaitForIndexing wait)
         {
+           
             if (isStale == false)
                 return true;
+
+            if (query.WaitForNonStaleResults && query.WaitForNonStaleResultsTimeout == null)
+            {
+                query.WaitForNonStaleResultsTimeout = TimeSpan.FromSeconds(30);
+                return false;
+            }
 
             if (query.WaitForNonStaleResultsTimeout == null)
                 return true;

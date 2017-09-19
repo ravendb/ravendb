@@ -72,7 +72,7 @@ namespace SlowTests.Tests.Spatial
                     var matchingVenues = session.Query<Event, SpatialIdx>()
                         .Spatial("Coordinates", factory => factory.WithinRadius(5, 38.9103000, -77.3942))
                         .Customize(x => x
-                            .WaitForNonStaleResultsAsOfNow()
+                            .WaitForNonStaleResults()
                         );
 
                     var iq = RavenTestHelper.GetIndexQuery(matchingVenues);
@@ -97,7 +97,7 @@ namespace SlowTests.Tests.Spatial
                     var matchingVenues = session.Query<Event, SpatialIdx>()
                         .Spatial("Coordinates", factory => factory.WithinRadius(5, 38.9103000, -77.3942))
                         .Customize(x => x
-                            .WaitForNonStaleResultsAsOfNow()
+                            .WaitForNonStaleResults()
                         );
 
                     var iq = RavenTestHelper.GetIndexQuery(matchingVenues);

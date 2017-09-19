@@ -20,7 +20,6 @@ namespace Raven.Client.Documents.Queries.Facets
                 Query = query.Query,
                 QueryParameters = query.QueryParameters,
                 WaitForNonStaleResults = query.WaitForNonStaleResults,
-                WaitForNonStaleResultsAsOfNow = query.WaitForNonStaleResultsAsOfNow,
                 WaitForNonStaleResultsTimeout = query.WaitForNonStaleResultsTimeout,
                 Start = start,
                 FacetSetupDoc = facetSetupDoc,
@@ -39,7 +38,6 @@ namespace Raven.Client.Documents.Queries.Facets
             {
                 hasher.Write(Query);
                 hasher.Write (WaitForNonStaleResults);
-                hasher.Write(WaitForNonStaleResultsAsOfNow);
                 hasher.Write(WaitForNonStaleResultsTimeout?.Ticks);
                 hasher.Write(CutoffEtag);
                 hasher.Write(Start);

@@ -72,7 +72,7 @@ namespace SlowTests.Issues
                         Assert.NotNull(user);
 
                         var list = session.Query<User>()
-                            .Customize(x => x.WaitForNonStaleResultsAsOfNow())
+                            .Customize(x => x.WaitForNonStaleResults())
                             .Take(1024)
                             .ToList();
                         Assert.Equal(1000, list.Count);

@@ -84,7 +84,7 @@ namespace SlowTests.MailingList
                     session.Store(service1);
                     session.SaveChanges();
                     var results = session.Query<Service, Services_QueryIndex>()
-                        .Customize(x => x.WaitForNonStaleResultsAsOfNow())
+                        .Customize(x => x.WaitForNonStaleResults())
                         .ToList();
 
                     Assert.Equal(1, results.Count);

@@ -40,7 +40,7 @@ namespace SlowTests.Tests.Querying
                 {
                     var results =
                         s.Query<Blog>()
-                            .Customize(x => x.WaitForNonStaleResultsAsOfNow())
+                            .Customize(x => x.WaitForNonStaleResults())
                             .Where(x => x.Category == "Rhinos" && x.Title.Length == 3)
                             .ToArray();
 
@@ -75,7 +75,7 @@ namespace SlowTests.Tests.Querying
                             .WhereLucene("Title.Length", "3")
                             .AndAlso()
                             .WhereLucene("Category", "Rhinos")
-                            .WaitForNonStaleResultsAsOfNow()
+                            .WaitForNonStaleResults()
                             .ToArray();
 
                     Assert.Equal(1, results.Length);
@@ -255,7 +255,7 @@ namespace SlowTests.Tests.Querying
                             .SetHighlighterTags("*", "*")
                             .WhereLucene("Title", "(target word)")
                             .WhereLucene("Category", "rhinos")
-                            .WaitForNonStaleResultsAsOfNow()
+                            .WaitForNonStaleResults()
                             .ToArray();
 
                     Assert.Equal(3, results.Length);
@@ -312,7 +312,7 @@ namespace SlowTests.Tests.Querying
                                 c.Highlight("Title", 18, 2, out titleHighlightings)
                                     .Highlight("Category", 18, 2, out categoryHighlightings)
                                     .SetHighlighterTags("*", "*")
-                                    .WaitForNonStaleResultsAsOfNow())
+                                    .WaitForNonStaleResults())
                             .Search(x => x.Category, "rhinos")
                             .Search(x => x.Title, "target word")
                             .ToArray();
@@ -385,7 +385,7 @@ namespace SlowTests.Tests.Querying
                                 c.Highlight("Title", 18, 2, out titleHighlightings)
                                     .Highlight("Category", 18, 2, out categoryHighlightings)
                                     .SetHighlighterTags("*", "*")
-                                    .WaitForNonStaleResultsAsOfNow())
+                                    .WaitForNonStaleResults())
                             .Search(x => x.Category, "rhinos")
                             .Search(x => x.Title, "target word")
                             .ToArray();

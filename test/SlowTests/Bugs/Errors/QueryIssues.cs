@@ -25,7 +25,7 @@ namespace SlowTests.Bugs.Errors
                 using (var session = store.OpenSession())
                 {
                     //first query to make sure we aren't stale.
-                    session.Query<Company>().Customize(x => x.WaitForNonStaleResultsAsOfNow()).ToList();
+                    session.Query<Company>().Customize(x => x.WaitForNonStaleResults()).ToList();
 
                     var loadResult = session.Load<Company>("cOmPaNy/1");
                     var loadStartResults = session.Advanced.LoadStartingWith<Company>("cOmPaNy/1").ToList();

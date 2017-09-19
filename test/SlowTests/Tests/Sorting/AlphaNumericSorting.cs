@@ -552,7 +552,7 @@ namespace SlowTests.Tests.Sorting
                     var titlesFromServer = session.Query<Track>()
                         .Customize(x =>
                         {
-                            x.WaitForNonStaleResultsAsOfNow();
+                            x.WaitForNonStaleResults();
                         })
                         .OrderBy(x => x.Title, OrderingType.AlphaNumeric)
                         .Select(x => x.Title)

@@ -76,7 +76,7 @@ namespace SlowTests.Bugs.MapRedue
                 using (var session = store.OpenSession())
                 {
                     var max = session.Query<Users_LastLoggedInAt.Result, Users_LastLoggedInAt>()
-                        .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
+                        .Customize(customization => customization.WaitForNonStaleResults())
                         .ToList();
 
                     var db = GetDocumentDatabaseInstanceFor(store).Result;

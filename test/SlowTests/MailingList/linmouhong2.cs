@@ -66,7 +66,7 @@ namespace SlowTests.MailingList
                 using (var session = database.OpenSession())
                 {
                     var products = session.Query<Product, ProductIndex>()
-                                            .Customize(x => x.WaitForNonStaleResultsAsOfNow())
+                                            .Customize(x => x.WaitForNonStaleResults())
                                             .OrderBy(x => x.Category.Id)
                                             .ToList();
 

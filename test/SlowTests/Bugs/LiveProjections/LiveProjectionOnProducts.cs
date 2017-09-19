@@ -62,7 +62,7 @@ select {
     Name: p.Name,
     Variants: p.Variants.map(function(n){ return {Name: n.Name.toUpperCase()}; })
 }
-").WaitForNonStaleResultsAsOfNow()
+").WaitForNonStaleResults()
                         .ToList();
 
                     var first = rep.FirstOrDefault();

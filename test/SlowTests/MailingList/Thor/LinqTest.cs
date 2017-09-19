@@ -76,7 +76,7 @@ namespace SlowTests.MailingList.Thor
 
                     session.SaveChanges();
 
-                    var query = session.Query<JoinedChildTransport, TransportsIndex>().Customize(x => x.WaitForNonStaleResultsAsOfNow())
+                    var query = session.Query<JoinedChildTransport, TransportsIndex>().Customize(x => x.WaitForNonStaleResults())
                         //                 .AsProjection<JoinedChildTransport>()
                         ;
 
@@ -105,7 +105,7 @@ namespace SlowTests.MailingList.Thor
 
                     session.SaveChanges();
 
-                    var query = session.Query<JoinedChildTransport, TransportsIndex>().Customize(x => x.WaitForNonStaleResultsAsOfNow())
+                    var query = session.Query<JoinedChildTransport, TransportsIndex>().Customize(x => x.WaitForNonStaleResults())
                         //                 .AsProjection<JoinedChildTransport>()
                         ;
 
@@ -138,7 +138,7 @@ namespace SlowTests.MailingList.Thor
                     session.SaveChanges();
 
                     var query = session.Query<JoinedChildTransport, TransportsIndex>()
-                        .Customize(x => x.WaitForNonStaleResultsAsOfNow())
+                        .Customize(x => x.WaitForNonStaleResults())
                         .OrderBy(x => x.TransportId)
                         //                 .AsProjection<JoinedChildTransport>()
                         ;

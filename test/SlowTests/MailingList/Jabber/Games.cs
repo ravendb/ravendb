@@ -73,7 +73,7 @@ namespace SlowTests.MailingList.Jabber
                 {
                     List<GameServers_ConnectedPlayers.IndexQuery> result =
                         session.Query<GameServers_ConnectedPlayers.IndexQuery, GameServers_ConnectedPlayers>()
-                            .Customize(x => x.WaitForNonStaleResultsAsOfNow())
+                            .Customize(x => x.WaitForNonStaleResults())
                             .Where(x => x.PlayerName.StartsWith("p"))
                             .OrderBy(x => x.Id).ThenBy(x => x.PlayerName)
                             .ProjectFromIndexFieldsInto<GameServers_ConnectedPlayers.IndexQuery>()

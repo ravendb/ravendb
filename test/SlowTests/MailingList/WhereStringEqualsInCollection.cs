@@ -28,7 +28,7 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var count = session.Query<MyEntity>()
-                        .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
+                        .Customize(customization => customization.WaitForNonStaleResults())
                         .Count(o => o.StringCollection.Any(s => s.Equals("CollectionItem1")));
 
                     Assert.Equal(1, count);
@@ -46,7 +46,7 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var count = session.Query<MyEntity>()
-                        .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
+                        .Customize(customization => customization.WaitForNonStaleResults())
                         .Count(o => o.StringCollection.Any(s => s.Equals("CollectionItem1", StringComparison.OrdinalIgnoreCase)));
 
                     Assert.Equal(1, count);
@@ -64,7 +64,7 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     Assert.Throws<NotSupportedException>(() => session.Query<MyEntity>()
-                        .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
+                        .Customize(customization => customization.WaitForNonStaleResults())
                         .Count(o => o.StringCollection.Any(s => s.Equals("CollectionItem1", StringComparison.Ordinal))));
 
                 }

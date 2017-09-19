@@ -55,7 +55,6 @@ namespace FastTests.Client.Indexing
                         ShowTimings = q.ShowTimings,
                         SkipDuplicateChecking = q.SkipDuplicateChecking,
                         WaitForNonStaleResults = q.WaitForNonStaleResults,
-                        WaitForNonStaleResultsAsOfNow = q.WaitForNonStaleResultsAsOfNow,
                         WaitForNonStaleResultsTimeout = q.WaitForNonStaleResultsTimeout
                     };
 

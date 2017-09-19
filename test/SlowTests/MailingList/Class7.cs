@@ -39,7 +39,7 @@ namespace SlowTests.MailingList
                     var e = Assert.Throws<RavenException>(() =>
                     {
                         var results = session.Query<Person, PersonIndex>()
-                            .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
+                            .Customize(customization => customization.WaitForNonStaleResults())
                             .OrderByDescending(x => x.Surname)
                             .ToList();
                     });
@@ -52,7 +52,7 @@ namespace SlowTests.MailingList
                     var e = Assert.Throws<RavenException>(() =>
                     {
                         var results = session.Advanced.DocumentQuery<Person, PersonIndex>()
-                           .WaitForNonStaleResultsAsOfNow()
+                           .WaitForNonStaleResults()
                            .OrderByDescending(x => x.Surname)
                            .ToList();
                     });

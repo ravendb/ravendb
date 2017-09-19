@@ -24,7 +24,7 @@ namespace SlowTests.Bugs.Queries
                 using (var session = documentStore.OpenSession())
                 {
                     IQueryable<EntityWithTags> query = session.Query<EntityWithTags>()
-                        .Customize(x => x.WaitForNonStaleResultsAsOfNow());
+                        .Customize(x => x.WaitForNonStaleResults());
 
                     foreach (var tag in new string[] { "FOO", "BAR" })
                     {
