@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using FastTests;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Tests.Core.Utils.Entities;
@@ -32,21 +33,31 @@ namespace SlowTests.Issues
                 var users = new BlockingCollection<User>();
                 using (var s = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions("test")))
                 {
-                    GC.KeepAlive(s.Run(batch =>
+                    var t = s.Run(batch =>
                     {
                         foreach (var user in batch.Items)
                         {
                             users.Add(user.Result);
                         }
-                    }));
+                    });
 
-                    users.TryTake(out var u, TimeSpan.FromSeconds(10));
-                    Assert.Equal("users/1", u.Id);
+                    try
+                    {
+                        var timeout = Debugger.IsAttached ? TimeSpan.FromMinutes(10) : TimeSpan.FromSeconds(10);
+                        Assert.True(users.TryTake(out var u, timeout));
+                        Assert.Equal("users/1", u.Id);
 
-                    users.TryTake(out u, TimeSpan.FromSeconds(10));
-                    Assert.Equal("users/3", u.Id);
+                        Assert.True(users.TryTake(out u, timeout));
+                        Assert.Equal("users/3", u.Id);
 
-                    Assert.Equal(0, users.Count);
+                        Assert.Equal(0, users.Count);
+                    }
+                    catch (Exception)
+                    {
+                        if (t.IsCompleted)
+                            t.Wait();//throw if needed so expose subscription error
+                        throw;
+                    }
                 }
             }
         }

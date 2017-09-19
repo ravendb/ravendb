@@ -98,6 +98,12 @@ namespace Raven.Server.Documents.Queries.AST
         {
             _sb.Append(expr.Name.Value);
             _sb.Append("(");
+
+            if (expr.Name.Value == "id" && expr.Arguments.Count == 0)
+            {
+                _sb.Append("this");
+            }
+
             for (var index = 0; index < expr.Arguments.Count; index++)
             {
                 if (index != 0)
