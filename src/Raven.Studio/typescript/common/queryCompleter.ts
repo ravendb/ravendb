@@ -404,12 +404,23 @@ class queryCompleter {
                 this.completeFields(session, lastKeyword.getFieldPrefix, callback);
                 break;
             case "group by":
+                if (lastKeyword.dividersCount === 0) {
+                    this.completeByKeyword(callback);
+                    return;
+                }
+                
                 if (lastKeyword.identifiers.length > 0 && lastKeyword.text) { // field already specified
                     return;
                 }
+                
                 this.completeFields(session, lastKeyword.getFieldPrefix, callback);
                 break;
             case "order by":
+                if (lastKeyword.dividersCount === 0) {
+                    this.completeByKeyword(callback);
+                    return;
+                }
+                
                 if (lastKeyword.identifiers.length > 0 && lastKeyword.text !== ",") { // field already specified but there is not comma separator for next field
                     if (!lastKeyword.keywordModifier){
                         const keywords = [
@@ -424,8 +435,8 @@ class queryCompleter {
                 }
                 
                 this.completeFields(session, lastKeyword.getFieldPrefix, callback, [
-                    {caption: "random", value: "random(", score: 0, meta: "function"},
-                    {caption: "score", value: "score(", score: 0, meta: "function"}
+                    {caption: "score", value: "score(", score: 22, meta: "function"},
+                    {caption: "random", value: "random(", score: 21, meta: "function"}
                 ]);
                 break;
                 
@@ -530,7 +541,7 @@ class queryCompleter {
                     return;
                 }
                 
-                this.completeWords(callback, [{value: "by", score: 21, meta: "keyword"}]);
+                this.completeByKeyword(callback);
                 break;
             default:
                 break;
@@ -571,6 +582,11 @@ class queryCompleter {
             {value: "from", score: 2, meta: "keyword"},
             {value: "declare", score: 1, meta: "keyword"}
         ];
+        this.completeWords(callback, keywords);
+    }
+
+    private completeByKeyword(callback: (errors: any[], wordList: autoCompleteWordList[]) => void) {
+        const keywords = [{value: "by", score: 21, meta: "keyword"}];
         this.completeWords(callback, keywords);
     }
 
