@@ -322,8 +322,7 @@ class queryCompleter {
              callback: (errors: any[], wordList: autoCompleteWordList[]) => void) {
 
         const lastKeyword = this.getLastKeyword(session, pos);
-        if (!lastKeyword || !lastKeyword.keyword || 
-            (lastKeyword.dividersCount === 0 && !lastKeyword.binaryOperation)) {
+        if (!lastKeyword || !lastKeyword.keyword) {
             this.completeEmpty(callback);
             return;
         }
@@ -341,6 +340,11 @@ class queryCompleter {
                     return;
                 }
                 if (lastKeyword.dividersCount > 2) {
+                    callback(["empty completion"], null);
+                    return;
+                }
+                if (lastKeyword.dividersCount === 0) {
+                    this.completeEmpty(callback);
                     return;
                 }
 
@@ -354,6 +358,10 @@ class queryCompleter {
                 }
                 if (lastKeyword.dividersCount > 2) {
                     callback(["empty completion"], null);
+                    return;
+                }
+                if (lastKeyword.dividersCount === 0) {
+                    this.completeEmpty(callback);
                     return;
                 }
 
@@ -428,6 +436,14 @@ class queryCompleter {
                         return {value: binaryOperation, score: 22 - i, meta: "binary operation"};
                     });
                     this.completeKeywordEnd(callback, lastKeyword, binaryOperations);
+                    return;
+                }
+                if (lastKeyword.dividersCount > 4) {
+                    callback(["empty completion"], null);
+                    return;
+                }
+                if (lastKeyword.dividersCount === 0) {
+                    this.completeKeywordEnd(callback, lastKeyword);
                     return;
                 }
                 
@@ -595,7 +611,7 @@ class queryCompleter {
             
             if (lastKeywordWithoutFromIndex === keyword) {
                 keywordEnoutered = true;
-                return false;
+                return lastKeyword.dividersCount === 0 && !lastKeyword.binaryOperation;
             }
             if (keywordEnoutered) {
                 if (keyword === "group") {

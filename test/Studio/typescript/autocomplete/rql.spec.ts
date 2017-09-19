@@ -91,6 +91,14 @@ describe("RQL Autocomplete", () => {
         {caption: "select", value: "select ", score: 18, meta: "keyword"},
         {caption: "include", value: "include ", score: 17, meta: "keyword"}
     ];
+
+    const afterWhereWithoutSpaceList = [
+        {caption: "where", value: "where ", score: 20, meta: "keyword"},
+        {caption: "order", value: "order ", score: 19, meta: "keyword"},
+        {caption: "load", value: "load ", score: 18, meta: "keyword"},
+        {caption: "select", value: "select ", score: 17, meta: "keyword"},
+        {caption: "include", value: "include ", score: 16, meta: "keyword"}
+    ];
     
     it('empty query should start with from or declare', done => {
         rqlTestUtils.autoComplete("|", northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
@@ -382,6 +390,20 @@ w|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
 
             assert.equal(lastKeyword.keyword, "from");
             assert.equal(lastKeyword.dividersCount, 2);
+
+            done();
+        });
+    });
+
+    it('After where| without space should has where prefix should complete itself', done => {
+        rqlTestUtils.autoComplete(`from Orders
+where|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "where");
+            const sortedList = _.sortBy(wordlist, [(x: autoCompleteWordList) => x.score]).reverse();
+            assert.deepEqual(sortedList, afterWhereWithoutSpaceList);
+
+            assert.equal(lastKeyword.keyword, "where");
+            assert.equal(lastKeyword.dividersCount, 0);
 
             done();
         });
