@@ -57,6 +57,8 @@ namespace Voron.Impl.Journal
 
         private readonly object _writeLock = new object();
         private int _maxNumberOfPagesRequiredForCompressionBuffer;
+        
+        internal NativeMemory.ThreadStats CurrentFlushingInProgressHolder;
 
         public WriteAheadJournal(StorageEnvironment env)
         {
@@ -621,6 +623,8 @@ namespace Voron.Impl.Journal
                 // we don't actually have to do that in our own transaction, what we'll do is to setup things so if there is a running
                 // write transaction, we'll piggy back on its commit to complete our process, without interrupting its work
                 _waj._env.FlushInProgressLock.EnterWriteLock();
+                _waj.CurrentFlushingInProgressHolder = NativeMemory.ThreadAllocations.Value;
+
                 try
                 {
                     var transactionPersistentContext = new TransactionPersistentContext(true);
@@ -653,6 +657,7 @@ namespace Voron.Impl.Journal
                 }
                 finally
                 {
+                    _waj.CurrentFlushingInProgressHolder = null;
                     _waj._env.FlushInProgressLock.ExitWriteLock();
                 }
             }
