@@ -90,9 +90,8 @@ namespace Raven.Server.ServerWide.Maintenance
         public readonly Exception Error;
 
         public readonly DateTime UpdateDateTime;
-        private readonly ClusterNodeStatusReport _lastSuccessfulReport;
 
-        public DateTime LastSuccessfulUpdateDateTime => _lastSuccessfulReport?.UpdateDateTime ?? DateTime.MinValue;
+        public readonly DateTime LastSuccessfulUpdateDateTime;
 
         public ClusterNodeStatusReport(
             Dictionary<string, DatabaseStatusReport> report, 
@@ -105,7 +104,9 @@ namespace Raven.Server.ServerWide.Maintenance
             Status = reportStatus;
             Error = error;
             UpdateDateTime = updateDateTime;
-            _lastSuccessfulReport = lastSuccessfulReport;
+
+            LastSuccessfulUpdateDateTime = lastSuccessfulReport?.UpdateDateTime ?? DateTime.MinValue;
+            
             LastGoodDatabaseStatus = new Dictionary<string, DateTime>();
             foreach (var dbReport in report)
             {
