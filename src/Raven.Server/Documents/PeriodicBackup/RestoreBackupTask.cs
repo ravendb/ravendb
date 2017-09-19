@@ -39,23 +39,20 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private readonly ServerStore _serverStore;
         private readonly RestoreBackupConfiguration _restoreConfiguration;
-        private readonly JsonOperationContext _context;
         private readonly string _nodeTag;
-        private readonly CancellationToken _cancellationToken;
+        private readonly OperationCancelToken _operationCancelToken;
         private List<string> _filesToRestore;
         private bool _hasEncryptionKey;
 
         public RestoreBackupTask(ServerStore serverStore,
             RestoreBackupConfiguration restoreConfiguration,
-            JsonOperationContext context,
             string nodeTag,
-            CancellationToken cancellationToken)
+            OperationCancelToken operationCancelToken)
         {
             _serverStore = serverStore;
             _restoreConfiguration = restoreConfiguration;
-            _context = context;
             _nodeTag = nodeTag;
-            _cancellationToken = cancellationToken;
+            _operationCancelToken = operationCancelToken;
 
             ValidateArguments();
         }
@@ -67,25 +64,30 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (onProgress == null)
                     onProgress = _ => { };
 
-                var restoreResult = new RestoreResult
+                var result = new RestoreResult
                 {
                     DataDirectory = _restoreConfiguration.DataDirectory,
                     JournalStoragePath = _restoreConfiguration.JournalsStoragePath
                 };
 
+                onProgress.Invoke(result.Progress);
+
+                Stopwatch sw = null;
                 RestoreSettings restoreSettings = null;
                 var firstFile = _filesToRestore[0];
                 var extension = Path.GetExtension(firstFile);
                 var snapshotRestore = false;
                 if (extension == Constants.Documents.PeriodicBackup.SnapshotExtension)
                 {
+                    snapshotRestore = true;
+                    sw = Stopwatch.StartNew();
                     // restore the snapshot
                     restoreSettings = SnapshotRestore(firstFile,
                         _restoreConfiguration.DataDirectory,
                         _restoreConfiguration.JournalsStoragePath,
                         onProgress,
-                        restoreResult);
-                    snapshotRestore = true;
+                        result);
+                    
                     // removing the snapshot from the list of files
                     _filesToRestore.RemoveAt(0);
                 }
@@ -108,7 +110,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                 }
 
                 var databaseRecord = restoreSettings.DatabaseRecord;
-
                 if (databaseRecord.Settings == null)
                     databaseRecord.Settings = new Dictionary<string, string>();
 
@@ -143,23 +144,38 @@ namespace Raven.Server.Documents.PeriodicBackup
                         options |= InitializeOptions.GenerateNewDatabaseId;
 
                     database.Initialize(options);
-                    SmugglerRestore(_restoreConfiguration.BackupLocation, database, databaseRecord, identity => restoreSettings.Identities[identity.Prefix] = identity.Value, onProgress, restoreResult);
+
+                    if (snapshotRestore)
+                    {
+                        var summary = database.GetDatabaseSummary();
+                        result.Documents.ReadCount += summary.DocumentsCount;
+                        result.Documents.Attachments.ReadCount += summary.AttachmentsCount;
+                        result.RevisionDocuments.ReadCount += summary.RevisionsCount;
+                        result.Indexes.ReadCount += summary.IndexesCount;
+                        result.Identities.ReadCount += summary.IdentitiesCount;
+                        result.AddInfo($"Successfully restored {result.RestoredFilesInSnapshotCount} " +
+                                       $"files during snapshot restore, took: {sw.ElapsedMilliseconds:#,#;;0}ms");
+                        onProgress.Invoke(result.Progress);
+                    }
+
+                    SmugglerRestore(_restoreConfiguration.BackupLocation, database, databaseRecord, restoreSettings, onProgress, result);
                 }
 
-                databaseRecord.Topology = new DatabaseTopology();
-                // restoring to the current node
-                databaseRecord.Topology.Members.Add(_nodeTag);
+                result.Documents.Processed = true;
+                result.RevisionDocuments.Processed = true;
+                result.Indexes.Processed = true;
+                result.Identities.Processed = true;
+                onProgress.Invoke(result.Progress);
 
-                // TODO: disribute key in cluster?
-                // TODO: _restoreConfiguration.ReplicationFactor ? 
-                // TODO: _restoreConfiguration.TopologyMembers ? 
+                databaseRecord.Topology = new DatabaseTopology();
+                // restoring to the current node only
+                databaseRecord.Topology.Members.Add(_nodeTag);
 
                 await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, restoreSettings.DatabaseValues, isRestore: true);
                 var index = await WriteIdentitiesAsync(databaseName, restoreSettings.Identities);
-
                 await _serverStore.Cluster.WaitForIndexNotification(index);
 
-                return restoreResult;
+                return result;
             }
             catch (OperationCanceledException)
             {
@@ -182,6 +198,10 @@ namespace Raven.Server.Documents.PeriodicBackup
                 // delete any files that we already created during the restore
                 IOExtensions.DeleteDirectory(_restoreConfiguration.DataDirectory);
                 throw;
+            }
+            finally
+            {
+                _operationCancelToken.Dispose();
             }
         }
 
@@ -299,7 +319,8 @@ namespace Raven.Server.Documents.PeriodicBackup
             foreach (var file in orderedFiles)
             {
                 filesToRestore.Add(file);
-                if (file.Equals(_restoreConfiguration.LastFileNameToRestore, StringComparison.OrdinalIgnoreCase))
+                var fileName = Path.GetFileName(file);
+                if (fileName.Equals(_restoreConfiguration.LastFileNameToRestore, StringComparison.OrdinalIgnoreCase))
                     break;
             }
 
@@ -310,9 +331,9 @@ namespace Raven.Server.Documents.PeriodicBackup
             string backupDirectory,
             DocumentDatabase database,
             DatabaseRecord databaseRecord,
-            Action<(string Prefix, long Value)> onIdentityAction,
+            RestoreSettings restoreSettings,
             Action<IOperationProgress> onProgress,
-            RestoreResult restoreResult)
+            RestoreResult result)
         {
             Debug.Assert(onProgress != null);
 
@@ -335,6 +356,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             // we do have at least one smuggler backup
             databaseRecord.AutoIndexes = new Dictionary<string, AutoIndexDefinition>();
             databaseRecord.Indexes = new Dictionary<string, IndexDefinition>();
+            restoreSettings.Identities = new Dictionary<string, long>();
 
             // restore the smuggler backup
             var options = new DatabaseSmugglerOptions();
@@ -346,13 +368,13 @@ namespace Raven.Server.Documents.PeriodicBackup
                 for (var i = 0; i < _filesToRestore.Count - 1; i++)
                 {
                     var filePath = Path.Combine(backupDirectory, _filesToRestore[i]);
-                    ImportSingleBackupFile(database, onProgress, restoreResult, filePath, context, destination, options);
+                    ImportSingleBackupFile(database, onProgress, result, filePath, context, destination, options);
                 }
 
                 options.OperateOnTypes = oldOperateOnTypes;
                 var lastFilePath = Path.Combine(backupDirectory, _filesToRestore.Last());
 
-                ImportSingleBackupFile(database, onProgress, restoreResult, lastFilePath, context, destination, options,
+                ImportSingleBackupFile(database, onProgress, result, lastFilePath, context, destination, options,
                     onIndexAction: indexAndType =>
                     {
                         switch (indexAndType.Type)
@@ -375,7 +397,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                                 throw new ArgumentOutOfRangeException();
                         }
                     },
-                    onIdentityAction: onIdentityAction);
+                    onIdentityAction: identity => restoreSettings.Identities[identity.Prefix] = identity.Value);
             }
         }
 
@@ -391,7 +413,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             {
                 var source = new StreamSource(stream, context);
                 var smuggler = new Smuggler.Documents.DatabaseSmuggler(database, source, destination,
-                    database.Time, options, result: restoreResult, onProgress: onProgress, token: _cancellationToken)
+                    database.Time, options, result: restoreResult, onProgress: onProgress, token: _operationCancelToken.Token)
                 {
                     OnIndexAction = onIndexAction,
                     OnIdentityAction = onIdentityAction
@@ -422,17 +444,22 @@ namespace Raven.Server.Documents.PeriodicBackup
                     //TODO: decrypt this file using the _restoreConfiguration.EncryptionKey
                     //http://issues.hibernatingrhinos.com/issue/RavenDB-7546
 
-                    var json = _context.Read(settingsStream, "read database settings for restore");
-                    restoreSettings = JsonDeserializationServer.RestoreSettings(json);
+                    using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    {
+                        var json = context.Read(settingsStream, "read database settings for restore");
+                        json.BlittableValidation();
 
-                    restoreSettings.DatabaseRecord.DatabaseName = _restoreConfiguration.DatabaseName;
-                    DatabaseHelper.Validate(_restoreConfiguration.DatabaseName, restoreSettings.DatabaseRecord);
+                        restoreSettings = JsonDeserializationServer.RestoreSettings(json);
 
-                    if (restoreSettings.DatabaseRecord.Encrypted && _hasEncryptionKey == false)
-                        throw new ArgumentException("Database snapshot is encrypted but the encryption key is missing!");
+                        restoreSettings.DatabaseRecord.DatabaseName = _restoreConfiguration.DatabaseName;
+                        DatabaseHelper.Validate(_restoreConfiguration.DatabaseName, restoreSettings.DatabaseRecord);
 
-                    if (restoreSettings.DatabaseRecord.Encrypted == false && _hasEncryptionKey)
-                        throw new ArgumentException("Cannot encrypt a non encrypted snapshot backup during restore!");
+                        if (restoreSettings.DatabaseRecord.Encrypted && _hasEncryptionKey == false)
+                            throw new ArgumentException("Database snapshot is encrypted but the encryption key is missing!");
+
+                        if (restoreSettings.DatabaseRecord.Encrypted == false && _hasEncryptionKey)
+                            throw new ArgumentException("Cannot encrypt a non encrypted snapshot backup during restore!");
+                    }
                 },
                 onProgress: message =>
                 {
@@ -440,7 +467,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     restoreResult.RestoredFilesInSnapshotCount++;
                     onProgress.Invoke(restoreResult.Progress);
                 },
-                cancellationToken: _cancellationToken);
+                cancellationToken: _operationCancelToken.Token);
 
             if (restoreSettings == null)
                 throw new InvalidDataException("Cannot restore the snapshot without the settings file!");

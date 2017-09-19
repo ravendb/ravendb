@@ -357,6 +357,9 @@ namespace Raven.Server.Documents.Operations
             [Description("Database migration")]
             DatabaseMigration,
 
+            [Description("Database Restore")]
+            DatabaseRestore,
+
             [Description("Database compact")]
             DatabaseCompact,
 
@@ -370,10 +373,7 @@ namespace Raven.Server.Documents.Operations
             UpdateByCollection,
 
             [Description("Bulk Insert")]
-            BulkInsert,
-
-            [Description("Database Restore")]
-            DatabaseRestore
+            BulkInsert
         }
     }
 }

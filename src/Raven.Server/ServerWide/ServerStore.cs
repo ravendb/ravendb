@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Dynamic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -1090,10 +1091,10 @@ namespace Raven.Server.ServerWide
 
         public Task<(long Index, object Result)> WriteDatabaseRecordAsync(
             string databaseName, DatabaseRecord record, long? index,
-            Dictionary<string, object> databaseValues = null, bool isRestore = false)
+            Dictionary<string, ExpandoObject> databaseValues = null, bool isRestore = false)
         {
             if (databaseValues == null)
-                databaseValues = new Dictionary<string, object>();
+                databaseValues = new Dictionary<string, ExpandoObject>();
 
             Debug.Assert(record.Topology != null);
             record.Topology.Stamp = new LeaderStamp
