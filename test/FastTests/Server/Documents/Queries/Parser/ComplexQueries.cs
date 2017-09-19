@@ -9,33 +9,34 @@ namespace FastTests.Server.Documents.Queries.Parser
     public class ComplexQueries : NoDisposalNeeded
     {
         [Theory]
-        [InlineData("FROM Users", "{\"From\":\"Users\"}")]
-        [InlineData("FROM Users (IsActive =false)", "{\"From\":\"Users\"}")]
-        [InlineData("FROM Users AS u", "{\"From\":\"Users\",\"Alias\":\"u\"}")]
-        [InlineData("FROM Users (IsActive = true) SELECT Age ", "{\"From\":\"Users\",\"Select\":[{\"Expression\":\"Age\"}]}")]
+        [InlineData(@"FROM Users (IsActive =false)", "{\"From\":\"Users\"}")]
         [InlineData(@"FROM Users (IsActive = true)
 GROUP BY Country
 WHERE Age BETWEEN 21 AND 30
-ORDER BY Age DESC, Name ASC", "{\"From\":\"Users\",\"GroupBy\":[\"Country\"],\"OrderBy\":[{\"Field\":\"Age\",\"Ascending\":false},{\"Field\":\"Name\",\"Ascending\":true}]}")]
-        [InlineData("FROM Posts WHERE Tags[].Name = 'Any'", "{\"From\":\"Posts\",\"Where\":{\"Type\":\"Equal\",\"Left\":\"Tags[].Name\",\"Right\":\"Any\"}}")]
-        [InlineData("FROM Users GROUP BY Country WHERE sum(Weight) > 100 SELECT sum(Weight) ", "{\"From\":\"Users\",\"GroupBy\":[\"Country\"],\"Select\":[{\"Expression\":{\"Method\":\"sum\",\"Arguments\":[\"Weight\"]}}]}")]
-        [InlineData(@"FROM Users
-ORDER BY Age AS double DESC, Name ASC", "{\"From\":\"Users\",\"OrderBy\":[{\"Field\":\"Age\",\"FieldType\":\"Double\",\"Ascending\":false},{\"Field\":\"Name\",\"Ascending\":true}]}")]
+ORDER BY Age DESC, Name ASC", "{\"From\":\"Users\",\"GroupBy\":[\"Country\"],\"Where\":{\"Between\":{\"Min\":21,\"Max\":30}},\"OrderBy\":[{\"Field\":\"Age\",\"Ascending\":false},{\"Field\":\"Name\",\"Ascending\":true}]}")]
         [InlineData(@"
 FROM Users
 WHERE boost(Age > 15, 2) 
 ORDER BY LastName
 SELECT sum(Age), Name as Username
-", "{\"From\":\"Users\",\"OrderBy\":[{\"Field\":\"LastName\",\"Ascending\":true}],\"Select\":[{\"Expression\":{\"Method\":\"sum\",\"Arguments\":[\"Age\"]}},{\"Expression\":\"Name\",\"Alias\":\"Username\"}]}")]
+", "{\"From\":\"Users\",\"Where\":{\"Method\":\"boost\",\"Arguments\":[{\"Type\":\"GreaterThan\",\"Left\":\"Age\",\"Right\":15},2]},\"OrderBy\":[{\"Field\":\"LastName\",\"Ascending\":true}],\"Select\":[{\"Expression\":{\"Method\":\"sum\",\"Arguments\":[\"Age\"]}},{\"Expression\":\"Name\",\"Alias\":\"Username\"}]}")]
+        [InlineData(@"FROM Users
+ORDER BY Age AS double DESC, Name ASC", "{\"From\":\"Users\",\"OrderBy\":[{\"Field\":\"Age\",\"FieldType\":\"Double\",\"Ascending\":false},{\"Field\":\"Name\",\"Ascending\":true}]}")]
+        [InlineData(@"FROM Users GROUP BY Country WHERE sum(Weight) > 100 SELECT sum(Weight) ", "{\"From\":\"Users\",\"GroupBy\":[\"Country\"],\"Where\":{\"Type\":\"GreaterThan\",\"Left\":{\"Method\":\"sum\",\"Arguments\":[\"Weight\"]},\"Right\":100},\"Select\":[{\"Expression\":{\"Method\":\"sum\",\"Arguments\":[\"Weight\"]}}]}")]
+        [InlineData(@"FROM Posts WHERE Tags[].Name = 'Any'", "{\"From\":\"Posts\",\"Where\":{\"Type\":\"Equal\",\"Left\":\"Tags[].Name\",\"Right\":\"Any\"}}")]
+        [InlineData(@"FROM Users AS u", "{\"From\":\"Users\",\"Alias\":\"u\"}")]
+        [InlineData(@"FROM Users WHERE search(Name, 'oren')", "{\"From\":\"Users\",\"Where\":{\"Method\":\"search\",\"Arguments\":[\"Name\",\"oren\"]}}")]
         [InlineData(@"FROM Users (IsActive = null)
 GROUP BY Country
 WHERE Age BETWEEN 21 AND 30
-ORDER BY Age DESC, Name ASC", "{\"From\":\"Users\",\"GroupBy\":[\"Country\"],\"OrderBy\":[{\"Field\":\"Age\",\"Ascending\":false},{\"Field\":\"Name\",\"Ascending\":true}]}")]
-        [InlineData("FROM Users GROUP BY Country WHERE count() > 100 SELECT count()", "{\"From\":\"Users\",\"GroupBy\":[\"Country\"],\"Select\":[{\"Expression\":{\"Method\":\"count\",\"Arguments\":[]}}]}")]
+ORDER BY Age DESC, Name ASC", "{\"From\":\"Users\",\"GroupBy\":[\"Country\"],\"Where\":{\"Between\":{\"Min\":21,\"Max\":30}},\"OrderBy\":[{\"Field\":\"Age\",\"Ascending\":false},{\"Field\":\"Name\",\"Ascending\":true}]}")]
         [InlineData(@"FROM Users (IsActive = true)
 WHERE Age BETWEEN 21 AND 30
-ORDER BY Age DESC, Name ASC", "{\"From\":\"Users\",\"OrderBy\":[{\"Field\":\"Age\",\"Ascending\":false},{\"Field\":\"Name\",\"Ascending\":true}]}")]
-        [InlineData("FROM Users WHERE search(Name, 'oren')", "{\"From\":\"Users\"}")]
+ORDER BY Age DESC, Name ASC", "{\"From\":\"Users\",\"Where\":{\"Between\":{\"Min\":21,\"Max\":30}},\"OrderBy\":[{\"Field\":\"Age\",\"Ascending\":false},{\"Field\":\"Name\",\"Ascending\":true}]}")]
+        [InlineData(@"FROM Users (IsActive = true) SELECT Age ", "{\"From\":\"Users\",\"Select\":[{\"Expression\":\"Age\"}]}")]
+        [InlineData(@"FROM Users GROUP BY Country WHERE count() > 100 SELECT count()", "{\"From\":\"Users\",\"GroupBy\":[\"Country\"],\"Where\":{\"Type\":\"GreaterThan\",\"Left\":{\"Method\":\"count\",\"Arguments\":[]},\"Right\":100},\"Select\":[{\"Expression\":{\"Method\":\"count\",\"Arguments\":[]}}]}")]
+        [InlineData(@"FROM Users", "{\"From\":\"Users\"}")]
+
         public void CanParseFullQueries(string q, string json)
         {
             var parser = new QueryParser();
@@ -48,7 +49,7 @@ ORDER BY Age DESC, Name ASC", "{\"From\":\"Users\",\"OrderBy\":[{\"Field\":\"Age
             new JsonQueryVisitor(jsonTextWriter).Visit(query);
             jsonTextWriter.WriteEndObject();
             var actual = output.GetStringBuilder().ToString();
-            //File.AppendAllText("out.txt", $"[InlineData(\"{q}\", \"{actual.Replace("\"", "\\\"")}\")]\r\n");
+            //File.AppendAllText("out.txt", $"[InlineData(@\"{q}\", \"{actual.Replace("\"", "\\\"")}\")]\r\n");
             Assert.Equal(json, actual);
         }
     }
