@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.ExceptionServices;
 using System.Text;
-using Raven.Server.Documents.Queries.Parser;
 using Sparrow;
 
 namespace Raven.Server.Documents.Queries.AST
@@ -9,12 +9,23 @@ namespace Raven.Server.Documents.Queries.AST
     public class JavascriptCodeQueryVisitor : QueryVisitor
     {
         private readonly StringBuilder _sb;
-        private readonly string _alias;
+        private readonly HashSet<string> _knownAliases = new HashSet<string>();
 
-        public JavascriptCodeQueryVisitor(StringBuilder sb, string alias)
+        public JavascriptCodeQueryVisitor(StringBuilder sb, Query q)
         {
             _sb = sb;
-            _alias = alias;
+
+            _knownAliases.Add("this");
+            if (q.From.Alias != null)
+                _knownAliases.Add(q.From.Alias.Value);
+            if (q.Load != null)
+            {
+                foreach (var t in q.Load)
+                {
+                    _knownAliases.Add(t.Alias.Value);
+                }
+            }
+
         }
 
         public override void VisitInclude(List<QueryExpression> includes)
@@ -134,9 +145,18 @@ namespace Raven.Server.Documents.Queries.AST
 
         public override void VisitField(FieldExpression field)
         {
-            if (_alias != null)
+            var fieldValue = field.Field.Value;
+            var firstPeriod = fieldValue.IndexOf('.');
+
+            if ((firstPeriod == -1 && _knownAliases.Contains(fieldValue) == false) ||
+                
+                (firstPeriod != -1 && _knownAliases.Contains(fieldValue.Substring(0, firstPeriod)) == false) 
+                )
+            {
                 _sb.Append("this.");
-            _sb.Append(field.Field);
+            }
+            
+            _sb.Append(fieldValue);
         }
 
         public override void VisitTrue()
