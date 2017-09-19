@@ -213,7 +213,6 @@ type querySortType = "Ascending" | "Descending" | "Range Ascending" | "Range Des
 interface recentErrorDto extends Raven.Server.NotificationCenter.Notifications.Notification {
     Details: string;
     HttpStatus?: string;
-    LicenseLimitType?: Raven.Server.Commercial.LimitType;
 }
 
 declare module studio.settings {
