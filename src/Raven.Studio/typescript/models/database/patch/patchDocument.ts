@@ -17,7 +17,7 @@ class patchDocument extends document {
 
     static empty() {
         const meta: any = {};
-        meta['@collection'] = 'PatchDocuments';
+        meta['@collection'] = '@studio';
         return new patchDocument({
             '@metadata': meta,
             Query: "",
