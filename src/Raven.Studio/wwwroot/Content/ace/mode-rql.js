@@ -7,11 +7,15 @@ var TextHighlightRules = require("./text_highlight_rules").TextHighlightRules;
 var RqlHighlightRules = function() {
 
     var clausesKeywords = (
-        "declare|from|where|select|group|order|load|include|update"
+        "declare|from|group|where|order|load|select|include|update"
     );
+    this.clausesKeywords = clausesKeywords.split("|");
+
     var clauseAppendKeywords = (
         "function|index|by"
     );
+    this.clauseAppendKeywords = clauseAppendKeywords.split("|");
+
     var insideClauseKeywords = (
         "as|not|all|between"
     );
@@ -41,6 +45,8 @@ var RqlHighlightRules = function() {
     var binaryOperations = (
         "and|or"
     );
+    this.binaryOperations = binaryOperations.split("|");
+
     var operations = (
         ">=|<=|<|>|=|==|!="
     );
@@ -98,8 +104,6 @@ var RqlHighlightRules = function() {
         } ]
     };
     this.normalizeRules();
-
-    this.clauseAppendKeywords = clauseAppendKeywords.split("|");
 };
 
 oop.inherits(RqlHighlightRules, TextHighlightRules);

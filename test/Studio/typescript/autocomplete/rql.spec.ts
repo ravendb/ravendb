@@ -65,22 +65,31 @@ describe("RQL Autocomplete", () => {
     ];
 
     const afterFromList = [
-        {caption: "as", value: "as ", score: 7, meta: "keyword"},
-        {caption: "where", value: "where ", score: 6, meta: "keyword"},
-        {caption: "group", value: "group ", score: 5, meta: "keyword"},
-        {caption: "load", value: "load ", score: 4, meta: "keyword"},
-        {caption: "select", value: "select ", score: 3, meta: "keyword"},
-        {caption: "order", value: "order ", score: 2, meta: "keyword"},
-        {caption: "include", value: "include ", score: 1, meta: "keyword"}
+        {caption: "as", value: "as ", score: 21, meta: "keyword"},
+        {caption: "group", value: "group ", score: 20, meta: "keyword"},
+        {caption: "where", value: "where ", score: 19, meta: "keyword"},
+        {caption: "order", value: "order ", score: 18, meta: "keyword"},
+        {caption: "load", value: "load ", score: 17, meta: "keyword"},
+        {caption: "select", value: "select ", score: 16, meta: "keyword"},
+        {caption: "include", value: "include ", score: 15, meta: "keyword"}
     ];
 
     const afterFromIndexList = [
-        {caption: "as", value: "as ", score: 7, meta: "keyword"},
-        {caption: "where", value: "where ", score: 6, meta: "keyword"},
-        {caption: "load", value: "load ", score: 4, meta: "keyword"},
-        {caption: "select", value: "select ", score: 3, meta: "keyword"},
-        {caption: "order", value: "order ", score: 2, meta: "keyword"},
-        {caption: "include", value: "include ", score: 1, meta: "keyword"}
+        {caption: "as", value: "as ", score: 21, meta: "keyword"},
+        {caption: "where", value: "where ", score: 20, meta: "keyword"},
+        {caption: "order", value: "order ", score: 19, meta: "keyword"},
+        {caption: "load", value: "load ", score: 18, meta: "keyword"},
+        {caption: "select", value: "select ", score: 17, meta: "keyword"},
+        {caption: "include", value: "include ", score: 16, meta: "keyword"}
+    ];
+
+    const afterWhereList = [
+        {caption: "and", value: "and ", score: 22, meta: "binary operation"},
+        {caption: "or", value: "or ", score: 21, meta: "binary operation"},
+        {caption: "order", value: "order ", score: 20, meta: "keyword"},
+        {caption: "load", value: "load ", score: 19, meta: "keyword"},
+        {caption: "select", value: "select ", score: 18, meta: "keyword"},
+        {caption: "include", value: "include ", score: 17, meta: "keyword"}
     ];
     
     it('empty query should start with from or declare', done => {
@@ -168,7 +177,8 @@ describe("RQL Autocomplete", () => {
     it('from Collection | should list collections', done => {
         rqlTestUtils.autoComplete("from Orders |", northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
-            assert.deepEqual(_.sortBy(wordlist, [(x: autoCompleteWordList) => x.score]).reverse(), afterFromList);
+            const sortedList = _.sortBy(wordlist, [(x: autoCompleteWordList) => x.score]).reverse();
+            assert.deepEqual(sortedList, afterFromList);
 
             assert.equal(lastKeyword.keyword, "from");
             assert.equal(lastKeyword.dividersCount, 2);
@@ -353,7 +363,8 @@ select |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
         rqlTestUtils.autoComplete(`from Orders 
 w|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "w");
-            assert.deepEqual(_.sortBy(wordlist, [(x: autoCompleteWordList) => x.score]).reverse(), afterFromList);
+            const sortedList = _.sortBy(wordlist, [(x: autoCompleteWordList) => x.score]).reverse();
+            assert.deepEqual(sortedList, afterFromList);
 
             assert.equal(lastKeyword.keyword, "from");
             assert.equal(lastKeyword.dividersCount, 2);
@@ -366,10 +377,43 @@ w|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
         rqlTestUtils.autoComplete(`from Orders
 w|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "w");
-            assert.deepEqual(_.sortBy(wordlist, [(x: autoCompleteWordList) => x.score]).reverse(), afterFromList);
+            const sortedList = _.sortBy(wordlist, [(x: autoCompleteWordList) => x.score]).reverse();
+            assert.deepEqual(sortedList, afterFromList);
 
             assert.equal(lastKeyword.keyword, "from");
             assert.equal(lastKeyword.dividersCount, 2);
+
+            done();
+        });
+    });
+
+    it('After where we should list binary operation and other keywords', done => {
+        rqlTestUtils.autoComplete(`from Orders
+where ShipTo.Country = 'France' |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            const sortedList = _.sortBy(wordlist, [(x: autoCompleteWordList) => x.score]).reverse();
+            assert.deepEqual(sortedList, afterWhereList);
+
+            assert.equal(lastKeyword.keyword, "where");
+            assert.equal(lastKeyword.dividersCount, 4);
+            assert.equal(lastKeyword.operator, "=");
+
+            done();
+        });
+    });
+
+    it('WHERE and than AND without space should have AND prefix', done => {
+        rqlTestUtils.autoComplete(`from Orders
+where ShipTo.Country = 'France' and|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "and");
+            const sortedList = _.sortBy(wordlist, [(x: autoCompleteWordList) => x.score]).reverse();
+            assert.deepEqual(sortedList, afterWhereList);
+
+            assert.equal(lastKeyword.keyword, "where");
+            assert.equal(lastKeyword.dividersCount, 0);
+            assert.equal(lastKeyword.binaryOperation, "and");
+            assert.isUndefined(lastKeyword.operator);
+            assert.isUndefined(lastKeyword.keywordModifier);
 
             done();
         });
@@ -427,7 +471,8 @@ where ShipTo.Country = 'France' and |`, northwindProvider(), (errors, wordlist, 
     it('from index after index name should complete with after from', done => {
         rqlTestUtils.autoComplete("from index 'Orders/Totals' |", northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
-            assert.deepEqual(_.sortBy(wordlist, [(x: autoCompleteWordList) => x.score]).reverse(), afterFromIndexList);
+            const sortedList = _.sortBy(wordlist, [(x: autoCompleteWordList) => x.score]).reverse();
+            assert.deepEqual(sortedList, afterFromIndexList);
 
             assert.equal(lastKeyword.keyword, "from index");
             assert.equal(lastKeyword.dividersCount, 2);

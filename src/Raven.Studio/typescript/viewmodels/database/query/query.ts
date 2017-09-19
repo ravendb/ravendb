@@ -108,7 +108,7 @@ class query extends viewModelBase {
     constructor() {
         super();
 
-        this.queryCompleter = queryCompleter.remoteCompleter(this.activeDatabase, this.indexes);
+        this.queryCompleter = queryCompleter.remoteCompleter(this.activeDatabase, this.indexes, RqlQueryType.Select);
         aceEditorBindingHandler.install();
         datePickerBindingHandler.install();
 

@@ -147,7 +147,7 @@ class patch extends viewModelBase {
         super();
         aceEditorBindingHandler.install();
 
-        this.queryCompleter = queryCompleter.remoteCompleter(this.activeDatabase, this.indexes);
+        this.queryCompleter = queryCompleter.remoteCompleter(this.activeDatabase, this.indexes, RqlQueryType.Update);
 
         this.initValidation();
 

@@ -9,10 +9,11 @@ import collection = require("models/database/documents/collection");
 import document = require("models/database/documents/document");
 
 class queryCompleter {
+    private rules: AceAjax.RqlHighlightRules;
     private tokenIterator: new(session : AceAjax.IEditSession, initialRow: number, initialColumn: number) => AceAjax.TokenIterator = ace.require("ace/token_iterator").TokenIterator;
     private indexOrCollectionFieldsCache = new Map<string, autoCompleteWordList[]>();
     
-    constructor(private providers: queryCompleterProviders) {
+    constructor(private providers: queryCompleterProviders, private queryType: RqlQueryType) {
         _.bindAll(this, "complete");
     }
 
@@ -135,7 +136,7 @@ class queryCompleter {
     
     getLastKeyword(session: AceAjax.IEditSession, pos: AceAjax.Position): autoCompleteLastKeyword {
         const mode = session.getMode();
-        const rules = <AceAjax.RqlHighlightRules>mode.$highlightRules;
+        this.rules = <AceAjax.RqlHighlightRules>mode.$highlightRules;
         
         const result: autoCompleteLastKeyword = {
             keywordsBefore: undefined,
@@ -193,7 +194,7 @@ class queryCompleter {
             switch (token.type) {
                 case "keyword.clause":
                     const keyword = token.value.toLowerCase();
-                    if (_.includes(rules.clauseAppendKeywords, result.keyword)) {
+                    if (_.includes(this.rules.clauseAppendKeywords, result.keyword)) {
                         result.keyword = keyword + " " + result.keyword;
                     } else {
                         result.keyword = keyword;
@@ -308,7 +309,9 @@ class queryCompleter {
         this.getIndexFields(queryIndexName.name, queryIndexName.type, prefix)
             .done((wordList) => {
                 if (functions) {
-                    wordList = wordList.concat(functions);
+                    functions.forEach(f => {
+                        wordList.push(f);
+                    });
                 }
                 callback(null, wordList);
             });
@@ -321,7 +324,8 @@ class queryCompleter {
              callback: (errors: any[], wordList: autoCompleteWordList[]) => void) {
 
         const lastKeyword = this.getLastKeyword(session, pos);
-        if (!lastKeyword || !lastKeyword.keyword || lastKeyword.dividersCount === 0) {
+        if (!lastKeyword || !lastKeyword.keyword || 
+            (lastKeyword.dividersCount === 0 && !lastKeyword.binaryOperation)) {
             this.completeEmpty(callback);
             return;
         }
@@ -335,7 +339,7 @@ class queryCompleter {
                         return;
                     }
 
-                    this.completeFromAfter(callback, false, lastKeyword);
+                    this.completeFromEnd(callback, lastKeyword);
                     return;
                 }
                 if (lastKeyword.dividersCount > 2) {
@@ -347,7 +351,7 @@ class queryCompleter {
             }
             case "from index": {
                 if (lastKeyword.dividersCount === 2) { // index name already specified
-                    this.completeFromAfter(callback, true, lastKeyword);
+                    this.completeFromEnd(callback, lastKeyword);
                     return;
                 }
                 if (lastKeyword.dividersCount > 2) {
@@ -420,6 +424,15 @@ class queryCompleter {
                 break;
                 
             case "where": {
+                if (lastKeyword.dividersCount === 4 || 
+                    (lastKeyword.dividersCount === 0 && lastKeyword.binaryOperation)) {
+                    const binaryOperations = this.rules.binaryOperations.map((binaryOperation, i) => {
+                        return {value: binaryOperation, score: 22 - i, meta: "binary operation"};
+                    });
+                    this.completeKeywordEnd(callback, lastKeyword, binaryOperations);
+                    return;
+                }
+                
                 if (lastKeyword.operator === "=") {
                     // first, calculate and validate the column name
                     let currentField = _.last(lastKeyword.identifiers);
@@ -490,6 +503,12 @@ class queryCompleter {
                 this.completeFields(session, lastKeyword.getFieldPrefix, callback);
                 break;
             }
+            case "load":
+
+                break;
+            case "include":
+
+                break;
             case "group":
             case "order":
                 this.completeWords(callback, [{value: "by", score: 0, meta: "keyword"}]);
@@ -556,29 +575,51 @@ class queryCompleter {
         });
     }
 
-    private completeFromAfter(callback: (errors: any[], wordList: autoCompleteWordList[]) => void, isStaticIndex: boolean, lastKeyword: autoCompleteLastKeyword) {
-        const keywords = [
-            {value: "where", score: 6, meta: "keyword"},
-            {value: "load", score: 4, meta: "keyword"},
-            {value: "order", score: 2, meta: "keyword"},
-            {value: "include", score: 1, meta: "keyword"},
-        ];
-        if (!isStaticIndex) {
-            keywords.push({value: "group", score: 5, meta: "keyword"})
-        }
+    private completeFromEnd(callback: (errors: any[], wordList: autoCompleteWordList[]) => void, lastKeyword: autoCompleteLastKeyword) {
+        const keywords: autoCompleteWordList[] = [];
         if (!lastKeyword.keywordModifier) {
-            keywords.push({value: "as", score: 7, meta: "keyword"})
+            keywords.push({value: "as", score: 21, meta: "keyword"});
         }
-        if (!lastKeyword.keywordsBefore.find(keyword => keyword === "select")) {
-            keywords.push({value: "select", score: 3, meta: "keyword"})
+        this.completeKeywordEnd(callback, lastKeyword, keywords);
+    }
+
+    private completeKeywordEnd(callback: (errors: any[], wordList: autoCompleteWordList[]) => void, lastKeyword: autoCompleteLastKeyword, additions: autoCompleteWordList[] = null) {
+        let keywordEnoutered = false;
+        const lastKeywordWithoutFromIndex = lastKeyword.keyword === "from index" ? "from" : lastKeyword.keyword;
+
+        const keywords: autoCompleteWordList[] = this.rules.clausesKeywords.filter(keyword => {
+            if (keyword === "select" || keyword === "include") {
+                return this.queryType === RqlQueryType.Select;
+            }
+            if (keyword === "update") {
+                return this.queryType === RqlQueryType.Update;
+            }
+            
+            if (lastKeywordWithoutFromIndex === keyword) {
+                keywordEnoutered = true;
+                return false;
+            }
+            if (keywordEnoutered) {
+                if (keyword === "group") {
+                    return lastKeyword.keyword === "from";
+                }
+            }
+            return keywordEnoutered;
+        }).map((keyword, i) => {
+            return {caption: keyword, value: keyword, score: 20 - i, meta: "keyword"};
+        });
+
+        if (additions) {
+            additions.forEach(addition => {
+                keywords.push(addition);
+            });
         }
 
         this.completeWords(callback, keywords);
     }
     
-    
-    static remoteCompleter(activeDatabase: KnockoutObservable<database>, indexes: KnockoutObservableArray<Raven.Client.Documents.Operations.IndexInformation>) {
-        return new queryCompleter({
+    static remoteCompleter(activeDatabase: KnockoutObservable<database>, indexes: KnockoutObservableArray<Raven.Client.Documents.Operations.IndexInformation>, queryType: RqlQueryType) {
+        const providers: queryCompleterProviders = {
             terms: (indexName, field, pageSize, callback) => {
                 new getIndexTermsCommand(indexName, field, activeDatabase(), pageSize)
                     .execute()
@@ -613,7 +654,8 @@ class queryCompleter {
             indexNames: callback => {
                 callback(indexes().map(x => x.Name));
             }
-        });
+        };
+        return new queryCompleter(providers, queryType);
     }
 }
 
