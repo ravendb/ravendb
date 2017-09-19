@@ -22,6 +22,7 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Voron.Exceptions;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Web.System
@@ -194,49 +195,7 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-        [RavenAction("/cluster/cmpxchg", "GET", AuthorizationStatus.ClusterAdmin)]
-        public Task GetCmpXchgValue()
-        {
-            var key = GetStringQueryString("key");
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var res = ServerStore.Cluster.GetCmpXchg(context, key);
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    context.Write(writer, new DynamicJsonValue
-                    {
-                        [nameof(RawClusterValueResult.Index)] = res.Index,
-                        [nameof(RawClusterValueResult.Value)] = res.Value
-                    });
-                    writer.Flush();
-                }
-                return Task.CompletedTask;
-            }
-        }
-
-        [RavenAction("/cluster/cmpxchg", "PUT", AuthorizationStatus.ClusterAdmin)]
-        public async Task PutCmpXchgValue()
-        {
-            var key = GetStringQueryString("key");
-            // ReSharper disable once PossibleInvalidOperationException
-            var index = GetLongQueryString("index", true).Value;
-
-            ServerStore.EnsureNotPassive();
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                var updateJson = await context.ReadForMemoryAsync(RequestBodyStream(), "read-unique-value");
-                var command = new CompareExchangeCommand(key, updateJson, index);
-
-                var (raftIndex, _) = await ServerStore.SendToLeaderAsync(command);
-                await ServerStore.Cluster.WaitForIndexNotification(raftIndex);
-
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-            }
-        }
+        
 
         [RavenAction("/periodic-backup/status", "GET", AuthorizationStatus.ValidUser)]
         public Task GetPeriodicBackupStatus()

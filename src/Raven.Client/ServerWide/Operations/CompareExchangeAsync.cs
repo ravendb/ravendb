@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
@@ -17,32 +19,68 @@ namespace Raven.Client.ServerWide.Operations
         public long Index;
     }
 
-    public class ClusterValueResult<T>
+    public class CmpXchgResult<T>
     {
         public T Value;
         public long Index;
+
+
+        public static CmpXchgResult<T> ParseFromBlittable(BlittableJsonReaderObject response, DocumentConventions conventions)
+        {
+            if (response.TryGet(nameof(RawClusterValueResult.Index), out long index) == false)
+                throw new InvalidDataException("Response is invalid.");
+
+            response.TryGet(nameof(RawClusterValueResult.Value), out BlittableJsonReaderObject raw);
+
+            T result;
+            object val = null;
+            raw?.TryGet("Object", out val);
+
+            if (val == null)
+            {
+                return new CmpXchgResult<T>
+                {
+                    Index = index,
+                    Value = default(T)
+                };
+            }
+            if (val is BlittableJsonReaderObject obj)
+            {
+                result = (T)EntityToBlittable.ConvertToEntity(typeof(T), "cluster-value", obj, conventions);
+            }
+            else
+            {
+                raw.TryGet("Object", out result);
+            }
+
+            return new CmpXchgResult<T>
+            {
+                Index = index,
+                Value = result
+            };
+        }
     }
 
-    public class GetClusterValue<T> : IServerOperation<ClusterValueResult<T>>
+    public class GetCompareExchangeValueAsync<T> : IOperation<CmpXchgResult<T>>
     {
         private readonly string _key;
 
-        public GetClusterValue(string key)
+        public GetCompareExchangeValueAsync(string key)
         {
             _key = key;
         }
 
-        public RavenCommand<ClusterValueResult<T>> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<CmpXchgResult<T>> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new GetClusterValueCommand(_key, conventions);
+            return new GetCompareExchangeValueAsyncCommand(_key, conventions);
         }
 
-        private class GetClusterValueCommand : RavenCommand<ClusterValueResult<T>>
+        private class GetCompareExchangeValueAsyncCommand : RavenCommand<CmpXchgResult<T>>
         {
             private readonly string _key;
             private readonly DocumentConventions _conventions;
             
-            public GetClusterValueCommand(string key, DocumentConventions conventions = null)
+            public GetCompareExchangeValueAsyncCommand(string key, DocumentConventions conventions = null)
             {
                 if (string.IsNullOrEmpty(key))
                     throw new ArgumentNullException(nameof(key), "The key argument must have value");
@@ -55,7 +93,7 @@ namespace Raven.Client.ServerWide.Operations
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/cluster/cmpxchg?key={_key}";
+                url = $"{node.Url}/databases/{node.Database}/cmpxchg?key={_key}";
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethods.Get,
@@ -65,69 +103,38 @@ namespace Raven.Client.ServerWide.Operations
 
             public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
             {
-
-                if (response.TryGet(nameof(RawClusterValueResult.Index), out long index) == false)
-                    ThrowInvalidResponse();
-
-                response.TryGet(nameof(RawClusterValueResult.Value), out BlittableJsonReaderObject raw);
-
-                T result;
-                object val = null;
-                raw?.TryGet("Object", out val);
-
-                if (val == null)
-                {
-                    Result = new ClusterValueResult<T>
-                    {
-                        Index = index,
-                        Value = default(T)
-                    };
-                    return;
-                }
-                if (val is BlittableJsonReaderObject obj)
-                {
-                    result = (T)EntityToBlittable.ConvertToEntity(typeof(T), "cluster-value", obj, _conventions);
-                }
-                else
-                {
-                    raw.TryGet("Object", out result);
-                }
-
-                Result = new ClusterValueResult<T>
-                {
-                    Index = index,
-                    Value = result
-                };
+                Result = CmpXchgResult<T>.ParseFromBlittable(response, _conventions);
             }
         }
+
     }
 
-    public class CompareExchangeOperation<T> : IServerOperation
+    public class CompareExchangeAsync<T> : IOperation<CmpXchgResult<T>>
     {
         private readonly string _key;
         private readonly T _value;
         private readonly long _index;
 
-        public CompareExchangeOperation(string key, T value, long index)
+        public CompareExchangeAsync(string key, T value, long index)
         {
             _key = key;
             _value = value;
             _index = index;
         }
 
-        public RavenCommand GetCommand( DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<CmpXchgResult<T>> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new CompareExchangeCommand(_key, _value, _index, conventions);
+            return new CompareExchangeAsyncCommand(_key, _value, _index, conventions);
         }
 
-        private class CompareExchangeCommand : RavenCommand
+        private class CompareExchangeAsyncCommand : RavenCommand<CmpXchgResult<T>>
         {
             private readonly string _key;
             private readonly T _value;
             private readonly long _index;
             private readonly DocumentConventions _conventions;
 
-            public CompareExchangeCommand(string key, T value, long index, DocumentConventions conventions = null)
+            public CompareExchangeAsyncCommand(string key, T value, long index, DocumentConventions conventions = null)
             {
                 if (string.IsNullOrEmpty(key))
                     throw new ArgumentNullException(nameof(key), "The key argument must have value");
@@ -144,7 +151,7 @@ namespace Raven.Client.ServerWide.Operations
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/cluster/cmpxchg?key={_key}&index={_index}";
+                url = $"{node.Url}/databases/{node.Database}/cmpxchg?key={_key}&index={_index}";
                 //var tuple = ("Object", _value);
                 var tuple = new Dictionary<string, T>
                 {
@@ -161,6 +168,11 @@ namespace Raven.Client.ServerWide.Operations
                     })
                 };
                 return request;
+            }
+
+            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
+            {
+                Result = CmpXchgResult<T>.ParseFromBlittable(response, _conventions);
             }
         }
     }
