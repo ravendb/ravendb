@@ -147,7 +147,7 @@ namespace Voron.Platform.Posix
                 {
                     var err = Marshal.GetLastWin32Error();
                     Syscall.ThrowLastError(err,
-                        $"Unable to map (default view size) {sizeToMap/Constants.Size.Kilobyte:#,#} kb for page {pageNumber} starting at {allocationStartPosition} on {FileName}");
+                        $"Unable to map (default view size) {sizeToMap/Constants.Size.Kilobyte:#,#0} kb for page {pageNumber} starting at {allocationStartPosition} on {FileName}");
                 }
 
                 var pageHeader = (PageHeader*) (result.ToInt64() + distanceFromStart*Constants.Storage.PageSize);
@@ -172,7 +172,7 @@ namespace Voron.Platform.Posix
                     {
                         var err = Marshal.GetLastWin32Error();
                         Syscall.ThrowLastError(err,
-                            $"Unable to map {sizeToMap/Constants.Size.Kilobyte:#,#} kb for page {pageNumber} starting at {allocationStartPosition} on {FileName}");
+                            $"Unable to map {sizeToMap/Constants.Size.Kilobyte:#,#0} kb for page {pageNumber} starting at {allocationStartPosition} on {FileName}");
                     }
 
                     pageHeader = (PageHeader*) (result.ToInt64() + (distanceFromStart*Constants.Storage.PageSize));
@@ -259,7 +259,7 @@ namespace Voron.Platform.Posix
                     var err = Marshal.GetLastWin32Error();
 
                     Syscall.ThrowLastError(err,
-                        $"Unable to map {size/Constants.Size.Kilobyte:#,#} kb starting at {startPage} on {FileName}");
+                        $"Unable to map {size/Constants.Size.Kilobyte:#,#0} kb starting at {startPage} on {FileName}");
                 }
 
                 NativeMemory.RegisterFileMapping(FileName.FullPath, startingBaseAddressPtr, size);
@@ -299,7 +299,7 @@ namespace Voron.Platform.Posix
         private void ThrowInvalidMappingRequested(long startPage, long size)
         {
             throw new InvalidOperationException(
-                $"Was asked to map page {startPage} + {size / 1024:#,#} kb, but the file size is only {_totalAllocationSize}, can't do that.");
+                $"Was asked to map page {startPage} + {size / 1024:#,#0} kb, but the file size is only {_totalAllocationSize}, can't do that.");
         }
 
         private TransactionState GetTransactionState(IPagerLevelTransactionState tx)

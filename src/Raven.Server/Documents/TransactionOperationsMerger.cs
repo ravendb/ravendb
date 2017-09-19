@@ -237,7 +237,7 @@ namespace Raven.Server.Documents
                         if (_log.IsInfoEnabled)
                         {
                             _log.Info(
-                                $"Failed to run merged transaction with {pendingOps.Count:#,#}, will retry independently",
+                                $"Failed to run merged transaction with {pendingOps.Count:#,#0}, will retry independently",
                                 e);
                         }
                         tx.Dispose();
@@ -363,7 +363,7 @@ namespace Raven.Server.Documents
                             if (_log.IsInfoEnabled)
                             {
                                 _log.Info(
-                                    $"Failed to run merged transaction with {currentPendingOps.Count:#,#} operations in async manner, will retry independently",
+                                    $"Failed to run merged transaction with {currentPendingOps.Count:#,#0} operations in async manner, will retry independently",
                                     e);
                             }
                             if (calledCompletePreviousTx == false)

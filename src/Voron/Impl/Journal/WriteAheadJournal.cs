@@ -935,7 +935,7 @@ namespace Voron.Impl.Journal
                         if (_parent._waj._logger.IsInfoEnabled)
                         {
                             var sizeInKb = (_parent._waj._dataPager.NumberOfAllocatedPages * Constants.Storage.PageSize) / Constants.Size.Kilobyte;
-                            _parent._waj._logger.Info($"Sync of {sizeInKb:#,#} kb file with {_currentTotalWrittenBytes / Constants.Size.Kilobyte:#,#} kb dirty in {sp.Elapsed}");
+                            _parent._waj._logger.Info($"Sync of {sizeInKb:#,#0} kb file with {_currentTotalWrittenBytes / Constants.Size.Kilobyte:#,#0} kb dirty in {sp.Elapsed}");
                         }
                     }
                 }
@@ -1582,8 +1582,8 @@ namespace Voron.Impl.Journal
             if (_logger.IsOperationsEnabled)
             {
                 _logger.Operations(
-                    $"Compression buffer: {_compressionPager} has reached size {(_compressionPager.NumberOfAllocatedPages * Constants.Storage.PageSize) / Constants.Size.Kilobyte:#,#} kb which is more than the limit " +
-                    $"of {_env.Options.MaxScratchBufferSize / 1024:#,#} kb. Will trim it now to the max size allowed. If this is happen on a regular basis," +
+                    $"Compression buffer: {_compressionPager} has reached size {(_compressionPager.NumberOfAllocatedPages * Constants.Storage.PageSize) / Constants.Size.Kilobyte:#,#0} kb which is more than the limit " +
+                    $"of {_env.Options.MaxScratchBufferSize / 1024:#,#0} kb. Will trim it now to the max size allowed. If this is happen on a regular basis," +
                     " consider raising the limit (MaxScratchBufferSize option control it), since it can cause performance issues");
             }
 

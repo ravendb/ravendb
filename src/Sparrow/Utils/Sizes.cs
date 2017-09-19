@@ -20,7 +20,7 @@ namespace Sparrow.Utils
                 return string.Format("{0:#,#.##} MBytes", size / MB);
             if (absSize >= KB)
                 return string.Format("{0:#,#.##} KBytes", size / KB);
-            return string.Format("{0:#,#} Bytes", size);
+            return string.Format("{0:#,#0} Bytes", size);
         }
     }
 }
