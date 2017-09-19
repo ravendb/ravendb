@@ -7,6 +7,7 @@ using System.Text;
 using Lucene.Net.Analysis;
 using Lucene.Net.Search;
 using Lucene.Net.Spatial.Queries;
+using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Exceptions;
@@ -64,7 +65,18 @@ namespace Raven.Server.Documents.Queries
                         switch (fieldType)
                         {
                             case LuceneFieldType.String:
-                                var valueAsString = value as string;
+                                if (!(value is string valueAsString))
+                                {
+                                    if (value is StringSegment s)
+                                    {
+                                        valueAsString= s.Value;
+                                    }
+                                    else
+                                    {
+                                        valueAsString = value?.ToString();
+                                    }
+                                }
+
 
                                 if (exact && metadata.IsDynamic)
                                     luceneFieldName = AutoIndexField.GetExactAutoIndexFieldName(luceneFieldName);
