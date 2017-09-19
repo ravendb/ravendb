@@ -155,7 +155,9 @@ declare module AceAjax {
     }
 
     interface RqlHighlightRules extends HighlightRules {
+        clausesKeywords: string[];
         clauseAppendKeywords: string[];
+        binaryOperations: string[];
     }
 }
 

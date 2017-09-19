@@ -345,6 +345,11 @@ interface queryCompleterProviders {
     indexNames: (callback: (indexNames: string[]) => void) => void;
 }
 
+declare const enum RqlQueryType {
+    Select,
+    Update
+}
+
 type autoCompleteCompleter = (editor: AceAjax.Editor, session: AceAjax.IEditSession, pos: AceAjax.Position, prefix: string, callback: (errors: any[], wordlist: autoCompleteWordList[]) => void) => void;
 type certificateMode = "generate" | "upload" | "editExisting";
     

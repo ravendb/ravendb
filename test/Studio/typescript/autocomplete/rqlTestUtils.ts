@@ -57,24 +57,24 @@ class rqlTestUtils {
             indexFields: (indexName, callback) => callback([]),
             collectionFields: (collectionName, prefix, callback) => callback({}),
             indexNames: callback => callback([])
-        });
+        }, RqlQueryType.Select);
         
         return () => completer;
     }
 
     static northwindProvider() {
-        const completer = new queryCompleter({
+        const providers: queryCompleterProviders = {
             terms: (indexName, field, pageSize, callback) => callback([]),
             collections: callback => {
                 callback([
-                    "Regions", 
-                    "Suppliers", 
-                    "Employees", 
-                    "Categories", 
-                    "Products", 
-                    "Shippers", 
-                    "Companies", 
-                    "Orders", 
+                    "Regions",
+                    "Suppliers",
+                    "Employees",
+                    "Categories",
+                    "Products",
+                    "Shippers",
+                    "Companies",
+                    "Orders",
                     "Collection With Space",
                     "Collection!",
                     "Collection With ' And \" in name"
@@ -97,7 +97,7 @@ class rqlTestUtils {
             collectionFields: (collectionName, prefix, callback) => {
                 switch (collectionName){
                     case "Orders":
-                        
+
                         switch (prefix) {
                             case "ShipTo":
                                 callback({
@@ -128,10 +128,10 @@ class rqlTestUtils {
                                 });
                                 break;
                         }
-                
+
                         break;
                     case "@all_docs":
-                        
+
                         switch (prefix) {
                             default:
                                 callback({
@@ -176,21 +176,22 @@ class rqlTestUtils {
                                 });
                                 break;
                         }
-                
+
                         break;
                     default:
                         callback({});
                         break;
                 }
-                
+
             },
             indexNames: callback => callback([
-                "Orders/ByCompany", 
-                "Product/Sales", 
-                "Orders/Totals", 
+                "Orders/ByCompany",
+                "Product/Sales",
+                "Orders/Totals",
                 "Index With ' And \" in name"
-                ])
-        });
+            ])
+        };
+        const completer = new queryCompleter(providers, RqlQueryType.Select);
 
         return () => completer;
     }
