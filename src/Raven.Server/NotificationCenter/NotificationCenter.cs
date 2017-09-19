@@ -126,7 +126,7 @@ namespace Raven.Server.NotificationCenter
             catch (Exception e)
             {
                 if (Logger.IsInfoEnabled)
-                    Logger.Info($"Failed to add notification: '{notification.ToJson()}' to the notification center", e);
+                    Logger.Info($"Failed to add notification '{notification.Id}' to the notification center. Title: {notification.Title}, message: {notification.Message}", e);
             }
         }
 
