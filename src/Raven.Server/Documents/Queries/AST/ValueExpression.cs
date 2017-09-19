@@ -1,7 +1,6 @@
-using Raven.Server.Documents.Queries.AST;
 using Sparrow;
 
-namespace Raven.Server.Documents.Queries.Parser
+namespace Raven.Server.Documents.Queries.AST
 {
     public class ValueExpression : QueryExpression
     {
@@ -20,6 +19,11 @@ namespace Raven.Server.Documents.Queries.Parser
             Token = token;
             Value = type;
             Type = ExpressionType.Value;
+        }
+
+        public override string ToString()
+        {
+            return Token + " (" + Value + ")";
         }
     }
 }

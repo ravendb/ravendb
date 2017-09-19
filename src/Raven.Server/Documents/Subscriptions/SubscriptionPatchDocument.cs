@@ -1,5 +1,6 @@
 ﻿using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Subscriptions
@@ -7,10 +8,10 @@ namespace Raven.Server.Documents.Subscriptions
     public class SubscriptionPatchDocument : ScriptRunnerCache.Key
     {
         public readonly string Script;
-        public readonly string[] DeclaredFunctions;
+        public readonly StringSegment[] DeclaredFunctions;
 
 
-        public SubscriptionPatchDocument(string script, string[] declaredFunctions)
+        public SubscriptionPatchDocument(string script, StringSegment[] declaredFunctions)
         {
             Script = script;
             DeclaredFunctions = declaredFunctions;

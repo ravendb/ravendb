@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Queries.AST
                 VisitDeclaredFunctions(q.DeclaredFunctions);
             }
 
-            VisitFromClause(ref q.From, q.IsDistinct);
+            VisitFromClause(q.From.From, q.From.Alias, q.From.Filter, q.From.Index);
 
             if (q.GroupBy != null)
             {
@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Queries.AST
 
             if (q.Select != null)
             {
-                VisitSelect(q.Select);
+                VisitSelect(q.Select, q.IsDistinct);
             }
 
             if (q.SelectFunctionBody != null)
@@ -76,7 +76,7 @@ namespace Raven.Server.Documents.Queries.AST
             
         }
 
-        public virtual void VisitSelect(List<(QueryExpression Expression, StringSegment? Alias)> select)
+        public virtual void VisitSelect(List<(QueryExpression Expression, StringSegment? Alias)> select, bool isDistinct)
         {
             foreach (var s in select)
             {
@@ -110,7 +110,12 @@ namespace Raven.Server.Documents.Queries.AST
 
         public virtual void VisitWhereClause(BinaryExpression where)
         {
-            switch (where.Operator)
+            VisitBinaryExpression(@where);
+        }
+
+        private void VisitBinaryExpression(BinaryExpression @where)
+        {
+            switch (@where.Operator)
             {
                 case OperatorType.Equal:
                 case OperatorType.NotEqual:
@@ -118,13 +123,13 @@ namespace Raven.Server.Documents.Queries.AST
                 case OperatorType.GreaterThan:
                 case OperatorType.LessThanEqual:
                 case OperatorType.GreaterThanEqual:
-                    VisitSimpleWhereExpression(where);
+                    VisitSimpleWhereExpression(@where);
                     break;
                 case OperatorType.And:
                 case OperatorType.AndNot:
                 case OperatorType.Or:
                 case OperatorType.OrNot:
-                    VisitCompoundWhereExpression(where);
+                    VisitCompoundWhereExpression(@where);
                     break;
                 default:
                     ThrowInvalidOperationType(@where);
@@ -139,7 +144,7 @@ namespace Raven.Server.Documents.Queries.AST
         }
 
 
-        protected void VisitExpression(QueryExpression expr)
+        public void VisitExpression(QueryExpression expr)
         {
             switch (expr.Type)
             {
@@ -150,7 +155,7 @@ namespace Raven.Server.Documents.Queries.AST
                     VisitBetween((BetweenExpression)expr);
                     break;
                 case ExpressionType.Binary:
-                    VisitBinary((BinaryExpression)expr);
+                    VisitBinaryExpression((BinaryExpression)expr);
                     break;
                 case ExpressionType.In:
                     VisitIn((InExpression)expr);
@@ -191,12 +196,6 @@ namespace Raven.Server.Documents.Queries.AST
             }
         }
 
-        private void VisitBinary(BinaryExpression expr)
-        {
-            VisitExpression(expr.Left);
-            VisitExpression(expr.Right);
-        }
-
         public virtual void VisitBetween(BetweenExpression expr)
         {
             VisitExpression(expr.Source);
@@ -233,17 +232,12 @@ namespace Raven.Server.Documents.Queries.AST
             
         }
 
-        public virtual void VisitFromClause(ref (FieldExpression From, StringSegment? Alias, QueryExpression Filter, bool Index) from, bool isDistinct)
+        public virtual void VisitFromClause(FieldExpression from, StringSegment? alias, QueryExpression filter, bool index)
         {
             
         }
 
-        public virtual void VisitDeclaredFunction(StringSegment name, StringSegment fund)
-        {
-            
-        }
-
-        public virtual void VisitWhere(QueryExpression where)
+        public virtual void VisitDeclaredFunction(StringSegment name, StringSegment func)
         {
             
         }

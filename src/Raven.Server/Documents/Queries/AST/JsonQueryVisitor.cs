@@ -38,10 +38,16 @@ namespace Raven.Server.Documents.Queries.AST
             _writer.WriteValue(func.Value);
         }
 
-        public override void VisitSelect(List<(QueryExpression Expression, StringSegment? Alias)> @select)
+        public override void VisitSelect(List<(QueryExpression Expression, StringSegment? Alias)> select, bool isDistinct)
         {
             _writer.WritePropertyName("Select");
             WriteExpressionList(@select);
+            
+            if (isDistinct)
+            {
+                _writer.WritePropertyName("IsDistinct");
+                _writer.WriteValue(true);
+            }
         }
 
         private void WriteExpressionList(List<(QueryExpression Expression, StringSegment? Alias)>  expressions)
@@ -223,34 +229,21 @@ namespace Raven.Server.Documents.Queries.AST
             _writer.WriteEndArray();
         }
 
-        public override void VisitFromClause(ref (FieldExpression From, StringSegment? Alias, QueryExpression Filter, bool Index) @from, bool isDistinct)
+        public override void VisitFromClause(FieldExpression from, StringSegment? alias, QueryExpression filter, bool index)
         {
             _writer.WritePropertyName("From");
-            _writer.WriteValue(from.From.Field);
-            if (from.Index)
+            _writer.WriteValue(from.Field);
+            if (index)
             {
                 _writer.WritePropertyName("Index");
                 _writer.WriteValue(true);
             }
-            if (isDistinct)
-            {
-                _writer.WritePropertyName("IsDistinct");
-                _writer.WriteValue(true);
-            }
-            if (from.Alias != null)
+            if (alias != null)
             {
                 _writer.WritePropertyName("Alias");
-                _writer.WriteValue(from.Alias.Value);
+                _writer.WriteValue(alias .Value);
             }
         }
 
-        public override void VisitWhere(QueryExpression @where)
-        {
-            _writer.WritePropertyName("Where");
-            _writer.WriteStartArray();
-            base.VisitWhere(where);
-            _writer.WriteEndArray();
-          
-        }
     }
 }

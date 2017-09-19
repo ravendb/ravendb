@@ -1,6 +1,4 @@
-using Raven.Server.Documents.Queries.AST;
-
-namespace Raven.Server.Documents.Queries.Parser
+namespace Raven.Server.Documents.Queries.AST
 {
     public class BinaryExpression : QueryExpression
     {
@@ -14,6 +12,11 @@ namespace Raven.Server.Documents.Queries.Parser
             Right = right;
             Operator = op;
             Type = ExpressionType.Binary;
+        }
+
+        public override string ToString()
+        {
+            return Left + " " + Operator + " " + Right;
         }
     }
 }

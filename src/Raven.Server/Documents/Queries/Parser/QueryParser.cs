@@ -304,7 +304,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     isQuoted
                         ? new StringSegment(Scanner.Input, Scanner.TokenStart + 1, Scanner.TokenLength - 2)
                         : new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength),
-                    Scanner.EscapeChars != 0
+                    isQuoted
                 );
 
                 index = true;
@@ -319,7 +319,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     isQuoted
                         ? new StringSegment(Scanner.Input, Scanner.TokenStart + 1, Scanner.TokenLength - 2)
                         : new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength),
-                    Scanner.EscapeChars != 0
+                    isQuoted
                 );
                 
                 if (Scanner.TryScan('(')) // FROM  Collection ( filter )
@@ -820,7 +820,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 isQuoted ? 
                     new StringSegment(Scanner.Input, tokenStart + 1, tokenLength -2 ) : 
                     new StringSegment(Scanner.Input, tokenStart, tokenLength),
-                escapeChars != 0
+                isQuoted
             );
             return true;
         }

@@ -1,7 +1,9 @@
 using System.Collections.Generic;
+using System.Linq;
+using Raven.Server.Documents.Queries.Parser;
 using Sparrow;
 
-namespace Raven.Server.Documents.Queries.Parser
+namespace Raven.Server.Documents.Queries.AST
 {
     public class MethodExpression : QueryExpression
     {
@@ -13,6 +15,11 @@ namespace Raven.Server.Documents.Queries.Parser
             Name = name;
             Arguments = arguments;
             Type = ExpressionType.Method;
+        }
+
+        public override string ToString()
+        {
+            return Name + "(" + string.Join(", ", Arguments.Select(x => x.ToString())) + ")";
         }
     }
 }

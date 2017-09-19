@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Parser;
+using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries
@@ -17,19 +19,34 @@ namespace Raven.Server.Documents.Queries
 
         public void Visit(QueryExpression expression, BlittableJsonReaderObject parameters)
         {
-            if (expression.Type == OperatorType.True)
+            if (expression is TrueExpression)
                 return;
-            
-            if (expression.Field == null)
+
+            if (expression is BetweenExpression between)
             {
-                Visit(expression.Left, parameters);
-                Visit(expression.Right, parameters);
+                VisitBetween(between.Source, between.Min, between.Max, parameters);
                 return;
             }
 
-            Debug.Assert(expression.Field != null);
+            if (expression is InExpression ie)
+            {
+                VisitIn(ie.Source, ie.Values, parameters);
+                return;
+            }
+            if (expression is MethodExpression me)
+            {
+                VisitMethodTokens(me.Name, me.Arguments, parameters);
+                return;
+            }
+            
+            var be = expression as BinaryExpression;
+            if (be == null)
+            {
+                ThrowUnexpectedExpression(expression);
+                return;// never hit
+            }
 
-            switch (expression.Type)
+            switch (be.Operator)
             {
                 case OperatorType.Equal:
                 case OperatorType.NotEqual:
@@ -37,49 +54,57 @@ namespace Raven.Server.Documents.Queries
                 case OperatorType.GreaterThan:
                 case OperatorType.LessThanEqual:
                 case OperatorType.GreaterThanEqual:
-                    VisitFieldToken(QueryExpression.Extract(expression.Field), expression.Value ?? expression.First, parameters);
+                    VisitFieldToken(be.Left, be.Right, parameters);
                     return;
-                case OperatorType.Between:
-                    VisitFieldTokens(QueryExpression.Extract(expression.Field), expression.First, expression.Second, parameters);
-                    return;
-                case OperatorType.In:
-                case OperatorType.AllIn:
-                    VisitFieldTokens(QueryExpression.Extract(expression.Field), expression.Values, parameters);
-                    return;
-                case OperatorType.Method:
-                    VisitMethodTokens(expression, parameters);
-                    return;
+                case OperatorType.And:
+                case OperatorType.AndNot:
+                case OperatorType.Or:
+                case OperatorType.OrNot:
+                    Visit(be.Left, parameters);
+                    Visit(be.Right, parameters);
+                    break;
+
                 default:
-                    throw new ArgumentException(expression.Type.ToString());
+                    ThrowInvalidOperatorType(expression);
+                    break;
             }
         }
 
-        protected ValueTokenType GetValueTokenType(BlittableJsonReaderObject parameters, ValueToken value, bool unwrapArrays)
+        private static void ThrowInvalidOperatorType(QueryExpression expression)
         {
-            var valueType = value.Type;
-
-            if (valueType == ValueTokenType.Parameter)
-            {
-                var parameterName = QueryExpression.Extract(value);
-
-                if (parameters == null)
-                    QueryBuilder.ThrowParametersWereNotProvided(QueryText);
-
-                if (parameters.TryGetMember(parameterName, out var parameterValue) == false)
-                    QueryBuilder.ThrowParameterValueWasNotProvided(parameterName, QueryText, parameters);
-
-                valueType = QueryBuilder.GetValueTokenType(parameterValue, QueryText, parameters, unwrapArrays);
-            }
-
-            return valueType;
+            throw new ArgumentException(expression.Type.ToString());
         }
 
-        public abstract void VisitFieldToken(string fieldName, ValueToken value, BlittableJsonReaderObject parameters);
+        private static void ThrowUnexpectedExpression(QueryExpression expression)
+        {
+            throw new InvalidOperationException("Expected binary expression, but got " + expression);
+        }
 
-        public abstract void VisitFieldTokens(string fieldName, ValueToken firstValue, ValueToken secondValue, BlittableJsonReaderObject parameters);
+        protected ValueTokenType GetValueTokenType(BlittableJsonReaderObject parameters, ValueExpression value, bool unwrapArrays)
+        {
+            if (value.Value == ValueTokenType.Parameter)
+            {
+                if (parameters == null)
+                {
+                    QueryBuilder.ThrowParametersWereNotProvided(QueryText);
+                    return ValueTokenType.Null; // never hit
+                }
 
-        public abstract void VisitFieldTokens(string fieldName, List<ValueToken> values, BlittableJsonReaderObject parameters);
+                if (parameters.TryGetMember(value.Token, out var parameterValue) == false)
+                    QueryBuilder.ThrowParameterValueWasNotProvided(value.Token, QueryText, parameters);
 
-        public abstract void VisitMethodTokens(QueryExpression expression, BlittableJsonReaderObject parameters);
+                return QueryBuilder.GetValueTokenType(parameterValue, QueryText, parameters, unwrapArrays);
+            }
+
+            return value.Value;
+        }
+
+        public abstract void VisitFieldToken(QueryExpression fieldName, QueryExpression value, BlittableJsonReaderObject parameters);
+
+        public abstract void VisitBetween(QueryExpression fieldName, QueryExpression firstValue, QueryExpression secondValue, BlittableJsonReaderObject parameters);
+
+        public abstract void VisitIn(QueryExpression fieldName, List<QueryExpression> values, BlittableJsonReaderObject parameters);
+
+        public abstract void VisitMethodTokens(StringSegment name, List<QueryExpression> arguments, BlittableJsonReaderObject parameters);
     }
 }

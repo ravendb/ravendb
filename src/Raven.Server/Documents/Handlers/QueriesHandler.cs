@@ -11,6 +11,7 @@ using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Faceted;
 using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Documents.Queries.Parser;
@@ -331,14 +332,14 @@ namespace Raven.Server.Documents.Handlers
 
                 var patch = new PatchRequest(query.Metadata.GetUpdateBody(), PatchRequestType.Patch);
 
-                var whereValueToken = (query.Metadata?.Query?.Where?.Arguments[0] as QueryExpression)?.Value;
+                var whereValueToken = ((query.Metadata?.Query?.Where as MethodExpression)?.Arguments[0] as ValueExpression)?.Token;
                 if (whereValueToken == null)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                     return Task.CompletedTask;
                 }
 
-                var docId = QueryExpression.Extract(whereValueToken, stripQuotes: true);
+                var docId = whereValueToken.Value;
 
                 PatchDocumentCommand command;
                 if (query.Metadata.IsDynamic == false)

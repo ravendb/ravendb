@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Parser;
 
 namespace Raven.Server.Documents.Queries
@@ -92,19 +93,19 @@ namespace Raven.Server.Documents.Queries
             object finalVal = val;
             switch (type)
             {
-                case Parser.ValueTokenType.Long:
+                case AST.ValueTokenType.Long:
                     finalVal = long.Parse(val, CultureInfo.InvariantCulture);
                     break;
-                case Parser.ValueTokenType.Double:
+                case AST.ValueTokenType.Double:
                     finalVal = double.Parse(val, CultureInfo.InvariantCulture);
                     break;
-                case Parser.ValueTokenType.True:
+                case AST.ValueTokenType.True:
                     finalVal = true;
                     break;
-                case Parser.ValueTokenType.False:
+                case AST.ValueTokenType.False:
                     finalVal = false;
                     break;
-                case Parser.ValueTokenType.Null:
+                case AST.ValueTokenType.Null:
                     finalVal = null;
                     break;
             }

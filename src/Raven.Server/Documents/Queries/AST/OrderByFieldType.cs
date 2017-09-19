@@ -1,4 +1,4 @@
-﻿namespace Raven.Server.Documents.Queries.Parser
+﻿namespace Raven.Server.Documents.Queries.AST
 {
     public enum OrderByFieldType
     {

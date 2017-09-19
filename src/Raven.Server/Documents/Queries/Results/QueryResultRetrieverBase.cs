@@ -391,7 +391,7 @@ namespace Raven.Server.Documents.Queries.Results
 
         private class QueryKey : ScriptRunnerCache.Key
         {
-            private readonly Dictionary<StringSegment, string> _functions;
+            private readonly Dictionary<StringSegment, StringSegment> _functions;
 
             private bool Equals(QueryKey other)
             {
@@ -432,7 +432,7 @@ namespace Raven.Server.Documents.Queries.Results
                 }
             }
 
-            public QueryKey(Dictionary<StringSegment, string> functions)
+            public QueryKey(Dictionary<StringSegment, StringSegment> functions)
             {
                 _functions = functions;
             }

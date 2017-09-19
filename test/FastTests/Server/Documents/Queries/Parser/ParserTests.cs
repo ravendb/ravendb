@@ -2,6 +2,7 @@
 using Raven.Server.Documents.Queries.Parser;
 using System;
 using System.IO;
+using Raven.Server.Documents.Queries.AST;
 using Xunit;
 
 namespace FastTests.Server.Documents.Queries.Parser
@@ -20,7 +21,7 @@ namespace FastTests.Server.Documents.Queries.Parser
             var parser = new QueryParser();
             parser.Init(q);
 
-            FieldToken token;
+            FieldExpression token;
             Assert.True(parser.Field(out token));
         }
 
@@ -42,30 +43,42 @@ namespace FastTests.Server.Documents.Queries.Parser
         [InlineData("Name <= 'Oren'", OperatorType.LessThanEqual)]
         [InlineData("Name > 'Oren'", OperatorType.GreaterThan)]
         [InlineData("Name >= 'Oren'", OperatorType.GreaterThanEqual)]
-        [InlineData("Name between 'Oren' AND 'Phoebe'", OperatorType.Between)]
-        [InlineData("(Name between 'Oren' AND 'Phoebe')", OperatorType.Between)]
-        [InlineData("Name IN ()", OperatorType.In)]
-        [InlineData("(Name IN ())", OperatorType.In)]
-        [InlineData("Age in (23)", OperatorType.In)]
-        [InlineData("Age in (23,48)", OperatorType.In)]
-        [InlineData("Status in ('Active', 'Passive')", OperatorType.In)]
-        [InlineData("(Status in ('Active', 'Passive'))", OperatorType.In)]
+     
         [InlineData("State = 2 AND Act = 'Wait'", OperatorType.And)]
         [InlineData("(State = 2 OR Act = 'Wait')", OperatorType.Or)]
         [InlineData("(State = 2 OR Act = 'Wait') OR NOT User = 'Admin'", OperatorType.OrNot)]
         [InlineData("State = 2 AND NOT (User = 'Admin' OR User ='Root')", OperatorType.AndNot)]
-        [InlineData("boost()", OperatorType.Method)]
-        [InlineData("boost(User = 'Admin')", OperatorType.Method)]
-        [InlineData("boost(User = 'Admin' OR User = 'Root', 2)", OperatorType.Method)]
-        [InlineData("boost((User = 'Admin' OR User = 'Root') AND NOT State = 'Active', 2)", OperatorType.Method)]
-        public void CanParse(string q, OperatorType type)
+       public void CanParse(string q, OperatorType type)
         {
             var parser = new QueryParser();
             parser.Init(q);
 
             QueryExpression op;
             Assert.True(parser.Expression(out op));
-            Assert.Equal(type, op.Type);
+            Assert.IsType<BinaryExpression>(op);
+            Assert.Equal(type, ((BinaryExpression)op).Operator);
+        }
+        
+        [InlineData("Name between 'Oren' AND 'Phoebe'", typeof(BetweenExpression))]
+        [InlineData("(Name between 'Oren' AND 'Phoebe')", typeof(BetweenExpression))]
+        [InlineData("boost()", typeof(MethodExpression))]
+        [InlineData("boost(User = 'Admin')", typeof(MethodExpression))]
+        [InlineData("boost(User = 'Admin' OR User = 'Root', 2)", typeof(MethodExpression))]
+        [InlineData("boost((User = 'Admin' OR User = 'Root') AND NOT State = 'Active', 2)", typeof(MethodExpression))]
+        [InlineData("Name IN ()", typeof(InExpression))]
+        [InlineData("(Name IN ())", typeof(InExpression))]
+        [InlineData("Age in (23)", typeof(InExpression))]
+        [InlineData("Age in (23,48)",typeof(InExpression))]
+        [InlineData("Status in ('Active', 'Passive')", typeof(InExpression))]
+        [InlineData("(Status in ('Active', 'Passive'))",typeof(InExpression))]
+        public void CanParse2(string q, Type type)
+        {
+            var parser = new QueryParser();
+            parser.Init(q);
+
+            QueryExpression op;
+            Assert.True(parser.Expression(out op));
+            Assert.Equal(type, op.GetType());
         }
         
         [Theory]
@@ -90,7 +103,7 @@ namespace FastTests.Server.Documents.Queries.Parser
             QueryExpression op;
             Assert.True(parser.Expression(out op));
             var output = new StringWriter();
-            op.ToString(q, output);
+            new StringQueryVisitor(output.GetStringBuilder()).VisitExpression(op);
             Assert.Equal(o, output.GetStringBuilder().ToString());
         }
         
@@ -116,7 +129,7 @@ namespace FastTests.Server.Documents.Queries.Parser
             QueryExpression op;
             Assert.True(parser.Expression(out op));
             var output = new StringWriter();
-            op.ToJsonAst(q, new JsonTextWriter(output));
+            new JsonQueryVisitor(new JsonTextWriter(output)).VisitExpression(op);
             Assert.Equal(o, output.GetStringBuilder().ToString());
         }
     }

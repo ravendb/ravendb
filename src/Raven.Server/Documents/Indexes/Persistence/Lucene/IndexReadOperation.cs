@@ -15,6 +15,7 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Documents.Queries.Results;
@@ -129,22 +130,24 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public IEnumerable<Document> IntersectQuery(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, JsonOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
-            if (query.Metadata.Query.Where.Type != OperatorType.Method)
+            var method = query.Metadata.Query.Where as MethodExpression;
+            
+            if (method  == null)
                 throw new InvalidQueryException($"Invalid intersect query. WHERE clause must contains just an intersect() method call while it got {query.Metadata.Query.Where.Type} expression", query.Metadata.QueryText, query.QueryParameters);
 
-            var methodName = QueryExpression.Extract(query.Metadata.Query.Where.Field);
+            var methodName = method.Name;
 
             if (string.Equals("intersect", methodName) == false)
                 throw new InvalidQueryException($"Invalid intersect query. WHERE clause must contains just a single intersect() method call while it got '{methodName}' method", query.Metadata.QueryText, query.QueryParameters);
 
-            if (query.Metadata.Query.Where.Arguments.Count <= 1)
+            if (method.Arguments.Count <= 1)
                 throw new InvalidQueryException("The valid intersect query must have multiple intersect clauses.", query.Metadata.QueryText, query.QueryParameters);
 
-            var subQueries = new Query[query.Metadata.Query.Where.Arguments.Count];
+            var subQueries = new Query[method.Arguments.Count];
 
             for (var i = 0; i < subQueries.Length; i++)
             {
-                var whereExpression = query.Metadata.Query.Where.Arguments[i] as QueryExpression;
+                var whereExpression = method.Arguments[i] as QueryExpression;
 
                 if (whereExpression == null)
                     throw new InvalidQueryException($"Invalid intersect query. The intersect clause at position {i} isn't a valid expression", query.Metadata.QueryText, query.QueryParameters);

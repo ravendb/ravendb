@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using Raven.Server.Documents.Queries.AST;
 using Xunit;
 using Raven.Server.Documents.Queries.Parser;
 

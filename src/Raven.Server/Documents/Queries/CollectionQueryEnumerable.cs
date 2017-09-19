@@ -7,6 +7,7 @@ using Lucene.Net.Search;
 using Raven.Client;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Includes;
+using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.ServerWide.Context;
@@ -315,62 +316,64 @@ namespace Raven.Server.Documents.Queries
                     _allocator = allocator;
                 }
 
-                public override void VisitFieldToken(string fieldName, ValueToken value, BlittableJsonReaderObject parameters)
+                public override void VisitFieldToken(QueryExpression fieldName, QueryExpression value, BlittableJsonReaderObject parameters)
                 {
-                    if (fieldName != Constants.Documents.Indexing.Fields.DocumentIdFieldName)
-                        return;
-
-                    var id = QueryBuilder.GetValue(Constants.Documents.Indexing.Fields.DocumentIdFieldName, _query, _metadata, parameters, value);
-
-                    Debug.Assert(id.Type == ValueTokenType.String);
-
-                    AddId(id.Value.ToString());
-                }
-
-                public override void VisitFieldTokens(string fieldName, ValueToken firstValue, ValueToken secondValue, BlittableJsonReaderObject parameters)
-                {
-                    if (fieldName != Constants.Documents.Indexing.Fields.DocumentIdFieldName)
-                        return;
-
-                    var first = QueryBuilder.GetValue(Constants.Documents.Indexing.Fields.DocumentIdFieldName, _query, _metadata, parameters, firstValue);
-                    var second = QueryBuilder.GetValue(Constants.Documents.Indexing.Fields.DocumentIdFieldName, _query, _metadata, parameters, secondValue);
-
-                    Debug.Assert(first.Type == ValueTokenType.String);
-                    Debug.Assert(second.Type == ValueTokenType.String);
-
-                    AddId(first.Value.ToString());
-                    AddId(second.Value.ToString());
-                }
-
-                public override void VisitFieldTokens(string fieldName, List<ValueToken> values, BlittableJsonReaderObject parameters)
-                {
-                    if (fieldName != Constants.Documents.Indexing.Fields.DocumentIdFieldName)
-                        return;
-
-                    foreach (var item in values)
+                    if (fieldName is MethodExpression me && me.Name.Equals("id") && value is ValueExpression ve)
                     {
-                        foreach (var id in QueryBuilder.GetValues(fieldName, _query, _metadata, parameters, item))
+                        var id = QueryBuilder.GetValue(Constants.Documents.Indexing.Fields.DocumentIdFieldName, _query, _metadata, parameters, ve);
+
+                        Debug.Assert(id.Type == ValueTokenType.String);
+
+                        AddId(id.Value.ToString());
+                    }
+                }
+
+                public override void VisitBetween(QueryExpression fieldName, QueryExpression firstValue, QueryExpression secondValue, BlittableJsonReaderObject parameters)
+                {
+                    if (fieldName is MethodExpression me && me.Name.Equals("id") && firstValue is ValueExpression fv && secondValue is ValueExpression sv)
+                    {
+                        var first = QueryBuilder.GetValue(Constants.Documents.Indexing.Fields.DocumentIdFieldName, _query, _metadata, parameters, fv);
+                        var second = QueryBuilder.GetValue(Constants.Documents.Indexing.Fields.DocumentIdFieldName, _query, _metadata, parameters, sv);
+
+                        Debug.Assert(first.Type == ValueTokenType.String);
+                        Debug.Assert(second.Type == ValueTokenType.String);
+
+                        AddId(first.Value.ToString());
+                        AddId(second.Value.ToString());
+                    }
+                }
+
+                public override void VisitIn(QueryExpression fieldName, List<QueryExpression> values, BlittableJsonReaderObject parameters)
+                {
+                    if (fieldName is MethodExpression me && me.Name.Equals("id"))
+                    {
+                        foreach (var item in values)
                         {
-                            AddId(id.Value?.ToString());
+                            if (item is ValueExpression iv)
+                            {
+                                foreach (var id in QueryBuilder.GetValues(me.Name, _query, _metadata, parameters, iv))
+                                {
+                                    AddId(id.Value?.ToString());
+                                }
+                            }
                         }
                     }
                 }
 
-                public override void VisitMethodTokens(QueryExpression expression, BlittableJsonReaderObject parameters)
+                public override void VisitMethodTokens(StringSegment name, List<QueryExpression> arguments, BlittableJsonReaderObject parameters)
                 {
-                    expression = (QueryExpression)expression.Arguments[expression.Arguments.Count - 1];
-
-                    switch (expression.Type)
+                    var expression = arguments[arguments.Count - 1];
+                    if (expression is BinaryExpression be && be.Operator == OperatorType.Equal)
                     {
-                        case OperatorType.Equal:
-                            VisitFieldToken(Constants.Documents.Indexing.Fields.DocumentIdFieldName, expression.Value, parameters);
-                            break;
-                        case OperatorType.In:
-                            VisitFieldTokens(Constants.Documents.Indexing.Fields.DocumentIdFieldName, expression.Values, parameters);
-                            break;
-                        default:
-                            ThrowNotSupportedCollectionQueryOperator(expression.Type, parameters);
-                            break;
+                        VisitFieldToken(new MethodExpression("id", new List<QueryExpression>()), be.Right, parameters);                        
+                    }
+                    else if (expression is InExpression ie)
+                    {
+                        VisitIn(new FieldExpression("id",false), ie.Values, parameters);
+                    }
+                    else
+                    {
+                        ThrowNotSupportedCollectionQueryOperator(expression.Type.ToString(), parameters);
                     }
                 }
 
@@ -382,7 +385,7 @@ namespace Raven.Server.Documents.Queries
                     Ids.Add(key);
                 }
 
-                private void ThrowNotSupportedCollectionQueryOperator(OperatorType @operator, BlittableJsonReaderObject parameters)
+                private void ThrowNotSupportedCollectionQueryOperator(string @operator, BlittableJsonReaderObject parameters)
                 {
                     throw new InvalidQueryException(
                         $"Collection query does not support filtering by {Constants.Documents.Indexing.Fields.DocumentIdFieldName} using {@operator} operator. Supported operators are: =, IN",

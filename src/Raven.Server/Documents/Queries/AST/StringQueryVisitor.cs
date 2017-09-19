@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.RegularExpressions;
+using Raven.Client.Extensions;
 using Raven.Server.Documents.Queries.Parser;
 using Sparrow;
 
@@ -8,37 +10,53 @@ namespace Raven.Server.Documents.Queries.AST
 {
     public class StringQueryVisitor : QueryVisitor
     {
-        StringBuilder _sb = new StringBuilder();
+        private readonly StringBuilder _sb;
+
+        public StringQueryVisitor(StringBuilder sb)
+        {
+            _sb = sb;
+        }
+        
         
         public override void VisitInclude(List<QueryExpression> includes)
         {
-            _sb.AppendLine("INCLUDE ");
+            EnsureLine();
+            _sb.Append("INCLUDE ");
             for (int i = 0; i < includes.Count; i++)
             {
                 if (i != 0)
                     _sb.Append(", ");
                 VisitExpression(includes[i]);
             }
+            _sb.AppendLine();
         }
 
         public override void VisitUpdate(StringSegment update)
         {
-            _sb.AppendLine("UPDATE { ");
+            EnsureLine();
+            _sb.Append("UPDATE { ");
             _sb.AppendLine(update.Value);
-            _sb.Append("}");
+            _sb.AppendLine("}");
         }
 
         public override void VisitSelectFunctionBody(StringSegment func)
         {
+            EnsureLine();
             _sb.AppendLine("SELECT { ");
             _sb.AppendLine(func.Value);
-            _sb.Append("}");
+            _sb.AppendLine("}");
         }
 
-        public override void VisitSelect(List<(QueryExpression Expression, StringSegment? Alias)> select)
+        public override void VisitSelect(List<(QueryExpression Expression, StringSegment? Alias)> @select, bool isDistinct)
         {
-            _sb.AppendLine("SELECT ");
-            VisitExpressionList(@select);
+            EnsureLine();
+            _sb.Append("SELECT ");
+
+            if (isDistinct)
+                _sb.Append("DISTINCT ");
+            
+            VisitExpressionList(select);
+            _sb.AppendLine();
         }
 
         private void VisitExpressionList(List<(QueryExpression Expression, StringSegment? Alias)> expressions)
@@ -51,21 +69,22 @@ namespace Raven.Server.Documents.Queries.AST
                 if (expressions[i].Alias != null)
                 {
                     _sb.Append(" AS ");
-                    _sb.Append((string)expressions[i].Alias.Value);
+                    _sb.Append(expressions[i].Alias.Value);
                 }
             }
         }
 
         public override void VisitLoad(List<(QueryExpression Expression, StringSegment? Alias)> load)
         {
-            _sb.AppendLine("LOAD ");
+            EnsureLine();
+            _sb.Append("LOAD ");
             VisitExpressionList(load);
-      
         }
 
         public override void VisitOrderBy(List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> orderBy)
         {
-            _sb.AppendLine("ORDER BY ");
+            EnsureLine();
+            _sb.Append("ORDER BY ");
             for (int i = 0; i < orderBy.Count; i++)
             {
                 if (i != 0)
@@ -74,16 +93,16 @@ namespace Raven.Server.Documents.Queries.AST
                 switch (orderBy[i].FieldType)
                 {
                     case OrderByFieldType.String:
-                        _sb.Append(" AS string")
+                        _sb.Append(" AS string");
                         break;
                     case OrderByFieldType.Long:
-                        _sb.Append(" AS long")
+                        _sb.Append(" AS long");
                         break;
                     case OrderByFieldType.Double:
-                        _sb.Append(" AS double")
+                        _sb.Append(" AS double");
                         break;
                     case OrderByFieldType.AlphaNumeric:
-                        _sb.Append(" AS alphanumeric")
+                        _sb.Append(" AS alphanumeric");
                         break;
                 }
                 if (orderBy[i].Ascending == false)
@@ -93,97 +112,230 @@ namespace Raven.Server.Documents.Queries.AST
             }
         }
 
-        private static void ThrowInvalidFieldType()
+        public override void VisitDeclaredFunction(StringSegment name, StringSegment func)
         {
-            throw new ArgumentOutOfRangeException();
+            EnsureLine();
+            _sb.Append("DECLARE function ").Append(name).AppendLine(func).AppendLine();
         }
 
-        public override void VisitDeclaredFunctions(Dictionary<StringSegment, StringSegment> declaredFunctions)
+        public override void VisitWhereClause(BinaryExpression where)
         {
-            foreach (var kvp in declaredFunctions)
+            EnsureSpace();
+            _sb.Append("WHERE ");
+            base.VisitWhereClause(where);
+            _sb.AppendLine();
+        }
+
+        public override void VisitCompoundWhereExpression(BinaryExpression where)
+        {
+            EnsureSpace();
+            _sb.Append("(");
+
+            VisitExpression(where.Left);
+
+            switch (where.Operator)
             {
-                _sb.Append("DECLARE FUNCTION ").Append(kvp.Key).AppendLine(kvp.Value.Value).AppendLine();
+                case OperatorType.And:
+                    _sb.Append(" AND ");
+                    break;
+                case OperatorType.AndNot:
+                    _sb.Append(" AND NOT ");
+                    break;
+                case OperatorType.Or:
+                    _sb.Append(" OR ");
+                    break;
+                case OperatorType.OrNot:
+                    _sb.Append(" OR NOT ");
+                    break;
+                default:
+                    InvalidOperatorTypeForWhere(where);
+                    break;
             }
+
+            VisitExpression(where.Right);
+
+            _sb.Append(")");
         }
 
-        public override void VisitWhereClause(BinaryExpression @where)
+        private static void InvalidOperatorTypeForWhere(BinaryExpression where)
         {
-            base.VisitWhereClause(@where);
-        }
-
-        public override void VisitCompoundWhereExpression(BinaryExpression @where)
-        {
-            base.VisitCompoundWhereExpression(@where);
+            throw new ArgumentOutOfRangeException("Invalid where operator type " + where.Operator);
         }
 
         public override void VisitMethod(MethodExpression expr)
         {
-            base.VisitMethod(expr);
+            EnsureSpace();
+            _sb.Append(expr.Name.Value);
+            _sb.Append("(");
+            for (var index = 0; index < expr.Arguments.Count; index++)
+            {
+                if (index != 0)
+                    _sb.Append(", ");
+                VisitExpression(expr.Arguments[index]);
+            }
+            _sb.Append(")");
         }
 
         public override void VisitValue(ValueExpression expr)
         {
-            base.VisitValue(expr);
+            EnsureSpace();
+            if (expr.Value == ValueTokenType.String)
+                _sb.Append('"');
+
+            if (expr.Value == ValueTokenType.Parameter)
+                _sb.Append("$");
+            
+            _sb.Append(expr.Token.Value.Replace("\"", "\\\""));
+
+            if (expr.Value == ValueTokenType.String)
+                _sb.Append('"');
         }
 
         public override void VisitIn(InExpression expr)
         {
-            base.VisitIn(expr);
+            EnsureSpace();
+
+            VisitExpression(expr.Source);
+
+            _sb.Append("(");
+
+            for (var index = 0; index < expr.Values.Count; index++)
+            {
+                if (index != 0)
+                    _sb.Append(", ");
+                VisitExpression(expr.Values[index]);
+            }
+
+            _sb.Append(")");
         }
 
         public override void VisitBetween(BetweenExpression expr)
         {
-            base.VisitBetween(expr);
+            EnsureSpace();
+
+            VisitExpression(expr.Source);
+
+            _sb.Append(" BETWEEN ");
+
+            VisitExpression(expr.Min);
+
+            _sb.Append(" AND ");
+
+            VisitExpression(expr.Max);
+        }
+
+        private void EnsureSpace()
+        {
+            _sb.Append(" ");
+        }
+
+        private void EnsureLine()
+        {
+            _sb.AppendLine();
         }
 
         public override void VisitField(FieldExpression field)
         {
-            base.VisitField(field);
+            EnsureSpace();
+            _sb.Append(field.Field.Value);
         }
 
         public override void VisitTrue()
         {
-            base.VisitTrue();
+            EnsureSpace();
+            _sb.Append("true");
         }
 
         public override void VisitSimpleWhereExpression(BinaryExpression expr)
         {
-            base.VisitSimpleWhereExpression(expr);
+            EnsureSpace();
+            VisitExpression(expr.Left);
+
+            switch (expr.Operator)
+            {
+                case OperatorType.Equal:
+                    _sb.Append(" = ");
+                    break;
+                case OperatorType.NotEqual:
+                    _sb.Append(" ~= ");
+                    break;
+                case OperatorType.LessThan:
+                    _sb.Append(" < ");
+                    break;
+                case OperatorType.GreaterThan:
+                    _sb.Append(" > ");
+                    break;
+                case OperatorType.LessThanEqual:
+                    _sb.Append(" <= ");
+                    break;
+                case OperatorType.GreaterThanEqual:
+                    _sb.Append(" >= ");
+                    break;
+                default:
+                    InvalidOperatorTypeForWhere(expr);
+                    break;
+            }
+
+            VisitExpression(expr.Right);
         }
 
         public override void VisitGroupByExpression(List<FieldExpression> expressions)
         {
-            base.VisitGroupByExpression(expressions);
+            EnsureLine();
+            for (int i = 0; i < expressions.Count; i++)
+            {
+                if (i != 0)
+                    _sb.Append(", ");
+                VisitExpression(expressions[i]);
+            }
         }
 
-        public override void VisitFromClause(ref (FieldExpression From, Nullable<StringSegment>? Alias, QueryExpression Filter, bool Index) @from, bool isDistinct)
+        private static bool RequiresQuotes(StringSegment s)
         {
-            base.VisitFromClause(ref @from, isDistinct);
-        }
+            if (s.Length == 0)
+                return true;
 
-        public override void VisitDeclaredFunction(StringSegment name, StringSegment fund)
-        {
-            base.VisitDeclaredFunction(name, fund);
-        }
+            var fst = s[0];
+            if (char.IsLetter(fst) == false && fst != '_')
+                return true;
 
-        public override void VisitWhere(QueryExpression @where)
-        {
-            base.VisitWhere(@where);
+            for (int i = 1; i < s.Length; i++)
+            {
+                if (char.IsLetterOrDigit(s[i]) == false)
+                    return true;
+            }
+            return false;
         }
-
-        public override bool Equals(object obj)
+        
+        public override void VisitFromClause(FieldExpression from, StringSegment? alias, QueryExpression filter, bool index)
         {
-            return base.Equals(obj);
-        }
+             EnsureLine();
+            _sb.Append("FROM ");
 
-        public override int GetHashCode()
-        {
-            return base.GetHashCode();
-        }
+            if (index)
+                _sb.Append("INDEX ");
 
-        public override string ToString()
-        {
-            return base.ToString();
+            var quote = RequiresQuotes(from.Field);
+
+            if (quote)
+            {
+                _sb.Append("\"");
+                _sb.Append(from.Field.Value.Replace("\"", "\\\""));
+                _sb.Append("\"");
+            }
+            else
+            {
+                _sb.Append(from.Field.Value);
+            }
+
+            if (filter != null)
+            {
+                _sb.Append("(");
+                
+                VisitExpression(filter);
+                
+                _sb.Append(")");
+            }
         }
     }
 }

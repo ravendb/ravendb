@@ -1,7 +1,8 @@
 using System.Collections.Generic;
-using Raven.Server.Documents.Queries.AST;
+using System.Linq;
+using Raven.Server.Documents.Queries.Parser;
 
-namespace Raven.Server.Documents.Queries.Parser
+namespace Raven.Server.Documents.Queries.AST
 {
     public class InExpression : QueryExpression
     {
@@ -15,6 +16,11 @@ namespace Raven.Server.Documents.Queries.Parser
             Source = source;
             Values = values;
             Type = ExpressionType.In;
+        }
+
+        public override string ToString()
+        {
+            return Source + " IN ( " + string.Join(", ", Values.Select(x => x.ToString())) + ")";
         }
     }
 }

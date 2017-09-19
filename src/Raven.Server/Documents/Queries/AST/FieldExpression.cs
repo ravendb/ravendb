@@ -1,21 +1,22 @@
 using Sparrow;
 
-namespace Raven.Server.Documents.Queries.Parser
+namespace Raven.Server.Documents.Queries.AST
 {
     public class FieldExpression : QueryExpression
     {
+        public bool IsQuoted;
         public StringSegment Field;
 
-        public FieldExpression(StringSegment field)
+        public FieldExpression(StringSegment field,  bool isQuoted)
         {
+            IsQuoted = isQuoted;
             Field = field;
             Type = ExpressionType.Field;
         }
-        
-        public FieldExpression(StringSegment field, bool escapeChars)
+
+        public override string ToString()
         {
-            Field = field;
-            Type = ExpressionType.Field;
+            return "<Field>: " + Field;
         }
     }
 }

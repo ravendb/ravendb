@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using Raven.Server.Documents.Queries.Parser;
 using System.IO;
+using Raven.Server.Documents.Queries.AST;
 using Xunit;
 
 namespace FastTests.Server.Documents.Queries.Parser
@@ -45,7 +46,7 @@ ORDER BY Age AS double DESC, Name ASC", "{\"From\":{\"Index\":false,\"Source\":\
 
             var query = parser.Parse();
             var output = new StringWriter();
-            query.ToJsonAst(new JsonTextWriter(output));
+            new JsonQueryVisitor(new JsonTextWriter(output)).Visit(query);
             var actual = output.GetStringBuilder().ToString();
             //Console.WriteLine(actual.Replace("\"", "\\\""));
             Assert.Equal(json, actual);

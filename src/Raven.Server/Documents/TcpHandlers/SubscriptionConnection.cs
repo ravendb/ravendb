@@ -18,8 +18,10 @@ using Sparrow.Logging;
 using Raven.Server.Utils;
 using Sparrow.Utils;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Rachis;
 using QueryParser = Raven.Server.Documents.Queries.Parser.QueryParser;
 
 namespace Raven.Server.Documents.TcpHandlers
@@ -53,7 +55,7 @@ namespace Raven.Server.Documents.TcpHandlers
         public SubscriptionState SubscriptionState;
 
         public string Collection, Script;
-        public string[] Functions;
+        public StringSegment[] Functions;
         public bool Revisions;
 
         public long SubscriptionId { get; set; }
@@ -677,7 +679,7 @@ namespace Raven.Server.Documents.TcpHandlers
             CancellationTokenSource.Dispose();
         }
 
-        public static (string Collection, (string Script, string[] Functions), bool Revisions) ParseSubscriptionQuery(string query)
+        public static (string Collection, (string Script, StringSegment[] Functions), bool Revisions) ParseSubscriptionQuery(string query)
         {
             var queryParser = new QueryParser();
             queryParser.Init(query);
@@ -697,26 +699,29 @@ namespace Raven.Server.Documents.TcpHandlers
                 throw new NotSupportedException("Subscription cannot specify an update clause");
 
             bool revisions = false;
-            if (q.From.Filter != null)
+            if (q.From.Filter is BinaryExpression filter)
             {
-                switch (q.From.Filter.Type)
+                switch (filter.Operator)
                 {
                     case OperatorType.Equal:
                     case OperatorType.NotEqual:
-                        var field = QueryExpression.Extract(q.From.Filter.Field);
-                        if (string.Equals(field, "Revisions", StringComparison.OrdinalIgnoreCase) == false)
+                        var field = (filter.Left as FieldExpression)?.Field;
+                        if (field == null || string.Equals(field, "Revisions", StringComparison.OrdinalIgnoreCase) == false)
                             throw new NotSupportedException("Subscription collection filter can only specify 'Revisions = true'");
-                        if (q.From.Filter.Value.Type != ValueTokenType.True)
+                        if (filter.Right is TrueExpression == false)
                             throw new NotSupportedException("Subscription collection filter can only specify 'Revisions = true'");
-                        revisions = q.From.Filter.Type == OperatorType.Equal;
+                        revisions = filter.Operator == OperatorType.Equal;
                         break;
                     default:
                         throw new NotSupportedException("Subscription must not specify a collection filter (move it to the where clause)");
                 }
-
+            }
+            else if (q.From.Filter != null)
+            {
+                throw new NotSupportedException("Subscription must not specify a collection filter (move it to the where clause)");
             }
 
-            var collectionName = QueryExpression.Extract(q.From.From);
+            var collectionName = q.From.From.Field.Value;
             if (q.Where == null && q.Select == null && q.SelectFunctionBody == null)
                 return (collectionName, (null, null), revisions);
 
@@ -725,7 +730,7 @@ namespace Raven.Server.Documents.TcpHandlers
             if (q.From.Alias != null)
             {
                 writer.Write("var ");
-                writer.Write(QueryExpression.Extract( q.From.Alias));
+                writer.Write(q.From.Alias);
                 writer.WriteLine(" = this;");
             }
             else if(q.Select != null || q.SelectFunctionBody != null || q.Load != null)
@@ -734,13 +739,15 @@ namespace Raven.Server.Documents.TcpHandlers
             }
             if (q.Load != null)
             {
-                var fromAlias = QueryExpression.Extract( q.From.Alias);
+                Debug.Assert(q.From.Alias != null);
+                
+                var fromAlias = q.From.Alias.Value;
                 foreach (var tuple in q.Load)
                 {
                     writer.Write("var ");
-                    writer.Write(QueryExpression.Extract( tuple.Alias));
+                    writer.Write(tuple.Alias);
                     writer.Write(" = loadPath(this,'");
-                    var fullFieldPath = QueryExpression.Extract( tuple.Expression.Field);
+                    var fullFieldPath = ((FieldExpression)tuple.Expression).Field.Value;
                     if (fullFieldPath.StartsWith(fromAlias) == false)
                         throw new InvalidOperationException("Load clause can only load paths starting from the from alias: " + fromAlias);
                     var indexOfDot = fullFieldPath.IndexOf('.', fromAlias.Length);
@@ -753,7 +760,7 @@ namespace Raven.Server.Documents.TcpHandlers
             if (q.Where != null)
             {
                 writer.Write("if (");
-                q.Where.ToJavaScript(query, q.From.Alias != null ? null : "this", writer);
+                new JavascriptCodeQueryVisitor(writer.GetStringBuilder()).VisitExpression(q.Where);
                 writer.WriteLine(" )");
                 writer.WriteLine("{");
             }
@@ -761,16 +768,16 @@ namespace Raven.Server.Documents.TcpHandlers
             if (q.SelectFunctionBody != null)
             {
                 writer.Write(" return ");
-                writer.Write(QueryExpression.Extract(q.SelectFunctionBody));
+                writer.Write(q.SelectFunctionBody);
                 writer.WriteLine(";");
             }
             else if (q.Select != null)
             {
-                if (q.Select.Count != 1 || q.Select[0].Expression.Type != OperatorType.Method)
+                if (q.Select.Count != 1 || q.Select[0].Expression is MethodExpression == false)
                     throw new NotSupportedException("Subscription select clause must specify an object literal");
                 writer.WriteLine();
                 writer.Write(" return ");
-                q.Select[0].Expression.ToJavaScript(query, q.From.Alias != null ? null : "this", writer);
+                new JavascriptCodeQueryVisitor(writer.GetStringBuilder()).VisitExpression(q.Select[0].Expression);
                 writer.WriteLine(";");
             }
             else
@@ -787,7 +794,7 @@ namespace Raven.Server.Documents.TcpHandlers
             // verify that the JS code parses
             new Esprima.JavaScriptParser(script).ParseProgram();
 
-            return (collectionName, (script, q.DeclaredFunctions?.Values?.ToArray() ?? Array.Empty<string>()), revisions);
+            return (collectionName, (script, q.DeclaredFunctions?.Values?.ToArray() ?? Array.Empty<StringSegment>()), revisions);
         }
     }
 
