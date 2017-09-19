@@ -1,5 +1,5 @@
-﻿using Raven.Client.Exceptions.Cluster;
-using Raven.Client.ServerWide.Operations;
+﻿using System;
+using System.Threading.Tasks;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -8,83 +8,98 @@ namespace FastTests.Client
     public class UniqueValues : RavenTestBase
     {
         [Fact]
-        public void CanPutUniqueString()
+        public async Task CanPutUniqueString()
         {
             DoNotReuseServer();
             var store = GetDocumentStore();
-            var putCmd = new CompareExchangeOperation<string>("test", "Karmel", 0);
-            var serverOperationExecutor = new ServerOperationExecutor(store);
-            serverOperationExecutor.Send(putCmd);
-            var getCmd = new GetClusterValue<string>("test");
-            var res = serverOperationExecutor.Send(getCmd);
+            await store.Operations.CompareExchangeAsync("test", "Karmel", 0);
+            var res = await store.Operations.GetCompareExchangeValueAsync<string>("test");
             Assert.Equal("Karmel", res.Value);
         }
 
         [Fact]
-        public void CanPutUniqueObject()
+        public async Task CanPutUniqueObject()
         {
             DoNotReuseServer();
             var store = GetDocumentStore();
-            var putCmd = new CompareExchangeOperation<User>("test", new User
+            var res = await store.Operations.CompareExchangeAsync("test", new User
             {
                 Name = "Karmel"
             }, 0);
-            var serverOperationExecutor = new ServerOperationExecutor(store);
-            serverOperationExecutor.Send(putCmd);
-            var getCmd = new GetClusterValue<User>("test");
-            var res = serverOperationExecutor.Send(getCmd);
             Assert.Equal("Karmel", res.Value.Name);
         }
 
         [Fact]
-        public void CanPutMultiDifferentValues()
+        public async Task CanPutMultiDifferentValues()
         {
             DoNotReuseServer();
             var store = GetDocumentStore();
-            var putCmd = new CompareExchangeOperation<User>("test", new User
+            var res = await store.Operations.CompareExchangeAsync("test", new User
             {
                 Name = "Karmel"
             }, 0);
-            var putCmd2 = new CompareExchangeOperation<User>("test2", new User
+            var res2 = await store.Operations.CompareExchangeAsync("test2", new User
             {
                 Name = "Karmel"
             }, 0);
-            var serverOperationExecutor = new ServerOperationExecutor(store);
-            var serverOperationExecutor2 = new ServerOperationExecutor(store);
-            serverOperationExecutor.Send(putCmd);
-            serverOperationExecutor2.Send(putCmd2);
 
-            var getCmd = new GetClusterValue<User>("test");
-            var getCmd2 = new GetClusterValue<User>("test2");
-            var res = serverOperationExecutor.Send(getCmd);
-            var res2 = serverOperationExecutor.Send(getCmd2);
             Assert.Equal("Karmel", res.Value.Name);
             Assert.Equal("Karmel", res2.Value.Name);
         }
 
         [Fact]
-        public void ThrowWhenPuttingConcurrently()
+        public async Task ReturnCurrentValueWhenPuttingConcurrently()
         {
             DoNotReuseServer();
             var store = GetDocumentStore();
-            var putCmd = new CompareExchangeOperation<User>("test", new User
+            var res = await store.Operations.CompareExchangeAsync("test", new User
             {
                 Name = "Karmel"
             }, 0);
-            var putCmd2 = new CompareExchangeOperation<User>("test", new User
+            var res2 = await store.Operations.CompareExchangeAsync("test", new User
             {
                 Name = "Karmel2"
             }, 0);
-            var serverOperationExecutor = new ServerOperationExecutor(store);
-            var serverOperationExecutor2 = new ServerOperationExecutor(store);
-            serverOperationExecutor.Send(putCmd);
-            Assert.Throws<CommandExecutionException>(() =>
-            {
-                serverOperationExecutor2.Send(putCmd2);
-            });
-            var getCmd = new GetClusterValue<User>("test");
-            var res = serverOperationExecutor.Send(getCmd);
             Assert.Equal("Karmel", res.Value.Name);
+            Assert.Equal("Karmel", res2.Value.Name);
+
+            res2 = await store.Operations.CompareExchangeAsync("test", new User
+            {
+                Name = "Karmel2"
+            }, res2.Index);
+            Assert.Equal("Karmel2", res2.Value.Name);
+        }
+
+        [Fact]
+        public async Task CanGetIndexValue()
+        {
+            DoNotReuseServer();
+            var store = GetDocumentStore();
+            await store.Operations.CompareExchangeAsync("test", new User
+            {
+                Name = "Karmel"
+            }, 0);
+            var res = await store.Operations.GetCompareExchangeValueAsync<User>("test");
+            Assert.Equal("Karmel", res.Value.Name);
+
+            var res2 = await store.Operations.CompareExchangeAsync("test", new User
+            {
+                Name = "Karmel2"
+            }, res.Index);
+            Assert.Equal("Karmel2", res2.Value.Name);
+        }
+
+        [Fact]
+        public async Task SaveSameValuesToDifferentDatabases()
+        {
+            DoNotReuseServer();
+            var store = GetDocumentStore(caller: $"CmpExchangeTest1-{new Guid()}");
+            var store2 = GetDocumentStore(caller: $"CmpExchangeTest2-{new Guid()}");
+            var user  = new User{Name = "Karmel"};
+            var res = await store.Operations.CompareExchangeAsync("test", user, 0);
+            var res2 = await store2.Operations.CompareExchangeAsync("test", user, 0);
+            Assert.Equal("Karmel", res.Value.Name);
+            Assert.Equal("Karmel", res2.Value.Name);
         }
     }
 }

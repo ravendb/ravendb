@@ -803,11 +803,12 @@ namespace Raven.Server.ServerWide
                     if (cmdIndex == itemIndex)
                     {
                         items.Update(reader.Id, tvb);
-                        return;
                     }
-                    throw new ConcurrencyException($"The key '{key}' was already changed by an other command.");
                 }
-                items.Set(tvb);
+                else
+                {
+                    items.Set(tvb);
+                }
             }
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += transaction =>
             {
