@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Text;
 using Raven.Server.Documents.Queries.Parser;
 using Sparrow;
 
@@ -27,6 +28,13 @@ namespace Raven.Server.Documents.Queries.AST
                 DeclaredFunctions = new Dictionary<StringSegment, StringSegment>(CaseInsensitiveStringSegmentEqualityComparer.Instance);
 
             return DeclaredFunctions.TryAdd(name, func);
+        }
+
+        public override string ToString()
+        {
+            var sb = new StringBuilder();
+            new StringQueryVisitor(sb).Visit(this);
+            return sb.ToString();
         }
     }
 }

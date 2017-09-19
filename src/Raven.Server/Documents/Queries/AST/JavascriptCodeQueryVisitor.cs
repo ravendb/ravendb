@@ -83,6 +83,7 @@ namespace Raven.Server.Documents.Queries.AST
 
         public override void VisitMethod(MethodExpression expr)
         {
+            _sb.Append(expr.Name.Value);
             _sb.Append("(");
             for (var index = 0; index < expr.Arguments.Count; index++)
             {
