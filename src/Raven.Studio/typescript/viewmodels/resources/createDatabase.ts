@@ -5,15 +5,12 @@ import databasesManager = require("common/shell/databasesManager");
 import createDatabaseCommand = require("commands/resources/createDatabaseCommand");
 import restoreDatabaseFromBackupCommand = require("commands/resources/restoreDatabaseFromBackupCommand");
 import getClusterTopologyCommand = require("commands/database/cluster/getClusterTopologyCommand");
-import generateSecretCommand = require("commands/database/secrets/generateSecretCommand");
-import distributeSecretCommand = require("commands/database/secrets/distributeSecretCommand");
 import clusterTopology = require("models/database/cluster/clusterTopology");
 import clusterNode = require("models/database/cluster/clusterNode");
-import copyToClipboard = require("common/copyToClipboard");
 import databaseCreationModel = require("models/resources/creation/databaseCreationModel");
 import eventsCollector = require("common/eventsCollector");
-import fileDownloader = require("common/fileDownloader");
 import setupEncryptionKey = require("viewmodels/resources/setupEncryptionKey");
+import notificationCenter = require("common/notifications/notificationCenter");
 
 class createDatabase extends dialogViewModelBase {
 
@@ -251,6 +248,10 @@ class createDatabase extends dialogViewModelBase {
 
         return new restoreDatabaseFromBackupCommand(restoreDocument)
             .execute()
+            .done((operationIdDto: operationIdDto) => {
+                const operationId = operationIdDto.OperationId;
+                notificationCenter.instance.openDetailsForOperationById(null, operationId);
+            })
             .always(() => {
                 dialog.close(this);
                 this.spinners.create(false);

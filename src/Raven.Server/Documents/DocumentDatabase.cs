@@ -20,6 +20,7 @@ using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.Revisions;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.NotificationCenter.Notifications;
@@ -481,6 +482,24 @@ namespace Raven.Server.Documents
             return databaseInfo;
         }
 
+        public DatabaseSummary GetDatabaseSummary()
+        {
+            using (DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (documentsContext.OpenReadTransaction())
+            using (context.OpenReadTransaction())
+            {
+                return new DatabaseSummary
+                {
+                    DocumentsCount = DocumentsStorage.GetNumberOfDocuments(),
+                    AttachmentsCount = DocumentsStorage.AttachmentsStorage.GetNumberOfAttachments(documentsContext).AttachmentCount,
+                    RevisionsCount = DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(documentsContext),
+                    IndexesCount = IndexStore.GetIndexes().Count(),
+                    IdentitiesCount = _serverStore.Cluster.GetIdentitiesCount(context)
+                };
+            }
+        }
+
         public void RunIdleOperations()
         {
             if (Monitor.TryEnter(_idleLocker) == false)
@@ -580,17 +599,33 @@ namespace Raven.Server.Documents
                         Helpers.ClusterStateMachineValuesPrefix(Name)))
                     {
                         if (first == false)
-                        {
                             writer.WriteComma();
-                        }
 
                         first = false;
 
                         writer.WritePropertyName(keyValue.Key.ToString());
                         context.Write(writer, keyValue.Value);
                     }
+
                     writer.WriteEndObject();
-                    // end of dictionary
+                    // end of values
+
+                    writer.WriteComma();
+                    writer.WritePropertyName(nameof(RestoreSettings.Identities));
+                    writer.WriteStartObject();
+
+                    first = true;
+                    foreach (var identity in ServerStore.Cluster.ReadIdentities(context, Name, 0, long.MaxValue))
+                    {
+                        if (first == false)
+                            writer.WriteComma();
+
+                        first = false;
+                        writer.WritePropertyName(identity.Prefix);
+                        writer.WriteInteger(identity.Value);
+                    }
+                    writer.WriteEndObject();
+                    // end of identities
 
                     writer.WriteEndObject();
                 }

@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Dynamic;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide;
@@ -11,7 +12,7 @@ namespace Raven.Server.ServerWide.Commands
     {
         public string Name;
         public DatabaseRecord Record;
-        public Dictionary<string, object> DatabaseValues;
+        public Dictionary<string, ExpandoObject> DatabaseValues;
         public bool Encrypted;
         public bool IsRestore;
 

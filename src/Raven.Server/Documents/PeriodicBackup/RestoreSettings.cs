@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Dynamic;
 using Raven.Client.ServerWide;
 
 namespace Raven.Server.Documents.PeriodicBackup
@@ -11,6 +12,6 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public Dictionary<string, long> Identities { get; set; }
 
-        public Dictionary<string, object> DatabaseValues { get; set; }
+        public Dictionary<string, ExpandoObject> DatabaseValues { get; set; }
     }
 }

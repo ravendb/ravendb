@@ -187,9 +187,8 @@ namespace Raven.Server.Smuggler.Migration
                         return;
                     }
 
-                    var operationState = JsonDeserializationServer.OperationState(operationStateBlittable);
-                    operationStateBlittable = EntityToBlittable.ConvertEntityToBlittable(operationState, DocumentConventions.Default, context);
-                    var cmd = new MergedPutCommand(operationStateBlittable, _migrationStateKey, null, database);
+                    var blittableCopy = context.ReadObject(operationStateBlittable, _migrationStateKey);
+                    var cmd = new MergedPutCommand(blittableCopy, _migrationStateKey, null, database);
                     await database.TxMerger.Enqueue(cmd);
                     return;
                 }

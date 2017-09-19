@@ -145,7 +145,7 @@ namespace Raven.Server.Smuggler.Documents
                 scope.EnsureDispose(_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context));
                 scope.EnsureDispose(context.OpenReadTransaction());
 
-                identities = _database.ServerStore.Cluster.ReadIdentities(context, _database.Name, 0, int.MaxValue);
+                identities = _database.ServerStore.Cluster.ReadIdentities(context, _database.Name, 0, long.MaxValue);
 
                 return scope.Delay();
             }

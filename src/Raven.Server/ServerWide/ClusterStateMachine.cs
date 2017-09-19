@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Dynamic;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
@@ -449,7 +450,7 @@ namespace Raven.Server.ServerWide
         }
 
         private static void SetDatabaseValues(
-            Dictionary<string, object> databaseValues,
+            Dictionary<string, ExpandoObject> databaseValues,
             TransactionOperationContext context,
             long index,
             Table items)
@@ -903,7 +904,7 @@ namespace Raven.Server.ServerWide
             return JsonDeserializationCluster.DatabaseRecord(doc);
         }
 
-        public IEnumerable<(string Prefix, long Value)> ReadIdentities<T>(TransactionOperationContext<T> context, string databaseName, int start, int take)
+        public IEnumerable<(string Prefix, long Value)> ReadIdentities<T>(TransactionOperationContext<T> context, string databaseName, int start, long take)
             where T : RavenTransaction
         {
             var identities = context.Transaction.InnerTransaction.ReadTree(Identities);
@@ -1023,6 +1024,12 @@ namespace Raven.Server.ServerWide
                     yield return (holder.Key, doc);
                 }
             }
+        }
+
+        public long GetIdentitiesCount(TransactionOperationContext context)
+        {
+            var identities = context.Transaction.InnerTransaction.ReadTree(Identities);
+            return identities.State.NumberOfEntries;
         }
 
         private static unsafe int GetDataAndEtagTupleFromReader(JsonOperationContext context, TableValueReader reader, out BlittableJsonReaderObject doc,

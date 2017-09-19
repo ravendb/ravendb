@@ -607,10 +607,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/database-restore", "POST", AuthorizationStatus.Operator)]
         public async Task RestoreDatabase()
         {
-            // we don't dispose this as operation is async
-            var returnContextToPool = ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context);
-
-            try
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var restoreConfiguration = await context.ReadForMemoryAsync(RequestBodyStream(), "database-restore");
                 var restoreConfigurationJson = JsonDeserializationCluster.RestoreBackupConfiguration(restoreConfiguration);
@@ -642,39 +639,26 @@ namespace Raven.Server.Web.System
                 }
 
                 var operationId = ServerStore.Operations.GetNextOperationId();
-                var token = new OperationCancelToken(ServerStore.ServerShutdown);
+                var cancelToken = new OperationCancelToken(ServerStore.ServerShutdown);
                 var restoreBackupTask = new RestoreBackupTask(
                     ServerStore,
                     restoreConfigurationJson,
-                    context,
                     ServerStore.NodeTag,
-                    token.Token);
-
-                var task = ServerStore.Operations.AddOperation(
-                    null,
-                    "Restoring database: " + databaseName,
-                    Documents.Operations.Operations.OperationType.DatabaseRestore,
-                    taskFactory: onProgress => Task.Run(async () => await restoreBackupTask.Execute(onProgress), token.Token),
-                    id: operationId, token: token);
+                    cancelToken);
 
 #pragma warning disable 4014
-                task.ContinueWith(_ =>
+                ServerStore.Operations.AddOperation(
 #pragma warning restore 4014
-                {
-                    using (returnContextToPool)
-                    using (token)
-                    { }
-                });
+                    null,
+                    $"Database restore: {databaseName}",
+                    Documents.Operations.Operations.OperationType.DatabaseRestore,
+                    taskFactory: onProgress => Task.Run(async () => await restoreBackupTask.Execute(onProgress), cancelToken.Token),
+                    id: operationId, token: cancelToken);
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteOperationId(context, operationId);
                 }
-            }
-            catch (Exception)
-            {
-                returnContextToPool.Dispose();
-                throw;
             }
         }
 
