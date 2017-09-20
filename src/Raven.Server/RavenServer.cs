@@ -90,7 +90,7 @@ namespace Raven.Server
             };
 
             ServerStore = new ServerStore(Configuration, this);
-            Metrics = new MetricsCountersManager();
+            Metrics = new MetricCounters();
 
             _tcpLogger = LoggingSource.Instance.GetLogger<RavenServer>("<TcpServer>");
         }
@@ -938,7 +938,7 @@ namespace Raven.Server
         }
 
         public RequestRouter Router { get; private set; }
-        public MetricsCountersManager Metrics { get; }
+        public MetricCounters Metrics { get; }
 
         public bool Disposed { get; private set; }
 

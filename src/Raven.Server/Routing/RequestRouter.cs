@@ -25,7 +25,7 @@ namespace Raven.Server.Routing
     {
         private readonly Trie<RouteInformation> _trie;
         private readonly RavenServer _ravenServer;
-        private readonly MetricsCountersManager _serverMetrics;
+        private readonly MetricCounters _serverMetrics;
 
         public RequestRouter(Dictionary<string, RouteInformation> routes, RavenServer ravenServer)
         {
@@ -72,10 +72,10 @@ namespace Raven.Server.Routing
             var tuple = tryMatch.Value.TryGetHandler(reqCtx);
             var handler = tuple.Item1 ?? await tuple.Item2;
 
-            reqCtx.Database?.Metrics?.RequestsMeter.Mark();
-            _serverMetrics.RequestsMeter.Mark();
+            reqCtx.Database?.Metrics?.Requests.RequestsPerSec.Mark();
+            _serverMetrics.Requests.RequestsPerSec.Mark();
 
-            Interlocked.Increment(ref _serverMetrics.ConcurrentRequestsCount);
+            Interlocked.Increment(ref _serverMetrics.Requests.ConcurrentRequestsCount);
             _ravenServer.Statistics.LastRequestTime = SystemTime.UtcNow;
 
             if (handler == null)
@@ -111,7 +111,7 @@ namespace Raven.Server.Routing
                 await handler(reqCtx);
             }
 
-            Interlocked.Decrement(ref _serverMetrics.ConcurrentRequestsCount);
+            Interlocked.Decrement(ref _serverMetrics.Requests.ConcurrentRequestsCount);
 
             return reqCtx.Database?.Name;
         }

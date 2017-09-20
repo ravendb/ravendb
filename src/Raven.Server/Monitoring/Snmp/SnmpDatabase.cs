@@ -1,9 +1,3 @@
-// -----------------------------------------------------------------------
-//  <copyright file="SnmpDatabase.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
 using System;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
@@ -66,13 +60,12 @@ namespace Raven.Server.Monitoring.Snmp
             _objectStore.Add(new DatabaseUpTime(_databaseName, _databaseLandlord, _databaseIndex));
             _objectStore.Add(new DatabaseLoaded(_databaseName, _databaseLandlord, _databaseIndex));
 
-            //_objectStore.Add(new DatabaseDocsWritePerSecond(_databaseName, _databaseLandlord, _databaseIndex));
-            //_objectStore.Add(new DatabaseIndexedPerSecond(_databaseName, _databaseLandlord, _databaseIndex));
-            //_objectStore.Add(new DatabaseReducedPerSecond(_databaseName, _databaseLandlord, _databaseIndex));
-            //_objectStore.Add(new DatabaseRequestDurationLastMinuteAvg(_databaseName, _databaseLandlord, _databaseIndex));
-            //_objectStore.Add(new DatabaseRequestsPerSecond(_databaseName, _databaseLandlord, _databaseIndex));
-            //_objectStore.Add(new DatabaseRequestDurationLastMinuteMax(_databaseName, _databaseLandlord, _databaseIndex));
-            //_objectStore.Add(new DatabaseRequestDurationLastMinuteMin(_databaseName, _databaseLandlord, _databaseIndex));
+            _objectStore.Add(new DatabaseDocPutsPerSecond(_databaseName, _databaseLandlord, _databaseIndex));
+            _objectStore.Add(new DatabaseMapIndexIndexedPerSecond(_databaseName, _databaseLandlord, _databaseIndex));
+            _objectStore.Add(new DatabaseMapReduceIndexMappedPerSecond(_databaseName, _databaseLandlord, _databaseIndex));
+            _objectStore.Add(new DatabaseMapReduceIndexReducedPerSecond(_databaseName, _databaseLandlord, _databaseIndex));
+            _objectStore.Add(new DatabaseRequestsPerSecond(_databaseName, _databaseLandlord, _databaseIndex));
+            _objectStore.Add(new DatabaseRequestsCount(_databaseName, _databaseLandlord, _databaseIndex));
 
             //_objectStore.Add(new DatabaseNumberOfAbandonedIndexes(_databaseName, _databaseLandlord, _databaseIndex));
             //_objectStore.Add(new DatabaseNumberOfAutoIndexes(_databaseName, _databaseLandlord, _databaseIndex));

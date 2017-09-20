@@ -225,7 +225,7 @@ namespace Raven.Server.Documents
                         }
                     }
 
-                    _documentDatabase.Metrics.AttachmentPutsPerSecond.MarkSingleThreaded(1);
+                    _documentDatabase.Metrics.Attachments.PutsPerSec.MarkSingleThreaded(1);
 
                     if (updateDocument)
                         UpdateDocumentAfterAttachmentChange(context, lowerDocumentId, documentId, tvr, changeVector);
@@ -272,7 +272,7 @@ namespace Raven.Server.Documents
                 table.Set(tvb);
             }
 
-            _documentDatabase.Metrics.AttachmentPutsPerSecond.MarkSingleThreaded(1);
+            _documentDatabase.Metrics.Attachments.PutsPerSec.MarkSingleThreaded(1);
         }
 
         /// <summary>
@@ -408,7 +408,7 @@ namespace Raven.Server.Documents
             if (existingStream == null)
                 tree.AddStream(base64Hash, stream, tag: key);
 
-            _documentDatabase.Metrics.AttachmentBytesPutsPerSecond.MarkSingleThreaded(stream.Length);
+            _documentDatabase.Metrics.Attachments.BytesPutsPerSec.MarkSingleThreaded(stream.Length);
         }
 
         private void DeleteAttachmentStream(DocumentsOperationContext context, Slice hash, int expectedCount = 1)

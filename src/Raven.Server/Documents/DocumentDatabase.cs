@@ -120,7 +120,7 @@ namespace Raven.Server.Documents
                 EtlLoader = new EtlLoader(this, serverStore);
                 ReplicationLoader = new ReplicationLoader(this, serverStore);
                 SubscriptionStorage = new SubscriptionStorage(this, serverStore);
-                Metrics = new MetricsCountersManager();
+                Metrics = new MetricCounters();
                 TxMerger = new TransactionOperationsMerger(this, DatabaseShutdown);
                 HugeDocuments = new HugeDocuments(configuration.PerformanceHints.HugeDocumentsCollectionSize,
                     configuration.PerformanceHints.HugeDocumentSize.GetValue(SizeUnit.Bytes));
@@ -187,7 +187,7 @@ namespace Raven.Server.Documents
 
         public HugeDocuments HugeDocuments { get; }
 
-        public MetricsCountersManager Metrics { get; }
+        public MetricCounters Metrics { get; }
 
         public IndexStore IndexStore { get; private set; }
 

@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using System.Linq;
 using System.Runtime.Loader;
 using System.Threading;
@@ -222,7 +221,7 @@ namespace Raven.Server
             {
                 var json = MemoryStatsHandler.MemoryStatsInternal();
                 var humaneProp = (json["Humane"] as DynamicJsonValue);
-                var reqCounter = server.Metrics.RequestsMeter;
+                var reqCounter = server.Metrics.Requests.RequestsPerSec;
 
                 Console.Write($"\r {((i++ % 2) == 0 ? "*" : "+")} ");
 
