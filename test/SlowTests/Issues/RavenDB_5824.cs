@@ -97,7 +97,7 @@ namespace SlowTests.Issues
         {
             private readonly string _indexName;
 
-            public GetIndexStalenessOperation([NotNull] string indexName)
+            public GetIndexStalenessOperation(string indexName)
             {
                 _indexName = indexName ?? throw new ArgumentNullException(nameof(indexName));
             }

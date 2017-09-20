@@ -703,6 +703,8 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        public long Count => _indexes.Count;
+
         public void StartIndexing()
         {
             _run = true;

@@ -199,7 +199,7 @@ namespace Raven.Server.Documents
 
         public readonly ConcurrentSet<TcpConnectionOptions> RunningTcpConnections = new ConcurrentSet<TcpConnectionOptions>();
 
-        public DateTime StartTime { get; }
+        public readonly DateTime StartTime;
 
         public readonly RachisLogIndexNotifications RachisLogIndexNotifications;
 

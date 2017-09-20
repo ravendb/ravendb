@@ -1,4 +1,5 @@
 ﻿{
-  "ServerUrl": "http://localhost:8080",
-  "RunInMemory": false
+    "ServerUrl": "http://localhost:8080",
+    "RunInMemory": false,
+    "Monitoring.Snmp.Enabled": true
 }
