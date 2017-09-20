@@ -200,7 +200,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             return new StaticIndexDocsEnumerator(documents, _compiled.Maps[collection], collection, stats);
         }
 
-        public override int HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override int HandleMap(LazyStringValue lowerId, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             if (_enumerationWrappers.TryGetValue(CurrentIndexingScope.Current.SourceCollection, out AnonymousObjectToBlittableMapResultsEnumerableWrapper wrapper) == false)
             {
@@ -209,7 +209,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
             wrapper.InitializeForEnumeration(mapResults, indexContext, stats);
 
-            return PutMapResults(key, wrapper, indexContext, stats);
+            return PutMapResults(lowerId, wrapper, indexContext, stats);
         }
 
         protected override bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? cutoff = null, List<string> stalenessReasons = null)

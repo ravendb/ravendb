@@ -1264,7 +1264,7 @@ namespace Raven.Server.Documents.Indexes
         public abstract void HandleDelete(DocumentTombstone tombstone, string collection, IndexWriteOperation writer,
             TransactionOperationContext indexContext, IndexingStatsScope stats);
 
-        public abstract int HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer,
+        public abstract int HandleMap(LazyStringValue lowerId, IEnumerable mapResults, IndexWriteOperation writer,
             TransactionOperationContext indexContext, IndexingStatsScope stats);
 
         private void HandleIndexChange(IndexChange change)

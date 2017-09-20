@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Indexes.Errors
             throw new NotSupportedException($"Index with etag {Etag} is in-memory implementation of a faulty index", _e);
         }
 
-        public override int HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override int HandleMap(LazyStringValue lowerId, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             throw new NotSupportedException($"Index with etag {Etag} is in-memory implementation of a faulty index", _e);
         }
