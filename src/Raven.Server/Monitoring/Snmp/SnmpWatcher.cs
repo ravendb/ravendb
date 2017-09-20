@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Lextm.SharpSnmpLib;
 using Lextm.SharpSnmpLib.Messaging;
 using Lextm.SharpSnmpLib.Pipeline;
+using Lextm.SharpSnmpLib.Security;
 using Raven.Client;
 using Raven.Server.Monitoring.Snmp.Objects.Documents;
 using Raven.Server.Monitoring.Snmp.Objects.Server;
@@ -94,6 +95,8 @@ namespace Raven.Server.Monitoring.Snmp
             var factory = new SnmpApplicationFactory(new SnmpLogger(Logger), objectStore, membershipProvider, messageHandlerFactory);
 
             var listener = new Listener();
+            listener.Users.Add(new OctetString("ravendb"), new DefaultPrivacyProvider(new SHA1AuthenticationProvider(new OctetString(server.Configuration.Monitoring.Snmp.Community))));
+
             var engineGroup = new EngineGroup();
 
             var engine = new SnmpEngine(factory, listener, engineGroup);
