@@ -202,9 +202,9 @@ class genUtils {
 
     // Replace characters with their char codes, but leave A-Za-z0-9 and - in place. 
     static escape(input: string) {
-        var output = "";
-        for (var i = 0; i < input.length; i++) {
-            var ch = input.charCodeAt(i);
+        let output = "";
+        for (let i = 0; i < input.length; i++) {
+            const ch = input.charCodeAt(i);
             if (ch == 0x2F) {
                 output += '-';
             } else if (ch >= 0x30 && ch <= 0x39 || ch >= 0x41 && ch <= 0x5A || ch >= 0x61 && ch <= 0x7A || ch == 0x2D) {

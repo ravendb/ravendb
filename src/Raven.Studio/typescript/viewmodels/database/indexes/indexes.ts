@@ -33,6 +33,7 @@ class indexes extends viewModelBase {
     selectedIndexesName = ko.observableArray<string>();
     indexesSelectionState: KnockoutComputed<checkbox>;
     indexingProgresses = new observableMap<string, indexProgress>();
+    perIndexProgressRefreshThrottle = new Map<string, Function>();
 
     spinners = {
         globalStartStop: ko.observable<boolean>(false),
@@ -42,7 +43,7 @@ class indexes extends viewModelBase {
         localState: ko.observableArray<string>([]),
         swapNow: ko.observableArray<string>([]),
         indexingProgress: ko.observableArray<string>([])
-    }
+    };
 
     globalIndexingStatus = ko.observable<Raven.Client.Documents.Indexes.IndexRunningStatus>();
 
@@ -91,7 +92,7 @@ class indexes extends viewModelBase {
         this.searchText.throttle(200).subscribe(() => this.filterIndexes());
 
         this.sortedGroups = ko.pureComputed<indexGroup[]>(() => {
-            var groups = this.indexGroups().slice(0).sort((l, r) => l.entityName.toLowerCase() > r.entityName.toLowerCase() ? 1 : -1);
+            const groups = this.indexGroups().slice(0).sort((l, r) => l.entityName.toLowerCase() > r.entityName.toLowerCase() ? 1 : -1);
 
             groups.forEach((group: { entityName: string; indexes: KnockoutObservableArray<index> }) => {
                 group.indexes(group.indexes().slice(0).sort((l: index, r: index) => l.name.toLowerCase() > r.name.toLowerCase() ? 1 : -1));
@@ -204,9 +205,9 @@ class indexes extends viewModelBase {
         const filterLower = this.searchText().toLowerCase();
         this.selectedIndexesName([]);
         this.indexGroups().forEach(indexGroup => {
-            var hasAnyInGroup = false;
+            let hasAnyInGroup = false;
             indexGroup.indexes().forEach(index => {
-                var match = index.name.toLowerCase().indexOf(filterLower) >= 0;
+                const match = index.name.toLowerCase().indexOf(filterLower) >= 0;
                 index.filteredOut(!match);
                 if (match) {
                     hasAnyInGroup = true;
@@ -227,14 +228,22 @@ class indexes extends viewModelBase {
                 if (result.can) {
                     this.spinners.indexingProgress.push(idx.name);
                     this.indexingProgresses.delete(idx.name);
+                    
+                    if (!this.perIndexProgressRefreshThrottle.get(idx.name)) {
+                        this.perIndexProgressRefreshThrottle.set(idx.name, _.throttle(() => this.computeIndexingProgress(idx.name), 4000));
+                    }
 
-                    new computeIndexingProgressCommand(idx.name, this.activeDatabase())
-                        .execute()
-                        .done(progress => {
-                            this.indexingProgresses.set(idx.name, progress);
-                        })
+                    return this.computeIndexingProgress(idx.name)
                         .always(() => this.spinners.indexingProgress.remove(idx.name));
                 }
+            });
+    }
+    
+    private computeIndexingProgress(indexName: string) {
+        return new computeIndexingProgressCommand(indexName, this.activeDatabase())
+            .execute()
+            .done(progress => {
+                this.indexingProgresses.set(indexName, progress);
             });
     }
 
@@ -276,6 +285,10 @@ class indexes extends viewModelBase {
         } else {
             this.throttledRefresh();
         }
+        
+        if (e.Type === "BatchCompleted" && this.indexingProgresses.get(e.Name)) {
+            this.perIndexProgressRefreshThrottle.get(e.Name)();
+        }
     }
 
     private removeIndexesFromAllGroups(indexes: index[]) {
@@ -288,7 +301,7 @@ class indexes extends viewModelBase {
     }
 
     private findIndexesByName(indexName: string): index[] {
-        var result = new Array<index>();
+        const result = [] as Array<index>;
         this.indexGroups().forEach(g => {
             g.indexes().forEach(i => {
                 if (i.name === indexName) {
