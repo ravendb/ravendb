@@ -11,7 +11,7 @@
     </div>
     <div class="edit-conflict flex-vertical slidein-style" data-bind="visible: hasDetailsLoaded">
         
-        <div class="flex-horizontal">
+        <div class="flex-horizontal flex-noshrink">
             <h3 data-bind="text: 'Resolving conflict for: ' + documentId()"></h3>
             <div class="flex-separator"></div>
             <div>
@@ -52,7 +52,7 @@
             </div>
         </div>
 
-        <div class="margin-bottom margin-bottom-sm">
+        <div class="margin-bottom margin-bottom-sm margin-top margin-top-sm">
             <button type="button" data-bind="click: deleteDocument" class="btn btn-danger">
                 <i class="icon-trash"></i>
                 <span>Delete</span>
