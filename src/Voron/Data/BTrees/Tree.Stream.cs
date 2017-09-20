@@ -116,6 +116,7 @@ namespace Voron.Data.BTrees
 
                     if (remaining < infoSize)
                     {
+                        _numberOfPagesPerChunk = 1;
                         AllocateNextPage();
                         chunkSize = 0;
                         RecordChunkPage(_currentPage.PageNumber, chunkSize);
