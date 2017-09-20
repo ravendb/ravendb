@@ -307,6 +307,7 @@ namespace FastTests.Voron.Storage
         [InlineDataWithRandomSeed(1)]
         [InlineDataWithRandomSeed(5)]
         [InlineDataWithRandomSeed(15)]
+        [InlineData(5, 1390075326)] // RavenDB-8694
         public void TreeReportContainsInfoAboutStreams(int numberOfStreams, int seed)
         {
             var r = new Random(seed);
