@@ -34,15 +34,15 @@ namespace Raven.Client.Documents.Conventions
 
         internal static DocumentConventions Default = new DocumentConventions();
 
-        private static IDictionary<Type, string> _cachedDefaultTypeCollectionNames = new Dictionary<Type, string>();
+        private static Dictionary<Type, string> _cachedDefaultTypeCollectionNames = new Dictionary<Type, string>();
 
         private readonly Dictionary<MemberInfo, CustomQueryTranslator> _customQueryTranslators = new Dictionary<MemberInfo, CustomQueryTranslator>();
 
         private readonly List<(Type Type, TryConvertValueForQueryDelegate<object> Convert)> _listOfQueryValueConverters = new List<(Type, TryConvertValueForQueryDelegate<object>)>();
 
-        private readonly IList<Tuple<Type, Func<string, object, Task<string>>>> _listOfRegisteredIdConventionsAsync = new List<Tuple<Type, Func<string, object, Task<string>>>>();
+        private readonly List<Tuple<Type, Func<string, object, Task<string>>>> _listOfRegisteredIdConventionsAsync = new List<Tuple<Type, Func<string, object, Task<string>>>>();
 
-        private readonly IList<Tuple<Type, Func<ValueType, string>>> _listOfRegisteredIdLoadConventions = new List<Tuple<Type, Func<ValueType, string>>>();
+        private readonly List<Tuple<Type, Func<ValueType, string>>> _listOfRegisteredIdLoadConventions = new List<Tuple<Type, Func<ValueType, string>>>();
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="DocumentConventions" /> class.
@@ -466,6 +466,7 @@ namespace Raven.Client.Documents.Conventions
                 return null;
 
             if (FindCollectionNameForDynamic != null && entity is IDynamicMetaObjectProvider)
+            {
                 try
                 {
                     return FindCollectionNameForDynamic(entity);
@@ -475,6 +476,7 @@ namespace Raven.Client.Documents.Conventions
                     // if we can't find it, we'll just assume the the propery
                     // isn't there
                 }
+            }
 
             return GetCollectionName(entity.GetType());
         }
