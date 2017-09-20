@@ -47,27 +47,27 @@ namespace Raven.Server.Documents.Indexes
             writer.Delete(tombstone.LowerId, stats);
         }
 
-        public override int HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override int HandleMap(LazyStringValue lowerId, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             EnsureValidStats(stats);
 
             bool mustDelete;
             using (_stats.BloomStats.Start())
             {
-                mustDelete = _filter.Add(key) == false;
+                mustDelete = _filter.Add(lowerId) == false;
             }
 
             if (mustDelete)
-                writer.Delete(key, stats);
+                writer.Delete(lowerId, stats);
 
             var numberOfOutputs = 0;
             foreach (var mapResult in mapResults)
             {
-                writer.IndexDocument(key, mapResult, stats, indexContext);
+                writer.IndexDocument(lowerId, mapResult, stats, indexContext);
                 numberOfOutputs++;
             }
 
-            HandleIndexOutputsPerDocument(key, numberOfOutputs, stats);
+            HandleIndexOutputsPerDocument(lowerId, numberOfOutputs, stats);
 
             DocumentDatabase.Metrics.IndexedPerSecond.Mark();
             return numberOfOutputs;

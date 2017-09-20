@@ -182,7 +182,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
                 foreach (var docId in docIds)
                 {
                     FixedSizeTree mapEntriesTree;
-                    scope.EnsureDispose(mapEntriesTree = mapPhaseTree.FixedTreeFor(docId, sizeof(long)));
+                    scope.EnsureDispose(mapEntriesTree = mapPhaseTree.FixedTreeFor(docId.ToLower(), sizeof(long)));
                     mapEntries.Add(mapEntriesTree);
                 }
 

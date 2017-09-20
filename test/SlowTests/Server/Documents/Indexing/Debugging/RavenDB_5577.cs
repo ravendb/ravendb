@@ -133,66 +133,69 @@ select new
                         var scope = new IndexingStatsScope(firstRunStats);
                         index.DoIndexingWork(scope, CancellationToken.None);
 
-                        IEnumerable<ReduceTree> trees;
-                        using (index.GetReduceTree(new [] { "orders/1" }, out trees))
+                        foreach (var documentId in new[] {"orders/1", "orderS/1"})
                         {
-                            var result = trees.ToList();
-
-                            Assert.Equal(2, result.Count);
-
-                            for (int i = 0; i < 2; i++)
+                            IEnumerable<ReduceTree> trees;
+                            using (index.GetReduceTree(new[] { documentId }, out trees))
                             {
-                                var tree = result[i];
+                                var result = trees.ToList();
 
-                                Assert.Equal(expectedTreeDepth, tree.Depth);
-                                Assert.Equal(numberOfDocs, tree.NumberOfEntries);
-                                Assert.Equal(expectedPageCount, tree.PageCount);
+                                Assert.Equal(2, result.Count);
 
-                                var hasSource = false;
-
-                                List<ReduceTreePage> pages;
-
-                                if (tree.Depth > 1)
+                                for (int i = 0; i < 2; i++)
                                 {
-                                    // real tree
+                                    var tree = result[i];
 
-                                    Assert.True(tree.Root.Children.Any());
-                                    Assert.Null(tree.Root.Entries);
+                                    Assert.Equal(expectedTreeDepth, tree.Depth);
+                                    Assert.Equal(numberOfDocs, tree.NumberOfEntries);
+                                    Assert.Equal(expectedPageCount, tree.PageCount);
 
-                                    pages = tree.Root.Children;
-                                }
-                                else
-                                {
-                                    // nested section
+                                    var hasSource = false;
 
-                                    Assert.Null(tree.Root.Children);
-                                    Assert.NotNull(tree.Root.Entries);
+                                    List<ReduceTreePage> pages;
 
-                                    pages = new List<ReduceTreePage>
+                                    if (tree.Depth > 1)
                                     {
-                                        tree.Root
-                                    };
-                                }
+                                        // real tree
 
-                                Assert.NotNull(tree.Root.AggregationResult);
+                                        Assert.True(tree.Root.Children.Any());
+                                        Assert.Null(tree.Root.Entries);
 
-                                foreach (var leafPage in pages)
-                                {
-                                    Assert.Null(leafPage.Children);
-                                    Assert.NotNull(leafPage.AggregationResult);
-
-                                    foreach (var entry in leafPage.Entries)
-                                    {
-                                        if (string.IsNullOrEmpty(entry.Source) == false)
-                                            hasSource = true;
-
-                                        Assert.NotNull(entry.Data);
+                                        pages = tree.Root.Children;
                                     }
+                                    else
+                                    {
+                                        // nested section
+
+                                        Assert.Null(tree.Root.Children);
+                                        Assert.NotNull(tree.Root.Entries);
+
+                                        pages = new List<ReduceTreePage>
+                                        {
+                                            tree.Root
+                                        };
+                                    }
+
+                                    Assert.NotNull(tree.Root.AggregationResult);
+
+                                    foreach (var leafPage in pages)
+                                    {
+                                        Assert.Null(leafPage.Children);
+                                        Assert.NotNull(leafPage.AggregationResult);
+
+                                        foreach (var entry in leafPage.Entries)
+                                        {
+                                            if (string.IsNullOrEmpty(entry.Source) == false)
+                                                hasSource = true;
+
+                                            Assert.NotNull(entry.Data);
+                                        }
+                                    }
+
+                                    Assert.True(hasSource);
+
+                                    Assert.Equal(numberOfDocs, pages.Sum(x => x.Entries.Count));
                                 }
-
-                                Assert.True(hasSource);
-
-                                Assert.Equal(numberOfDocs, pages.Sum(x => x.Entries.Count));
                             }
                         }
                     }
@@ -236,7 +239,7 @@ select new
                         var scope = new IndexingStatsScope(firstRunStats);
                         index.DoIndexingWork(scope, CancellationToken.None);
 
-                        var docIds = Enumerable.Range(0, numberOfDocs).Select(x => "orders/" + x).ToArray();
+                        var docIds = Enumerable.Range(0, numberOfDocs).Select(x => x % 2 == 0 ? "orders/" + x : "Orders/" + x).ToArray();
 
                         IEnumerable<ReduceTree> trees;
                         using (index.GetReduceTree(docIds, out trees))

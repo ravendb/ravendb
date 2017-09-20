@@ -97,16 +97,16 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             return tx.CreateTree(ReducePhaseTreeName);
         }
 
-        protected unsafe int PutMapResults(LazyStringValue documentKey, IEnumerable<MapResult> mappedResults, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        protected unsafe int PutMapResults(LazyStringValue lowerId, IEnumerable<MapResult> mappedResults, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             EnsureValidStats(stats);
 
-            using (Slice.External(indexContext.Allocator, documentKey.Buffer, documentKey.Length, out Slice docKeyAsSlice))
+            using (Slice.External(indexContext.Allocator, lowerId.Buffer, lowerId.Length, out Slice docIdAsSlice))
             {
                 Queue<MapEntry> existingEntries = null;
 
                 using (_stats.GetMapEntriesTree.Start())
-                    MapReduceWorkContext.DocumentMapEntries.RepurposeInstance(docKeyAsSlice, clone: false);
+                    MapReduceWorkContext.DocumentMapEntries.RepurposeInstance(docIdAsSlice, clone: false);
 
 
                 if (MapReduceWorkContext.DocumentMapEntries.NumberOfEntries > 0)
@@ -169,7 +169,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     }
                 }
 
-                HandleIndexOutputsPerDocument(documentKey, resultsCount, stats);
+                HandleIndexOutputsPerDocument(lowerId, resultsCount, stats);
 
                 DocumentDatabase.Metrics.MapReduceMappedPerSecond.Mark(resultsCount);
 
