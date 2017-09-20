@@ -22,7 +22,7 @@ $ErrorActionPreference = "Stop"
 . '.\scripts\buildProjects.ps1'
 . '.\scripts\getScriptDirectory.ps1'
 . '.\scripts\copyAssets.ps1'
-. '.\scripts\env.ps1'
+. '.\scripts\version.ps1'
 . '.\scripts\updateSourceWithBuildInfo.ps1'
 . '.\scripts\nuget.ps1'
 . '.\scripts\target.ps1'
@@ -34,12 +34,10 @@ if ($Help) {
 
 CheckPrerequisites
 
-$buildNumber = GetBuildNumber
-$buildType = GetBuildType
-
-# TODO @gregolsky create a function for this - stable does not have label
-$versionSuffix = "$buildType-$buildNumber"
-$version = "4.0.0-$versionSuffix"
+$versionObj = GetVersion
+$version = $versionObj.Version
+$versionSuffix = $versionObj.VersionSuffix
+$buildNumber = $versionObj.BuildNumber
 
 Write-Host -ForegroundColor Green "Building $version"
 
@@ -100,8 +98,6 @@ if ($targets.Count -eq 0) {
 } else {
     Write-Host -ForegroundColor Magenta "Build targets: $($targets.Name)"
 }
-
-SetVersionEnvironmentVariableInTeamCity $version
 
 New-Item -Path $RELEASE_DIR -ErrorAction SilentlyContinue
 CleanFiles $RELEASE_DIR
