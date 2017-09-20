@@ -238,6 +238,22 @@ namespace Raven.Client
             }
         }
 
+        internal class Monitoring
+        {
+            private Monitoring()
+            {
+            }
+
+            internal class Snmp
+            {
+                private Snmp()
+                {
+                }
+
+                public const string MappingKey = "monitoring/snmp/mapping";
+            }
+        }
+
         internal class Schemas
         {
             public const int ServerVersion = 10;

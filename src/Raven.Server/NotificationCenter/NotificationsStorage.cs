@@ -247,7 +247,7 @@ namespace Raven.Server.NotificationCenter
 
                     var typeLsv = (LazyStringValue)type;
 
-                    if (typeLsv.CompareTo(NotificationType.AlertRaised.ToString()) == 0)
+                    if (typeLsv.CompareTo(nameof(NotificationType.AlertRaised)) == 0)
                         count++;
                 }
             }
