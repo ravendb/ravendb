@@ -272,6 +272,10 @@ interface pagedResult<T> {
     additionalResultInfo?: any; 
 }
 
+interface pagedResultWithIncludes<T> extends pagedResult<T> {
+    includes: dictionary<any>;
+}
+
 interface pagedResultWithAvailableColumns<T> extends pagedResult<T> {
     availableColumns: string[];
 }

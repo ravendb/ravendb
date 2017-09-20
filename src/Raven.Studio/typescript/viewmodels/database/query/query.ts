@@ -31,7 +31,7 @@ import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnsSelector = require("viewmodels/partial/columnsSelector");
 import popoverUtils = require("common/popoverUtils");
 
-type filterType = "in" | "string" | "range";
+type queryResultTab = "results" | "includes";
 
 type stringSearchType = "Starts With" | "Ends With" | "Contains" | "Exact";
 
@@ -61,10 +61,17 @@ class query extends viewModelBase {
 
     columnsSelector = new columnsSelector<document>();
 
-    fetcher = ko.observable<fetcherType>();
+    queryFetcher = ko.observable<fetcherType>();
+    includesFetcher = ko.observable<fetcherType>();
+    effectiveFetcher = this.queryFetcher;
+    
     queryStats = ko.observable<Raven.Client.Documents.Queries.QueryResult<any, any>>();
     staleResult: KnockoutComputed<boolean>;
     dirtyResult = ko.observable<boolean>();
+    currentTab = ko.observable<queryResultTab>("results");
+    includesCache = new Map<string, document>();
+    totalResults: KnockoutComputed<number>;
+    totalIncludes = ko.observable<number>(0);
 
     canDeleteDocumentsMatchingQuery: KnockoutComputed<boolean>;
     isMapReduceIndex: KnockoutComputed<boolean>;
@@ -208,8 +215,6 @@ class query extends viewModelBase {
 
         this.containsAsterixQuery = ko.pureComputed(() => this.criteria().queryText().includes("*.*"));
 
-        const dateToString = (input: moment.Moment) => input ? input.format("YYYY-MM-DDTHH:mm:00.0000000") : "";
-
         this.staleResult = ko.pureComputed(() => {
             //TODO: return false for test index
             const stats = this.queryStats();
@@ -234,6 +239,14 @@ class query extends viewModelBase {
                 this.runQuery();
             }
         });
+        
+        this.totalResults = ko.pureComputed(() => {
+            const stats = this.queryStats();
+            if (!stats) {
+                return 0;
+            }
+            return stats.TotalResults || 0;
+        })
 
          /* TODO
         this.showSuggestions = ko.computed<boolean>(() => {
@@ -291,21 +304,29 @@ class query extends viewModelBase {
             enableInlinePreview: true
         });
 
-        if (!this.fetcher())
-            this.fetcher(() => $.when({
+        if (!this.queryFetcher())
+            this.queryFetcher(() => $.when({
                 items: [] as document[],
                 totalResultCount: 0
             }));
+        
+        this.includesFetcher(() => {
+            const allIncludes = Array.from(this.includesCache.values());
+            return $.when({
+                items: allIncludes.map(x => new document(x)),
+                totalResultCount: allIncludes.length
+            });
+        });
 
         this.columnsSelector.init(grid,
-            (s, t, c) => this.fetcher()(s, t),
+            (s, t, c) => this.effectiveFetcher()(s, t),
             (w, r) => documentsProvider.findColumns(w, r), (results: pagedResult<document>) => documentBasedColumnsProvider.extractUniquePropertyNames(results));
 
         grid.headerVisible(true);
 
         grid.dirtyResults.subscribe(dirty => this.dirtyResult(dirty));
 
-        this.fetcher.subscribe(() => grid.reset());
+        this.queryFetcher.subscribe(() => grid.reset());
 
         this.columnPreview.install("virtual-grid", ".tooltip", (doc: document, column: virtualColumn, e: JQueryEventObject, onValue: (context: any) => void) => {
             if (column instanceof textColumn) {
@@ -359,8 +380,6 @@ class query extends viewModelBase {
     runQueryOnIndex(indexName: string) {
         this.criteria().setSelectedIndex(indexName);
 
-        this.columnsSelector.reset();
-
         if (this.isDynamicIndex() && this.criteria().indexEntries()) {
             this.criteria().indexEntries(false);
             this.indexEntrieStateWasTrue = true; // save the state..
@@ -373,8 +392,7 @@ class query extends viewModelBase {
 
         this.runQuery();
 
-        const indexQuery = indexName;
-        const url = appUrl.forQuery(this.activeDatabase(), indexQuery);
+        const url = appUrl.forQuery(this.activeDatabase(), indexName);
         this.updateUrl(url);
     }
 
@@ -383,12 +401,16 @@ class query extends viewModelBase {
             return;
         }
         
+        this.columnsSelector.reset();
+        
+        this.effectiveFetcher = this.queryFetcher;
+        this.currentTab("results");
+        this.includesCache.clear();
+        
         eventsCollector.default.reportEvent("query", "run");
         const criteria = this.criteria();
 
-        if (this.criteria().queryText()) {
-
-            //TODO: this.isWarning(false);
+        if (criteria.queryText()) {
             this.isLoading(true);
 
             const database = this.activeDatabase();
@@ -406,8 +428,9 @@ class query extends viewModelBase {
                     .always(() => {
                         this.isLoading(false);
                     })
-                    .done((queryResults: pagedResult<any>) => {
+                    .done((queryResults: pagedResultWithIncludes<any>) => {
                         this.queryStats(queryResults.additionalResultInfo);
+                        this.onIncludesLoaded(queryResults.includes);
 
                         //TODO: this.indexSuggestions([]);
                         /* TODO
@@ -442,9 +465,17 @@ class query extends viewModelBase {
                     });
             };
 
-            this.fetcher(resultsFetcher);
+            this.queryFetcher(resultsFetcher);
             this.recordQueryRun(this.criteria());
         }
+    }
+    
+    private onIncludesLoaded(includes: dictionary<any>) {
+        _.forIn(includes, (doc, id) => {
+            this.includesCache.set(id, doc);
+        });
+        
+        this.totalIncludes(this.includesCache.size);
     }
 
     refresh() {
@@ -492,7 +523,7 @@ class query extends viewModelBase {
         eventsCollector.default.reportEvent("query", "delete-documents");
         // Run the query so that we have an idea of what we'll be deleting.
         this.runQuery();
-        this.fetcher()(0, 1)
+        this.queryFetcher()(0, 1)
             .done((results) => {
                 if (results.totalResultCount === 0) {
                     app.showBootstrapMessage("There are no documents matching your query.", "Nothing to do");
@@ -535,26 +566,23 @@ class query extends viewModelBase {
                 messagePublisher.reportError("Could not delete documents: " + exception.Message, exception.Error, null, false);
             });
     }
+    
+    goToResultsTab() {
+        this.currentTab("results");
+        this.effectiveFetcher = this.queryFetcher;
 
-    /* TODO
-    extractQueryFields(): Array<queryFieldInfo> {
-        var query = this.queryText();
-        var luceneSimpleFieldRegex = /(\w+):\s*("((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)'|(\w+))/g;
+        this.columnsSelector.reset();
+        this.refresh();
+    }
+    
+    goToIncludesTab() {
+        this.currentTab("includes");
+        this.effectiveFetcher = this.includesFetcher;
 
-        var queryFields: Array<queryFieldInfo> = [];
-        var match: RegExpExecArray = null;
-        while ((match = luceneSimpleFieldRegex.exec(query))) {
-            var value = match[3] || match[4] || match[5];
-            queryFields.push({
-                FieldName: match[1],
-                FieldValue: value,
-                Index: match.index
-            });
-        }
-        return queryFields;
+        this.columnsSelector.reset();
+        this.refresh();
     }
    
-*/
 
     /* TODO future:
 
@@ -590,23 +618,7 @@ class query extends viewModelBase {
         var url = appUrl.forDatabaseQuery(db) + this.csvUrl();
         this.downloader.download(db, url);
     }
-
-     onIndexChanged(newIndexName: string) {
-        var command = getCustomColumnsCommand.forIndex(newIndexName, this.activeDatabase());
-        this.contextName(command.docName);
-
-        command.execute().done((dto: customColumnsDto) => {
-            if (dto) {
-                this.currentColumnsParams().columns($.map(dto.Columns, c => new customColumnParams(c)));
-                this.currentColumnsParams().customMode(true);
-            } else {
-                // use default values!
-                this.currentColumnsParams().columns.removeAll();
-                this.currentColumnsParams().customMode(false);
-            }
-
-        });
-    }
+     
     */
 
 }
