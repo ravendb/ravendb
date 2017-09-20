@@ -97,14 +97,14 @@
                             <div class="collapse panel-addon" data-bind="collapse: showReplicationDetails">
                                 <div class="padding padding-sm flex-horizontal">
                                     <div class="flex-grow">
-                                        <ul class="properties">
-                                            <li>
-                                                <span>Destination:</span>
+                                        <div class="property">
+                                            <h6><span>Destination:</span></h6>
+                                            <h4>
                                                 <span title="Destination <database>@<Url>">
                                                     <a target="_blank" data-bind="attr: { href: destinationURL }, text: destinationDB() + '@' + destinationURL()"></a>
                                                 </span>
-                                            </li>
-                                        </ul>
+                                            </h4>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -260,11 +260,13 @@
                                             <li><span>Last Server Activity Time:</span><span class="text-details" data-bind="text: lastTimeServerMadeProgressWithDocuments"></span></li>
                                             <li>
                                                 <span>Last Client Connection Time:</span><span class="text-details" data-bind="text: lastClientConnectionTime"></span>
-                                                <span data-bind="if: clientIP()">
+                                                <!-- ko if: clientIP() -->
+                                                <span>
                                                     <button class="btn btn-xs" data-bind="click: disconnectClientFromSubscription" title="Disconnect client from this subscription (unsubscribe client)">
                                                         <i class="icon-disconnected"></i><span>Disconnect</span>
                                                     </button>
                                                 </span>
+                                                <!-- /ko -->
                                             </li>
                                             <!-- ko if: clientDetailsIssue -->
                                             <li><span>Status:</span><span data-bind="text: clientDetailsIssue, attr: { class: textClass() }"></span></li>
