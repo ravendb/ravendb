@@ -1,9 +1,3 @@
-// -----------------------------------------------------------------------
-//  <copyright file="ServerTotalMemory.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
 using System.Diagnostics;
 using Lextm.SharpSnmpLib;
 

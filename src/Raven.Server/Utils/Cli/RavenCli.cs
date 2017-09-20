@@ -77,7 +77,7 @@ namespace Raven.Server.Utils.Cli
                         break;
                     case "%R":
                         {
-                            var reqCounter = server.Metrics.RequestsMeter;
+                            var reqCounter = server.Metrics.Requests.RequestsPerSec;
                             msg.Append($"Req/Sec:{Math.Round(reqCounter.OneSecondRate, 1)}");
                         }
                         break;

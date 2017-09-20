@@ -101,7 +101,7 @@ namespace SlowTests.Core.AdminConsole
             using (var store = GetDocumentStore())
             {
                 var database = await GetDocumentDatabaseInstanceFor(store);
-                var requestsMeter = database.Metrics.RequestsMeter;
+                var requestsMeter = database.Metrics.Requests.RequestsPerSec;
 
                 using (var session = store.OpenSession())
                 {                    
@@ -113,7 +113,7 @@ namespace SlowTests.Core.AdminConsole
                 }
 
                 var result = ExecuteScript(database, @"
-                                return database.Metrics.RequestsMeter
+                                return database.Metrics.Requests.RequestsPerSec
                              "
                 );
 

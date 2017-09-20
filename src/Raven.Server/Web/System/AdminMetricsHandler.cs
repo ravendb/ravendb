@@ -19,7 +19,7 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                context.Write(writer, Server.Metrics.CreateMetricsStatsJsonValue());
+                context.Write(writer, Server.Metrics.ToJson());
             }
             return Task.CompletedTask;
         }

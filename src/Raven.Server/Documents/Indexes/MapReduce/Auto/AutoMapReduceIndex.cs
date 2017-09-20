@@ -168,7 +168,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
             var resultsCount = PutMapResults(key, _singleOutputList, indexContext, stats);
 
-            DocumentDatabase.Metrics.MapReduceMappedPerSecond.Mark(resultsCount);
+            DocumentDatabase.Metrics.MapReduceIndexes.MappedPerSec.Mark(resultsCount);
 
             return resultsCount;
         }

@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/stats", "GET", AuthorizationStatus.ValidUser)]
         public Task Stats()
         {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))            
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             using (context.OpenReadTransaction())
             {
@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Handlers
                 stats.CountOfUniqueAttachments = attachments.StreamsCount;
                 stats.CountOfIndexes = indexes.Count;
                 var statsDatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
-                
+
                 stats.DatabaseChangeVector = statsDatabaseChangeVector;
                 stats.DatabaseId = Database.DocumentsStorage.Environment.Base64Id;
                 stats.Is64Bit = IntPtr.Size == sizeof(long);
@@ -74,7 +74,7 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                context.Write(writer, Database.Metrics.CreateMetricsStatsJsonValue());
+                context.Write(writer, Database.Metrics.ToJson());
             }
 
             return Task.CompletedTask;
@@ -86,9 +86,18 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
+                var empty = GetBoolValueQueryString("empty", required: false) ?? true;
+
                 context.Write(writer, new DynamicJsonValue
                 {
-                    ["DocsPutsPerSec"] = Database.Metrics.DocPutsPerSecond.CreateMeterData(true, GetBoolValueQueryString("empty", required: false) ?? true)
+                    [nameof(Database.Metrics.Docs)] = new DynamicJsonValue
+                    {
+                        [nameof(Database.Metrics.Docs.PutsPerSec)] = Database.Metrics.Docs.PutsPerSec.CreateMeterData(true, empty)
+                    },
+                    [nameof(Database.Metrics.Attachments)] = new DynamicJsonValue
+                    {
+                        [nameof(Database.Metrics.Attachments.PutsPerSec)] = Database.Metrics.Docs.PutsPerSec.CreateMeterData(true, empty)
+                    }
                 });
             }
 
@@ -101,9 +110,18 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
+                var empty = GetBoolValueQueryString("empty", required: false) ?? true;
+
                 context.Write(writer, new DynamicJsonValue
                 {
-                    ["BytesPutsPerSecond"] = Database.Metrics.BytesPutsPerSecond.CreateMeterData(true, GetBoolValueQueryString("empty", required: false) ?? true)
+                    [nameof(Database.Metrics.Docs)] = new DynamicJsonValue
+                    {
+                        [nameof(Database.Metrics.Docs.BytesPutsPerSec)] = Database.Metrics.Docs.BytesPutsPerSec.CreateMeterData(true, empty)
+                    },
+                    [nameof(Database.Metrics.Attachments)] = new DynamicJsonValue
+                    {
+                        [nameof(Database.Metrics.Attachments.BytesPutsPerSec)] = Database.Metrics.Docs.BytesPutsPerSec.CreateMeterData(true, empty)
+                    }
                 });
             }
 

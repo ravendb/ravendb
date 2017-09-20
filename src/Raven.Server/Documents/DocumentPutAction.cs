@@ -167,8 +167,8 @@ namespace Raven.Server.Documents
                 }
 
                 context.LastDatabaseChangeVector = changeVector;
-                _documentDatabase.Metrics.DocPutsPerSecond.MarkSingleThreaded(1);
-                _documentDatabase.Metrics.BytesPutsPerSecond.MarkSingleThreaded(document.Size);
+                _documentDatabase.Metrics.Docs.PutsPerSec.MarkSingleThreaded(1);
+                _documentDatabase.Metrics.Docs.BytesPutsPerSec.MarkSingleThreaded(document.Size);
 
                 context.Transaction.AddAfterCommitNotification(new DocumentChange
                 {

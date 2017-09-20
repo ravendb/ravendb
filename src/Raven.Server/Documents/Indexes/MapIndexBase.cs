@@ -69,7 +69,7 @@ namespace Raven.Server.Documents.Indexes
 
             HandleIndexOutputsPerDocument(key, numberOfOutputs, stats);
 
-            DocumentDatabase.Metrics.IndexedPerSecond.Mark();
+            DocumentDatabase.Metrics.MapIndexes.IndexedPerSec.Mark();
             return numberOfOutputs;
         }
 

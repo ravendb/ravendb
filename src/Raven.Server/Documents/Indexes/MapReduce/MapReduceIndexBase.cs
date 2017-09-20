@@ -171,7 +171,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                 HandleIndexOutputsPerDocument(documentKey, resultsCount, stats);
 
-                DocumentDatabase.Metrics.MapReduceMappedPerSecond.Mark(resultsCount);
+                DocumentDatabase.Metrics.MapReduceIndexes.MappedPerSec.Mark(resultsCount);
 
                 while (existingEntries?.Count > 0)
                 {
