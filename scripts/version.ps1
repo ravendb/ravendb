@@ -7,11 +7,10 @@ function SetVersionEnvironmentVariableInTeamCity($version) {
 }
 
 function SetBuiltAtEnvironmentVariableInTeamCity($builtAt) {
-    SetTeamCityEnvironmentVariable 'env.builtAt' $($builtAt.ToString('o'))
+    SetTeamCityEnvironmentVariable 'env.BUILT_AT' $($builtAt.ToString('o'))
 }
 
 $DEV_BUILD_NUMBER = 40
-
 function GetBuildNumber () {
     if ($env:BUILD_NUMBER) {
         $result = $env:BUILD_NUMBER
