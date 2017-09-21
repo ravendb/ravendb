@@ -1,17 +1,22 @@
 using System;
-using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Lextm.SharpSnmpLib.Pipeline;
 using Raven.Client.Documents.Changes;
 using Raven.Server.Documents;
 using Raven.Server.Monitoring.Snmp.Objects.Database;
 using Raven.Server.Monitoring.Snmp.Objects.Server;
+using Raven.Server.ServerWide.Commands.Monitoring.Snmp;
+using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 
 namespace Raven.Server.Monitoring.Snmp
 {
     public class SnmpDatabase
     {
-        private readonly ConcurrentDictionary<string, int> _loadedIndexes = new ConcurrentDictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, int> _loadedIndexes = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
         private readonly DatabasesLandlord _databaseLandlord;
 
@@ -21,7 +26,7 @@ namespace Raven.Server.Monitoring.Snmp
 
         private readonly int _databaseIndex;
 
-        private readonly object _locker = new object();
+        private readonly SemaphoreSlim _lockers = new SemaphoreSlim(1, 1);
 
         private bool _attached;
 
@@ -82,10 +87,7 @@ namespace Raven.Server.Monitoring.Snmp
             //_objectStore.Add(new DatabaseIndexStorageDiskRemainingSpace(_databaseName, _databaseLandlord, _databaseIndex));
             //_objectStore.Add(new DatabaseTransactionalStorageDiskRemainingSpace(_databaseName, _databaseLandlord, _databaseIndex));
 
-            //_objectStore.Add(new ReplicationBundleEnabled(_databaseName, _databaseLandlord, _databaseIndex));
-
             //AddIndexesFromMappingDocument();
-            //AddReplicationDestinationsFromMappingDocument();
         }
 
         private void Attach(bool force)
@@ -93,44 +95,85 @@ namespace Raven.Server.Monitoring.Snmp
             if (force == false && _attached)
                 return;
 
-            Task.Factory.StartNew(() =>
+            Task.Factory.StartNew(async () =>
             {
-                lock (_locker)
+                await _lockers.WaitAsync();
+
+                try
                 {
                     if (force == false && _attached)
                         return;
 
-                    var database = _databaseLandlord
-                        .TryGetOrCreateResourceStore(_databaseName)
-                        .Result;
+                    var database = await _databaseLandlord.TryGetOrCreateResourceStore(_databaseName);
 
-                    database.Changes.OnIndexChange += change =>
-                    {
-                        if (change.Type != IndexChangeTypes.IndexAdded)
-                            return;
+                    database.Changes.OnIndexChange += AddIndexIfNecessary;
 
-                        _loadedIndexes.GetOrAdd(change.Name, AddIndex);
-                    };
-
-                    AddIndexesFromDatabase(database);
+                    await AddIndexesFromDatabase(database);
 
                     _attached = true;
+                }
+                finally
+                {
+                    _lockers.Release();
                 }
             });
         }
 
-        private void AddIndexesFromDatabase(DocumentDatabase database)
+        private void AddIndexIfNecessary(IndexChange change)
         {
-            foreach (var index in database.IndexStore.GetIndexes())
-                _loadedIndexes.GetOrAdd(index.Name, AddIndex);
+            if (change.Type != IndexChangeTypes.IndexAdded)
+                return;
+
+            //Task.Factory.StartNew(async () =>
+            //{
+            //    _loadedIndexes.GetOrAdd(change.Name, AddIndex);
+            //});
         }
 
-        private int AddIndex(string indexName)
+        private async Task AddIndexesFromDatabase(DocumentDatabase database)
         {
-            //var index = (int)GetOrAddIndex(indexName, MappingDocumentType.Indexes, _databaseLandlord.SystemDatabase);
+            var indexes = database.IndexStore.GetIndexes().ToList();
 
-            //_objectStore.Add(new DatabaseIndexExists(_databaseName, indexName, _databaseLandlord, _databaseIndex, index));
-            //_objectStore.Add(new DatabaseIndexName(_databaseName, indexName, _databaseLandlord, _databaseIndex, index));
+            if (indexes.Count == 0)
+                return;
+
+            using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                context.OpenReadTransaction();
+
+                var mapping = GetMapping(context, database);
+
+                var missingIndexes = new List<string>();
+                foreach (var index in indexes)
+                {
+                    if (mapping.ContainsKey(index.Name) == false)
+                        missingIndexes.Add(index.Name);
+                }
+
+                if (missingIndexes.Count > 0)
+                {
+                    context.CloseTransaction();
+
+                    var result = await database.ServerStore.SendToLeaderAsync(new UpdateSnmpDatabaseIndexesMappingCommand(database.Name, missingIndexes));
+                    await database.ServerStore.Cluster.WaitForIndexNotification(result.Index);
+
+                    context.OpenReadTransaction();
+
+                    mapping = GetMapping(context, database);
+                }
+
+                foreach (var index in indexes)
+                    LoadIndex(index.Name, (int)mapping[index.Name]);
+            }
+        }
+
+        private void LoadIndex(string indexName, int index)
+        {
+            if (_loadedIndexes.ContainsKey(indexName))
+                return;
+
+            _objectStore.Add(new DatabaseIndexExists(_databaseName, indexName, _databaseLandlord, _databaseIndex, index));
+            _objectStore.Add(new DatabaseIndexName(_databaseName, indexName, _databaseLandlord, _databaseIndex, index));
             //_objectStore.Add(new DatabaseIndexId(_databaseName, indexName, _databaseLandlord, _databaseIndex, index));
             //_objectStore.Add(new DatabaseIndexAttempts(_databaseName, indexName, _databaseLandlord, _databaseIndex, index));
             //_objectStore.Add(new DatabaseIndexErrors(_databaseName, indexName, _databaseLandlord, _databaseIndex, index));
@@ -142,71 +185,26 @@ namespace Raven.Server.Monitoring.Snmp
             //_objectStore.Add(new DatabaseIndexReduceErrors(_databaseName, indexName, _databaseLandlord, _databaseIndex, index));
             //_objectStore.Add(new DatabaseIndexTimeSinceLastQuery(_databaseName, indexName, _databaseLandlord, _databaseIndex, index));
 
-            return -1;
+            _loadedIndexes[indexName] = index;
         }
 
-        /*
-        private void AddIndexesFromMappingDocument()
+        private static Dictionary<string, long> GetMapping(TransactionOperationContext context, DocumentDatabase database)
         {
-            var mappingDocument = GetMappingDocument(MappingDocumentType.Indexes);
-            if (mappingDocument == null)
-                return;
+            var json = database.ServerStore.Cluster.Read(context, UpdateSnmpDatabaseIndexesMappingCommand.GetStorageKey(database.Name));
 
-            foreach (var indexName in mappingDocument.DataAsJson.Keys)
-                _loadedIndexes.GetOrAdd(indexName, AddIndex);
-        }
+            var result = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+            if (json == null)
+                return result;
 
-        private JsonDocument GetMappingDocument(MappingDocumentType type)
-        {
-            var key = Constants.Monitoring.Snmp.DatabaseMappingDocumentPrefix + _databaseName + "/" + type;
-
-            return _databaseLandlord.SystemDatabase.Documents.Get(key, null);
-        }
-
-        private long GetOrAddIndex(string name, MappingDocumentType mappingDocumentType, DocumentDatabase systemDatabase)
-        {
-            var tries = 0;
-            while (true)
+            var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+            foreach (var index in json.GetPropertiesByInsertionOrder())
             {
-                try
-                {
-                    var key = Constants.Monitoring.Snmp.DatabaseMappingDocumentPrefix + _databaseName + "/" + mappingDocumentType;
+                json.GetPropertyByIndex(index, ref propertyDetails);
 
-                    var mappingDocument = systemDatabase.Documents.Get(key, null) ?? new JsonDocument();
-
-                    RavenJToken value;
-                    if (mappingDocument.DataAsJson.TryGetValue(name, out value))
-                        return value.Value<int>();
-
-                    var index = 0L;
-                    systemDatabase.TransactionalStorage.Batch(actions =>
-                    {
-                        mappingDocument.DataAsJson[name] = index = actions.General.GetNextIdentityValue(key);
-                        systemDatabase.Documents.Put(key, null, mappingDocument.DataAsJson, mappingDocument.Metadata, null);
-                    });
-
-                    return index;
-                }
-                catch (Exception e)
-                {
-                    Exception _;
-                    if (TransactionalStorageHelper.IsWriteConflict(e, out _) == false || tries >= 5)
-                        throw;
-
-                    Thread.Sleep(13);
-                }
-                finally
-                {
-                    tries++;
-                }
+                result[propertyDetails.Name] = (long)propertyDetails.Value;
             }
-        }
-        */
 
-        private enum MappingDocumentType
-        {
-            Indexes,
-            Replication
+            return result;
         }
     }
 }

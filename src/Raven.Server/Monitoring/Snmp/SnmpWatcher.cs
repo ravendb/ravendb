@@ -15,16 +15,14 @@ using Raven.Server.Monitoring.Snmp.Objects.Documents;
 using Raven.Server.Monitoring.Snmp.Objects.Server;
 using Raven.Server.ServerWide.Commands.Monitoring.Snmp;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Collections.LockFree;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
 namespace Raven.Server.Monitoring.Snmp
 {
     public class SnmpWatcher
     {
-        private readonly ConcurrentDictionary<string, SnmpDatabase> _loadedDatabases = new ConcurrentDictionary<string, SnmpDatabase>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, SnmpDatabase> _loadedDatabases = new Dictionary<string, SnmpDatabase>(StringComparer.OrdinalIgnoreCase);
 
         private readonly SemaphoreSlim _locker = new SemaphoreSlim(1, 1);
 
@@ -65,7 +63,7 @@ namespace Raven.Server.Monitoring.Snmp
 
             Task.Factory.StartNew(async () =>
             {
-                _locker.Wait();
+                await _locker.WaitAsync();
 
                 try
                 {
@@ -73,17 +71,17 @@ namespace Raven.Server.Monitoring.Snmp
                     {
                         context.OpenReadTransaction();
 
-                        var mapping = LoadMapping(context);
+                        var mapping = GetMapping(context);
                         if (mapping.ContainsKey(databaseName) == false)
                         {
                             context.CloseTransaction();
 
-                            var result = await _server.ServerStore.SendToLeaderAsync(new AddDatabasesToSnmpMappingCommand(new List<string> { databaseName }));
+                            var result = await _server.ServerStore.SendToLeaderAsync(new UpdateSnmpDatabasesMappingCommand(new List<string> { databaseName }));
                             await _server.ServerStore.Cluster.WaitForIndexNotification(result.Index);
 
                             context.OpenReadTransaction();
 
-                            mapping = LoadMapping(context);
+                            mapping = GetMapping(context);
                         }
 
                         LoadDatabase(databaseName, mapping[databaseName]);
@@ -181,7 +179,7 @@ namespace Raven.Server.Monitoring.Snmp
                     if (databases.Count == 0)
                         return;
 
-                    var mapping = LoadMapping(context);
+                    var mapping = GetMapping(context);
 
                     var missingDatabases = new List<string>();
                     foreach (var database in databases)
@@ -194,12 +192,12 @@ namespace Raven.Server.Monitoring.Snmp
                     {
                         context.CloseTransaction();
 
-                        var result = await _server.ServerStore.SendToLeaderAsync(new AddDatabasesToSnmpMappingCommand(missingDatabases));
+                        var result = await _server.ServerStore.SendToLeaderAsync(new UpdateSnmpDatabasesMappingCommand(missingDatabases));
                         await _server.ServerStore.Cluster.WaitForIndexNotification(result.Index);
-                       
+
                         context.OpenReadTransaction();
 
-                        mapping = LoadMapping(context);
+                        mapping = GetMapping(context);
                     }
 
                     foreach (var database in databases)
@@ -214,21 +212,15 @@ namespace Raven.Server.Monitoring.Snmp
 
         private void LoadDatabase(string databaseName, long databaseIndex)
         {
-            _loadedDatabases.GetOrAdd(databaseName, _ => new SnmpDatabase(_server.ServerStore.DatabasesLandlord, _objectStore, databaseName, (int)databaseIndex));
+            if (_loadedDatabases.ContainsKey(databaseName))
+                return;
+
+            _loadedDatabases[databaseName] = new SnmpDatabase(_server.ServerStore.DatabasesLandlord, _objectStore, databaseName, (int)databaseIndex);
         }
 
-        private List<(string DatabaseName, int DatabaseIndex)> AssignIndexes(IEnumerable<string> databases, BlittableJsonReaderObject mapping)
+        private Dictionary<string, long> GetMapping(TransactionOperationContext context)
         {
-            var results = new List<(string DatabaseName, int DatabaseIndex)>();
-            foreach (var database in databases)
-                results.Add((database, GetOrAddDatabaseIndex(mapping, database)));
-
-            return results;
-        }
-
-        private Dictionary<string, long> LoadMapping(TransactionOperationContext context)
-        {
-            var json = _server.ServerStore.Cluster.Read(context, Constants.Monitoring.Snmp.MappingKey);
+            var json = _server.ServerStore.Cluster.Read(context, Constants.Monitoring.Snmp.DatabasesMappingKey);
 
             var result = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
             if (json == null)
@@ -243,23 +235,6 @@ namespace Raven.Server.Monitoring.Snmp
             }
 
             return result;
-        }
-
-        private int GetOrAddDatabaseIndex(BlittableJsonReaderObject mappingJson, string databaseName)
-        {
-            if (databaseName == null)
-                throw new ArgumentNullException(nameof(databaseName));
-
-            if (mappingJson.TryGet(databaseName, out int index))
-                return index;
-
-            if (mappingJson.Modifications == null)
-                mappingJson.Modifications = new DynamicJsonValue();
-
-            index = mappingJson.Count + mappingJson.Modifications.Properties.Count + 1;
-            mappingJson.Modifications[databaseName] = index;
-
-            return index;
         }
 
         private class SnmpLogger : ILogger
@@ -293,7 +268,7 @@ namespace Raven.Server.Monitoring.Snmp
                         .Select(x => x.Data)
                         .FirstOrDefault();
 
-                    builder.AppendLine(string.Format("OID: {0}. Response: {1}", oid, responseData != null ? responseData.ToString() : null));
+                    builder.AppendLine(string.Format("OID: {0}. Response: {1}", oid, responseData?.ToString()));
                 }
 
                 _logger.Info(builder.ToString());

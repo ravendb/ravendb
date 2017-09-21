@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -338,10 +337,8 @@ namespace Raven.Server.Documents
 
         public bool IsDatabaseLoaded(StringSegment databaseName)
         {
-            if (DatabasesCache.TryGetValue(databaseName, out Task<DocumentDatabase> databaseTask))
-            {
-                return databaseTask.IsCanceled == false && databaseTask.IsFaulted == false;
-            }
+            if (DatabasesCache.TryGetValue(databaseName, out var task))
+                return task != null && task.IsCompletedSuccessfully;
 
             return false;
         }
