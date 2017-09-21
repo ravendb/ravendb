@@ -79,16 +79,16 @@ namespace Raven.Server.Documents.Indexes.Static
                 throw new InvalidOperationException(
                     "Indexing scope was not initialized. Key: " + keyOrEnumerable);
 
-            var keyLazy = keyOrEnumerable as LazyStringValue;
-            if (keyLazy != null)
+            if (keyOrEnumerable is LazyStringValue keyLazy)
                 return CurrentIndexingScope.Current.LoadDocument(keyLazy, null, collectionName);
 
-            var keyString = keyOrEnumerable as string;
-            if (keyString != null)
+            if (keyOrEnumerable is string keyString)
                 return CurrentIndexingScope.Current.LoadDocument(null, keyString, collectionName);
 
-            var enumerable = keyOrEnumerable as IEnumerable;
-            if (enumerable != null)
+            if(keyOrEnumerable is DynamicNullObject)
+                return DynamicNullObject.Null;
+
+            if (keyOrEnumerable is IEnumerable enumerable)
             {
                 var enumerator = enumerable.GetEnumerator();
                 using (enumerable as IDisposable)

@@ -1714,7 +1714,7 @@ namespace Raven.Server.Documents.Indexes
                             query.CutoffEtag = 0;
                             foreach (var collection in Collections)
                             {
-                                var etag = GetLastDocumentEtagInCollection(documentsContext, collection);
+                                var etag = GetLastEtagInCollection(documentsContext, collection);
 
                                 if (etag > query.CutoffEtag)
                                     query.CutoffEtag = etag;
@@ -2505,6 +2505,24 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
         }
+
+        public long GetLastEtagInCollection(DocumentsOperationContext databaseContext, string collection)
+        {
+            long lastDocEtag;
+            long lastTombstoneEtag;
+            if (collection == Constants.Documents.Collections.AllDocumentsCollection)
+            {
+                lastDocEtag = DocumentsStorage.ReadLastDocumentEtag(databaseContext.Transaction.InnerTransaction);
+                lastTombstoneEtag = DocumentsStorage.ReadLastTombstoneEtag(databaseContext.Transaction.InnerTransaction);
+            }
+            else
+            {
+                lastDocEtag = DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, collection);
+                lastTombstoneEtag = DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(databaseContext, collection);
+            }
+            return Math.Max(lastDocEtag, lastTombstoneEtag);
+        }
+
 
         public long GetLastDocumentEtagInCollection(DocumentsOperationContext databaseContext, string collection)
         {
