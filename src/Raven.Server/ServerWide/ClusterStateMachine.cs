@@ -28,6 +28,7 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.ConnectionStrings;
 using Raven.Server.ServerWide.Commands.ETL;
 using Raven.Server.ServerWide.Commands.Indexes;
+using Raven.Server.ServerWide.Commands.Monitoring.Snmp;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
@@ -189,6 +190,9 @@ namespace Raven.Server.ServerWide
                     case nameof(CompareExchangeCommand):
                         CompareExchange(context, type, cmd, index);
                         break;
+                    case nameof(AddDatabasesToSnmpMappingCommand):
+                        UpdateValue<List<string>>(context, type, cmd, index, leader);
+                        break;
                     case nameof(PutLicenseCommand):
                         PutValue<License>(context, type, cmd, index, leader);
                         break;
@@ -327,7 +331,7 @@ namespace Raven.Server.ServerWide
                 NotifyDatabaseValueChanged(context, updateCommand?.DatabaseName, index, type);
             }
         }
-        
+
         public async Task WaitForIndexNotification(long index, TimeSpan? timeout = null)
         {
             await _rachisLogIndexNotifications.WaitForIndexNotification(index, timeout ?? _parent.OperationTimeout);
@@ -486,6 +490,42 @@ namespace Raven.Server.ServerWide
                 using (Slice.From(context.Allocator, delCmd.Name.ToLowerInvariant(), out Slice keyNameLowered))
                 {
                     items.DeleteByKey(keyNameLowered);
+                }
+            }
+            finally
+            {
+                NotifyValueChanged(context, type, index);
+            }
+        }
+
+        private unsafe void UpdateValue<T>(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader)
+        {
+            try
+            {
+                var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+                var command = (UpdateValueCommand<T>)CommandBase.CreateFrom(cmd);
+                if (command.Name.StartsWith(Constants.Documents.Prefix))
+                {
+                    NotifyLeaderAboutError(index, leader,
+                        new InvalidOperationException("Cannot set " + command.Name + " using PutValueCommand, only via dedicated database calls"));
+                    return;
+                }
+
+                using (Slice.From(context.Allocator, command.Name, out Slice valueName))
+                using (Slice.From(context.Allocator, command.Name.ToLowerInvariant(), out Slice valueNameLowered))
+                {
+                    BlittableJsonReaderObject previousValue = null;
+                    if (items.ReadByKey(valueNameLowered, out var tvr))
+                    {
+                        var ptr = tvr.Read(2, out int size);
+                        previousValue = new BlittableJsonReaderObject(ptr, size, context);
+                    }
+
+                    var newValue = command.OnUpdate(context, previousValue);
+                    if (newValue == null)
+                        return;
+
+                    UpdateValue(index, items, valueNameLowered, valueName, newValue);
                 }
             }
             finally
@@ -1159,8 +1199,8 @@ namespace Raven.Server.ServerWide
             while (true)
             {
                 // first get the task, then wait on it
-                var waitAsync = timeout.HasValue == false ? 
-                    _notifiedListeners.WaitAsync() : 
+                var waitAsync = timeout.HasValue == false ?
+                    _notifiedListeners.WaitAsync() :
                     _notifiedListeners.WaitAsync(timeout.Value);
 
                 if (index <= Volatile.Read(ref LastModifiedIndex))
@@ -1189,7 +1229,7 @@ namespace Raven.Server.ServerWide
         {
             throw new TimeoutException($"Waited for {value} but didn't get index notification for {index}. " +
                                        $"Last commit index is: {lastModifiedIndex}. " +
-                                       $"Number of errors is: {_numberOfErrors}." + Environment.NewLine + 
+                                       $"Number of errors is: {_numberOfErrors}." + Environment.NewLine +
                                        PrintLastNotifications());
         }
 
