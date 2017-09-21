@@ -1,14 +1,7 @@
 ﻿using System.Linq;
 using Indexing.Benchmark.Entities;
-using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
-
-#if v35
-using Raven.NewClient.Abstractions.Indexing;
-#else
-
-#endif
 
 namespace Indexing.Benchmark
 {
@@ -21,7 +14,7 @@ namespace Indexing.Benchmark
             _numberOfOrdersInDb = numberOfOrdersInDb;
         }
 
-        public override IndexingTestRun[] IndexTestRuns => new []
+        public override IndexingTestRun[] IndexTestRuns => new[]
         {
             new IndexingTestRun
             {
@@ -94,7 +87,7 @@ select new
             {
                 return new IndexDefinition
                 {
-                    Maps = {@"from order in docs.Orders
+                    Maps = { @"from order in docs.Orders
                             from line in order.Lines
                             select
                             new
@@ -102,7 +95,7 @@ select new
                                 order.Company,
                                 Count = 1,
                                 Total = line.PricePerUnit
-                            }"},
+                            }" },
                     Reduce = @"from result in results
 group result by result.Company into g
 select new
@@ -117,7 +110,7 @@ select new
 
         public class Orders_GroupByMultipleFields : AbstractIndexCreationTask<Order, Orders_GroupByMultipleFields.ReduceResults>
         {
-            public class ReduceResults 
+            public class ReduceResults
             {
                 public string Company { get; set; }
                 public string ShipVia { get; set; }
@@ -136,20 +129,20 @@ select new
                                 };
 
                 Reduce = results => from result in results
-                    group result by new
-                    {
-                        result.Company,
-                        result.ShipVia,
-                        result.Employee,
-                    }
+                                    group result by new
+                                    {
+                                        result.Company,
+                                        result.ShipVia,
+                                        result.Employee,
+                                    }
                     into g
-                    select new
-                    {
-                        Company = g.Key.Company,
-                        ShipVia = g.Key.ShipVia,
-                        Employee = g.Key.Employee,
-                        Count = g.Sum(x => x.Count)
-                    };
+                                    select new
+                                    {
+                                        Company = g.Key.Company,
+                                        ShipVia = g.Key.ShipVia,
+                                        Employee = g.Key.Employee,
+                                        Count = g.Sum(x => x.Count)
+                                    };
             }
         }
 
@@ -167,20 +160,20 @@ select new
             {
                 _number = number;
                 Map = employees => from e in employees
-                    select new ReduceResult
-                    {
-                        Country = e.Address.Country,
-                        Count = 1
-                    };
+                                   select new ReduceResult
+                                   {
+                                       Country = e.Address.Country,
+                                       Count = 1
+                                   };
 
                 Reduce = results => from r in results
-                    group r by r.Country
+                                    group r by r.Country
                     into g
-                    select new ReduceResult
-                    {
-                        Country = g.Key,
-                        Count = g.Sum(x => x.Count)
-                    };
+                                    select new ReduceResult
+                                    {
+                                        Country = g.Key,
+                                        Count = g.Sum(x => x.Count)
+                                    };
             }
 
             public override string IndexName

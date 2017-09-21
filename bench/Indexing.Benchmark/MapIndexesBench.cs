@@ -1,14 +1,7 @@
 ﻿using System.Linq;
 using Indexing.Benchmark.Entities;
-using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
-
-#if v35
-using Raven.NewClient.Abstractions.Indexing;
-#else
-
-#endif
 
 namespace Indexing.Benchmark
 {
@@ -21,7 +14,7 @@ namespace Indexing.Benchmark
             _numberOfOrdersInDb = numberOfOrdersInDb;
         }
 
-        public override IndexingTestRun[] IndexTestRuns => new []
+        public override IndexingTestRun[] IndexTestRuns => new[]
         {
             new IndexingTestRun
             {
@@ -79,11 +72,11 @@ select new { order.Employee,  order.Company, Total = order.Lines.Sum(l =>l.Price
             public Orders_ByCompanyNameAndEmploeeFirstName_LoadDocument()
             {
                 Map = orders => from o in orders
-                                     select new
-                                     {
-                                         CompanyName = LoadDocument<Company>(o.Company).Name,
-                                         EmployeeName = LoadDocument<Employee>(o.Employee).FirstName
-                                     };
+                                select new
+                                {
+                                    CompanyName = LoadDocument<Company>(o.Company).Name,
+                                    EmployeeName = LoadDocument<Employee>(o.Employee).FirstName
+                                };
             }
         }
 
@@ -92,12 +85,12 @@ select new { order.Employee,  order.Company, Total = order.Lines.Sum(l =>l.Price
             public Orders_ByProducts_Fanout()
             {
                 Map = orders => from o in orders
-                    from line in o.Lines
-                    select new
-                    {
-                        line.Product,
-                        line.ProductName
-                    };
+                                from line in o.Lines
+                                select new
+                                {
+                                    line.Product,
+                                    line.ProductName
+                                };
             }
         }
 
@@ -110,12 +103,12 @@ select new { order.Employee,  order.Company, Total = order.Lines.Sum(l =>l.Price
                 _number = number;
 
                 Map = employees => from e in employees
-                    select new
-                    {
-                        e.FirstName,
-                        e.LastName,
-                        e.Address
-                    };
+                                   select new
+                                   {
+                                       e.FirstName,
+                                       e.LastName,
+                                       e.Address
+                                   };
             }
 
             public override string IndexName

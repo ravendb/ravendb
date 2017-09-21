@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Reflection;
@@ -58,7 +56,7 @@ namespace Raven.Client.Exceptions
                 return new RavenException(error, exception);
 
             return exception;
-        }        
+        }
 
         public static async Task Throw(JsonOperationContext context, HttpResponseMessage response, Action<StringBuilder> additionalErrorInfo = null)
         {
@@ -136,10 +134,7 @@ namespace Raven.Client.Exceptions
 
         public static Type GetType(string typeAsString)
         {
-            var type = Type.GetType(typeAsString, throwOnError: false) ??
-                       Type.GetType(typeAsString.Replace("Raven.Client", "Raven.NewClient.Client"), throwOnError: false); // temporary!
-
-            return type;
+            return Type.GetType(typeAsString, throwOnError: false);
         }
 
         private static ExceptionSchema GetExceptionSchema(HttpResponseMessage response, BlittableJsonReaderObject json)

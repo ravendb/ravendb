@@ -10,7 +10,7 @@ namespace Raven.Client.Documents.Session.Operations
     internal class LoadOperation
     {
         private readonly InMemoryDocumentSessionOperations _session;
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LoadOperation>("Raven.NewClient.Client");
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LoadOperation>("Client");
 
         private string[] _ids;
         private string[] _includes;
