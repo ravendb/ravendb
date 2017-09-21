@@ -11,17 +11,21 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            using (var test = new AdminJsConsoleTests())
+            for (int i = 0; i < 100; i++)
             {
-                try
+                Console.WriteLine(i);
+                using (var test = new SlowTests.Tests.NestedIndexing.CanIndexReferencedEntity())
                 {
-                    test.CanConvertAllJsonTypesToString().Wait();
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
-                    Console.WriteLine("-------------");
-                    throw;
+                    try
+                    {
+                        test.WhenReferencedItemDeleted();
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                        Console.WriteLine("-------------");
+                        throw;
+                    }
                 }
             }
         }

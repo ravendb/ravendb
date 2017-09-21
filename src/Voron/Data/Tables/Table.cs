@@ -1215,11 +1215,12 @@ namespace Voron.Data.Tables
                 if (it.Seek(key) == false)
                     return 0;
 
+
                 long count = 0;
-                do
+                while(it.MovePrev())
                 {
                     count++;
-                } while (it.MovePrev());
+                }
                 return count;
             }
         }
