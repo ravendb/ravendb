@@ -11,6 +11,7 @@ function SetBuiltAtEnvironmentVariableInTeamCity($builtAt) {
 }
 
 $DEV_BUILD_NUMBER = 40
+
 function GetBuildNumber () {
     if ($env:BUILD_NUMBER) {
         $result = $env:BUILD_NUMBER
@@ -43,6 +44,7 @@ function GetVersion() {
     if ($buildType.ToLower() -eq 'nightly') {
         $nightlyDateSuffix = $builtAt.ToString("yyyyMMdd-HHmm")
         $versionSuffix = "$buildType-$nightlyDateSuffix"
+        $buildNumber = $DEV_BUILD_NUMBER
     } else {
         $versionSuffix = "$buildType-$buildNumber"
     }
