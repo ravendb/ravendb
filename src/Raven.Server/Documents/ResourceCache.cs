@@ -24,6 +24,8 @@ namespace Raven.Server.Documents
         /// </summary>
         public IEnumerable<Task<TResource>> Values => _caseSensitive.Values;
 
+        public int Count => _caseSensitive.Count;
+
         public void Clear()
         {
             _caseSensitive.Clear();

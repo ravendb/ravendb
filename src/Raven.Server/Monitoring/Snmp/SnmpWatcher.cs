@@ -3,14 +3,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Lextm.SharpSnmpLib;
 using Lextm.SharpSnmpLib.Messaging;
 using Lextm.SharpSnmpLib.Pipeline;
 using Lextm.SharpSnmpLib.Security;
 using Raven.Client;
+using Raven.Client.Util;
 using Raven.Server.Monitoring.Snmp.Objects.Documents;
 using Raven.Server.Monitoring.Snmp.Objects.Server;
+using Raven.Server.ServerWide.Commands.Monitoring.Snmp;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Collections.LockFree;
 using Sparrow.Json;
@@ -23,7 +26,7 @@ namespace Raven.Server.Monitoring.Snmp
     {
         private readonly ConcurrentDictionary<string, SnmpDatabase> _loadedDatabases = new ConcurrentDictionary<string, SnmpDatabase>(StringComparer.OrdinalIgnoreCase);
 
-        private readonly object _locker = new object();
+        private readonly SemaphoreSlim _locker = new SemaphoreSlim(1, 1);
 
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RavenServer>(nameof(SnmpWatcher));
 
@@ -51,7 +54,8 @@ namespace Raven.Server.Monitoring.Snmp
             _snmpEngine.Start();
 
             _server.ServerStore.DatabasesLandlord.OnDatabaseLoaded += AddDatabaseIfNecessary;
-            AddDatabases();
+
+            AsyncHelpers.RunSync(AddDatabases);
         }
 
         private void AddDatabaseIfNecessary(string databaseName)
@@ -59,20 +63,34 @@ namespace Raven.Server.Monitoring.Snmp
             if (string.IsNullOrWhiteSpace(databaseName))
                 return;
 
-            Task.Factory.StartNew(() =>
+            Task.Factory.StartNew(async () =>
             {
-                lock (_locker)
+                _locker.Wait();
+
+                try
                 {
                     using (_server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                    using (context.OpenReadTransaction())
                     {
+                        context.OpenReadTransaction();
+
                         var mapping = LoadMapping(context);
+                        if (mapping.ContainsKey(databaseName) == false)
+                        {
+                            var result = await _server.ServerStore.SendToLeaderAsync(new AddDatabasesToSnmpMappingCommand(new List<string> { databaseName }));
+                            await _server.ServerStore.Cluster.WaitForIndexNotification(result.Index);
 
-                        var index = GetOrAddDatabaseIndex(mapping, databaseName);
-                        PersistMappingIfNecessary(mapping);
+                            context.CloseTransaction();
+                            context.OpenReadTransaction();
 
-                        LoadDatabase(databaseName, index);
+                            mapping = LoadMapping(context);
+                        }
+
+                        LoadDatabase(databaseName, mapping[databaseName]);
                     }
+                }
+                finally
+                {
+                    _locker.Release();
                 }
             });
         }
@@ -142,13 +160,16 @@ namespace Raven.Server.Monitoring.Snmp
             return store;
         }
 
-        private void AddDatabases()
+        private async Task AddDatabases()
         {
-            lock (_locker)
+            await _locker.WaitAsync();
+
+            try
             {
                 using (_server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (context.OpenReadTransaction())
                 {
+                    context.OpenReadTransaction();
+
                     var databases = _server
                         .ServerStore
                         .Cluster
@@ -161,18 +182,37 @@ namespace Raven.Server.Monitoring.Snmp
 
                     var mapping = LoadMapping(context);
 
-                    var databaseIndexes = AssignIndexes(databases, mapping);
-                    PersistMappingIfNecessary(mapping);
+                    var missingDatabases = new List<string>();
+                    foreach (var database in databases)
+                    {
+                        if (mapping.ContainsKey(database) == false)
+                            missingDatabases.Add(database);
+                    }
 
-                    foreach (var kvp in databaseIndexes)
-                        LoadDatabase(kvp.DatabaseName, kvp.DatabaseIndex);
+                    if (missingDatabases.Count > 0)
+                    {
+                        var result = await _server.ServerStore.SendToLeaderAsync(new AddDatabasesToSnmpMappingCommand(missingDatabases));
+                        await _server.ServerStore.Cluster.WaitForIndexNotification(result.Index);
+
+                        context.CloseTransaction();
+                        context.OpenReadTransaction();
+
+                        mapping = LoadMapping(context);
+                    }
+
+                    foreach (var database in databases)
+                        LoadDatabase(database, mapping[database]);
                 }
+            }
+            finally
+            {
+                _locker.Release();
             }
         }
 
-        private void LoadDatabase(string databaseName, int databaseIndex)
+        private void LoadDatabase(string databaseName, long databaseIndex)
         {
-            _loadedDatabases.GetOrAdd(databaseName, _ => new SnmpDatabase(_server.ServerStore.DatabasesLandlord, _objectStore, databaseName, databaseIndex));
+            _loadedDatabases.GetOrAdd(databaseName, _ => new SnmpDatabase(_server.ServerStore.DatabasesLandlord, _objectStore, databaseName, (int)databaseIndex));
         }
 
         private List<(string DatabaseName, int DatabaseIndex)> AssignIndexes(IEnumerable<string> databases, BlittableJsonReaderObject mapping)
@@ -184,25 +224,23 @@ namespace Raven.Server.Monitoring.Snmp
             return results;
         }
 
-        private void PersistMappingIfNecessary(BlittableJsonReaderObject mapping)
+        private Dictionary<string, long> LoadMapping(TransactionOperationContext context)
         {
-            if (mapping.Modifications == null || mapping.Modifications.Properties.Count <= 0)
-                return;
+            var json = _server.ServerStore.Cluster.Read(context, Constants.Monitoring.Snmp.MappingKey);
 
-            using (_server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext writeContext))
-            using (var tx = writeContext.OpenWriteTransaction())
+            var result = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+            if (json == null)
+                return result;
+
+            var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+            foreach (var index in json.GetPropertiesByInsertionOrder())
             {
-                mapping = writeContext.ReadObject(mapping, Constants.Monitoring.Snmp.MappingKey);
-                _server.ServerStore.Cluster.PutLocalState(writeContext, Constants.Monitoring.Snmp.MappingKey, mapping);
+                json.GetPropertyByIndex(index, ref propertyDetails);
 
-                tx.Commit();
+                result[propertyDetails.Name] = (long)propertyDetails.Value;
             }
-        }
 
-        private BlittableJsonReaderObject LoadMapping(TransactionOperationContext context)
-        {
-            return _server.ServerStore.Cluster.GetLocalState(context, Constants.Monitoring.Snmp.MappingKey)
-                   ?? context.ReadObject(new DynamicJsonValue(), Constants.Monitoring.Snmp.MappingKey);
+            return result;
         }
 
         private int GetOrAddDatabaseIndex(BlittableJsonReaderObject mappingJson, string databaseName)

@@ -1,4 +1,3 @@
-using System.Linq;
 using Lextm.SharpSnmpLib;
 using Raven.Server.Documents;
 
@@ -21,7 +20,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Documents
 
         private static int GetCount(DatabasesLandlord landlord)
         {
-            return landlord.DatabasesCache.Values.Count();
+            return landlord.DatabasesCache.Count;
         }
     }
 }
