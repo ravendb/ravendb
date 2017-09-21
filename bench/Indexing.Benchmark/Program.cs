@@ -10,10 +10,6 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 
-#if v35
-using Raven.NewClient.Abstractions.Data;
-#endif
-
 namespace Indexing.Benchmark
 {
     public class Program : IDisposable
@@ -41,7 +37,7 @@ namespace Indexing.Benchmark
 
             _store = new DocumentStore
             {
-                Urls = new [] { url },
+                Urls = new[] { url },
                 Database = DbName
             }.Initialize();
 
