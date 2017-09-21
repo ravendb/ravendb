@@ -112,6 +112,8 @@ class visualizer extends viewModelBase {
         if (!documentId) {
             return;
         }
+        
+        documentId = documentId.toLocaleLowerCase();
 
         const expandedDocumentIds = visualizer.maybeExpandDocumentIds(documentId);
 
