@@ -21,6 +21,6 @@ namespace Raven.Server.Documents
             };
         }
 
-        public bool ShouldPersist => false;
+        public bool ShouldPersist => true;
     }
 }

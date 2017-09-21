@@ -1233,7 +1233,6 @@ namespace Raven.Server.Web.System
         public Task CompactDatabase()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            var operationId = GetLongQueryString("operationId");
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
@@ -1251,6 +1250,8 @@ namespace Raven.Server.Web.System
                 name,
                 token.Token);
 
+            var operationId = ServerStore.Operations.GetNextOperationId();
+            
             ServerStore.Operations.AddOperation(
                 null,
                 "Compacting database: " + name,

@@ -1,0 +1,92 @@
+<div class="modal-dialog" role="document">
+    <div class="modal-content" tabindex="-1">
+        <div class="modal-header">
+            <div class="flex-horizontal">
+                <div class="flex-grow">
+                    <h3 class="modal-title" id="myModalLabel" data-bind="text: op.title, attr:{ class: 'modal-title ' + op.headerClass() }"></h3>
+                </div>
+                <div class="flex-grow text-right">
+                    <span class="text-muted">Time elapsed:</span> <span data-bind="text: op.duration"></span>
+                </div>
+                <div>
+                    <button type="button" class="close" data-bind="click: $root.close" aria-hidden="true">
+                        <i class="icon-cancel"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="modal-body">
+            <div data-bind="with: progress">
+
+                <div class="modal-details">
+                    <div class="details-item">
+                        <div class="row">
+                            <div class="col-sm-6 text-right">
+                                Stage:
+                            </div>
+                            <div class="col-sm-6 details-value">
+                                <span data-bind="text: Message"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="details-item" data-bind="visible: TreeName">
+                        <div class="row">
+                            <div class="col-sm-6 text-right">
+                                Current Tree
+                            </div>
+                            <div class="col-sm-6 details-value">
+                                <span data-bind="text: TreeName"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="details-item">
+                        <div class="row">
+                            <div class="col-sm-6 text-right">
+                                Processed tree entries:
+                            </div>
+                            <div class="col-sm-6 details-value">
+                                <span data-bind="text: TreeProgress.toLocaleString()"></span> / <span data-bind="text: TreeTotal.toLocaleString()"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="progress">
+                    <div class="progress-bar" role="progressbar" data-bind="style: {'width': TreeProgress/TreeTotal*100 + '%'}">
+                    </div>
+                </div>
+                
+                <div class="modal-details">
+                    <div class="details-item">
+                        <div class="row">
+                            <div class="col-sm-6 text-right">
+                                Processed trees:
+                            </div>
+                            <div class="col-sm-6 details-value">
+                                <span data-bind="text: Processed.toLocaleString()"></span> / <span data-bind="text: Total.toLocaleString()"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="progress">
+                    <div class="progress-bar" role="progressbar" data-bind="style: {'width': Processed/Total*100 + '%'}">
+                    </div>
+                </div>
+            </div>
+            <div data-bind="with: result">
+                <h3 class="text-center" data-bind="text: Message"></h3>
+            </div>
+            <div data-bind="if: operationFailed">
+                <h3 class="text-danger">Operation failed</h3>
+                <pre class="margin-top error-messages"><code data-bind="foreach: errorMessages"><span data-bind="text: $data"></span>
+</code></pre>    
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-bind="click: $root.close">Close</button>
+            <button type="button" class="btn btn-danger" data-bind="click: killOperation, visible: killable">
+                <i class="icon-cancel"></i> <span>Abort</span>
+            </button>
+        </div>
+    </div>
+</div>

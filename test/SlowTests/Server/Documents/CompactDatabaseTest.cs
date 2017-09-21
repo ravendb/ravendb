@@ -43,15 +43,7 @@ namespace SlowTests.Server.Documents
                 var oldSize = StorageCompactionTestsSlow.GetDirSize(new DirectoryInfo(path));
 
                 var requestExecutor = store.GetRequestExecutor();
-                long compactOperationId;
-                using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-                {
-                    var getOperationIdCommand = new GetNextOperationIdCommand();
-                    await requestExecutor.ExecuteAsync(getOperationIdCommand, context);
-                    compactOperationId = getOperationIdCommand.Result;
-                }
-
-                var compactOperation = store.Operations.Send(new CompactDatabaseOperation(store.Database, compactOperationId));
+                var compactOperation = store.Operations.Send(new CompactDatabaseOperation(store.Database));
                 await compactOperation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
 
                 var newSize = StorageCompactionTestsSlow.GetDirSize(new DirectoryInfo(path));
@@ -93,15 +85,7 @@ namespace SlowTests.Server.Documents
                 var oldSize = StorageCompactionTestsSlow.GetDirSize(new DirectoryInfo(path));
 
                 var requestExecutor = store.GetRequestExecutor();
-                long compactOperationId;
-                using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-                {
-                    var getOperationIdCommand = new GetNextOperationIdCommand();
-                    await requestExecutor.ExecuteAsync(getOperationIdCommand, context);
-                    compactOperationId = getOperationIdCommand.Result;
-                }
-
-                var operation = await store.Operations.SendAsync(new CompactDatabaseOperation(store.Database, compactOperationId), isServerOperation: true);
+                var operation = await store.Operations.SendAsync(new CompactDatabaseOperation(store.Database), isServerOperation: true);
                 await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
 
                 var newSize = StorageCompactionTestsSlow.GetDirSize(new DirectoryInfo(path));

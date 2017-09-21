@@ -191,6 +191,11 @@
                                                 <i class="icon-play"></i> Enable indexing
                                             </a>
                                         </li>
+                                        <li>
+                                            <a href="#" data-bind="click: $root.compactDatabase">
+                                                <i class="icon-compact"></i> Compact database
+                                            </a>
+                                        </li>
                                     </ul>
                                 </div>
                                 <button class="btn btn-success" data-bind="click: _.partial($root.updateDatabaseInfo, name), enable: canNavigateToDatabase(), disable: isBeingDeleted" title="Refresh database statistics">

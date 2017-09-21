@@ -11,6 +11,8 @@ import toggleDisableIndexingCommand = require("commands/database/index/toggleDis
 import deleteDatabaseCommand = require("commands/resources/deleteDatabaseCommand");
 import loadDatabaseCommand = require("commands/resources/loadDatabaseCommand");
 import changesContext = require("common/changesContext");
+import compactDatabaseCommand = require("commands/resources/compactDatabaseCommand");
+import notificationCenter = require("common/notifications/notificationCenter");
 
 import databasesInfo = require("models/resources/info/databasesInfo");
 import getDatabasesCommand = require("commands/resources/getDatabasesCommand");
@@ -45,7 +47,9 @@ class databases extends viewModelBase {
     constructor() {
         super();
 
-        this.bindToCurrentInstance("newDatabase", "toggleDatabase", "togglePauseDatabaseIndexing", "toggleDisableDatabaseIndexing", "deleteDatabase", "activateDatabase", "updateDatabaseInfo");
+        this.bindToCurrentInstance("newDatabase", "toggleDatabase", "togglePauseDatabaseIndexing", 
+            "toggleDisableDatabaseIndexing", "deleteDatabase", "activateDatabase", "updateDatabaseInfo",
+            "compactDatabase");
 
         this.initObservables();
     }
@@ -378,6 +382,26 @@ class databases extends viewModelBase {
                             db.indexingPaused(false);
                         })
                         .always(() => db.inProgressAction(null));
+                }
+            });
+    }
+    
+    compactDatabase(db: databaseInfo) {
+        this.confirmationMessage("Are you sure?", "Do you want to compact '" + db.name + "'?", ["No", "Yes, compact"])
+            .done(result => {
+                if (result.can) {
+                    db.inProgressAction("Compacting...");
+
+                    new compactDatabaseCommand(db.name)
+                        .execute()
+                        .done(result => {
+
+                            notificationCenter.instance.monitorOperation(null, result.OperationId)
+                                .always(() => db.inProgressAction(null));
+                            
+                            notificationCenter.instance.openDetailsForOperationById(null, result.OperationId);
+                        })
+                        .fail(() => db.inProgressAction(null));
                 }
             });
     }

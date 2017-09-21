@@ -24,6 +24,7 @@ import patchDocumentsDetails = require("viewmodels/common/notificationCenter/det
 import indexCompactDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/indexCompactDetails");
 import bulkInsertDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/bulkInsertDetails");
 import deleteDocumentsDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/deleteDocumentsDetails");
+import compactDatabaseDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/compactDatabaseDetails");
 import indexingDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/indexingDetails");
 import pagingDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/pagingDetails");
 import newVersionAvailableDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/newVersionAvailableDetails");
@@ -106,6 +107,7 @@ class notificationCenter {
             deleteDocumentsDetails,
             bulkInsertDetails,
             indexCompactDetails,
+            compactDatabaseDetails,
 
             // performance hints:
             indexingDetails,

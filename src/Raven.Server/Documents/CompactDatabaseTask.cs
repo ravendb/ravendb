@@ -53,12 +53,11 @@ namespace Raven.Server.Documents
                             _token.ThrowIfCancellationRequested();
                             StorageCompaction.Execute(src, (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)dst, progressReport =>
                             {
-                                progress.ObjectType = progressReport.ObjectType.ToString();
-                                progress.GlobalProgress = progressReport.GlobalProgress;
-                                progress.GlobalTotal = progressReport.GlobalTotal;
-                                progress.ObjectName = progressReport.ObjectName;
-                                progress.ObjectProgress = progressReport.ObjectProgress;
-                                progress.ObjectTotal = progressReport.ObjectTotal;
+                                progress.Processed = progressReport.GlobalProgress;
+                                progress.Total = progressReport.GlobalTotal;
+                                progress.TreeProgress = progressReport.TreeProgress;
+                                progress.TreeTotal = progressReport.TreeTotal;
+                                progress.TreeName = progressReport.TreeName;
                                 progress.Message = progressReport.Message;
                                 onProgress?.Invoke(progress);
                             }, _token);
