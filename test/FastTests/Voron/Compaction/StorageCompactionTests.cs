@@ -253,19 +253,19 @@ namespace FastTests.Voron.Compaction
 
             StorageCompaction.Execute(StorageEnvironmentOptions.ForPath(DataDir), 
                 (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(Path.Combine(DataDir, "Compacted")),
-                x => progressReport.Add($"Copied {x.ObjectProgress} of {x.ObjectTotal} records in '{x.ObjectName}' tree. Copied {x.GlobalProgress} of {x.GlobalTotal} trees."));
+                x => progressReport.Add($"{x.Message} ({x.TreeName} - {x.TreeProgress}/{x.TreeTotal}). Copied {x.GlobalProgress} of {x.GlobalTotal} trees."));
 
             Assert.NotEmpty(progressReport);
             var lines = new[]
             {
-                "Copied 0 of 2 records in '$Database-Metadata' tree. Copied 0 of 4 trees.",
-                "Copied 2 of 2 records in '$Database-Metadata' tree. Copied 1 of 4 trees.",
-                "Copied 0 of 2 records in 'fruits' tree. Copied 1 of 4 trees.",
-                "Copied 2 of 2 records in 'fruits' tree. Copied 2 of 4 trees.",
-                "Copied 0 of 2 records in 'multi' tree. Copied 2 of 4 trees.",
-                "Copied 2 of 2 records in 'multi' tree. Copied 3 of 4 trees.",
-                "Copied 0 of 2 records in 'vegetables' tree. Copied 3 of 4 trees.",
-                "Copied 2 of 2 records in 'vegetables' tree. Copied 4 of 4 trees."
+                "Copying variable size tree ($Database-Metadata - 0/2). Copied 0 of 4 trees.",
+                "Copied variable size tree ($Database-Metadata - 2/2). Copied 1 of 4 trees.",
+                "Copying variable size tree (fruits - 0/2). Copied 1 of 4 trees.",
+                "Copied variable size tree (fruits - 2/2). Copied 2 of 4 trees.",
+                "Copying variable size tree (multi - 0/2). Copied 2 of 4 trees.",
+                "Copied variable size tree (multi - 2/2). Copied 3 of 4 trees.",
+                "Copying variable size tree (vegetables - 0/2). Copied 3 of 4 trees.",
+                "Copied variable size tree (vegetables - 2/2). Copied 4 of 4 trees."
             };
             foreach (var line in lines)
             {

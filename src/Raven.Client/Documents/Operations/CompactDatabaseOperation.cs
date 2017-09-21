@@ -9,34 +9,30 @@ namespace Raven.Client.Documents.Operations
 {
     public class CompactDatabaseOperation : IOperation<OperationIdResult>
     {
-        private readonly long _operationId;
         private readonly string _dbName;
 
-        public CompactDatabaseOperation(string dbName, long operationId)
+        public CompactDatabaseOperation(string dbName)
         {
-            _operationId = operationId;
             _dbName = dbName ?? throw new ArgumentNullException(nameof(dbName));
         }
 
         public RavenCommand<OperationIdResult> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new CompactDatabaseCommand(_dbName, _operationId);
+            return new CompactDatabaseCommand(_dbName);
         }
 
         private class CompactDatabaseCommand : RavenCommand<OperationIdResult>
         {
-            private readonly long _operationId;
             private readonly string _dbName;
 
-            public CompactDatabaseCommand(string dbName, long operationId)
+            public CompactDatabaseCommand(string dbName)
             {
-                _operationId = operationId;
                 _dbName = dbName ?? throw new ArgumentNullException(nameof(dbName));
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/compact?name={_dbName}&operationId={_operationId}";
+                url = $"{node.Url}/admin/compact?name={_dbName}";
 
                 var request = new HttpRequestMessage
                 {

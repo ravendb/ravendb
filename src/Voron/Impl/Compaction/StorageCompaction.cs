@@ -21,10 +21,9 @@ namespace Voron.Impl.Compaction
 {
     public class CompactionProgress
     {
-        public RootObjectType ObjectType;
-        public string ObjectName;
-        public long ObjectProgress;
-        public long ObjectTotal;
+        public string TreeName;
+        public long TreeProgress;
+        public long TreeTotal;
 
         public long GlobalProgress;
         public long GlobalTotal;
@@ -54,7 +53,6 @@ namespace Voron.Impl.Compaction
                 CopyTrees(existingEnv, compactedEnv, progressReport, token);
 
                 compactedEnv.FlushLogToDataFile();
-
                 bool synced;
 
                 const int maxNumberOfRetries = 100;
@@ -138,7 +136,9 @@ namespace Voron.Impl.Compaction
 
                 if (rootIterator.Seek(Slices.BeforeAllKeys) == false)
                     return;
-                var totalTreesCount = txr.LowLevelTransaction.RootObjects.State.NumberOfEntries;
+                
+                // substract skipped items  
+                var totalTreesCount = txr.LowLevelTransaction.RootObjects.State.NumberOfEntries - globalTableIndexesToSkipCopying.Count;
                 var copiedTrees = 0L;
                 do
                 {
@@ -168,7 +168,7 @@ namespace Voron.Impl.Compaction
                                 continue; // we don't copy the allocator storage
                             }
 
-                            copiedTrees = CopyFixedSizeTrees(compactedEnv, progressReport, txr, rootIterator, treeName, copiedTrees, totalTreesCount, objectType, context, token);
+                            copiedTrees = CopyFixedSizeTrees(compactedEnv, progressReport, txr, rootIterator, treeName, copiedTrees, totalTreesCount, context, token);
                             break;
                         case RootObjectType.Table:
                             copiedTrees = CopyTableTree(compactedEnv, progressReport, txr, treeName, copiedTrees, totalTreesCount, context, token);
@@ -182,7 +182,7 @@ namespace Voron.Impl.Compaction
         }
 
         private static long CopyFixedSizeTrees(StorageEnvironment compactedEnv, Action<CompactionProgress> progressReport, Transaction txr,
-            TreeIterator rootIterator, string treeName, long copiedTrees, long totalTreesCount, RootObjectType type, TransactionPersistentContext context, CancellationToken token)
+            TreeIterator rootIterator, string treeName, long copiedTrees, long totalTreesCount, TransactionPersistentContext context, CancellationToken token)
         {
 
             var treeNameSlice = rootIterator.CurrentKey.Clone(txr.Allocator);
@@ -191,7 +191,7 @@ namespace Voron.Impl.Compaction
 
             var fst = txr.FixedTreeFor(treeNameSlice, header->ValueSize);
 
-            Report(type, treeName, copiedTrees, totalTreesCount, 0, fst.NumberOfEntries, progressReport, "Copying fixed size trees");
+            Report(copiedTrees, totalTreesCount, 0, fst.NumberOfEntries, progressReport, "Copying fixed size tree", treeName);
 
             using (var it = fst.Iterate())
             {
@@ -222,7 +222,7 @@ namespace Voron.Impl.Compaction
                     if (fst.NumberOfEntries == copiedEntries)
                         copiedTrees++;
 
-                    Report(type, treeName, copiedTrees, totalTreesCount, copiedEntries, fst.NumberOfEntries, progressReport);
+                    Report(copiedTrees, totalTreesCount, copiedEntries, fst.NumberOfEntries, progressReport, "Copied fixed size tree", treeName);
                     compactedEnv.FlushLogToDataFile();
                 } while (it.MoveNext());
             }
@@ -233,7 +233,7 @@ namespace Voron.Impl.Compaction
         {
             var existingTree = txr.ReadTree(treeName);
 
-            Report(RootObjectType.VariableSizeTree, treeName, copiedTrees, totalTreesCount, 0, existingTree.State.NumberOfEntries, progressReport, "Copying variable size trees");
+            Report(copiedTrees, totalTreesCount, 0, existingTree.State.NumberOfEntries, progressReport, "Copying variable size tree", treeName);
 
             using (var existingTreeIterator = existingTree.Iterate(true))
             {
@@ -329,7 +329,7 @@ namespace Voron.Impl.Compaction
                     if (copiedEntries == existingTree.State.NumberOfEntries)
                         copiedTrees++;
 
-                    Report(RootObjectType.VariableSizeTree, treeName, copiedTrees, totalTreesCount, copiedEntries, existingTree.State.NumberOfEntries, progressReport);
+                    Report(copiedTrees, totalTreesCount, copiedEntries, existingTree.State.NumberOfEntries, progressReport, "Copied variable size tree", treeName);
 
                     compactedEnv.FlushLogToDataFile();
                 } while (existingTreeIterator.MoveNext());
@@ -361,7 +361,7 @@ namespace Voron.Impl.Compaction
             var lastSlice = Slices.BeforeAllKeys;
             long lastFixedIndex = 0L;
 
-            Report(RootObjectType.Table, treeName, copiedTrees, totalTreesCount, copiedEntries, inputTable.NumberOfEntries, progressReport, "Copying table trees");
+            Report(copiedTrees, totalTreesCount, copiedEntries, inputTable.NumberOfEntries, progressReport, "Copying table tree", treeName);
             using (var txw = compactedEnv.WriteTransaction(context))
             {
                 schema.Create(txw, treeName, Math.Max((ushort)inputTable.ActiveDataSmallSection.NumberOfPages, ushort.MaxValue));
@@ -458,7 +458,7 @@ namespace Voron.Impl.Compaction
                 if (copiedEntries == inputTable.NumberOfEntries)
                     copiedTrees++;
 
-                Report(RootObjectType.Table, treeName, copiedTrees, totalTreesCount, copiedEntries, inputTable.NumberOfEntries, progressReport);
+                Report(copiedTrees, totalTreesCount, copiedEntries, inputTable.NumberOfEntries, progressReport, "Copied table tree:", treeName);
 
                 compactedEnv.FlushLogToDataFile();
             }
@@ -466,19 +466,18 @@ namespace Voron.Impl.Compaction
             return copiedTrees;
         }
 
-        private static void Report(RootObjectType objectType, string objectName, long globalProgress, long globalTotal, long objectProgress, long objectTotal, Action<CompactionProgress> progressReport, string message = null)
+        private static void Report(long globalProgress, long globalTotal, long objectProgress, long objectTotal, Action<CompactionProgress> progressReport, string message = null, string treeName = null)
         {
             if (progressReport == null)
                 return;
 
             progressReport(new CompactionProgress
             {
-                ObjectType = objectType,
-                ObjectName = objectName,
-                ObjectProgress = objectProgress,
-                ObjectTotal = objectTotal,
+                TreeProgress = objectProgress,
+                TreeTotal = objectTotal,
                 GlobalProgress = globalProgress,
                 GlobalTotal = globalTotal,
+                TreeName = treeName,
                 Message = message
             });
         }

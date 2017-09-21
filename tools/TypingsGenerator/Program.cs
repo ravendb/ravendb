@@ -22,6 +22,7 @@ using Raven.Client.ServerWide.Operations.ConnectionStrings;
 using Raven.Client.ServerWide.PeriodicBackup;
 using Raven.Client.ServerWide.Revisions;
 using Raven.Server.Commercial;
+using Raven.Server.Documents;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.Handlers;
@@ -220,6 +221,10 @@ namespace TypingsGenerator
             // conflicts
             scripter.AddType(typeof(GetConflictsResult));
             scripter.AddType(typeof(ConflictResolverAdvisor.MergeResult));
+            
+            // database compact
+            scripter.AddType(typeof(DatabaseCompactionResult));
+            scripter.AddType(typeof(DatabaseCompactionProgress));
 
             // ongoing tasks - common
             scripter.AddType(typeof(OngoingTasksResult));
