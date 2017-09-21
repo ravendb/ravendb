@@ -6,7 +6,7 @@ import viewHelpers = require("common/helpers/view/viewHelpers");
 abstract class abstractOperationDetails extends dialogViewModelBase {
 
     protected readonly op: operation;
-    protected readonly killFunction: () => void;
+    protected readonly killFunction: () => JQueryPromise<confirmDialogResult>;
     protected readonly openDetails: () => void;
 
     operationFailed: KnockoutComputed<boolean>;
@@ -15,7 +15,7 @@ abstract class abstractOperationDetails extends dialogViewModelBase {
 
     spinners = {
         kill: ko.observable<boolean>(false)
-    }
+    };
 
     constructor(op: operation, notificationCenter: notificationCenter) {
         super();
@@ -45,12 +45,12 @@ abstract class abstractOperationDetails extends dialogViewModelBase {
 
     killOperation() {
         this.close();
-        viewHelpers.confirmationMessage("Are you sure?", "Do you want to abort current operation?", ["No", "Yes"], true)
-            .done((result: confirmDialogResult) => {
+        
+        // kill function handles confirmation 
+        this.killFunction()
+            .done(result => {
                 if (result.can) {
                     this.spinners.kill(true);
-                    this.killFunction();
-                    // note we don't set kill back to false - we close details view when operation is cancelled
                 } else {
                     this.openDetails();
                 }

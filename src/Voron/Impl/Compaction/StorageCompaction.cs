@@ -458,7 +458,7 @@ namespace Voron.Impl.Compaction
                 if (copiedEntries == inputTable.NumberOfEntries)
                     copiedTrees++;
 
-                Report(copiedTrees, totalTreesCount, copiedEntries, inputTable.NumberOfEntries, progressReport, "Copied table tree:", treeName);
+                Report(copiedTrees, totalTreesCount, copiedEntries, inputTable.NumberOfEntries, progressReport, "Copied table tree", treeName);
 
                 compactedEnv.FlushLogToDataFile();
             }
