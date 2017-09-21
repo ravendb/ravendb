@@ -86,7 +86,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         protected LuceneDocumentConverterBase(ICollection<IndexField> fields, bool reduceOutput = false)
         {
-            var dictionary = new Dictionary<string, IndexField>(fields.Count, default(OrdinalIgnoreCaseStringStructComparer));
+            var dictionary = new Dictionary<string, IndexField>(fields.Count, default(OrdinalStringStructComparer));
             foreach (var field in fields)
                 dictionary[field.Name] = field;
             _fields = dictionary;
