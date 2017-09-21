@@ -161,7 +161,7 @@ namespace Raven.Server.Documents.Queries
             if (selectFields == null || selectFields.Length == 0)
                 return null;
 
-            var result = new Dictionary<string, FieldToFetch>();
+            var result = new Dictionary<string, FieldToFetch>(StringComparer.Ordinal);
             singleFieldNoAlias = selectFields.Length == 1 &&
                                  selectFields[0].Alias == null &&
                                  selectFields[0].Function != null;
