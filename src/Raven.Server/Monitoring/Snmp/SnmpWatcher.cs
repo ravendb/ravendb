@@ -76,10 +76,11 @@ namespace Raven.Server.Monitoring.Snmp
                         var mapping = LoadMapping(context);
                         if (mapping.ContainsKey(databaseName) == false)
                         {
+                            context.CloseTransaction();
+
                             var result = await _server.ServerStore.SendToLeaderAsync(new AddDatabasesToSnmpMappingCommand(new List<string> { databaseName }));
                             await _server.ServerStore.Cluster.WaitForIndexNotification(result.Index);
 
-                            context.CloseTransaction();
                             context.OpenReadTransaction();
 
                             mapping = LoadMapping(context);
@@ -191,10 +192,11 @@ namespace Raven.Server.Monitoring.Snmp
 
                     if (missingDatabases.Count > 0)
                     {
+                        context.CloseTransaction();
+
                         var result = await _server.ServerStore.SendToLeaderAsync(new AddDatabasesToSnmpMappingCommand(missingDatabases));
                         await _server.ServerStore.Cluster.WaitForIndexNotification(result.Index);
-
-                        context.CloseTransaction();
+                       
                         context.OpenReadTransaction();
 
                         mapping = LoadMapping(context);
