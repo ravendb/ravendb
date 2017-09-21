@@ -5,16 +5,23 @@
             <div class="flex-header flex-horizontal">
                 <button data-bind="click: addNode, enable: canAddNodes" class="btn btn-primary"><i class="icon-plus"></i> <span>Add Node to cluster</span></button>
                 <div class="flex-separator"></div>
-                <div class="flex-end text-muted" data-bind="if: utilizedCores() > 0">
-                    <small>Available resources: <strong data-bind="text: utilizedCores, css: cssCores" data-toggle="tooltip" title="Total Assigned CPU cores"></strong>
-                        / <strong data-bind="text: maxCores" data-toggle="tooltip" title="Total licensed cores"></strong>
-                        <span data-bind="if: totalServersCores() > maxCores()">
-                            / <strong data-bind="text: totalServersCores" data-toggle="tooltip" title="Total cores in the cluster"></strong>
-                        </span> Cores
-                    </small>
+                <div class="flex-end text-muted resources" data-bind="if: utilizedCores() > 0">
+                    <div class="text-center"><small>Available cores:</small></div>
+                    <div class="text-center">
+                        <small>
+                            Assigned: <strong data-bind="text: utilizedCores, css: cssCores" data-toggle="tooltip" title="Total assigned CPU cores"></strong>
+                            / Licensed: <strong data-bind="text: maxCores" data-toggle="tooltip" title="Total licensed cores"></strong>
+                            <span data-bind="if: totalServersCores() > maxCores()">
+                                / Cluster <strong data-bind="text: totalServersCores" data-toggle="tooltip" title="Total cores in the cluster"></strong>
+                            </span> 
+                        </small>
+                    </div>
                 </div>
-                <div class="flex-end text-muted">
-                    <small>Term: <span data-bind="text: topology().currentTerm"></span></small>
+                <div class="flex-end text-muted resources">
+                    <div class="text-center"><small>Term:</small></div>
+                    <div class="text-center">
+                        <small><strong data-bind="text: topology().currentTerm"></strong></small>
+                    </div>
                 </div>
             </div>
 
