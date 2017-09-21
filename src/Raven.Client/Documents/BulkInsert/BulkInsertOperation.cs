@@ -96,14 +96,12 @@ namespace Raven.Client.Documents.BulkInsert
             public override bool IsReadRequest => false;
             private readonly StreamExposerContent _stream;
             private readonly long _id;
-            private readonly bool _useGzipCompression;
 
-            public BulkInsertCommand(long id, StreamExposerContent stream, bool useGzipCompression)
+            public BulkInsertCommand(long id, StreamExposerContent stream)
             {
                 _stream = stream;
                 _id = id;
                 Timeout = TimeSpan.FromHours(12); // global max timeout
-                _useGzipCompression = useGzipCompression;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
@@ -114,9 +112,6 @@ namespace Raven.Client.Documents.BulkInsert
                     Method = HttpMethod.Post,
                     Content = _stream
                 };
-
-                if (_useGzipCompression)
-                    message.Headers.Add(Constants.Headers.ContentEncoding, new[] { "gzip" });
 
                 return message;
             }
@@ -280,10 +275,12 @@ namespace Raven.Client.Documents.BulkInsert
 
         private async Task EnsureStream()
         {
+            if (UseGzipCompressionLevel != CompressionLevel.NoCompression)
+                _streamExposerContent.Headers.ContentEncoding.Add("gzip");
+
             var bulkCommand = new BulkInsertCommand(
                 _operationId,
-                _streamExposerContent,
-                UseGzipCompressionLevel != CompressionLevel.NoCompression);
+                _streamExposerContent);
             _bulkInsertExecuteTask = _requestExecutor.ExecuteAsync(bulkCommand, _context, _token);
 
             _stream = await _streamExposerContent.OutputStream.ConfigureAwait(false);
