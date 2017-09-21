@@ -282,9 +282,7 @@ namespace Sparrow.Json
         private static Dictionary<TK, TV> ToDictionary<TK, TV>(BlittableJsonReaderObject json, string name, Func<BlittableJsonReaderObject, TV> converter)
         {
             var isStringKey = typeof(TK) == typeof(string);
-            var dictionary = isStringKey ?
-                new Dictionary<TK, TV>((IEqualityComparer<TK>)StringComparer.OrdinalIgnoreCase) :
-                new Dictionary<TK, TV>();
+            var dictionary = new Dictionary<TK, TV>();
 
             BlittableJsonReaderObject obj;
             if (json.TryGet(name, out obj) == false || obj == null)
