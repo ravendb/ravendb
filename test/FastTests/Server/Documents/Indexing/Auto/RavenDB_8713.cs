@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using System.Threading;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Config;
 using Xunit;
@@ -127,6 +128,35 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     Assert.Equal(2, results[1].Count);
                     Assert.Equal("joe", results[1].Name);
                     Assert.Equal("doe", results[1].name);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanQueryOnCaseSensitiveFields_UsingSearch()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Item
+                    {
+                        Name = "joe",
+                        name = "doe"
+                    });
+
+                    session.Store(new Item
+                    {
+                        Name = "ja",
+                        name = "da"
+                    });
+
+                    session.SaveChanges();
+
+                    var count = session.Advanced.DocumentQuery<Item>().WhereEquals(x => x.Name, "joe").OrElse().Search(x => x.name, "d*").Statistics(out var stats).Count();
+
+                    Assert.Equal(2, count);
+                    Assert.Equal("Auto/Items/ByNameAndSearch(name)", stats.IndexName);
                 }
             }
         }

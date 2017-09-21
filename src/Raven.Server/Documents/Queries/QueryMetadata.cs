@@ -72,9 +72,9 @@ namespace Raven.Server.Documents.Queries
 
         public readonly string QueryText;
 
-        public readonly HashSet<string> IndexFieldNames = new HashSet<string>();
+        public readonly HashSet<string> IndexFieldNames = new HashSet<string>(StringComparer.Ordinal);
 
-        public readonly Dictionary<string, WhereField> WhereFields = new Dictionary<string, WhereField>(StringComparer.OrdinalIgnoreCase);
+        public readonly Dictionary<string, WhereField> WhereFields = new Dictionary<string, WhereField>(StringComparer.Ordinal);
 
         public string[] GroupBy;
 

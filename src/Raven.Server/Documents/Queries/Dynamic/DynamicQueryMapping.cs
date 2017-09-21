@@ -133,7 +133,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 ForCollection = query.Metadata.CollectionName
             };
 
-            var mapFields = new Dictionary<string, DynamicQueryMappingItem>();
+            var mapFields = new Dictionary<string, DynamicQueryMappingItem>(StringComparer.Ordinal);
 
             foreach (var field in query.Metadata.IndexFieldNames)
             {
@@ -220,7 +220,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 }
             }
 
-            var result = new Dictionary<string, DynamicQueryMappingItem>(groupByFields.Length);
+            var result = new Dictionary<string, DynamicQueryMappingItem>(groupByFields.Length, StringComparer.Ordinal);
 
             for (int i = 0; i < groupByFields.Length; i++)
             {
