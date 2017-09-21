@@ -26,7 +26,7 @@ namespace Raven.Server.Monitoring.Snmp
 
         private readonly int _databaseIndex;
 
-        private readonly SemaphoreSlim _lockers = new SemaphoreSlim(1, 1);
+        private readonly SemaphoreSlim _locker = new SemaphoreSlim(1, 1);
 
         private bool _attached;
 
@@ -97,7 +97,7 @@ namespace Raven.Server.Monitoring.Snmp
 
             Task.Factory.StartNew(async () =>
             {
-                await _lockers.WaitAsync();
+                await _locker.WaitAsync();
 
                 try
                 {
@@ -114,7 +114,7 @@ namespace Raven.Server.Monitoring.Snmp
                 }
                 finally
                 {
-                    _lockers.Release();
+                    _locker.Release();
                 }
             });
         }
@@ -124,10 +124,46 @@ namespace Raven.Server.Monitoring.Snmp
             if (change.Type != IndexChangeTypes.IndexAdded)
                 return;
 
-            //Task.Factory.StartNew(async () =>
-            //{
-            //    _loadedIndexes.GetOrAdd(change.Name, AddIndex);
-            //});
+            Task.Factory.StartNew(async () =>
+            {
+                await _locker.WaitAsync();
+
+                try
+                {
+                    if (_loadedIndexes.ContainsKey(change.Name))
+                        return;
+
+                    var database = await _databaseLandlord.TryGetOrCreateResourceStore(_databaseName);
+
+                    using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    {
+                        context.OpenReadTransaction();
+
+                        var mapping = GetMapping(context, database);
+                        if (mapping.ContainsKey(change.Name) == false)
+                        {
+                            context.CloseTransaction();
+
+                            var result = await database.ServerStore.SendToLeaderAsync(new UpdateSnmpDatabaseIndexesMappingCommand(_databaseName, new List<string>
+                            {
+                                change.Name
+                            }));
+
+                            await database.ServerStore.Cluster.WaitForIndexNotification(result.Index);
+
+                            context.OpenReadTransaction();
+
+                            mapping = GetMapping(context, database);
+                        }
+
+                        LoadIndex(change.Name, (int)mapping[change.Name]);
+                    }
+                }
+                finally
+                {
+                    _locker.Release();
+                }
+            });
         }
 
         private async Task AddIndexesFromDatabase(DocumentDatabase database)

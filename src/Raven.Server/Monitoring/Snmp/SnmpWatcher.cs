@@ -67,6 +67,9 @@ namespace Raven.Server.Monitoring.Snmp
 
                 try
                 {
+                    if (_loadedDatabases.ContainsKey(databaseName))
+                        return;
+
                     using (_server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     {
                         context.OpenReadTransaction();

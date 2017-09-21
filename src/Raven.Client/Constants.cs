@@ -250,7 +250,7 @@ namespace Raven.Client
                 {
                 }
 
-                public const string DatabasesMappingKey = "monitoring/snmp/database/mapping";
+                public const string DatabasesMappingKey = "monitoring/snmp/databases/mapping";
             }
         }
 
