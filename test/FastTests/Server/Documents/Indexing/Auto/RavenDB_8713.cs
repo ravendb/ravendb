@@ -83,6 +83,54 @@ namespace FastTests.Server.Documents.Indexing.Auto
             }
         }
 
+        [Fact]
+        public void CanQueryOnCaseSensitiveGroupByFields()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Item
+                    {
+                        Name = "joe",
+                        name = "doe"
+                    });
+
+                    session.Store(new Item
+                    {
+                        Name = "joe",
+                        name = "doe"
+                    });
+
+
+                    session.Store(new Item
+                    {
+                        Name = "ja",
+                        name = "da"
+                    });
+
+                    session.SaveChanges();
+
+                    var results = session.Query<Item>().Statistics(out var stats).GroupBy(x => new {x.name, x.Name}).Select(g => new
+                    {
+                        g.Key.name,
+                        g.Key.Name,
+                        Count = g.Count()
+                    }).OrderBy(x => x.Count).ToList();
+
+                    Assert.Equal(2, results.Count);
+
+                    Assert.Equal(1, results[0].Count);
+                    Assert.Equal("ja", results[0].Name);
+                    Assert.Equal("da", results[0].name);
+
+                    Assert.Equal(2, results[1].Count);
+                    Assert.Equal("joe", results[1].Name);
+                    Assert.Equal("doe", results[1].name);
+                }
+            }
+        }
+
         private class Item
         {
             public string Name { get; set; }
