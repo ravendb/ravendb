@@ -326,8 +326,8 @@ class notificationCenter {
         this.databaseNotifications.remove(notification);
     }
 
-    killOperation(operationToKill: operation): void {
-        viewHelpers.confirmationMessage("Are you sure?", "Do you want to abort current operation?", ["No", "Yes"], true)
+    killOperation(operationToKill: operation) {
+        return viewHelpers.confirmationMessage("Are you sure?", "Do you want to abort current operation?", ["No", "Yes"], true)
             .done((result: confirmDialogResult) => {
                 if (result.can) {
                     const notificationId = operationToKill.id;
