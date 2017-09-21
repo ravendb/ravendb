@@ -205,27 +205,37 @@ namespace Sparrow.Json
             var strBuffer = str.Buffer;
             var size = str.Size;
 
-            EnsureBuffer(size + 2);
-            _buffer[_pos++] = Quote;
             var escapeSequencePos = size;
             var numberOfEscapeSequences = BlittableJsonReaderBase.ReadVariableSizeInt(str.Buffer, ref escapeSequencePos);
-            if (numberOfEscapeSequences == 0)
-            {
-                WriteRawString(strBuffer, size);
-                _buffer[_pos++] = Quote;
 
+            // We ensure our buffer will have enough space to deal with the whole string.
+            int bufferSize = 2 * numberOfEscapeSequences + size + 1;
+            if (bufferSize >= JsonOperationContext.ManagedPinnedBuffer.Size)
+            {
+                UnlikelyWriteLargeString(strBuffer, size, numberOfEscapeSequences, escapeSequencePos); // OK, do it the slow way. 
                 return;
             }
 
-            UnlikelyWriteEscapeSequences(strBuffer, size, numberOfEscapeSequences, escapeSequencePos);
+            EnsureBuffer(size + 2);
+            _buffer[_pos++] = Quote;
+
+            if (numberOfEscapeSequences == 0)
+            {
+                // PERF: Fast Path. 
+                WriteRawString(strBuffer, size);
+            }
+            else
+            {
+                UnlikelyWriteEscapeSequences(strBuffer, size, numberOfEscapeSequences, escapeSequencePos);
+            }
+
+            _buffer[_pos++] = Quote;
         }
 
         private void UnlikelyWriteEscapeSequences(byte* strBuffer, int size, int numberOfEscapeSequences, int escapeSequencePos)
         {
             // We ensure our buffer will have enough space to deal with the whole string.
             int bufferSize = 2 * numberOfEscapeSequences + size + 1;
-            if (bufferSize >= JsonOperationContext.ManagedPinnedBuffer.Size)
-                goto WriteLargeEscapedString; // OK, do it the slow way. 
 
             EnsureBuffer(bufferSize);
 
@@ -248,18 +258,14 @@ namespace Sparrow.Json
 
             // write remaining (or full string) to the buffer in one shot
             WriteRawString(strBuffer, size);
-
-            buffer[_pos++] = Quote;
-
-            return;
-
-            WriteLargeEscapedString:
-            VeryUnlikelyWriteEscapeSequences(strBuffer, size, numberOfEscapeSequences, escapeSequencePos);
         }
 
-        private void VeryUnlikelyWriteEscapeSequences(byte* strBuffer, int size, int numberOfEscapeSequences, int escapeSequencePos)
+        private void UnlikelyWriteLargeString(byte* strBuffer, int size, int numberOfEscapeSequences, int escapeSequencePos)
         {
             var ptr = strBuffer;
+
+            EnsureBuffer(1);
+            _buffer[_pos++] = Quote;
 
             while (numberOfEscapeSequences > 0)
             {
@@ -267,7 +273,7 @@ namespace Sparrow.Json
                 var bytesToSkip = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, ref escapeSequencePos);
 
                 EnsureBuffer(bytesToSkip);
-                WriteRawString(strBuffer, bytesToSkip);
+                UnlikelyWriteLargeRawString(strBuffer, bytesToSkip);
                 strBuffer += bytesToSkip;
                 size -= bytesToSkip + 1 /*for the escaped char we skip*/;
                 var b = *(strBuffer++);
@@ -278,8 +284,7 @@ namespace Sparrow.Json
             }
 
             // write remaining (or full string) to the buffer in one shot
-            EnsureBuffer(size);
-            WriteRawString(strBuffer, size);
+            UnlikelyWriteLargeRawString(strBuffer, size);
 
             EnsureBuffer(1);
             _buffer[_pos++] = Quote;
@@ -390,7 +395,7 @@ namespace Sparrow.Json
         {
             // PERF: We are no longer ensuring the buffer has enough size anymore. Caller must ensure it is so.
             if (size < JsonOperationContext.ManagedPinnedBuffer.Size)
-            {          
+            {
                 Memory.Copy(_buffer + _pos, buffer, size);
                 _pos += size;
                 return;
