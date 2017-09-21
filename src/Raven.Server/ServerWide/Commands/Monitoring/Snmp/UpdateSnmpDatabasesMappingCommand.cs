@@ -5,14 +5,14 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Monitoring.Snmp
 {
-    public class AddDatabasesToSnmpMappingCommand : UpdateValueCommand<List<string>>
+    public class UpdateSnmpDatabasesMappingCommand : UpdateValueCommand<List<string>>
     {
-        public AddDatabasesToSnmpMappingCommand()
+        public UpdateSnmpDatabasesMappingCommand()
         {
-            Name = Constants.Monitoring.Snmp.MappingKey;
+            Name = Constants.Monitoring.Snmp.DatabasesMappingKey;
         }
 
-        public AddDatabasesToSnmpMappingCommand(List<string> databases)
+        public UpdateSnmpDatabasesMappingCommand(List<string> databases)
             : this()
         {
             Value = databases;
@@ -26,7 +26,7 @@ namespace Raven.Server.ServerWide.Commands.Monitoring.Snmp
             return new DynamicJsonArray(Value);
         }
 
-        public override BlittableJsonReaderObject OnUpdate(JsonOperationContext context, BlittableJsonReaderObject previousValue)
+        public override BlittableJsonReaderObject GetUpdatedValue(JsonOperationContext context, BlittableJsonReaderObject previousValue)
         {
             if (previousValue != null)
             {
@@ -42,8 +42,8 @@ namespace Raven.Server.ServerWide.Commands.Monitoring.Snmp
             }
 
             var djv = new DynamicJsonValue();
-            if (Value != null)
-                AddDatabasesIfNecessary(djv, null, Value);
+
+            AddDatabasesIfNecessary(djv, null, Value);
 
             return context.ReadObject(djv, Name);
         }
@@ -53,10 +53,11 @@ namespace Raven.Server.ServerWide.Commands.Monitoring.Snmp
             if (databases == null)
                 return;
 
+            var propertiesCount = previousValue?.Count ?? 0;
             foreach (var database in databases)
             {
                 if (previousValue == null || previousValue.TryGet(database, out long _) == false)
-                    djv[database] = djv.Properties.Count + 1;
+                    djv[database] = propertiesCount + djv.Properties.Count + 1;
             }
         }
     }

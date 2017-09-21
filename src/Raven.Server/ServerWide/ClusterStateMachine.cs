@@ -185,12 +185,13 @@ namespace Raven.Server.ServerWide
                     case nameof(UpdateEtlProcessStateCommand):
                     case nameof(ToggleSubscriptionStateCommand):
                     case nameof(UpdateSubscriptionClientConnectionTime):
+                    case nameof(UpdateSnmpDatabaseIndexesMappingCommand):
                         SetValueForTypedDatabaseCommand(context, type, cmd, index, leader, out _);
                         break;
                     case nameof(CompareExchangeCommand):
                         CompareExchange(context, type, cmd, index);
                         break;
-                    case nameof(AddDatabasesToSnmpMappingCommand):
+                    case nameof(UpdateSnmpDatabasesMappingCommand):
                         UpdateValue<List<string>>(context, type, cmd, index, leader);
                         break;
                     case nameof(PutLicenseCommand):
@@ -521,7 +522,7 @@ namespace Raven.Server.ServerWide
                         previousValue = new BlittableJsonReaderObject(ptr, size, context);
                     }
 
-                    var newValue = command.OnUpdate(context, previousValue);
+                    var newValue = command.GetUpdatedValue(context, previousValue);
                     if (newValue == null)
                         return;
 

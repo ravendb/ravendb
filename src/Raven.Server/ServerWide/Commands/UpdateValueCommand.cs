@@ -20,6 +20,6 @@ namespace Raven.Server.ServerWide.Commands
 
         public abstract object ValueToJson();
 
-        public abstract BlittableJsonReaderObject OnUpdate(JsonOperationContext context, BlittableJsonReaderObject previousValue);
+        public abstract BlittableJsonReaderObject GetUpdatedValue(JsonOperationContext context, BlittableJsonReaderObject previousValue);
     }
 }
