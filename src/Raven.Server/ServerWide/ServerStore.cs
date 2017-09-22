@@ -1377,6 +1377,8 @@ namespace Raven.Server.ServerWide
 
             public override void OnResponseFailure(HttpResponseMessage response)
             {
+                if (response.Headers.Contains("Reached-Leader") == false)
+                    return;
                 _reachedLeader = response.Headers.GetValues("Reached-Leader").Contains("true");
             }
 
