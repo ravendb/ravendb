@@ -1,0 +1,19 @@
+﻿.log-list {
+    .item {
+        &:not(.bg-danger) {
+            background-color: @gray-darker;
+        }
+        border: none;
+        white-space: pre-wrap;
+        font-size: 13px;
+        line-height: 17px;
+
+        &:nth-of-type(even) {
+            background-color: lighten(@gray-darker,5%);
+        }
+
+        + .item {
+            //margin-top: @grid-gutter-width/4;
+        }
+    }
+}
