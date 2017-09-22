@@ -257,7 +257,7 @@ class editRavenEtlTask extends viewModelBase {
             const key = collectionText();
 
             const options = this.collections()
-                .filter(x => !x.isAllDocuments && !x.isSystemDocuments && !x.name.startsWith("@"))
+                .filter(x => !x.isAllDocuments && !x.name.startsWith("@"))
                 .map(x => x.name);
 
             const usedOptions = usedCollections().filter(k => k !== key);

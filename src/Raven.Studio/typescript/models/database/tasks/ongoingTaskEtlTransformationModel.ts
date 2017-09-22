@@ -17,7 +17,7 @@ class ongoingTaskEtlTransformationModel {
         this.name(dto.Name);
         this.script(dto.Script);
         this.transformScriptCollections(dto.ApplyToAllDocuments ? collectionsTracker.default.collections()
-                                                 .filter(x => !x.isAllDocuments && !x.isSystemDocuments && !x.name.startsWith("@"))
+                                                 .filter(x => !x.isAllDocuments && !x.name.startsWith("@"))
                                                  .map(x => x.name) : dto.Collections);
         this.applyScriptForAllCollections(dto.ApplyToAllDocuments);
         this.isNew(isNew);
@@ -47,7 +47,7 @@ class ongoingTaskEtlTransformationModel {
             if (x) {
                 // Add all collections to the 'used' collections...
                 this.transformScriptCollections(collectionsTracker.default.collections()
-                    .filter(x => !x.isAllDocuments && !x.isSystemDocuments && !x.name.startsWith("@"))
+                    .filter(x => !x.isAllDocuments && !x.name.startsWith("@"))
                     .map(x => x.name));
             }
         });
