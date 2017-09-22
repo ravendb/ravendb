@@ -98,13 +98,16 @@ namespace Raven.Client.ServerWide.Operations
 
         public string DestinationDatabase { get; set; }
 
-        public RavenEtlConfiguration Configuration { get; set; }
+        public string ConnectionStringName { get; set; }
+
+        public RavenEtlConfiguration Configuration { get; set; } 
 
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
             json[nameof(DestinationUrl)] = DestinationUrl;
             json[nameof(DestinationDatabase)] = DestinationDatabase;
+            json[nameof(ConnectionStringName)] = ConnectionStringName;
             json[nameof(Configuration)] = Configuration?.ToJson();
 
             return json;

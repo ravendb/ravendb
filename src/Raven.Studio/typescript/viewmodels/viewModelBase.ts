@@ -1,12 +1,9 @@
 /// <reference path="../../typings/tsd.d.ts"/>
-
 import appUrl = require("common/appUrl");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import router = require("plugins/router");
 import changeSubscription = require("common/changeSubscription");
 import changesContext = require("common/changesContext");
-import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
-import document = require("models/database/documents/document");
 import downloader = require("common/downloader");
 import databasesManager = require("common/shell/databasesManager");
 import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
@@ -92,26 +89,29 @@ class viewModelBase {
     compositionComplete() {        
         this.dirtyFlag().reset(); //Resync Changes
     }
-
+   
     canDeactivate(isClose: boolean): any {
-        const isDirty = this.dirtyFlag().isDirty();
-        if (isDirty) {
-            const discard = "Discard changes";
-            const stay = "Stay on this page";
-            const discardStayResult = $.Deferred();
-            const confirmation = this.confirmationMessage("Unsaved changes", "You have unsaved changes. How do you want to proceed?", [discard, stay], true);
-            confirmation.done((result: { can: boolean; }) => {
-                if (!result.can) {
-                    this.dirtyFlag().reset();    
-                }
-                result.can = !result.can;
-                discardStayResult.resolve(result);
-            });
-
-            return discardStayResult;
+        if (this.dirtyFlag().isDirty()) {
+            return this.discardStayResult();
         }
 
         return true;
+    }
+
+    discardStayResult(): any {
+        const discard = "Discard changes";
+        const stay = "Stay on this page";
+        const discardStayResult = $.Deferred();
+        const confirmation = this.confirmationMessage("Unsaved changes", "You have unsaved changes. How do you want to proceed?", [discard, stay], true);
+        confirmation.done((result: { can: boolean; }) => {
+            if (!result.can) {
+                this.dirtyFlag().reset(); 
+            }
+            result.can = !result.can;
+            discardStayResult.resolve(result);
+        });
+
+        return discardStayResult;
     }
 
     detached() {

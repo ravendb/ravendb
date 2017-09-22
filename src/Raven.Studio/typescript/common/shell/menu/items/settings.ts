@@ -14,16 +14,6 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             css: 'icon-database-settings',
             dynamicHash: appUrls.databaseRecord
         }),
-        /* TODO
-        new leafMenuItem({
-            route: 'databases/settings/quotas',
-            moduleId: 'viewmodels/database/settings/quotas',
-            title: 'Quotas',
-            nav: true,
-            css: 'icon-plus',
-            dynamicHash: appUrls.quotas
-        }),*/
-        /* TODO - bring this back for RTM - issue 8429
         new leafMenuItem({
             route: 'databases/settings/connectionStrings',
             moduleId: "viewmodels/database/settings/connectionStrings",
@@ -32,6 +22,15 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             css: 'icon-manage-connection-strings',
             dynamicHash: appUrls.connectionStrings,
             enabled: accessHelper.isGlobalAdmin
+        }),
+        /* TODO
+        new leafMenuItem({
+            route: 'databases/settings/quotas',
+            moduleId: 'viewmodels/database/settings/quotas',
+            title: 'Quotas',
+            nav: true,
+            css: 'icon-plus',
+            dynamicHash: appUrls.quotas
         }),*/
         new leafMenuItem({
             route: 'databases/settings/revisions',

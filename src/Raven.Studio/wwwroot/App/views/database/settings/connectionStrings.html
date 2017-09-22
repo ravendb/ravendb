@@ -3,7 +3,7 @@
         <div class="col-sm-12 col-lg-6 flex-vertical">
             <div class="scroll flex-grow">
                 <div class="hr-title">
-                    <h5>RavenDB Connection Strings</h5><hr>
+                    <h5><strong>RavenDB</strong> Connection Strings</h5><hr>
                     <button class="btn btn-sm btn-primary" data-bind="click: onAddRavenEtl" title="Add a new RavenDB ETL connection string"><i class="icon-plus"></i><span>Add</span></button>
                 </div>
                 <div data-bind="if: ravenEtlConnectionStringsNames().length === 0">
@@ -29,7 +29,7 @@
                     </div>
                 </div>
                 <div class="hr-title">
-                    <h5>SQL Connection strings</h5><hr>
+                    <h5><strong>SQL</strong> Connection strings</h5><hr>
                     <button class="btn btn-sm btn-primary" data-bind="click: onAddSqlEtl" title="Add a new SQL ETL connection string"><i class="icon-plus"></i><span>Add</span></button> 
                 </div>
                 <div data-bind="if: sqlEtlConnectionStringsNames().length === 0">
@@ -104,7 +104,7 @@
                             <button type="submit" class="btn btn-info" title="Test url connection"
                                     data-bind="click: onTestConnection, visible: editedRavenEtlConnectionString, disable: $root.spinners.test, css: { 'btn-spinner': $root.spinners.test }" >
                                 <i class="icon-rocket"></i>
-                                <span>Test connection</span>
+                                <span>Test Connection</span>
                             </button>
                         </div>
                         <div class="flex-grow">

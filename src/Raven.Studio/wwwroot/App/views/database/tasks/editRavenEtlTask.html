@@ -1,194 +1,183 @@
-<!--<div class="content-container"-->
-    <div class="content-margin">
-        <div class="row flex-row absolute-fill">
-            <div class="col-xs-12 col-lg-6 flex-vertical">
-                <div class="flex-header">
-                    <button data-bind="click: saveRavenEtl" class="btn btn-primary"><i class="icon-save"></i><span>Save</span></button>
-                    <button data-bind="click: cancelOperation" class="btn btn-default"><i class="icon-cancel"></i><span>Cancel</span></button>
-                </div>
-                <div class="panel">
-                    <form class="flex-form">
-                        <div class="panel-body" data-bind="with: editedRavenEtl">
-                            <h3 data-bind="visible: $parent.isAddingNewRavenEtlTask">New RavenDB ETL</h3>
-                            <h3 data-bind="visible: !$parent.isAddingNewRavenEtlTask()">Edit RavenDB ETL</h3>
-                            <div class="form-group">
-                                <label for="taskName" class="control-label">Task Name</label>
-                                <div class="flex-grow">
-                                    <input type="text" class="form-control" id="taskName" placeholder="Enter a descriptive name for the RavenDB ETL task" data-bind="textInput: taskName">
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label class="control-label">Connection String</label>
-                                <div class="flex-grow" data-bind="validationOptions: { insertMessages: false }, validationElement: connectionStringName">
-                                    <div class="dropdown btn-block">
-                                        <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
-                                               data-bind="textInput: connectionStringName, attr: { id: 'connectionStringInput' }"
-                                               placeholder="Select a connection String">
-                                        <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
-                                        <ul class="dropdown-menu max-height" data-bind="foreach: $root.ravenEtlConnectionStringsNames"> <!-- TODO: autocomplete... -->
-                                            <li data-bind="click: _.partial($root.useConnectionString, $data)">
-                                                <a href="#" data-bind="text: $data"></a>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                    <span class="help-block" data-bind="validationMessage: connectionStringName"></span>
-                                </div>
-                            </div>
-                            <div data-bind="if: $root.activeDatabase().isEncrypted">
-                                <div class="bg-warning inline-block padding padding-xs small">
-                                    <i class="icon-warning"></i>
-                                    &nbsp;Note:&nbsp;&nbsp;Database&nbsp;<strong data-bind="text: $root.activeDatabase().name"></strong>&nbsp;is encrypted
-                                </div>
-                                <div class="toggle">
-                                    <input id="toggle-non-encrypted-channel" type="checkbox" data-bind="checked: allowEtlOnNonEncryptedChannel">
-                                    <label class="small" for="toggle-non-encrypted-channel">Allow ETL on non-encrypted communication channel</label>
-                                </div>
-                            </div>
-                            <div class="flex-horizontal">
-                                <div class="flex-grow">
-                                </div>
-                                <div>
-                                    <button type="submit" class="btn btn-default btn-info"
-                                            data-bind="click: $root.testConnection, disable: !connectionStringName() || $root.spinners.test, css: { 'btn-spinner': $root.spinners.test }">
-                                        <i class="icon-rocket"></i>
-                                        <span>Test connection</span>
-                                    </button>
-                                </div>
+<div class="content-margin">
+    <div class="row flex-row absolute-fill">
+        <div class="col-xs-12 col-lg-6 flex-vertical">
+            <div class="flex-header">
+                <button data-bind="click: trySaveRavenEtl" class="btn btn-primary"><i class="icon-save"></i><span>Save</span></button>
+                <button data-bind="click: cancelOperation" class="btn btn-default"><i class="icon-cancel"></i><span>Cancel</span></button>
+            </div>
+            <div class="panel">
+                <form class="flex-form">
+                    <div class="panel-body" data-bind="with: editedRavenEtl">
+                        <h3 data-bind="visible: $parent.isAddingNewRavenEtlTask">New RavenDB ETL</h3>
+                        <h3 data-bind="visible: !$parent.isAddingNewRavenEtlTask()">Edit RavenDB ETL</h3>
+                        <div class="form-group">
+                            <label for="taskName" class="control-label">Task Name</label>
+                            <div class="flex-grow">
+                                <input type="text" class="form-control" id="taskName" placeholder="Enter a descriptive name for the RavenDB ETL task" data-bind="textInput: taskName">
                             </div>
                         </div>
-                    </form>
-                    <div class="panel-addon" data-bind="with: $root.testConnectionResult">
-                        <div class="padding bg-success small" data-bind="visible: Success">
-                            <div>Successfully connected to node</div>
+                        <div class="form-group">
+                            <label class="control-label">Connection String</label>
+                            <div class="flex-grow" data-bind="validationOptions: { insertMessages: false }, validationElement: connectionStringName">
+                                <div class="dropdown btn-block">
+                                    <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
+                                           data-bind="textInput: connectionStringName, attr: { id: 'connectionStringInput', disabled: $root.ravenEtlConnectionStringsNames().length == 0 }"
+                                           placeholder="Select a connection String">
+                                    <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                                    <ul class="dropdown-menu max-height" data-bind="foreach: $root.ravenEtlConnectionStringsNames">
+                                        <!--TODO: autocomplete...-->
+                                        <li data-bind="click: _.partial($root.useConnectionString, $data)">
+                                            <a href="#" data-bind="text: $data"></a>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <span class="help-block" data-bind="validationMessage: connectionStringName"></span>
+                            </div>
                         </div>
-                        <div class="padding bg-danger small" data-bind="visible: !Success">
-                            Connection test failed: <span data-bind="text: $root.fullErrorDetailsVisible() ? Error : $root.shortErrorText()"></span>
+                        <div data-bind="if: $root.activeDatabase().isEncrypted">
+                            <div class="bg-warning inline-block padding padding-xs small">
+                                <i class="icon-warning"></i>
+                                &nbsp;Note:&nbsp;&nbsp;Database&nbsp;<strong data-bind="text: $root.activeDatabase().name"></strong>&nbsp;is encrypted
+                            </div>
+                            <div class="toggle">
+                                <input id="toggle-non-encrypted-channel" type="checkbox" data-bind="checked: allowEtlOnNonEncryptedChannel">
+                                <label class="small" for="toggle-non-encrypted-channel">Allow ETL on non-encrypted communication channel</label>
+                            </div>
+                        </div>
+                        <div class="flex-horizontal">
+                            <div class="flex-grow">
+                            </div>
                             <div>
-                                <a href="#" data-bind="click: $root.fullErrorDetailsVisible.toggle.bind($root.fullErrorDetailsVisible), text: $root.fullErrorDetailsVisible() ? 'hide details' : 'show details'"></a>
+                                <button type="submit" class="btn btn-default btn-info" title="Test the connection string connection"
+                                        data-bind="click: $root.testConnection, disable: !connectionStringName() || $root.spinners.test, css: { 'btn-spinner': $root.spinners.test }">
+                                    <i class="icon-rocket"></i>
+                                    <span>Test Connection</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+                <div class="panel-addon" data-bind="with: $root.testConnectionResult">
+                    <div class="padding bg-success small" data-bind="visible: Success">
+                        <div>Successfully connected to node</div>
+                    </div>
+                    <div class="padding bg-danger small" data-bind="visible: !Success && $root.connectionStringIsDefined()">
+                        Connection test failed: <span data-bind="text: $root.fullErrorDetailsVisible() ? Error : $root.shortErrorText()"></span>
+                        <div>
+                            <a href="#" data-bind="click: $root.fullErrorDetailsVisible.toggle.bind($root.fullErrorDetailsVisible), text: $root.fullErrorDetailsVisible() ? 'hide details' : 'show details'"></a>
+                        </div>
+                    </div>
+                    <div class="padding bg-danger small" data-bind="visible: !Success && !$root.connectionStringIsDefined()">
+                        <span class="icon-warning"></span><span data-bind="text: Error"></span>
+                        <a target="_blank" data-bind="attr: { href: $root.editedRavenEtl().connectionStringsUrl }"> - Click <u>here</u> to define a new connection string</a>
+                    </div>
+                </div>
+                <div class="panel-addon" data-bind="visible: $root.ravenEtlConnectionStringsNames().length == 0">
+                    <div class="padding bg-warning small">
+                        <span class="icon-warning"></span>&nbsp;&nbsp;No connection strings have been defined yet
+                        <a data-bind="attr: { href: $root.editedRavenEtl().connectionStringsUrl }"> - Click <u>here</u> to define a new connection string</a>
+                    </div>
+                </div>
+            </div>
+            <div class="flex-header">
+                <div class="flex-row">
+                    <h3>Transform Scripts:</h3>
+                    <button id="addNewScript" data-bind="click: tryAddNewTransformation" title="Add a new transformation script for this ETL task" class="btn btn-info pull-right"><i class="icon-plus"></i><span>Add New Script</span></button>
+                </div>
+            </div>
+            <div class="scroll">
+                <div class="etl-list" id="transformsList" data-bind="with: editedRavenEtl">
+                    <div data-bind="if: transformationScripts().length === 0">
+                        <div>
+                            <i class="icon-xl icon-empty-set text-muted"></i>
+                            <h3 class="text-center text-muted">No transformation scripts have been defined.</h3>
+                        </div>
+                    </div>
+                    <div data-bind="foreach: transformationScripts">
+                        <div class="panel item">
+                            <div class="padding padding-sm">
+                                <div class="flex-horizontal">
+                                    <div class="flex-grow info">
+                                        <div class="transformer-name" data-bind="text: name" title="Transformation script name"></div>
+                                        <div class="collections">
+                                            Collections:
+                                            <span data-bind="foreach: transformScriptCollections" title="The Collections transformed">
+                                                <span data-bind="text: $data, attr: { class: 'collection-color-' + $parent.getCollectionEntry($data) }"></span>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="actions">
+                                        <button data-bind="click: $parent.editTransformationScript.bind($parent, $data)" class="btn btn-default"><i class="icon-edit" title="Edit script"></i></button>
+                                        <button data-bind="click: $root.confirmRemoveTransformationScript" class="btn btn-danger"><i class="icon-trash" title="Delete script"></i></button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <!-- TODO: code below is the scripts part... -->
-            <!--<div class="col-xs-12 col-lg-6 flex-vertical">
-                <div class="flex-horizontal flex-header">
-                    <div class="flex-grow">
-                        <h3>Transform scripts <i class="icon-info text-info"></i></h3>
-                    </div>
-                    <div>
-                        <button class="btn btn-info" onclick="$('#transformsList').collapse('hide'); $('#editTransform').collapse('show');"><i class="icon-plus"></i> <span>Add script</span></button>
-                    </div>
-                </div>
-                <div class="scroll">
-                    <div id="editTransform" class="collapse panel">
-                        <div class="padding padding-sm">
-                            <div class="edit-name flex-horizontal margin-bottom">
-                                <div class="flex-grow">
-                                    <input class="form-control" type="text" value="Cars to car parts">
-                                </div>
-                                <div class="flex-noshrink">
-                                    <button class="btn btn-success" onclick="$('#transformsList').collapse('show'); $('#editTransform').collapse('hide');"><i class="icon-tick"></i></button>
-                                    <button class="btn btn-default" onclick="$('#transformsList').collapse('show'); $('#editTransform').collapse('hide');"><i class="icon-cancel"></i></button>
-                                </div>
+        </div>
+        <div class="col-xs-12 col-lg-6 flex-vertical" data-bind="with: editedRavenEtl()">
+            <div class="flex-grow">
+                <div id="editTransform" class="panel" data-bind="if: showEditTransformationArea">
+                    <div class="padding padding-sm" data-bind="with: editedTransformationScript">
+                        <label><strong>Name:</strong></label>
+                        <div class="edit-name flex-horizontal margin-bottom">
+                            <div class="flex-grow" title="Transform script name" data-bind="validationElement: name">
+                                <input autofocus class="form-control" type="text" data-bind="textInput: name, attr: { 'disabled': !isNew() }" placeholder="Enter a name for the transform script">
                             </div>
-                            <textarea class="form-control" rows="8">
-
-var docsPositionsLengths = docs.map(x => x.Positions && x.Positions.length);
-if (docsPositionsLengths.some(x => docsPositionsLengths[0] !== x)) {
-    return {
-        Positions: _(docs.map(x => x.Positions)).flatten().uniq().value()
-    };
-}
-
-</textarea>
-                            <h4>Collections</h4>
-                            <div class="flex-horizontal margin-bottom">
-                                <div class="flex-grow">
-                                    <input class="form-control" id="dropdownMenu4" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true" placeholder="Name">
-                                    <ul class="dropdown-menu" aria-labelledby="dropdownMenu4">
-                                        <li><a href="#">Regular link</a></li>
-                                        <li><a href="#">Another link</a></li>
+                            <div class="flex-noshrink">
+                                <button title="Save this transformation script" class="btn btn-success" data-bind="click: $root.saveEditedTransformation"><i class="icon-tick"></i></button>
+                                <button title="Cancel" class="btn btn-default" data-bind="click: $root.cancelEditedTransformation"><i class="icon-cancel"></i></button>
+                            </div>
+                        </div>
+                        <label><strong>Script:</strong></label>
+                        <span class="pull-right"><a href="#" data-bind="click: $root.syntaxHelp"><small>Syntax help</small></a></span>
+                        <textarea class="form-control" rows="7" data-bind="textinput: script" placeholder="Enter script"></textarea>
+                        <div class="toggle">
+                            <input id="applyToAll" type="checkbox" data-bind="checked: applyScriptForAllCollections">
+                            <label for="applyToAll">Apply script to all collections</label>
+                        </div>
+                        <div class="flex-horizontal margin-bottom" data-bind="collapse: !applyScriptForAllCollections(), css: {'invisible': applyScriptForAllCollections }">
+                            <div class="flex-grow">
+                                <div class="dropdown btn-block flex-grow"> 
+                                    <input class="form-control dropdown-toggle" placeholder="Select collection" data-toggle="dropdown"
+                                           data-bind="textInput: inputCollection, attr: { id: 'collectionNameInput', disabled: $root.collections().length == 0 }" />
+                                    <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                                    <ul class="dropdown-menu" role="menu" style="display: none;"
+                                        data-bind="autoComplete: '#' + 'collectionNameInput', foreach: $root.createCollectionNameAutocompleter(transformScriptCollections, inputCollection)">
+                                        <li role="presentation" data-bind="click: $parent.inputCollection.bind($parent, $data)">
+                                            <a role="menuitem" tabindex="-1" href="#">
+                                                <span data-bind="text: $data"></span>
+                                            </a>
+                                        </li>
                                     </ul>
                                 </div>
-                                <div>
-
-                                    <button class="btn btn-default"><i class="icon-plus"></i> <span>Add collection</span></button>
-                                </div>
                             </div>
+                            <div>
+                                <button class="btn btn-info" data-bind="click: addCollection, attr: { 'disabled': !inputCollection() || !canAddCollection() }"><i class="icon-plus"></i> <span>Add Collection</span></button>
+                            </div>
+                        </div>
+                        <label><strong>Collections Selected:</strong></label>
+                        <div data-bind="validationElement: transformScriptCollections">
                             <ul class="well collection-list">
+                                <!-- ko foreach: transformScriptCollections -->
                                 <li>
-                                    <div class="name">
-                                        Animals
-                                    </div>
-                                    <a href="javascript:void(0)">
-                                        <i class="icon-trash"></i>
-                                    </a>
+                                    <div class="name" data-bind="text: $data"></div>
+                                    <a title="Remove collection" href="#" data-bind="click: $parent.removeCollection.bind($parent, $data)"><i class="icon-trash"></i></a>
                                 </li>
+                                <!-- /ko -->
+                                <!-- ko if: transformScriptCollections().length === 0 && !applyScriptForAllCollections()-->
                                 <li>
-                                    <div class="name">
-                                        Employees
-                                    </div>
-                                    <a href="javascript:void(0)">
-                                        <i class="icon-trash"></i>
-                                    </a>
+                                    <div class="name">No collections have been defined yet..</div>
                                 </li>
-                                <li>
-                                    <div class="name">
-                                        Other
-                                    </div>
-                                    <a href="javascript:void(0)">
-                                        <i class="icon-trash"></i>
-                                    </a>
-                                </li>
+                                <!-- /ko -->
                             </ul>
-                            <div class="checkbox">
-                                <input id="applyToAll" class="styled" type="checkbox">
-                                <label for="applyToAll">
-                                    Apply script to all documents
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="etl-list collapse in" id="transformsList">
-                        <div class="panel item">
-                            <div class="padding padding-sm">
-                                <div class="flex-horizontal">
-                                    <div class="flex-grow info">
-                                        <div class="transformer-name">Cars to car parts</div>
-                                        <div class="collections">
-                                            Collections: <strong style="color:#b6ff00">Cars</strong>
-                                        </div>
-                                    </div>
-                                    <div class="actions">
-                                        <button class="btn btn-default" onclick="$('#transformsList').collapse('hide'); $('#editTransform').collapse('show');"><i class="icon-edit"></i></button>
-                                        <button class="btn btn-danger"><i class="icon-trash"></i></button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="panel item">
-                            <div class="padding padding-sm">
-                                <div class="flex-horizontal">
-                                    <div class="flex-grow info">
-                                        <div class="transformer-name">Transform old machines to parts</div>
-                                        <div class="collections">
-                                            Collections: <strong style="color:#0094ff">Computers</strong> <strong style="color:#ff006e">Printers</strong> <strong style="color:blueviolet">Lorem</strong>
-                                            <strong style="color:#ffd800">ipsum</strong> <strong style="color:#ff6a00">dolor</strong> <strong style="color:#0094ff">Computers</strong> <strong style="color:#ff006e">Printers</strong> <strong style="color:blueviolet">Lorem</strong>
-                                            <strong style="color:#ffd800">ipsum</strong> <strong style="color:#ff6a00">dolor</strong> <strong style="color:#0094ff">Computers</strong> <strong style="color:#ff006e">Printers</strong> <strong style="color:blueviolet">Lorem</strong>
-                                            <strong style="color:#ffd800">ipsum</strong> <strong style="color:#ff6a00">dolor</strong>
-                                        </div>
-                                    </div>
-                                    <div class="actions">
-                                        <button class="btn btn-default" onclick="$('#transformsList').collapse('hide'); $('#editTransform').collapse('show');"><i class="icon-edit"></i></button>
-                                        <button class="btn btn-danger"><i class="icon-trash"></i></button>
-                                    </div>
-                                </div>
-                            </div>
+                            <span class="help-block" data-bind="validationMessage: transformScriptCollections"></span>
                         </div>
                     </div>
                 </div>
-            </div>-->
+            </div>
         </div>
     </div>
-
+</div>

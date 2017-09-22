@@ -1,0 +1,93 @@
+﻿/// <reference path="../../../../typings/tsd.d.ts"/>
+import collectionsTracker = require("common/helpers/database/collectionsTracker");
+
+class ongoingTaskEtlTransformationModel {
+    name = ko.observable<string>();
+    script = ko.observable<string>();
+    transformScriptCollections = ko.observableArray<string>([]);
+
+    applyScriptForAllCollections = ko.observable<boolean>(false);
+    isNew = ko.observable<boolean>(true);
+    inputCollection = ko.observable<string>();
+    canAddCollection: KnockoutComputed<boolean>;
+
+    validationGroup: KnockoutValidationGroup; 
+  
+    constructor(dto: Raven.Client.ServerWide.ETL.Transformation, isNew: boolean) {
+        this.name(dto.Name);
+        this.script(dto.Script);
+        this.transformScriptCollections(dto.ApplyToAllDocuments ? collectionsTracker.default.collections()
+                                                 .filter(x => !x.isAllDocuments && !x.isSystemDocuments && !x.name.startsWith("@"))
+                                                 .map(x => x.name) : dto.Collections);
+        this.applyScriptForAllCollections(dto.ApplyToAllDocuments);
+        this.isNew(isNew);
+        this.initObservables();
+        this.initValidation();
+    }
+
+    getCollectionEntry(collectionName: string) {
+        return (_.findIndex(collectionsTracker.default.collections(), x => x.name === collectionName) - 2) % 6;
+        // 6 is the number of classes that I have defined in etl.less for colors...
+    }
+
+    static empty(): ongoingTaskEtlTransformationModel {
+        return new ongoingTaskEtlTransformationModel(
+            {
+                ApplyToAllDocuments: false, 
+                Collections: [],
+                Disabled: false,
+                HasLoadAttachment: false,
+                Name: "",
+                Script: ""
+            }, true);
+    }
+
+    private initObservables() {
+        this.applyScriptForAllCollections.subscribe(x => {
+            if (x) {
+                // Add all collections to the 'used' collections...
+                this.transformScriptCollections(collectionsTracker.default.collections()
+                    .filter(x => !x.isAllDocuments && !x.isSystemDocuments && !x.name.startsWith("@"))
+                    .map(x => x.name));
+            }
+        });
+
+        this.canAddCollection = ko.pureComputed(() => {
+            // Add collection only if exists in collection tracker & not yet added...
+            return !!collectionsTracker.default.collections().find(x => x.name === this.inputCollection()) &&
+                   !this.transformScriptCollections().find(x => x === this.inputCollection());
+        }).extend({ throttle: 200});
+    }
+
+    private initValidation() {
+        this.name.extend({
+            required: true
+        });
+
+        this.transformScriptCollections.extend({
+            validation: [
+                {
+                    validator: () => this.transformScriptCollections().length > 0,
+                    message: "No collections have been selected"
+                }]
+        });
+
+        this.validationGroup = ko.validatedObservable({
+            name: this.name,
+            transformScriptCollections: this.transformScriptCollections
+        });
+    }
+
+    removeCollection(collection: string) {
+        this.transformScriptCollections.remove(collection);
+        this.applyScriptForAllCollections(false);
+    }
+
+    addCollection() {
+        this.transformScriptCollections.push(this.inputCollection());
+        this.inputCollection("");
+        this.transformScriptCollections.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+    }
+}
+
+export = ongoingTaskEtlTransformationModel;

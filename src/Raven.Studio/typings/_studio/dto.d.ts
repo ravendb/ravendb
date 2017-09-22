@@ -304,7 +304,7 @@ interface ravenEtlDataFromUI {
     TaskName: string;
     ConnectionStringName: string;
     AllowEtlOnNonEncryptedChannel: boolean;
-    // list of scripts... // TODO..
+    TransformationScripts: Array<Raven.Client.ServerWide.ETL.Transformation>;
 } 
 
 interface subscriptionDataFromUI {
