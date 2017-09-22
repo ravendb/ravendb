@@ -1,3 +1,4 @@
+import app = require("durandal/app");
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import router = require("plugins/router");
@@ -9,12 +10,17 @@ import getConnectionStringInfoCommand = require("commands/database/settings/getC
 import getConnectionStringsCommand = require("commands/database/settings/getConnectionStringsCommand");
 import saveRavenEtlTaskCommand = require("commands/database/tasks/saveRavenEtlTaskCommand");
 import generalUtils = require("common/generalUtils");
+import ongoingTaskEtlTransformationModel = require("models/database/tasks/ongoingTaskEtlTransformationModel");
+import collectionsTracker = require("common/helpers/database/collectionsTracker");
+import deleteTransformationScriptConfirm = require("viewmodels/database/tasks/deleteTransformationScriptConfirm");
+import transformationScriptSyntax = require("viewmodels/database/tasks/transformationScriptSyntax");
 
 class editRavenEtlTask extends viewModelBase {
 
     editedRavenEtl = ko.observable<ongoingTaskRavenEtl>();
     isAddingNewRavenEtlTask = ko.observable<boolean>(true);
     ravenEtlConnectionStringsNames = ko.observableArray<string>([]);
+    connectionStringIsDefined: KnockoutComputed<boolean>;
     private taskId: number = null;
 
     testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
@@ -22,9 +28,12 @@ class editRavenEtlTask extends viewModelBase {
     fullErrorDetailsVisible = ko.observable<boolean>(false);
     shortErrorText: KnockoutObservable<string>;
 
+    collections = collectionsTracker.default.collections;
+    validationGroup: KnockoutValidationGroup;
+
     constructor() {
         super();
-        this.bindToCurrentInstance("useConnectionString","testConnection");
+        this.bindToCurrentInstance("useConnectionString", "testConnection", "confirmRemoveTransformationScript", "cancelEditedTransformation", "saveEditedTransformation", "syntaxHelp");
     }
 
     activate(args: any) {
@@ -32,7 +41,6 @@ class editRavenEtlTask extends viewModelBase {
         const deferred = $.Deferred<void>();
 
         if (args.taskId) {
-
             // 1. Editing an Existing task
             this.isAddingNewRavenEtlTask(false);
             this.taskId = args.taskId;
@@ -52,7 +60,11 @@ class editRavenEtlTask extends viewModelBase {
             deferred.resolve();
         }
 
-        deferred.always(() => this.initObservables());
+        deferred.always(() => {
+            this.initObservables();
+            this.initValidation();
+        });
+
         return $.when<any>(this.getAllConnectionStrings(), deferred); 
     }
 
@@ -76,6 +88,28 @@ class editRavenEtlTask extends viewModelBase {
             }
             return generalUtils.trimMessage(result.Error);
         });
+
+        this.connectionStringIsDefined = ko.pureComputed(() => {
+            return !!(_.find(this.ravenEtlConnectionStringsNames(), (x) => x.toString() === this.editedRavenEtl().connectionStringName()));
+        });
+
+        this.dirtyFlag = new ko.DirtyFlag([this.editedRavenEtl().isDirty]); 
+    }
+
+    private initValidation() {
+        this.editedRavenEtl().connectionStringName.extend({
+            required: true,
+            validation: [
+                {
+                    validator: () => this.connectionStringIsDefined(),
+                    message: "Connection string is Not defined"
+                }
+            ]
+        });
+
+        this.validationGroup = ko.validatedObservable({
+            connectionStringName: this.editedRavenEtl().connectionStringName 
+        });
     }
 
     useConnectionString(connectionStringToUse: string) {
@@ -91,22 +125,48 @@ class editRavenEtlTask extends viewModelBase {
 
     testConnection() {
         if (this.editedRavenEtl().connectionStringName) {
-            if (this.isValid(this.editedRavenEtl().connectionStringName)) {
-                eventsCollector.default.reportEvent("ravenDB-ETL-connection-string", "test-connection"); // TODO: do we really need this ?
-
+            if (this.connectionStringIsDefined()) {
+                // 1. Input connection string name is pre-defined
+                eventsCollector.default.reportEvent("ravenDB-ETL-connection-string", "test-connection");
                 this.spinners.test(true);
 
                 new testClusterNodeConnectionCommand(this.editedRavenEtl().destinationURL())
                     .execute()
                     .done(result => this.testConnectionResult(result))
                     .always(() => this.spinners.test(false));
+            } else {
+                // 2. Input connection string name was Not yet defined
+                this.testConnectionResult({ Error: "Connection string Not yet defined", Success: false });
             }
         }
     }
 
+    trySaveRavenEtl() {
+        if (!this.editedRavenEtl().isDirty()) {
+            this.saveRavenEtl();
+            return true;
+        }
+
+        const defferedResult = $.Deferred();
+        this.discardStayResult().done((result: { can: boolean; }) => {
+            if (!result.can) {
+                // Keep changes & stay
+                return;
+            } else {
+                // Discard changes & add save the Raven Etl model
+                this.saveRavenEtl();
+            }
+
+            defferedResult.resolve(result);
+        });
+
+        return defferedResult;
+
+    }
+
     saveRavenEtl() {
         // 1. Validate model
-        if (!this.validate()) {
+        if (!this.isValid(this.validationGroup)) {
             return;
         }
 
@@ -116,17 +176,72 @@ class editRavenEtlTask extends viewModelBase {
         new saveRavenEtlTaskCommand(this.activeDatabase(), this.taskId, dto)
             .execute()
             .done(() => {
+                this.editedRavenEtl().isDirty(false);
+                this.dirtyFlag().reset();
                 this.goToOngoingTasksView();
             });
     }
 
-    private validate(): boolean {
-        let valid = true;
+    tryAddNewTransformation() {
+        if (!this.editedRavenEtl().isDirty()) {
+            this.addNewTransformation();
+            return true;
+        }
 
-        if (!this.isValid(this.editedRavenEtl().validationGroup))
-            valid = false;
+        const defferedResult = $.Deferred();
+        this.discardStayResult().done((result: { can: boolean; }) => {
+            if (!result.can) {
+                // Keep changes & stay
+                return; 
+            } else {
+                // Discard changes & add new transformation
+                this.addNewTransformation();
+            }
 
-        return valid;
+            defferedResult.resolve(result);
+        });
+
+        return defferedResult;
+    }
+
+    private addNewTransformation() {
+        this.editedRavenEtl().editedTransformationScript(ongoingTaskEtlTransformationModel.empty());
+        this.editedRavenEtl().showEditTransformationArea(true);
+
+        this.editedRavenEtl().isDirty(false);
+        this.editedRavenEtl().editedTransformationScript().name.subscribe(() => this.editedRavenEtl().isDirty(true));
+        this.editedRavenEtl().editedTransformationScript().script.subscribe(() => this.editedRavenEtl().isDirty(true));
+        this.editedRavenEtl().editedTransformationScript().transformScriptCollections.subscribe(() => this.editedRavenEtl().isDirty(true));
+    }
+
+    cancelEditedTransformation() {
+        this.editedRavenEtl().showEditTransformationArea(false);
+        this.editedRavenEtl().editedTransformationScript(null);
+        this.editedRavenEtl().isDirty(false);
+    }
+
+    saveEditedTransformation(transformation: ongoingTaskEtlTransformationModel) {
+        // 1. Validate
+        if (!this.isValid(this.editedRavenEtl().editedTransformationScript().validationGroup))
+            return;
+
+        // 2. Save
+        if (transformation.isNew()) {
+            this.editedRavenEtl().transformationScripts.push(transformation);
+        } else {
+            let item = this.editedRavenEtl().transformationScripts().find(x => x.name() === transformation.name());
+            item.applyScriptForAllCollections(transformation.applyScriptForAllCollections());
+            item.transformScriptCollections(transformation.transformScriptCollections());
+            item.script(transformation.script());
+        }
+
+        // 3. Sort
+        this.editedRavenEtl().transformationScripts.sort((a, b) => a.name().toLowerCase().localeCompare(b.name().toLowerCase()));
+
+        // 4. Clear
+        this.editedRavenEtl().showEditTransformationArea(false);
+        this.editedRavenEtl().editedTransformationScript(null);
+        this.editedRavenEtl().isDirty(false);
     }
 
     cancelOperation() {
@@ -135,6 +250,43 @@ class editRavenEtlTask extends viewModelBase {
 
     private goToOngoingTasksView() {
         router.navigate(appUrl.forOngoingTasks(this.activeDatabase()));
+    }
+
+    createCollectionNameAutocompleter(usedCollections: KnockoutObservableArray<string>, collectionText: KnockoutObservable<string>) {
+        return ko.pureComputed(() => {
+            const key = collectionText();
+
+            const options = this.collections()
+                .filter(x => !x.isAllDocuments && !x.isSystemDocuments && !x.name.startsWith("@"))
+                .map(x => x.name);
+
+            const usedOptions = usedCollections().filter(k => k !== key);
+
+            const filteredOptions = _.difference(options, usedOptions);
+
+            if (key) {
+                return filteredOptions.filter(x => x.toLowerCase().includes(key.toLowerCase()));
+            } else {
+                return filteredOptions;
+            }
+        });
+    }
+
+    confirmRemoveTransformationScript(model: ongoingTaskEtlTransformationModel) {
+        const db = this.activeDatabase();
+
+        const confirmDeleteViewModel = new deleteTransformationScriptConfirm(db, model.name()); 
+        app.showBootstrapDialog(confirmDeleteViewModel);
+        confirmDeleteViewModel.result.done(result => {
+            if (result.can) {
+                this.editedRavenEtl().deleteTransformationScript(model);
+            }
+        });
+    }
+
+    syntaxHelp() {
+        const viewmodel = new transformationScriptSyntax();
+        app.showBootstrapDialog(viewmodel);
     }
 }
 

@@ -123,7 +123,7 @@
                             <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
                             <div class="padding padding-sm destination-info flex-vertical">
                                 <div class="flex-horizontal">
-                                    <div class="checkbox panel-checkbox">
+                                    <div class="checkbox panel-checkbox hide">
                                         <input type="checkbox" class="styled">
                                         <label></label>
                                     </div>
@@ -133,15 +133,31 @@
                                                 <span data-bind="text: taskName"></span>
                                             </a>
                                         </h3>
-                                        <div class="specs">
-                                            <span title="Destination database" class="location" data-bind="text: destinationDB() + '@'"></span>
-                                            <a target="_blank" title="Destination Url" data-bind="attr: { href: destinationURL }"><span data-bind="text: destinationURL"></span></a>
-                                        </div>
                                     </div>
                                     <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
                                     <div class="status" data-bind="template: { name: 'status-template' }"></div>
+                                    <div data-bind="template: { name: 'actions-template' }"></div>
                                 </div>
-                                <div data-bind="template: { name: 'actions-template' }"></div>
+                            </div>
+                            <div class="collapse panel-addon" data-bind="collapse: showRavenEtlDetails">
+                                <div class="padding padding-sm flex-horizontal">
+                                    <div class="flex-grow">
+                                        <ul class="properties">
+                                            <li>
+                                                <span>Destination:</span>
+                                                <span title="Destination <database>@<Url>">
+                                                    <a target="_blank" data-bind="attr: { href: destinationURL }, text: destinationDB() + '@' + destinationURL()"></a>
+                                                </span>
+                                            </li>
+                                            <li>
+                                                <span>Connection String:</span> 
+                                                <span title="Destination <database>@<Url>">
+                                                    <a target="_blank" data-bind="attr: { href: connectionStringsUrl }, text: connectionStringName"></a>
+                                                </span>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -315,27 +331,25 @@
                     <div class="col-sm-4">
                         <h5>TASK TYPE</h5>
                         <div class="row">
-                            <div class="col-xs-12"><i class="task-rect task-external-replication"></i> <span>External Replication</span></div>
-                            <!-- TODO: Bring this back for RTM - issue 8429 -->
-                            <!--<div class="col-xs-12"><i class="task-rect task-ravendb-etl"></i> <span>RavenDB ETL</span></div>
-                            <div class="col-xs-12"><i class="task-rect task-sql-etl"></i> <span>SQL ETL</span></div>-->
-                            <div class="col-xs-12"><i class="task-rect task-periodic-backup"></i> <span>Backup</span></div> <!-- todo: change class name to just backup ..-->
-                            <div class="col-xs-12"><i class="task-rect task-subscriptions"></i> <span>Subscription</span></div>
+                            <div class="col-xs-12"><i class="task-rect task-external-replication"></i><span>External Replication</span></div>
+                            <div class="col-xs-12"><i class="task-rect task-ravendb-etl"></i><span>RavenDB ETL</span></div>
+                            <!--<div class="col-xs-12"><i class="task-rect task-sql-etl"></i><span>SQL ETL</span></div>-->
+                            <div class="col-xs-12"><i class="task-rect task-periodic-backup"></i><span>Backup</span></div> <!-- todo: change class name to just backup ..-->
+                            <div class="col-xs-12"><i class="task-rect task-subscriptions"></i><span>Subscription</span></div>
                         </div>
                     </div>
                     <div class="col-sm-4">
                         <h5>NODE TYPE</h5>
-                        
-                        <div><i class="icon-dbgroup-member"></i> <span>Member</span></div>
-                        <div><i class="icon-dbgroup-promotable"></i> <span>Promotable</span></div>
-                        <div><i class="icon-dbgroup-rehab"></i> <span>Rehab</span></div>
+                        <div><i class="icon-dbgroup-member"></i><span>Member</span></div>
+                        <div><i class="icon-dbgroup-promotable"></i><span>Promotable</span></div>
+                        <div><i class="icon-dbgroup-rehab"></i><span>Rehab</span></div>
                     </div>
                     <div class="col-sm-4">
                         <h5>CONNECTION STATUS</h5>
-                        <div><i class="icon-arrow"></i> <span>Connection</span></div>
-                        <!--<div><i class="icon-arrow-dashed"></i> <span>Partial Connection (ETL)</span></div>--> <!-- TODO: Bring back when etl is implemented -->
-                        <div><i class="icon-arrow-dashed text-warning"></i> <span>Disabled Connection</span></div>
-                        <div><i class="icon-arrow-dashed text-danger"></i> <span>Broken Connection</span></div>
+                        <div><i class="icon-arrow"></i><span>Connection</span></div>
+                        <div><i class="icon-arrow-dashed"></i><span>Partial Connection (ETL)</span></div> 
+                        <div><i class="icon-arrow-dashed text-warning"></i><span>Disabled Connection</span></div>
+                        <div><i class="icon-arrow-dashed text-danger"></i><span>Broken Connection</span></div>
                     </div>
                 </div>
             </div>

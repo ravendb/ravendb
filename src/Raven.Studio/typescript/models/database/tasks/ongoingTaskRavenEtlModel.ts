@@ -2,20 +2,25 @@
 import ongoingTask = require("models/database/tasks/ongoingTaskModel");
 import appUrl = require("common/appUrl");
 import router = require("plugins/router");
+import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
+import ongoingTaskEtlTransformationModel = require("models/database/tasks/ongoingTaskEtlTransformationModel");
 
 class ongoingTaskRavenEtlModel extends ongoingTask {
     editUrl: KnockoutComputed<string>;
+    connectionStringsUrl: KnockoutComputed<string>;
+    protected activeDatabase = activeDatabaseTracker.default.database;
 
     destinationDB = ko.observable<string>();
     destinationURL = ko.observable<string>();
     connectionStringName = ko.observable<string>();
-
     allowEtlOnNonEncryptedChannel = ko.observable<boolean>(false);
+    transformationScripts = ko.observableArray<ongoingTaskEtlTransformationModel>([]);
 
-    // TODO: Add support for the collections scripts dictionary
-    //transformScripts = ko.observableArray<>([]);
+    showRavenEtlDetails = ko.observable(false); // used in tasks list view
+    showEditTransformationArea = ko.observable<boolean>(false); // used for edit transfromation
+    editedTransformationScript = ko.observable<ongoingTaskEtlTransformationModel>(null);
 
-    validationGroup: KnockoutValidationGroup;
+    isDirty = ko.observable<boolean>(false);
 
     constructor(dto: Raven.Client.ServerWide.Operations.OngoingTaskRavenEtl, isInListView: boolean) {
         super();
@@ -23,7 +28,6 @@ class ongoingTaskRavenEtlModel extends ongoingTask {
         this.isInTasksListView = isInListView;
         this.update(dto);
         this.initializeObservables();
-        this.initValidation();
     }
 
     initializeObservables() {
@@ -31,24 +35,22 @@ class ongoingTaskRavenEtlModel extends ongoingTask {
 
         const urls = appUrl.forCurrentDatabase();
         this.editUrl = urls.editRavenEtl(this.taskId);
-    }
-
-    initValidation() {
-        this.connectionStringName.extend({
-            required: true
-        });
-
-        this.validationGroup = ko.validatedObservable({
-            connectionStringName: this.connectionStringName
-        });
+        this.connectionStringsUrl = urls.connectionStrings;
     }
 
     update(dto: Raven.Client.ServerWide.Operations.OngoingTaskRavenEtl) {
         super.update(dto);
 
+        // Data for the model in List View
         this.destinationDB(dto.DestinationDatabase);
         this.destinationURL(dto.DestinationUrl);
-        this.connectionStringName(dto.Configuration.ConnectionStringName);
+        this.connectionStringName(dto.ConnectionStringName);
+
+        // Data for the model in Edit View (Note: dto.configuration is only available for Edit View)
+        if (dto.Configuration) {
+            this.connectionStringName(dto.Configuration.ConnectionStringName);
+            this.transformationScripts(dto.Configuration.Transforms.map(x => { return new ongoingTaskEtlTransformationModel(x, false); }));
+        }
     }
 
     editTask() {
@@ -56,16 +58,51 @@ class ongoingTaskRavenEtlModel extends ongoingTask {
     }
 
     toggleDetails() {
-        // TODO...
+        this.showRavenEtlDetails(!this.showRavenEtlDetails());
     }
 
     toDto(): ravenEtlDataFromUI {
+        const Transformations = this.transformationScripts().map(x => {
+            const collections = x.applyScriptForAllCollections() ? null : x.transformScriptCollections();
+            return {
+                ApplyToAllDocuments: x.applyScriptForAllCollections(),
+                //Collections: x.transformScriptCollections(),
+                Collections: collections,
+                Disabled: false,
+                HasLoadAttachment: false,
+                Name: x.name(),
+                Script: x.script()
+            };
+        });
+
         return {
             TaskName: this.taskName(),
             ConnectionStringName: this.connectionStringName(),
-            AllowEtlOnNonEncryptedChannel: this.allowEtlOnNonEncryptedChannel()
-            // todo:  add list of scripts...
+            AllowEtlOnNonEncryptedChannel: this.allowEtlOnNonEncryptedChannel(),
+            TransformationScripts: Transformations
         };
+    }
+
+    deleteTransformationScript(transformationScript: ongoingTaskEtlTransformationModel) {
+        this.transformationScripts.remove(x => transformationScript.name() === x.name());
+        this.showEditTransformationArea(false);
+    }
+
+    editTransformationScript(transformationScript: ongoingTaskEtlTransformationModel) {
+        this.editedTransformationScript(new ongoingTaskEtlTransformationModel({
+                ApplyToAllDocuments: transformationScript.applyScriptForAllCollections(),
+                Collections: transformationScript.transformScriptCollections().slice(),
+                Disabled: false,
+                HasLoadAttachment: false,
+                Name: transformationScript.name(),
+                Script: transformationScript.script()
+        }, false));
+        this.showEditTransformationArea(true);
+
+        this.isDirty(false);
+        this.editedTransformationScript().name.subscribe(() => this.isDirty(true));
+        this.editedTransformationScript().script.subscribe(() => this.isDirty(true));
+        this.editedTransformationScript().transformScriptCollections.subscribe(() => this.isDirty(true));
     }
 
     static empty(): ongoingTaskRavenEtlModel {
@@ -79,7 +116,7 @@ class ongoingTaskRavenEtlModel extends ongoingTask {
                 TaskConnectionStatus: "Active",
                 Configuration: {
                     EtlType: "Raven",
-                    Transforms: null,
+                    Transforms: [],
                     AllowEtlOnNonEncryptedChannel: false,
                     ConnectionStringName: "",
                     Disabled: false,
@@ -87,7 +124,8 @@ class ongoingTaskRavenEtlModel extends ongoingTask {
                     TaskId: null
                 },
                 DestinationDatabase: "",
-                DestinationUrl: ""
+                DestinationUrl: "",
+                ConnectionStringName: ""
             }, false);
     }
 }

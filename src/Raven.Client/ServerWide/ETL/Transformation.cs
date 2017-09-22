@@ -11,8 +11,7 @@ namespace Raven.Client.ServerWide.ETL
         internal const string LoadAttachment = "loadAttachment";
         
         internal const string AttachmentMarker = "$attachment/";
-
-
+        
         private static readonly Regex LoadToMethodRegex = new Regex($@"{LoadTo}(\w+)", RegexOptions.Compiled);
         private static readonly Regex LoadAttachmentMethodRegex = new Regex(LoadAttachment, RegexOptions.Compiled);
 
