@@ -210,16 +210,14 @@ namespace Raven.Server.Monitoring.Snmp
 
             _objectStore.Add(new DatabaseIndexExists(_databaseName, indexName, _databaseLandlord, _databaseIndex, index));
             _objectStore.Add(new DatabaseIndexName(_databaseName, indexName, _databaseLandlord, _databaseIndex, index));
-            //_objectStore.Add(new DatabaseIndexId(_databaseName, indexName, _databaseLandlord, _databaseIndex, index));
-            //_objectStore.Add(new DatabaseIndexAttempts(_databaseName, indexName, _databaseLandlord, _databaseIndex, index));
-            //_objectStore.Add(new DatabaseIndexErrors(_databaseName, indexName, _databaseLandlord, _databaseIndex, index));
-            //_objectStore.Add(new DatabaseIndexPriority(_databaseName, indexName, _databaseLandlord, _databaseIndex, index));
-            //_objectStore.Add(new DatabaseIndexAttempts(_databaseName, indexName, _databaseLandlord, _databaseIndex, index));
-            //_objectStore.Add(new DatabaseIndexSuccesses(_databaseName, indexName, _databaseLandlord, _databaseIndex, index));
-            //_objectStore.Add(new DatabaseIndexReduceAttempts(_databaseName, indexName, _databaseLandlord, _databaseIndex, index));
-            //_objectStore.Add(new DatabaseIndexReduceSuccesses(_databaseName, indexName, _databaseLandlord, _databaseIndex, index));
-            //_objectStore.Add(new DatabaseIndexReduceErrors(_databaseName, indexName, _databaseLandlord, _databaseIndex, index));
-            //_objectStore.Add(new DatabaseIndexTimeSinceLastQuery(_databaseName, indexName, _databaseLandlord, _databaseIndex, index));
+            _objectStore.Add(new DatabaseIndexEtag(_databaseName, indexName, _databaseLandlord, _databaseIndex, index));
+            _objectStore.Add(new DatabaseIndexPriority(_databaseName, indexName, _databaseLandlord, _databaseIndex, index));
+            _objectStore.Add(new DatabaseIndexState(_databaseName, indexName, _databaseLandlord, _databaseIndex, index));
+            _objectStore.Add(new DatabaseIndexErrors(_databaseName, indexName, _databaseLandlord, _databaseIndex, index));
+            _objectStore.Add(new DatabaseIndexLastQueryTime(_databaseName, indexName, _databaseLandlord, _databaseIndex, index));
+            _objectStore.Add(new DatabaseIndexLastIndexingTime(_databaseName, indexName, _databaseLandlord, _databaseIndex, index));
+            _objectStore.Add(new DatabaseIndexTimeSinceLastQuery(_databaseName, indexName, _databaseLandlord, _databaseIndex, index));
+            _objectStore.Add(new DatabaseIndexTimeSinceLastIndexing(_databaseName, indexName, _databaseLandlord, _databaseIndex, index));
 
             _loadedIndexes[indexName] = index;
         }
