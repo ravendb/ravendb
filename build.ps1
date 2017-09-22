@@ -34,13 +34,6 @@ if ($Help) {
 
 CheckPrerequisites
 
-$versionObj = GetVersion
-$version = $versionObj.Version
-$versionSuffix = $versionObj.VersionSuffix
-$buildNumber = $versionObj.BuildNumber
-
-Write-Host -ForegroundColor Green "Building $version"
-
 $PROJECT_DIR = Get-ScriptDirectory
 $RELEASE_DIR = [io.path]::combine($PROJECT_DIR, "artifacts")
 $OUT_DIR = [io.path]::combine($PROJECT_DIR, "artifacts")
@@ -102,6 +95,12 @@ if ($targets.Count -eq 0) {
 New-Item -Path $RELEASE_DIR -ErrorAction SilentlyContinue
 CleanFiles $RELEASE_DIR
 CleanBinDirs $TYPINGS_GENERATOR_SRC_DIR, $RVN_SRC_DIR, $SERVER_SRC_DIR, $CLIENT_SRC_DIR, $SPARROW_SRC_DIR, $TESTDRIVER_SRC_DIR
+
+$versionObj = SetVersionInfo
+$version = $versionObj.Version
+$versionSuffix = $versionObj.VersionSuffix
+$buildNumber = $versionObj.BuildNumber
+Write-Host -ForegroundColor Green "Building $version"
 
 ValidateClientDependencies $CLIENT_SRC_DIR $SPARROW_SRC_DIR
 UpdateSourceWithBuildInfo $PROJECT_DIR $buildNumber $version

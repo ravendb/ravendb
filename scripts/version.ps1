@@ -31,18 +31,15 @@ function GetBuildType () {
     $result
 }
 
-function GetBuiltAt() {
-    return [DateTime]::UtcNow
-}
-
-function GetVersion() {
+$RELEASE_INFO_FILE = 'artifacts/release-info.json'
+function SetVersionInfo() {
     $buildNumber = GetBuildNumber
     $buildType = GetBuildType
-    $builtAt = GetBuiltAt
+    $builtAt = [DateTime]::UtcNow
+    $builtAtString = $builtAt.ToString("yyyyMMdd-HHmm")
 
     if ($buildType.ToLower() -eq 'nightly') {
-        $nightlyDateSuffix = $builtAt.ToString("yyyyMMdd-HHmm")
-        $versionSuffix = "$buildType-$nightlyDateSuffix"
+        $versionSuffix = "$buildType-$builtAtString"
         $buildNumber = $DEV_BUILD_NUMBER
     } else {
         $versionSuffix = "$buildType-$buildNumber"
@@ -57,9 +54,21 @@ function GetVersion() {
     SetVersionEnvironmentVariableInTeamCity $version
     SetBuiltAtEnvironmentVariableInTeamCity $builtAt
     
-    return @{ 
+    $versionInfo = @{ 
         Version = $version;
         VersionSuffix = $versionSuffix;
         BuildNumber = $buildNumber;
+        BuiltAt = $builtAt;
+        BuiltAtString = $builtAtString;
+        BuildType = $buildType
     }
+
+    $versionInfoJson = ConvertTo-Json -InputObject $versionInfo
+    Set-Content -Path $RELEASE_INFO_FILE -Value $versionInfoJson
+
+    return $versionInfo
+}
+
+function GetVersionInfo() {
+    return Get-Content -Path $RELEASE_INFO_FILE | ConvertFrom-Json
 }

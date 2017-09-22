@@ -5,7 +5,6 @@ $CATEGORIES = @(
     @('RavenDB-[0-9]\.[0-9]\.[0-9]-[a-zA-Z]+-[0-9]+-ubuntu\.16\.04-x64', "RavenDB for Ubuntu 16.04 x64"),
     @('RavenDB-[0-9]\.[0-9]\.[0-9]-[a-zA-Z]+-[0-9]+-raspberry-pi', "RavenDB for Raspberry Pi")
 )
-
 function Get-UploadCategory ( $filename ) {
     $result = [io.path]::GetFilenameWithoutExtension($filename)
     foreach ($category in $CATEGORIES) {
@@ -19,9 +18,22 @@ function Get-UploadCategory ( $filename ) {
     $result
 }
 
-function UploadArtifact ( $uploader, $buildNumber, $buildType, $filename, $log ) {
+function FormatBuildDownloadVersion($versionInfo) {
+    $buildNumber = $versionInfo.BuildNumber
+    $builtAtString = $versionInfo.BuiltAtString
+    $buildType = $versionInfo.BuildType
+
+    if ($buildType.ToLower() -eq 'nightly') {
+        $versionString = "$builtAtString-$((Get-Culture).textinfo.toTitleCase($buildType))"
+    } else {
+        $versionString = "$buildNumber-$((Get-Culture).textinfo.toTitleCase($buildType))"
+    }
+
+    return $versionString
+}
+function UploadArtifact ( $uploader, $versionInfo, $filename, $log ) {
     $uploadCategory = Get-UploadCategory $filename
-    $versionString = "$buildNumber-$((Get-Culture).textinfo.toTitleCase($buildType))"
+    $versionString = FormatBuildDownloadVersion($versionInfo)
 
     write-host "Executing: $uploader ""$uploadCategory"" ""$versionString"" $filename ""$log"""
     $uploadTryCount = 0
@@ -44,7 +56,7 @@ function UploadArtifact ( $uploader, $buildNumber, $buildType, $filename, $log )
     }
 }
 
-function Upload ( $uploader, $buildNumber, $buildType, $artifacts ) {
+function Upload ($uploader, $versionInfo, $artifacts) {
     Write-Host "Starting upload"
 
     if ($(Test-Path $uploader) -eq $False) {
@@ -56,6 +68,6 @@ function Upload ( $uploader, $buildNumber, $buildType, $artifacts ) {
 
     foreach ($filename in $artifacts)
     {
-        UploadArtifact $uploader $buildNumber $buildType $filename $log
+        UploadArtifact $uploader $versionInfo $filename $log
     }
 }
