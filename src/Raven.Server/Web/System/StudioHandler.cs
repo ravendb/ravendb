@@ -358,10 +358,21 @@ namespace Raven.Server.Web.System
                 // ever to be handled by the server) changes it, it also
                 // starts the process to check if files change and invalidate
                 // cache entries.
-                _fileWatcher = new FileSystemWatcher();
-                _fileWatcher.Path = _wwwRootBasePath;
-                _fileWatcher.Filter = "*.*";
-                StartFileSystemWatcher(_fileWatcher, CacheEvictEntryEventHandler, CacheEvictRenamedEntryEventHandler);
+                try
+                {
+                    _fileWatcher = new FileSystemWatcher
+                    {
+                        Path = _wwwRootBasePath,
+                        Filter = "*.*"
+                    };
+                }
+                catch (ArgumentException)
+                {
+                    // path does not exists or no permissions
+                }
+                if (_fileWatcher != null)
+                    StartFileSystemWatcher(_fileWatcher, CacheEvictEntryEventHandler, CacheEvictRenamedEntryEventHandler);
+
             }
 
             return staticFileInfo;
@@ -386,7 +397,7 @@ namespace Raven.Server.Web.System
             if (File.Exists(e.FullPath) || Directory.Exists(e.FullPath) == false)
             {
                 // It is a file, or it does not exist any more
-                string relativePath = Path.GetRelativePath(_wwwRootBasePath, e.FullPath).Replace('\\','/');
+                string relativePath = Path.GetRelativePath(_wwwRootBasePath, e.FullPath).Replace('\\', '/');
                 StaticContentCache.TryRemove(relativePath, out var value);
             }
             else
@@ -410,7 +421,7 @@ namespace Raven.Server.Web.System
             {
                 // It is a file, or it does not exist any more. Notice we
                 // clear the old version.
-                string relativePath = Path.GetRelativePath(_wwwRootBasePath, e.OldFullPath).Replace('\\','/');
+                string relativePath = Path.GetRelativePath(_wwwRootBasePath, e.OldFullPath).Replace('\\', '/');
                 StaticContentCache.TryRemove(relativePath, out var value);
             }
             else

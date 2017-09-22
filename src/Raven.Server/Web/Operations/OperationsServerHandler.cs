@@ -7,7 +7,7 @@ namespace Raven.Server.Web.Operations
 {
     public class OperationsServerHandler : RequestHandler
     {
-        [RavenAction("/operations/next-operation-id", "GET", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/operations/next-operation-id", "GET", AuthorizationStatus.Operator)]
         public Task GetNextOperationId()
         {
             var nextId = ServerStore.Operations.GetNextOperationId();
