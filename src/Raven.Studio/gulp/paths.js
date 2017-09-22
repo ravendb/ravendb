@@ -49,6 +49,7 @@ var paths = {
         'wwwroot/Content/css/legacy_styles.css'
     ],
     externalLibs: [
+        'es6-shim/es6-shim.js',
         "jquery/dist/jquery.js",
         'lodash/dist/lodash.js',
         'prism/prism.js',
