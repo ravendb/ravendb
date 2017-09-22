@@ -147,7 +147,7 @@ namespace Raven.Client.Documents.BulkInsert
         private bool _first = true;
         private long _operationId = -1;
 
-        public CompressionLevel UseGzipCompressionLevel = CompressionLevel.Fastest;
+        public CompressionLevel CompressionLevel = CompressionLevel.Fastest;
 
         public BulkInsertOperation(string database, IDocumentStore store, CancellationToken token = default(CancellationToken))
         {
@@ -186,11 +186,11 @@ namespace Raven.Client.Documents.BulkInsert
                 id = GetId(entity);
             }
 
-            await StoreAsync(entity, id , metadata).ConfigureAwait(false);
+            await StoreAsync(entity, id, metadata).ConfigureAwait(false);
             return id;
         }
 
-        public async Task StoreAsync(object entity, string id , IMetadataDictionary metadata = null)
+        public async Task StoreAsync(object entity, string id, IMetadataDictionary metadata = null)
         {
             VerifyValidId(id);
 
@@ -242,7 +242,7 @@ namespace Raven.Client.Documents.BulkInsert
                         }
                         await ThrowOnUnavailableStream(id, e).ConfigureAwait(false);
                     }
-                } 
+                }
             }
         }
 
@@ -275,7 +275,7 @@ namespace Raven.Client.Documents.BulkInsert
 
         private async Task EnsureStream()
         {
-            if (UseGzipCompressionLevel != CompressionLevel.NoCompression)
+            if (CompressionLevel != CompressionLevel.NoCompression)
                 _streamExposerContent.Headers.ContentEncoding.Add("gzip");
 
             var bulkCommand = new BulkInsertCommand(
@@ -286,9 +286,9 @@ namespace Raven.Client.Documents.BulkInsert
             _stream = await _streamExposerContent.OutputStream.ConfigureAwait(false);
 
             var requestBodyStream = _stream;
-            if (UseGzipCompressionLevel != CompressionLevel.NoCompression)
+            if (CompressionLevel != CompressionLevel.NoCompression)
             {
-                _compressedStream = new GZipStream(_stream, UseGzipCompressionLevel, leaveOpen: true);
+                _compressedStream = new GZipStream(_stream, CompressionLevel, leaveOpen: true);
                 requestBodyStream = _compressedStream;
             }
 
