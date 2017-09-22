@@ -63,6 +63,7 @@ function SetVersionInfo() {
         BuildType = $buildType
     }
 
+    New-Item -Path $RELEASE_INFO_FILE -Force -Type File
     $versionInfoJson = ConvertTo-Json -InputObject $versionInfo
     Set-Content -Path $RELEASE_INFO_FILE -Value $versionInfoJson
 

@@ -2,7 +2,7 @@ function CleanDir ( $dir ) {
     write-host "Cleaning $dir..."
     Remove-Item -Recurse -Force -ErrorAction SilentlyContinue $dir
     if (-Not (Test-Path -path $dir)) {
-        New-Item -ItemType Directory -Path $dir | Out-Null
+        New-Item -ItemType Directory -Path $dir -Force | Out-Null
     }
 }
 function CleanBinDirs ([string[]] $srcDirs) {

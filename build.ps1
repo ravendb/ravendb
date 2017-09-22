@@ -92,7 +92,7 @@ if ($targets.Count -eq 0) {
     Write-Host -ForegroundColor Magenta "Build targets: $($targets.Name)"
 }
 
-New-Item -Path $RELEASE_DIR -ErrorAction SilentlyContinue
+New-Item -Path $RELEASE_DIR -Type Directory -Force
 CleanFiles $RELEASE_DIR
 CleanBinDirs $TYPINGS_GENERATOR_SRC_DIR, $RVN_SRC_DIR, $SERVER_SRC_DIR, $CLIENT_SRC_DIR, $SPARROW_SRC_DIR, $TESTDRIVER_SRC_DIR
 
