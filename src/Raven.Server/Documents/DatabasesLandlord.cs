@@ -522,10 +522,10 @@ namespace Raven.Server.Documents
 
                 if (databaseRecord.Encrypted)
                 {
-                    if (_serverStore.RavenServer.WebUrl?.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)
+                    if (_serverStore.Server.WebUrl?.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)
                     {
                         throw new DatabaseDisabledException(
-                            $"The database {databaseName.Value} is encrypted, and must be accessed only via HTTPS, but the web url used is {_serverStore.RavenServer.WebUrl}");
+                            $"The database {databaseName.Value} is encrypted, and must be accessed only via HTTPS, but the web url used is {_serverStore.Server.WebUrl}");
                     }
                 }
 

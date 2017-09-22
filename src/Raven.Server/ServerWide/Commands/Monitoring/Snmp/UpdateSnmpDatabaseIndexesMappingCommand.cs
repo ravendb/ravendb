@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using Raven.Client;
 using Raven.Client.ServerWide;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -10,7 +9,7 @@ namespace Raven.Server.ServerWide.Commands.Monitoring.Snmp
     {
         public static string GetStorageKey(string databaseName)
         {
-            return $"{Constants.Documents.Prefix}{databaseName.ToLowerInvariant()}/monitoring/snmp/indexes/mapping";
+            return $"{Helpers.ClusterStateMachineValuesPrefix(databaseName)}/monitoring/snmp/indexes/mapping";
         }
 
         private string _itemId;
