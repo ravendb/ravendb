@@ -36,7 +36,8 @@ namespace FastTests.Issues
                 Operations.OperationType.DatabaseRestore,
                 Operations.OperationType.BulkInsert,
                 Operations.OperationType.IndexCompact,
-                Operations.OperationType.DatabaseCompact
+                Operations.OperationType.DatabaseCompact,
+                Operations.OperationType.CertificateGeneration
             };
 
             var operationWithoutDetails = new HashSet<Operations.OperationType>
