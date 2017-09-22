@@ -147,7 +147,7 @@ namespace Raven.Client.Documents.BulkInsert
         private bool _first = true;
         private long _operationId = -1;
 
-        public CompressionLevel CompressionLevel = CompressionLevel.Fastest;
+        public CompressionLevel CompressionLevel = CompressionLevel.NoCompression;
 
         public BulkInsertOperation(string database, IDocumentStore store, CancellationToken token = default(CancellationToken))
         {
