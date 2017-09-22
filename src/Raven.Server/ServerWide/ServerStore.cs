@@ -75,7 +75,7 @@ namespace Raven.Server.ServerWide
         private RequestExecutor _clusterRequestExecutor;
 
         public readonly RavenConfiguration Configuration;
-        private readonly RavenServer _ravenServer;
+        private readonly RavenServer _server;
         public readonly DatabasesLandlord DatabasesLandlord;
         public readonly NotificationCenter.NotificationCenter NotificationCenter;
         public readonly LicenseManager LicenseManager;
@@ -92,11 +92,11 @@ namespace Raven.Server.ServerWide
 
         public Operations Operations { get; }
 
-        public ServerStore(RavenConfiguration configuration, RavenServer ravenServer)
+        public ServerStore(RavenConfiguration configuration, RavenServer server)
         {
             Configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
 
-            _ravenServer = ravenServer;
+            _server = server;
 
             DatabasesLandlord = new DatabasesLandlord(this);
 
@@ -120,8 +120,7 @@ namespace Raven.Server.ServerWide
 
         }
 
-        public RavenServer RavenServer => _ravenServer;
-
+        public RavenServer Server => _server;
 
         public DatabaseInfoCache DatabaseInfoCache { get; set; }
 
@@ -1120,7 +1119,7 @@ namespace Raven.Server.ServerWide
             if (_engine.CurrentState != RachisConsensus.State.Passive)
                 return;
 
-            _engine.Bootstrap(_ravenServer.ServerStore.NodeHttpServerUrl);
+            _engine.Bootstrap(_server.ServerStore.NodeHttpServerUrl);
             LicenseManager.TryActivateLicense();
 
             // we put a certificate in the local state to tell the server who to trust, and this is done before
@@ -1347,7 +1346,7 @@ namespace Raven.Server.ServerWide
                     || _clusterRequestExecutor.Url.Equals(leaderUrl, StringComparison.OrdinalIgnoreCase) == false)
                 {
                     _clusterRequestExecutor?.Dispose();
-                    _clusterRequestExecutor = ClusterRequestExecutor.CreateForSingleNode(leaderUrl, RavenServer.ClusterCertificateHolder.Certificate);
+                    _clusterRequestExecutor = ClusterRequestExecutor.CreateForSingleNode(leaderUrl, Server.ClusterCertificateHolder.Certificate);
                     _clusterRequestExecutor.DefaultTimeout = Engine.OperationTimeout;
                 }
 
@@ -1449,9 +1448,9 @@ namespace Raven.Server.ServerWide
                 if (_nodeHttpServerUrl != null)
                     return _nodeHttpServerUrl;
 
-                Debug.Assert(Configuration.Core.PublicServerUrl.HasValue || _ravenServer.WebUrl != null);
+                Debug.Assert(Configuration.Core.PublicServerUrl.HasValue || _server.WebUrl != null);
                 return _nodeHttpServerUrl = Configuration.Core.GetNodeHttpServerUrl(
-                    Configuration.Core.PublicServerUrl?.UriValue ?? _ravenServer.WebUrl
+                    Configuration.Core.PublicServerUrl?.UriValue ?? _server.WebUrl
                     );
             }
         }
@@ -1463,10 +1462,10 @@ namespace Raven.Server.ServerWide
                 if (_nodeTcpServerUrl != null)
                     return _nodeTcpServerUrl;
 
-                var ravenServerWebUrl = _ravenServer.WebUrl;
+                var ravenServerWebUrl = _server.WebUrl;
                 if (ravenServerWebUrl == null)
                     ThrowInvalidTcpUrlOnStartup();
-                var status = _ravenServer.GetTcpServerStatus();
+                var status = _server.GetTcpServerStatus();
                 return _nodeTcpServerUrl = Configuration.Core.GetNodeTcpServerUrl(ravenServerWebUrl, status.Port);
             }
         }
@@ -1485,7 +1484,7 @@ namespace Raven.Server.ServerWide
             return new DynamicJsonValue
             {
                 [nameof(TcpConnectionInfo.Url)] = tcpServerUrl,
-                [nameof(TcpConnectionInfo.Certificate)] = _ravenServer.ClusterCertificateHolder.CertificateForClients
+                [nameof(TcpConnectionInfo.Certificate)] = _server.ClusterCertificateHolder.CertificateForClients
             };
         }
 

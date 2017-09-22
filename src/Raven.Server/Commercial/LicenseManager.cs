@@ -826,7 +826,7 @@ namespace Raven.Server.Commercial
 
         private async Task<NodeInfo> GetNodeInfo(string nodeUrl, TransactionOperationContext ctx)
         {
-            using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(nodeUrl, _serverStore.RavenServer.ClusterCertificateHolder.Certificate))
+            using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(nodeUrl, _serverStore.Server.ClusterCertificateHolder.Certificate))
             {
                 var infoCmd = new GetNodeInfoCommand();
 

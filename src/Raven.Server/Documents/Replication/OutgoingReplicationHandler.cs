@@ -123,7 +123,7 @@ namespace Raven.Server.Documents.Replication
             try
             {
                 var connectionInfo = ReplicationUtils.GetTcpInfo(Destination.Url, GetNode(), "Replication",
-                    _parent._server.RavenServer.ClusterCertificateHolder.Certificate);
+                    _parent._server.Server.ClusterCertificateHolder.Certificate);
 
                 if (_log.IsInfoEnabled)
                     _log.Info($"Will replicate to {Destination.FromString()} via {connectionInfo.Url}");
@@ -144,7 +144,7 @@ namespace Raven.Server.Documents.Replication
                 task.Wait(CancellationToken);
                 using (_tcpClient = task.Result)
                 {
-                    var wrapSsl = TcpUtils.WrapStreamWithSslAsync(_tcpClient, connectionInfo, _parent._server.RavenServer.ClusterCertificateHolder.Certificate);
+                    var wrapSsl = TcpUtils.WrapStreamWithSslAsync(_tcpClient, connectionInfo, _parent._server.Server.ClusterCertificateHolder.Certificate);
 
                     wrapSsl.Wait(CancellationToken);
 

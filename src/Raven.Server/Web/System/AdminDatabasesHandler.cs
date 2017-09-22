@@ -307,7 +307,7 @@ namespace Raven.Server.Web.System
                 foreach (var member in members)
                 {
                     var url = clusterTopology.GetUrlFromTag(member);
-                    var requester = ClusterRequestExecutor.CreateForSingleNode(url, ServerStore.RavenServer.ClusterCertificateHolder.Certificate);
+                    var requester = ClusterRequestExecutor.CreateForSingleNode(url, ServerStore.Server.ClusterCertificateHolder.Certificate);
                     executors.Add(requester);
                     waitingTasks.Add(requester.ExecuteAsync(new WaitForRaftIndexCommand(index), context, cts.Token));
                 }
@@ -341,7 +341,7 @@ namespace Raven.Server.Web.System
         {
             await ServerStore.Cluster.WaitForIndexNotification(index); // first let see if we commit this in the leader
 
-            using (var requester = ClusterRequestExecutor.CreateForSingleNode(clusterTopology.GetUrlFromTag(node), ServerStore.RavenServer.ClusterCertificateHolder.Certificate))
+            using (var requester = ClusterRequestExecutor.CreateForSingleNode(clusterTopology.GetUrlFromTag(node), ServerStore.Server.ClusterCertificateHolder.Certificate))
             {
                 await requester.ExecuteAsync(new WaitForRaftIndexCommand(index), context);
             }
