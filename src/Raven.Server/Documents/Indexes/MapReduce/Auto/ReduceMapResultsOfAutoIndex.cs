@@ -52,6 +52,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                                     if (obj.TryGetMember(propertyName, out value) == false)
                                         throw new InvalidOperationException($"Could not read numeric value of '{propertyName}' property");
 
+                                    if (value == null)
+                                        throw new InvalidOperationException($"Could not perform aggregation operation ({indexField.Aggregation}) on '{propertyName}' field because its value is null");
+
                                     double doubleValue;
                                     long longValue;
 
