@@ -496,12 +496,17 @@ namespace Raven.Database.Actions
             catch (Exception e)
             {
                 Log.WarnException("Could not create index batch", e);
-                foreach (var index in createdIndexes)
+
+                if (isReplication == false)
                 {
-                    DeleteIndex(index.Name);
-                    if (index.IsSideBySide)
-                        Database.Documents.Delete(index.Name, null, null);
+                    foreach (var index in createdIndexes)
+                    {
+                        DeleteIndex(index.Name);
+                        if (index.IsSideBySide)
+                            Database.Documents.Delete(index.Name, null, null);
+                    }
                 }
+
                 throw;
             }
         }
