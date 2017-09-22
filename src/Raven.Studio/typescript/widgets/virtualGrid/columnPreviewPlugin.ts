@@ -32,7 +32,7 @@ class columnPreviewPlugin<T> {
         $(containerSelector).on("mouseenter", ".cell", e => {
             const [element, column] = this.findItemAndColumn(e);
             this.previewTimeoutHandle = setTimeout(() => {
-                if (document.contains(e.target)) {
+                if (document.body.contains(e.target)) {
                     this.previewVisible = true;
 
                     previewContextProvider(element, column, e, markup => this.show(markup, e));    
