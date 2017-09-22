@@ -154,7 +154,7 @@ namespace Voron.Util
 
         public bool Contains(LowLevelTransaction tx)
         {
-            return Volatile.Read(ref tx.ActiveTransactionNode.Transaction) == tx;
+            return tx.ActiveTransactionNode.Transaction == tx;
         }
 
         public bool TryRemove(LowLevelTransaction tx)

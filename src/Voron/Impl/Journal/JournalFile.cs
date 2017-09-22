@@ -47,7 +47,7 @@ namespace Voron.Impl.Journal
         }
 
 
-        internal long WritePosIn4KbPosition => Volatile.Read(ref _writePosIn4Kb);
+        internal long WritePosIn4KbPosition => Interlocked.Read(ref _writePosIn4Kb);
 
         public long Number { get; }
 

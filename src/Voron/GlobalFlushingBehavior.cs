@@ -154,7 +154,7 @@ namespace Voron
 
                 // we have mutliple threads racing for this value, no a concern, the last one wins is probably
                 // going to be the latest, or close enough that we don't care
-                Volatile.Write(ref req.Env.LastSyncTimeInTicks, DateTime.UtcNow.Ticks);
+                Interlocked.Exchange(ref req.Env.LastSyncTimeInTicks, DateTime.UtcNow.Ticks);
             }
         }
 
@@ -199,7 +199,7 @@ namespace Voron
                 if (envToFlush.Disposed || envToFlush.Options.ManualFlushing)
                     continue;
 
-                var sizeOfUnflushedTransactionsInJournalFile = Volatile.Read(ref envToFlush.SizeOfUnflushedTransactionsInJournalFile);
+                var sizeOfUnflushedTransactionsInJournalFile = envToFlush.SizeOfUnflushedTransactionsInJournalFile;
 
                 if (sizeOfUnflushedTransactionsInJournalFile == 0)
                     continue; // nothing to do
