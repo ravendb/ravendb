@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Parser;
 using Sparrow;
@@ -49,7 +50,7 @@ namespace Raven.Server.Documents.Queries
 
             if (!(expression is BinaryExpression be))
             {
-                ThrowUnexpectedExpression(expression);
+                ThrowUnexpectedExpression(expression, parameters);
                 return;// never hit
             }
 
@@ -82,9 +83,9 @@ namespace Raven.Server.Documents.Queries
             throw new ArgumentException(expression.Type.ToString());
         }
 
-        private static void ThrowUnexpectedExpression(QueryExpression expression)
+        private void ThrowUnexpectedExpression(QueryExpression expression, BlittableJsonReaderObject parameters)
         {
-            throw new InvalidOperationException("Expected binary expression, but got " + expression);
+            throw new InvalidQueryException("Expected binary expression, but got " + expression, QueryText, parameters);
         }
 
         protected ValueTokenType GetValueTokenType(BlittableJsonReaderObject parameters, ValueExpression value, bool unwrapArrays)
