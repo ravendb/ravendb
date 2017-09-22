@@ -34,6 +34,18 @@ namespace FastTests.Blittable
         }
 
         [Fact]
+        public void CanAddNegativeIntegerProperty()
+        {
+            AssertEqualAfterRoundTrip(source =>
+            {
+                source.Modifications = new DynamicJsonValue
+                {
+                    ["Age"] = -34
+                };
+            }, @"{""Name"":""Oren"",""Dogs"":[""Arava"",""Oscar"",""Sunny""],""State"":{""Sleep"":false},""Age"":-34}");
+        }
+
+        [Fact]
         public void CanCompressFields()
         {
             AssertEqualAfterRoundTrip(source =>

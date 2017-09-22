@@ -36,7 +36,7 @@ namespace Sparrow.Json
         private readonly byte* _buffer;
         private JsonOperationContext.ReturnBuffer _returnBuffer;
         private readonly JsonOperationContext.ManagedPinnedBuffer _pinnedBuffer;
-        private readonly AllocatedMemoryData _dateTimeMemory;
+        private readonly AllocatedMemoryData _parserAuxiliarMemory;
 
         static BlittableJsonTextWriter()
         {
@@ -62,7 +62,7 @@ namespace Sparrow.Json
             _returnBuffer = context.GetManagedBuffer(out _pinnedBuffer);
             _buffer = _pinnedBuffer.Pointer;
 
-            _dateTimeMemory = context.GetMemory(32);
+            _parserAuxiliarMemory = context.GetMemory(32);
         }
 
         public int Position => _pos;
@@ -178,9 +178,9 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteDateTime(DateTime value, bool isUtc)
         {
-            int size = value.GetDefaultRavenFormat(_dateTimeMemory, isUtc);
+            int size = value.GetDefaultRavenFormat(_parserAuxiliarMemory, isUtc);
 
-            var strBuffer = _dateTimeMemory.Address;
+            var strBuffer = _parserAuxiliarMemory.Address;
 
             WriteRawStringWhichMustBeWithoutEscapeChars(strBuffer, size);
         }
@@ -542,29 +542,36 @@ namespace Sparrow.Json
                 return;
             }
 
-            int len = 1;
-            for (var i = val / 10; i != 0; i /= 10)
+            var localBuffer = _parserAuxiliarMemory.Address;
+
+            int idx = 0;
+            bool negative = false;
+            if (val < 0)
             {
-                len++;
+                negative = true;
+                val = -val; // value is positive now.
             }
 
-            EnsureBuffer(len + 1);
+            do
+            {
+                localBuffer[idx++] = (byte)('0' + val % 10);
+                val /= 10;
+            }
+            while (val != 0);
+
+            if (negative)
+                localBuffer[idx++] = (byte)'-';
+
+            EnsureBuffer(idx);
 
             var buffer = _buffer;
             int auxPos = _pos;
 
-            if (val < 0)
-            {
-                buffer[auxPos++] = (byte)'-';
-                val = -val; // value is positive now.
-            }
+            do
+                buffer[auxPos++] = localBuffer[--idx];
+            while (idx > 0);
 
-            for (int i = len - 1; i >= 0; i--)
-            {
-                buffer[auxPos + i] = (byte)('0' + val % 10);
-                val /= 10;
-            }
-            _pos = auxPos + len;
+            _pos = auxPos;          
         }
 
         public void WriteDouble(LazyNumberValue val)
@@ -641,7 +648,7 @@ namespace Sparrow.Json
             finally
             {
                 _returnBuffer.Dispose();
-                _context.ReturnMemory(_dateTimeMemory);
+                _context.ReturnMemory(_parserAuxiliarMemory);
             }
         }
 
