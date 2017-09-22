@@ -162,6 +162,10 @@ namespace Raven.Server.Monitoring.Snmp
             store.Add(new ClusterNodeState(server.ServerStore));
             store.Add(new ClusterNodeTag(server.ServerStore));
 
+            store.Add(new ClusterId(server.ServerStore));
+            store.Add(new ClusterIndex(server.ServerStore));
+            store.Add(new ClusterTerm(server.ServerStore));
+
             store.Add(new ServerLicenseType(server.ServerStore));
             store.Add(new ServerLicenseExpiration(server.ServerStore));
             store.Add(new ServerLicenseExpirationLeft(server.ServerStore));

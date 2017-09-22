@@ -126,7 +126,7 @@ namespace Raven.Server.ServerWide
 
         public TransactionContextPool ContextPool;
 
-        public long LastRaftCommitEtag
+        public long LastRaftCommitIndex
         {
             get
             {
