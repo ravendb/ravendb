@@ -226,7 +226,7 @@ namespace Voron
                 {
                     if (await _writeTransactionRunning.WaitAsync(TimeSpan.FromMilliseconds(Options.IdleFlushTimeout)) == false)
                     {
-                        if (Volatile.Read(ref SizeOfUnflushedTransactionsInJournalFile) != 0)
+                        if (SizeOfUnflushedTransactionsInJournalFile != 0)
                             GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
 
                         else if (Journal.Applicator.TotalWrittenButUnsyncedBytes != 0)
@@ -270,8 +270,7 @@ namespace Voron
                 Options = Options
             };
 
-            _transactionsCounter = (header->TransactionId == 0 ? entry.TransactionId : header->TransactionId);
-
+            Interlocked.Exchange(ref _transactionsCounter, header->TransactionId == 0 ? entry.TransactionId : header->TransactionId);
             var transactionPersistentContext = new TransactionPersistentContext(true);
             using (var tx = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
             {
@@ -659,8 +658,8 @@ namespace Voron
             throw new TimeoutException(message);
         }
 
-        public long CurrentReadTransactionId => Volatile.Read(ref _transactionsCounter);
-        public long NextWriteTransactionId => Volatile.Read(ref _transactionsCounter) + 1;
+        public long CurrentReadTransactionId => Interlocked.Read(ref _transactionsCounter);
+        public long NextWriteTransactionId => Interlocked.Read(ref _transactionsCounter) + 1;
 
         public long PossibleOldestReadTransaction(LowLevelTransaction tx)
         {
@@ -710,7 +709,7 @@ namespace Voron
                 tx.OnAfterCommitWhenNewReadTransactionsPrevented();
 
                 if (tx.Committed && tx.FlushedToJournal)
-                    _transactionsCounter = tx.Id;
+                    Interlocked.Exchange(ref _transactionsCounter, tx.Id);
 
                 State = tx.State;
             }

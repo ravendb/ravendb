@@ -449,11 +449,11 @@ namespace Voron.Impl.Journal
 
             public void OnTransactionCommitted(LowLevelTransaction tx)
             {
-                var action = Volatile.Read(ref _updateJournalStateAfterFlush);
+                var action = _updateJournalStateAfterFlush;
                 action?.Invoke(tx);
             }
 
-            public long TotalWrittenButUnsyncedBytes => Volatile.Read(ref _totalWrittenButUnsyncedBytes);
+            public long TotalWrittenButUnsyncedBytes => Interlocked.Read(ref _totalWrittenButUnsyncedBytes);
 
             public JournalApplicator(WriteAheadJournal waj)
             {
@@ -585,7 +585,7 @@ namespace Voron.Impl.Journal
                     var needImmediateFsync =
                         _pendingSync.IsCompleted &&
                         (_forceDataSync.Lower() ||
-                         _totalWrittenButUnsyncedBytes > 32 * Constants.Size.Megabyte);
+                         Interlocked.Read(ref _totalWrittenButUnsyncedBytes) > 32 * Constants.Size.Megabyte);
 
                     if (needImmediateFsync)
                     {
@@ -693,7 +693,7 @@ namespace Voron.Impl.Journal
                             }
                             continue;
                         }
-                        var action = Volatile.Read(ref _updateJournalStateAfterFlush);
+                        var action = _updateJournalStateAfterFlush;
                         if (action != null)
                         {
                             action(txw);
@@ -915,7 +915,7 @@ namespace Voron.Impl.Journal
                             return;
                         }
 
-                        _parent._totalWrittenButUnsyncedBytes -= _currentTotalWrittenBytes;
+                        Interlocked.Add(ref _parent._totalWrittenButUnsyncedBytes, -_currentTotalWrittenBytes);
                         _parent.UpdateFileHeaderAfterDataFileSync(_lastSyncedJournal, _lastSyncedTransactionId, ref _transactionHeader);
 
                         foreach (var toDelete in _journalsToDelete)
@@ -936,7 +936,7 @@ namespace Voron.Impl.Journal
                     {
                         // We do the sync _outside_ of the lock, letting the rest of the stuff proceed
                         var sp = Stopwatch.StartNew();
-                        _parent._waj._dataPager.Sync(_parent._totalWrittenButUnsyncedBytes);
+                        _parent._waj._dataPager.Sync(Interlocked.Read(ref _parent._totalWrittenButUnsyncedBytes));
                         if (_parent._waj._logger.IsInfoEnabled)
                         {
                             var sizeInKb = (_parent._waj._dataPager.NumberOfAllocatedPages * Constants.Storage.PageSize) / Constants.Size.Kilobyte;
@@ -983,7 +983,7 @@ namespace Voron.Impl.Journal
                             _parent._waj._env.QueueForSyncDataFile();
                             return false;
                         }
-                        _currentTotalWrittenBytes = _parent._totalWrittenButUnsyncedBytes;
+                        _currentTotalWrittenBytes = Interlocked.Read(ref _parent._totalWrittenButUnsyncedBytes);
                         _lastSyncedJournal = _parent._lastFlushedJournalId;
                         _lastSyncedTransactionId = _parent._lastFlushedTransactionId;
                         _parent.SetLastReadTxHeader(_parent._lastFlushedJournal, _lastSyncedTransactionId, ref _transactionHeader);
@@ -1066,7 +1066,7 @@ namespace Voron.Impl.Journal
                     if (_waj._logger.IsInfoEnabled)
                         _waj._logger.Info($"Flushed {pagesToWrite.Count:#,#} pages to { _waj._dataPager.FileName} with {written / Constants.Size.Kilobyte:#,#} kb in {sp.Elapsed}");
 
-                    _totalWrittenButUnsyncedBytes += written;
+                    Interlocked.Add(ref _totalWrittenButUnsyncedBytes, written);
                 }
                 finally
                 {

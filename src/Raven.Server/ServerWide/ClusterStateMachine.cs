@@ -1204,12 +1204,12 @@ namespace Raven.Server.ServerWide
                     _notifiedListeners.WaitAsync() :
                     _notifiedListeners.WaitAsync(timeout.Value);
 
-                if (index <= Volatile.Read(ref LastModifiedIndex))
+                if (index <= Interlocked.Read(ref LastModifiedIndex))
                     break;
 
                 if (await waitAsync == false)
                 {
-                    var copy = Volatile.Read(ref LastModifiedIndex);
+                    var copy = Interlocked.Read(ref LastModifiedIndex);
                     if (index <= copy)
                         break;
                     ThrowTimeoutException(timeout ?? TimeSpan.MaxValue, index, copy);

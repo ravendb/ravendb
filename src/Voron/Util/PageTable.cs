@@ -184,7 +184,7 @@ namespace Voron.Util
 
         public long GetLastSeenTransactionId()
         {
-            return Volatile.Read(ref _maxSeenTransaction);
+            return Interlocked.Read(ref _maxSeenTransaction);
         }
 
         public List<Dictionary<long, PagePosition>> GetModifiedPagesForTransactionRange(long minTxInclusive, long maxTxInclusive)
