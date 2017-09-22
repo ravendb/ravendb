@@ -1,6 +1,7 @@
 # TODO @gregolsky update regexes for stable
 $CATEGORIES = @(
     @('RavenDB-[0-9]\.[0-9]\.[0-9]-[a-zA-Z]+-([0-9-]+)-windows-x64', "RavenDB for Windows x64"),
+    @('RavenDB-[0-9]\.[0-9]\.[0-9]-[a-zA-Z]+-([0-9-]+)-windows-x86', "RavenDB for Windows x86"),
     @('RavenDB-[0-9]\.[0-9]\.[0-9]-[a-zA-Z]+-([0-9-]+)-ubuntu\.14\.04-x64', "RavenDB for Ubuntu 14.04 x64"),
     @('RavenDB-[0-9]\.[0-9]\.[0-9]-[a-zA-Z]+-([0-9-]+)-ubuntu\.16\.04-x64', "RavenDB for Ubuntu 16.04 x64"),
     @('RavenDB-[0-9]\.[0-9]\.[0-9]-[a-zA-Z]+-([0-9-]+)-raspberry-pi', "RavenDB for Raspberry Pi")
