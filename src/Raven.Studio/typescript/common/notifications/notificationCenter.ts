@@ -24,6 +24,7 @@ import patchDocumentsDetails = require("viewmodels/common/notificationCenter/det
 import indexCompactDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/indexCompactDetails");
 import bulkInsertDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/bulkInsertDetails");
 import deleteDocumentsDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/deleteDocumentsDetails");
+import generateClientCertificateDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/generateClientCertificateDetails");
 import compactDatabaseDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/compactDatabaseDetails");
 import indexingDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/indexingDetails");
 import pagingDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/pagingDetails");
@@ -104,6 +105,7 @@ class notificationCenter {
             // operations:
             smugglerDatabaseDetails,
             patchDocumentsDetails,
+            generateClientCertificateDetails,
             deleteDocumentsDetails,
             bulkInsertDetails,
             indexCompactDetails,

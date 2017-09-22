@@ -7,9 +7,12 @@ import certificatePermissionModel = require("models/auth/certificatePermissionMo
 import uploadCertificateCommand = require("commands/auth/uploadCertificateCommand");
 import deleteCertificateCommand = require("commands/auth/deleteCertificateCommand");
 import updateCertificatePermissionsCommand = require("commands/auth/updateCertificatePermissionsCommand");
+import getNextOperationId = require("commands/database/studio/getNextOperationId");
+import notificationCenter = require("common/notifications/notificationCenter");
 import appUrl = require("common/appUrl");
 import endpoints = require("endpoints");
 import copyToClipboard = require("common/copyToClipboard");
+import messagePublisher = require("common/messagePublisher");
 
 class certificates extends viewModelBase {
 
@@ -127,14 +130,31 @@ class certificates extends viewModelBase {
             case "generate":
                 this.generateCertPayload(JSON.stringify(model.toGenerateCertificateDto()));
                 
-                $("form[target=certificate_download_iframe]").submit();
-                
-                setTimeout(() => {
-                    this.spinners.processing(false);
-                    this.loadCertificates();
-                    this.onCloseEdit();
-                }, 3000);
-                
+                new getNextOperationId(null)
+                    .execute()
+                    .done(operationId => {
+                        
+                        const targetFrame = $("form[target=certificate_download_iframe]");
+                        targetFrame.attr("action", this.generateCertificateUrl + "?operationId=" + operationId);
+                        targetFrame.submit();
+
+                        notificationCenter.instance.monitorOperation(null, operationId)
+                            .done(() => {
+                                messagePublisher.reportSuccess("Client certificate was generated.");
+                            })
+                            .fail(() => {
+                                notificationCenter.instance.openDetailsForOperationById(null,  operationId);
+                            })
+                            .always(() => {
+                                this.spinners.processing(false);
+                                this.onCloseEdit();
+                                this.loadCertificates();
+                            })
+                    })
+                    .fail(() => {
+                        this.spinners.processing(false);
+                        this.onCloseEdit();
+                    });
                 break;
             case "upload":
                 new uploadCertificateCommand(model)

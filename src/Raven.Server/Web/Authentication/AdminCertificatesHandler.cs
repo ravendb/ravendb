@@ -5,8 +5,10 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client;
+using Raven.Client.Documents.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Config;
+using Raven.Server.Documents;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -30,66 +32,89 @@ namespace Raven.Server.Web.Authentication
             ServerStore.EnsureNotPassive();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {
+                
+                var operationId = GetLongQueryString("operationId", false);
+                if (operationId.HasValue == false)
+                    operationId = ServerStore.Operations.GetNextOperationId();
+                
                 var stream = TryGetRequestFormStream("Options") ?? RequestBodyStream();
 
                 var certificateJson = ctx.ReadForDisk(stream, "certificate-generation");
-
+    
                 var certificate = JsonDeserializationServer.CertificateDefinition(certificateJson);
-
-                ValidateCertificate(certificate, ServerStore);
-
-                if (certificate.SecurityClearance == SecurityClearance.ClusterAdmin && IsClusterAdmin() == false)
-                {
-                    var clientCert = (HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection)?.Certificate;
-                    throw new InvalidOperationException($"Cannot generate the certificate '{certificate.Name}' with 'Cluster Admin' security clearance because the current client certificate being used has a lower clearance: {clientCert}");
-                }
-
-                if (Server.ClusterCertificateHolder?.Certificate == null)
-                    throw new InvalidOperationException($"Cannot generate the client certificate '{certificate.Name}' becuase the server certificate is not loaded. " +
-                                                        $"You can supply a server certificate by using the following configuration keys: " +
-                                                        $"'{RavenConfiguration.GetKey(x => x.Security.CertificatePath)}'/'{RavenConfiguration.GetKey(x => x.Security.CertificateExec)}'/" +
-                                                        $"'{RavenConfiguration.GetKey(x => x.Security.ClusterCertificatePath)}'/'{RavenConfiguration.GetKey(x => x.Security.ClusterCertificateExec)}'. " +
-                                                        $"For a more detailed explanation please read about authentication and certificates in the RavenDB documentation.");
-
                 
-                if (PlatformDetails.RunningOnPosix)
-                {
-                    // For the client certificate to work properly, we need that the issuer (our server certificate) will be registered in the trusted root store.
-                    // In Linux, when using SslStream AuthenticateAsServer, the server sends the list of allowed CAs to the client. So the client's CA must be in the list. See RavenDB-8524
-                    using (var currentUserStore = new X509Store(StoreName.Root, StoreLocation.CurrentUser))
-                    {
-                        currentUserStore.Open(OpenFlags.ReadOnly);
-                        if (currentUserStore.Certificates.Contains(Server.ClusterCertificateHolder.Certificate) == false)
-                            throw new InvalidOperationException($"Cannot generate the client certificate '{certificate.Name}'. " +
-                                                                $"First, you must register the server certificate '{Server.ClusterCertificateHolder.Certificate.FriendlyName}' in the trusted root store, on the server machine." +
-                                                                $"The server certificate is located in one of the following locations: {ServerStore.Configuration.Security.CertificatePath ?? " "} / {ServerStore.Configuration.Security.ClusterCertificatePath ?? " "} / {ServerStore.Configuration.Security.CertificateExec ?? " "} / {ServerStore.Configuration.Security.ClusterCertificateExec ?? " "}." +
-                                                                "This step is required because you are using a self-signed server certificate.");
-                    }
-                }
-
-                // this creates a client certificate which is signed by the current server certificate
-                var selfSignedCertificate = CertificateUtils.CreateSelfSignedClientCertificate(certificate.Name, Server.ClusterCertificateHolder);
-
-                var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + selfSignedCertificate.Thumbprint,
-                    new CertificateDefinition
-                    {
-                        Name = certificate.Name,
-                        // this does not include the private key, that is only for the client
-                        Certificate = Convert.ToBase64String(selfSignedCertificate.Export(X509ContentType.Cert)),
-                        Permissions = certificate.Permissions,
-                        SecurityClearance = certificate.SecurityClearance,
-                        Thumbprint = selfSignedCertificate.Thumbprint
-                    }));
-                await ServerStore.Cluster.WaitForIndexNotification(res.Index);
-
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-
+                byte[] pfx = null;
+                await
+                    ServerStore.Operations.AddOperation(
+                        null,
+                        "Generate certificate: " + certificate.Name,
+                        Documents.Operations.Operations.OperationType.CertificateGeneration,
+                        async onProgress => 
+                        {
+                            pfx = await GenerateCertificateInternal(ctx, certificate);
+                            
+                            return ClientCertificateGenerationResult.Instance;
+                        },
+                        operationId.Value);
+                
                 var contentDisposition = "attachment; filename=" + Uri.EscapeDataString(certificate.Name) + ".pfx";
                 HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
                 HttpContext.Response.ContentType = "binary/octet-stream";
-                var pfx = selfSignedCertificate.Export(X509ContentType.Pfx, certificate.Password);
+                
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
                 HttpContext.Response.Body.Write(pfx, 0, pfx.Length);
             }
+        }
+        
+        private async Task<byte[]> GenerateCertificateInternal(TransactionOperationContext ctx, CertificateDefinition certificate)
+        {
+            ValidateCertificate(certificate, ServerStore);
+
+            if (certificate.SecurityClearance == SecurityClearance.ClusterAdmin && IsClusterAdmin() == false)
+            {
+                var clientCert = (HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection)?.Certificate;
+                throw new InvalidOperationException($"Cannot generate the certificate '{certificate.Name}' with 'Cluster Admin' security clearance because the current client certificate being used has a lower clearance: {clientCert}");
+            }
+
+            if (Server.ClusterCertificateHolder?.Certificate == null)
+                throw new InvalidOperationException($"Cannot generate the client certificate '{certificate.Name}' becuase the server certificate is not loaded. " +
+                                                    $"You can supply a server certificate by using the following configuration keys: " +
+                                                    $"'{RavenConfiguration.GetKey(x => x.Security.CertificatePath)}'/'{RavenConfiguration.GetKey(x => x.Security.CertificateExec)}'/" +
+                                                    $"'{RavenConfiguration.GetKey(x => x.Security.ClusterCertificatePath)}'/'{RavenConfiguration.GetKey(x => x.Security.ClusterCertificateExec)}'. " +
+                                                    $"For a more detailed explanation please read about authentication and certificates in the RavenDB documentation.");
+
+            
+            if (PlatformDetails.RunningOnPosix)
+            {
+                // For the client certificate to work properly, we need that the issuer (our server certificate) will be registered in the trusted root store.
+                // In Linux, when using SslStream AuthenticateAsServer, the server sends the list of allowed CAs to the client. So the client's CA must be in the list. See RavenDB-8524
+                using (var currentUserStore = new X509Store(StoreName.Root, StoreLocation.CurrentUser))
+                {
+                    currentUserStore.Open(OpenFlags.ReadOnly);
+                    if (currentUserStore.Certificates.Contains(Server.ClusterCertificateHolder.Certificate) == false)
+                        throw new InvalidOperationException($"Cannot generate the client certificate '{certificate.Name}'. " +
+                                                            $"First, you must register the server certificate '{Server.ClusterCertificateHolder.Certificate.FriendlyName}' in the trusted root store, on the server machine." +
+                                                            $"The server certificate is located in one of the following locations: {ServerStore.Configuration.Security.CertificatePath ?? " "} / {ServerStore.Configuration.Security.ClusterCertificatePath ?? " "} / {ServerStore.Configuration.Security.CertificateExec ?? " "} / {ServerStore.Configuration.Security.ClusterCertificateExec ?? " "}." +
+                                                            "This step is required because you are using a self-signed server certificate.");
+                }
+            }
+
+            // this creates a client certificate which is signed by the current server certificate
+            var selfSignedCertificate = CertificateUtils.CreateSelfSignedClientCertificate(certificate.Name, Server.ClusterCertificateHolder);
+
+            var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + selfSignedCertificate.Thumbprint,
+                new CertificateDefinition
+                {
+                    Name = certificate.Name,
+                    // this does not include the private key, that is only for the client
+                    Certificate = Convert.ToBase64String(selfSignedCertificate.Export(X509ContentType.Cert)),
+                    Permissions = certificate.Permissions,
+                    SecurityClearance = certificate.SecurityClearance,
+                    Thumbprint = selfSignedCertificate.Thumbprint
+                }));
+            await ServerStore.Cluster.WaitForIndexNotification(res.Index);
+
+            return selfSignedCertificate.Export(X509ContentType.Pfx, certificate.Password);
         }
 
         [RavenAction("/admin/certificates", "PUT", AuthorizationStatus.Operator)]
