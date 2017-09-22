@@ -218,6 +218,12 @@ namespace Raven.Server.Monitoring.Snmp
             _objectStore.Add(new DatabaseIndexLastIndexingTime(_databaseName, indexName, _databaseLandlord, _databaseIndex, index));
             _objectStore.Add(new DatabaseIndexTimeSinceLastQuery(_databaseName, indexName, _databaseLandlord, _databaseIndex, index));
             _objectStore.Add(new DatabaseIndexTimeSinceLastIndexing(_databaseName, indexName, _databaseLandlord, _databaseIndex, index));
+            _objectStore.Add(new DatabaseIndexLockMode(_databaseName, indexName, _databaseLandlord, _databaseIndex, index));
+            _objectStore.Add(new DatabaseIndexIsInvalid(_databaseName, indexName, _databaseLandlord, _databaseIndex, index));
+            _objectStore.Add(new DatabaseIndexStatus(_databaseName, indexName, _databaseLandlord, _databaseIndex, index));
+            _objectStore.Add(new DatabaseIndexMapsPerSec(_databaseName, indexName, _databaseLandlord, _databaseIndex, index));
+            _objectStore.Add(new DatabaseIndexReducesPerSec(_databaseName, indexName, _databaseLandlord, _databaseIndex, index));
+            _objectStore.Add(new DatabaseIndexType(_databaseName, indexName, _databaseLandlord, _databaseIndex, index));
 
             _loadedIndexes[indexName] = index;
         }
