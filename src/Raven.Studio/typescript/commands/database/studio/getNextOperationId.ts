@@ -9,7 +9,8 @@ class getNextOperationId extends commandBase {
     }
 
     execute(): JQueryPromise<number> {
-        return this.query(endpoints.databases.operations.operationsNextOperationId, null, this.db, x => x.Id);
+        const url = this.db ? endpoints.databases.operations.operationsNextOperationId : endpoints.global.operationsServer.operationsNextOperationId;
+        return this.query(url, null, this.db, x => x.Id);
     }
 }
 

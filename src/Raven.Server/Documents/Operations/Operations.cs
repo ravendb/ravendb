@@ -373,7 +373,10 @@ namespace Raven.Server.Documents.Operations
             UpdateByCollection,
 
             [Description("Bulk Insert")]
-            BulkInsert
+            BulkInsert,
+            
+            [Description("Certificate generation")]
+            CertificateGeneration
         }
     }
 }

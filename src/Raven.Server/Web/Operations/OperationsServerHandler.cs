@@ -7,6 +7,25 @@ namespace Raven.Server.Web.Operations
 {
     public class OperationsServerHandler : RequestHandler
     {
+        [RavenAction("/operations/next-operation-id", "GET", AuthorizationStatus.Operator)]
+        public Task GetNextOperationId()
+        {
+            var nextId = ServerStore.Operations.GetNextOperationId();
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
+                    writer.WritePropertyName("Id");
+                    writer.WriteInteger(nextId);
+                    writer.WriteEndObject();
+                }
+            }
+
+            return Task.CompletedTask;
+        }
+        
         [RavenAction("/operations/state", "GET", AuthorizationStatus.ValidUser)]
         public Task State()
         {

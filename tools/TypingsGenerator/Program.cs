@@ -284,7 +284,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(AdminJsScript));
 
             scripter.AddType(typeof(NodeConnectionTestResult));
-            
+            scripter.AddType(typeof(ClientCertificateGenerationResult));
             
             // request with POST parameters
             scripter.AddType(typeof(DeleteDatabasesOperation.Parameters));
