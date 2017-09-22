@@ -115,8 +115,6 @@ namespace Raven.Server.Utils
                             stringBuilder.Append(" ").Append(processesUsingFile.ProcessName).Append(' ').Append(processesUsingFile.Id).
                                 AppendLine();
                         }
-                        Console.Beep();
-                        Console.ReadLine();
                         throw new IOException(stringBuilder.ToString());
                     }
                 }
