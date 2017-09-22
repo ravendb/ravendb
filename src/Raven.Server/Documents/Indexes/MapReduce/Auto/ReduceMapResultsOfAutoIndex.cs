@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Json;
@@ -48,15 +49,18 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                                 case AggregationOperation.Count:
                                 case AggregationOperation.Sum:
 
-                                    object value;
-                                    if (obj.TryGetMember(propertyName, out value) == false)
+                                    if (obj.TryGetMember(propertyName, out var value) == false)
                                         throw new InvalidOperationException($"Could not read numeric value of '{propertyName}' property");
 
-                                    double doubleValue;
-                                    long longValue;
+                                    if (value == null)
+                                    {
+                                        aggregatedResult[propertyName] = PropertyResult.NullNumber();
+                                        break;
+                                    }
 
-                                    var numberType = BlittableNumber.Parse(value, out doubleValue, out longValue);
-                                    var aggregate = new PropertyResult(numberType);
+                                    var numberType = BlittableNumber.Parse(value, out var doubleValue, out var longValue);
+
+                                    var aggregate = PropertyResult.Number(numberType);
 
                                     switch (numberType)
                                     {
@@ -69,7 +73,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                                         default:
                                             throw new ArgumentOutOfRangeException($"Unknown number type: {numberType}");
                                     }
-
                                     aggregatedResult[propertyName] = aggregate;
                                     break;
                                 //case FieldMapReduceOperation.None:
@@ -128,7 +131,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
         private class PropertyResult
         {
-            private readonly NumberParseResult? _numberType;
+            private NumberParseResult? _numberType;
+
+            private bool _isNullNumber;
 
             public object ResultValue;
 
@@ -136,15 +141,32 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
             public double DoubleValue;
 
-            public PropertyResult(NumberParseResult? numberType = null)
+            public static PropertyResult NullNumber()
             {
-                _numberType = numberType;
+                return new PropertyResult
+                {
+                    _isNullNumber = true,
+                    ResultValue = 0
+                };
+            }
+
+            public static PropertyResult Number(NumberParseResult type)
+            {
+                return new PropertyResult
+                {
+                    _numberType = type
+                };
             }
 
             public void Aggregate(PropertyResult other)
             {
                 if (_numberType != null)
                 {
+                    if (other._isNullNumber)
+                        return;
+
+                    Debug.Assert(other._numberType != null);
+
                     switch (_numberType.Value)
                     {
                         case NumberParseResult.Double:
@@ -156,6 +178,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                         default:
                             throw new ArgumentOutOfRangeException($"Unknown number type: {_numberType.Value}");
                     }
+                }
+                else if (_isNullNumber)
+                {
+                    _numberType = other._numberType;
+                    ResultValue = other.ResultValue;
+                    DoubleValue = other.DoubleValue;
+                    LongValue = other.LongValue;
+                    _isNullNumber = false;
                 }
             }
         }
