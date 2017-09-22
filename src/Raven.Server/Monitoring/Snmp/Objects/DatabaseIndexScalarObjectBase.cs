@@ -5,7 +5,9 @@
 // -----------------------------------------------------------------------
 
 using Lextm.SharpSnmpLib;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Indexes;
 
 namespace Raven.Server.Monitoring.Snmp.Objects
 {
@@ -27,7 +29,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects
                 if (Landlord.IsDatabaseLoaded(DatabaseName))
                 {
                     var database = Landlord.TryGetOrCreateResourceStore(DatabaseName).Result;
-                    var index = database.IndexStore.GetIndex(IndexName);
+                    var index = GetIndex(database);
                     if (index == null)
                         return DefaultValue();
 
@@ -36,6 +38,11 @@ namespace Raven.Server.Monitoring.Snmp.Objects
 
                 return DefaultValue();
             }
+        }
+
+        protected Index GetIndex(DocumentDatabase database)
+        {
+            return database.IndexStore.GetIndex(IndexName);
         }
     }
 }
