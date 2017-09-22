@@ -1,9 +1,9 @@
 # TODO @gregolsky update regexes for stable
 $CATEGORIES = @(
-    @('RavenDB-[0-9]\.[0-9]\.[0-9]-[a-zA-Z]+-[0-9]+-windows-x64', "RavenDB for Windows x64"),
-    @('RavenDB-[0-9]\.[0-9]\.[0-9]-[a-zA-Z]+-[0-9]+-ubuntu\.14\.04-x64', "RavenDB for Ubuntu 14.04 x64"),
-    @('RavenDB-[0-9]\.[0-9]\.[0-9]-[a-zA-Z]+-[0-9]+-ubuntu\.16\.04-x64', "RavenDB for Ubuntu 16.04 x64"),
-    @('RavenDB-[0-9]\.[0-9]\.[0-9]-[a-zA-Z]+-[0-9]+-raspberry-pi', "RavenDB for Raspberry Pi")
+    @('RavenDB-[0-9]\.[0-9]\.[0-9]-[a-zA-Z]+-([0-9-]+)-windows-x64', "RavenDB for Windows x64"),
+    @('RavenDB-[0-9]\.[0-9]\.[0-9]-[a-zA-Z]+-([0-9-]+)-ubuntu\.14\.04-x64', "RavenDB for Ubuntu 14.04 x64"),
+    @('RavenDB-[0-9]\.[0-9]\.[0-9]-[a-zA-Z]+-([0-9-]+)-ubuntu\.16\.04-x64', "RavenDB for Ubuntu 16.04 x64"),
+    @('RavenDB-[0-9]\.[0-9]\.[0-9]-[a-zA-Z]+-([0-9-]+)-raspberry-pi', "RavenDB for Raspberry Pi")
 )
 function Get-UploadCategory ( $filename ) {
     $result = [io.path]::GetFilenameWithoutExtension($filename)
@@ -31,7 +31,7 @@ function FormatBuildDownloadVersion($versionInfo) {
 
     return $versionString
 }
-function UploadArtifact ( $uploader, $versionInfo, $filename, $log ) {
+function UploadArtifact ($uploader, $versionInfo, $filename, $log, $dryRun) {
     $uploadCategory = Get-UploadCategory $filename
     $versionString = FormatBuildDownloadVersion($versionInfo)
 
@@ -40,7 +40,9 @@ function UploadArtifact ( $uploader, $versionInfo, $filename, $log ) {
     while ($uploadTryCount -lt 5) {
         $uploadTryCount += 1
 
-        & $uploader "$uploadCategory" "$versionString" "$filename" "$log"
+        if ($dryRun -eq $False) {
+            & $uploader "$uploadCategory" "$versionString" "$filename" "$log"
+        }
 
         if ($lastExitCode -ne 0) {
             write-host "Failed to upload to S3: $lastExitCode. UploadTryCount: $uploadTryCount"
@@ -56,10 +58,10 @@ function UploadArtifact ( $uploader, $versionInfo, $filename, $log ) {
     }
 }
 
-function Upload ($uploader, $versionInfo, $artifacts) {
+function Upload ($uploader, $versionInfo, $artifacts, $dryRun) {
     Write-Host "Starting upload"
 
-    if ($(Test-Path $uploader) -eq $False) {
+    if (($dryRun -eq $False) -and $(Test-Path $uploader) -eq $False) {
         throw "$uploader not found."
     }
 
@@ -68,6 +70,6 @@ function Upload ($uploader, $versionInfo, $artifacts) {
 
     foreach ($filename in $artifacts)
     {
-        UploadArtifact $uploader $versionInfo $filename $log
+        UploadArtifact $uploader $versionInfo $filename $log $dryRun
     }
 }

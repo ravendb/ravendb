@@ -1,3 +1,5 @@
+param([switch]$DryRun)
+    
 $ErrorActionPreference = "Stop"
 
 $ARTIFACTS = Get-ChildItem $([io.path]::combine("artifacts", '*')) -Include "*.zip", "*.tar", "*.tar.bz2"
@@ -12,4 +14,4 @@ $uploader = [io.path]::combine($projectDir, '..', 'Uploader', 'S3Uploader.exe')
 $versionInfo = GetVersionInfo
 $files = Get-ChildItem $ARTIFACTS
 
-Upload "$uploader" $versionInfo $files
+Upload "$uploader" $versionInfo $files $DryRun
