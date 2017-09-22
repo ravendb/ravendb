@@ -31,6 +31,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.ResponseCompression;
@@ -39,6 +40,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Core.Adapter.Internal;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
 using Microsoft.AspNetCore.Server.Kestrel.Https.Internal;
 using Microsoft.Extensions.Logging;
+using Org.BouncyCastle.Asn1;
 using Org.BouncyCastle.Pkcs;
 using Raven.Client;
 using Raven.Client.Extensions;
@@ -261,6 +263,12 @@ namespace Raven.Server
                 Configuration.Security.CertificatePath,
                 Configuration.Security.CertificatePassword);
 
+            if (string.IsNullOrEmpty(Configuration.Security.SslProxyCertificatePath) == false)
+                _sslProxyCertificate = ServerStore.Secrets.LoadProxyCertificateFromPath(
+                    Configuration.Security.SslProxyCertificatePath,
+                    Configuration.Security.SslProxyCertificatePassword);
+
+
             ClusterCertificateHolder = clusterCert ?? httpsCert ?? new CertificateHolder();
             return clusterCert;
         }
@@ -405,6 +413,19 @@ namespace Raven.Server
                     {
                         cert = ServerStore.Cluster.Read(ctx, certKey) ??
                                ServerStore.Cluster.GetLocalState(ctx, certKey);
+
+                        if (cert == null && _sslProxyCertificate != null)
+                        {
+                            var proxyThumbprint = GetCertificateThumbprintFromProxy(certificate);
+                            if (proxyThumbprint != null)
+                            {
+                                certKey = Constants.Certificates.Prefix + proxyThumbprint;
+                                cert = ServerStore.Cluster.Read(ctx, certKey) ??
+                                       ServerStore.Cluster.GetLocalState(ctx, certKey);
+
+                            }
+                        }
+
                     }
                     if (cert == null)
                     {
@@ -434,6 +455,34 @@ namespace Raven.Server
                 }
             }
             return authenticationStatus;
+        }
+
+        private string GetCertificateThumbprintFromProxy(X509Certificate2 certificate)
+        {
+            var chain = new X509Chain
+            {
+                ChainPolicy =
+                {
+                    RevocationMode = X509RevocationMode.NoCheck,
+                    RevocationFlag = X509RevocationFlag.ExcludeRoot,
+                    VerificationFlags = X509VerificationFlags.AllowUnknownCertificateAuthority,
+                    VerificationTime = DateTime.UtcNow,
+                    UrlRetrievalTimeout = new TimeSpan(0, 0, 0),
+                    ExtraStore = { _sslProxyCertificate }
+                },
+            };
+
+            if (chain.Build(certificate) == false)
+                return null;
+
+            foreach (var extension in certificate.Extensions)
+            {
+                if (extension.Oid.Value == ProxyDelegation.Value)
+                {
+                    return Asn1Object.FromByteArray(extension.RawData).ToString();
+                }
+            }
+            return null;
         }
 
         public string WebUrl { get; private set; }
@@ -755,6 +804,8 @@ namespace Raven.Server
 
         private TcpListenerStatus _tcpListenerStatus;
         private SnmpWatcher _snmpWatcher;
+        private static readonly Oid ProxyDelegation = new Oid("1.3.6.1.4.1.45751.42", "RavenDB Proxy Delegation");
+        private X509Certificate2 _sslProxyCertificate;
 
         private async Task<bool> DispatchServerWideTcpConnection(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header)
         {

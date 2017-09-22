@@ -14,11 +14,11 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {
                 Console.WriteLine(i);
-                using (var test = new SlowTests.Tests.NestedIndexing.CanIndexReferencedEntity())
+                using (var test = new SlowTests.Issues.RavenDB_2514())
                 {
                     try
                     {
-                        test.WhenReferencedItemDeleted();
+                        test.CanKillBulkInsert();
                     }
                     catch (Exception e)
                     {

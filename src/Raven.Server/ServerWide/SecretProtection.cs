@@ -415,6 +415,17 @@ namespace Raven.Server.ServerWide
             return rawData;
         }
 
+        public X509Certificate2 LoadProxyCertificateFromPath(string path, string password)
+        {
+            var rawData = File.ReadAllBytes(path);
+
+            var loadedCertificate = password == null
+                ? new X509Certificate2(rawData)
+                : new X509Certificate2(rawData, password);
+
+            return loadedCertificate;
+        }
+
         public RavenServer.CertificateHolder LoadCertificateFromPath(string path, string password)
         {
             try
