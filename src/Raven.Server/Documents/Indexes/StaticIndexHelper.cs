@@ -64,6 +64,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     var lastDocEtag = databaseContext.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, referencedCollection.Name);
                     var lastProcessedReferenceEtag = index._indexStorage.ReadLastProcessedReferenceEtag(indexContext.Transaction, collection, referencedCollection);
+                    var lastProcessedTombstoneEtag = index._indexStorage.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, collection, referencedCollection);
 
                     if (cutoff == null)
                     {
@@ -78,7 +79,6 @@ namespace Raven.Server.Documents.Indexes
                         }
 
                         var lastTombstoneEtag = databaseContext.DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(databaseContext, referencedCollection.Name);
-                        var lastProcessedTombstoneEtag = index._indexStorage.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, collection, referencedCollection);
 
                         if (lastTombstoneEtag > lastProcessedTombstoneEtag)
                         {
@@ -103,13 +103,15 @@ namespace Raven.Server.Documents.Indexes
                             stalenessReasons.Add($"There are still some document references to process from collection '{referencedCollection.Name}'. The last document etag in that collection is '{lastDocEtag}' ({Constants.Documents.Metadata.Id}: '{lastDoc.Id}', {Constants.Documents.Metadata.LastModified}: '{lastDoc.LastModified}') with cutoff set to '{cutoff.Value}', but last processed document etag for that collection is '{lastProcessedReferenceEtag}'.");
                         }
 
-                        var numberOfTombstones = databaseContext.DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesWithDocumentEtagLowerThan(databaseContext, referencedCollection.Name, cutoff.Value);
-                        if (numberOfTombstones > 0)
+                        var hasTombstones = databaseContext.DocumentDatabase.DocumentsStorage.HasTombstonesWithDocumentEtagBetween(databaseContext, referencedCollection.Name,
+                            lastProcessedTombstoneEtag,
+                            cutoff.Value);
+                        if (hasTombstones)
                         {
                             if (stalenessReasons == null)
                                 return true;
 
-                            stalenessReasons.Add($"There are still '{numberOfTombstones}' tombstone references to process from collection '{referencedCollection.Name}' with document etag lower than '{cutoff.Value}'.");
+                            stalenessReasons.Add($"There are still tomstones tombstones to process from collection '{referencedCollection.Name}' with etag range '{lastProcessedTombstoneEtag} - {cutoff.Value}'.");
                         }
                     }
                 }

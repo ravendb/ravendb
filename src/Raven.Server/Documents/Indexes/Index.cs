@@ -679,6 +679,9 @@ namespace Raven.Server.Documents.Indexes
                 var lastDocEtag = GetLastDocumentEtagInCollection(databaseContext, collection);
 
                 var lastProcessedDocEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
+                var lastProcessedTombstoneEtag =
+                    _indexStorage.ReadLastProcessedTombstoneEtag(indexContext.Transaction, collection);
+
 
                 if (cutoff == null)
                 {
@@ -693,9 +696,6 @@ namespace Raven.Server.Documents.Indexes
                     }
 
                     var lastTombstoneEtag = GetLastTombstoneEtagInCollection(databaseContext, collection);
-
-                    var lastProcessedTombstoneEtag =
-                        _indexStorage.ReadLastProcessedTombstoneEtag(indexContext.Transaction, collection);
 
                     if (lastTombstoneEtag > lastProcessedTombstoneEtag)
                     {
@@ -720,13 +720,16 @@ namespace Raven.Server.Documents.Indexes
                         stalenessReasons.Add($"There are still some documents to process from collection '{collection}'. The last document etag in that collection is '{lastDocEtag}' ({Constants.Documents.Metadata.Id}: '{lastDoc.Id}', {Constants.Documents.Metadata.LastModified}: '{lastDoc.LastModified}') with cutoff set to '{cutoff.Value}', but last processed document etag for that collection is '{lastProcessedDocEtag}'.");
                     }
 
-                    var numberOfTombstones = DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesWithDocumentEtagLowerThan(databaseContext, collection, cutoff.Value);
-                    if (numberOfTombstones > 0)
+                    var hasTombstones = DocumentDatabase.DocumentsStorage.HasTombstonesWithDocumentEtagBetween(databaseContext, 
+                        collection,
+                        lastProcessedTombstoneEtag,
+                        cutoff.Value);
+                    if (hasTombstones)
                     {
                         if (stalenessReasons == null)
                             return true;
 
-                        stalenessReasons.Add($"There are still '{numberOfTombstones}' tombstones to process from collection '{collection}' with document etag lower than '{cutoff.Value}'.");
+                        stalenessReasons.Add($"There are still tomstones tombstones to process from collection '{collection}' with etag range '{lastProcessedTombstoneEtag} - {cutoff.Value}'.");
                     }
                 }
             }

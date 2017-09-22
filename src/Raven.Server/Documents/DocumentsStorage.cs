@@ -844,19 +844,24 @@ namespace Raven.Server.Documents
             return TableValueToEtag(1, ref result.Reader);
         }
 
-        public long GetNumberOfTombstonesWithDocumentEtagLowerThan(DocumentsOperationContext context, string collection, long etag)
+        public bool HasTombstonesWithDocumentEtagBetween(DocumentsOperationContext context, string collection,
+            long start, 
+            long end)
         {
+            if (start >= end)
+                return false;
+
             var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
             if (collectionName == null)
-                return 0;
+                return false;
 
             var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
                 collectionName.GetTableName(CollectionTableType.Tombstones));
 
             if (table == null)
-                return 0;
+                return false;
 
-            return table.CountBackwardFrom(TombstonesSchema.FixedSizeIndexes[DeletedEtagsSlice], etag);
+            return table.HasEntriesBetween(TombstonesSchema.FixedSizeIndexes[DeletedEtagsSlice], start, end);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

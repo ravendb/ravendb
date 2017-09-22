@@ -1206,22 +1206,17 @@ namespace Voron.Data.Tables
             }
         }
 
-        public long CountBackwardFrom(TableSchema.FixedSizeSchemaIndexDef index, long key)
+        public bool HasEntriesBetween(TableSchema.FixedSizeSchemaIndexDef index, long start, long end)
         {
             var fst = GetFixedSizeTree(index);
 
             using (var it = fst.Iterate())
             {
-                if (it.Seek(key) == false)
-                    return 0;
+                if (it.Seek(start) == false)
+                    return false;
 
 
-                long count = 0;
-                while(it.MovePrev())
-                {
-                    count++;
-                }
-                return count;
+                return it.CurrentKey < end;
             }
         }
 
