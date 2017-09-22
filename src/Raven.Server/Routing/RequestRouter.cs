@@ -235,7 +235,7 @@ namespace Raven.Server.Routing
                 if (RavenServerStartup.IsHtmlAcceptable(context))
                 {
                     context.Response.StatusCode = (int)HttpStatusCode.Redirect;
-                    context.Response.Headers["Location"] = "/studio-auth-error.html?err=" + Uri.EscapeDataString(message);
+                    context.Response.Headers["Location"] = "/studio/auth-error.html?err=" + Uri.EscapeDataString(message);
                     return;
                 }
 
