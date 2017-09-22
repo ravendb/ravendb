@@ -179,7 +179,7 @@
             <i data-bind="css: item.css"></i>
             <span data-bind="text: item.title"></span>
         </a>
-        <div data-bind="click: menu.handleLevelClick.bind(menu), attr: { 'data-level-name': item.title, 'data-level': item.depth() + 1, class: 'level-' + (item.depth() + 1) + (item.isOpen() ? 'level-show' : '')  }" class="level">
+        <div data-bind="click: menu.handleLevelClick.bind(menu), attr: { 'data-level-name': item.title, 'data-level': item.depth() + 1, class: 'level ' + (item.isOpen() ? 'level-show ' : '') + 'level-' + (item.depth() + 1) }">
             <h2>
                 <a class="back" title="back"
                    data-bind="click: menu.back.bind(menu)"></a>
