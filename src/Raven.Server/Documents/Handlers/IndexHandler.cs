@@ -26,50 +26,6 @@ namespace Raven.Server.Documents.Handlers
 {
     public class IndexHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/admin/indexes", "PUT", AuthorizationStatus.DatabaseAdmin)]
-        public async Task Put()
-        {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            {
-                var createdIndexes = new List<KeyValuePair<string, long>>();
-                var input = await context.ReadForMemoryAsync(RequestBodyStream(), "Indexes");
-                if (input.TryGet("Indexes", out BlittableJsonReaderArray indexes) == false)
-                    ThrowRequiredPropertyNameInRequest("Indexes");
-
-                foreach (var indexToAdd in indexes)
-                {
-                    var indexDefinition = JsonDeserializationServer.IndexDefinition((BlittableJsonReaderObject)indexToAdd);
-
-                    if (indexDefinition.Maps == null || indexDefinition.Maps.Count == 0)
-                        throw new ArgumentException("Index must have a 'Maps' fields");
-                    var etag = await Database.IndexStore.CreateIndex(indexDefinition);
-                    createdIndexes.Add(new KeyValuePair<string, long>(indexDefinition.Name, etag));
-                }
-
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteStartObject();
-
-                    writer.WriteArray(context, "Results", createdIndexes, (w, c, index) =>
-                    {
-                        w.WriteStartObject();
-                        w.WritePropertyName(nameof(PutIndexResult.IndexId));
-                        w.WriteInteger(index.Value);
-
-                        w.WriteComma();
-
-                        w.WritePropertyName(nameof(PutIndexResult.Index));
-                        w.WriteString(index.Key);
-                        w.WriteEndObject();
-                    });
-
-                    writer.WriteEndObject();
-                }
-            }
-        }
-
         [RavenAction("/databases/*/indexes/replace", "POST", AuthorizationStatus.ValidUser)]
         public Task Replace()
         {
