@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.Indexes
         /// </summary>
         private readonly object _locker = new object();
 
-        private readonly SemaphoreSlim _indexAndTransformerLocker;
+        private readonly SemaphoreSlim _indexLocker = new SemaphoreSlim(1, 1);
 
         private bool _initialized;
 
@@ -55,12 +55,11 @@ namespace Raven.Server.Documents.Indexes
 
         public Logger Logger => _logger;
 
-        public IndexStore(DocumentDatabase documentDatabase, ServerStore serverStore, SemaphoreSlim indexAndTransformerLocker)
+        public IndexStore(DocumentDatabase documentDatabase, ServerStore serverStore)
         {
             _documentDatabase = documentDatabase;
             _serverStore = serverStore;
             _logger = LoggingSource.Instance.GetLogger<IndexStore>(_documentDatabase.Name);
-            _indexAndTransformerLocker = indexAndTransformerLocker;
         }
 
         public void HandleDatabaseRecordChange(DatabaseRecord record, long index)
@@ -226,7 +225,7 @@ namespace Raven.Server.Documents.Indexes
                         if (_indexes.TryGetByName(indexName, out Index j) && j is FaultyInMemoryIndex)
                             return;
                     }
-                    
+
                     var configuration = new FaultyInMemoryIndexConfiguration(_documentDatabase.Configuration.Indexing.StoragePath, _documentDatabase.Configuration);
                     var fakeIndex = new FaultyInMemoryIndex(exception, index, indexName, configuration);
                     _indexes.Add(fakeIndex);
@@ -377,13 +376,13 @@ namespace Raven.Server.Documents.Indexes
             if (definition == null)
                 throw new ArgumentNullException(nameof(definition));
 
-            ValidateIndexName(definition.Name);
+            ValidateIndexName(definition.Name, isStatic: true);
             definition.RemoveDefaultValues();
             ValidateAnalyzers(definition);
 
             var instance = IndexCompilationCache.GetIndexInstance(definition); // pre-compile it and validate
 
-            await _indexAndTransformerLocker.WaitAsync();
+            await _indexLocker.WaitAsync(_documentDatabase.DatabaseShutdown);
 
             try
             {
@@ -410,7 +409,7 @@ namespace Raven.Server.Documents.Indexes
             }
             finally
             {
-                _indexAndTransformerLocker.Release();
+                _indexLocker.Release();
             }
         }
 
@@ -422,11 +421,11 @@ namespace Raven.Server.Documents.Indexes
             if (definition is MapIndexDefinition)
                 return await CreateIndex(((MapIndexDefinition)definition).IndexDefinition);
 
-            await _indexAndTransformerLocker.WaitAsync(_documentDatabase.DatabaseShutdown);
+            await _indexLocker.WaitAsync(_documentDatabase.DatabaseShutdown);
 
             try
             {
-                ValidateIndexName(definition.Name);
+                ValidateIndexName(definition.Name, isStatic: false);
 
                 var command = PutAutoIndexCommand.Create((AutoIndexDefinitionBase)definition, _documentDatabase.Name);
 
@@ -440,7 +439,7 @@ namespace Raven.Server.Documents.Indexes
             }
             finally
             {
-                _indexAndTransformerLocker.Release();
+                _indexLocker.Release();
             }
         }
 
@@ -449,7 +448,7 @@ namespace Raven.Server.Documents.Indexes
             if (definition == null)
                 throw new ArgumentNullException(nameof(definition));
 
-            ValidateIndexName(definition.Name);
+            ValidateIndexName(definition.Name, isStatic: true);
 
             var existingIndex = GetIndex(definition.Name);
             if (existingIndex == null)
@@ -463,7 +462,7 @@ namespace Raven.Server.Documents.Indexes
         {
             Debug.Assert(index != null);
             Debug.Assert(index.Etag > 0);
-            
+
             _indexes.Add(index);
 
             if (_documentDatabase.Configuration.Indexing.Disabled == false && _run)
@@ -574,15 +573,16 @@ namespace Raven.Server.Documents.Indexes
             return IndexCreationOptions.Update;
         }
 
-        private void ValidateIndexName(string name)
+        private void ValidateIndexName(string name, bool isStatic)
         {
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Index name cannot be empty!");
 
             if (name.Contains("//"))
-            {
                 throw new ArgumentException($"Index name '{name.Replace("//", "__")}' not permitted. Index name cannot contain // (double slashes)", nameof(name));
-            }
+
+            if (isStatic && name.StartsWith("Auto/", StringComparison.OrdinalIgnoreCase))
+                throw new ArgumentException($"Index name '{name}' not permitted. Static index name cannot start with 'Auto/'", nameof(name));
         }
 
         public long ResetIndex(string name)
@@ -605,7 +605,7 @@ namespace Raven.Server.Documents.Indexes
 
         public async Task<bool> TryDeleteIndexIfExists(string name)
         {
-            await _indexAndTransformerLocker.WaitAsync();
+            await _indexLocker.WaitAsync();
 
             try
             {
@@ -621,13 +621,13 @@ namespace Raven.Server.Documents.Indexes
             }
             finally
             {
-                _indexAndTransformerLocker.Release();
+                _indexLocker.Release();
             }
         }
 
         public async Task DeleteIndex(long etag)
         {
-            await _indexAndTransformerLocker.WaitAsync();
+            await _indexLocker.WaitAsync();
 
             try
             {
@@ -641,7 +641,7 @@ namespace Raven.Server.Documents.Indexes
             }
             finally
             {
-                _indexAndTransformerLocker.Release();
+                _indexLocker.Release();
             }
         }
 
@@ -934,11 +934,11 @@ namespace Raven.Server.Documents.Indexes
                     if (i is FaultyInMemoryIndex)
                     {
                         alreadyFaulted = true;
-                    }                    
+                    }
                 }
                 index?.Dispose();
                 exceptions?.Add(e);
-                if(alreadyFaulted)
+                if (alreadyFaulted)
                     return;
                 var configuration = new FaultyInMemoryIndexConfiguration(path, _documentDatabase.Configuration);
                 var fakeIndex = new FaultyInMemoryIndex(e, etag, name, configuration);
@@ -953,7 +953,7 @@ namespace Raven.Server.Documents.Indexes
                     AlertType.IndexStore_IndexCouldNotBeOpened,
                     NotificationSeverity.Error,
                     key: fakeIndex.Name,
-                    details: new ExceptionDetails(e)));                
+                    details: new ExceptionDetails(e)));
                 _indexes.Add(fakeIndex);
             }
         }
@@ -1181,7 +1181,7 @@ namespace Raven.Server.Documents.Indexes
 
         public async Task SetLock(string name, IndexLockMode mode)
         {
-            await _indexAndTransformerLocker.WaitAsync();
+            await _indexLocker.WaitAsync();
 
             try
             {
@@ -1204,13 +1204,13 @@ namespace Raven.Server.Documents.Indexes
             }
             finally
             {
-                _indexAndTransformerLocker.Release();
+                _indexLocker.Release();
             }
         }
 
         public async Task SetPriority(string name, IndexPriority priority)
         {
-            await _indexAndTransformerLocker.WaitAsync();
+            await _indexLocker.WaitAsync();
 
             try
             {
@@ -1233,7 +1233,7 @@ namespace Raven.Server.Documents.Indexes
             }
             finally
             {
-                _indexAndTransformerLocker.Release();
+                _indexLocker.Release();
             }
         }
 

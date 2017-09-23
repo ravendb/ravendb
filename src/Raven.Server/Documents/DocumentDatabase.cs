@@ -20,7 +20,6 @@ using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Replication;
-using Raven.Server.Documents.Revisions;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.NotificationCenter.Notifications;
@@ -52,7 +51,6 @@ namespace Raven.Server.Documents
         /// <summary>
         /// The current lock, used to make sure indexes/transformers have a unique names
         /// </summary>
-        private readonly SemaphoreSlim _indexAndTransformerLocker = new SemaphoreSlim(1, 1);
         private Task _indexStoreTask;
         private long _usages;
         private readonly ManualResetEventSlim _waitForUsagesOnDisposal = new ManualResetEventSlim(false);
@@ -116,7 +114,7 @@ namespace Raven.Server.Documents
                 Changes = new DocumentsChanges();
                 DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);
                 DocumentsStorage = new DocumentsStorage(this);
-                IndexStore = new IndexStore(this, serverStore, _indexAndTransformerLocker);
+                IndexStore = new IndexStore(this, serverStore);
                 EtlLoader = new EtlLoader(this, serverStore);
                 ReplicationLoader = new ReplicationLoader(this, serverStore);
                 SubscriptionStorage = new SubscriptionStorage(this, serverStore);
