@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using FastTests;
+using Orders;
 using Raven.Client.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -39,6 +40,38 @@ namespace SlowTests.Issues
                     Assert.Equal(1, results.Count);
                     Assert.Equal(3, results[0].PostsCount);
                     Assert.Equal(12, results[0].CommentsCount);
+                }
+            }
+        }
+
+        [Fact]
+        public void Can_group_by_constant_in_dynamic_query()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Product
+                    {
+                        PricePerUnit = 10
+                    });
+
+                    session.Store(new Product
+                    {
+                        PricePerUnit = 10
+                    });
+
+                    session.SaveChanges();
+
+                    var results = session.Query<Product>().GroupBy(x => "Name").Select(g => new // "Name" needs to be a constant, not a product field name
+                    {
+                        TotalPrice = g.Sum(x => x.PricePerUnit),
+                        ProductsCount = g.Count()
+                    }).ToList();
+
+                    Assert.Equal(1, results.Count);
+                    Assert.Equal(20, results[0].TotalPrice);
+                    Assert.Equal(2, results[0].ProductsCount);
                 }
             }
         }

@@ -1405,6 +1405,24 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         AddGroupByAliasIfNeeded(field.Member, originalField);
                     }
                     break;
+                case ExpressionType.Constant:
+                    var constantExpression = (ConstantExpression)body;
+
+                    string constantValue;
+
+                    switch (constantExpression.Value)
+                    {
+                        case string stringConst:
+                            constantValue = $"\"{stringConst}\"";
+                            break;
+                        default:
+                            constantValue = constantExpression.Value.ToString();
+                            break;
+                    }
+
+                    _documentQuery.GroupBy(constantValue);
+
+                    break;
                 default:
                     throw new NotSupportedException("Node not supported in GroupBy: " + body.NodeType);
 
