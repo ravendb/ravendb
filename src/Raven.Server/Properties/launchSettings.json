@@ -2,7 +2,7 @@
   "profiles": {
     "Raven.Server": {
       "commandName": "Project",
-      "commandLineArgs": "--Security.UnsecuredAccessAllowed=\"PublicNetwork\" --Security.Certificate.Path=C:\\Work\\ravendb-4.0\\scripts\\certificates\\server.pfx --Security.Certificate.Password=test --ServerUrl=https://oren-laptop:8080 --Security.SslProxy.Certificate.Path=C:\\Work\\ravendb-4.0\\scripts\\certificates\\server.pfx --Security.SslProxy.Certificate.Password=test"
+      "commandLineArgs": "--Security.UnsecuredAccessAllowed=\"PublicNetwork\""
     }
   }
 }
