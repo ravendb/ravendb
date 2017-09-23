@@ -8,7 +8,7 @@ class getRestorePointsCommand extends commandBase {
     }
 
     execute(): JQueryPromise<Raven.Server.Documents.PeriodicBackup.RestorePoints> {
-        const url = endpoints.global.adminDatabases.adminGetRestorePoints;
+        const url = endpoints.global.adminDatabases.adminRestorePoints;
         const args = {
             Path: this.path
         };

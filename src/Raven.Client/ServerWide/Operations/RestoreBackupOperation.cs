@@ -36,7 +36,7 @@ namespace Raven.Client.ServerWide.Operations
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/admin/database-restore";
+            url = $"{node.Url}/admin/restore/database";
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Post,

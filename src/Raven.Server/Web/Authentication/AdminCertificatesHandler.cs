@@ -276,7 +276,7 @@ namespace Raven.Server.Web.Authentication
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/edit-certificate", "Post", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/certificates/edit", "POST", AuthorizationStatus.Operator)]
         public async Task EditPermissions()
         {
             ServerStore.EnsureNotPassive();

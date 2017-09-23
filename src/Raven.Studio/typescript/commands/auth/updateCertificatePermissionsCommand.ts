@@ -9,7 +9,7 @@ class updateCertificatePermissionsCommand extends commandBase {
     }
     
     execute(): JQueryPromise<void> {
-        const url = endpoints.global.adminCertificates.adminEditCertificate; 
+        const url = endpoints.global.adminCertificates.adminCertificatesEdit; 
         
         const payload = this.model.toUpdatePermissionsDto();
         return this.post<void>(url, JSON.stringify(payload), null, { dataType: undefined })

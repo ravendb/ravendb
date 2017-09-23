@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class RevisionsHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/revisions-config", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/revisions/config", "GET", AuthorizationStatus.ValidUser)]
         public Task GetRevisionsConfig()
         {
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
