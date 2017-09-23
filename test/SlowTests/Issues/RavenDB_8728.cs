@@ -2,6 +2,8 @@
 using System.Linq;
 using FastTests;
 using FastTests.Server.Basic.Entities;
+using Raven.Client.Util;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -9,7 +11,7 @@ namespace SlowTests.Issues
     public class RavenDB_8728 : RavenTestBase
     {
         [Fact]
-        public void Can_sum_or_group_by_array_length()
+        public void Can_sum_or_group_by_list_count()
         {
             using (var store = GetDocumentStore())
             {
@@ -66,6 +68,58 @@ namespace SlowTests.Issues
                     Assert.Equal(1, results4.Count);
                     Assert.Equal(2, results4[0].Count);
                     Assert.Equal(2, results4[0].LinesLength);
+                }
+            }
+        }
+
+        [Fact]
+        public void Can_sum_or_group_by_array_length()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var createdAt = SystemTime.UtcNow;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Post
+                    {
+                        CreatedAt = createdAt,
+                        Comments = new Post[4]
+                    });
+
+                    session.Store(new Post
+                    {
+                        CreatedAt = createdAt,
+                        Comments = new Post[4]
+                    });
+
+                    session.Store(new Post
+                    {
+                        CreatedAt = createdAt,
+                        Comments = new Post[4]
+                    });
+
+                    session.SaveChanges();
+
+                    var results = session.Query<Post>().GroupBy(x => x.CreatedAt).Select(g => new
+                    {
+                        CommentsCount = g.Sum(x => x.Comments.Length),
+                        PostsCount = g.Count()
+                    }).ToList();
+
+                    Assert.Equal(1, results.Count);
+                    Assert.Equal(3, results[0].PostsCount);
+                    Assert.Equal(12, results[0].CommentsCount);
+
+                    var results4 = session.Query<Post>().GroupBy(x => x.Comments.Length).Select(x => new
+                    {
+                        Count = x.Count(),
+                        CommentsLength = x.Key
+                    }).ToList();
+
+                    Assert.Equal(1, results4.Count);
+                    Assert.Equal(3, results4[0].Count);
+                    Assert.Equal(4, results4[0].CommentsLength);
                 }
             }
         }
