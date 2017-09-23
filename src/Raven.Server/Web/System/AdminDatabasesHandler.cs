@@ -720,6 +720,8 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/databases", "DELETE", AuthorizationStatus.Operator)]
         public async Task Delete()
         {
+            ServerStore.EnsureNotPassive();
+
             var waitOnRecordDeletion = new List<string>();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
@@ -944,8 +946,6 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/etl", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task AddEtl()
         {
-
-
             var id = GetLongQueryString("id", required: false);
 
             if (id == null)
