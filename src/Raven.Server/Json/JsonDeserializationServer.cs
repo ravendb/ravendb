@@ -3,7 +3,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Replication.Messages;
-using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
@@ -45,7 +44,7 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, TcpConnectionInfo> TcpConnectionInfo = GenerateJsonDeserializationRoutine<TcpConnectionInfo>();
 
-        public static readonly Func<BlittableJsonReaderObject, DatabaseSmugglerOptions> DatabaseSmugglerOptions = GenerateJsonDeserializationRoutine<DatabaseSmugglerOptions>();
+        public static readonly Func<BlittableJsonReaderObject, DatabaseSmugglerOptionsServerSide> DatabaseSmugglerOptions = GenerateJsonDeserializationRoutine<DatabaseSmugglerOptionsServerSide>();
 
         public static readonly Func<BlittableJsonReaderObject, ReplicationMessageReply> ReplicationMessageReply = GenerateJsonDeserializationRoutine<ReplicationMessageReply>();
 

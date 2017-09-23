@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Raven.Client.Extensions;
-
-namespace Raven.Client.Documents.Smuggler
+﻿namespace Raven.Client.Documents.Smuggler
 {
-    public class DatabaseSmugglerOptions
+    public class DatabaseSmugglerOptions : IDatabaseSmugglerOptions
     {
         private const DatabaseItemType DefaultOperateOnTypes = DatabaseItemType.Indexes |
                                                                DatabaseItemType.Documents | DatabaseItemType.RevisionDocuments |
@@ -17,7 +12,6 @@ namespace Raven.Client.Documents.Smuggler
         {
             OperateOnTypes = DefaultOperateOnTypes;
             MaxStepsForTransformScript = DefaultMaxStepsForTransformScript;
-            CollectionsToExport = new List<string>();
             IncludeExpired = true;
         }
 
@@ -29,39 +23,15 @@ namespace Raven.Client.Documents.Smuggler
 
         public string TransformScript { get; set; }
 
-        public string FileName { get; set; }
-
-        public List<string> CollectionsToExport { get; set; }
-
-        /// <summary>
-        /// Maximum number of steps that transform script can have
-        /// </summary>
         public int MaxStepsForTransformScript { get; set; }
+    }
 
-        public string Database { get; set; }
-
-        public string ToQueryString()
-        {
-            var sb = new StringBuilder();
-
-            if (OperateOnTypes != DefaultOperateOnTypes)
-                sb.Append($"operateOnTypes={OperateOnTypes}");
-
-            if (IncludeExpired == false)
-                sb.Append("&includeExpired=false");
-
-            if (RemoveAnalyzers)
-                sb.Append("&removeAnalyzers=true");
-
-            if (string.IsNullOrWhiteSpace(TransformScript) == false)
-                sb.Append($"&transformScript={Uri.EscapeDataString(TransformScript)}");
-
-            CollectionsToExport.ApplyIfNotNull(collection => sb.AppendFormat("&collection={0}", Uri.EscapeDataString(collection)));
-
-            if (MaxStepsForTransformScript != DefaultMaxStepsForTransformScript)
-                sb.Append($"&maxStepsForTransformScript={MaxStepsForTransformScript}");
-
-            return sb.ToString();
-        }
+    internal interface IDatabaseSmugglerOptions
+    {
+        DatabaseItemType OperateOnTypes { get; set; }
+        bool IncludeExpired { get; set; }
+        bool RemoveAnalyzers { get; set; }
+        string TransformScript { get; set; }
+        int MaxStepsForTransformScript { get; set; }
     }
 }

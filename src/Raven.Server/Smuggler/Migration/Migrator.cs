@@ -9,9 +9,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents;
@@ -21,6 +19,7 @@ using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
+using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Web.System;
 using Sparrow.Json;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
@@ -250,7 +249,7 @@ namespace Raven.Server.Smuggler.Migration
             {
                 var source = new StreamSource(stream, context);
                 var destination = new DatabaseDestination(database);
-                var options = new DatabaseSmugglerOptions();
+                var options = new DatabaseSmugglerOptionsServerSide();
                 var smuggler = new DatabaseSmuggler(database, source, destination, database.Time, options, result, onProgress, cancelToken.Token);
 
                 smuggler.Execute();

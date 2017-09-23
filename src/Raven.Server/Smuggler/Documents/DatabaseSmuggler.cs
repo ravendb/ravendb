@@ -19,7 +19,7 @@ namespace Raven.Server.Smuggler.Documents
     {
         private readonly ISmugglerSource _source;
         private readonly ISmugglerDestination _destination;
-        private readonly DatabaseSmugglerOptions _options;
+        private readonly DatabaseSmugglerOptionsServerSide _options;
         private readonly SmugglerResult _result;
         private readonly SystemTime _time;
         private readonly Action<IOperationProgress> _onProgress;
@@ -29,11 +29,11 @@ namespace Raven.Server.Smuggler.Documents
         public Action<IndexDefinitionAndType> OnIndexAction;
         public Action<(string Prefix, long Value)> OnIdentityAction;
 
-        public DatabaseSmuggler(DocumentDatabase database, ISmugglerSource source, ISmugglerDestination destination, SystemTime time, DatabaseSmugglerOptions options = null, SmugglerResult result = null, Action<IOperationProgress> onProgress = null, CancellationToken token = default(CancellationToken))
+        public DatabaseSmuggler(DocumentDatabase database, ISmugglerSource source, ISmugglerDestination destination, SystemTime time, DatabaseSmugglerOptionsServerSide options = null, SmugglerResult result = null, Action<IOperationProgress> onProgress = null, CancellationToken token = default(CancellationToken))
         {
             _source = source;
             _destination = destination;
-            _options = options ?? new DatabaseSmugglerOptions();
+            _options = options ?? new DatabaseSmugglerOptionsServerSide();
             _result = result;
             _token = token;
 

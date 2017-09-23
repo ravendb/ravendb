@@ -1,12 +1,22 @@
 ﻿using System;
+using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Smuggler;
 using Sparrow.Json;
 
 namespace Raven.Server.Smuggler.Documents.Data
 {
-    public class DatabaseSmugglerOptionsServerSide : DatabaseSmugglerOptions
+    public class DatabaseSmugglerOptionsServerSide : DatabaseSmugglerOptions, IDatabaseSmugglerImportOptions, IDatabaseSmugglerExportOptions
     {
+        public DatabaseSmugglerOptionsServerSide()
+        {
+            CollectionsToExport = new List<string>();
+        }
+
+        public string FileName { get; set; }
+
+        public List<string> CollectionsToExport { get; set; }
+
         public static DatabaseSmugglerOptionsServerSide Create(HttpContext httpContext, JsonOperationContext context)
         {
             var result = new DatabaseSmugglerOptionsServerSide();

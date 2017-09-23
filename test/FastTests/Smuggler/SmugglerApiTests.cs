@@ -50,7 +50,7 @@ namespace FastTests.Smuggler
                     await session.SaveChangesAsync();
                 }
 
-                await store1.Smuggler.ExportAsync(new DatabaseSmugglerOptions(), store2.Smuggler);
+                await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), store2.Smuggler);
 
                 using (var commands = store2.Commands())
                 {
@@ -97,9 +97,9 @@ namespace FastTests.Smuggler
                         await session.SaveChangesAsync();
                     }
 
-                    await store1.Smuggler.ExportAsync(new DatabaseSmugglerOptions(), file);
+                    await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
 
-                    await store2.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), file);
+                    await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
 
                     var stats = await store2.Admin.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(3, stats.CountOfDocuments);
@@ -149,7 +149,7 @@ namespace FastTests.Smuggler
                         await session.SaveChangesAsync();
                     }
 
-                    var exportOperation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerOptions(), file);
+                    var exportOperation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
                     var exportResult = (SmugglerResult)exportOperation.WaitForCompletion();
 
                     var stats = await store1.Admin.SendAsync(new GetStatisticsOperation());
@@ -158,7 +158,7 @@ namespace FastTests.Smuggler
                     Assert.Equal(stats.CountOfDocuments, progress.Documents.ReadCount);
                     Assert.Equal(stats.CountOfIndexes, progress.Indexes.ReadCount);
 
-                    var importOperation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), file);
+                    var importOperation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
                     var importResult = (SmugglerResult)importOperation.WaitForCompletion();
 
                     stats = await store2.Admin.SendAsync(new GetStatisticsOperation());
@@ -200,7 +200,7 @@ namespace FastTests.Smuggler
 
                     database.Time.UtcDateTime = () => DateTime.UtcNow.AddSeconds(11);
 
-                    await exportStore.Smuggler.ExportAsync(new DatabaseSmugglerOptions { IncludeExpired = false }, file).ConfigureAwait(false);
+                    await exportStore.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions { IncludeExpired = false }, file).ConfigureAwait(false);
 
                 }
 
@@ -209,7 +209,7 @@ namespace FastTests.Smuggler
                     ModifyDatabaseName = s => $"{s}_importStore"
                 }))
                 {
-                    await importStore.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), file);
+                    await importStore.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
                     using (var session = importStore.OpenAsyncSession())
                     {
                         var person = await session.LoadAsync<Person>("people/1").ConfigureAwait(false);
@@ -266,7 +266,7 @@ namespace FastTests.Smuggler
                         await session.SaveChangesAsync();
                     }
 
-                    await store1.Smuggler.ExportAsync(new DatabaseSmugglerOptions(), file);
+                    await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
 
                     var stats = await store1.Admin.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(4, stats.CountOfDocuments);
@@ -280,7 +280,7 @@ namespace FastTests.Smuggler
                 {
                     await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database);
 
-                    await store2.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), file);
+                    await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
 
                     var stats = await store2.Admin.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(4, stats.CountOfDocuments);
@@ -336,13 +336,13 @@ namespace FastTests.Smuggler
                         await session.SaveChangesAsync();
                     }
 
-                    await store1.Smuggler.ExportAsync(new DatabaseSmugglerOptions(), file);
+                    await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
 
                     var stats = await store1.Admin.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(4, stats.CountOfDocuments);
                     Assert.Equal(8, stats.CountOfRevisionDocuments);
 
-                    await store1.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), file);
+                    await store1.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
 
                     stats = await store1.Admin.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(4, stats.CountOfDocuments);

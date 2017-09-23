@@ -39,12 +39,12 @@ namespace SlowTests.Issues
                 {
                     Initialize(store);
 
-                    await store.Smuggler.ExportAsync(new DatabaseSmugglerOptions(), path);
+                    await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), path);
                 }
 
                 using (var store = GetDocumentStore())
                 {
-                    await store.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), path);
+                    await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), path);
 
                     using (var session = store.OpenSession())
                     {
@@ -75,12 +75,12 @@ namespace SlowTests.Issues
                 {
                     Initialize(store);
 
-                    await store.Smuggler.ExportAsync(new DatabaseSmugglerOptions { IncludeExpired = false }, path);
+                    await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions { IncludeExpired = false }, path);
                 }
 
                 using (var store = GetDocumentStore())
                 {
-                    await store.Smuggler.ImportAsync(new DatabaseSmugglerOptions { IncludeExpired = false }, path);
+                    await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions { IncludeExpired = false }, path);
 
                     using (var session = store.OpenSession())
                     {
@@ -111,7 +111,7 @@ namespace SlowTests.Issues
                 {
                     Initialize(store);
 
-                    await store.Smuggler.ExportAsync(new DatabaseSmugglerOptions { IncludeExpired = false }, path);
+                    await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions { IncludeExpired = false }, path);
                 }
 
                 using (var store = GetDocumentStore())
@@ -119,7 +119,7 @@ namespace SlowTests.Issues
                     var database = GetDocumentDatabaseInstanceFor(store).Result;
                     database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
 
-                    await store.Smuggler.ImportAsync(new DatabaseSmugglerOptions { IncludeExpired = false }, path);
+                    await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions { IncludeExpired = false }, path);
 
                     using (var session = store.OpenSession())
                     {

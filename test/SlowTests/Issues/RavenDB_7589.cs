@@ -75,7 +75,7 @@ namespace SlowTests.Issues
                 identities = GetIdentities(store, 1502, 10);
                 Assert.Equal(0, identities.Count);
 
-                await store.Smuggler.ExportAsync(new DatabaseSmugglerOptions(), exportFile1);
+                await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), exportFile1);
             }
 
             string dbName2;
@@ -83,7 +83,7 @@ namespace SlowTests.Issues
             {
                 dbName2 = store.Database;
 
-                await store.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), exportFile1);
+                await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportFile1);
 
                 var identities = GetIdentities(store, 0, 2000);
 
@@ -106,7 +106,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                await store.Smuggler.ExportAsync(new DatabaseSmugglerOptions(), exportFile2);
+                await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), exportFile2);
             }
 
             string dbName3;
@@ -114,8 +114,8 @@ namespace SlowTests.Issues
             {
                 dbName3 = store.Database;
 
-                await store.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), exportFile1);
-                await store.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), exportFile2);
+                await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportFile1);
+                await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportFile2);
 
                 var identities = GetIdentities(store, 0, 2000);
 

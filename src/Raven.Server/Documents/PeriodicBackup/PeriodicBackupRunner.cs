@@ -28,6 +28,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.PeriodicBackup;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
+using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Collections;
 using Constants = Raven.Client.Constants;
 
@@ -379,7 +380,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         configuration.BackupType == BackupType.Snapshot && isFullBackup == false)
                     {
                         // smuggler backup
-                        var options = new DatabaseSmugglerOptions();
+                        var options = new DatabaseSmugglerOptionsServerSide();
                         if (isFullBackup == false)
                             options.OperateOnTypes |= DatabaseItemType.Tombstones;
 
@@ -415,7 +416,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        private SmugglerResult CreateBackup(DatabaseSmugglerOptions options, string backupFilePath, long? startDocumentEtag, DocumentsOperationContext context)
+        private SmugglerResult CreateBackup(DatabaseSmugglerOptionsServerSide options, string backupFilePath, long? startDocumentEtag, DocumentsOperationContext context)
         {
             // the last etag is already included in the last backup
             startDocumentEtag = startDocumentEtag == null ? 0 : ++startDocumentEtag;
