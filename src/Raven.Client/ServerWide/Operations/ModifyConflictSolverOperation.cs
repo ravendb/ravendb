@@ -49,7 +49,7 @@ namespace Raven.Client.ServerWide.Operations
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/update-resolver?name={_databaseName}";
+                url = $"{node.Url}/admin/replication/conflicts/solver?name={_databaseName}";
 
                 var request = new HttpRequestMessage
                 {

@@ -229,7 +229,7 @@ namespace Raven.Server.Web.System
                     foreach (var member in topology.Members)
                     {
                         var nodeUrl = clusterTopology.GetUrlFromTag(member);
-                        if(nodeUrl == null)
+                        if (nodeUrl == null)
                             throw new ArgumentException($"Failed to add node {member}, becasue we don't have it in the cluster.");
                         nodeUrlsAddedTo.Add(nodeUrl);
                     }
@@ -260,7 +260,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/databases/reorder","POST",AuthorizationStatus.Operator)]
+        [RavenAction("/admin/databases/reorder", "POST", AuthorizationStatus.Operator)]
         public async Task Reorder()
         {
             var name = GetStringQueryString("name");
@@ -274,7 +274,7 @@ namespace Raven.Server.Web.System
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "nodes");
                 var parameters = JsonDeserializationServer.Parameters.MembersOrder(json);
 
-                if (record.Topology.Members.Count != parameters.MembersOrder.Count 
+                if (record.Topology.Members.Count != parameters.MembersOrder.Count
                     || record.Topology.Members.All(parameters.MembersOrder.Contains) == false)
                 {
                     throw new ArgumentException("The reordered list doesn't correspond to the existing members of the database group.");
@@ -575,7 +575,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/get-restore-points", "POST", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/restore/points", "POST", AuthorizationStatus.Operator)]
         public async Task GetRestorePoints()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -607,7 +607,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/database-restore", "POST", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/restore/database", "POST", AuthorizationStatus.Operator)]
         public async Task RestoreDatabase()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -966,7 +966,7 @@ namespace Raven.Server.Web.System
             switch (EtlConfiguration<ConnectionString>.GetEtlType(etlConfiguration))
             {
                 case EtlType.Raven:
-                 
+
                     if (ServerStore.LicenseManager.CanAddRavenEtl(out licenseLimit) == false)
                     {
                         SetLicenseLimitResponse(licenseLimit);
@@ -1189,8 +1189,8 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/update-resolver", "POST", AuthorizationStatus.DatabaseAdmin)]
-        public async Task UpdateConflictResolver()
+        [RavenAction("/admin/replication/conflicts/solver", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public async Task UpdateConflictSolver()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
@@ -1251,7 +1251,7 @@ namespace Raven.Server.Web.System
                 token.Token);
 
             var operationId = ServerStore.Operations.GetNextOperationId();
-            
+
             ServerStore.Operations.AddOperation(
                 null,
                 "Compacting database: " + name,
