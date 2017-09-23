@@ -52,7 +52,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 ModifyDatabaseName = s => $"{s}_2"
             }))
             {
-                await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(),
+                await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(),
                     Directory.GetDirectories(backupPath).First());
 
                 using (var session = store.OpenAsyncSession())
@@ -126,7 +126,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 ModifyDatabaseName = s => $"{s}_2"
             }))
             {
-                await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(),
+                await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(),
                     Directory.GetDirectories(backupPath).First());
                 using (var session = store.OpenAsyncSession())
                 {
@@ -201,7 +201,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 ModifyDatabaseName = s => $"{s}_2"
             }))
             {
-                await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(),
+                await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(),
                     Directory.GetDirectories(backupPath).First());
                 using (var session = store.OpenAsyncSession())
                 {
@@ -264,7 +264,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 ModifyDatabaseName = s => $"{s}_2"
             }))
             {
-                await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(),
+                await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(),
                     Directory.GetDirectories(backupPath).First());
                 using (var session = store.OpenAsyncSession())
                 {
@@ -325,7 +325,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 ModifyDatabaseName = s => $"{s}_2"
             }))
             {
-                await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(),
+                await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(),
                     Directory.GetDirectories(backupPath).First());
                 using (var session = store.OpenAsyncSession())
                 {
@@ -397,7 +397,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var fileName = Path.GetFileName(incrementalBackupFile);
                 File.Move(incrementalBackupFile, $"{backupToMovePath}\\{fileName}");
 
-                await store1.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(), backupDirectory);
+                await store1.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), backupDirectory);
                 using (var session = store1.OpenAsyncSession())
                 {
                     var users = await session.LoadAsync<User>(new[] { "users/1", "users/2" });
@@ -407,7 +407,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.Null(users.Last().Value);
                 }
 
-                await store2.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(), backupToMovePath);
+                await store2.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), backupToMovePath);
                 using (var session = store2.OpenAsyncSession())
                 {
                     var users = await session.LoadAsync<User>(new[] { "users/1", "users/2" });

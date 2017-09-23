@@ -50,11 +50,7 @@ namespace SlowTests.Issues
 
                 WaitForIdentity(leaderStore, "users", 3);
 
-                await leaderStore.Smuggler.ExportAsync(new DatabaseSmugglerOptions
-                {
-                    Database = databaseName,
-                    FileName = _fileName
-                }, _fileName);
+                await leaderStore.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), _fileName);
             }
 
             foreach (var server in Servers)
@@ -73,11 +69,7 @@ namespace SlowTests.Issues
                 leaderStore.Initialize();
                 
                 await CreateDatabasesInCluster(clusterSize, databaseName, leaderStore);
-                await leaderStore.Smuggler.ImportAsync(new DatabaseSmugglerOptions
-                {
-                    Database = databaseName,
-                    FileName = _fileName
-                }, _fileName);
+                await leaderStore.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), _fileName);
                 
                 using (var session = leaderStore.OpenSession())
                 {

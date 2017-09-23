@@ -36,12 +36,12 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                await store.Smuggler.ExportAsync(new DatabaseSmugglerOptions(), exportFile);
+                await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), exportFile);
             }
 
             using (var store = GetDocumentStore())
             {
-                await store.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), exportFile);
+                await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportFile);
 
                 using (var session = store.OpenSession())
                 {

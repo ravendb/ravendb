@@ -6,7 +6,6 @@
 
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
@@ -49,7 +48,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 var options = JsonDeserializationServer.DatabaseSmugglerOptions(blittableJson);
 
                 if (!string.IsNullOrEmpty(options.FileName) && options.FileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
-                    throw new InvalidOperationException($"{options.FileName} is Invalid File Name");
+                    throw new InvalidOperationException($"{options.FileName} is invalid file name");
 
                 if (string.IsNullOrEmpty(options.TransformScript))
                 {
@@ -113,7 +112,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
-        private IOperationResult ExportDatabaseInternal(DatabaseSmugglerOptions options, Action<IOperationProgress> onProgress, DocumentsOperationContext context, OperationCancelToken token)
+        private IOperationResult ExportDatabaseInternal(DatabaseSmugglerOptionsServerSide options, Action<IOperationProgress> onProgress, DocumentsOperationContext context, OperationCancelToken token)
         {
             using (token)
             {
@@ -338,7 +337,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                     MediaTypeHeaderValue.Parse(HttpContext.Request.ContentType),
                                     MultipartRequestHelper.MultipartBoundaryLengthLimit);
                                 var reader = new MultipartReader(boundary, HttpContext.Request.Body);
-                                DatabaseSmugglerOptions options = null;
+                                DatabaseSmugglerOptionsServerSide options = null;
 
                                 while (true)
                                 {
@@ -393,7 +392,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
-        private void DoImportInternal(DocumentsOperationContext context, Stream stream, DatabaseSmugglerOptions options, SmugglerResult result, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        private void DoImportInternal(DocumentsOperationContext context, Stream stream, DatabaseSmugglerOptionsServerSide options, SmugglerResult result, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
             using (stream)
             using (token)

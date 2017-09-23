@@ -21,7 +21,7 @@ namespace SlowTests.Smuggler
 
                 using (var store = GetDocumentStore())
                 {
-                    await store.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), stream);
+                    await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), stream);
 
                     var stats = await store.Admin.SendAsync(new GetStatisticsOperation());
 
@@ -67,7 +67,7 @@ namespace SlowTests.Smuggler
                 {
                     await store.Admin.SendAsync(new StopIndexingOperation());
 
-                    await store.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), stream);
+                    await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), stream);
 
                     var stats = await store.Admin.SendAsync(new GetStatisticsOperation());
 

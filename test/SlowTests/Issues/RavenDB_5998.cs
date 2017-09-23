@@ -5,6 +5,7 @@ using FastTests;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
+using Raven.Server.Smuggler.Documents.Data;
 using Xunit;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 
@@ -27,7 +28,7 @@ namespace SlowTests.Issues
                     var source = new StreamSource(stream, context);
                     var destination = new DatabaseDestination(database);
 
-                    var smuggler = new DatabaseSmuggler(database, source, destination, database.Time, new DatabaseSmugglerOptions
+                    var smuggler = new DatabaseSmuggler(database, source, destination, database.Time, new DatabaseSmugglerOptionsServerSide
                     {
                         TransformScript = "this['Test'] = 'NewValue';"
                     });

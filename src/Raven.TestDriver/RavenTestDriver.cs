@@ -103,20 +103,16 @@ namespace Raven.TestDriver
 
         private void ImportDatabase(DocumentStore docStore, string database)
         {
-            var smugglerOpts = new DatabaseSmugglerOptions()
-            {
-                Database = database
-            };
-
+            var options = new DatabaseSmugglerImportOptions();
             if (DatabaseDumpFilePath != null)
             {
-                AsyncHelpers.RunSync(() => docStore.Smuggler
-                    .ImportAsync(smugglerOpts, DatabaseDumpFilePath));
+                AsyncHelpers.RunSync(() => docStore.Smuggler.ForDatabase(database)
+                    .ImportAsync(options, DatabaseDumpFilePath));
             }
             else if (DatabaseDumpFileStream != null)
             {
-                AsyncHelpers.RunSync(() => docStore.Smuggler
-                    .ImportAsync(smugglerOpts, DatabaseDumpFileStream));
+                AsyncHelpers.RunSync(() => docStore.Smuggler.ForDatabase(database)
+                    .ImportAsync(options, DatabaseDumpFileStream));
             }
         }
 

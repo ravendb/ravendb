@@ -41,7 +41,7 @@ namespace SlowTests.Issues
                     var task1 = Task.Run(async () =>
                     {
                         // now perform full backup
-                        await store.Smuggler.ExportAsync(new DatabaseSmugglerOptions(), backupPath);
+                        await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), backupPath);
                     });
                     var task2 = Task.Run(() =>
                     {
@@ -63,7 +63,7 @@ namespace SlowTests.Issues
                 using (var store = GetDocumentStore())
                 {
                     // import all the data
-                    await store.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), backupPath);
+                    await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), backupPath);
 
                     using (var session = store.OpenSession())
                     {

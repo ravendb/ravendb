@@ -4,12 +4,10 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.PeriodicBackup;
 using Raven.Server.Config;
@@ -26,7 +24,6 @@ using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Utils;
 using Raven.Server.Web.System;
-using Sparrow.Json;
 using Sparrow.Logging;
 using Voron.Impl.Backup;
 using DatabaseSmuggler = Raven.Client.Documents.Smuggler.DatabaseSmuggler;
@@ -359,7 +356,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             restoreSettings.Identities = new Dictionary<string, long>();
 
             // restore the smuggler backup
-            var options = new DatabaseSmugglerOptions();
+            var options = new DatabaseSmugglerOptionsServerSide();
             var oldOperateOnTypes = DatabaseSmuggler.ConfigureOptionsForIncrementalImport(options);
 
             var destination = new DatabaseDestination(database);
@@ -404,7 +401,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         private void ImportSingleBackupFile(DocumentDatabase database,
             Action<IOperationProgress> onProgress, RestoreResult restoreResult,
             string filePath, DocumentsOperationContext context,
-            DatabaseDestination destination, DatabaseSmugglerOptions options,
+            DatabaseDestination destination, DatabaseSmugglerOptionsServerSide options,
             Action<IndexDefinitionAndType> onIndexAction = null,
             Action<(string Prefix, long Value)> onIdentityAction = null)
         {
