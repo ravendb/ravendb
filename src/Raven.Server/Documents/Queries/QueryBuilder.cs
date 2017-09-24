@@ -376,7 +376,7 @@ namespace Raven.Server.Documents.Queries
                 ThrowMethodExpectsArgumentOfTheFollowingType("lucene", ValueTokenType.String, valueType, metadata.QueryText, parameters);
 
             var parser = new Lucene.Net.QueryParsers.QueryParser(Version.LUCENE_29, fieldName, analyzer);
-            return parser.Parse(value as string);
+            return parser.Parse(GetValueAsString(value));
         }
 
         private static Lucene.Net.Search.Query HandleStartsWith(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters)

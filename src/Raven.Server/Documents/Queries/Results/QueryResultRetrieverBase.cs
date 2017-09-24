@@ -123,6 +123,8 @@ namespace Raven.Server.Documents.Queries.Results
                     {
                         if (fieldVal is BlittableJsonReaderObject nested)
                             doc.Data = nested;
+                        if (fieldVal is Document d)
+                            doc = d;
                         else
                             ThrowInvalidQueryBodyResponse(fieldVal);
                         doc.IndexScore = score;
@@ -157,6 +159,8 @@ namespace Raven.Server.Documents.Queries.Results
                     {
                         if (fieldVal is BlittableJsonReaderObject nested)
                             doc.Data = nested;
+                        else if (fieldVal is Document d)
+                            doc = d;
                         else
                             ThrowInvalidQueryBodyResponse(fieldVal);
 
@@ -165,6 +169,8 @@ namespace Raven.Server.Documents.Queries.Results
                     }
                     if (fieldVal is List<object> list)
                         fieldVal = new DynamicJsonArray(list);
+                    if (fieldVal is Document d2)
+                        fieldVal = d2.Data;
                     var key = fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value;
                     result[key] = fieldVal;
                 }

@@ -164,14 +164,16 @@ namespace Raven.Server.Documents.Queries
 
             var result = new Dictionary<string, FieldToFetch>(StringComparer.Ordinal);
             singleFieldNoAlias = selectFields.Length == 1 &&
-                                 selectFields[0].Alias == null &&
-                                 selectFields[0].Function != null;
+                                 ((selectFields[0].Alias == null &&
+                                   selectFields[0].Function != null) ||
+                                   (selectFields[0].Name == string.Empty &&
+                                    selectFields[0].Function == null)
+                                 );
             for (var i = 0; i < selectFields.Length; i++)
             {
                 var selectField = selectFields[i];
-                string key;
                 var val = GetFieldToFetch(indexDefinition, selectField, result, 
-                    out key, ref anyExtractableFromIndex, ref extractAllStoredFields);
+                    out var key, ref anyExtractableFromIndex, ref extractAllStoredFields);
                 if (extractAllStoredFields)
                     return result;
                 if (val == null)
