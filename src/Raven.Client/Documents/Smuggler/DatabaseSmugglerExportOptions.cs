@@ -6,14 +6,14 @@ namespace Raven.Client.Documents.Smuggler
     {
         public DatabaseSmugglerExportOptions()
         {
-            CollectionsToExport = new List<string>();
+            Collections = new List<string>();
         }
 
-        public List<string> CollectionsToExport { get; set; }
+        public List<string> Collections { get; set; }
     }
 
     internal interface IDatabaseSmugglerExportOptions : IDatabaseSmugglerOptions
     {
-        List<string> CollectionsToExport { get; set; }
+        List<string> Collections { get; set; }
     }
 }

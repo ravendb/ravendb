@@ -10,12 +10,12 @@ namespace Raven.Server.Smuggler.Documents.Data
     {
         public DatabaseSmugglerOptionsServerSide()
         {
-            CollectionsToExport = new List<string>();
+            Collections = new List<string>();
         }
 
         public string FileName { get; set; }
 
-        public List<string> CollectionsToExport { get; set; }
+        public List<string> Collections { get; set; }
 
         public static DatabaseSmugglerOptionsServerSide Create(HttpContext httpContext, JsonOperationContext context)
         {
@@ -37,7 +37,7 @@ namespace Raven.Server.Smuggler.Documents.Data
                     else if (string.Equals(key, "maxStepsForTransformScript", StringComparison.OrdinalIgnoreCase))
                         result.MaxStepsForTransformScript = int.Parse(item.Value[0]);
                     else if (string.Equals(key, "collection", StringComparison.OrdinalIgnoreCase))
-                        result.CollectionsToExport.AddRange(item.Value);
+                        result.Collections.AddRange(item.Value);
                 }
                 catch (Exception e)
                 {
