@@ -154,7 +154,7 @@ namespace FastTests.Server
             }
         }
 
-        [Fact(Skip = "Should be restored")]
+        [Fact]
         public async Task Server_store_write_should_throw_concurrency_exception_if_relevant()
         {
             using (GetDocumentStore())

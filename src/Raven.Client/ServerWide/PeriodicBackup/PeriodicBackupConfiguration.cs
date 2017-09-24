@@ -16,6 +16,8 @@ namespace Raven.Client.ServerWide.PeriodicBackup
 
         public string Name { get; set; }
 
+        public string MentorNode { get; set; }
+
         public BackupType BackupType { get; set; }
 
         /// <summary>
@@ -46,6 +48,11 @@ namespace Raven.Client.ServerWide.PeriodicBackup
             return (ulong)TaskId;
         }
 
+        public string GetMentorNode()
+        {
+            return MentorNode;
+        }
+
         public bool Equals(PeriodicBackupConfiguration other)
         {
             if (other == null)
@@ -70,6 +77,9 @@ namespace Raven.Client.ServerWide.PeriodicBackup
                 return false;
 
             if (Equals(other.AzureSettings, AzureSettings) == false)
+                return false;
+
+            if (Equals(other.MentorNode, MentorNode) == false)
                 return false;
 
             return true;

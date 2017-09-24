@@ -19,13 +19,15 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         public long? SubscriptionId;
         public string SubscriptionName;
         public bool Disabled;
+        public string MentorNode;
 
         // for serialization
         private PutSubscriptionCommand() : base(null) { }
 
-        public PutSubscriptionCommand(string databaseName, string query) : base(databaseName)
+        public PutSubscriptionCommand(string databaseName, string query, string mentor) : base(databaseName)
         {
             Query = query;
+            MentorNode = mentor;
             // this verifies that the query is a valid subscription query
             SubscriptionConnection.ParseSubscriptionQuery(query);
         }
@@ -48,7 +50,8 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 SubscriptionName = SubscriptionName,
                 LastTimeServerMadeProgressWithDocuments = DateTime.UtcNow,
                 Disabled = Disabled,
-                LastClientConnectionTime = DateTime.Now
+                LastClientConnectionTime = DateTime.Now,
+                MentorNode = MentorNode
             }.ToJson(), SubscriptionName);
             BlittableJsonReaderObject modifiedSubscriptionState = null;
             try
@@ -101,7 +104,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             json[nameof(SubscriptionName)] = SubscriptionName;
             json[nameof(SubscriptionId)] = SubscriptionId;
             json[nameof(Disabled)] = Disabled;
-
+            json[nameof(MentorNode)] = MentorNode;
         }
     }
 }

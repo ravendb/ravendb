@@ -14,6 +14,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         public string NodeTag;
         public long LastDocumentEtagAckedInNode;
         public DateTime LastTimeServerMadeProgressWithDocuments;
+        public string MentorNode;
 
         // for serializtion
         private AcknowledgeSubscriptionBatchCommand() : base(null) { }
@@ -48,12 +49,18 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             json[nameof(SubscriptionId)] = SubscriptionId;
             json[nameof(SubscriptionName)] = SubscriptionName;
             json[nameof(NodeTag)] = NodeTag;
+            json[nameof(MentorNode)] = MentorNode;
             json[nameof(LastTimeServerMadeProgressWithDocuments)] = LastTimeServerMadeProgressWithDocuments;
         }
 
         public ulong GetTaskKey()
         {
             return (ulong)SubscriptionId;
+        }
+
+        public string GetMentorNode()
+        {
+            return MentorNode;
         }
     }
 }

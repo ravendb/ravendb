@@ -11,6 +11,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         public long SubscriptionId;
         public string SubscriptionName;
         public string NodeTag;
+        public string MentorNode;
         public DateTime LastClientConnectionTime;
 
         private UpdateSubscriptionClientConnectionTime():base(null){}
@@ -43,11 +44,17 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             json[nameof(SubscriptionName)] = SubscriptionName;
             json[nameof(NodeTag)] = NodeTag;
             json[nameof(LastClientConnectionTime)] = LastClientConnectionTime;
+            json[nameof(MentorNode)] = MentorNode;
         }
 
         public ulong GetTaskKey()
         {
             return (ulong)SubscriptionId;
+        }
+
+        public string GetMentorNode()
+        {
+            return MentorNode;
         }
     }
 }

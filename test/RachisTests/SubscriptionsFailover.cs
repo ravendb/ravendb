@@ -192,6 +192,62 @@ namespace RachisTests
             }
         }
 
+        [Fact]
+        public async Task SetMentorToSubscriptionWithFailover()
+        {
+            const int nodesAmount = 5;
+            var leader = await CreateRaftClusterAndGetLeader(nodesAmount);
+
+            var defaultDatabase = "SetMentorToSubscription";
+
+            await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrl).ConfigureAwait(false);
+
+            string mentor = "C";
+            string tag1, tag2, tag3;
+            using (var store = new DocumentStore
+            {
+                Urls = new[] { leader.WebUrl },
+                Database = defaultDatabase
+            }.Initialize())
+            {
+                var usersCount = new List<User>();
+                var reachedMaxDocCountMre = new AsyncManualResetEvent();
+                var subscription = await CreateAndInitiateSubscription(store, defaultDatabase, usersCount, reachedMaxDocCountMre, 20, mentor: mentor);
+
+                await GenerateDocuments(store);
+
+                Assert.True(await reachedMaxDocCountMre.WaitAsync(_reasonableWaitTime), $"Reached {usersCount.Count}/10");
+                tag1 = subscription.SelectedNode;
+                Assert.Equal(mentor, tag1);
+
+                usersCount.Clear();
+                reachedMaxDocCountMre.Reset();
+
+                await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionName);
+
+                await GenerateDocuments(store);
+
+                Assert.True(await reachedMaxDocCountMre.WaitAsync(_reasonableWaitTime), $"Reached {usersCount.Count}/10");
+
+                tag2 = subscription.CurrentNodeTag;
+
+                //     Assert.NotEqual(tag1,tag2);
+                usersCount.Clear();
+                reachedMaxDocCountMre.Reset();
+
+                await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionName);
+
+                await GenerateDocuments(store);
+
+                Assert.True(await reachedMaxDocCountMre.WaitAsync(_reasonableWaitTime), $"Reached {usersCount.Count}/10");
+
+                tag3 = subscription.CurrentNodeTag;
+                // Assert.NotEqual(tag1, tag3);
+                //    Assert.NotEqual(tag2, tag3);
+
+            }
+        }
+
         [NightlyBuildTheory]
         [InlineData(3)]
         [InlineData(5)]
@@ -420,18 +476,22 @@ namespace RachisTests
             }
         }
 
-        private async Task<Subscription<User>> CreateAndInitiateSubscription(IDocumentStore store, string defaultDatabase, List<User> usersCount, AsyncManualResetEvent reachedMaxDocCountMre, int batchSize)
+        private async Task<Subscription<User>> CreateAndInitiateSubscription(IDocumentStore store, string defaultDatabase, List<User> usersCount, AsyncManualResetEvent reachedMaxDocCountMre, int batchSize, string mentor = null)
         {
             var proggress = new SubscriptionProggress()
             {
                 MaxId = 0
             };
-            var subscriptionName = await store.Subscriptions.CreateAsync<User>().ConfigureAwait(false);
+            var subscriptionName = await store.Subscriptions.CreateAsync<User>(options:new SubscriptionCreationOptions
+            {
+                MentorNode = mentor
+            }).ConfigureAwait(false);
 
             var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionName)
             {
                 TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(500),
                 MaxDocsPerBatch = batchSize
+                
             });
             var subscripitonState = await store.Subscriptions.GetSubscriptionStateAsync(subscriptionName, store.Database);
             var getDatabaseTopologyCommand = new GetDatabaseRecordOperation(defaultDatabase);

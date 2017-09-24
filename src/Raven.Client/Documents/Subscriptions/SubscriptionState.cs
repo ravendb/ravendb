@@ -17,6 +17,7 @@ namespace Raven.Client.Documents.Subscriptions
         public string ChangeVectorForNextBatchStartingPoint { get; set; }
         public long SubscriptionId { get; set; }
         public string SubscriptionName { get; set; }
+        public string MentorNode { get; set; }
         public DateTime LastTimeServerMadeProgressWithDocuments { get; set; }  // Last time server made some progress with the subscriptions docs  
         public DateTime LastClientConnectionTime { get; set; } // Last time any client has connected to server (connection dead or alive)
         public bool Disabled { get; set; }
@@ -24,6 +25,11 @@ namespace Raven.Client.Documents.Subscriptions
         public ulong GetTaskKey()
         {
             return (ulong)SubscriptionId;
+        }
+
+        public string GetMentorNode()
+        {
+            return MentorNode;
         }
 
         public virtual DynamicJsonValue ToJson()
@@ -34,6 +40,7 @@ namespace Raven.Client.Documents.Subscriptions
                 [nameof(ChangeVectorForNextBatchStartingPoint)] = ChangeVectorForNextBatchStartingPoint,
                 [nameof(SubscriptionId)] = SubscriptionId,
                 [nameof(SubscriptionName)] = SubscriptionName,
+                [nameof(MentorNode)] = MentorNode,
                 [nameof(LastTimeServerMadeProgressWithDocuments)] = LastTimeServerMadeProgressWithDocuments,
                 [nameof(LastClientConnectionTime)] = LastClientConnectionTime,
                 [nameof(Disabled)] = Disabled
