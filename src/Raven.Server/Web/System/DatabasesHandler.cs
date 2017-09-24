@@ -433,7 +433,7 @@ namespace Raven.Server.Web.System
                 NodeTag = rehab,
                 Url = url
             };
-            promotableTask = new PromotableTask(rehab, url, databaseName);
+            promotableTask = new PromotableTask(rehab, url, databaseName); // internal replication doesn't have a predefined mentor
             return node;
         }
 

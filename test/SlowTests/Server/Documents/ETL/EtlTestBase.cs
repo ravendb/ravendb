@@ -22,12 +22,12 @@ namespace SlowTests.Server.Documents.ETL
             return src.Admin.Server.Send(new AddEtlOperation<T>(configuration, src.Database));
         }
 
-        protected static AddEtlOperationResult AddEtl(DocumentStore src, DocumentStore dst, string collection, string script, bool applyToAllDocuments = false, bool disabled = false)
+        protected static AddEtlOperationResult AddEtl(DocumentStore src, DocumentStore dst, string collection, string script, bool applyToAllDocuments = false, bool disabled = false, string mentor = null)
         {
-            return AddEtl(src, dst, new[] { collection }, script, applyToAllDocuments, disabled);
+            return AddEtl(src, dst, new[] { collection }, script, applyToAllDocuments, disabled, mentor);
         }
 
-        protected static AddEtlOperationResult AddEtl(DocumentStore src, DocumentStore dst, IEnumerable<string> collections, string script, bool applyToAllDocuments = false, bool disabled = false)
+        protected static AddEtlOperationResult AddEtl(DocumentStore src, DocumentStore dst, IEnumerable<string> collections, string script, bool applyToAllDocuments = false, bool disabled = false, string mentor = null)
         {
             var connectionStringName = $"{src.Database}@{src.Urls.First()} to {dst.Database}@{dst.Urls.First()}";
 
@@ -45,7 +45,8 @@ namespace SlowTests.Server.Documents.ETL
                             ApplyToAllDocuments = applyToAllDocuments,
                             Disabled = disabled
                         }
-                    }
+                    },
+                    MentorNode = mentor
                 },
                 new RavenConnectionString
                 {

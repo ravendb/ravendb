@@ -346,6 +346,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 {
                     topology.Promotables.Remove(promotable);
                     topology.Members.Add(promotable);
+                    topology.PredefinedMentors.Remove(promotable);
                     RemoveOtherNodesIfNeeded(dbName, record, clusterTopology, current, ref deletions);
                     return $"Promoting node {promotable} to member";
                 }
@@ -512,7 +513,8 @@ namespace Raven.Server.ServerWide.Maintenance
         private bool TryGetMentorNode(string dbName, DatabaseTopology topology, ClusterTopology clusterTopology, string promotable, out string mentorNode)
         {
             var url = clusterTopology.GetUrlFromTag(promotable);
-            var task = new PromotableTask(promotable, url, dbName);
+            topology.PredefinedMentors.TryGetValue(promotable, out var mentor);
+            var task = new PromotableTask(promotable, url, dbName, mentor);
             mentorNode = topology.WhoseTaskIsIt(task, _server.IsPassive());
 
             if (mentorNode == null)

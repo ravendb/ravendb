@@ -63,6 +63,60 @@ namespace SlowTests.Server.Documents.ETL.Raven
         }
 
         [Fact]
+        public void SetMentorToEtlAndFailover()
+        {
+            using (var src = GetDocumentStore())
+            using (var dest = GetDocumentStore())
+            {
+                AddEtl(src, dest, "Users", script:null ,mentor: "C");
+
+                var database = GetDatabase(src.Database).Result;
+
+                Assert.Equal("C",database.EtlLoader.RavenDestinations[0].MentorNode);
+
+                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+
+                using (var session = src.OpenSession())
+                {
+                    session.Store(new User()
+                    {
+                        Name = "Joe Doe2"
+                    });
+
+                    session.SaveChanges();
+                }
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                using (var session = dest.OpenSession())
+                {
+                    var user = session.Load<User>("users/1-A");
+
+                    Assert.NotNull(user);
+                    Assert.Equal("Joe Doe2", user.Name);
+                }
+
+                etlDone.Reset();
+
+                using (var session = src.OpenSession())
+                {
+                    session.Delete("users/1-A");
+
+                    session.SaveChanges();
+                }
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                using (var session = dest.OpenSession())
+                {
+                    var user = session.Load<User>("users/1-A");
+
+                    Assert.Null(user);
+                }
+            }
+        }
+
+        [Fact]
         public void No_script()
         {
             using (var src = GetDocumentStore())

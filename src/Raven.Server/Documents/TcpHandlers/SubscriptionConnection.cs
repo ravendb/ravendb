@@ -61,7 +61,6 @@ namespace Raven.Server.Documents.TcpHandlers
         public long SubscriptionId { get; set; }
         public SubscriptionOpeningStrategy Strategy => _options.Strategy;
 
-
         public SubscriptionConnection(TcpConnectionOptions connectionOptions)
         {
             TcpConnection = connectionOptions;
@@ -136,7 +135,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                     Stats.ConnectedAt = DateTime.UtcNow;
                     await TcpConnection.DocumentDatabase.SubscriptionStorage.UpdateClientConnectionTime(SubscriptionState.SubscriptionId,
-                        SubscriptionState.SubscriptionName);
+                        SubscriptionState.SubscriptionName, SubscriptionState.MentorNode);
                     return;
                 }
                 catch (TimeoutException)
@@ -508,7 +507,7 @@ namespace Raven.Server.Documents.TcpHandlers
                             _logger.Info(
                                 $"Finished sending a batch with {docsToFlush} documents for subscription {Options.SubscriptionName}");
                         }
-                        await TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(SubscriptionId, Options.SubscriptionName, startEtag, lastChangeVector);
+                        await TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(SubscriptionId, Options.SubscriptionName, startEtag, lastChangeVector,SubscriptionState.MentorNode);
 
                         if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
                             await SendHeartBeat();
@@ -555,7 +554,8 @@ namespace Raven.Server.Documents.TcpHandlers
                                 SubscriptionId,
                                 Options.SubscriptionName,
                                 startEtag,
-                                lastChangeVector);
+                                lastChangeVector,
+                                SubscriptionState.MentorNode);
                             Stats.LastAckReceivedAt = DateTime.UtcNow;
                             Stats.AckRate.Mark();
                             await WriteJsonAsync(new DynamicJsonValue

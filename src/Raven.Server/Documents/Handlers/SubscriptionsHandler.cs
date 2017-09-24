@@ -137,7 +137,8 @@ namespace Raven.Server.Documents.Handlers
                 }
                 var id = GetLongQueryString("id", required: false);
                 var disabled = GetBoolValueQueryString("disabled", required: false);
-                var subscriptionId = await Database.SubscriptionStorage.PutSubscription(options, id, disabled);
+                var mentor = options.MentorNode;
+                var subscriptionId = await Database.SubscriptionStorage.PutSubscription(options, id, disabled, mentor: mentor);
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created; // Created
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))

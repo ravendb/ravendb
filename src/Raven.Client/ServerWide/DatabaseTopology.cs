@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Http;
@@ -11,6 +12,7 @@ namespace Raven.Client.ServerWide
     public interface IDatabaseTask
     {
         ulong GetTaskKey();
+        string GetMentorNode();
     }
 
     public class LeaderStamp : IDynamicJson
@@ -35,12 +37,14 @@ namespace Raven.Client.ServerWide
         private readonly string _tag;
         private readonly string _url;
         private readonly string _name;
+        private readonly string _mentorNode;
 
-        public PromotableTask(string tag, string url, string name)
+        public PromotableTask(string tag, string url, string name, string mentorNode = null)
         {
             _tag = tag;
             _url = url;
             _name = name;
+            _mentorNode = mentorNode;
         }
 
         protected static ulong CalculateStringHash(string s)
@@ -53,6 +57,11 @@ namespace Raven.Client.ServerWide
             var hashCode = CalculateStringHash(_tag);
             hashCode = (hashCode * 397) ^ CalculateStringHash(_url);
             return (hashCode * 397) ^ CalculateStringHash(_name);
+        }
+
+        public string GetMentorNode()
+        {
+            return _mentorNode;
         }
     }
 
@@ -71,6 +80,7 @@ namespace Raven.Client.ServerWide
         public List<string> Promotables = new List<string>();
         public List<string> Rehabs = new List<string>();
 
+        public Dictionary<string,string> PredefinedMentors = new Dictionary<string, string>();
         public Dictionary<string, string> DemotionReasons = new Dictionary<string, string>();
         public Dictionary<string, DatabasePromotionStatus> PromotablesStatus = new Dictionary<string, DatabasePromotionStatus>();
 
@@ -102,7 +112,8 @@ namespace Raven.Client.ServerWide
             foreach (var promotable in Promotables.Concat(Rehabs))
             {
                 var url = clusterTopology.GetUrlFromTag(promotable);
-                if (WhoseTaskIsIt(new PromotableTask(promotable, url, databaseName), isPassive) == nodeTag)
+                PredefinedMentors.TryGetValue(promotable, out var mentor);
+                if (WhoseTaskIsIt(new PromotableTask(promotable, url, databaseName, mentor), isPassive) == nodeTag)
                 {
                     list.Add(url);
                 }
@@ -201,6 +212,13 @@ namespace Raven.Client.ServerWide
             if (inPassiveState)
                 return null;
 
+            var mentorNode = task.GetMentorNode();
+            if (mentorNode != null)
+            {
+                if (Members.Contains(mentorNode))
+                    return mentorNode;
+            }
+
             var topology = new List<string>(Members);
             topology.AddRange(Promotables);
             topology.AddRange(Rehabs);
@@ -227,5 +245,12 @@ namespace Raven.Client.ServerWide
             }
         }
 
+        public void ValidateMemberNode(string node)
+        {
+            if (RelevantFor(node) == false)
+                throw new ArgumentException($"The node {node} is not part of the database group");
+            if (Members.Contains(node) == false)
+                throw new ArgumentException($"The node {node} is not vaild for the operation because it is not a member");
+        }
     }
 }

@@ -351,9 +351,14 @@ namespace Raven.Client.Documents.Subscriptions
 
                 _subscriptionLocalRequestExecutor?.Dispose();
                 _subscriptionLocalRequestExecutor = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(command.RequestedNode.Url, _dbName, requestExecutor.Certificate, _store.Conventions);
+
+                SelectedNode = requestExecutor.Topology.Nodes.Single(n => n.Url == command.RequestedNode.Url).ClusterTag;
+
                 return _stream;
             }
         }
+
+        public string SelectedNode { get; private set; }
 
         private void AssertConnectionState(SubscriptionConnectionServerMessage connectionStatus)
         {
@@ -659,6 +664,8 @@ namespace Raven.Client.Documents.Subscriptions
                         .FirstOrDefault(x => x.ClusterTag == se.AppropriateNode);
                     _redirectNode = nodeToRedirectTo ?? throw new AggregateException(ex,
                                         new InvalidOperationException($"Could not redirect to {se.AppropriateNode}, because it was not found in local topology, even after retrying"));
+                    SelectedNode = _redirectNode.ClusterTag;
+
                     return true;
                 case SubscriptionInUseException _:
                 case SubscriptionDoesNotExistException _:

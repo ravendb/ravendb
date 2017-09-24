@@ -10,6 +10,7 @@ namespace Raven.Client.ServerWide
     {
         public long TaskId;
         public string Name;
+        public string MentorNode;
 
         public static void RemoveWatcher(ref List<ExternalReplication> watchers, long taskId)
         {
@@ -71,6 +72,7 @@ namespace Raven.Client.ServerWide
             var json = base.ToJson();
             json[nameof(TaskId)] = TaskId;
             json[nameof(Name)] = Name;
+            json[nameof(MentorNode)] = MentorNode;
             return json;
         }
 
@@ -84,6 +86,11 @@ namespace Raven.Client.ServerWide
             var hashCode = CalculateStringHash(Database);
             hashCode = (hashCode * 397) ^ CalculateStringHash(Url);
             return hashCode;
+        }
+
+        public string GetMentorNode()
+        {
+            return MentorNode;
         }
     }
 }

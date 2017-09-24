@@ -215,6 +215,79 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
+        [Fact]
+        public async Task SetMetorToExternalReplication()
+        {
+            var clusterSize = 5;
+            var databaseName = GetDatabaseName();
+            var leader = await CreateRaftClusterAndGetLeader(clusterSize);
+            var watchers = new List<ExternalReplication>();
+
+            using (var store = new DocumentStore()
+            {
+                Urls = new[] { leader.WebUrl },
+                Database = databaseName,
+            }.Initialize())
+            {
+                var doc = new DatabaseRecord(databaseName);
+                var databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
+                Assert.Equal(clusterSize, databaseResult.Topology.AllNodes.Count());
+                foreach (var server in Servers)
+                {
+                    await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.RaftCommandIndex);
+                }
+                foreach (var server in Servers)
+                {
+                    await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
+                }
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Karmel" }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+                Assert.True(await WaitForDocumentInClusterAsync<User>(
+                    databaseResult.Topology,
+                    databaseName,
+                    "users/1",
+                    u => u.Name.Equals("Karmel"),
+                    TimeSpan.FromSeconds(clusterSize + 5)));
+
+                for (var i = 0; i < 5; i++)
+                {
+                    doc = new DatabaseRecord($"Watcher{i}");
+                    var res = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc));
+                    var server = Servers.Single(x => x.WebUrl == res.NodesAddedTo[0]);
+                    await server.ServerStore.Cluster.WaitForIndexNotification(res.RaftCommandIndex);
+                    await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore($"Watcher{i}");
+
+                    var watcher = new ExternalReplication
+                    {
+                        Database = $"Watcher{i}",
+                        Url = res.NodesAddedTo[0],
+                        MentorNode = "C"
+                    };
+                    watchers.Add(watcher);
+
+                    var taskRes = await AddWatcherToReplicationTopology((DocumentStore)store, watcher);
+                    var replicationResult = (OngoingTaskReplication)await GetTaskInfo((DocumentStore)store, taskRes.TaskId, OngoingTaskType.Replication);
+                    Assert.Equal("C",replicationResult.ResponsibleNode.NodeTag);
+                }
+            }
+
+            foreach (var watcher in watchers)
+            {
+                using (var store = new DocumentStore
+                {
+                    Urls = new[] { watcher.Url },
+                    Database = watcher.Database,
+                }.Initialize())
+                {
+                    Assert.True(WaitForDocument<User>(store, "users/1", u => u.Name == "Karmel"));
+                }
+            }
+        }
+
+
         [NightlyBuildFact]
         public async Task CanAddAndModifySingleWatcher()
         {

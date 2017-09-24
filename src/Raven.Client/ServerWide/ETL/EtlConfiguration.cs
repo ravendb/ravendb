@@ -17,6 +17,8 @@ namespace Raven.Client.ServerWide.ETL
         
         public string Name { get; set; }
 
+        public string MentorNode { get; set; }
+
         public abstract string GetDestination();
 
         public string ConnectionStringName { get; set; }
@@ -78,6 +80,11 @@ namespace Raven.Client.ServerWide.ETL
                                            Hashing.XXHash64.Calculate(ConnectionStringName.ToLowerInvariant(), Encodings.Utf8)).Value;
         }
 
+        public string GetMentorNode()
+        {
+            return MentorNode;
+        }
+
         public override string ToString()
         {
             return Name;
@@ -89,6 +96,7 @@ namespace Raven.Client.ServerWide.ETL
             {
                 [nameof(Name)] = Name,
                 [nameof(ConnectionStringName)] = ConnectionStringName,
+                [nameof(MentorNode)] = MentorNode,
                 [nameof(Transforms)] = new DynamicJsonArray(Transforms.Select(x => new DynamicJsonValue
                 {
                     [nameof(x.Name)] = x.Name,

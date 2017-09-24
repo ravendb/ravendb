@@ -99,6 +99,7 @@ namespace Raven.Server.Web.System
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             var node = GetStringQueryString("node", false);
+            var mentor = GetStringQueryString("mentor", false);
 
             string errorMessage;
             if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out errorMessage) == false)
@@ -158,6 +159,12 @@ namespace Raven.Server.Web.System
                     databaseRecord.Topology.Promotables.Add(node);
                     databaseRecord.Topology.DemotionReasons[node] = "Joined the Db-Group as a new promotable node";
                     databaseRecord.Topology.PromotablesStatus[node] = DatabasePromotionStatus.WaitingForFirstPromotion;
+                }
+
+                if (mentor != null)
+                {
+                    databaseRecord.Topology.ValidateMemberNode(mentor);
+                    databaseRecord.Topology.PredefinedMentors.Add(node, mentor);
                 }
 
                 databaseRecord.Topology.ReplicationFactor++;

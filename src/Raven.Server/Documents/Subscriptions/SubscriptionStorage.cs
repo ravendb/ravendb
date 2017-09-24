@@ -53,9 +53,9 @@ namespace Raven.Server.Documents.Subscriptions
 
         }
 
-        public async Task<long> PutSubscription(SubscriptionCreationOptions options, long? subscriptionId = null, bool? disabled = false)
+        public async Task<long> PutSubscription(SubscriptionCreationOptions options, long? subscriptionId = null, bool? disabled = false, string mentor = null)
         {
-            var command = new PutSubscriptionCommand(_db.Name, options.Query)
+            var command = new PutSubscriptionCommand(_db.Name, options.Query, mentor)
             {
                 InitialChangeVector = options.ChangeVector,
                 SubscriptionName = options.Name,
@@ -79,7 +79,7 @@ namespace Raven.Server.Documents.Subscriptions
             return subscriptionState;
         }
 
-        public async Task AcknowledgeBatchProcessed(long id, string name, long lastEtag, string changeVector)
+        public async Task AcknowledgeBatchProcessed(long id, string name, long lastEtag, string changeVector, string mentor)
         {
             var command = new AcknowledgeSubscriptionBatchCommand(_db.Name)
             {
@@ -88,7 +88,8 @@ namespace Raven.Server.Documents.Subscriptions
                 SubscriptionId = id,
                 SubscriptionName = name,
                 LastDocumentEtagAckedInNode = lastEtag,
-                LastTimeServerMadeProgressWithDocuments = DateTime.UtcNow
+                LastTimeServerMadeProgressWithDocuments = DateTime.UtcNow,
+                MentorNode = mentor
             };
 
             var (etag, _) = await _serverStore.SendToLeaderAsync(command);
@@ -96,14 +97,15 @@ namespace Raven.Server.Documents.Subscriptions
         }
 
 
-        public async Task UpdateClientConnectionTime(long id, string name)
+        public async Task UpdateClientConnectionTime(long id, string name, string mentorNode = null)
         {
             var command = new UpdateSubscriptionClientConnectionTime(_db.Name)
             {
                 NodeTag = _serverStore.NodeTag,
                 SubscriptionId = id,
                 SubscriptionName = name,
-                LastClientConnectionTime = DateTime.UtcNow
+                LastClientConnectionTime = DateTime.UtcNow,
+                MentorNode = mentorNode
             };
 
             var (etag, _) = await _serverStore.SendToLeaderAsync(command);
@@ -127,7 +129,6 @@ namespace Raven.Server.Documents.Subscriptions
             using (serverStoreContext.OpenReadTransaction())
             {
                 var subscription = GetSubscriptionFromServerStore(serverStoreContext, name);
-
                 var dbRecord = _serverStore.Cluster.ReadDatabase(serverStoreContext, _db.Name, out var _);
                 var whoseTaskIsIt = dbRecord.Topology.WhoseTaskIsIt(subscription, _serverStore.IsPassive());
                 if (whoseTaskIsIt != _serverStore.NodeTag)
@@ -318,6 +319,7 @@ namespace Raven.Server.Documents.Subscriptions
                 SubscriptionId = @base.SubscriptionId;
                 LastTimeServerMadeProgressWithDocuments = @base.LastTimeServerMadeProgressWithDocuments;
                 SubscriptionName = @base.SubscriptionName;
+                MentorNode = @base.MentorNode;
             }
         }
 
