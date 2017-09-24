@@ -171,6 +171,7 @@ class queryCompleter {
             
             if (iterator.$tokenIndex < 0) {
                 result.dividersCount++;
+                lastToken = {type: "space", start: null, index: null, value: null};
                 continue;
             }
             const token = iterator.getCurrentToken();
