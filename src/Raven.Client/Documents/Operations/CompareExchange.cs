@@ -2,16 +2,14 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Util;
 using Sparrow.Json;
 
-namespace Raven.Client.ServerWide.Operations
+namespace Raven.Client.Documents.Operations
 {
     public class RawClusterValueResult
     {
@@ -128,17 +126,17 @@ namespace Raven.Client.ServerWide.Operations
 
         public RavenCommand<CmpXchgResult<T>> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new CompareExchangeAsyncCommand(_key, _value, _index, conventions);
+            return new CompareExchangeCommand(_key, _value, _index, conventions);
         }
 
-        private class CompareExchangeAsyncCommand : RavenCommand<CmpXchgResult<T>>
+        private class CompareExchangeCommand : RavenCommand<CmpXchgResult<T>>
         {
             private readonly string _key;
             private readonly T _value;
             private readonly long _index;
             private readonly DocumentConventions _conventions;
 
-            public CompareExchangeAsyncCommand(string key, T value, long index, DocumentConventions conventions = null)
+            public CompareExchangeCommand(string key, T value, long index, DocumentConventions conventions = null)
             {
                 if (string.IsNullOrEmpty(key))
                     throw new ArgumentNullException(nameof(key), "The key argument must have value");
