@@ -31,7 +31,8 @@ namespace Raven.Server.Web.System
                     context.Write(writer, new DynamicJsonValue
                     {
                         [nameof(RawClusterValueResult.Index)] = res.Index,
-                        [nameof(RawClusterValueResult.Value)] = res.Value
+                        [nameof(RawClusterValueResult.Value)] = res.Value,
+                        [nameof(RawClusterValueResult.Successful)] = true
                     });
                     writer.Flush();
                 }
@@ -64,7 +65,8 @@ namespace Raven.Server.Web.System
                         context.Write(writer, new DynamicJsonValue
                         {
                             [nameof(RawClusterValueResult.Index)] = res.Index,
-                            [nameof(RawClusterValueResult.Value)] = res.Value
+                            [nameof(RawClusterValueResult.Value)] = res.Value,
+                            [nameof(RawClusterValueResult.Successful)] = res.Index == raftIndex
                         });
                     }
                     writer.Flush();
