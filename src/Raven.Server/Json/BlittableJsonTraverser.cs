@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using Sparrow;
 using Sparrow.Json;
 
@@ -34,9 +35,7 @@ namespace Raven.Server.Json
 
         public object Read(BlittableJsonReaderObject docReader, StringSegment path)
         {
-            object result;
-            StringSegment leftPath;
-            if (TryRead(docReader, path, out result, out leftPath) == false)
+            if (TryRead(docReader, path, out var result, out _) == false)
                 throw new InvalidOperationException($"Invalid path: {path}.");
 
             return result;
@@ -44,19 +43,15 @@ namespace Raven.Server.Json
 
         public bool TryRead(BlittableJsonReaderObject docReader, StringSegment path, out object result, out StringSegment leftPath)
         {
-            var indexOfFirstSeparator = path.IndexOfAny(_separators, 0);
-            object reader;
-
-            //if not found -> indexOfFirstSeparator == -1 -> take whole includePath as segment
-            var propertySegment = path.Subsegment(0, indexOfFirstSeparator);
-            if (docReader.TryGetMember(propertySegment, out reader) == false)
+            var propertySegment = GetNextToken(path, out int propertySegmentLength);
+            if (docReader.TryGetMember(propertySegment, out var reader) == false)
             {
                 leftPath = path;
                 result = null;
                 return false;
             }
 
-            if (indexOfFirstSeparator == -1)
+            if (propertySegmentLength == path.Length || propertySegmentLength == -1)
             {
                 leftPath = string.Empty;// we read it all
                 result = reader;
@@ -64,13 +59,12 @@ namespace Raven.Server.Json
             }
             
 
-            switch (path[indexOfFirstSeparator])
+            switch (path[propertySegmentLength])
             {
                 case PropertySeparator:
-                    var pathSegment = path.Subsegment(indexOfFirstSeparator + 1);
+                    var pathSegment = path.Subsegment(propertySegmentLength + 1);
 
-                    var propertyInnerObject = reader as BlittableJsonReaderObject;
-                    if (propertyInnerObject != null)
+                    if (reader is BlittableJsonReaderObject propertyInnerObject)
                     {
                         if (TryRead(propertyInnerObject, pathSegment, out result, out leftPath))
                             return true;
@@ -85,12 +79,12 @@ namespace Raven.Server.Json
                     result = reader;
                     return false;
                 case CollectionSeparatorStart:
-                    if (path.Length <= indexOfFirstSeparator + 2 ||
-                        path[indexOfFirstSeparator + 1] != ']' ||
-                        path[indexOfFirstSeparator + 2] != '.')
+                    if (path.Length <= propertySegmentLength + 2 ||
+                        path[propertySegmentLength + 1] != ']' ||
+                        path[propertySegmentLength + 2] != '.')
                     {
-                        if (indexOfFirstSeparator + 1 < path.Length &&
-                            path[indexOfFirstSeparator + 1] == ']')
+                        if (propertySegmentLength + 1 < path.Length &&
+                            path[propertySegmentLength + 1] == ']')
                         {
                             if (reader is BlittableJsonReaderArray innerArray)
                             {
@@ -103,7 +97,7 @@ namespace Raven.Server.Json
                         leftPath = path;
                         return false;
                     }
-                    leftPath = path.Subsegment(indexOfFirstSeparator + CollectionSeparator.Length);
+                    leftPath = path.Subsegment(propertySegmentLength + CollectionSeparator.Length);
 
                     if (reader is BlittableJsonReaderArray collectionInnerArray)
                     {
@@ -120,8 +114,35 @@ namespace Raven.Server.Json
                     result = reader;
                     return false;
                 default:
-                    throw new NotSupportedException($"Unhandled separator character: {path[indexOfFirstSeparator]}");
+                    throw new NotSupportedException($"Unhandled separator character: {path[propertySegmentLength]}");
             }
+        }
+
+        private StringSegment GetNextToken(StringSegment path, out int consumed)
+        {
+            int SkipQoute(char ch, int i)
+            {
+                for (int j = i; j < path.Length; j++)
+                {
+                    if (path[j] == '\'')
+                    {
+                        j++;// escape next chart
+                        continue;
+                    }
+                    if (path[j] == ch)
+                        return j;
+                }
+                return path.Length;
+            }
+
+            if (path[0] == '"' || path[0] == '\'')
+            {
+                consumed = SkipQoute(path[0], 1);
+                return path.Subsegment(1, consumed - 2);
+            }
+
+            consumed = path.IndexOfAny(_separators, 0);
+            return path.Subsegment(0, consumed);
         }
 
         private bool ReadNestedObjects(BlittableJsonReaderObject nested, StringSegment path, out object result, out StringSegment leftPath)

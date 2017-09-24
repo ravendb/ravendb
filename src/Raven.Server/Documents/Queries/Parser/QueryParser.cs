@@ -774,7 +774,6 @@ namespace Raven.Server.Documents.Queries.Parser
         {
             var tokenStart = -1;
             var tokenLength = 0;
-            var escapeChars = 0;
             var part = 0;
             var isQuoted = false;
 
@@ -784,8 +783,8 @@ namespace Raven.Server.Documents.Queries.Parser
                 {
                     if (Scanner.String())
                     {
-                        isQuoted = true;
-                        escapeChars += Scanner.EscapeChars;
+                        if(part == 1)
+                            isQuoted = true;
                     }
                     else
                     {
