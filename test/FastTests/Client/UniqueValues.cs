@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Raven.Client.ServerWide.Operations;
+using Raven.Client.Documents.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -41,7 +41,7 @@ namespace FastTests.Client
             {
                 Name = "Karmel"
             }, 0));
-            var res2 = await store.Operations.SendAsync(new CompareExchangeOperation<User>("test", new User
+            var res2 = await store.Operations.SendAsync(new CompareExchangeOperation<User>("test2", new User
             {
                 Name = "Karmel"
             }, 0));
