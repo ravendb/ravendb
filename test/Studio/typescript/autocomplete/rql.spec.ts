@@ -236,6 +236,20 @@ describe("RQL Autocomplete", () => {
         });
     });
 
+    it('from collection with a new line', done => {
+        rqlTestUtils.autoComplete(`from Orders 
+|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            const sortedList = _.sortBy(wordlist, [(x: autoCompleteWordList) => x.score]).reverse();
+            assert.deepEqual(sortedList, afterFromList);
+
+            assert.equal(lastKeyword.keyword, "from");
+            assert.equal(lastKeyword.dividersCount, 2);
+
+            done();
+        });
+    });
+
     it('from Collection select | should list fields', done => {
         rqlTestUtils.autoComplete("from Orders select |", northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
