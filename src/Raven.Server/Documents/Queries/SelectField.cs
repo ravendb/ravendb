@@ -113,7 +113,7 @@ namespace Raven.Server.Documents.Queries
             return new SelectField
             {
                 Value = finalVal,
-                Alias = alias,
+                Alias = alias ?? val,
                 ValueTokenType = type
             };
         }
