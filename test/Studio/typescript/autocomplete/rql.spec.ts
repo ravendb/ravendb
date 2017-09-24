@@ -60,14 +60,23 @@ describe("RQL Autocomplete", () => {
         {caption: "random", value: "random(", score: 21, meta: "function"}
     ]);
     
-    const orderBySortListAfterSort = [
+    const orderBySortAfterList = [
         {caption: ",", value: ", ", score: 23, meta: "separator"},
         {caption: "load", value: "load ", score: 20, meta: "keyword"},
         {caption: "select", value: "select ", score: 19, meta: "keyword"},
         {caption: "include", value: "include ", score: 18, meta: "keyword"}
     ];
     
-    const orderBySortList =  _.sortBy(orderBySortListAfterSort.concat([
+    const groupByAfterList = [
+        {caption: ",", value: ", ", score: 23, meta: "separator"},
+        {caption: "where", value: "where ", score: 20, meta: "keyword"},
+        {caption: "order", value: "order ", score: 19, meta: "keyword"},
+        {caption: "load", value: "load ", score: 18, meta: "keyword"},
+        {caption: "select", value: "select ", score: 17, meta: "keyword"},
+        {caption: "include", value: "include ", score: 16, meta: "keyword"}
+    ];
+    
+    const orderBySortList =  _.sortBy(orderBySortAfterList.concat([
         {caption: "desc", value: "desc ", score: 22, meta: "descending sort"},
         {caption: "asc", value: "asc ", score: 21, meta: "ascending sort"}
     ]), [(x: autoCompleteWordList) => x.score]).reverse();
@@ -622,7 +631,7 @@ order by OrderedAt desc|`, northwindProvider(), (errors, wordlist, prefix, lastK
 order by OrderedAt desc |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
             const sortedList = _.sortBy(wordlist, [(x: autoCompleteWordList) => x.score]).reverse();
-            assert.deepEqual(sortedList, orderBySortListAfterSort);
+            assert.deepEqual(sortedList, orderBySortAfterList);
 
             assert.equal(lastKeyword.keyword, "order by");
             assert.equal(lastKeyword.dividersCount, 3);
@@ -780,6 +789,59 @@ group by|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
     it('After group by | should list fields', done => {
         rqlTestUtils.autoComplete(`from Orders
 group by |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, fieldsList);
+
+            assert.equal(lastKeyword.keyword, "group by");
+            assert.equal(lastKeyword.dividersCount, 1);
+
+            done();
+        });
+    });
+
+    it('After group by without space | should list itself with prefix', done => {
+        rqlTestUtils.autoComplete(`from Orders
+group by ShippedAt|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "ShippedAt");
+            assert.deepEqual(wordlist, fieldsList);
+
+            assert.equal(lastKeyword.keyword, "group by");
+            assert.equal(lastKeyword.dividersCount, 1);
+
+            done();
+        });
+    });
+
+    it('After group by | should list comma or next keywords', done => {
+        rqlTestUtils.autoComplete(`from Orders
+group by ShippedAt |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            const sortedList = _.sortBy(wordlist, [(x: autoCompleteWordList) => x.score]).reverse();
+            assert.deepEqual(sortedList, groupByAfterList);
+
+            assert.equal(lastKeyword.keyword, "group by");
+            assert.equal(lastKeyword.dividersCount, 2);
+
+            done();
+        });
+    });
+
+    it('After group by comma without space | should fields', done => {
+        rqlTestUtils.autoComplete(`from Orders
+group by ShippedAt,|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, fieldsList);
+
+            assert.equal(lastKeyword.keyword, "group by");
+            assert.equal(lastKeyword.dividersCount, 1);
+
+            done();
+        });
+    });
+
+    it('After group by comma | should fields', done => {
+        rqlTestUtils.autoComplete(`from Orders
+group by ShippedAt, |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
             assert.deepEqual(wordlist, fieldsList);
 

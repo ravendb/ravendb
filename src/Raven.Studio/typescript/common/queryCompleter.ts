@@ -370,7 +370,7 @@ class queryCompleter {
                     this.completeWords(callback, names.map(name => ({
                         caption: name,
                         value: queryCompleter.escapeCollectionOrFieldName(name),
-                        score: 1, 
+                        score: 1,
                         meta: "index"
                     })));
                 });
@@ -380,7 +380,7 @@ class queryCompleter {
                 if (lastKeyword.identifiers.length > 0 && lastKeyword.text) { // field already specified
                     return;
                 }
-                
+
                 this.completeFields(session, lastKeyword.getFieldPrefix, callback);
                 break;
             case "declare":
@@ -393,43 +393,48 @@ class queryCompleter {
                     this.completeEmpty(callback);
                 }
                 break;
-            case "select":
+            case "select": {
                 if (lastKeyword.identifiers.length > 0 && lastKeyword.dividersCount >= 2) {
                     if (!lastKeyword.keywordModifier) {
                         this.completeWords(callback, [{value: "as", score: 3, meta: "keyword"}]);
                     }
-                    
+
                     return;
                 }
-                
+
                 this.completeFields(session, lastKeyword.getFieldPrefix, callback);
                 break;
-            case "group by":
+            }
+            case "group by": {
                 if (lastKeyword.dividersCount === 0) {
                     this.completeByKeyword(callback);
                     return;
                 }
-                
-                if (lastKeyword.identifiers.length > 0 && lastKeyword.text) { // field already specified
-                    return;
-                }
-                
-                this.completeFields(session, lastKeyword.getFieldPrefix, callback);
-                break;
-            case "order by":
-                if (lastKeyword.dividersCount === 0) {
-                    this.completeByKeyword(callback);
-                    return;
-                } 
                 if (lastKeyword.dividersCount === 1) {
-                    const functions = lastKeyword.fieldPrefix ? null: [
+                    this.completeFields(session, lastKeyword.getFieldPrefix, callback);
+                    return;
+                }
+
+                const keywords = [
+                    {value: ",", score: 23, meta: "separator"}
+                ];
+                this.completeKeywordEnd(callback, lastKeyword, keywords);
+                return;
+            }
+            case "order by": {
+                if (lastKeyword.dividersCount === 0) {
+                    this.completeByKeyword(callback);
+                    return;
+                }
+                if (lastKeyword.dividersCount === 1) {
+                    const functions = lastKeyword.fieldPrefix ? null : [
                         {value: "score", score: 22, meta: "function"},
                         {value: "random", score: 21, meta: "function"}
                     ];
                     this.completeFields(session, lastKeyword.getFieldPrefix, callback, functions);
                     return;
                 }
-                
+
                 const keywords = [
                     {value: ",", score: 23, meta: "separator"}
                 ];
@@ -441,8 +446,9 @@ class queryCompleter {
                 }
                 this.completeKeywordEnd(callback, lastKeyword, keywords);
                 return;
+            }
             case "where": {
-                if (lastKeyword.dividersCount === 4 || 
+                if (lastKeyword.dividersCount === 4 ||
                     (lastKeyword.dividersCount === 0 && lastKeyword.binaryOperation)) {
                     const binaryOperations = this.rules.binaryOperations.map((binaryOperation, i) => {
                         return {value: binaryOperation, score: 22 - i, meta: "binary operation"};
@@ -458,7 +464,7 @@ class queryCompleter {
                     this.completeKeywordEnd(callback, lastKeyword);
                     return;
                 }
-                
+
                 if (lastKeyword.operator === "=") {
                     // first, calculate and validate the column name
                     let currentField = _.last(lastKeyword.identifiers);
@@ -493,12 +499,17 @@ class queryCompleter {
                             if (!queryIndexName) {
                                 return; // todo: try to callback with error
                             }
-                            
+
                             if (queryIndexName.type === "index") {
                                 this.providers.terms(queryIndexName.name, currentField, 20, terms => {
                                     if (terms && terms.length) {
                                         this.completeWords(callback,
-                                            terms.map(term => ({caption: term, value: queryCompleter.escapeCollectionOrFieldName(term), score: 1, meta: "value"})));
+                                            terms.map(term => ({
+                                                caption: term,
+                                                value: queryCompleter.escapeCollectionOrFieldName(term),
+                                                score: 1,
+                                                meta: "value"
+                                            })));
                                     }
                                 })
                             } else {
@@ -525,11 +536,11 @@ class queryCompleter {
                         });
                     return;
                 }
-                
+
                 this.completeFields(session, lastKeyword.getFieldPrefix, callback);
                 break;
             }
-            case "load":
+            case "load": {
                 if (lastKeyword.dividersCount === 0) {
                     this.completeKeywordEnd(callback, lastKeyword);
                     return;
@@ -537,7 +548,8 @@ class queryCompleter {
 
                 callback(["empty completion"], null);
                 return;
-            case "include":
+            }
+            case "include": {
                 if (lastKeyword.dividersCount === 0) {
                     this.completeKeywordEnd(callback, lastKeyword);
                     return;
@@ -549,20 +561,18 @@ class queryCompleter {
 
                 callback(["empty completion"], null);
                 return;
+            }
             case "group":
-            case "order":
+            case "order": {
                 if (lastKeyword.dividersCount === 0) {
                     this.completeKeywordEnd(callback, lastKeyword);
                     return;
                 }
-                
+
                 this.completeByKeyword(callback);
-                break;
-            default:
-                break;
+                return;
+            }
         }
-        
-        return;
     }
 
     private completeWords(callback: (errors: any[], wordList: autoCompleteWordList[]) => void, keywords: autoCompleteWordList[]) {
