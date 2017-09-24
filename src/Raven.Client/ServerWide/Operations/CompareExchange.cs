@@ -17,19 +17,21 @@ namespace Raven.Client.ServerWide.Operations
     {
         public BlittableJsonReaderObject Value;
         public long Index;
+        public bool Successful;
     }
 
     public class CmpXchgResult<T>
     {
         public T Value;
         public long Index;
-
+        public bool Successful;
 
         public static CmpXchgResult<T> ParseFromBlittable(BlittableJsonReaderObject response, DocumentConventions conventions)
         {
             if (response.TryGet(nameof(RawClusterValueResult.Index), out long index) == false)
                 throw new InvalidDataException("Response is invalid.");
 
+            response.TryGet(nameof(RawClusterValueResult.Successful), out bool successful);
             response.TryGet(nameof(RawClusterValueResult.Value), out BlittableJsonReaderObject raw);
 
             T result;
@@ -41,7 +43,8 @@ namespace Raven.Client.ServerWide.Operations
                 return new CmpXchgResult<T>
                 {
                     Index = index,
-                    Value = default(T)
+                    Value = default(T),
+                    Successful = successful
                 };
             }
             if (val is BlittableJsonReaderObject obj)
@@ -56,31 +59,32 @@ namespace Raven.Client.ServerWide.Operations
             return new CmpXchgResult<T>
             {
                 Index = index,
-                Value = result
+                Value = result,
+                Successful = successful
             };
         }
     }
 
-    public class GetCompareExchangeValueAsync<T> : IOperation<CmpXchgResult<T>>
+    public class GetCompareExchangeOperation<T> : IOperation<CmpXchgResult<T>>
     {
         private readonly string _key;
 
-        public GetCompareExchangeValueAsync(string key)
+        public GetCompareExchangeOperation(string key)
         {
             _key = key;
         }
 
         public RavenCommand<CmpXchgResult<T>> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new GetCompareExchangeValueAsyncCommand(_key, conventions);
+            return new GetCompareExchangeValueCommand(_key, conventions);
         }
 
-        private class GetCompareExchangeValueAsyncCommand : RavenCommand<CmpXchgResult<T>>
+        private class GetCompareExchangeValueCommand : RavenCommand<CmpXchgResult<T>>
         {
             private readonly string _key;
             private readonly DocumentConventions _conventions;
             
-            public GetCompareExchangeValueAsyncCommand(string key, DocumentConventions conventions = null)
+            public GetCompareExchangeValueCommand(string key, DocumentConventions conventions = null)
             {
                 if (string.IsNullOrEmpty(key))
                     throw new ArgumentNullException(nameof(key), "The key argument must have value");
@@ -109,13 +113,13 @@ namespace Raven.Client.ServerWide.Operations
 
     }
 
-    public class CompareExchangeAsync<T> : IOperation<CmpXchgResult<T>>
+    public class CompareExchangeOperation<T> : IOperation<CmpXchgResult<T>>
     {
         private readonly string _key;
         private readonly T _value;
         private readonly long _index;
 
-        public CompareExchangeAsync(string key, T value, long index)
+        public CompareExchangeOperation(string key, T value, long index)
         {
             _key = key;
             _value = value;

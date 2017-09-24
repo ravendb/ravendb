@@ -9,18 +9,6 @@ namespace Raven.Client.Documents.Operations
 {
     public partial class OperationExecutor
     {
-        public Task<CmpXchgResult<T>> CompareExchangeAsync<T>(string name, T newValue, long index)
-        {
-            var operation = new CompareExchangeAsync<T>(name, newValue, index);
-            return SendAsync(operation);
-        }
-
-        public Task<CmpXchgResult<T>> GetCompareExchangeValueAsync<T>(string name)
-        {
-            var operation = new GetCompareExchangeValueAsync<T>(name);
-            return SendAsync(operation);
-        }
-
         public Operation Send(IOperation<OperationIdResult> operation, SessionInfo sessionInfo = null, bool isServerOperation = false)
         {
             return AsyncHelpers.RunSync(() => SendAsync(operation, default(CancellationToken), sessionInfo, isServerOperation));
