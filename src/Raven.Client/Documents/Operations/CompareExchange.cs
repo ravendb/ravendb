@@ -11,13 +11,6 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations
 {
-    public class RawClusterValueResult
-    {
-        public BlittableJsonReaderObject Value;
-        public long Index;
-        public bool Successful;
-    }
-
     public class CmpXchgResult<T>
     {
         public T Value;
@@ -26,11 +19,11 @@ namespace Raven.Client.Documents.Operations
 
         public static CmpXchgResult<T> ParseFromBlittable(BlittableJsonReaderObject response, DocumentConventions conventions)
         {
-            if (response.TryGet(nameof(RawClusterValueResult.Index), out long index) == false)
+            if (response.TryGet(nameof(Index), out long index) == false)
                 throw new InvalidDataException("Response is invalid.");
 
-            response.TryGet(nameof(RawClusterValueResult.Successful), out bool successful);
-            response.TryGet(nameof(RawClusterValueResult.Value), out BlittableJsonReaderObject raw);
+            response.TryGet(nameof(Successful), out bool successful);
+            response.TryGet(nameof(Value), out BlittableJsonReaderObject raw);
 
             T result;
             object val = null;
@@ -63,11 +56,11 @@ namespace Raven.Client.Documents.Operations
         }
     }
 
-    public class GetCompareExchangeOperation<T> : IOperation<CmpXchgResult<T>>
+    public class GetCompareExchangeValueOperation<T> : IOperation<CmpXchgResult<T>>
     {
         private readonly string _key;
 
-        public GetCompareExchangeOperation(string key)
+        public GetCompareExchangeValueOperation(string key)
         {
             _key = key;
         }
@@ -81,7 +74,7 @@ namespace Raven.Client.Documents.Operations
         {
             private readonly string _key;
             private readonly DocumentConventions _conventions;
-            
+
             public GetCompareExchangeValueCommand(string key, DocumentConventions conventions = null)
             {
                 if (string.IsNullOrEmpty(key))
@@ -111,13 +104,13 @@ namespace Raven.Client.Documents.Operations
 
     }
 
-    public class CompareExchangeOperation<T> : IOperation<CmpXchgResult<T>>
+    public class PutCompareExchangeValueOperation<T> : IOperation<CmpXchgResult<T>>
     {
         private readonly string _key;
         private readonly T _value;
         private readonly long _index;
 
-        public CompareExchangeOperation(string key, T value, long index)
+        public PutCompareExchangeValueOperation(string key, T value, long index)
         {
             _key = key;
             _value = value;
@@ -126,17 +119,17 @@ namespace Raven.Client.Documents.Operations
 
         public RavenCommand<CmpXchgResult<T>> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new CompareExchangeCommand(_key, _value, _index, conventions);
+            return new PutCompareExchangeValueCommand(_key, _value, _index, conventions);
         }
 
-        private class CompareExchangeCommand : RavenCommand<CmpXchgResult<T>>
+        private class PutCompareExchangeValueCommand : RavenCommand<CmpXchgResult<T>>
         {
             private readonly string _key;
             private readonly T _value;
             private readonly long _index;
             private readonly DocumentConventions _conventions;
 
-            public CompareExchangeCommand(string key, T value, long index, DocumentConventions conventions = null)
+            public PutCompareExchangeValueCommand(string key, T value, long index, DocumentConventions conventions = null)
             {
                 if (string.IsNullOrEmpty(key))
                     throw new ArgumentNullException(nameof(key), "The key argument must have value");
@@ -159,7 +152,7 @@ namespace Raven.Client.Documents.Operations
                 {
                     ["Object"] = _value
                 };
-                var blit = EntityToBlittable.ConvertEntityToBlittable(tuple,_conventions,ctx);
+                var blit = EntityToBlittable.ConvertEntityToBlittable(tuple, _conventions, ctx);
 
                 var request = new HttpRequestMessage
                 {
