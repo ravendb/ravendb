@@ -298,7 +298,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             using (var actions = _destination.RevisionDocuments())
             {
-                foreach (var item in _source.GetRevisionDocuments(_options.CollectionsToExport, actions))
+                foreach (var item in _source.GetRevisionDocuments(_options.Collections, actions))
                 {
                     _token.ThrowIfCancellationRequested();
                     result.RevisionDocuments.ReadCount++;
@@ -332,7 +332,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             using (var actions = _destination.Documents())
             {
-                foreach (var item in _source.GetDocuments(_options.CollectionsToExport, actions))
+                foreach (var item in _source.GetDocuments(_options.Collections, actions))
                 {
                     _token.ThrowIfCancellationRequested();
                     result.Documents.ReadCount++;
@@ -394,7 +394,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             using (var actions = _destination.Tombstones())
             {
-                foreach (var tombstone in _source.GetTombstones(_options.CollectionsToExport, actions))
+                foreach (var tombstone in _source.GetTombstones(_options.Collections, actions))
                 {
                     _token.ThrowIfCancellationRequested();
                     result.Tombstones.ReadCount++;

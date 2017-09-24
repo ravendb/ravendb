@@ -40,7 +40,7 @@ class exportDatabaseModel {
         }
 
         return {
-            CollectionsToExport: this.includeAllCollections() ? null : this.includedCollections(),
+            Collections: this.includeAllCollections() ? null : this.includedCollections(),
             FileName: this.exportFileName(),
             IncludeExpired: this.includeExpiredDocuments(),
             TransformScript: this.transformScript(),
