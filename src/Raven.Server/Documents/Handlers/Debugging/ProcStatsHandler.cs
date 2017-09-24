@@ -3,6 +3,7 @@ using System.Collections;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Win32.SafeHandles;
 using Raven.Server.Routing;
@@ -48,20 +49,36 @@ namespace Raven.Server.Documents.Handlers.Debugging
         {
             var proc = Process.GetCurrentProcess();
 
-            var dja = new DynamicJsonArray();
-            var djv = new DynamicJsonValue();
+            var djaCpu = new DynamicJsonArray();
+            var djvCpu = new DynamicJsonValue();
 
-            djv["ProcessName"] = proc.ProcessName;
-            djv["ProcessorAffinity"] = proc.ProcessorAffinity.ToInt64();
-            djv["PrivilegedProcessorTime"] = proc.PrivilegedProcessorTime;
-            djv["TotalProcessorTime"] = proc.TotalProcessorTime;
-            djv["UserProcessorTime"] = proc.UserProcessorTime;
+            djvCpu["ProcessName"] = proc.ProcessName;
+            djvCpu["ProcessorAffinity"] = proc.ProcessorAffinity.ToInt64();
+            djvCpu["PrivilegedProcessorTime"] = proc.PrivilegedProcessorTime;
+            djvCpu["TotalProcessorTime"] = proc.TotalProcessorTime;
+            djvCpu["UserProcessorTime"] = proc.UserProcessorTime;
 
-            dja.Add(djv);
+            djaCpu.Add(djvCpu);
+
+            var djaThreadpool = new DynamicJsonArray();
+            var djvThreadpool = new DynamicJsonValue();
+
+            ThreadPool.GetAvailableThreads(out var workerThreads, out var completionPortThreads);
+            djvThreadpool["AvailableThreadPoolWorkerThreads"] = workerThreads;
+            djvThreadpool["AvailableThreadPoolCompletionPortThreads"] = completionPortThreads;
+            ThreadPool.GetMinThreads(out workerThreads, out completionPortThreads);
+            djvThreadpool["MinThreadPoolWorkerThreads"] = workerThreads;
+            djvThreadpool["MinThreadPoolCompletionPortThreads"] = completionPortThreads;
+            ThreadPool.GetMaxThreads(out workerThreads, out completionPortThreads);
+            djvThreadpool["MaxThreadPoolWorkerThreads"] = workerThreads;
+            djvThreadpool["MaxThreadPoolCompletionPortThreads"] = completionPortThreads;
+
+            djaThreadpool.Add(djvThreadpool);
 
             return new DynamicJsonValue
             {
-                ["CpuStats"] = dja
+                ["CpuStats"] = djaCpu,
+                ["ThreadPoolStats"] = djaThreadpool
             };
         }
 
