@@ -96,14 +96,13 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                     if (value != null)
                     {
-                        if ( value.GetType() == typeof(ProcessThreadCollection))
+                        // ReSharper disable once MergeCastWithTypeCheck
+                        if (value is ProcessThreadCollection)
                         {
-                            // djv[prop.Name] = GetProcessThreadCollection((ProcessThreadCollection)value);
                             djv[prop.Name] = GetProcessCollection<ProcessThread>((ProcessThreadCollection)value);
                         }
                         else if (value.GetType() == typeof(ProcessModuleCollection))
                         {
-                            // djv[prop.Name] = GetProcessThreadCollection((ProcessModuleCollection)value);
                             djv[prop.Name] = GetProcessCollection<ProcessModule>((ProcessModuleCollection)value);
                         }
                         else
