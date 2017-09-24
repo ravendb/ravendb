@@ -83,7 +83,7 @@ namespace Raven.TestDriver
                 }
             };
 
-            ImportDatabase(store, database);
+            ImportDatabase(store, name);
 
             SetupDatabase(store);
 
