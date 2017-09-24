@@ -311,7 +311,7 @@ class queryCompleter {
                 if (functions) {
                     wordList.push(...functions);
                 }
-                callback(null, wordList);
+                this.completeWords(callback, wordList);
             });
     }
 
@@ -419,27 +419,27 @@ class queryCompleter {
                 if (lastKeyword.dividersCount === 0) {
                     this.completeByKeyword(callback);
                     return;
-                }
-                
-                if (lastKeyword.identifiers.length > 0 && lastKeyword.text !== ",") { // field already specified but there is not comma separator for next field
-                    if (!lastKeyword.keywordModifier){
-                        const keywords = [
-                            {value: ",", score: 5, meta: "separator"},
-                            {value: "asc", score: 4, meta: "keyword"},
-                            {value: "desc", score: 3, meta: "keyword"}
-                        ];
-                        this.completeWords(callback, keywords);
-                    }
-                    
+                } 
+                if (lastKeyword.dividersCount === 1) {
+                    const functions = lastKeyword.fieldPrefix ? null: [
+                        {value: "score", score: 22, meta: "function"},
+                        {value: "random", score: 21, meta: "function"}
+                    ];
+                    this.completeFields(session, lastKeyword.getFieldPrefix, callback, functions);
                     return;
                 }
                 
-                this.completeFields(session, lastKeyword.getFieldPrefix, callback, [
-                    {caption: "score", value: "score(", score: 22, meta: "function"},
-                    {caption: "random", value: "random(", score: 21, meta: "function"}
-                ]);
-                break;
-                
+                const keywords = [
+                    {value: ",", score: 23, meta: "separator"}
+                ];
+                if (lastKeyword.dividersCount === 2) {
+                    keywords.push(...[
+                        {value: "desc", score: 22, meta: "descending sort"},
+                        {value: "asc", score: 21, meta: "ascending sort"}
+                    ]);
+                }
+                this.completeKeywordEnd(callback, lastKeyword, keywords);
+                return;
             case "where": {
                 if (lastKeyword.dividersCount === 4 || 
                     (lastKeyword.dividersCount === 0 && lastKeyword.binaryOperation)) {
