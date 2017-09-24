@@ -1421,7 +1421,20 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     }
 
                     _documentQuery.GroupBy(constantValue);
+                    break;
+                case ExpressionType.ArrayLength:
+                    var unaryExpression = (UnaryExpression)lambdaExpression.Body;
 
+                    switch (unaryExpression.NodeType)
+                    {
+                        case ExpressionType.ArrayLength:
+                            var prop = GetMember(unaryExpression.Operand);
+
+                            _documentQuery.GroupBy(prop.Path + ".Length");
+                            break;
+                        default:
+                            throw new NotSupportedException($"Unhandled expression type in group by: {unaryExpression.NodeType}");
+                    }
                     break;
                 default:
                     throw new NotSupportedException("Node not supported in GroupBy: " + body.NodeType);
@@ -1673,7 +1686,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                 if (member == null)
                     member = elementSelectorPath as MemberExpression;
-
+                
                 if (member != null)
                 {
                     mapReduceField = GetSelectPath(member);
@@ -1687,12 +1700,11 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     if (methodCallExpression == null)
                         methodCallExpression = elementSelectorPath as MethodCallExpression;
 
-                    if (methodCallExpression == null)
-                        throw new NotSupportedException("No idea how to handle this dynamic map-reduce query!");
-
-                    switch (methodCallExpression.Method.Name)
+                    if (methodCallExpression != null)
                     {
-                        case "Sum":
+                        switch (methodCallExpression.Method.Name)
+                        {
+                            case "Sum":
                             {
                                 if (mapReduceOperation != AggregationOperation.Sum)
                                     throw new NotSupportedException("Cannot use different aggregating functions for a single field");
@@ -1707,10 +1719,29 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                                 break;
                             }
-                        default:
+                            default:
                             {
                                 throw new NotSupportedException("Method not supported: " + methodCallExpression.Method.Name);
                             }
+                        }
+                    }
+                    else
+                    {
+                        var unaryExpression = lambdaExpression.Body as UnaryExpression;
+
+                        if (unaryExpression == null)
+                            throw new NotSupportedException("No idea how to handle this dynamic map-reduce query!");
+
+                        switch (unaryExpression.NodeType)
+                        {
+                            case ExpressionType.ArrayLength:
+                                var prop = GetMember(unaryExpression.Operand);
+
+                                mapReduceField = prop.Path + ".Length";
+                                break;
+                            default:
+                                throw new NotSupportedException($"Unhandled expression type: {unaryExpression.NodeType}");
+                        }
                     }
                 }
             }
