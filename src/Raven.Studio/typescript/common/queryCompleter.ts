@@ -529,11 +529,25 @@ class queryCompleter {
                 break;
             }
             case "load":
+                if (lastKeyword.dividersCount === 0) {
+                    this.completeKeywordEnd(callback, lastKeyword);
+                    return;
+                }
 
-                break;
+                callback(["empty completion"], null);
+                return;
             case "include":
+                if (lastKeyword.dividersCount === 0) {
+                    this.completeKeywordEnd(callback, lastKeyword);
+                    return;
+                }
+                if (lastKeyword.dividersCount === 1) {
+                    this.completeFields(session, lastKeyword.getFieldPrefix, callback);
+                    return;
+                }
 
-                break;
+                callback(["empty completion"], null);
+                return;
             case "group":
             case "order":
                 if (lastKeyword.dividersCount === 0) {
@@ -620,26 +634,26 @@ class queryCompleter {
 
     private completeKeywordEnd(callback: (errors: any[], wordList: autoCompleteWordList[]) => void, lastKeyword: autoCompleteLastKeyword, additions: autoCompleteWordList[] = null) {
         let keywordEnoutered = false;
-        const lastKeywordWithoutFromIndex = lastKeyword.keyword === "from index" ? "from" : lastKeyword.keyword;
+        const lastInitialKeyword = this.getInitialKeyword(lastKeyword);
 
         const keywords: autoCompleteWordList[] = this.rules.clausesKeywords.filter(keyword => {
+            if (keywordEnoutered) {
+                if (keyword === "group") { // group cluase is not shown when querying an index
+                    return lastKeyword.keyword === "from";
+                }
+            } else if (lastInitialKeyword === keyword) {
+                keywordEnoutered = true;
+                return lastKeyword.dividersCount === 0 && !lastKeyword.binaryOperation;
+            }
+            return keywordEnoutered;
+        }).filter(keyword => {
             if (keyword === "select" || keyword === "include") {
                 return this.queryType === "Select";
             }
             if (keyword === "update") {
                 return this.queryType === "Update";
             }
-            
-            if (lastKeywordWithoutFromIndex === keyword) {
-                keywordEnoutered = true;
-                return lastKeyword.dividersCount === 0 && !lastKeyword.binaryOperation;
-            }
-            if (keywordEnoutered) {
-                if (keyword === "group") {
-                    return lastKeyword.keyword === "from";
-                }
-            }
-            return keywordEnoutered;
+            return true;
         }).map((keyword, i) => {
             return {caption: keyword, value: keyword, score: 20 - i, meta: "keyword"};
         });
@@ -689,6 +703,19 @@ class queryCompleter {
             }
         };
         return new queryCompleter(providers, queryType);
+    }
+
+    private getInitialKeyword(lastKeyword: autoCompleteLastKeyword) {
+        switch (lastKeyword.keyword){
+            case "from index":
+                return "from";
+            case "group by":
+                return "group";
+            case "order by":
+                return "order";
+            default:
+                return lastKeyword.keyword;
+        }
     }
 }
 

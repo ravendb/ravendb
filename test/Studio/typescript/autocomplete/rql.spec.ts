@@ -62,8 +62,9 @@ describe("RQL Autocomplete", () => {
     
     const orderBySortListAfterSort = [
         {caption: ",", value: ", ", score: 23, meta: "separator"},
-        {caption: "select", value: "select ", score: 20, meta: "keyword"},
-        {caption: "include", value: "include ", score: 19, meta: "keyword"}
+        {caption: "load", value: "load ", score: 20, meta: "keyword"},
+        {caption: "select", value: "select ", score: 19, meta: "keyword"},
+        {caption: "include", value: "include ", score: 18, meta: "keyword"}
     ];
     
     const orderBySortList =  _.sortBy(orderBySortListAfterSort.concat([
@@ -106,6 +107,10 @@ describe("RQL Autocomplete", () => {
         {caption: "load", value: "load ", score: 17, meta: "keyword"},
         {caption: "select", value: "select ", score: 16, meta: "keyword"},
         {caption: "include", value: "include ", score: 15, meta: "keyword"}
+    ];
+
+    const afterIncludeWithoutSpaceList = [
+        {caption: "include", value: "include ", score: 20, meta: "keyword"}
     ];
 
     const afterWhereList = [
@@ -659,6 +664,59 @@ order by OrderedAt desc,|`, northwindProvider(), (errors, wordlist, prefix, last
 
             assert.equal(lastKeyword.keyword, "order by");
             assert.equal(lastKeyword.dividersCount, 1);
+
+            done();
+        });
+    });
+
+    it('After include| without space should complete itself with prefix', done => {
+        rqlTestUtils.autoComplete(`from Orders
+include|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "include");
+            const sortedList = _.sortBy(wordlist, [(x: autoCompleteWordList) => x.score]).reverse();
+            assert.deepEqual(sortedList, afterIncludeWithoutSpaceList);
+
+            assert.equal(lastKeyword.keyword, "include");
+            assert.equal(lastKeyword.dividersCount, 0);
+
+            done();
+        });
+    });
+
+    it('After include | should list fields', done => {
+        rqlTestUtils.autoComplete(`from Orders
+include |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, fieldsList);
+
+            assert.equal(lastKeyword.keyword, "include");
+            assert.equal(lastKeyword.dividersCount, 1);
+
+            done();
+        });
+    });
+
+    it('After include and field without space | should list fields with prefix', done => {
+        rqlTestUtils.autoComplete(`from Orders
+include Employee|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "Employee");
+            assert.deepEqual(wordlist, fieldsList);
+
+            assert.equal(lastKeyword.keyword, "include");
+            assert.equal(lastKeyword.dividersCount, 1);
+
+            done();
+        });
+    });
+
+    it('After include and field | should not list anything', done => {
+        rqlTestUtils.autoComplete(`from Orders
+include Employee |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.isNull(wordlist);
+
+            assert.equal(lastKeyword.keyword, "include");
+            assert.equal(lastKeyword.dividersCount, 2);
 
             done();
         });
