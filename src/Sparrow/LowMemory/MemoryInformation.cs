@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.InteropServices;
 using Sparrow.Logging;
 using Sparrow.Platform;
@@ -13,15 +12,14 @@ namespace Sparrow.LowMemory
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<MemoryInfoResult>("Raven/Server");
 
-        public static long HighLastOneMinute = 0;
+        public static long HighLastOneMinute;
         public static long LowLastOneMinute = long.MaxValue;
-        public static long HighLastFiveMinutes = 0;
+        public static long HighLastFiveMinutes;
         public static long LowLastFiveMinutes = long.MaxValue;
-        public static long HighSinceStartup = 0;
+        public static long HighSinceStartup;
         public static long LowSinceStartup = long.MaxValue;
 
 
-        private static int _memoryLimit;
         private static bool _failedToGetAvailablePhysicalMemory;
         private static readonly MemoryInfoResult FailedResult = new MemoryInfoResult
         {
@@ -71,14 +69,7 @@ namespace Sparrow.LowMemory
         /// <summary>
         /// This value is in MB
         /// </summary>
-        public static int MemoryLimit
-        {
-            get { return _memoryLimit; }
-            set
-            {
-                _memoryLimit = value;
-            }
-        }
+        public static int MemoryLimit { get; set; }
 
         public static long GetRssMemoryUsage(int procId)
         {
@@ -110,8 +101,7 @@ namespace Sparrow.LowMemory
                 return 0;
             }
 
-            long result;
-            if (long.TryParse(parsedLine[1], out result) == false)
+            if (long.TryParse(parsedLine[1], out var result) == false)
             {
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Failed to parse VmRSS from {path}. Line was {parsedLine}");
@@ -296,7 +286,7 @@ namespace Sparrow.LowMemory
             }
         }
 
-        private static List<Tuple<long, DateTime>> _memByTime = new List<Tuple<long, DateTime>>();
+        private static readonly List<Tuple<long, DateTime>> MemByTime = new List<Tuple<long, DateTime>>();
 
         private static void SetMemoryRecords(long availableRamInBytes)
         {
@@ -307,15 +297,15 @@ namespace Sparrow.LowMemory
             if (LowSinceStartup > availableRamInBytes)
                 LowSinceStartup = availableRamInBytes;
 
-            _memByTime.Add(new Tuple<long, DateTime>(availableRamInBytes, now));
-            _memByTime.RemoveAll(x => now - x.Item2 > TimeSpan.FromMinutes(5));
+            MemByTime.Add(new Tuple<long, DateTime>(availableRamInBytes, now));
+            MemByTime.RemoveAll(x => now - x.Item2 > TimeSpan.FromMinutes(5));
 
             long highLastOneMinute = 0;
             long lowLastOneMinute = long.MaxValue;
             long highLastFiveMinutes = 0;
             long lowLastFiveMinutes = long.MaxValue;
 
-            foreach (var item in _memByTime)
+            foreach (var item in MemByTime)
             {
                 if (now - item.Item2 < TimeSpan.FromMinutes(1))
                 {
