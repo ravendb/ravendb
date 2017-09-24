@@ -137,7 +137,24 @@ namespace Raven.Server.Documents.Queries
             else if (Query.Select != null)
                 FillSelectFields(parameters);
             if (Query.Where != null)
+            {
+                if (Query.Where is MethodExpression me)
+                {
+                    var methodType = QueryMethod.GetMethodType(me.Name);
+                    switch (methodType)
+                    {
+                        case MethodType.Id:
+                        case MethodType.Count:
+                        case MethodType.Sum:
+                        case MethodType.Point:
+                        case MethodType.Wkt:
+                        case MethodType.Circle:
+                            ThrowInvalidMethod(parameters, me);
+                            break;
+                    }
+                }
                 new FillWhereFieldsAndParametersVisitor(this, fromAlias, QueryText).Visit(Query.Where, parameters);
+            }
 
             if (Query.OrderBy != null)
             {
@@ -166,6 +183,11 @@ namespace Raven.Server.Documents.Queries
 
             if (Query.Include != null)
                 HandleQueryInclude(parameters);
+        }
+
+        private void ThrowInvalidMethod(BlittableJsonReaderObject parameters, MethodExpression me)
+        {
+            throw new InvalidQueryException("Where clause cannot conatin just an '" + me.Name + "' method", Query.QueryText, parameters);
         }
 
         private void HandleQueryInclude(BlittableJsonReaderObject parameters)
@@ -242,7 +264,7 @@ namespace Raven.Server.Documents.Queries
                 ThrowUseOfReserveFunctionBodyMethodName(parameters);
 
 
-            SelectFields = new[] {SelectField.CreateMethodCall(name, null, args)};
+            SelectFields = new[] { SelectField.CreateMethodCall(name, null, args) };
         }
 
         private void ThrowUseOfReserveFunctionBodyMethodName(BlittableJsonReaderObject parameters)
@@ -730,7 +752,7 @@ namespace Raven.Server.Documents.Queries
                             _metadata.AddWhereField(Constants.Documents.Indexing.Fields.CountFieldName, exact: _insideExact > 0);
                             break;
                         case MethodType.Sum:
-                            if(me.Arguments != null && me.Arguments[0] is FieldExpression f)
+                            if (me.Arguments != null && me.Arguments[0] is FieldExpression f)
                                 VisitFieldToken(f, value, parameters);
                             break;
                     }
@@ -807,9 +829,6 @@ namespace Raven.Server.Documents.Queries
 
             public override void VisitMethodTokens(StringSegment methodName, List<QueryExpression> arguments, BlittableJsonReaderObject parameters)
             {
-                if (arguments.Count == 0)
-                    return;
-
                 string fieldName;
 
                 var methodType = QueryMethod.GetMethodType(methodName);
@@ -849,9 +868,7 @@ namespace Raven.Server.Documents.Queries
                         if (arguments.Count == 1)
                             throw new InvalidQueryException($"Method {methodName}() expects second argument to be provided", QueryText, parameters);
 
-                        var valueToken = arguments[1] as ValueExpression;
-
-                        if (valueToken == null)
+                        if (!(arguments[1] is ValueExpression valueToken))
                             throw new InvalidQueryException($"Method {methodName}() expects value token as second argument, got {arguments[1]} type", QueryText,
                                 parameters);
 
@@ -865,7 +882,8 @@ namespace Raven.Server.Documents.Queries
                         _metadata.AddExistField(fieldName);
                         break;
                     case MethodType.Boost:
-                        var firstArg = arguments[0];
+
+                        var firstArg = arguments.Count == 0 ? null : arguments[0];
 
                         if (firstArg == null)
                             throw new InvalidQueryException($"Method {methodName}() expects expression , got {arguments[0]}", QueryText, parameters);
@@ -994,9 +1012,9 @@ namespace Raven.Server.Documents.Queries
                 foreach (var load in Query.Load)
                 {
                     var fieldExpression = load.Expression as FieldExpression;
-                    if(fieldExpression == null)
+                    if (fieldExpression == null)
                         throw new InvalidOperationException("Load clause can only load paths with fields, but got " + load.Expression);
-                    var fullFieldPath = fieldExpression.Field.Value;   
+                    var fullFieldPath = fieldExpression.Field.Value;
                     if (fullFieldPath.StartsWith(fromAlias) == false)
                         throw new InvalidOperationException("Load clause can only load paths starting from the from alias: " + fromAlias);
                     var indexOfDot = fullFieldPath.IndexOf('.', fromAlias.Length);
