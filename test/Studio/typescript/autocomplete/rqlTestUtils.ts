@@ -120,10 +120,10 @@ class rqlTestUtils {
                                     "ShipVia": "String",
                                     "Freight": "Number",
                                     "Lines": "ArrayObject",
-                                    "With.Dot": "Object",
-                                    "With*Star": "Object",
-                                    "With Space": "Object",
-                                    "With ' and \" quotes": "Object",
+                                    "With.Dot": "String",
+                                    "With*Star": "String",
+                                    "With Space": "String",
+                                    "With ' and \" quotes": "String",
                                     "@metadata": "Object"
                                 });
                                 break;

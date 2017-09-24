@@ -39,34 +39,45 @@ describe("RQL Autocomplete", () => {
     ];
 
     const fieldsList = [
-        {caption: "Company", value: "Company", score: 1, meta: "string field"},
-        {caption: "Employee", value: "Employee", score: 1, meta: "string field"},
-        {caption: "OrderedAt", value: "OrderedAt", score: 1, meta: "string field"},
-        {caption: "RequireAt", value: "RequireAt", score: 1, meta: "string field"},
-        {caption: "ShippedAt", value: "ShippedAt", score: 1, meta: "string field"},
-        {caption: "ShipTo", value: "ShipTo", score: 1, meta: "object field"},
-        {caption: "ShipVia", value: "ShipVia", score: 1, meta: "string field"},
-        {caption: "Freight", value: "Freight", score: 1, meta: "number field"},
-        {caption: "Lines", value: "Lines", score: 1, meta: "object[] field"},
-        {caption: "With.Dot", value: "'With.Dot'", score: 1, meta: "object field"},
-        {caption: "With*Star", value: "'With*Star'", score: 1, meta: "object field"},
-        {caption: "With Space", value: "'With Space'", score: 1, meta: "object field"},
-        {caption: "With ' and \" quotes", value: "'With '' and \" quotes'", score: 1, meta: "object field"},
-        {caption: "@metadata", value: "@metadata", score: 1, meta: "object field"}
+        {caption: "Company", value: "Company ", score: 1, meta: "string field"},
+        {caption: "Employee", value: "Employee ", score: 1, meta: "string field"},
+        {caption: "OrderedAt", value: "OrderedAt ", score: 1, meta: "string field"},
+        {caption: "RequireAt", value: "RequireAt ", score: 1, meta: "string field"},
+        {caption: "ShippedAt", value: "ShippedAt ", score: 1, meta: "string field"},
+        {caption: "ShipTo", value: "ShipTo ", score: 1, meta: "object field"},
+        {caption: "ShipVia", value: "ShipVia ", score: 1, meta: "string field"},
+        {caption: "Freight", value: "Freight ", score: 1, meta: "number field"},
+        {caption: "Lines", value: "Lines ", score: 1, meta: "object[] field"},
+        {caption: "With.Dot", value: "'With.Dot' ", score: 1, meta: "string field"},
+        {caption: "With*Star", value: "'With*Star' ", score: 1, meta: "string field"},
+        {caption: "With Space", value: "'With Space' ", score: 1, meta: "string field"},
+        {caption: "With ' and \" quotes", value: "'With '' and \" quotes' ", score: 1, meta: "string field"},
+        {caption: "@metadata", value: "@metadata ", score: 1, meta: "object field"}
     ];
     
     const orderByFieldsList = fieldsList.concat([
         {caption: "score", value: "score(", score: 22, meta: "function"},
         {caption: "random", value: "random(", score: 21, meta: "function"}
     ]);
+    
+    const orderBySortListAfterSort = [
+        {caption: ",", value: ", ", score: 23, meta: "separator"},
+        {caption: "select", value: "select ", score: 20, meta: "keyword"},
+        {caption: "include", value: "include ", score: 19, meta: "keyword"}
+    ];
+    
+    const orderBySortList =  _.sortBy(orderBySortListAfterSort.concat([
+        {caption: "desc", value: "desc ", score: 22, meta: "descending sort"},
+        {caption: "asc", value: "asc ", score: 21, meta: "ascending sort"}
+    ]), [(x: autoCompleteWordList) => x.score]).reverse();
 
     const fieldsShipToList = [
-        {caption: "Line1", value: "Line1", score: 1, meta: "string field"},
-        {caption: "Line2", value: "Line2", score: 1, meta: "null field"},
-        {caption: "City", value: "City", score: 1, meta: "string field"},
-        {caption: "Region", value: "Region", score: 1, meta: "string field"},
-        {caption: "PostalCode", value: "PostalCode", score: 1, meta: "string field"},
-        {caption: "Country", value: "Country", score: 1, meta: "string field"}
+        {caption: "Line1", value: "Line1 ", score: 1, meta: "string field"},
+        {caption: "Line2", value: "Line2 ", score: 1, meta: "null field"},
+        {caption: "City", value: "City ", score: 1, meta: "string field"},
+        {caption: "Region", value: "Region ", score: 1, meta: "string field"},
+        {caption: "PostalCode", value: "PostalCode ", score: 1, meta: "string field"},
+        {caption: "Country", value: "Country ", score: 1, meta: "string field"}
     ];
 
     const afterFromList = [
@@ -309,44 +320,44 @@ select ShipTo.City,|`, northwindProvider(), (errors, wordlist, prefix, lastKeywo
 select |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
             assert.deepEqual(wordlist, [
-                {caption: "Max", value: "Max", score: 1, meta: "number field"},
-                {caption: "@metadata", value: "@metadata", score: 1, meta: "object field"},
-                {caption: "Name", value: "Name", score: 1, meta: "string field"},
-                {caption: "Description", value: "Description", score: 1, meta: "string field"},
-                {caption: "ExternalId", value: "ExternalId", score: 1, meta: "string field"},
-                {caption: "Contact", value: "Contact", score: 1, meta: "object field"},
-                {caption: "Address", value: "Address", score: 1, meta: "object field"},
-                {caption: "Phone", value: "Phone", score: 1, meta: "string field"},
-                {caption: "Fax", value: "Fax", score: 1, meta: "string field"},
-                {caption: "LastName", value: "LastName", score: 1, meta: "string field"},
-                {caption: "FirstName", value: "FirstName", score: 1, meta: "string field"},
-                {caption: "Title", value: "Title", score: 1, meta: "string field"},
-                {caption: "HiredAt", value: "HiredAt", score: 1, meta: "string field"},
-                {caption: "Birthday", value: "Birthday", score: 1, meta: "string field"},
-                {caption: "HomePhone", value: "HomePhone", score: 1, meta: "string field"},
-                {caption: "Extension", value: "Extension", score: 1, meta: "string field"},
-                {caption: "ReportsTo", value: "ReportsTo", score: 1, meta: "string field"},
-                {caption: "Notes", value: "Notes", score: 1, meta: "null field"},
-                {caption: "Territories", value: "Territories", score: 1, meta: "object[] | string[] field"},
-                {caption: "Company", value: "Company", score: 1, meta: "string field"},
-                {caption: "Employee", value: "Employee", score: 1, meta: "string field"},
-                {caption: "OrderedAt", value: "OrderedAt", score: 1, meta: "string field"},
-                {caption: "RequireAt", value: "RequireAt", score: 1, meta: "string field"},
-                {caption: "ShippedAt", value: "ShippedAt", score: 1, meta: "null field"},
-                {caption: "ShipTo", value: "ShipTo", score: 1, meta: "object field"},
-                {caption: "ShipVia", value: "ShipVia", score: 1, meta: "string field"},
-                {caption: "Freight", value: "Freight", score: 1, meta: "number field"},
-                {caption: "Lines", value: "Lines", score: 1, meta: "object[] field"},
-                {caption: "Na.me", value: "'Na.me'", score: 1, meta: "string field"},
-                {caption: "Supplier", value: "Supplier", score: 1, meta: "string field"},
-                {caption: "Category", value: "Category", score: 1, meta: "string field"},
-                {caption: "QuantityPerUnit", value: "QuantityPerUnit", score: 1, meta: "string field"},
-                {caption: "PricePerUnit", value: "PricePerUnit", score: 1, meta: "number field"},
-                {caption: "UnitsInStock", value: "UnitsInStock", score: 1, meta: "number field"},
-                {caption: "UnitsOnOrder", value: "UnitsOnOrder", score: 1, meta: "number field"},
-                {caption: "Discontinued", value: "Discontinued", score: 1, meta: "boolean field"},
-                {caption: "ReorderLevel", value: "ReorderLevel", score: 1, meta: "number field"},
-                {caption: "HomePage", value: "HomePage", score: 1, meta: "null field"}
+                {caption: "Max", value: "Max ", score: 1, meta: "number field"},
+                {caption: "@metadata", value: "@metadata ", score: 1, meta: "object field"},
+                {caption: "Name", value: "Name ", score: 1, meta: "string field"},
+                {caption: "Description", value: "Description ", score: 1, meta: "string field"},
+                {caption: "ExternalId", value: "ExternalId ", score: 1, meta: "string field"},
+                {caption: "Contact", value: "Contact ", score: 1, meta: "object field"},
+                {caption: "Address", value: "Address ", score: 1, meta: "object field"},
+                {caption: "Phone", value: "Phone ", score: 1, meta: "string field"},
+                {caption: "Fax", value: "Fax ", score: 1, meta: "string field"},
+                {caption: "LastName", value: "LastName ", score: 1, meta: "string field"},
+                {caption: "FirstName", value: "FirstName ", score: 1, meta: "string field"},
+                {caption: "Title", value: "Title ", score: 1, meta: "string field"},
+                {caption: "HiredAt", value: "HiredAt ", score: 1, meta: "string field"},
+                {caption: "Birthday", value: "Birthday ", score: 1, meta: "string field"},
+                {caption: "HomePhone", value: "HomePhone ", score: 1, meta: "string field"},
+                {caption: "Extension", value: "Extension ", score: 1, meta: "string field"},
+                {caption: "ReportsTo", value: "ReportsTo ", score: 1, meta: "string field"},
+                {caption: "Notes", value: "Notes ", score: 1, meta: "null field"},
+                {caption: "Territories", value: "Territories ", score: 1, meta: "object[] | string[] field"},
+                {caption: "Company", value: "Company ", score: 1, meta: "string field"},
+                {caption: "Employee", value: "Employee ", score: 1, meta: "string field"},
+                {caption: "OrderedAt", value: "OrderedAt ", score: 1, meta: "string field"},
+                {caption: "RequireAt", value: "RequireAt ", score: 1, meta: "string field"},
+                {caption: "ShippedAt", value: "ShippedAt ", score: 1, meta: "null field"},
+                {caption: "ShipTo", value: "ShipTo ", score: 1, meta: "object field"},
+                {caption: "ShipVia", value: "ShipVia ", score: 1, meta: "string field"},
+                {caption: "Freight", value: "Freight ", score: 1, meta: "number field"},
+                {caption: "Lines", value: "Lines ", score: 1, meta: "object[] field"},
+                {caption: "Na.me", value: "'Na.me' ", score: 1, meta: "string field"},
+                {caption: "Supplier", value: "Supplier ", score: 1, meta: "string field"},
+                {caption: "Category", value: "Category ", score: 1, meta: "string field"},
+                {caption: "QuantityPerUnit", value: "QuantityPerUnit ", score: 1, meta: "string field"},
+                {caption: "PricePerUnit", value: "PricePerUnit ", score: 1, meta: "number field"},
+                {caption: "UnitsInStock", value: "UnitsInStock ", score: 1, meta: "number field"},
+                {caption: "UnitsOnOrder", value: "UnitsOnOrder ", score: 1, meta: "number field"},
+                {caption: "Discontinued", value: "Discontinued ", score: 1, meta: "boolean field"},
+                {caption: "ReorderLevel", value: "ReorderLevel ", score: 1, meta: "number field"},
+                {caption: "HomePage", value: "HomePage ", score: 1, meta: "null field"}
             ]);
 
             assert.equal(lastKeyword.keyword, "select");
@@ -533,6 +544,126 @@ order by |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
         });
     });
 
+    it('After order by field| without space should list the fields with prefix', done => {
+        rqlTestUtils.autoComplete(`from Orders
+order by OrderedAt|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "OrderedAt");
+            assert.deepEqual(wordlist, orderByFieldsList);
+
+            assert.equal(lastKeyword.keyword, "order by");
+            assert.equal(lastKeyword.dividersCount, 1);
+
+            done();
+        });
+    });
+
+    it.skip('After order by field with dot | without space should list the fields without the functions', done => {
+        rqlTestUtils.autoComplete(`from Orders
+order by OrderedAt.|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, orderByFieldsList);
+
+            assert.equal(lastKeyword.keyword, "order by");
+            assert.equal(lastKeyword.dividersCount, 1);
+
+            done();
+        });
+    });
+
+    it('After order by field | should list the sort functions and comma separator', done => {
+        rqlTestUtils.autoComplete(`from Orders
+order by OrderedAt |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            const sortedList = _.sortBy(wordlist, [(x: autoCompleteWordList) => x.score]).reverse();
+            assert.deepEqual(sortedList, orderBySortList);
+
+            assert.equal(lastKeyword.keyword, "order by");
+            assert.equal(lastKeyword.dividersCount, 2);
+
+            done();
+        });
+    });
+
+    it('After order by field and desc| without space should list desc prefix', done => {
+        rqlTestUtils.autoComplete(`from Orders
+order by OrderedAt desc|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "desc");
+            const sortedList = _.sortBy(wordlist, [(x: autoCompleteWordList) => x.score]).reverse();
+            assert.deepEqual(sortedList, orderBySortList);
+
+            assert.equal(lastKeyword.keyword, "order by");
+            assert.equal(lastKeyword.dividersCount, 2);
+
+            done();
+        });
+    });
+
+    it('After order by field with sort | should list the comma separator without the sort functions', done => {
+        rqlTestUtils.autoComplete(`from Orders
+order by OrderedAt desc |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            const sortedList = _.sortBy(wordlist, [(x: autoCompleteWordList) => x.score]).reverse();
+            assert.deepEqual(sortedList, orderBySortListAfterSort);
+
+            assert.equal(lastKeyword.keyword, "order by");
+            assert.equal(lastKeyword.dividersCount, 3);
+
+            done();
+        });
+    });
+
+    it('After order by field and comma | should list the fields', done => {
+        rqlTestUtils.autoComplete(`from Orders
+order by OrderedAt, |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, orderByFieldsList);
+
+            assert.equal(lastKeyword.keyword, "order by");
+            assert.equal(lastKeyword.dividersCount, 1);
+
+            done();
+        });
+    });
+
+    it('After order by field and comma without space | should list the fields', done => {
+        rqlTestUtils.autoComplete(`from Orders
+order by OrderedAt,|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, orderByFieldsList);
+
+            assert.equal(lastKeyword.keyword, "order by");
+            assert.equal(lastKeyword.dividersCount, 1);
+
+            done();
+        });
+    });
+
+    it('After order by field, sort and comma without space | should list the fields', done => {
+        rqlTestUtils.autoComplete(`from Orders
+order by OrderedAt desc, |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, orderByFieldsList);
+
+            assert.equal(lastKeyword.keyword, "order by");
+            assert.equal(lastKeyword.dividersCount, 1);
+
+            done();
+        });
+    });
+
+    it('After order by field, sort and comma without space | should list the fields', done => {
+        rqlTestUtils.autoComplete(`from Orders
+order by OrderedAt desc,|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, orderByFieldsList);
+
+            assert.equal(lastKeyword.keyword, "order by");
+            assert.equal(lastKeyword.dividersCount, 1);
+
+            done();
+        });
+    });
+
     it('After group| without space should has group prefix and should complete itself', done => {
         rqlTestUtils.autoComplete(`from Orders
 group|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
@@ -653,9 +784,9 @@ group by |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
         rqlTestUtils.autoComplete("from index 'Orders/Totals' select |", northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
             assert.deepEqual(wordlist, [
-                {caption: "Employee", value: "Employee", score: 1, meta: "field"},
-                {caption: "Company", value: "Company", score: 1, meta: "field"},
-                {caption: "Total", value: "Total", score: 1, meta: "field"}
+                {caption: "Employee", value: "Employee ", score: 1, meta: "field"},
+                {caption: "Company", value: "Company ", score: 1, meta: "field"},
+                {caption: "Total", value: "Total ", score: 1, meta: "field"}
             ]);
 
             assert.equal(lastKeyword.keyword, "select");
