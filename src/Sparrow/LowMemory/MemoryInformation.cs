@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 using Sparrow.Logging;
 using Sparrow.Platform;
@@ -11,13 +13,37 @@ namespace Sparrow.LowMemory
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<MemoryInfoResult>("Raven/Server");
 
+        public static long HighLastOneMinute = 0;
+        public static long LowLastOneMinute = long.MaxValue;
+        public static long HighLastFiveMinutes = 0;
+        public static long LowLastFiveMinutes = long.MaxValue;
+        public static long HighSinceStartup = 0;
+        public static long LowSinceStartup = long.MaxValue;
+
+
         private static int _memoryLimit;
         private static bool _failedToGetAvailablePhysicalMemory;
         private static readonly MemoryInfoResult FailedResult = new MemoryInfoResult
         {
             AvailableMemory = new Size(256, SizeUnit.Megabytes),
             TotalPhysicalMemory = new Size(256, SizeUnit.Megabytes),
-            InstalledMemory = new Size(256, SizeUnit.Megabytes)
+            InstalledMemory = new Size(256, SizeUnit.Megabytes),
+            MemoryUsageRecords =
+            new MemoryInfoResult.MemoryUsageLowHigh
+            {
+                High = new MemoryInfoResult.MemoryUsageIntervals
+                {
+                    LastFiveMinutes = new Size(0, SizeUnit.Bytes),
+                    LastOneMinute = new Size(0, SizeUnit.Bytes),
+                    SinceStartup = new Size(0, SizeUnit.Bytes)
+                },
+                Low = new MemoryInfoResult.MemoryUsageIntervals
+                {
+                    LastFiveMinutes = new Size(0, SizeUnit.Bytes),
+                    LastOneMinute = new Size(0, SizeUnit.Bytes),
+                    SinceStartup = new Size(0, SizeUnit.Bytes)
+                }
+            }
         };
 
         [StructLayout(LayoutKind.Sequential)]
@@ -145,11 +171,28 @@ namespace Sparrow.LowMemory
                     if (GetPhysicallyInstalledSystemMemory(out var installedMemoryInKb) == false)
                         installedMemoryInKb = (long)memoryStatus.ullTotalPhys;
 
+                    SetMemoryRecords((long)memoryStatus.ullAvailPhys);
+
                     return new MemoryInfoResult
                     {
                         AvailableMemory = new Size((long)memoryStatus.ullAvailPhys, SizeUnit.Bytes),
                         TotalPhysicalMemory = new Size((long)memoryStatus.ullTotalPhys, SizeUnit.Bytes),
-                        InstalledMemory = new Size(installedMemoryInKb, SizeUnit.Kilobytes)
+                        InstalledMemory = new Size(installedMemoryInKb, SizeUnit.Kilobytes),
+                        MemoryUsageRecords = new MemoryInfoResult.MemoryUsageLowHigh
+                        {
+                            High = new MemoryInfoResult.MemoryUsageIntervals
+                            {
+                                LastOneMinute = new Size(HighLastOneMinute, SizeUnit.Bytes),
+                                LastFiveMinutes = new Size(HighLastFiveMinutes, SizeUnit.Bytes),
+                                SinceStartup = new Size(HighSinceStartup, SizeUnit.Bytes)
+                            },
+                            Low = new MemoryInfoResult.MemoryUsageIntervals
+                            {
+                                LastOneMinute = new Size(LowLastOneMinute, SizeUnit.Bytes),
+                                LastFiveMinutes = new Size(LowLastFiveMinutes, SizeUnit.Bytes),
+                                SinceStartup = new Size(LowSinceStartup, SizeUnit.Bytes)
+                            }
+                        }
                     };
                 }
 
@@ -219,12 +262,29 @@ namespace Sparrow.LowMemory
                     totalPhysicalMemory = new Size((long)totalPhysicalMemoryInBytes, SizeUnit.Bytes);
                 }
 
+                SetMemoryRecords((long)availableRamInBytes);
+
                 return new MemoryInfoResult
                 {
                     AvailableMemory = availableRam,
                     TotalPhysicalMemory = totalPhysicalMemory,
                     //TODO: http://issues.hibernatingrhinos.com/issue/RavenDB-8468
-                    InstalledMemory = totalPhysicalMemory
+                    InstalledMemory = totalPhysicalMemory,
+                    MemoryUsageRecords = new MemoryInfoResult.MemoryUsageLowHigh
+                    {
+                        High = new MemoryInfoResult.MemoryUsageIntervals
+                        {
+                            LastOneMinute = new Size(HighLastOneMinute, SizeUnit.Bytes),
+                            LastFiveMinutes = new Size(HighLastFiveMinutes, SizeUnit.Bytes),
+                            SinceStartup = new Size(HighSinceStartup, SizeUnit.Bytes)
+                        },
+                        Low = new MemoryInfoResult.MemoryUsageIntervals
+                        {
+                            LastOneMinute = new Size(LowLastOneMinute, SizeUnit.Bytes),
+                            LastFiveMinutes = new Size(LowLastFiveMinutes, SizeUnit.Bytes),
+                            SinceStartup = new Size(LowSinceStartup, SizeUnit.Bytes)
+                        }
+                    }
                 };
             }
             catch (Exception e)
@@ -234,6 +294,47 @@ namespace Sparrow.LowMemory
                 _failedToGetAvailablePhysicalMemory = true;
                 return FailedResult;
             }
+        }
+
+        private static List<Tuple<long, DateTime>> _memByTime = new List<Tuple<long, DateTime>>();
+
+        private static void SetMemoryRecords(long availableRamInBytes)
+        {
+            var now = DateTime.UtcNow;
+
+            if (HighSinceStartup < availableRamInBytes)
+                HighSinceStartup = availableRamInBytes;
+            if (LowSinceStartup > availableRamInBytes)
+                LowSinceStartup = availableRamInBytes;
+
+            _memByTime.Add(new Tuple<long, DateTime>(availableRamInBytes, now));
+            _memByTime.RemoveAll(x => now - x.Item2 > TimeSpan.FromMinutes(5));
+            _memByTime.Sort((x, y) => y.Item1.CompareTo(x.Item1));
+
+            long highLastOneMinute = 0;
+            long lowLastOneMinute = long.MaxValue;
+            long highLastFiveMinutes = 0;
+            long lowLastFiveMinutes = long.MaxValue;
+
+            foreach (var item in _memByTime)
+            {
+                if (now - item.Item2 < TimeSpan.FromMinutes(1))
+                {
+                    if (highLastOneMinute < item.Item1)
+                        highLastOneMinute = item.Item1;
+                    if (lowLastOneMinute > item.Item1)
+                        lowLastOneMinute = item.Item1;
+                }
+                if (highLastFiveMinutes < item.Item1)
+                    highLastFiveMinutes = item.Item1;
+                if (lowLastFiveMinutes > item.Item1)
+                    lowLastFiveMinutes = item.Item1;
+            }
+
+            HighLastOneMinute = highLastOneMinute;
+            LowLastOneMinute = lowLastOneMinute;
+            HighLastFiveMinutes = highLastFiveMinutes;
+            LowLastFiveMinutes = lowLastFiveMinutes;
         }
 
         public static bool IsSwappingOnHddInsteadOfSsd()
@@ -248,8 +349,20 @@ namespace Sparrow.LowMemory
 
     public struct MemoryInfoResult
     {
+        public class MemoryUsageIntervals
+        {
+            public Size LastOneMinute;
+            public Size LastFiveMinutes;
+            public Size SinceStartup;
+        }
+        public class MemoryUsageLowHigh
+        {
+            public MemoryUsageIntervals High;
+            public MemoryUsageIntervals Low;
+        }
         public Size TotalPhysicalMemory;
         public Size InstalledMemory;
         public Size AvailableMemory;
+        public MemoryUsageLowHigh MemoryUsageRecords;
     }
 }

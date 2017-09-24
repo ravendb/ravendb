@@ -4,14 +4,15 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Client.Util;
 using Raven.Server.Routing;
 using Raven.Server.Web;
+using Sparrow;
 using Sparrow.Collections.LockFree;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.LowMemory;
 using Sparrow.Utils;
+using Size = Raven.Client.Util.Size;
 
 namespace Raven.Server.Documents.Handlers.Debugging
 {
@@ -105,6 +106,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 workingSet = currentProcess.WorkingSet64;
             else
                 workingSet = Sparrow.LowMemory.MemoryInformation.GetRssMemoryUsage(currentProcess.Id);
+            var memInfo = MemoryInformation.GetMemoryInfo();
             long totalUnmanagedAllocations = 0;
             long totalMapping = 0;
             var fileMappingByDir = new Dictionary<string, Dictionary<string, ConcurrentDictionary<IntPtr, long>>>();
@@ -212,6 +214,14 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 ["TotalUnmanagedAllocations"] = totalUnmanagedAllocations,
                 ["ManagedAllocations"] = managedMemory,
                 ["TotalMemoryMapped"] = totalMapping,
+                ["PhysicalMem"] = Size.Humane(memInfo.TotalPhysicalMemory.GetValue(SizeUnit.Bytes)),
+                ["FreeMem"] = Size.Humane(memInfo.AvailableMemory.GetValue(SizeUnit.Bytes)),
+                ["HighMemLastOneMinute"] = Size.Humane(memInfo.MemoryUsageRecords.High.LastOneMinute.GetValue(SizeUnit.Bytes)),
+                ["LowMemLastOneMinute"] = Size.Humane(memInfo.MemoryUsageRecords.Low.LastOneMinute.GetValue(SizeUnit.Bytes)),
+                ["HighMemLastFiveMinute"] = Size.Humane(memInfo.MemoryUsageRecords.High.LastFiveMinutes.GetValue(SizeUnit.Bytes)),
+                ["LowMemLastFiveMinute"] = Size.Humane(memInfo.MemoryUsageRecords.Low.LastFiveMinutes.GetValue(SizeUnit.Bytes)),
+                ["HighMemSinceStartup"] = Size.Humane(memInfo.MemoryUsageRecords.High.SinceStartup.GetValue(SizeUnit.Bytes)),
+                ["LowMemSinceStartup"] = Size.Humane(memInfo.MemoryUsageRecords.Low.SinceStartup.GetValue(SizeUnit.Bytes)),
 
                 ["Humane"] = new DynamicJsonValue
                 {
