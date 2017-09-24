@@ -309,7 +309,6 @@ namespace Sparrow.LowMemory
 
             _memByTime.Add(new Tuple<long, DateTime>(availableRamInBytes, now));
             _memByTime.RemoveAll(x => now - x.Item2 > TimeSpan.FromMinutes(5));
-            _memByTime.Sort((x, y) => y.Item1.CompareTo(x.Item1));
 
             long highLastOneMinute = 0;
             long lowLastOneMinute = long.MaxValue;
