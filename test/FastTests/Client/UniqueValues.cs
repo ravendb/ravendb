@@ -13,8 +13,8 @@ namespace FastTests.Client
         {
             DoNotReuseServer();
             var store = GetDocumentStore();
-            await store.Operations.SendAsync(new CompareExchangeOperation<string>("test", "Karmel", 0));
-            var res = await store.Operations.SendAsync(new GetCompareExchangeOperation<string>("test"));
+            await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("test", "Karmel", 0));
+            var res = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<string>("test"));
             Assert.Equal("Karmel", res.Value);
             Assert.True(res.Successful);
         }
@@ -24,7 +24,7 @@ namespace FastTests.Client
         {
             DoNotReuseServer();
             var store = GetDocumentStore();
-            var res = await store.Operations.SendAsync(new CompareExchangeOperation<User>("test", new User
+            var res = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("test", new User
             {
                 Name = "Karmel"
             }, 0));
@@ -37,11 +37,11 @@ namespace FastTests.Client
         {
             DoNotReuseServer();
             var store = GetDocumentStore();
-            var res = await store.Operations.SendAsync(new CompareExchangeOperation<User>("test", new User
+            var res = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("test", new User
             {
                 Name = "Karmel"
             }, 0));
-            var res2 = await store.Operations.SendAsync(new CompareExchangeOperation<User>("test2", new User
+            var res2 = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("test2", new User
             {
                 Name = "Karmel"
             }, 0));
@@ -57,11 +57,11 @@ namespace FastTests.Client
         {
             DoNotReuseServer();
             var store = GetDocumentStore();
-            var res = await store.Operations.SendAsync(new CompareExchangeOperation<User>("test", new User
+            var res = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("test", new User
             {
                 Name = "Karmel"
             }, 0));
-            var res2 = await store.Operations.SendAsync(new CompareExchangeOperation<User>("test", new User
+            var res2 = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("test", new User
             {
                 Name = "Karmel2"
             }, 0));
@@ -70,7 +70,7 @@ namespace FastTests.Client
             Assert.Equal("Karmel", res.Value.Name);
             Assert.Equal("Karmel", res2.Value.Name);
 
-            res2 = await store.Operations.SendAsync(new CompareExchangeOperation<User>("test", new User
+            res2 = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("test", new User
             {
                 Name = "Karmel2"
             }, res2.Index));
@@ -84,15 +84,15 @@ namespace FastTests.Client
         {
             DoNotReuseServer();
             var store = GetDocumentStore();
-            await store.Operations.SendAsync(new CompareExchangeOperation<User>("test", new User
+            await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("test", new User
             {
                 Name = "Karmel"
             }, 0));
-            var res = await store.Operations.SendAsync(new GetCompareExchangeOperation<User>("test"));
+            var res = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<User>("test"));
             Assert.Equal("Karmel", res.Value.Name);
             Assert.True(res.Successful);
 
-            var res2 = await store.Operations.SendAsync(new CompareExchangeOperation<User>("test", new User
+            var res2 = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("test", new User
             {
                 Name = "Karmel2"
             }, res.Index));
@@ -107,8 +107,8 @@ namespace FastTests.Client
             var store = GetDocumentStore(caller: $"CmpExchangeTest1-{new Guid()}");
             var store2 = GetDocumentStore(caller: $"CmpExchangeTest2-{new Guid()}");
             var user  = new User{Name = "Karmel"};
-            var res = await store.Operations.SendAsync(new CompareExchangeOperation<User>("test",user,0));
-            var res2 = await store2.Operations.SendAsync(new CompareExchangeOperation<User>("test", user, 0));
+            var res = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("test",user,0));
+            var res2 = await store2.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("test", user, 0));
             Assert.Equal("Karmel", res.Value.Name);
             Assert.Equal("Karmel", res2.Value.Name);
             Assert.True(res.Successful);

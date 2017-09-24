@@ -27,9 +27,9 @@ namespace Raven.Server.Web.System
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
-                        [nameof(RawClusterValueResult.Index)] = res.Index,
-                        [nameof(RawClusterValueResult.Value)] = res.Value,
-                        [nameof(RawClusterValueResult.Successful)] = true
+                        [nameof(CmpXchgResult<object>.Index)] = res.Index,
+                        [nameof(CmpXchgResult<object>.Value)] = res.Value,
+                        [nameof(CmpXchgResult<object>.Successful)] = true
                     });
                     writer.Flush();
                 }
@@ -42,7 +42,7 @@ namespace Raven.Server.Web.System
         {
             var prefix = Database.Name + "/";
             var key = prefix + GetStringQueryString("key");
-            
+
             // ReSharper disable once PossibleInvalidOperationException
             var index = GetLongQueryString("index", true).Value;
 
@@ -61,9 +61,9 @@ namespace Raven.Server.Web.System
                         var res = ServerStore.Cluster.GetCmpXchg(context, key);
                         context.Write(writer, new DynamicJsonValue
                         {
-                            [nameof(RawClusterValueResult.Index)] = res.Index,
-                            [nameof(RawClusterValueResult.Value)] = res.Value,
-                            [nameof(RawClusterValueResult.Successful)] = res.Index == raftIndex
+                            [nameof(CmpXchgResult<object>.Index)] = res.Index,
+                            [nameof(CmpXchgResult<object>.Value)] = res.Value,
+                            [nameof(CmpXchgResult<object>.Successful)] = res.Index == raftIndex
                         });
                     }
                     writer.Flush();
