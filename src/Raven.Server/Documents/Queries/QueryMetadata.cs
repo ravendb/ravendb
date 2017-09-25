@@ -41,9 +41,9 @@ namespace Raven.Server.Documents.Queries
             var fromToken = Query.From.From;
 
             if (IsDynamic)
-                CollectionName = fromToken.Field;
+                CollectionName = fromToken.FieldValue;
             else
-                IndexName = fromToken.Field;
+                IndexName = fromToken.FieldValue;
 
             if (IsDynamic == false || IsGroupBy)
                 IsCollectionQuery = false;
@@ -121,11 +121,9 @@ namespace Raven.Server.Documents.Queries
 
                 for (var i = 0; i < Query.GroupBy.Count; i++)
                 {
-                    var name = Query.GroupBy[i].Field;
+                    EnsureValidGroupByField(Query.GroupBy[i], parameters);
 
-                    EnsureValidGroupByField(name, parameters);
-
-                    GroupBy[i] = name;
+                    GroupBy[i] = Query.GroupBy[i].Compound[0];
                 }
             }
 
@@ -169,7 +167,7 @@ namespace Raven.Server.Documents.Queries
                     }
                     else if (order.Expression is FieldExpression fe)
                     {
-                        OrderBy[i] = new OrderByField(GetIndexFieldName(fe.Field), order.FieldType, order.Ascending);
+                        OrderBy[i] = new OrderByField(GetIndexFieldName(fe), order.FieldType, order.Ascending);
                     }
                     else
                     {
@@ -199,7 +197,7 @@ namespace Raven.Server.Documents.Queries
 
                 if (include is FieldExpression fe)
                 {
-                    path = fe.Field;
+                    path = fe.FieldValue;
                 }
                 else if (include is ValueExpression ve)
                 {
@@ -319,7 +317,7 @@ namespace Raven.Server.Documents.Queries
                 string path;
                 if (load.Expression is FieldExpression fe)
                 {
-                    path = fe.Field;
+                    path = fe.FieldValue;
                 }
                 else if (load.Expression is ValueExpression ve)
                 {
@@ -433,7 +431,7 @@ namespace Raven.Server.Documents.Queries
                 }
 
                 return new OrderByField(
-                    fieldToken.Field,
+                    fieldToken.FieldValue,
                     OrderByFieldType.Distance,
                     asc,
                     methodType,
@@ -472,7 +470,7 @@ namespace Raven.Server.Documents.Queries
                         orderingType = OrderByFieldType.Double;
                     }
 
-                    return new OrderByField(sumFieldToken.Field, orderingType, asc)
+                    return new OrderByField(sumFieldToken.FieldValue, orderingType, asc)
                     {
                         AggregationOperation = AggregationOperation.Sum
                     };
@@ -542,10 +540,6 @@ namespace Raven.Server.Documents.Queries
             }
             if (expression is FieldExpression fe)
             {
-                if (fe.IsQuoted)
-                {
-                    return SelectField.CreateValue(fe.Field, alias, ValueTokenType.String);
-                }
                 return GetSelectValue(alias, fe);
             }
             if (expression is MethodExpression me)
@@ -598,7 +592,7 @@ namespace Raven.Server.Documents.Queries
                         fieldName = Constants.Documents.Indexing.Fields.CountFieldName;
                         break;
                     case AggregationOperation.Sum:
-                        if (IsGroupBy == false)
+                        if(IsGroupBy == false)
                             ThrowInvalidAggregationMethod(parameters, methodName);
                         if (me.Arguments == null)
                         {
@@ -614,7 +608,7 @@ namespace Raven.Server.Documents.Queries
                             return null; //never hit
                         }
 
-                        fieldName = sumFieldToken.Field.Value;
+                        fieldName = sumFieldToken.FieldValue;
                         break;
                 }
 
@@ -638,40 +632,64 @@ namespace Raven.Server.Documents.Queries
 
         private SelectField GetSelectValue(string alias, FieldExpression expressionField)
         {
-            var name = expressionField.Field.Value;
-            var indexOf = name.IndexOf('.');
             (string Path, bool Array) sourceAlias;
-
+            string name = expressionField.Compound[0];
             bool hasSourceAlias = false;
             bool array = false;
-            if (indexOf != -1)
+            if (expressionField.Compound.Count > 1)
             {
-                var key = new StringSegment(name, 0, indexOf);
-                if (key.Length > 2 && key[key.Length - 1] == ']' && key[key.Length - 2] == '[')
+                if (expressionField.Compound.Last() == "[]")
                 {
-                    key = key.Subsegment(0, key.Length - 2);
                     array = true;
                 }
-                if (RootAliasPaths.TryGetValue(key, out sourceAlias))
+                if (RootAliasPaths.TryGetValue(expressionField.Compound[1], out sourceAlias))
                 {
-                    name = name.Substring(indexOf + 1);
+                    name = expressionField.FieldValueWithoutAlias;
                     hasSourceAlias = true;
                     array = sourceAlias.Array;
                 }
                 else if (RootAliasPaths.Count != 0)
                 {
-                    throw new InvalidOperationException($"Unknown alias {key}, but there are aliases specified in the query ({string.Join(", ", RootAliasPaths.Keys)})");
+                    throw new InvalidOperationException($"Unknown alias {expressionField.Compound[1]}, but there are aliases specified in the query ({string.Join(", ", RootAliasPaths.Keys)})");
                 }
             }
-            else if (RootAliasPaths.TryGetValue(name, out sourceAlias))
+            else if (RootAliasPaths.TryGetValue(expressionField.Compound[0], out sourceAlias))
             {
                 hasSourceAlias = true;
                 if (string.IsNullOrEmpty(alias))
-                    alias = name;
+                    alias = expressionField.Compound[0];
                 array = sourceAlias.Array;
                 name = string.Empty;
             }
             return SelectField.Create(name, alias, sourceAlias.Path, array, hasSourceAlias);
+        }
+
+        public string GetIndexFieldName(FieldExpression fe)
+        {
+            if (_aliasToName.TryGetValue(fe.Compound[0], out var indexFieldName))
+            {
+                if(fe.Compound.Count != 1)
+                    throw new InvalidOperationException("Field alias " + fe.Compound[0] + " cannot be used in a compound field, but got: " + fe);
+
+                return indexFieldName;
+            }
+            if (fe.Compound.Count == 1)
+                return fe.Compound[0];
+            if (RootAliasPaths.TryGetValue(fe.Compound[0], out _))
+            {
+                if (fe.Compound.Count == 2)
+                {
+                    return fe.Compound[1];
+                }
+                return fe.FieldValueWithoutAlias;
+            }
+
+            if (RootAliasPaths.Count != 0)
+            {
+                throw new InvalidOperationException($"Unknown alias {fe.Compound[0]}, but there are aliases specified in the query ({string.Join(", ", RootAliasPaths.Keys)})");
+            }
+
+            return fe.FieldValue;
         }
 
         public string GetIndexFieldName(string fieldNameOrAlias)
@@ -775,7 +793,7 @@ namespace Raven.Server.Documents.Queries
             public override void VisitFieldToken(QueryExpression fieldName, QueryExpression value, BlittableJsonReaderObject parameters)
             {
                 if (fieldName is FieldExpression fe)
-                    _metadata.AddWhereField(fe.Field, exact: _insideExact > 0);
+                    _metadata.AddWhereField(fe.FieldValue, exact: _insideExact > 0);
                 if (fieldName is MethodExpression me)
                 {
                     var methodType = QueryMethod.GetMethodType(me.Name);
@@ -799,7 +817,7 @@ namespace Raven.Server.Documents.Queries
             {
                 if (fieldName is FieldExpression fe)
                 {
-                    _metadata.AddWhereField(fe.Field, exact: _insideExact > 0);
+                    _metadata.AddWhereField(fe.FieldValue, exact: _insideExact > 0);
                 }
                 else if (fieldName is MethodExpression me)
                 {
@@ -855,7 +873,7 @@ namespace Raven.Server.Documents.Queries
                         previousType = valueType;
                 }
                 if (fieldName is FieldExpression fieldExpression)
-                    _metadata.AddWhereField(fieldExpression.Field, exact: _insideExact > 0);
+                    _metadata.AddWhereField(fieldExpression.FieldValue, exact: _insideExact > 0);
             }
 
             private void ThrowInvalidInValue(BlittableJsonReaderObject parameters)
@@ -887,9 +905,9 @@ namespace Raven.Server.Documents.Queries
                             if (!(arguments[0] is FieldExpression idAliasToken))
                                 throw new InvalidQueryException($"Method 'id()' expects field token as a first argument, got {arguments[0]} type", QueryText, parameters);
 
-                            if (idAliasToken.Field.Equals(_fromAlias) == false)
+                            if (idAliasToken.Compound.Count != 1 || idAliasToken.Compound[0].Equals(_fromAlias) == false)
                                 throw new InvalidQueryException(
-                                    $"Alias passed to method 'id({idAliasToken.Field})' does not match specified document alias ('{_fromAlias}').", QueryText,
+                                    $"Alias passed to method 'id({idAliasToken.Compound[0]})' does not match specified document alias ('{_fromAlias}').", QueryText,
                                     parameters);
                         }
 
@@ -1011,7 +1029,7 @@ namespace Raven.Server.Documents.Queries
                 if (!(arguments[0] is FieldExpression f))
                     throw new InvalidQueryException($"Method sum() expects first argument to be field token, got {arguments[0]}", QueryText, parameters);
 
-                _metadata.AddWhereField(f.Field.Value);
+                _metadata.AddWhereField(f.FieldValue);
             }
 
             private string ExtractFieldNameFromFirstArgument(List<QueryExpression> arguments, string methodName, BlittableJsonReaderObject parameters)
@@ -1019,7 +1037,7 @@ namespace Raven.Server.Documents.Queries
                 if (!(arguments[0] is FieldExpression fieldArgument))
                     throw new InvalidQueryException($"Method {methodName}() expects a field name as its first argument", QueryText, parameters);
 
-                return fieldArgument.Field;
+                return fieldArgument.FieldValue;
             }
         }
 
@@ -1047,20 +1065,16 @@ namespace Raven.Server.Documents.Queries
             {
                 foreach (var load in Query.Load)
                 {
-                    var fieldExpression = load.Expression as FieldExpression;
-                    if (fieldExpression == null)
+                    if (!(load.Expression is FieldExpression fieldExpression))
                         throw new InvalidOperationException("Load clause can only load paths with fields, but got " + load.Expression);
-                    var fullFieldPath = fieldExpression.Field.Value;
-                    if (fullFieldPath.StartsWith(fromAlias) == false)
+                    if (fieldExpression.Compound[0] != fromAlias)
                         throw new InvalidOperationException("Load clause can only load paths starting from the from alias: " + fromAlias);
-                    var indexOfDot = fullFieldPath.IndexOf('.', fromAlias.Length);
-                    fullFieldPath = fullFieldPath.Substring(indexOfDot + 1);
-
+                    
                     sb.Append("var ").Append(load.Alias)
                         .Append(" = loadPath(")
                         .Append(fromAlias)
                         .Append(", '")
-                        .Append(fullFieldPath.Trim())
+                        .Append(string.Join(".",fieldExpression.Compound.Skip(1)).Trim())
                         .AppendLine("');");
                 }
             }
@@ -1069,20 +1083,11 @@ namespace Raven.Server.Documents.Queries
             return sb.ToString();
         }
 
-        private void EnsureValidGroupByField(string groupByFieldName, BlittableJsonReaderObject parameters)
+        private void EnsureValidGroupByField(FieldExpression groupByFieldName, BlittableJsonReaderObject parameters)
         {
-            var indexOfSeparatorStart = groupByFieldName.IndexOf(BlittableJsonTraverser.CollectionSeparator[0]);
-
-            if (indexOfSeparatorStart != -1)
+            if (groupByFieldName.Compound[groupByFieldName.Compound.Count - 1] == "[]")
             {
-                if (groupByFieldName.Length > indexOfSeparatorStart + BlittableJsonTraverser.CollectionSeparator.Length)
-                {
-                    if (groupByFieldName[indexOfSeparatorStart + 1] == BlittableJsonTraverser.CollectionSeparator[1] &&
-                        groupByFieldName[indexOfSeparatorStart + 2] == BlittableJsonTraverser.CollectionSeparator[2])
-                    {
-                        ThrowGroupByCollectionIsNotSupported(QueryText, parameters);
-                    }
-                }
+                ThrowGroupByCollectionIsNotSupported(QueryText, parameters);
             }
         }
     }

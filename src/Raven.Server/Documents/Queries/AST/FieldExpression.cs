@@ -1,22 +1,66 @@
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using Lucene.Net.Documents;
 using Sparrow;
 
 namespace Raven.Server.Documents.Queries.AST
 {
     public class FieldExpression : QueryExpression
     {
-        public bool IsQuoted;
-        public StringSegment Field;
+        public List<StringSegment> Compound;
 
-        public FieldExpression(StringSegment field,  bool isQuoted)
+        private string _field;
+        private string _fieldWithoutAlias;
+
+        public FieldExpression(List<StringSegment> path)
         {
-            IsQuoted = isQuoted;
-            Field = field;
+            Compound = path;
             Type = ExpressionType.Field;
         }
 
+        public string FieldValue
+        {
+            get
+            {
+                if (Compound.Count == 1)
+                    return Compound[0];
+                if (_field == null)
+                    _field = JoinCompoundFragements(0);
+                return _field;
+            }
+        }
+
+        private string JoinCompoundFragements(int start)
+        {
+            var sb = new StringBuilder();
+            for (int i = start; i < Compound.Count; i++)
+            {
+                sb.Append(Compound[i]);
+                if (i + i < Compound.Count && Compound[i + 1] != "[]")
+                {
+                    sb.Append(".");
+                }
+            }
+            return sb.ToString();
+        }
+
+
+        public string FieldValueWithoutAlias
+        {
+            get
+            {
+                if (_fieldWithoutAlias == null)
+                    _fieldWithoutAlias = JoinCompoundFragements(1);
+                return _fieldWithoutAlias;
+            }
+        }
+
+
+
         public override string ToString()
         {
-            return "<Field>: " + Field;
+            return "<Field>: " + string.Join(".", Compound);
         }
     }
 }

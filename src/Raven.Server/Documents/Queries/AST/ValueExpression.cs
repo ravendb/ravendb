@@ -14,13 +14,6 @@ namespace Raven.Server.Documents.Queries.AST
             Type = ExpressionType.Value;
         }
         
-        public ValueExpression(StringSegment token, ValueTokenType type, bool escapeChars)
-        {
-            Token = token;
-            Value = type;
-            Type = ExpressionType.Value;
-        }
-
         public override string ToString()
         {
             return Token + " (" + Value + ")";

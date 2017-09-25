@@ -1,9 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using System.Text.RegularExpressions;
-using Raven.Client.Extensions;
-using Raven.Server.Documents.Queries.Parser;
 using Sparrow;
 
 namespace Raven.Server.Documents.Queries.AST
@@ -247,7 +244,23 @@ namespace Raven.Server.Documents.Queries.AST
         public override void VisitField(FieldExpression field)
         {
             EnsureSpace();
-            _sb.Append(field.Field.Value);
+            for (int i = 0; i < field.Compound.Count; i++)
+            {
+                var quote = RequiresQuotes(field.Compound[i]);
+
+                if (quote)
+                {
+                    _sb.Append("'");
+                    _sb.Append(field.Compound[i].Value.Replace("'", "\\'"));
+                    _sb.Append("'");
+                }
+                else
+                {
+                    _sb.Append(field.Compound[i].Value);
+                }
+                if (i + 1 != field.Compound.Count)
+                    _sb.Append(".");
+            }
         }
 
         public override void VisitTrue()
@@ -325,18 +338,7 @@ namespace Raven.Server.Documents.Queries.AST
             if (index)
                 _sb.Append("INDEX ");
 
-            var quote = RequiresQuotes(from.Field);
-
-            if (quote)
-            {
-                _sb.Append("'");
-                _sb.Append(from.Field.Value.Replace("'", "\\'"));
-                _sb.Append("'");
-            }
-            else
-            {
-                _sb.Append(from.Field.Value);
-            }
+            VisitField(from);
 
             if (filter != null)
             {

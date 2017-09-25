@@ -363,7 +363,7 @@ namespace Raven.Server.Documents.Queries
                     }
                     else if (expression is InExpression ie)
                     {
-                        VisitIn(new FieldExpression("id",false), ie.Values, parameters);
+                        VisitIn(new MethodExpression("id", new List<QueryExpression>()), ie.Values, parameters);
                     }
                     else
                     {

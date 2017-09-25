@@ -36,16 +36,18 @@ namespace FastTests.Server.Documents.Queries.Parser
 
 
         [Theory]
-        [InlineData(" 'hel lo' ", 0)]
-        [InlineData(" \"he \" ", 0)]
-        [InlineData(" 'we''ll' ", 1)]
-        public void ParseStringLiterals(string q, int escape)
+        [InlineData(" 'hel lo' ", "hel lo")]
+        [InlineData(" \"he \"", "he ")]
+        [InlineData(" \"he\"\" \" ", "he\" ")]
+        [InlineData(" 'we''ll' ", "we'll")]
+        [InlineData(" 'we\\r\\nll' ", "we\r\nll")]
+        public void ParseStringLiterals(string q, string escape)
         {
             var qs = new QueryScanner();
             qs.Init(q);
 
-            Assert.True(qs.String());
-            Assert.Equal(escape, qs.EscapeChars);
+            Assert.True(qs.String(out var a));
+            Assert.Equal(escape, a);
         }
 
         [Theory]
