@@ -42,27 +42,11 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.Disable", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public virtual bool Disabled { get; protected set; }
 
-        [Description("Default path for the indexes on disk. Useful if you want to store the indexes on another HDD for performance reasons.\r\nDefault: ~\\Databases\\[database-name]\\Indexes.")]
         [DefaultValue(null)]
-        [IndexUpdateType(IndexUpdateType.Reset)]
-        [ConfigurationEntry("Indexing.StoragePath", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        [LegacyConfigurationEntry("Raven/IndexStoragePath")]
-        public virtual PathSetting StoragePath
-        {
-            get
-            {
-
-                if (_indexStoragePath == null)
-                {
-                    _indexStoragePath = _root.ResourceType == ResourceType.Server
-                        ? null
-                        : _root.Core.DataDirectory.Combine("Indexes");
-                }
-
-                return _indexStoragePath;
-            }
-            protected set => _indexStoragePath = value;
-        }
+        [ReadOnlyPath]
+        public virtual PathSetting StoragePath => _indexStoragePath ?? (_indexStoragePath = _root.ResourceType == ResourceType.Server
+                                                      ? null
+                                                      : _root.Core.DataDirectory.Combine("Indexes"));
 
         [DefaultValue(null)]
         [IndexUpdateType(IndexUpdateType.Reset)]
