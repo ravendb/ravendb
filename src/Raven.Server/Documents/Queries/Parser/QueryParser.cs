@@ -763,13 +763,15 @@ namespace Raven.Server.Documents.Queries.Parser
             var part = 0;
 
             var parts = new List<StringSegment>(1);
-
+            bool quoted = false;
             while (true)
             {
                 if (Scanner.Identifier(beginning: part++ == 0) == false)
                 {
                     if (Scanner.String(out var str))
                     {
+                        if (part == 1)
+                            quoted = true;
                         parts.Add(str);
                     }
                     else
@@ -819,7 +821,10 @@ namespace Raven.Server.Documents.Queries.Parser
                     break;
             }
 
-            token = new FieldExpression(parts);
+            token = new FieldExpression(parts)
+            {
+                IsQuoted = quoted
+            };
             return true;
         }
 

@@ -10,6 +10,8 @@ namespace Raven.Server.Documents.Queries.AST
     {
         public List<StringSegment> Compound;
 
+        public bool IsQuoted;
+
         private string _field;
         private string _fieldWithoutAlias;
 

@@ -540,6 +540,8 @@ namespace Raven.Server.Documents.Queries
             }
             if (expression is FieldExpression fe)
             {
+                if(fe.IsQuoted && fe.Compound.Count == 1)
+                    return SelectField.CreateValue(fe.Compound[0], alias, ValueTokenType.String);
                 return GetSelectValue(alias, fe);
             }
             if (expression is MethodExpression me)
