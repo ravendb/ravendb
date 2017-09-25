@@ -192,7 +192,7 @@ namespace RachisTests
             }
         }
 
-        [Fact]
+        [NightlyBuildFact]
         public async Task SetMentorToSubscriptionWithFailover()
         {
             const int nodesAmount = 5;
@@ -217,8 +217,6 @@ namespace RachisTests
                 await GenerateDocuments(store);
 
                 Assert.True(await reachedMaxDocCountMre.WaitAsync(_reasonableWaitTime), $"Reached {usersCount.Count}/10");
-                tag1 = subscription.SelectedNode;
-                Assert.Equal(mentor, tag1);
 
                 usersCount.Clear();
                 reachedMaxDocCountMre.Reset();
@@ -500,6 +498,11 @@ namespace RachisTests
             foreach (var server in Servers.Where(s => record.Topology.RelevantFor(s.ServerStore.NodeTag)))
             {
                 await server.ServerStore.Cluster.WaitForIndexNotification(subscripitonState.SubscriptionId).ConfigureAwait(false);
+            }
+
+            if (mentor != null)
+            {
+                Assert.Equal(mentor, record.Topology.WhoseTaskIsIt(subscripitonState, false));
             }
 
             var task = subscription.Run(a =>

@@ -90,8 +90,6 @@ namespace Raven.Client.Http
 
         public long ClientConfigurationEtag { get; internal set; }
 
-        public ServerNode LastSelectedNode { get; private set; }
-
         public readonly DocumentConventions Conventions;
 
         protected bool _disableTopologyUpdates;
@@ -316,31 +314,22 @@ namespace Raven.Client.Http
 
         public (int CurrentIndex, ServerNode CurrentNode) ChooseNodeForRequest<TResult>(RavenCommand<TResult> cmd, SessionInfo sessionInfo = null)
         {
-            (int Index, ServerNode Node) currentChoice;
             if (cmd.IsReadRequest == false)
             {
-                currentChoice = _nodeSelector.GetPreferredNode();
-                LastSelectedNode = currentChoice.Node;
-                return currentChoice;
+                return _nodeSelector.GetPreferredNode();
             }
 
             switch (_readBalanceBehavior)
             {
                 case ReadBalanceBehavior.None:
-                    currentChoice = _nodeSelector.GetPreferredNode();
-                    break;
+                    return _nodeSelector.GetPreferredNode();
                 case ReadBalanceBehavior.RoundRobin:
-                    currentChoice = _nodeSelector.GetNodeBySessionId(sessionInfo?.SessionId ?? 0);
-                    break;
+                    return _nodeSelector.GetNodeBySessionId(sessionInfo?.SessionId ?? 0);
                 case ReadBalanceBehavior.FastestNode:
-                    currentChoice = _nodeSelector.GetFastestNode();
-                    break;
+                    return _nodeSelector.GetFastestNode();
                 default:
                     throw new ArgumentOutOfRangeException();
             }
-
-            LastSelectedNode = currentChoice.Node;
-            return currentChoice;
         }
         
         private async Task UnlikelyExecuteAsync<TResult>(
