@@ -13,7 +13,6 @@ import virtualListRow = require("widgets/listView/virtualListRow");
 class listView<T> {
 
     private items = new Map<number, T>();
-    private itemsHeight = new Map<number, number>(); //TODO: it can be removed and we can use cumultive items height
     private cumulativeItemsHeight = new Map<number, number>();
     private totalItemCount = 0;
     
@@ -92,7 +91,6 @@ class listView<T> {
             this.items.set(itemIdx, item);
 
             const itemHeight = this.itemHeightProvider(item);
-            this.itemsHeight.set(itemIdx, itemHeight);
             this.cumulativeItemsHeight.set(itemIdx, virtualHeight + itemHeight);
             virtualHeight += itemHeight;
             this.totalItemCount++;
@@ -106,6 +104,14 @@ class listView<T> {
     private scrollDown() {
         const viewPort = this.$viewportElement[0];
         viewPort.scrollTop = viewPort.scrollHeight;
+    }
+    
+    private getItemHeight(idx: number) {
+        if (idx === 0) {
+            return this.cumulativeItemsHeight.get(0);
+        }
+        
+        return this.cumulativeItemsHeight.get(idx) - this.cumulativeItemsHeight.get(idx - 1);
     }
     
     private initializeVirtualRows() {
@@ -233,7 +239,7 @@ class listView<T> {
     }
     
     private populate(dataIdx: number, row: virtualListRow<T>) {
-        const itemHeight = this.itemsHeight.get(dataIdx);
+        const itemHeight = this.getItemHeight(dataIdx);
         row.populate(this.items.get(dataIdx), dataIdx, this.cumulativeItemsHeight.get(dataIdx) - itemHeight, itemHeight);
     }
     
@@ -250,7 +256,7 @@ class listView<T> {
             let idxToTest = Math.floor((minIdx + maxIdx) / 2);
             
             const itemEnd = this.cumulativeItemsHeight.get(idxToTest);
-            const itemStart = itemEnd - this.itemsHeight.get(idxToTest);
+            const itemStart = itemEnd - this.getItemHeight(idxToTest);
             
             if (itemStart <= yStart && yStart < itemEnd) {
                 minIdx = maxIdx = idxToTest;
@@ -271,7 +277,7 @@ class listView<T> {
         
         for (let i = firstIdx; i < this.totalItemCount; i++) {
             const itemEnd = this.cumulativeItemsHeight.get(i);
-            const itemStart = itemEnd - this.itemsHeight.get(i);
+            const itemStart = itemEnd - this.getItemHeight(i);
 
             if (itemEnd >= yEnd) {
                 lastIdx = i;
@@ -297,7 +303,6 @@ class listView<T> {
 
     private resetItems() {
         this.items.clear();
-        this.itemsHeight.clear();
         this.cumulativeItemsHeight.clear();
         this.totalItemCount = 0;
         this.emptyResult(true);
