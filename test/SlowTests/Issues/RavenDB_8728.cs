@@ -101,7 +101,9 @@ namespace SlowTests.Issues
 
                     session.SaveChanges();
 
-                    var results = session.Query<Post>().GroupBy(x => x.CreatedAt).Select(g => new
+                    var results = session.Query<Post>()
+                        .Customize(x=>x.WaitForNonStaleResults())
+                        .GroupBy(x => x.CreatedAt).Select(g => new
                     {
                         CommentsCount = g.Sum(x => x.Comments.Length),
                         PostsCount = g.Count()
@@ -111,7 +113,9 @@ namespace SlowTests.Issues
                     Assert.Equal(3, results[0].PostsCount);
                     Assert.Equal(12, results[0].CommentsCount);
 
-                    var results4 = session.Query<Post>().GroupBy(x => x.Comments.Length).Select(x => new
+                    var results4 = session.Query<Post>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .GroupBy(x => x.Comments.Length).Select(x => new
                     {
                         Count = x.Count(),
                         CommentsLength = x.Key
