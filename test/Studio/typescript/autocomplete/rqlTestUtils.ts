@@ -40,7 +40,11 @@ class rqlTestUtils {
             const lastKeyword = completer.getLastKeyword(aceEditor.getSession(), aceEditor.getCursorPosition());
             
             completer.complete(aceEditor, aceEditor.getSession(), aceEditor.getCursorPosition(), prefix, (errors: any[], wordlist: autoCompleteWordList[]) => {
-                callback(errors, wordlist, prefix, lastKeyword);
+                let i = 999;
+                const sortedList = wordlist ? _.sortBy(wordlist, (word: autoCompleteWordList) => {
+                    return word.score * 1000 + i--;
+                }).reverse() : wordlist;
+                callback(errors, sortedList, prefix, lastKeyword);
                 aceEditor.destroy();
             });
         });

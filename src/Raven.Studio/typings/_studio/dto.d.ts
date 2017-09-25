@@ -322,6 +322,7 @@ interface layoutable {
 interface autoCompleteWordList {
     caption?: string; 
     value: string; 
+    snippet?: string; 
     score: number; 
     meta: string 
 }
@@ -331,7 +332,6 @@ interface autoCompleteLastKeyword {
     keyword: string,
     keywordModifier: string,
     binaryOperation: string,
-    operator: string,
     fieldPrefix: string[],
     readonly getFieldPrefix: string,
     identifiers: string[],
