@@ -476,42 +476,61 @@ namespace Raven.Server.Documents.Queries
             throw new InvalidQueryException("Invalid ORDER BY method call " + me.Name, QueryText, parameters);
         }
 
+        [ThreadStatic] private static HashSet<string> _duplicateAliasHelper;
+
         private void FillSelectFields(BlittableJsonReaderObject parameters)
         {
-            var fields = new List<SelectField>(Query.Select.Count);
-
-            foreach (var fieldInfo in Query.Select)
+            if(_duplicateAliasHelper == null)
+                _duplicateAliasHelper = new HashSet<string>();
+            try
             {
-                string alias = null;
+                SelectFields = new SelectField[Query.Select.Count];
 
-                if (fieldInfo.Alias != null)
-                    alias = fieldInfo.Alias;
-
-                var expression = fieldInfo.Expression;
-
-                var selectField = GetSelectField(parameters, expression, alias);
-                fields.Add(selectField);
-            }
-
-            SelectFields = new SelectField[fields.Count];
-
-            for (var i = 0; i < fields.Count; i++)
-            {
-                var field = fields[i];
-
-                SelectFields[i] = field;
-
-                if (field.Alias != null)
+                for (var index = 0; index < Query.Select.Count; index++)
                 {
-                    if (field.IsGroupByKey == false)
-                        _aliasToName[field.Alias] = field.Name;
-                    else
+                    var fieldInfo = Query.Select[index];
+                    string alias = null;
+
+                    if (fieldInfo.Alias != null)
+                        alias = fieldInfo.Alias;
+
+                    var expression = fieldInfo.Expression;
+
+                    var selectField = GetSelectField(parameters, expression, alias);
+
+                    SelectFields[index] = selectField;
+
+                    var finalAlias = selectField.Alias ?? selectField.Name;
+                    if (finalAlias != null && _duplicateAliasHelper.Add(finalAlias) == false)
+                        ThrowInvalidDuplicateAliasInSelectClause(parameters, finalAlias);
+
+                    if (selectField.Alias != null)
                     {
-                        if (field.GroupByKeys.Length == 1)
-                            _aliasToName[field.Alias] = field.GroupByKeys[0];
+                      
+                        if (selectField.IsGroupByKey == false)
+                            _aliasToName[selectField.Alias] = selectField.Name;
+                        else
+                        {
+                            if (selectField.GroupByKeys.Length == 1)
+                                _aliasToName[selectField.Alias] = selectField.GroupByKeys[0];
+                        }
                     }
                 }
             }
+            finally
+            {
+                _duplicateAliasHelper.Clear();
+            }
+        }
+
+        private void ThrowInvalidDuplicateAliasInSelectClause(BlittableJsonReaderObject parameters, string finalAlias)
+        {
+            throw new InvalidQueryException("Duplicate alias " + finalAlias + " detected", QueryText, parameters);
+        }
+
+        private void ThrowInvalidDuplicateAlias(BlittableJsonReaderObject parameters, string finalAlias)
+        {
+            throw new InvalidQueryException("Duplicate alias " + finalAlias + " detected", QueryText, parameters);
         }
 
         private SelectField GetSelectField(BlittableJsonReaderObject parameters, QueryExpression expression, string alias)
