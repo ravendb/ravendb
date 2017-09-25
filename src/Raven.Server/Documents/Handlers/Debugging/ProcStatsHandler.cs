@@ -1,11 +1,7 @@
 ﻿using System;
-using System.Collections;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Win32.SafeHandles;
 using Raven.Server.Routing;
 using Raven.Server.Web;
 using Sparrow.Json;
@@ -50,13 +46,15 @@ namespace Raven.Server.Documents.Handlers.Debugging
             var proc = Process.GetCurrentProcess();
 
             var djaCpu = new DynamicJsonArray();
-            var djvCpu = new DynamicJsonValue();
+            var djvCpu = new DynamicJsonValue
+            {
+                ["ProcessName"] = proc.ProcessName,
+                ["ProcessorAffinity"] = proc.ProcessorAffinity.ToInt64(),
+                ["PrivilegedProcessorTime"] = proc.PrivilegedProcessorTime,
+                ["TotalProcessorTime"] = proc.TotalProcessorTime,
+                ["UserProcessorTime"] = proc.UserProcessorTime
+            };
 
-            djvCpu["ProcessName"] = proc.ProcessName;
-            djvCpu["ProcessorAffinity"] = proc.ProcessorAffinity.ToInt64();
-            djvCpu["PrivilegedProcessorTime"] = proc.PrivilegedProcessorTime;
-            djvCpu["TotalProcessorTime"] = proc.TotalProcessorTime;
-            djvCpu["UserProcessorTime"] = proc.UserProcessorTime;
 
             djaCpu.Add(djvCpu);
 
@@ -88,45 +86,54 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             var dja = new DynamicJsonArray();
             var djv = new DynamicJsonValue();
-            foreach (var prop in typeof(Process).GetProperties())
-            {
-                try
-                {
-                    var value = prop.GetValue(proc);
 
-                    if (value != null)
-                    {
-                        // ReSharper disable once MergeCastWithTypeCheck
-                        if (value is ProcessThreadCollection)
-                        {
-                            djv[prop.Name] = GetProcessCollection<ProcessThread>((ProcessThreadCollection)value);
-                        }
-                        else if (value.GetType() == typeof(ProcessModuleCollection))
-                        {
-                            djv[prop.Name] = GetProcessCollection<ProcessModule>((ProcessModuleCollection)value);
-                        }
-                        else
-                        {
-                            AddGenericValue(djv, prop, value);
-                        }
-                    }
-                    else
-                    {
-                        djv[prop.Name] = "null";
-                    }
-                }
-                catch (Exception ex)
-                {
-                    if (ex.InnerException != null)
-                    {
-                        if (ex.InnerException.Message.Contains("Process must exit before requested information can be determined") == false)
-                            djv[prop.Name] = "Not Available : " + ex.InnerException.Message;
-                    }
-                    else
-                        djv[prop.Name] = "Not Available : " + ex.Message;
-                }
-            }
-            
+            AddValue(djv, "Id", () => proc.Id);
+            AddValue(djv, "Handle", () => proc.Handle.ToInt64());
+            AddValue(djv, "BasePriority", () => proc.BasePriority);
+            AddValue(djv, "ExitCode", () => proc.ExitCode);
+            AddValue(djv, "HasExited", () => proc.HasExited);
+            AddValue(djv, "StartTime", () => proc.StartTime);
+            AddValue(djv, "ExitTime", () => proc.ExitTime);
+            AddValue(djv, "MachineName", () => proc.MachineName);
+            AddValue(djv, "MaxWorkingSet", () => proc.MaxWorkingSet.ToInt64());
+            AddValue(djv, "MinWorkingSet", () => proc.MinWorkingSet.ToInt64());
+            AddValue(djv, "NonpagedSystemMemorySize64", () => proc.NonpagedSystemMemorySize64);
+            AddValue(djv, "PagedMemorySize64", () => proc.PagedMemorySize64);
+            AddValue(djv, "PagedSystemMemorySize64", () => proc.PagedSystemMemorySize64);
+            AddValue(djv, "PeakPagedMemorySize64", () => proc.PeakPagedMemorySize64);
+            AddValue(djv, "PeakWorkingSet64", () => proc.PeakWorkingSet64);
+            AddValue(djv, "PeakVirtualMemorySize64", () => proc.PeakVirtualMemorySize64);
+            AddValue(djv, "PriorityBoostEnabled", () => proc.PriorityBoostEnabled);
+            AddValue(djv, "PriorityClass", () => proc.PriorityClass);
+            AddValue(djv, "PrivateMemorySize64", () => proc.PrivateMemorySize64);
+            AddValue(djv, "ProcessName", () => proc.ProcessName);
+            AddValue(djv, "ProcessorAffinity", () => proc.ProcessorAffinity.ToInt64());
+            AddValue(djv, "SessionId", () => proc.SessionId);
+            AddValue(djv, "StartInfo", () => proc.StartInfo);
+            AddValue(djv, "HandleCount", () => proc.HandleCount);
+            AddValue(djv, "VirtualMemorySize64", () => proc.VirtualMemorySize64);
+            AddValue(djv, "EnableRaisingEvents", () => proc.EnableRaisingEvents);
+            AddValue(djv, "StandardInput", () => proc.StandardInput);
+            AddValue(djv, "StandardOutput", () => proc.StandardOutput);
+            AddValue(djv, "StandardError", () => proc.StandardError);
+            AddValue(djv, "WorkingSet64", () => proc.WorkingSet64);
+            AddValue(djv, "Responding", () => proc.Responding);
+            AddValue(djv, "MainWindowTitle", () => proc.MainWindowTitle);
+            AddValue(djv, "MainWindowHandle", () => proc.MainWindowHandle.ToInt64());
+            AddValue(djv, "SynchronizingObject", () => proc.SynchronizingObject);
+            AddValue(djv, "MainModuleFileName", () => proc.MainModule.FileName);
+            AddValue(djv, "MainModuleFileVersionInfoFileVersion", () => proc.MainModule.FileVersionInfo.FileVersion);
+            AddValue(djv, "MainModuleModuleName", () => proc.MainModule.ModuleName);
+            AddValue(djv, "MainModuleModuleMemorySize", () => proc.MainModule.ModuleMemorySize);
+            AddValue(djv, "PrivilegedProcessorTime", () => proc.PrivilegedProcessorTime);
+            AddValue(djv, "TotalProcessorTime", () => proc.TotalProcessorTime);
+            AddValue(djv, "UserProcessorTime", () => proc.UserProcessorTime);
+            AddValue(djv, "Site", () => proc.Site);
+            AddValue(djv, "Container", () => proc.Container);
+
+            djv["Threads"] = GetProcessThreadCollection(proc);
+            djv["Modules"] = GetProcessModuleCollection(proc);
+
             dja.Add(djv);
 
             return new DynamicJsonValue
@@ -134,76 +141,87 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 ["ProcStats"] = dja
             };
         }
-
-        [SuppressMessage("ReSharper", "OperatorIsCanBeUsed")]
-        private static void AddGenericValue(DynamicJsonValue djv, MemberInfo prop, object value)
-        {
-            if (value.GetType() == typeof(IntPtr))
-            {
-                djv[prop.Name] = (long)(IntPtr)value;
-            }
-            else if (value.GetType() == typeof(SafeProcessHandle))
-            {
-                djv[prop.Name] = (long)((SafeProcessHandle)value).DangerousGetHandle();
-            }
-            else
-            {
-                switch (Type.GetTypeCode(value.GetType()))
-                {
-                    case TypeCode.Byte:
-                    case TypeCode.SByte:
-                    case TypeCode.UInt16:
-                    case TypeCode.UInt32:
-                    case TypeCode.UInt64:
-                    case TypeCode.Int16:
-                    case TypeCode.Int32:
-                    case TypeCode.Int64:
-                    case TypeCode.Decimal:
-                    case TypeCode.Double:
-                    case TypeCode.Single:
-                    case TypeCode.DateTime:
-                    case TypeCode.Boolean:
-                    case TypeCode.String:
-                        djv[prop.Name] = value;
-                        break;
-                    default:
-                        djv[prop.Name] = value.ToString();
-                        break;
-                }
-            }
-        }
-
-        private DynamicJsonArray GetProcessCollection<T>(ReadOnlyCollectionBase threadCollection)
+        
+        private DynamicJsonArray GetProcessThreadCollection(Process proc)
         {
             var dja = new DynamicJsonArray();
-            foreach (T procThread in threadCollection)
-            {
-                var djv = new DynamicJsonValue();
-                foreach (var prop in typeof(T).GetProperties())
-                {
-                    try
-                    {
-                        var value = prop.GetValue(procThread);
+            var collection = proc.Threads;
 
-                        if (value != null)
-                        {
-                            AddGenericValue(djv, prop, value);
-                        }
-                        else
-                        {
-                            djv[prop.Name] = "null";
-                        }
-                    }
-                    catch
-                    {
-                        // ignore - too much information
-                    }
-                }
+            for (var idx = 0; idx < collection.Count; idx++)
+            {
+                var i = idx;
+                var djv = new DynamicJsonValue();
+
+                AddValue(djv, "Id", () => collection[i].Id);
+                AddValue(djv, "BasePriority", () => collection[i].BasePriority);
+                AddValue(djv, "CurrentPriority", () => collection[i].CurrentPriority);
+                AddValue(djv, "PriorityBoostEnabled", () => collection[i].PriorityBoostEnabled);
+                AddValue(djv, "PriorityLevel", () => collection[i].PriorityLevel);
+                AddValue(djv, "StartAddress", () => collection[i].StartAddress.ToInt64());
+                AddValue(djv, "ThreadState", () => collection[i].ThreadState);
+                AddValue(djv, "WaitReason", () => collection[i].WaitReason);
+                AddValue(djv, "PrivilegedProcessorTime", () => collection[i].PrivilegedProcessorTime);
+                AddValue(djv, "StartTime", () => collection[i].StartTime);
+                AddValue(djv, "TotalProcessorTime", () => collection[i].TotalProcessorTime);
+                AddValue(djv, "UserProcessorTime", () => collection[i].UserProcessorTime);
+                AddValue(djv, "Site", () => collection[i].Site);
+                AddValue(djv, "Container", () => collection[i].Container);
 
                 dja.Add(djv);
             }
-
             return dja;
+        }
+
+        private DynamicJsonArray GetProcessModuleCollection(Process proc)
+        {
+            var dja = new DynamicJsonArray();
+            var collection = proc.Modules;
+
+            for (var idx = 0; idx < collection.Count; idx++)
+            {
+                var i = idx;
+                var djv = new DynamicJsonValue();
+
+                AddValue(djv, "ModuleName", () => collection[i].ModuleName);
+                AddValue(djv, "FileName", () => collection[i].FileName);
+                AddValue(djv, "BaseAddress", () => collection[i].BaseAddress.ToInt64());
+                AddValue(djv, "ModuleMemorySize", () => collection[i].ModuleMemorySize);
+                AddValue(djv, "EntryPointAddress", () => collection[i].EntryPointAddress.ToInt64());
+                AddValue(djv, "FileVersionInfoFileVersion", () => collection[i].FileVersionInfo.FileVersion);
+                AddValue(djv, "Site", () => collection[i].Site);
+                AddValue(djv, "Container", () => collection[i].Container);
+
+                dja.Add(djv);
+            }
+            return dja;
+        }
+
+
+        private static void AddValue<T>(DynamicJsonValue djv, string key, Func<T> func)
+        {
+            try
+            {
+                var result = func.Invoke();
+
+                if (result == null)
+                {
+                    djv[key] = "null";
+                    return;
+                }
+
+                djv[key] = result;
+
+            }
+            catch (Exception ex)
+            {
+                if (ex.InnerException != null)
+                {
+                    if (ex.InnerException.Message.Contains("Process must exit before requested information can be determined") == false)
+                        djv[key] = "Not Available : " + ex.InnerException.Message;
+                }
+                else
+                    djv[key] = "Not Available : " + ex.Message;
+            }
         }
     }
 }
