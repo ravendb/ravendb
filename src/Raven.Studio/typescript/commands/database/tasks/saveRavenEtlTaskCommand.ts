@@ -37,7 +37,8 @@ class saveRavenEtlTaskCommand extends commandBase {
             ConnectionStringName: this.ravenEtlSettings.ConnectionStringName,
             AllowEtlOnNonEncryptedChannel: this.ravenEtlSettings.AllowEtlOnNonEncryptedChannel,
             Disabled: false, 
-            Transforms: this.ravenEtlSettings.TransformationScripts
+            Transforms: this.ravenEtlSettings.TransformationScripts,
+            MentorNode: null
         }
 
         return this.put(url, JSON.stringify(ravenEtlToSend));

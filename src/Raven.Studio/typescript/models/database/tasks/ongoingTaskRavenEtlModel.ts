@@ -115,7 +115,8 @@ class ongoingTaskRavenEtlModel extends ongoingTask {
                     ConnectionStringName: "",
                     Disabled: false,
                     Name: "",
-                    TaskId: null
+                    TaskId: null,
+                    MentorNode: null
                 },
                 DestinationDatabase: "",
                 DestinationUrl: "",
