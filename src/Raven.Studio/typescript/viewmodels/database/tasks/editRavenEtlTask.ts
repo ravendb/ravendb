@@ -92,8 +92,8 @@ class editRavenEtlTask extends viewModelBase {
         this.connectionStringIsDefined = ko.pureComputed(() => {
             return !!(_.find(this.ravenEtlConnectionStringsNames(), (x) => x.toString() === this.editedRavenEtl().connectionStringName()));
         });
-
-        this.dirtyFlag = new ko.DirtyFlag([this.editedRavenEtl().isDirty]); 
+        
+        this.dirtyFlag = new ko.DirtyFlag([this.editedRavenEtl().isDirtyEditedScript().isDirty, this.editedRavenEtl().transformationScripts]);
     }
 
     private initValidation() {
@@ -142,13 +142,13 @@ class editRavenEtlTask extends viewModelBase {
     }
 
     trySaveRavenEtl() {
-        if (!this.editedRavenEtl().isDirty()) {
+        if (!this.editedRavenEtl().isDirtyEditedScript().isDirty()) {
             this.saveRavenEtl();
             return true;
         }
 
-        const defferedResult = $.Deferred();
-        this.discardStayResult().done((result: { can: boolean; }) => {
+        const deferredResult = $.Deferred<boolean>();
+        this.discardStayResult().done((result: confirmDialogResult) => {
             if (!result.can) {
                 // Keep changes & stay
                 return;
@@ -157,11 +157,10 @@ class editRavenEtlTask extends viewModelBase {
                 this.saveRavenEtl();
             }
 
-            defferedResult.resolve(result);
+            deferredResult.resolve(result.can);
         });
 
-        return defferedResult;
-
+        return deferredResult;
     }
 
     saveRavenEtl() {
@@ -176,20 +175,20 @@ class editRavenEtlTask extends viewModelBase {
         new saveRavenEtlTaskCommand(this.activeDatabase(), this.taskId, dto)
             .execute()
             .done(() => {
-                this.editedRavenEtl().isDirty(false);
+                this.editedRavenEtl().isDirtyEditedScript().reset();
                 this.dirtyFlag().reset();
                 this.goToOngoingTasksView();
             });
     }
 
     tryAddNewTransformation() {
-        if (!this.editedRavenEtl().isDirty()) {
+        if (!this.editedRavenEtl().isDirtyEditedScript().isDirty()) {
             this.addNewTransformation();
             return true;
         }
 
-        const defferedResult = $.Deferred();
-        this.discardStayResult().done((result: { can: boolean; }) => {
+        const deferredResult = $.Deferred<boolean>();
+        this.discardStayResult().done((result: confirmDialogResult) => {
             if (!result.can) {
                 // Keep changes & stay
                 return; 
@@ -198,32 +197,30 @@ class editRavenEtlTask extends viewModelBase {
                 this.addNewTransformation();
             }
 
-            defferedResult.resolve(result);
+            deferredResult.resolve(result.can);
         });
 
-        return defferedResult;
+        return deferredResult;
     }
 
     private addNewTransformation() {
-        this.editedRavenEtl().editedTransformationScript(ongoingTaskEtlTransformationModel.empty());
-        this.editedRavenEtl().showEditTransformationArea(true);
+        this.editedRavenEtl().showEditTransformationArea(false);
+        this.editedRavenEtl().editedTransformationScript().update(ongoingTaskEtlTransformationModel.empty().toDto(), true);
 
-        this.editedRavenEtl().isDirty(false);
-        this.editedRavenEtl().editedTransformationScript().name.subscribe(() => this.editedRavenEtl().isDirty(true));
-        this.editedRavenEtl().editedTransformationScript().script.subscribe(() => this.editedRavenEtl().isDirty(true));
-        this.editedRavenEtl().editedTransformationScript().transformScriptCollections.subscribe(() => this.editedRavenEtl().isDirty(true));
+        this.editedRavenEtl().showEditTransformationArea(true);
+        this.editedRavenEtl().isDirtyEditedScript().reset();    
     }
 
     cancelEditedTransformation() {
         this.editedRavenEtl().showEditTransformationArea(false);
-        this.editedRavenEtl().editedTransformationScript(null);
-        this.editedRavenEtl().isDirty(false);
+        this.editedRavenEtl().isDirtyEditedScript().reset();
     }
 
     saveEditedTransformation(transformation: ongoingTaskEtlTransformationModel) {
         // 1. Validate
-        if (!this.isValid(this.editedRavenEtl().editedTransformationScript().validationGroup))
+        if (!this.isValid(this.editedRavenEtl().editedTransformationScript().validationGroup)) {
             return;
+        }
 
         // 2. Save
         if (transformation.isNew()) {
@@ -240,8 +237,7 @@ class editRavenEtlTask extends viewModelBase {
 
         // 4. Clear
         this.editedRavenEtl().showEditTransformationArea(false);
-        this.editedRavenEtl().editedTransformationScript(null);
-        this.editedRavenEtl().isDirty(false);
+        this.editedRavenEtl().isDirtyEditedScript().reset();
     }
 
     cancelOperation() {
@@ -256,9 +252,7 @@ class editRavenEtlTask extends viewModelBase {
         return ko.pureComputed(() => {
             const key = collectionText();
 
-            const options = this.collections()
-                .filter(x => !x.isAllDocuments && !x.name.startsWith("@"))
-                .map(x => x.name);
+            const options = this.collections().filter(x => !x.isAllDocuments).map(x => x.name);
 
             const usedOptions = usedCollections().filter(k => k !== key);
 
