@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using Newtonsoft.Json;
+using Sparrow.Collections.LockFree;
 
 namespace Raven.Client.Json.Converters
 {
@@ -13,6 +14,7 @@ namespace Raven.Client.Json.Converters
     public sealed class JsonLinqEnumerableConverter : JsonConverter
     {
         public static readonly JsonLinqEnumerableConverter Instance = new JsonLinqEnumerableConverter();
+        private static readonly ConcurrentDictionary<Type, bool> _converterCache = new ConcurrentDictionary<Type, bool>();
 
         private JsonLinqEnumerableConverter()
         {
@@ -64,25 +66,40 @@ namespace Raven.Client.Json.Converters
         /// </returns>
         public override bool CanConvert(Type objectType)
         {
+            if (_converterCache.TryGetValue(objectType, out var canConvert))
+                return canConvert;
+
             if (objectType.Namespace == null)
-                return false;
-            if (objectType == typeof(string))
-                return false;
-
-            if (objectType.GetTypeInfo().IsClass == false)
-                return false;
-
-            foreach (var interfaceType in objectType.GetInterfaces())
             {
-                if (interfaceType.GetTypeInfo().IsGenericType == false)
-                    continue;
+                canConvert = false;
+            }
+            else if (objectType == typeof(string))
+            {
+                canConvert = false;
+            }
+            else if(objectType.GetTypeInfo().IsClass == false)
+            {
+                canConvert = false;
+            }
+            else
+            {
+                canConvert = false;
+                foreach (var interfaceType in objectType.GetInterfaces())
+                {
+                    if (interfaceType.GetTypeInfo().IsGenericType == false)
+                        continue;
 
-                var genericInterfaceType = interfaceType.GetGenericTypeDefinition();
-                if (typeof(IEnumerable<>) == genericInterfaceType && objectType.Namespace.StartsWith("System.Linq"))
-                    return true;
+                    var genericInterfaceType = interfaceType.GetGenericTypeDefinition();
+                    if (typeof(IEnumerable<>) == genericInterfaceType && objectType.Namespace.StartsWith("System.Linq"))
+                    {
+                        canConvert = true;
+                        break;
+                    }
+                }
             }
 
-            return false;
+            _converterCache.TryAdd(objectType, canConvert);
+            return canConvert;
         }
     }
 }
