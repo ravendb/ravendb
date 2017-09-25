@@ -756,5 +756,10 @@ namespace Raven.Imports.Newtonsoft.Json
                 _writer.Write(_writeBuffer, 0, length);
             }
         }
+
+        public void SealValue()
+        {
+            InternalWriteValue(JsonToken.String);
+        }
     }
 }
