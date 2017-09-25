@@ -43,6 +43,8 @@ namespace SlowTests.Issues
 
         [Theory]
         [InlineData(@"from Orders 
+select count()", "count may only be used in group by queries")]
+        [InlineData(@"from Orders 
 group by ShippedAt
 order by count() asc
 select id()", "Cannot use id() method in a group by query")]

@@ -533,12 +533,7 @@ namespace Raven.Server.Documents.Queries
         {
             throw new InvalidQueryException("Duplicate alias " + finalAlias + " detected", QueryText, parameters);
         }
-
-        private void ThrowInvalidDuplicateAlias(BlittableJsonReaderObject parameters, string finalAlias)
-        {
-            throw new InvalidQueryException("Duplicate alias " + finalAlias + " detected", QueryText, parameters);
-        }
-
+        
         private SelectField GetSelectField(BlittableJsonReaderObject parameters, QueryExpression expression, string alias)
         {
             if (expression is ValueExpression ve)
@@ -598,9 +593,13 @@ namespace Raven.Server.Documents.Queries
                 switch (aggregation)
                 {
                     case AggregationOperation.Count:
+                        if(IsGroupBy == false)
+                            ThrowInvalidAggregationMethod(parameters, methodName);
                         fieldName = Constants.Documents.Indexing.Fields.CountFieldName;
                         break;
                     case AggregationOperation.Sum:
+                        if (IsGroupBy == false)
+                            ThrowInvalidAggregationMethod(parameters, methodName);
                         if (me.Arguments == null)
                         {
                             ThrowMissingFieldNameArgumentOfSumMethod(QueryText, parameters);
@@ -625,6 +624,11 @@ namespace Raven.Server.Documents.Queries
             }
             ThrowUnhandledExpressionTypeInSelect(expression.Type.ToString(), QueryText, parameters);
             return null; // never hit
+        }
+
+        private void ThrowInvalidAggregationMethod(BlittableJsonReaderObject parameters, string methodName)
+        {
+            throw new InvalidQueryException(methodName + " may only be used in group by queries", QueryText, parameters);
         }
 
         private void ThrowInvalidIdInGroupByQuery(BlittableJsonReaderObject parameters)
