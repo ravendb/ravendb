@@ -70,6 +70,28 @@
             }
         }
 
+        &.relevant {
+            background-color: desaturate(darken(@brand-info-dark, 15%), 10%);
+
+            &:hover {
+                background-color: darken(@brand-info-dark, 13%);
+            }
+
+            .dbgroup-node-type a {
+                color: @brand-info;
+                font-weight: bold;
+
+                &:hover {
+                    color: @brand-info-light;
+                }
+            }
+        }
+
+        &:not(.relevant) {
+            //background-color: darken(@gray-darker,3%);
+            //border: 1px dashed @gray;
+        }
+
         &:hover {
             background-color: lighten(@gray-darker, 3%);
             transition: background-color 0.15s ease;
@@ -80,6 +102,10 @@
 
             a {
                 color: @gray-light;
+
+                &:hover {
+                    color: @gray-lighter;
+                }
             }
         }
 
