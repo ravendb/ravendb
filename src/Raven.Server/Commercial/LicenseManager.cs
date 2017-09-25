@@ -676,15 +676,14 @@ namespace Raven.Server.Commercial
                     newLicense.Id != license.Id ||
                     newLicense.Keys.All(license.Keys.Contains) == false;
 
-                var hasMessage = string.IsNullOrWhiteSpace(leasedLicense.Message) == false;
-                if (hasMessage || licenseChanged)
+                if (string.IsNullOrWhiteSpace(leasedLicense.Message) == false)
                 {
                     var severity =
                         leasedLicense.NotificationSeverity == NotificationSeverity.None ?
                         NotificationSeverity.Info : leasedLicense.NotificationSeverity;
                     var alert = AlertRaised.Create(
-                        "License was updated",
-                        hasMessage ? leasedLicense.Message : "license was updated",
+                        leasedLicense.Title,
+                        leasedLicense.Message,
                         AlertType.LicenseManager_LicenseUpdateMessage,
                         severity);
 
@@ -731,6 +730,14 @@ namespace Raven.Server.Commercial
                     return;
 
                 await Activate(updatedLicense, skipLeaseLicense: true);
+
+                var alert = AlertRaised.Create(
+                    "License was updated",
+                    "Successfully leased license",
+                    AlertType.LicenseManager_LeaseLicenseSuccess,
+                    NotificationSeverity.Info);
+
+                _serverStore.NotificationCenter.Add(alert);
             }
             catch (Exception e)
             {

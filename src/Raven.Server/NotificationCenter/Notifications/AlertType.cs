@@ -18,6 +18,7 @@ namespace Raven.Server.NotificationCenter.Notifications
         Replication,
         Server_NewVersionAvailable,
         LicenseManager_InitializationError,
+        LicenseManager_LeaseLicenseSuccess,
         LicenseManager_LeaseLicenseError,
         LicenseManager_LicenseUpdateMessage,
         LicenseManager_LicenseLimit,
