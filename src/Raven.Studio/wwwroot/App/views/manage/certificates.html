@@ -59,7 +59,7 @@
                         <div class="flex-horizontal margin-bottom">
                             <div class="flex-grow">
                                 <h3 data-bind="visible: mode() === 'generate'">Generate client certificate</h3>
-                                <h3 data-bind="visible: mode() === 'upload'">Upload certificate</h3>
+                                <h3 data-bind="visible: mode() === 'upload'">Upload client certificate</h3>
                                 <h3 data-bind="visible: mode() === 'editExisting'">Edit permissions</h3>
                             </div>
                             <div class="flex-start">
@@ -129,7 +129,7 @@
                                 <input class="form-control" type="text" data-bind="value: thumbprint" disabled>
                                 <button type="button" data-bind="click: $root.copyThumbprint" class="btn btn-default"><i class="icon-copy"></i></button>
                             </div>
-                            
+                            <hr />
                             <h4>Database permissions</h4>
                            
                             <div class="flex-horizontal margin-bottom margin-bottom-sm" data-bind="visible: $root.showDatabasesSelector">
