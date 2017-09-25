@@ -42,11 +42,8 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.Disable", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public virtual bool Disabled { get; protected set; }
 
-        [DefaultValue(null)]
         [ReadOnlyPath]
-        public virtual PathSetting StoragePath => _indexStoragePath ?? (_indexStoragePath = _root.ResourceType == ResourceType.Server
-                                                      ? null
-                                                      : _root.Core.DataDirectory.Combine("Indexes"));
+        public virtual PathSetting StoragePath => _indexStoragePath ?? (_indexStoragePath = _root.ResourceType == ResourceType.Server ? null : _root.Core.DataDirectory.Combine("Indexes"));
 
         [DefaultValue(null)]
         [IndexUpdateType(IndexUpdateType.Reset)]
@@ -57,7 +54,6 @@ namespace Raven.Server.Config.Categories
         [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry("Indexing.JournalsStoragePath", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public virtual PathSetting JournalsStoragePath { get; protected set; }
-
 
         [Description("How long indexing will keep document transaction open when indexing. After this the transaction will be reopened.")]
         [DefaultValue(15)]

@@ -8,8 +8,6 @@ namespace Raven.Server.Documents.Indexes.Configuration
 {
     public class SingleIndexConfiguration : IndexingConfiguration
     {
-        private PathSetting _indexStoragePath;
-
         private readonly RavenConfiguration _databaseConfiguration;
 
         public SingleIndexConfiguration(IndexConfiguration clientConfiguration, RavenConfiguration databaseConfiguration)
@@ -31,15 +29,7 @@ namespace Raven.Server.Documents.Indexes.Configuration
 
         public override bool RunInMemory => _databaseConfiguration.Indexing.RunInMemory;
 
-        public override PathSetting StoragePath
-        {
-            get
-            {
-                if (_indexStoragePath == null)
-                    _indexStoragePath = _databaseConfiguration.Indexing.StoragePath;
-                return _indexStoragePath;
-            }
-        }
+        public override PathSetting StoragePath => _databaseConfiguration.Indexing.StoragePath;
 
         public override PathSetting TempPath => _databaseConfiguration.Indexing.TempPath;
 
