@@ -16,7 +16,6 @@ class listView<T> {
     private cumulativeItemsHeight = new Map<number, number>();
     
     virtualHeight = ko.observable<number>(0);
-    virtualWidth = ko.observable<number>(500); //TODO:
     private listId: string;
     private emptyTemplate: string = null;
     private isLoading = ko.observable(false);
@@ -328,7 +327,7 @@ class listView<T> {
 <div class="list-view flex-window stretch" data-bind="attr: { id: listId }">
     <div class="absolute-center loading" data-bind="visible: isLoading"><div class="global-spinner"></div></div>
     <div class="viewport flex-window-scroll">
-        <div class="viewport-scroller" data-bind="style: { height: virtualHeight() + 'px', width: virtualWidth() + 'px' }, template: { afterRender: afterRender.bind($data) }">
+        <div class="viewport-scroller" data-bind="style: { height: virtualHeight() + 'px'}, template: { afterRender: afterRender.bind($data) }">
         </div>
     </div>
     <div class="absolute-center" data-bind="visible: emptyTemplate && emptyResult(), if: emptyTemplate">
