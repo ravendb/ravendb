@@ -385,6 +385,8 @@ namespace Raven.Server.Documents.Patch
 
             private JsValue LoadDocumentInternal(string id)
             {
+                if(string.IsNullOrEmpty(id))
+                    return JsValue.Undefined;
                 if (DebugMode)
                     DebugActions.LoadDocument.Add(id);
                 var document = _database.DocumentsStorage.Get(_context, id);

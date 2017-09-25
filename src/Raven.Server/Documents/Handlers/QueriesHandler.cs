@@ -21,6 +21,7 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
@@ -332,14 +333,7 @@ namespace Raven.Server.Documents.Handlers
 
                 var patch = new PatchRequest(query.Metadata.GetUpdateBody(), PatchRequestType.Patch);
 
-                var whereValueToken = ((query.Metadata?.Query?.Where as MethodExpression)?.Arguments[0] as ValueExpression)?.Token;
-                if (whereValueToken == null)
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                    return Task.CompletedTask;
-                }
-
-                var docId = whereValueToken.Value;
+                var docId = GetDocumentId(query);
 
                 PatchDocumentCommand command;
                 if (query.Metadata.IsDynamic == false)
@@ -387,6 +381,24 @@ namespace Raven.Server.Documents.Handlers
 
                 return Task.CompletedTask;
             }
+        }
+
+        private StringSegment  GetDocumentId(IndexQueryServerSide query)
+        {
+            if (!(query.Metadata?.Query?.Where is BinaryExpression binaryExpression))
+            {
+                throw new InvalidOperationException("Patch test query must contain have a where clause with a simple id() equality test, but was " + query.Query);
+            }
+            if (!(binaryExpression.Left is MethodExpression me) || "id".Equals(me.Name, StringComparison.OrdinalIgnoreCase) == false)
+            {
+                throw new InvalidOperationException("Patch test query must contain have a where clause with a simple id() equality test, but was " + query.Query);
+            }
+            if (!(binaryExpression.Right is ValueExpression ve))
+            {
+                throw new InvalidOperationException("Patch test query must contain have a where clause with an id() equality test to a constant value, but was " + query.Query);
+            }
+
+            return ve.Token;
         }
 
         private void WritePatchResultToResponse(DocumentsOperationContext context, PatchDocumentCommand command)
