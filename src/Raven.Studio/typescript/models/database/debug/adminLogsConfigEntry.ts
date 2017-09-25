@@ -1,31 +1,20 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 
-class adminLogsConfigEntry {
-    includeStackTrace = ko.observable<boolean>();
-    category = ko.observable<string>();
-    level = ko.observable<string>();
+type logEntryMode = "include" | "exclude";
 
-    constructor(category: string, level: string, includeStackTrace: boolean = false) {
-        this.category(category);
-        this.level(level);
-        this.includeStackTrace(includeStackTrace);
+class adminLogsConfigEntry {
+    logSource = ko.observable<string>();
+    mode = ko.observable<logEntryMode>();
+
+    constructor(logSource: string, mode: logEntryMode) {
+        this.logSource(logSource);
+        this.mode(mode);
     }
 
     clone() {
-        return new adminLogsConfigEntry(this.category(), this.level(), this.includeStackTrace());
+        return new adminLogsConfigEntry(this.logSource(), this.mode());
     }
 
-    static empty() {
-        return new adminLogsConfigEntry(null, null, false);
-    }
-
-    toDto(): adminLogsConfigEntryDto {
-        return {
-            category: this.category(),
-            level: this.level(),
-            includeStackTrace: this.includeStackTrace()
-        }
-    }
 }
 
 export = adminLogsConfigEntry;
