@@ -2,6 +2,7 @@
 using System.Runtime.InteropServices;
 using Sparrow;
 using Sparrow.Platform;
+using Sparrow.Platform.Posix;
 
 namespace Raven.Server.Utils
 {
@@ -18,6 +19,20 @@ namespace Raven.Server.Utils
         {
             if (string.IsNullOrEmpty(pathToCheck))
                 return null;
+
+            if (PlatformDetails.RunningOnPosix)
+            {
+                var statvfs = default(Statvfs);
+                if (Syscall.statvfs(pathToCheck, ref statvfs) != 0)
+                    return null;
+
+                return new DiskSpaceResult
+                {
+                    DriveName = Syscall.GetRootMountString(pathToCheck),
+                    TotalFreeSpace = new Size((long)(statvfs.f_bsize * statvfs.f_bfree), SizeUnit.Bytes),
+                    TotalSize = new Size((long)(statvfs.f_bsize * statvfs.f_blocks), SizeUnit.Bytes)
+                };
+            }
 
             if (Path.IsPathRooted(pathToCheck) && pathToCheck.StartsWith("\\\\") == false)
             {
@@ -42,9 +57,6 @@ namespace Raven.Server.Utils
             if (pathToCheck.StartsWith("\\\\"))
             {
                 var uncRoot = Path.GetPathRoot(pathToCheck);
-
-                if (PlatformDetails.RunningOnPosix) // TODO
-                    return null;
 
                 var success = GetDiskFreeSpaceEx(uncRoot, out ulong freeBytesAvailable, out ulong totalNumberOfBytes, out _);
 

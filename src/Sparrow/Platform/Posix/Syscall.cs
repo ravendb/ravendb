@@ -232,6 +232,9 @@ namespace Sparrow.Platform.Posix
         }
 
         [DllImport(LIBC_6, SetLastError = true)]
+        public static extern int statvfs(string path, ref Statvfs buf);
+
+        [DllImport(LIBC_6, SetLastError = true)]
         public static extern int mprotect(IntPtr start, ulong size, ProtFlag protFlag);
 
         public static int AllocateFileSpace(int fd, long size, string file, out bool usingWrite)
@@ -347,6 +350,26 @@ namespace Sparrow.Platform.Posix
                 return -1;
             return close(fd);
         }
+
+        public static string GetRootMountString(string filepath)
+        {
+            string root = null;
+            var allMounts = DriveInfo.GetDrives();
+            var matchSize = 0;
+            foreach (var m in allMounts)
+            {
+                var mountNameSize = m.Name.Length;
+                if (filepath.StartsWith(m.Name))
+                {
+                    if (matchSize < mountNameSize)
+                    {
+                        matchSize = mountNameSize;
+                        root = m.Name;
+                    }
+                }
+            }
+            return root;
+        }
     }
 
     [Flags]
@@ -411,5 +434,20 @@ namespace Sparrow.Platform.Posix
         HOST_VM_INFO64 = 4,         /* 64-bit virtual memory stats */
         HOST_EXTMOD_INFO64 = 5,     /* External modification stats */
         HOST_EXPIRED_TASK_INFO = 6  /* Statistics for expired tasks */
+    }
+
+    public struct Statvfs
+    {
+        public ulong f_bsize;    /* file system block size */
+        public ulong f_frsize;   /* fragment size */
+        public ulong f_blocks;   /* size of fs in f_frsize units */
+        public ulong f_bfree;    /* # free blocks */
+        public ulong f_bavail;   /* # free blocks for unprivileged users */
+        public ulong f_files;    /* # inodes */
+        public ulong f_ffree;    /* # free inodes */
+        public ulong f_favail;   /* # free inodes for unprivileged users */
+        public ulong f_fsid;     /* file system ID */
+        public ulong f_flag;     /* mount flags */
+        public ulong f_namemax;  /* maximum filename length */
     }
 }

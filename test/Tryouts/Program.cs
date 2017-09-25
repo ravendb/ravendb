@@ -1,9 +1,6 @@
 using System;
-using FastTests.Client;
-using FastTests.Smuggler;
-using SlowTests.Core.AdminConsole;
-using SlowTests.Server.Documents.ETL.Raven;
-using SlowTests.Server.Replication;
+using System.IO;
+using Raven.Server.Utils;
 
 namespace Tryouts
 {
@@ -11,23 +8,10 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            for (int i = 0; i < 100; i++)
-            {
-                Console.WriteLine(i);
-                using (var test = new SlowTests.Issues.RavenDB_6886())
-                {
-                    try
-                    {
-                        test.Cluster_identity_for_single_document_should_work().Wait();
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e);
-                        Console.WriteLine("-------------");
-                        throw;
-                    }
-                }
-            }
+            var c = DiskSpaceChecker.GetFreeDiskSpace(@"/home/lili/Sources/ravendb", DriveInfo.GetDrives());
+            Console.WriteLine("Name:  " + c.DriveName);
+            Console.WriteLine("Free:  " + c.TotalFreeSpace);
+            Console.WriteLine("Total: " + c.TotalSize);
         }
     }
 }
