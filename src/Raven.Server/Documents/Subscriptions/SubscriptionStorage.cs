@@ -102,10 +102,8 @@ namespace Raven.Server.Documents.Subscriptions
             var command = new UpdateSubscriptionClientConnectionTime(_db.Name)
             {
                 NodeTag = _serverStore.NodeTag,
-                SubscriptionId = id,
                 SubscriptionName = name,
                 LastClientConnectionTime = DateTime.UtcNow,
-                MentorNode = mentorNode
             };
 
             var (etag, _) = await _serverStore.SendToLeaderAsync(command);

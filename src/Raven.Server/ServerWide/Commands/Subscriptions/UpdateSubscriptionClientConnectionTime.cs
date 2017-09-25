@@ -6,12 +6,9 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Subscriptions
 {
-    public class UpdateSubscriptionClientConnectionTime:UpdateValueForDatabaseCommand, IDatabaseTask
-    {
-        public long SubscriptionId;
+    public class UpdateSubscriptionClientConnectionTime:UpdateValueForDatabaseCommand    {
         public string SubscriptionName;
         public string NodeTag;
-        public string MentorNode;
         public DateTime LastClientConnectionTime;
 
         private UpdateSubscriptionClientConnectionTime():base(null){}
@@ -28,10 +25,11 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             if (existingValue == null)
                 throw new InvalidOperationException($"Subscription with id {itemId} does not exist");
 
-            if (record.Topology.WhoseTaskIsIt(this, isPassive) != NodeTag)
+            var subscription = JsonDeserializationCluster.SubscriptionState(existingValue);
+
+            if (record.Topology.WhoseTaskIsIt(subscription, isPassive) != NodeTag)
                 throw new InvalidOperationException($"Can't update subscription with name {itemId} by node {NodeTag}, because it's not it's task to update this subscription");
 
-            var subscription = JsonDeserializationCluster.SubscriptionState(existingValue);
 
             subscription.LastClientConnectionTime = LastClientConnectionTime;
 
@@ -40,21 +38,9 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
         public override void FillJson(DynamicJsonValue json)
         {
-            json[nameof(SubscriptionId)] = SubscriptionId;
             json[nameof(SubscriptionName)] = SubscriptionName;
             json[nameof(NodeTag)] = NodeTag;
             json[nameof(LastClientConnectionTime)] = LastClientConnectionTime;
-            json[nameof(MentorNode)] = MentorNode;
-        }
-
-        public ulong GetTaskKey()
-        {
-            return (ulong)SubscriptionId;
-        }
-
-        public string GetMentorNode()
-        {
-            return MentorNode;
         }
     }
 }

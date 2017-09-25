@@ -244,13 +244,5 @@ namespace Raven.Client.ServerWide
                 key = Hashing.Mix(key);
             }
         }
-
-        public void ValidateMemberNode(string node)
-        {
-            if (RelevantFor(node) == false)
-                throw new ArgumentException($"The node {node} is not part of the database group");
-            if (Members.Contains(node) == false)
-                throw new ArgumentException($"The node {node} is not vaild for the operation because it is not a member");
-        }
     }
 }

@@ -163,7 +163,10 @@ namespace Raven.Server.Web.System
 
                 if (mentor != null)
                 {
-                    databaseRecord.Topology.ValidateMemberNode(mentor);
+                    if (databaseRecord.Topology.RelevantFor(mentor) == false)
+                        throw new ArgumentException($"The node {mentor} is not part of the database group");
+                    if (databaseRecord.Topology.Members.Contains(mentor) == false)
+                        throw new ArgumentException($"The node {mentor} is not vaild for the operation because it is not a member");
                     databaseRecord.Topology.PredefinedMentors.Add(node, mentor);
                 }
 

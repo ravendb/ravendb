@@ -215,7 +215,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [NightlyBuildFact]
         public async Task SetMetorToExternalReplication()
         {
             var clusterSize = 5;
