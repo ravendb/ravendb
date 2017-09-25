@@ -1,45 +1,42 @@
 ﻿using System;
-using Jint;
 using Raven.Server.Documents.Patch;
+using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 
 namespace Raven.Server.SqlMigration
 {
     public class JsPatch
     {
-        private const string FunctionName = "Execute";
-        private const string ExecutionStr = "function " + FunctionName + "(document) {{(function () {{ {0} }}).apply(document)}}";
-        private readonly Engine _engine;
+        private const string FunctionName = "execute";
         private readonly bool _hasScript;
+        private readonly ScriptRunner.SingleRun _runner;
+        private readonly DocumentsOperationContext _context;
 
-        public JsPatch(string patchScript)
+        public JsPatch(string patchScript, DocumentsOperationContext context)
         {
-            if (string.IsNullOrEmpty(patchScript))
+            if (string.IsNullOrWhiteSpace(patchScript))
                 return;
 
-            _engine = new Engine(options =>
-            {
-                options.LimitRecursion(64)
-                    .SetReferencesResolver(new JintPreventResolvingTasksReferenceResolver())
-                    .Strict();
-            });
+            _context = context;
 
-            _engine.Execute(string.Format(ExecutionStr, patchScript));
+            var req = new PatchRequest(patchScript, PatchRequestType.None);
+            _context.DocumentDatabase.Scripts.GetScriptRunner(req, true, out _runner);
 
             _hasScript = true;
         }
 
-        public void PatchDocument(SqlMigrationDocument document)
+        public BlittableJsonReaderObject PatchDocument(BlittableJsonReaderObject document)
         {
-            if (!_hasScript)
-                return;
+            if (_hasScript == false)
+                return document;
 
             try
             {
-                _engine.Invoke(FunctionName, document);
+                return _runner.Run(_context, FunctionName, new object[] { document }).TranslateToObject(_context);
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException($"Error patching document of table '{document.TableName}'. Document id: {document.Id}", e);
+                throw new InvalidOperationException("Error patching document", e);
             }
         }
     }

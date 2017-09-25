@@ -35,30 +35,25 @@ namespace Raven.Server.SqlMigration
             _database = database;
             _context = context;
 
-            NewCommand();
-
-            _rowsRead = 0;
-
             _time = new Stopwatch();
         }
 
         public async Task WriteDatabase()
         {
-            SqlReader.RowsRead = 0;
-            _time.Start();
+            Reset();
 
-            foreach (var table in _database.Tables)
+            foreach (var table in _database.ParentTables)
             {
-                if (table.IsEmbedded)
-                    continue;
-
+                var patcher = table.GetJsPatch();
                 using (var reader = table.GetReader())
                 {
                     while (reader.Read())
                     {
                         var migrationDocument = _database.Factory.FromReader(reader, table, out var attachments);
 
-                        await InsertDocument(migrationDocument.ToBllitable(_context), migrationDocument.Id, attachments);
+                        var doc = patcher.PatchDocument(migrationDocument.ToBllitable(_context));
+
+                        await InsertDocument(doc, migrationDocument.Id, attachments);
                     }
                 }
             }
@@ -108,13 +103,15 @@ namespace Raven.Server.SqlMigration
   
         private async Task FlushCommands()
         {
+            if (_commands.Count == 0 && _attachmentStreams.Count == 0)
+                return;
+
             _command.ParsedCommands = new ArraySegment<BatchRequestParser.CommandData>(_commands.ToArray(), 0, _commands.Count);
             _command.AttachmentStreams = new Queue<BatchHandler.MergedBatchCommand.AttachmentStream>(_attachmentStreams);
            
             try
             {
                 await _context.DocumentDatabase.TxMerger.Enqueue(_command);
-                
             }
             catch (Exception e)
             {
@@ -125,13 +122,8 @@ namespace Raven.Server.SqlMigration
             var attachmentsCount = _command.ParsedCommands.Count(x => x.Type == CommandType.AttachmentPUT);
 
             OnDocumentsInserted?.Invoke((double) _time.ElapsedMilliseconds / 1000, SqlReader.RowsRead - _rowsRead, _command.ParsedCommands.Count - attachmentsCount, attachmentsCount);
-            _rowsRead = SqlReader.RowsRead;
-            _time.Restart();
-
-            NewCommand();
-
-            _commands.Clear();
-            _attachmentStreams.Clear();
+            
+            Reset();
 
             foreach (var dispose in _toDispose)
                 dispose.Dispose();
@@ -139,21 +131,27 @@ namespace Raven.Server.SqlMigration
             _toDispose.Clear();
         }
 
-        private void NewCommand()
+        private void Reset()
         {
+            _rowsRead = SqlReader.RowsRead;
+            _time.Restart();
+
             _command?.Dispose();
             _command = new BatchHandler.MergedBatchCommand
             {
                 Database = _context.DocumentDatabase,
                 AttachmentStreamsTempFile = _context.DocumentDatabase.DocumentsStorage.AttachmentsStorage.GetTempFile("put")
             };
+
+            _commands.Clear();
+            _attachmentStreams.Clear();
         }
 
         public void Dispose()
         {
             SqlReader.DisposeAll();
             SqlConnection.ClearAllPools();
-            _command.Dispose();
+            _command?.Dispose();
         }
     }
 }

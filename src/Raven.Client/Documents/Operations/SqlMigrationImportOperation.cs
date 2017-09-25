@@ -13,17 +13,15 @@ namespace Raven.Client.Documents.Operations
     {
         private readonly string _connectionString;
         private readonly bool _binaryToAttachment;
-        private readonly bool _includeSchema;
         private readonly bool _trimStrings;
         private readonly bool _skipUnsupportedTypes;
         private readonly int _batchSize;
         private readonly List<SqlMigrationTable> _tables;
 
-        public SqlMigrationImportOperation(string connectionString, List<SqlMigrationTable> tables, bool binaryToAttachment, bool includeSchema, bool trimStrings, bool skipUnsupportedTypes, int batchSize)
+        public SqlMigrationImportOperation(string connectionString, List<SqlMigrationTable> tables, bool binaryToAttachment, bool trimStrings, bool skipUnsupportedTypes, int batchSize)
         {
             _connectionString = connectionString;
             _binaryToAttachment = binaryToAttachment;
-            _includeSchema = includeSchema;
             _trimStrings = trimStrings;
             _skipUnsupportedTypes = skipUnsupportedTypes;
             _batchSize = batchSize;
@@ -32,7 +30,7 @@ namespace Raven.Client.Documents.Operations
 
         public RavenCommand<SqlMigrationImportResult> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new SqlMigrationImportCommand(_connectionString, _tables, _binaryToAttachment, _includeSchema, _trimStrings, _skipUnsupportedTypes, _batchSize);
+            return new SqlMigrationImportCommand(_connectionString, _tables, _binaryToAttachment, _trimStrings, _skipUnsupportedTypes, _batchSize);
         }
 
         public class SqlMigrationImportCommand : RavenCommand<SqlMigrationImportResult>
@@ -42,17 +40,15 @@ namespace Raven.Client.Documents.Operations
             public readonly string ConnectionStringName;
             public readonly List<SqlMigrationTable> Tables;
             public readonly bool BinaryToAttachment;
-            public readonly bool IncludeSchema;
             public readonly bool TrimStrings;
             public readonly bool SkipUnsupportedTypes;
             public readonly int BatchSize;
 
-            public SqlMigrationImportCommand(string connectionStringName, List<SqlMigrationTable> tables, bool binaryToAttachment, bool includeSchema, bool trimStrings, bool skipUnsupportedTypes, int batchSize)
+            public SqlMigrationImportCommand(string connectionStringName, List<SqlMigrationTable> tables, bool binaryToAttachment, bool trimStrings, bool skipUnsupportedTypes, int batchSize)
             {
                 ConnectionStringName = connectionStringName;
                 Tables = tables;
                 BinaryToAttachment = binaryToAttachment;
-                IncludeSchema = includeSchema;
                 TrimStrings = trimStrings;
                 SkipUnsupportedTypes = skipUnsupportedTypes;
                 BatchSize = batchSize;
@@ -80,10 +76,6 @@ namespace Raven.Client.Documents.Operations
                             writer.WriteBool(BinaryToAttachment);
                             writer.WriteComma();
 
-                            writer.WritePropertyName(nameof(IncludeSchema));
-                            writer.WriteBool(IncludeSchema);
-                            writer.WriteComma();
-
                             writer.WritePropertyName(nameof(TrimStrings));
                             writer.WriteBool(TrimStrings);
                             writer.WriteComma();
@@ -96,8 +88,7 @@ namespace Raven.Client.Documents.Operations
                             writer.WriteInteger(BatchSize);
                             writer.WriteComma();
 
-                            writer.WritePropertyName(nameof(Tables));
-                            WriteTablesArray(Tables, writer);
+                            WriteTablesArray(nameof(Tables), Tables, writer);
 
                             writer.WriteEndObject();
                         }
@@ -107,8 +98,9 @@ namespace Raven.Client.Documents.Operations
                 return request;
             }
 
-            private void WriteTablesArray(List<SqlMigrationTable> tables, BlittableJsonTextWriter writer)
+            private void WriteTablesArray(string name, List<SqlMigrationTable> tables, BlittableJsonTextWriter writer)
             {
+                writer.WritePropertyName(name);
                 writer.WriteStartArray();
 
                 if (tables != null)
@@ -119,18 +111,21 @@ namespace Raven.Client.Documents.Operations
 
                         writer.WritePropertyName(nameof(table.Name));
                         writer.WriteString(table.Name);
+                        writer.WriteComma();
 
                         writer.WritePropertyName(nameof(table.Query));
                         writer.WriteString(table.Query);
+                        writer.WriteComma();
 
                         writer.WritePropertyName(nameof(table.Patch));
                         writer.WriteString(table.Patch);
+                        writer.WriteComma();
 
-                        writer.WritePropertyName(nameof(table.Property));
-                        writer.WriteString(table.Property);
+                        writer.WritePropertyName(nameof(table.NewName));
+                        writer.WriteString(table.NewName);
+                        writer.WriteComma();
 
-                        writer.WritePropertyName(nameof(table.EmbeddedTables));
-                        WriteTablesArray(table.EmbeddedTables, writer);
+                        WriteTablesArray(nameof(table.EmbeddedTables), table.EmbeddedTables, writer);
 
                         writer.WriteEndObject();
                     }
@@ -153,7 +148,7 @@ namespace Raven.Client.Documents.Operations
             public string Name;
             public string Query;
             public string Patch;
-            public string Property;
+            public string NewName;
             public List<SqlMigrationTable> EmbeddedTables;
 
             public SqlMigrationTable()
@@ -175,7 +170,7 @@ namespace Raven.Client.Documents.Operations
                 item.TryGet(nameof(table.Name), out table.Name);
                 item.TryGet(nameof(table.Query), out table.Query);
                 item.TryGet(nameof(table.Patch), out table.Patch);
-                item.TryGet(nameof(table.Property), out table.Property);
+                item.TryGet(nameof(table.NewName), out table.NewName);
 
                 if (item.TryGet(nameof(table.EmbeddedTables), out BlittableJsonReaderArray embeddedTables) == false)
                     return table;
