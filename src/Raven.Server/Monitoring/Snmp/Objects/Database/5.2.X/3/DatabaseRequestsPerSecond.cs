@@ -12,7 +12,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
     public class DatabaseRequestsPerSecond : DatabaseScalarObjectBase<Gauge32>
     {
         public DatabaseRequestsPerSecond(string databaseName, DatabasesLandlord landlord, int index)
-            : base(databaseName, landlord, "5.2.{0}.3.5", index)
+            : base(databaseName, landlord, SnmpOids.Databases.RequestsPerSecond, index)
         {
         }
 

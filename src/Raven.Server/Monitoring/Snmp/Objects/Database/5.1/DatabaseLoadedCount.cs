@@ -8,7 +8,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Documents
         private readonly DatabasesLandlord _landlord;
 
         public DatabaseLoadedCount(DatabasesLandlord landlord)
-            : base("5.1.2")
+            : base(SnmpOids.Databases.General.LoadedCount)
         {
             _landlord = landlord;
         }

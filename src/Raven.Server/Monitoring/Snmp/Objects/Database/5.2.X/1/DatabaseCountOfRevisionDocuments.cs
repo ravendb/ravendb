@@ -7,7 +7,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
     public class DatabaseCountOfRevisionDocuments : DatabaseScalarObjectBase<Gauge32>
     {
         public DatabaseCountOfRevisionDocuments(string databaseName, DatabasesLandlord landlord, int index)
-            : base(databaseName, landlord, "5.2.{0}.1.5", index)
+            : base(databaseName, landlord, SnmpOids.Databases.CountOfRevisionDocuments, index)
         {
         }
 

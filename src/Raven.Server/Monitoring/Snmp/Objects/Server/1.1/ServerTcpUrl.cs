@@ -8,7 +8,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
         private readonly OctetString _url;
 
         public ServerTcpUrl(RavenConfiguration configuration)
-            : base("1.1.3")
+            : base(SnmpOids.Server.TcpUrl)
         {
             if (configuration.Core.TcpServerUrl != null)
                 _url = new OctetString(configuration.Core.TcpServerUrl);

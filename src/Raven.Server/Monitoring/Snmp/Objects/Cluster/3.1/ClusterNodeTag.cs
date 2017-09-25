@@ -8,7 +8,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
         private readonly ServerStore _store;
 
         public ClusterNodeTag(ServerStore store)
-            : base("3.1.1")
+            : base(SnmpOids.Cluster.NodeTag)
         {
             _store = store;
         }

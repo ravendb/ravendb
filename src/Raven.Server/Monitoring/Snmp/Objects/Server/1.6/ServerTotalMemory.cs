@@ -6,7 +6,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
     public class ServerTotalMemory : ScalarObjectBase<Gauge32>
     {
         public ServerTotalMemory()
-            : base("1.6.1")
+            : base(SnmpOids.Server.TotalMemory)
         {
         }
 
