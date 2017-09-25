@@ -19,7 +19,7 @@ namespace SlowTests.Issues
             {
                 using (var session = store.OpenSession())
                 {
-                    var ex = Assert.Throws<InvalidQueryException>(() => session.Advanced.RawQuery<Order>("from Orders where id() between 'orders/1' and 'orders/100'").ToList());
+                    var ex = Assert.Throws<InvalidQueryException>(() => session.Advanced.RawQuery<Order>("from Orders as o where id(o) between 'orders/1' and 'orders/100'").ToList());
 
                     Assert.Contains("Collection query does not support filtering by id() using Between operator. Supported operators are: =, IN", ex.Message);
                 }
