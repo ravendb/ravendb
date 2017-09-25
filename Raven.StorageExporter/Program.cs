@@ -79,6 +79,10 @@ namespace Raven.StorageExporter
                             return false;
                         }
                         break;
+                    case "--RavenFS":
+                        configuration.IsRavendbFs = true;
+                        currArgPos += 1;
+                        break;
                     case "-DocumentsStartEtag":
                         Etag etag;
                         if (Etag.TryParse(args[currArgPos + 1], out etag) == false)
@@ -164,6 +168,7 @@ Parameters:
  -T <TableName> : The name of the table to be exported.
  -BatchSize <integer number> : The size of the export batch (default size is 1024). 
  -DocumentsStartEtag <Etag> : The document etag to start the export from (default is Etag.Empty).
+ --RavenFS : Indicates that the storage is of RavenFS type, this will output the files as attachments.
  --Compression : Indicates that the database has the compression bundle.
  -Encryption <Encryption Key> <Algorithm Type> <Prefered Encryption Key Bits Size>: Encryption bundle key, algorithm type and bits size.
  -JournalsPath <Path> : The custom path to Voron journal files or Esent logs 
