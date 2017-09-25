@@ -14,7 +14,6 @@ class listView<T> {
 
     private items = new Map<number, T>();
     private cumulativeItemsHeight = new Map<number, number>();
-    private totalItemCount = 0;
     
     virtualHeight = ko.observable<number>(0);
     virtualWidth = ko.observable<number>(500); //TODO:
@@ -22,14 +21,15 @@ class listView<T> {
     private emptyTemplate: string = null;
     private isLoading = ko.observable(false);
 
-    private itemHeightProvider: (item: T) => number;
     private itemHtmlProvider: (item: T) => string;
+    private itemHeightProvider: (item: T, row: virtualListRow<T>) => number;
     private controller: listViewController<T>;
 
     private virtualRows: virtualListRow<T>[] = []; // These are the fixed number of elements that get displayed on screen. Each virtual row displays an element from .items array. As the user scrolls, rows will be recycled to represent different items.
     private $listElement: JQuery;
     private $viewportElement: JQuery;
     private listElementHeight: number;
+    private heightMeasureVirtualRow: virtualListRow<T>;
 
     private isListVisible = false;
     
@@ -40,7 +40,7 @@ class listView<T> {
 
     private emptyResult = ko.observable(true);
 
-    constructor(params: { controller: KnockoutObservable<listViewController<T>>, emptyTemplate: string, itemHeightProvider: (item: T) => number, itemHtmlProvider: (item: T) => string}) {
+    constructor(params: { controller: KnockoutObservable<listViewController<T>>, emptyTemplate: string, itemHtmlProvider: (item: T) => string, itemHeightProvider: (item: T, row: virtualListRow<T>) => number}) {
         this.listId = _.uniqueId("vl_");
 
         this.initController();
@@ -53,8 +53,9 @@ class listView<T> {
             this.emptyTemplate = params.emptyTemplate;
         }
         
-        this.itemHeightProvider = params.itemHeightProvider;
         this.itemHtmlProvider = params.itemHtmlProvider;
+        this.itemHeightProvider = params.itemHeightProvider || this.measureHeight;
+        this.heightMeasureVirtualRow = new virtualListRow(params.itemHtmlProvider);
     }
     
     private initController() {
@@ -62,7 +63,8 @@ class listView<T> {
             reset: () => this.resetItems(),
             pushElements: (items: T[]) => this.onNewElements(items),
             getItems: () => this.items,
-            scrollDown: () => this.scrollDown()
+            scrollDown: () => this.scrollDown(),
+            getTotalCount: () => this.items.size
         }
     }
 
@@ -86,19 +88,23 @@ class listView<T> {
         for (let i = 0; i < items.length; i++) {
             const item = items[i];
 
-            const itemIdx = this.totalItemCount;
+            const itemIdx = this.items.size;
 
             this.items.set(itemIdx, item);
 
-            const itemHeight = this.itemHeightProvider(item);
+            const itemHeight = this.itemHeightProvider(item, this.heightMeasureVirtualRow);
             this.cumulativeItemsHeight.set(itemIdx, virtualHeight + itemHeight);
             virtualHeight += itemHeight;
-            this.totalItemCount++;
         }
         this.virtualHeight(virtualHeight);
         
         
         this.render();
+    }
+    
+    private measureHeight(item: T): number {
+        this.heightMeasureVirtualRow.populate(item, 0, -20000, undefined);
+        return this.heightMeasureVirtualRow.element.height();
     }
     
     private scrollDown() {
@@ -119,7 +125,8 @@ class listView<T> {
         this.$viewportElement
             .find(listView.viewportScrollerSelector)
             .empty()
-            .append(this.virtualRows.map(r => r.element[0]));
+            .append(this.virtualRows.map(r => r.element[0]))
+            .append(this.heightMeasureVirtualRow.element[0]);
     }
 
     private createVirtualRows(): virtualListRow<T>[] {
@@ -137,7 +144,7 @@ class listView<T> {
     }
 
     private listScrolled() {
-        if (this.totalItemCount != null) {
+        if (this.items.size) {
             window.cancelAnimationFrame(this.scrollAnimationFrameHandle);
             this.scrollAnimationFrameHandle = window.requestAnimationFrame(() => this.render());
         }
@@ -250,7 +257,7 @@ class listView<T> {
         yEnd = Math.min(yEnd, this.virtualHeight());
         
         let minIdx = 0;
-        let maxIdx = this.totalItemCount;
+        let maxIdx = this.items.size;
         
         while (minIdx !== maxIdx) {
             let idxToTest = Math.floor((minIdx + maxIdx) / 2);
@@ -275,7 +282,7 @@ class listView<T> {
         let firstIdx = minIdx;
         let lastIdx = 0;
         
-        for (let i = firstIdx; i < this.totalItemCount; i++) {
+        for (let i = firstIdx; i < this.items.size; i++) {
             const itemEnd = this.cumulativeItemsHeight.get(i);
             const itemStart = itemEnd - this.getItemHeight(i);
 
@@ -304,7 +311,6 @@ class listView<T> {
     private resetItems() {
         this.items.clear();
         this.cumulativeItemsHeight.clear();
-        this.totalItemCount = 0;
         this.emptyResult(true);
         this.virtualHeight(0);
         

@@ -6,12 +6,69 @@ import adminLogsConfigEntry = require("models/database/debug/adminLogsConfigEntr
 import eventsCollector = require("common/eventsCollector");
 import listViewController = require("widgets/listView/listViewController");
 import fileDownloader = require("common/fileDownloader");
+import virtualListRow = require("widgets/listView/virtualListRow");
+
+class heightCalculator {
+    
+    private charactersPerLine = undefined as number;
+    private padding = undefined as number;
+    private lineHeight = undefined as number;
+    
+    measure(item: string, row: virtualListRow<string>) {
+        this.ensureCacheFilled(row);
+        
+        const lines = item.split("\r\n");
+        const totalLinesCount = _.sum(lines.map(l => {
+            if (l.length > this.charactersPerLine) {
+                return Math.ceil(l.length  * 1.0 / this.charactersPerLine);
+            }
+            return 1;
+        }));
+        
+        return this.padding + totalLinesCount * this.lineHeight;
+    }
+    
+    // try to compute max numbers of characters in single line
+    ensureCacheFilled(row: virtualListRow<string>) {
+        if (!_.isUndefined(this.charactersPerLine)) {
+            return;
+        }
+        
+        row.populate("A", 0, -200, undefined);
+        const initialHeight = row.element.height();
+        let charactersInline = 1;
+        
+        while (true) {
+            row.populate(_.repeat("A", charactersInline), 0, -200, undefined);
+            if (row.element.height() > initialHeight) {
+                break;
+            }
+            charactersInline++;
+        }
+        
+        charactersInline -= 3; // substract few character to have extra space for scrolls
+        
+        const doubleLinesHeight = row.element.height();
+        
+        this.lineHeight = doubleLinesHeight - initialHeight;
+        this.padding = doubleLinesHeight - 2 * this.lineHeight;
+        this.charactersPerLine = charactersInline;
+    }
+}
 
 class adminLogs extends viewModelBase {
 
     private liveClient = ko.observable<adminLogsWebSocketClient>();
     private listController = ko.observable<listViewController<string>>();
     private headerSeen = false;
+    
+    private allData = [] as string[];
+    
+    filter = ko.observable<string>();
+    
+    private appendElementsTask: number;
+    private pendingMessages = [] as string[];
+    private heightCalculator = new heightCalculator();
     
     private configuration = ko.observable<adminLogsConfig>(adminLogsConfig.empty());
     
@@ -20,7 +77,9 @@ class adminLogs extends viewModelBase {
     constructor() {
         super();
         
-        this.bindToCurrentInstance("toggleTail");
+        this.bindToCurrentInstance("toggleTail", "itemHeightProvider");
+        
+        this.filter.throttle(500).subscribe(() => this.filterLogEntries());
     }
     
     activate(args: any) {
@@ -35,9 +94,22 @@ class adminLogs extends viewModelBase {
             this.liveClient().dispose();
         }
     }
+    
+    filterLogEntries() {
+        const searchText = this.filter().toLocaleLowerCase();
 
-    itemHeightProvider(item: string) {
-        return 27 + 17 * (item.split("\r\n").length - 1);  //tODO:
+        this.listController().reset();
+        
+        if (searchText) {
+            const filteredItems = this.allData.filter(x => x.toLocaleLowerCase().includes(searchText));
+            this.listController().pushElements(filteredItems);
+        } else {
+            this.listController().pushElements(this.allData);
+        }
+    }
+
+    itemHeightProvider(item: string, row: virtualListRow<string>) {
+        return this.heightCalculator.measure(item, row);
     }
     
     itemHtmlProvider(item: string) {
@@ -46,7 +118,7 @@ class adminLogs extends viewModelBase {
         
         return $("<pre class='item'></pre>")
             .toggleClass("bg-danger", hasError)
-            .html(item);
+            .text(item);
     }
     
     compositionComplete() {
@@ -73,7 +145,13 @@ class adminLogs extends viewModelBase {
     }
     
     private onData(data: string) {
-        //TODO: is no space in buffer then disconnect!
+        
+        if (this.listController().getTotalCount() + this.pendingMessages.length >= this.configuration().maxEntries()) {
+            this.pauseLogs();
+            return;
+        }
+        
+        data = data.trim();
         
         if (!this.headerSeen) {
             
@@ -81,8 +159,20 @@ class adminLogs extends viewModelBase {
             return;
         }
         
-        this.listController().pushElements([data.trim()]);
+        this.allData.push(data);
+        this.pendingMessages.push(data);
         
+        if (!this.appendElementsTask) {
+            this.appendElementsTask = setTimeout(() => this.onAppendPendingMessages(), 333);
+        }
+    }
+    
+    private onAppendPendingMessages() {
+        this.appendElementsTask = null;
+        this.listController().pushElements(this.pendingMessages);
+        
+        this.pendingMessages.length = 0;
+
         if (this.tailEnabled()) {
             this.listController().scrollDown();
         }
@@ -90,6 +180,7 @@ class adminLogs extends viewModelBase {
     
     clear() {
         eventsCollector.default.reportEvent("admin-logs", "clear");
+        this.allData.length = 0;
         this.listController().reset();
     }
     
