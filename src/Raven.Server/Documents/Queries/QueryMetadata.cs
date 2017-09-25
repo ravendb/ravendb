@@ -576,6 +576,8 @@ namespace Raven.Server.Documents.Queries
 
                     if (string.Equals("id", methodName, StringComparison.OrdinalIgnoreCase))
                     {
+                        if(IsGroupBy)
+                            ThrowInvalidIdInGroupByQuery(parameters);
                         return SelectField.Create(Constants.Documents.Indexing.Fields.DocumentIdFieldName, alias);
                     }
 
@@ -623,6 +625,11 @@ namespace Raven.Server.Documents.Queries
             }
             ThrowUnhandledExpressionTypeInSelect(expression.Type.ToString(), QueryText, parameters);
             return null; // never hit
+        }
+
+        private void ThrowInvalidIdInGroupByQuery(BlittableJsonReaderObject parameters)
+        {
+            throw new InvalidQueryException("Cannot use id() method in a group by query", QueryText, parameters);
         }
 
         private SelectField GetSelectValue(string alias, FieldExpression expressionField)
