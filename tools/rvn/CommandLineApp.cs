@@ -218,11 +218,12 @@ namespace rvn
 
                 cmd.Command("init-keys", subcmd =>
                 {
-                    subcmd.ExtendedHelpText = subcmd.Description = "Initialize keys";
+                    subcmd.ExtendedHelpText = subcmd.Description = "Initializes keys";
                     subcmd.HelpOption(HelpOptionString);
                     subcmd.OnExecute(() =>
                     {
-                        OfflineOperations.InitKeys();
+                        var result = OfflineOperations.InitKeys();
+                        Console.WriteLine(result);
                         return 0;
                     });
                 });
@@ -312,6 +313,12 @@ namespace rvn
                                 () => OfflineOperations.Decrypt(systemDir.Value), systemDir, subcmd);
                         });
                     });
+                });
+
+                cmd.OnExecute(() =>
+                {
+                    cmd.ShowHelp();
+                    return 1;
                 });
             });
         }
