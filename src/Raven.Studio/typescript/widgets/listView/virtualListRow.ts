@@ -86,7 +86,7 @@ class virtualListRow<T> {
     
     private setElementHeight(val: number) {
         this._height = val;
-        this.element.css("height", val + "px");
+        this.element.css("height", _.isUndefined(val) ? "auto" : val + "px");
     }
 }
 

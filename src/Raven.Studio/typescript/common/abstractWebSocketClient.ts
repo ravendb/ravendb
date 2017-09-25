@@ -99,7 +99,7 @@ abstract class abstractWebSocketClient<T> {
                     this.connect(() => this.connectWebSocket(connectArgs));
                 }
             }
-        }
+        };
         this.webSocket.onopen = () => {
             this.onOpen();
             connectionOpened = true;

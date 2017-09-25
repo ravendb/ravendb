@@ -6,6 +6,7 @@ interface listViewController<T> {
     reset(): void;
     getItems: () => Map<number, T>;
     scrollDown: () => void;
+    getTotalCount: () => number;
 }
 
 export = listViewController;
