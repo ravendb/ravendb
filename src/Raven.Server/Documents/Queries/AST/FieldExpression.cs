@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.Queries.AST
             for (int i = start; i < Compound.Count; i++)
             {
                 sb.Append(Compound[i]);
-                if (i + i < Compound.Count && Compound[i + 1] != "[]")
+                if (i + 1 < Compound.Count && Compound[i + 1] != "[]")
                 {
                     sb.Append(".");
                 }
