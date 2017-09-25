@@ -114,7 +114,8 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
                 SubscriptionName: null,
                 ResponsibleNode: null,
                 LastClientConnectionTime: null,
-                LastTimeServerMadeProgressWithDocuments: null
+                LastTimeServerMadeProgressWithDocuments: null,
+                MentorNode: null
             }, false);
     }
 }
