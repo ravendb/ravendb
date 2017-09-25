@@ -27,12 +27,12 @@ class adminLogsWebSocketClient extends abstractWebSocketClient<string> {
         const includes = config
             .entries()
             .filter(x => x.mode() === "include")
-            .map(x => x.logSource());
+            .map(x => "Source:" + x.logSource());
         
         const excludes = config
             .entries()
             .filter(x => x.mode() === "exclude")
-            .map(x => x.logSource());
+            .map(x => "Source:" + x.logSource());
         
         const args = {
             only: includes,
