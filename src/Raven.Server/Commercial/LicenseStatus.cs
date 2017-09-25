@@ -94,7 +94,22 @@ namespace Raven.Server.Commercial
 
         public int Ratio => MaxMemory / MaxCores;
 
-        public int MaxClusterSize => GetValue<int?>("maxClusterSize") ?? 3;
+        public int MaxClusterSize
+        {
+            get
+            {
+                var maxClusterSize = GetValue<int?>("maxClusterSize");
+                switch (maxClusterSize)
+                {
+                    case null:
+                        return 3;
+                    case 0:
+                        return int.MaxValue;
+                    default:
+                        return maxClusterSize.Value;
+                }
+            }
+        }
 
         public bool DistributedCluster => GetValue<bool>("distributedCluster");
 
