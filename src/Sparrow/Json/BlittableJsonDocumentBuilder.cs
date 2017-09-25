@@ -4,11 +4,38 @@ using System.Runtime.CompilerServices;
 using Sparrow.Collections;
 using Sparrow.Exceptions;
 using Sparrow.Json.Parsing;
+using Sparrow.Threading;
 
 namespace Sparrow.Json
 {
     public sealed class BlittableJsonDocumentBuilder : IDisposable
     {
+        private class GlobalPoolItem
+        {
+            public struct ResetBehavior : IResetSupport<GlobalPoolItem>
+            {
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                public void Reset(GlobalPoolItem value)
+                {
+                    value.PropertyCache.Reset();
+                    value.PositionsCache.Reset();
+                    value.TokensCache.Reset();
+                }
+            }
+
+            public readonly ListCache<PropertyTag> PropertyCache = new ListCache<PropertyTag>();
+            public readonly ListCache<int> PositionsCache = new ListCache<int>();
+            public readonly ListCache<BlittableJsonToken> TokensCache = new ListCache<BlittableJsonToken>();
+
+            public void Reset()
+            {
+                ResetBehavior behavior;
+                behavior.Reset(this);
+            }
+        }
+
+        private static readonly ObjectPool<GlobalPoolItem, GlobalPoolItem.ResetBehavior> GlobalCache = new ObjectPool<GlobalPoolItem,GlobalPoolItem.ResetBehavior>( () => new GlobalPoolItem() );
+
         private static readonly StringSegment UnderscoreSegment = new StringSegment("_");
 
         private readonly FastStack<BuildingState> _continuationState = new FastStack<BuildingState>();
@@ -21,12 +48,15 @@ namespace Sparrow.Json
         private readonly JsonParserState _state;
         private LazyStringValue _fakeFieldName;
 
+        private readonly SingleUseFlag _disposed = new SingleUseFlag();
+
         private WriteToken _writeToken;
         private  string _debugTag;
 
-        private readonly ListCache<PropertyTag> _propertiesCache = new ListCache<PropertyTag>();
-        private readonly ListCache<int> _positionsCache = new ListCache<int>();
-        private readonly ListCache<BlittableJsonToken> _tokensCache = new ListCache<BlittableJsonToken>();
+        private readonly GlobalPoolItem _cacheItem;
+        private readonly ListCache<PropertyTag> _propertiesCache;
+        private readonly ListCache<int> _positionsCache;
+        private readonly ListCache<BlittableJsonToken> _tokensCache;
 
         private class ListCache<T>
         {
@@ -67,6 +97,11 @@ namespace Sparrow.Json
             _reader = reader;
             _modifier = modifier;
             _writer = writer ?? new BlittableWriter<UnmanagedWriteBuffer>(context);
+
+            _cacheItem = GlobalCache.Allocate();
+            _propertiesCache = _cacheItem.PropertyCache;
+            _positionsCache = _cacheItem.PositionsCache;
+            _tokensCache = _cacheItem.TokensCache;            
         }
 
         public BlittableJsonDocumentBuilder(
@@ -91,14 +126,18 @@ namespace Sparrow.Json
             _continuationState.Clear();
             _writeToken = default(WriteToken);
             _writer.Reset();
-            ResetCaches();
+            _cacheItem.Reset();
         }
 
         public void Renew(string debugTag, UsageMode mode)
         {
-            Reset();
+            _writeToken = default(WriteToken);
             _debugTag = debugTag;
             _mode = mode;
+
+            _continuationState.Clear();          
+            _cacheItem.Reset();
+
             _writer.ResetAndRenew();
             _modifier?.Reset(_context);
 
@@ -125,7 +164,11 @@ namespace Sparrow.Json
 
         public void Dispose()
         {
+            if (_disposed.Raise() == false)
+                return;
+
             _writer.Dispose();
+            GlobalCache.Free(_cacheItem);
         }
 
         private bool ReadInternal<TWriteStrategy>() where TWriteStrategy : IWriteStrategy
@@ -517,20 +560,12 @@ namespace Sparrow.Json
             var rootOffset = _writeToken.ValuePos;
 
             _writer.WriteDocumentMetadata(rootOffset, documentToken);
-            ResetCaches();
+            _cacheItem.Reset();
         }
 
         public BlittableJsonReaderObject CreateReader()
         {
             return _writer.CreateReader();
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void ResetCaches()
-        {
-            _propertiesCache.Reset();
-            _tokensCache.Reset();
-            _positionsCache.Reset();
         }
 
         public BlittableJsonReaderArray CreateArrayReader(bool noCache)
