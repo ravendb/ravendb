@@ -158,6 +158,8 @@ declare module AceAjax {
         clausesKeywords: string[];
         clauseAppendKeywords: string[];
         binaryOperations: string[];
+        binaryOperators: string[];
+        whereFunctions: string[];
     }
 }
 
