@@ -35,12 +35,7 @@ class about extends viewModelBase {
             return "Invalid license";
         }
 
-        let licenseType = licenseStatus.Type;
-        if (licenseType === "Free") {
-            licenseType += " Single Node";
-        }
-
-        return licenseType + " License";
+        return licenseStatus.Type + " License";
     });
 
     shortDescription = ko.pureComputed(() => {
