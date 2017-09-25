@@ -174,10 +174,14 @@ class genUtils {
 
     /***  String Methods ***/
 
-    static trimMessage(message: string) {
+    static trimMessage(message: any) {
         if (!message) {
             return message;
         }
+        if (typeof message !== "string") {
+            message = message.toString();
+        }
+        
         const lineBreakIdx = Math.min(message.indexOf("\r"), message.indexOf("\r"));
         if (lineBreakIdx !== -1 && lineBreakIdx < 256) {
             return message.substr(0, lineBreakIdx);

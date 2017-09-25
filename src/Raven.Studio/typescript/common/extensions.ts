@@ -1,6 +1,7 @@
 /// <reference path="../../typings/tsd.d.ts"/>
 
 import virtualGrid = require("widgets/virtualGrid/virtualGrid");
+import listView = require("widgets/listView/listView");
 
 class extensions {
     static install() {
@@ -10,6 +11,7 @@ class extensions {
         extensions.configureValidation();
 
         virtualGrid.install();
+        listView.install();
 
         // Want Intellisense for your extensions?
         // Go to extensionInterfaces.ts and add the function signature there.

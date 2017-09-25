@@ -308,12 +308,6 @@ interface mergeResult {
   Metadata: string;
 }
 
-interface adminLogsConfigEntryDto {
-    category: string;
-    level: string;
-    includeStackTrace: boolean;
-}
-
 interface performanceTestRequestDto {
     Path: string;
     FileSize: number;

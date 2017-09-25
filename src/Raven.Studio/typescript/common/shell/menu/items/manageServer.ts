@@ -72,6 +72,15 @@ function getManageServerMenuItem() {
             dynamicHash: appUrl.forCertificates,
             enabled: accessHelper.isGlobalAdmin
         }),
+        new leafMenuItem({
+            route: 'admin/settings/adminLogs',
+            moduleId: 'viewmodels/manage/adminLogs',
+            title: 'Admin Logs',
+            nav: true,
+            css: 'icon-admin-logs',
+            dynamicHash: appUrl.forAdminLogs,
+            enabled: accessHelper.isGlobalAdmin
+        }),
         /* TODO
         new leafMenuItem({
             route: 'admin/settings/compact',
@@ -82,15 +91,7 @@ function getManageServerMenuItem() {
             dynamicHash: appUrl.forCompact,
             enabled: accessHelper.isGlobalAdmin
         }),
-        new leafMenuItem({
-            route: 'admin/settings/adminLogs',
-            moduleId: 'viewmodels/manage/adminLogs',
-            title: 'Admin Logs',
-            nav: true,
-            css: 'icon-admin-logs',
-            dynamicHash: appUrl.forAdminLogs,
-            enabled: accessHelper.isGlobalAdmin
-        }),
+       
         new leafMenuItem({
             route: 'admin/settings/topology',
             moduleId: 'viewmodels/manage/topology',

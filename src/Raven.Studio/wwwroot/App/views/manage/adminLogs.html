@@ -1,40 +1,104 @@
-<div data-bind="visible: isForbidden" class="text-center">
-    <h4 class="page-header text-info">You are not authorized to view this page!</h4>
-</div>
-
-<section id="logsContainer" style="width: 100%; position: relative" data-bind="visible: !isForbidden()">
-    <div class="panel panel-default panel-wo-margin">
-        <div class="panel-heading panel-info">
-            <div>
-                <div class="btn-group">
-                    <button type="button" class="btn btn-primary" data-bind="click: configureConnection">Configure Connection</button>
-                    <button type="button" class="btn btn-success" data-bind="click: reconnect">Reconnect</button>
-                    <button type="button" class="btn btn-warning" data-bind="click: disconnect">Disconnect</button>
-                </div>
-                <div class="btn-group">
-                    <button type="button" class="btn btn-default" data-bind="css: { 'active': keepDown }, click: function () { this.toggleKeepDown() }">Keep Down</button>
-                    <button type="button" class="btn btn-default" data-bind="click: clearLogs">Clear</button>
-                </div>
-                <div class="btn-group">
-                    <button type="button" class="btn btn-default" data-bind="click: exportLogs">Export</button>
-                </div>
-            </div>
+<div class="flex-vertical absolute-fill content-margin">
+    <div class="flex-horizontal flex-noshrink">
+        <div>
+            <button class="btn btn-primary" data-bind="click: pauseLogs, visible: liveClient()">
+                <i class="icon-pause"></i> <span>Pause</span>
+            </button>
+            <button class="btn btn-primary" data-bind="click: resumeLogs, visible: !liveClient()">
+                <i class="icon-play"></i> <span>Resume</span>
+            </button>
+            <button class="btn btn-default" data-bind="click: exportToFile">
+                <i class="icon-export"></i><span>Export</span>
+            </button>
         </div>
-        <div class="panel-body">
-            <div class="text-center" data-bind="visible: !adminLogsConfig()">
-                <h3 class="text-info">
-                    Click on 'Configure Connection' to start.
-                </h3>
-            </div>
-            <div id="rawLogsContainer" class="bs-code-output skip-header" data-bind="visible: adminLogsConfig, if: adminLogsConfig">
-                <pre id="adminLogsPre" style="overflow: auto" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', container: '#logsContainer'  }"></pre>
-                <div class="header small col-sm-11">
-                    <strong>Status: </strong><label data-bind="text: ($root.connected() == true ? 'Connected' : 'Disconnected'), css: { 'text-danger': $root.connected() == false, 'text-success': $root.connected() == true }"></label>
-                    <strong>; Entries: <label data-bind="text: $root.entriesCount()"></label></strong>
-                    <strong>; Buffer Size: </strong><label data-bind="text: $root.adminLogsConfig().maxEntries"></label>
-                </div>
-            </div>
-           
+        <div>
+            <input class="form-control" placeholder="Filter">
         </div>
     </div>
-</section>
+    <div class="flex-horizontal flex-noshrink">
+        <div class="flex-separator"></div>
+
+        <div class="btn-group dropdown-right">
+            <button class="btn btn-default btn-sm dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                <i class="icon-settings"></i><span>Options</span>
+                <span class="caret"></span>
+            </button>
+            <div class="dropdown-menu colselect-dropdown slidein-style">
+                <div class="columns-list-container flex-vertical">
+                    <div class="form flex-horizontal margin-bottom margin-bottom-sm">
+                        <div>
+                            Max log entries
+                        </div>
+                        <div class="flex-grow">
+                            <input class="form-control input-sm" type="number" placeholder="10000 (default)" value="10000" />
+                        </div>
+                    </div>
+                    <h4>Log source filters</h4>
+                    <div class="flex-horizontal margin-bottom margin-bottom-sm">
+                        <div class="btn-group flex-grow">
+                            <input type="text" placeholder="Source name" class="form-control input-sm dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                            <span class="caret"></span>
+                            <ul class="dropdown-menu">
+                                <li>
+                                    <a href="#">
+                                        Raven/Server
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                        <div>
+                            <button class="btn btn-sm btn-default"><i class="icon-plus"></i> <span>Include</span></button>
+                            <button class="btn btn-sm btn-default"><i class="icon-minus"></i> <span>Exclude</span></button>
+                        </div>
+                    </div>
+                    <div class="flex-grow">
+                        <ul class="column-list scroll">
+                            <li>
+                                <div class="column-name flex-center">
+                                    <div class="padding padding-xs">Raven/Server</div>
+                                </div>
+                                <div class="flex-center">
+                                    <div class="padding padding-xs text-success"><i class="icon-plus"></i><span>Include</span></div>
+                                </div>
+                                <a href="#" class="column-remove"><i class="icon-trash"></i></a>
+                            </li>
+                            <li>
+                                <div class="column-name flex-center">
+                                    <div class="padding padding-xs">Raven/Replication</div>
+                                </div>
+                                <div class="flex-center">
+                                    <div class="padding padding-xs text-warning"><i class="icon-minus"></i><span>Exclude</span></div>
+                                </div>
+                                <a href="#" class="column-remove"><i class="icon-trash"></i></a>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="flex-horizontal margin-top margin-top-sm">
+                        <div class="flex-separator"></div>
+                        <button class="btn btn-success btn-sm"><i class="icon-save"></i> <span>Apply</span></button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <button class="btn btn-sm btn-info btn-checkable" data-bind="click: toggleTail, css: { active: tailEnabled }">
+            <i class="icon-logs"></i> <span>Monitoring (tail -f)</span>
+        </button>
+
+        <button class="btn btn-sm btn-danger" data-bind="click: clear">
+            <i class="icon-cancel"></i><span>Clear</span>
+        </button>
+
+    </div>
+
+    <div class="log-list flex-grow scroll">
+        <list-view params="controller: listController, emptyTemplate: 'empty-admin-logs-template', itemHeightProvider: itemHeightProvider, itemHtmlProvider: itemHtmlProvider"></list-view>
+    </div>
+
+</div>
+<script type="text/html" id="empty-admin-logs-template">
+    No log entries for now.
+</script> 
+
+<script type="text/html" id="admin-log-item-template"><pre class="item">This is test!</pre></script> 
