@@ -75,7 +75,7 @@ class queryCompleter {
         return null;
     }
 
-    private getIndexFields(queryIndexName: string, queryIndexType: string, prefix: string): JQueryPromise<autoCompleteWordList[]> {
+    private getIndexFields(queryIndexName: string, queryIndexType: string, prefix: string, additions: autoCompleteWordList[] = null): JQueryPromise<autoCompleteWordList[]> {
         const wordList: autoCompleteWordList[] = [];
 
         let key = queryIndexName;
@@ -90,14 +90,27 @@ class queryCompleter {
 
         const fieldsTasks = $.Deferred<autoCompleteWordList[]>();
         
+        const taskResult = () => {
+            if (!prefix) {
+                wordList.push(
+                    this.normalizeWord({value: "ID", score: 0, meta: "function"})
+                );
+            }
+            if (additions) {
+                wordList.push(...additions.map(addition => this.normalizeWord(addition)));
+            }
+
+            this.indexOrCollectionFieldsCache.set(key, wordList);
+            fieldsTasks.resolve(wordList);
+        };
+        
         if (queryIndexType === "index") {
             this.providers.indexFields(queryIndexName, fields => {
                 fields.map(field => {
-                    wordList.push({caption: field, value: queryCompleter.escapeCollectionOrFieldName(field), score: 1, meta: "field"});
+                    wordList.push(this.normalizeWord({caption: field, value: queryCompleter.escapeCollectionOrFieldName(field), score: 1, meta: "field"}));
                 });
-                
-                this.indexOrCollectionFieldsCache.set(key, wordList);
-                fieldsTasks.resolve(wordList);
+
+                return taskResult();
             });
         } else {
             this.providers.collectionFields(queryIndexName, prefix, fields => {
@@ -108,12 +121,11 @@ class queryCompleter {
                         }
                         return fieldType;
                     }).join(" | ");
-
-                    wordList.push({caption: key, value: queryCompleter.escapeCollectionOrFieldName(key), score: 1, meta: formattedFieldType + " field"});
+                    
+                    wordList.push(this.normalizeWord({caption: key, value: queryCompleter.escapeCollectionOrFieldName(key), score: 1, meta: formattedFieldType + " field"}));
                 });
-                
-                this.indexOrCollectionFieldsCache.set(key, wordList);
-                fieldsTasks.resolve(wordList);
+
+                return taskResult();
             });
         }
 
@@ -301,23 +313,15 @@ class queryCompleter {
         return null;
     }
 
-    private completeFields(session: AceAjax.IEditSession, prefix: string, callback: (errors: any[], wordList: autoCompleteWordList[]) => void, functions: autoCompleteWordList[] = null): void {
+    private completeFields(session: AceAjax.IEditSession, prefix: string, callback: (errors: any[], wordList: autoCompleteWordList[]) => void, additions: autoCompleteWordList[] = null): void {
         const queryIndexName = queryCompleter.extractIndexOrCollectionName(session);
         if (!queryIndexName) {
             return;
         }
         
-        this.getIndexFields(queryIndexName.name, queryIndexName.type, prefix)
+        this.getIndexFields(queryIndexName.name, queryIndexName.type, prefix, additions)
             .done((wordList) => {
-                if (functions) {
-                    wordList.push(...functions);
-                }
-                if (!prefix) {
-                    wordList.push(
-                        {value: "ID", score: 0, meta: "function"}
-                    );
-                }
-                this.completeWords(callback, wordList);
+                callback(null, wordList);
             });
     }
 
@@ -585,17 +589,21 @@ class queryCompleter {
     }
 
     private completeWords(callback: (errors: any[], wordList: autoCompleteWordList[]) => void, keywords: autoCompleteWordList[]) {
-        callback(null,  keywords.map(keyword  => {
-            if (!keyword.caption){
-                keyword.caption = _.trim(keyword.value, "'");
-            }
-            if (keyword.meta === "function"){
-                keyword.value += "(";
-            } else {
-                keyword.value += " "; // insert space after each completed keyword or other value.
-            }
-            return keyword;
-        }))
+        callback(null, keywords.map(keyword => {
+            return this.normalizeWord(keyword);
+        }));
+    }
+
+    private normalizeWord(keyword: autoCompleteWordList) {
+        if (!keyword.caption) {
+            keyword.caption = _.trim(keyword.value, "'");
+        }
+        if (keyword.meta === "function") {
+            keyword.value += "(";
+        } else {
+            keyword.value += " "; // insert space after each completed keyword or other value.
+        }
+        return keyword;
     }
 
     private static escapeCollectionOrFieldName(name: string) : string {
