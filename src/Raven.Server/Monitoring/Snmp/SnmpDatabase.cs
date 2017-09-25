@@ -8,6 +8,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Server.Documents;
 using Raven.Server.Monitoring.Snmp.Objects.Database;
 using Raven.Server.Monitoring.Snmp.Objects.Server;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Monitoring.Snmp;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -139,7 +140,7 @@ namespace Raven.Server.Monitoring.Snmp
                     {
                         context.OpenReadTransaction();
 
-                        var mapping = GetMapping(context, database);
+                        var mapping = GetIndexMapping(context, database.ServerStore, database.Name);
                         if (mapping.ContainsKey(change.Name) == false)
                         {
                             context.CloseTransaction();
@@ -153,7 +154,7 @@ namespace Raven.Server.Monitoring.Snmp
 
                             context.OpenReadTransaction();
 
-                            mapping = GetMapping(context, database);
+                            mapping = GetIndexMapping(context, database.ServerStore, database.Name);
                         }
 
                         LoadIndex(change.Name, (int)mapping[change.Name]);
@@ -177,7 +178,7 @@ namespace Raven.Server.Monitoring.Snmp
             {
                 context.OpenReadTransaction();
 
-                var mapping = GetMapping(context, database);
+                var mapping = GetIndexMapping(context, database.ServerStore, database.Name);
 
                 var missingIndexes = new List<string>();
                 foreach (var index in indexes)
@@ -195,7 +196,7 @@ namespace Raven.Server.Monitoring.Snmp
 
                     context.OpenReadTransaction();
 
-                    mapping = GetMapping(context, database);
+                    mapping = GetIndexMapping(context, database.ServerStore, database.Name);
                 }
 
                 foreach (var index in indexes)
@@ -228,9 +229,9 @@ namespace Raven.Server.Monitoring.Snmp
             _loadedIndexes[indexName] = index;
         }
 
-        private static Dictionary<string, long> GetMapping(TransactionOperationContext context, DocumentDatabase database)
+        internal static Dictionary<string, long> GetIndexMapping(TransactionOperationContext context, ServerStore serverStore, string databaseName)
         {
-            var json = database.ServerStore.Cluster.Read(context, UpdateSnmpDatabaseIndexesMappingCommand.GetStorageKey(database.Name));
+            var json = serverStore.Cluster.Read(context, UpdateSnmpDatabaseIndexesMappingCommand.GetStorageKey(databaseName));
 
             var result = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
             if (json == null)

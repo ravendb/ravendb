@@ -9,7 +9,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
         private readonly ServerStatistics _statistics;
 
         public ServerLastRequestTime(ServerStatistics statistics)
-            : base("1.8")
+            : base(SnmpOids.Server.LastRequestTime)
         {
             _statistics = statistics;
         }

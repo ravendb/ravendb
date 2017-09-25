@@ -13,10 +13,12 @@ using Raven.Client;
 using Raven.Client.Util;
 using Raven.Server.Monitoring.Snmp.Objects.Documents;
 using Raven.Server.Monitoring.Snmp.Objects.Server;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Monitoring.Snmp;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
+using ServerVersion = Raven.Server.Monitoring.Snmp.Objects.Server.ServerVersion;
 
 namespace Raven.Server.Monitoring.Snmp
 {
@@ -74,7 +76,7 @@ namespace Raven.Server.Monitoring.Snmp
                     {
                         context.OpenReadTransaction();
 
-                        var mapping = GetMapping(context);
+                        var mapping = GetMapping(_server.ServerStore, context);
                         if (mapping.ContainsKey(databaseName) == false)
                         {
                             context.CloseTransaction();
@@ -84,7 +86,7 @@ namespace Raven.Server.Monitoring.Snmp
 
                             context.OpenReadTransaction();
 
-                            mapping = GetMapping(context);
+                            mapping = GetMapping(_server.ServerStore, context);
                         }
 
                         LoadDatabase(databaseName, mapping[databaseName]);
@@ -193,7 +195,7 @@ namespace Raven.Server.Monitoring.Snmp
                     if (databases.Count == 0)
                         return;
 
-                    var mapping = GetMapping(context);
+                    var mapping = GetMapping(_server.ServerStore, context);
 
                     var missingDatabases = new List<string>();
                     foreach (var database in databases)
@@ -211,7 +213,7 @@ namespace Raven.Server.Monitoring.Snmp
 
                         context.OpenReadTransaction();
 
-                        mapping = GetMapping(context);
+                        mapping = GetMapping(_server.ServerStore, context);
                     }
 
                     foreach (var database in databases)
@@ -232,9 +234,9 @@ namespace Raven.Server.Monitoring.Snmp
             _loadedDatabases[databaseName] = new SnmpDatabase(_server.ServerStore.DatabasesLandlord, _objectStore, databaseName, (int)databaseIndex);
         }
 
-        private Dictionary<string, long> GetMapping(TransactionOperationContext context)
+        internal static Dictionary<string, long> GetMapping(ServerStore serverStore, TransactionOperationContext context)
         {
-            var json = _server.ServerStore.Cluster.Read(context, Constants.Monitoring.Snmp.DatabasesMappingKey);
+            var json = serverStore.Cluster.Read(context, Constants.Monitoring.Snmp.DatabasesMappingKey);
 
             var result = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
             if (json == null)

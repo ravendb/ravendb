@@ -12,7 +12,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
     public class DatabaseNumberOfIndexes : DatabaseScalarObjectBase<Integer32>
     {
         public DatabaseNumberOfIndexes(string databaseName, DatabasesLandlord landlord, int index)
-            : base(databaseName, landlord, "5.2.{0}.5.1", index)
+            : base(databaseName, landlord, SnmpOids.Databases.NumberOfIndexes, index)
         {
         }
 

@@ -11,7 +11,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Documents
         private readonly ServerStore _serverStore;
 
         public DatabaseTotalCount(ServerStore serverStore)
-            : base("5.1.1")
+            : base(SnmpOids.Databases.General.TotalCount)
         {
             _serverStore = serverStore;
         }

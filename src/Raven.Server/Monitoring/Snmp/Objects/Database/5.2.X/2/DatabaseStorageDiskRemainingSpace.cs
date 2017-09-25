@@ -11,7 +11,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
         private static readonly Gauge32 Empty = new Gauge32(-1);
 
         public DatabaseStorageDiskRemainingSpace(string databaseName, DatabasesLandlord landlord, int index)
-            : base(databaseName, landlord, "5.2.{0}.2.6", index)
+            : base(databaseName, landlord, SnmpOids.Databases.StorageDiskRemainingSpace, index)
         {
         }
 

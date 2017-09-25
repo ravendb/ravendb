@@ -7,7 +7,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
     public class DatabaseCountOfAttachments : DatabaseScalarObjectBase<Gauge32>
     {
         public DatabaseCountOfAttachments(string databaseName, DatabasesLandlord landlord, int index)
-            : base(databaseName, landlord, "5.2.{0}.1.6", index)
+            : base(databaseName, landlord, SnmpOids.Databases.CountOfAttachments, index)
         {
         }
 

@@ -12,7 +12,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
     public class DatabaseRequestsCount : DatabaseScalarObjectBase<Integer32>
     {
         public DatabaseRequestsCount(string databaseName, DatabasesLandlord landlord, int index)
-            : base(databaseName, landlord, "5.2.{0}.3.6", index)
+            : base(databaseName, landlord, SnmpOids.Databases.RequestsCount, index)
         {
         }
 

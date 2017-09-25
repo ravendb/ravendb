@@ -8,7 +8,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
         private readonly MetricCounters _metrics;
 
         public ServerRequestsPerSecond(MetricCounters metrics)
-            : base("1.7.3")
+            : base(SnmpOids.Server.RequestsPerSecond)
         {
             _metrics = metrics;
         }

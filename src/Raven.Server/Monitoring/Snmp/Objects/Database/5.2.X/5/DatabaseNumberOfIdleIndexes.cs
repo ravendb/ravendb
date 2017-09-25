@@ -14,7 +14,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
     public class DatabaseNumberOfIdleIndexes : DatabaseScalarObjectBase<Integer32>
     {
         public DatabaseNumberOfIdleIndexes(string databaseName, DatabasesLandlord landlord, int index)
-            : base(databaseName, landlord, "5.2.{0}.5.4", index)
+            : base(databaseName, landlord, SnmpOids.Databases.NumberOfIdleIndexes, index)
         {
         }
 

@@ -8,7 +8,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
         private readonly Integer32 _pid;
 
         public ServerPid()
-            : base("1.4")
+            : base(SnmpOids.Server.Pid)
         {
             _pid = new Integer32(Process.GetCurrentProcess().Id);
         }

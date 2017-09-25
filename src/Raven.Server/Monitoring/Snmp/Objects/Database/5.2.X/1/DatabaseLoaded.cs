@@ -10,7 +10,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
         private readonly string _databaseName;
 
         public DatabaseLoaded(string databaseName, DatabasesLandlord landlord, int index)
-            : base(databaseName, landlord, "5.2.{0}.1.13", index)
+            : base(databaseName, landlord, SnmpOids.Databases.Loaded, index)
         {
             _databaseName = databaseName;
         }

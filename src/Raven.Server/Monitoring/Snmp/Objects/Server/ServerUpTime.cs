@@ -10,7 +10,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
         private readonly DateTime _startUpTime;
 
         public ServerUpTime(ServerStatistics statistics)
-            : base("1.3")
+            : base(SnmpOids.Server.UpTime)
         {
             _startUpTime = statistics.StartUpTime;
         }
@@ -26,7 +26,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
         private readonly DateTime _startUpTime;
 
         public ServerUpTimeGlobal(ServerStatistics statistics)
-            : base("1.3.6.1.2.1.1.3.0")
+            : base(SnmpOids.Server.UpTimeGlobal)
         {
             _startUpTime = statistics.StartUpTime;
         }

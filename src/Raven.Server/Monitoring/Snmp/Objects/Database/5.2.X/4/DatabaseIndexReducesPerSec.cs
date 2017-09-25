@@ -6,7 +6,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
     public class DatabaseIndexReducesPerSec : DatabaseIndexScalarObjectBase<Gauge32>
     {
         public DatabaseIndexReducesPerSec(string databaseName, string indexName, DatabasesLandlord landlord, int databaseIndex, int indexIndex)
-            : base(databaseName, indexName, landlord, databaseIndex, indexIndex, "15")
+            : base(databaseName, indexName, landlord, databaseIndex, indexIndex, SnmpOids.Databases.Indexes.ReducesPerSec)
         {
         }
 

@@ -6,7 +6,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
     public class DatabaseIndexLastQueryTime : DatabaseIndexScalarObjectBase<OctetString>
     {
         public DatabaseIndexLastQueryTime(string databaseName, string indexName, DatabasesLandlord landlord, int databaseIndex, int indexIndex)
-            : base(databaseName, indexName, landlord, databaseIndex, indexIndex, "7")
+            : base(databaseName, indexName, landlord, databaseIndex, indexIndex, SnmpOids.Databases.Indexes.LastQueryTime)
         {
         }
 
