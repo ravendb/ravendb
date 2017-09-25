@@ -1,7 +1,7 @@
 using Lextm.SharpSnmpLib;
 using Raven.Server.ServerWide;
 
-namespace Raven.Server.Monitoring.Snmp.Objects.Server
+namespace Raven.Server.Monitoring.Snmp.Objects.Cluster
 {
     public class ClusterNodeTag : ScalarObjectBase<OctetString>
     {

@@ -4,7 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
 using System.Linq;
 using Lextm.SharpSnmpLib;
 using Raven.Client.Documents.Indexes;
