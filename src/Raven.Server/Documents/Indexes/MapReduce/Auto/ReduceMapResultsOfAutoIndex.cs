@@ -27,85 +27,82 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             {
                 token.ThrowIfCancellationRequested();
 
-                using (obj)
+                var aggregatedResult = new Dictionary<string, PropertyResult>();
+
+                foreach (var propertyName in obj.GetPropertyNames())
                 {
-                    var aggregatedResult = new Dictionary<string, PropertyResult>();
-
-                    foreach (var propertyName in obj.GetPropertyNames())
+                    if (_indexDefinition.TryGetField(propertyName, out var indexField))
                     {
-                        if (_indexDefinition.TryGetField(propertyName, out var indexField))
+                        switch (indexField.Aggregation)
                         {
-                            switch (indexField.Aggregation)
-                            {
-                                case AggregationOperation.None:
-                                    if (obj.TryGet(propertyName, out object groupByValue) == false)
-                                        throw new InvalidOperationException($"Could not read group by value of '{propertyName}' property");
+                            case AggregationOperation.None:
+                                if (obj.TryGet(propertyName, out object groupByValue) == false)
+                                    throw new InvalidOperationException($"Could not read group by value of '{propertyName}' property");
 
-                                    aggregatedResult[propertyName] = new PropertyResult
-                                    {
-                                        ResultValue = groupByValue
-                                    };
+                                aggregatedResult[propertyName] = new PropertyResult
+                                {
+                                    ResultValue = groupByValue
+                                };
+                                break;
+                            case AggregationOperation.Count:
+                            case AggregationOperation.Sum:
+
+                                if (obj.TryGetMember(propertyName, out var value) == false)
+                                    throw new InvalidOperationException($"Could not read numeric value of '{propertyName}' property");
+
+                                if (value == null)
+                                {
+                                    aggregatedResult[propertyName] = PropertyResult.NullNumber();
                                     break;
-                                case AggregationOperation.Count:
-                                case AggregationOperation.Sum:
+                                }
 
-                                    if (obj.TryGetMember(propertyName, out var value) == false)
-                                        throw new InvalidOperationException($"Could not read numeric value of '{propertyName}' property");
+                                var numberType = BlittableNumber.Parse(value, out var doubleValue, out var longValue);
 
-                                    if (value == null)
-                                    {
-                                        aggregatedResult[propertyName] = PropertyResult.NullNumber();
+                                var aggregate = PropertyResult.Number(numberType);
+
+                                switch (numberType)
+                                {
+                                    case NumberParseResult.Double:
+                                        aggregate.ResultValue = aggregate.DoubleValue = doubleValue;
                                         break;
-                                    }
-
-                                    var numberType = BlittableNumber.Parse(value, out var doubleValue, out var longValue);
-
-                                    var aggregate = PropertyResult.Number(numberType);
-
-                                    switch (numberType)
-                                    {
-                                        case NumberParseResult.Double:
-                                            aggregate.ResultValue = aggregate.DoubleValue = doubleValue;
-                                            break;
-                                        case NumberParseResult.Long:
-                                            aggregate.ResultValue = aggregate.LongValue = longValue;
-                                            break;
-                                        default:
-                                            throw new ArgumentOutOfRangeException($"Unknown number type: {numberType}");
-                                    }
-                                    aggregatedResult[propertyName] = aggregate;
-                                    break;
-                                //case FieldMapReduceOperation.None:
-                                default:
-                                    throw new ArgumentOutOfRangeException($"Unhandled field type '{indexField.Aggregation}' to aggregate on");
-                            }
-                        }
-
-                        if (_indexDefinition.GroupByFields.ContainsKey(propertyName) == false)
-                        {
-                            // we want to reuse existing entry to get a reduce key
-
-                            if (obj.Modifications == null)
-                                obj.Modifications = new DynamicJsonValue(obj);
-
-                            obj.Modifications.Remove(propertyName);
+                                    case NumberParseResult.Long:
+                                        aggregate.ResultValue = aggregate.LongValue = longValue;
+                                        break;
+                                    default:
+                                        throw new ArgumentOutOfRangeException($"Unknown number type: {numberType}");
+                                }
+                                aggregatedResult[propertyName] = aggregate;
+                                break;
+                            //case FieldMapReduceOperation.None:
+                            default:
+                                throw new ArgumentOutOfRangeException($"Unhandled field type '{indexField.Aggregation}' to aggregate on");
                         }
                     }
 
-                    var reduceKey = indexContext.ReadObject(obj, "reduce key");
-
-                    if (aggregatedResultsByReduceKey.TryGetValue(reduceKey, out Dictionary<string, PropertyResult> existingAggregate) == false)
+                    if (_indexDefinition.GroupByFields.ContainsKey(propertyName) == false)
                     {
-                        aggregatedResultsByReduceKey.Add(reduceKey, aggregatedResult);
+                        // we want to reuse existing entry to get a reduce key
+
+                        if (obj.Modifications == null)
+                            obj.Modifications = new DynamicJsonValue(obj);
+
+                        obj.Modifications.Remove(propertyName);
                     }
-                    else
-                    {
-                        reduceKey.Dispose();
+                }
 
-                        foreach (var propertyResult in existingAggregate)
-                        {
-                            propertyResult.Value.Aggregate(aggregatedResult[propertyResult.Key]);
-                        }
+                var reduceKey = indexContext.ReadObject(obj, "reduce key");
+
+                if (aggregatedResultsByReduceKey.TryGetValue(reduceKey, out Dictionary<string, PropertyResult> existingAggregate) == false)
+                {
+                    aggregatedResultsByReduceKey.Add(reduceKey, aggregatedResult);
+                }
+                else
+                {
+                    reduceKey.Dispose();
+
+                    foreach (var propertyResult in existingAggregate)
+                    {
+                        propertyResult.Value.Aggregate(aggregatedResult[propertyResult.Key]);
                     }
                 }
             }

@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         internal static readonly Slice PageNumberSlice;
         internal static readonly string PageNumberToReduceResultTableName = "PageNumberToReduceResult";
         private readonly Logger _logger;
-        private readonly List<BlittableJsonReaderObject> _aggregationBatch = new List<BlittableJsonReaderObject>();
+        private readonly AggegationBatch _aggregationBatch = new AggegationBatch();
         private readonly Index _index;
         protected readonly T _indexDefinition;
         private readonly IndexStorage _indexStorage;
@@ -76,8 +76,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 return false;
             }
 
-            _aggregationBatch.Clear();
-
             ReduceResultsSchema.Create(indexContext.Transaction.InnerTransaction, PageNumberToReduceResultTableName, 32);
             var table = indexContext.Transaction.InnerTransaction.OpenTable(ReduceResultsSchema, PageNumberToReduceResultTableName);
 
@@ -92,6 +90,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             {
                 using (var reduceKeyHash = indexContext.GetLazyString(store.Key.ToString(CultureInfo.InvariantCulture)))
                 using (store.Value)
+                using (_aggregationBatch)
                 {
                     var modifiedStore = store.Value;
 
@@ -156,7 +155,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                 using (_nestedValuesReductionStats.NestedValuesRead.Start())
                 {
-                    numberOfEntriesToReduce += section.GetResults(indexContext, _aggregationBatch);
+                    numberOfEntriesToReduce += section.GetResults(indexContext, _aggregationBatch.Items);
                 }
 
                 stats.RecordReduceAttempts(numberOfEntriesToReduce);
@@ -164,7 +163,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 AggregationResult result;
                 using (_nestedValuesReductionStats.NestedValuesAggregation.Start())
                 {
-                    result = AggregateOn(_aggregationBatch, indexContext, token);
+                    result = AggregateOn(_aggregationBatch.Items, indexContext, token);
                 }
 
                 if (section.IsNew == false)
@@ -184,11 +183,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             {
                 _index.HandleError(e);
 
-                foreach (var item in _aggregationBatch)
-                {
-                    item.Dispose();
-                }
-
                 var message = $"Failed to execute reduce function for reduce key '{reduceKeyHash}' on nested values of '{_indexDefinition.Name}' index.";
 
                 if (_logger.IsInfoEnabled)
@@ -196,10 +190,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                 stats.RecordReduceErrors(numberOfEntriesToReduce);
                 stats.AddReduceError(message + $"  Exception: {e}");
-            }
-            finally
-            {
-                _aggregationBatch.Clear();
             }
         }
 
@@ -398,10 +388,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     var valueReader = TreeNodeHeader.Reader(lowLevelTransaction, page.GetNode(i));
                     var reduceEntry = new BlittableJsonReaderObject(valueReader.Base, valueReader.Length, indexContext);
 
-                    _aggregationBatch.Add(reduceEntry);
+                    _aggregationBatch.Items.Add(reduceEntry);
                 }
 
-                return AggregateBatchResults(_aggregationBatch, indexContext, token);
+                return AggregateBatchResults(_aggregationBatch.Items, indexContext, token);
             }
         }
 
@@ -446,12 +436,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                         for (int j = 0; j < numberOfResults; j++)
                         {
-                            _aggregationBatch.Add(new BlittableJsonReaderObject(tvr.Read(3 + j, out size), size, indexContext));
+                            _aggregationBatch.Items.Add(new BlittableJsonReaderObject(tvr.Read(3 + j, out size), size, indexContext));
                         }
                     }
                 }
 
-                return AggregateBatchResults(_aggregationBatch, indexContext, token);
+                return AggregateBatchResults(_aggregationBatch.Items, indexContext, token);
             }
         }
 
@@ -519,6 +509,21 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
             _nestedValuesReductionStats.NestedValuesRead = stats.For(IndexingOperation.Reduce.NestedValuesRead, start: false);
             _nestedValuesReductionStats.NestedValuesAggregation = stats.For(IndexingOperation.Reduce.NestedValuesAggregation, start: false);
+        }
+
+        private class AggegationBatch : IDisposable
+        {
+            public readonly List<BlittableJsonReaderObject> Items = new List<BlittableJsonReaderObject>();
+
+            public void Dispose()
+            {
+                foreach (var item in Items)
+                {
+                    item.Dispose();
+                }
+
+                Items.Clear();
+            }
         }
 
         private class TreeReductionStats

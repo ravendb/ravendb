@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Runtime.CompilerServices;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide;
@@ -214,6 +215,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 return;
             }
 
+            if (value is LazyNumberValue lnv)
+            {
+                Process(context, lnv.Inner, true);
+                return;
+            }
+
             long? ticks = null;
             if (value is DateTime)
                 ticks = ((DateTime)value).Ticks;
@@ -238,9 +245,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 return;
             }
 
-            var json = value as BlittableJsonReaderObject;
-
-            if (json != null)
+            if (value is BlittableJsonReaderObject json)
             {
                 _mode = Mode.MultipleValues;
 
@@ -260,16 +265,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 return;
             }
 
-            var array = value as DynamicJsonArray;
-
-            if (array != null)
+            if (value is IEnumerable enumerable)
             {
                 _mode = Mode.MultipleValues;
 
                 if (_buffer == null)
                     _buffer = _buffersPool.Allocate(16);
 
-                foreach (var item in array)
+                foreach (var item in enumerable)
                 {
                     Process(context, item, true);
                 }
