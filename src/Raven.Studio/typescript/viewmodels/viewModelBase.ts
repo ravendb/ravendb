@@ -98,16 +98,17 @@ class viewModelBase {
         return true;
     }
 
-    discardStayResult(): any {
+    discardStayResult() {
         const discard = "Discard changes";
         const stay = "Stay on this page";
-        const discardStayResult = $.Deferred();
+        const discardStayResult = $.Deferred<confirmDialogResult>();
         const confirmation = this.confirmationMessage("Unsaved changes", "You have unsaved changes. How do you want to proceed?", [discard, stay], true);
-        confirmation.done((result: { can: boolean; }) => {
+
+        confirmation.done((result: confirmDialogResult) => {
             if (!result.can) {
                 this.dirtyFlag().reset(); 
             }
-            result.can = !result.can;
+            result.can = !result.can;  // TODO: Check why this toggle is needed..
             discardStayResult.resolve(result);
         });
 

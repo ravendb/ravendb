@@ -4,6 +4,7 @@ import appUrl = require("common/appUrl");
 import router = require("plugins/router");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import ongoingTaskEtlTransformationModel = require("models/database/tasks/ongoingTaskEtlTransformationModel");
+import jsonUtil = require("common/jsonUtil");
 
 class ongoingTaskRavenEtlModel extends ongoingTask {
     editUrl: KnockoutComputed<string>;
@@ -18,9 +19,9 @@ class ongoingTaskRavenEtlModel extends ongoingTask {
 
     showRavenEtlDetails = ko.observable(false); // used in tasks list view
     showEditTransformationArea = ko.observable<boolean>(false); // used for edit transfromation
-    editedTransformationScript = ko.observable<ongoingTaskEtlTransformationModel>(null);
 
-    isDirty = ko.observable<boolean>(false);
+    editedTransformationScript = ko.observable<ongoingTaskEtlTransformationModel>(ongoingTaskEtlTransformationModel.empty());
+    isDirtyEditedScript = new ko.DirtyFlag([]);
 
     constructor(dto: Raven.Client.ServerWide.Operations.OngoingTaskRavenEtl, isInListView: boolean) {
         super();
@@ -36,6 +37,11 @@ class ongoingTaskRavenEtlModel extends ongoingTask {
         const urls = appUrl.forCurrentDatabase();
         this.editUrl = urls.editRavenEtl(this.taskId);
         this.connectionStringsUrl = urls.connectionStrings;
+       
+        this.isDirtyEditedScript = new ko.DirtyFlag([this.editedTransformationScript().name,
+                                                        this.editedTransformationScript().script,
+                                                        this.editedTransformationScript().transformScriptCollections],
+                                                        false, jsonUtil.newLineNormalizingHashFunction);
     }
 
     update(dto: Raven.Client.ServerWide.Operations.OngoingTaskRavenEtl) {
@@ -49,7 +55,7 @@ class ongoingTaskRavenEtlModel extends ongoingTask {
         // Data for the model in Edit View (Note: dto.configuration is only available for Edit View)
         if (dto.Configuration) {
             this.connectionStringName(dto.Configuration.ConnectionStringName);
-            this.transformationScripts(dto.Configuration.Transforms.map(x => { return new ongoingTaskEtlTransformationModel(x, false); }));
+            this.transformationScripts(dto.Configuration.Transforms.map(x => new ongoingTaskEtlTransformationModel(x, false)));
         }
     }
 
@@ -66,7 +72,6 @@ class ongoingTaskRavenEtlModel extends ongoingTask {
             const collections = x.applyScriptForAllCollections() ? null : x.transformScriptCollections();
             return {
                 ApplyToAllDocuments: x.applyScriptForAllCollections(),
-                //Collections: x.transformScriptCollections(),
                 Collections: collections,
                 Disabled: false,
                 HasLoadAttachment: false,
@@ -89,20 +94,9 @@ class ongoingTaskRavenEtlModel extends ongoingTask {
     }
 
     editTransformationScript(transformationScript: ongoingTaskEtlTransformationModel) {
-        this.editedTransformationScript(new ongoingTaskEtlTransformationModel({
-                ApplyToAllDocuments: transformationScript.applyScriptForAllCollections(),
-                Collections: transformationScript.transformScriptCollections().slice(),
-                Disabled: false,
-                HasLoadAttachment: false,
-                Name: transformationScript.name(),
-                Script: transformationScript.script()
-        }, false));
+        this.editedTransformationScript().update(transformationScript.toDto(), false);
         this.showEditTransformationArea(true);
-
-        this.isDirty(false);
-        this.editedTransformationScript().name.subscribe(() => this.isDirty(true));
-        this.editedTransformationScript().script.subscribe(() => this.isDirty(true));
-        this.editedTransformationScript().transformScriptCollections.subscribe(() => this.isDirty(true));
+        this.isDirtyEditedScript().reset();
     }
 
     static empty(): ongoingTaskRavenEtlModel {

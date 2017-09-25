@@ -25,14 +25,10 @@ class saveRavenEtlTaskCommand extends commandBase {
                 }
             });
     }
-
     private updateRavenEtl(): JQueryPromise<Raven.Client.ServerWide.Operations.ModifyOngoingTaskResult> {
-        const args = this.taskId ? { name: this.db.name, id: this.taskId} :
-                                   { name: this.db.name };
+        const args = this.taskId ? { name: this.db.name, id: this.taskId } : { name: this.db.name };
 
         const url = endpoints.global.adminDatabases.adminEtl + this.urlEncodeArgs(args);
-
-        const addRavenEtlTask = $.Deferred<Raven.Client.ServerWide.Operations.ModifyOngoingTaskResult>();
 
         const ravenEtlToSend: Raven.Client.ServerWide.ETL.RavenEtlConfiguration = {
             EtlType: "Raven",
@@ -42,15 +38,9 @@ class saveRavenEtlTaskCommand extends commandBase {
             AllowEtlOnNonEncryptedChannel: this.ravenEtlSettings.AllowEtlOnNonEncryptedChannel,
             Disabled: false, 
             Transforms: this.ravenEtlSettings.TransformationScripts
-    }
-        
-        this.put(url, JSON.stringify(ravenEtlToSend))
-            .done((results: Raven.Client.ServerWide.Operations.ModifyOngoingTaskResult) => {
-                addRavenEtlTask.resolve(results);
-            })
-            .fail(response => addRavenEtlTask.reject(response));
+        }
 
-        return addRavenEtlTask;
+        return this.put(url, JSON.stringify(ravenEtlToSend));
     }
 }
 

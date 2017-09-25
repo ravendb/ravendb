@@ -101,7 +101,7 @@
                                         <div class="transformer-name" data-bind="text: name" title="Transformation script name"></div>
                                         <div class="collections">
                                             Collections:
-                                            <span data-bind="foreach: transformScriptCollections" title="The Collections transformed">
+                                            <span class="etl-collections" data-bind="foreach: transformScriptCollections" title="The Collections transformed">
                                                 <span data-bind="text: $data, attr: { class: 'collection-color-' + $parent.getCollectionEntry($data) }"></span>
                                             </span>
                                         </div>
@@ -127,8 +127,8 @@
                                 <input autofocus class="form-control" type="text" data-bind="textInput: name, attr: { 'disabled': !isNew() }" placeholder="Enter a name for the transform script">
                             </div>
                             <div class="flex-noshrink">
-                                <button title="Save this transformation script" class="btn btn-success" data-bind="click: $root.saveEditedTransformation"><i class="icon-tick"></i></button>
-                                <button title="Cancel" class="btn btn-default" data-bind="click: $root.cancelEditedTransformation"><i class="icon-cancel"></i></button>
+                                <button title="Save this transformation script" class="btn btn-success" data-bind="click: $root.saveEditedTransformation">Save&nbsp;&nbsp;<i class="icon-tick"></i></button>
+                                <button title="Cancel" class="btn btn-default" data-bind="click: $root.cancelEditedTransformation">Cancel&nbsp;&nbsp;<i class="icon-cancel"></i></button>
                             </div>
                         </div>
                         <label><strong>Script:</strong></label>
@@ -158,22 +158,24 @@
                                 <button class="btn btn-info" data-bind="click: addCollection, attr: { 'disabled': !inputCollection() || !canAddCollection() }"><i class="icon-plus"></i> <span>Add Collection</span></button>
                             </div>
                         </div>
-                        <label><strong>Collections Selected:</strong></label>
-                        <div data-bind="validationElement: transformScriptCollections">
-                            <ul class="well collection-list">
-                                <!-- ko foreach: transformScriptCollections -->
-                                <li>
-                                    <div class="name" data-bind="text: $data"></div>
-                                    <a title="Remove collection" href="#" data-bind="click: $parent.removeCollection.bind($parent, $data)"><i class="icon-trash"></i></a>
-                                </li>
-                                <!-- /ko -->
-                                <!-- ko if: transformScriptCollections().length === 0 && !applyScriptForAllCollections()-->
-                                <li>
-                                    <div class="name">No collections have been defined yet..</div>
-                                </li>
-                                <!-- /ko -->
-                            </ul>
-                            <span class="help-block" data-bind="validationMessage: transformScriptCollections"></span>
+                        <div data-bind="collapse: !applyScriptForAllCollections(), css: {'invisible': applyScriptForAllCollections }">
+                            <label><strong>Collections Selected:</strong></label>
+                            <div data-bind="validationElement: transformScriptCollections">
+                                <ul class="well collection-list">
+                                    <!-- ko foreach: transformScriptCollections -->
+                                    <li>
+                                        <div class="name" data-bind="text: $data"></div>
+                                        <a title="Remove collection" href="#" data-bind="click: $parent.removeCollection.bind($parent, $data)"><i class="icon-trash"></i></a>
+                                    </li>
+                                    <!-- /ko -->
+                                    <!-- ko if: transformScriptCollections().length === 0 && !applyScriptForAllCollections()-->
+                                    <li>
+                                        <div class="name">No collections have been defined yet..</div>
+                                    </li>
+                                    <!-- /ko -->
+                                </ul>
+                                <span class="help-block" data-bind="validationMessage: transformScriptCollections"></span>
+                            </div>
                         </div>
                     </div>
                 </div>

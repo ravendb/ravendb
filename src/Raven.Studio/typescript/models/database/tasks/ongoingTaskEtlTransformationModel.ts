@@ -14,19 +14,12 @@ class ongoingTaskEtlTransformationModel {
     validationGroup: KnockoutValidationGroup; 
   
     constructor(dto: Raven.Client.ServerWide.ETL.Transformation, isNew: boolean) {
-        this.name(dto.Name);
-        this.script(dto.Script);
-        this.transformScriptCollections(dto.ApplyToAllDocuments ? collectionsTracker.default.collections()
-                                                 .filter(x => !x.isAllDocuments && !x.name.startsWith("@"))
-                                                 .map(x => x.name) : dto.Collections);
-        this.applyScriptForAllCollections(dto.ApplyToAllDocuments);
-        this.isNew(isNew);
+        this.update(dto, isNew);
         this.initObservables();
-        this.initValidation();
     }
 
     getCollectionEntry(collectionName: string) {
-        return (_.findIndex(collectionsTracker.default.collections(), x => x.name === collectionName) - 2) % 6;
+        return (_.findIndex(collectionsTracker.default.collections(), x => x.name === collectionName) - 1) % 6;
         // 6 is the number of classes that I have defined in etl.less for colors...
     }
 
@@ -42,13 +35,27 @@ class ongoingTaskEtlTransformationModel {
             }, true);
     }
 
+    toDto(): Raven.Client.ServerWide.ETL.Transformation {
+        return {
+            ApplyToAllDocuments: this.applyScriptForAllCollections(),
+            Collections: this.transformScriptCollections(),
+            Disabled: false,
+            HasLoadAttachment: false,
+            Name: this.name(),
+            Script: this.script()
+        }
+    }
+
     private initObservables() {
         this.applyScriptForAllCollections.subscribe(x => {
             if (x) {
                 // Add all collections to the 'used' collections...
                 this.transformScriptCollections(collectionsTracker.default.collections()
-                    .filter(x => !x.isAllDocuments && !x.name.startsWith("@"))
+                    .filter(x => !x.isAllDocuments)
                     .map(x => x.name));
+            }
+            else {
+                this.transformScriptCollections([]);
             }
         });
 
@@ -87,6 +94,21 @@ class ongoingTaskEtlTransformationModel {
         this.transformScriptCollections.push(this.inputCollection());
         this.inputCollection("");
         this.transformScriptCollections.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+    }
+
+    update(dto: Raven.Client.ServerWide.ETL.Transformation, isNew: boolean) {
+        this.name(dto.Name);
+        this.script(dto.Script);
+        this.transformScriptCollections(dto.ApplyToAllDocuments ? collectionsTracker.default.collections()
+            .filter(x => !x.isAllDocuments)
+            .map(x => x.name) : dto.Collections);
+        this.applyScriptForAllCollections(dto.ApplyToAllDocuments);
+        this.isNew(isNew);
+
+        // Reset validation for this transformation script model 
+        this.name.extend({ validatable: false });
+        this.transformScriptCollections.extend({ validatable: false });
+        this.initValidation();
     }
 }
 
