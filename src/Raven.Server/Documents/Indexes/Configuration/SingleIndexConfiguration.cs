@@ -29,11 +29,7 @@ namespace Raven.Server.Documents.Indexes.Configuration
 
         public override bool RunInMemory => _databaseConfiguration.Indexing.RunInMemory;
 
-        public override PathSetting StoragePath => _databaseConfiguration.Indexing.StoragePath;
-
         public override PathSetting TempPath => _databaseConfiguration.Indexing.TempPath;
-
-        public override PathSetting JournalsStoragePath => _databaseConfiguration.Indexing.JournalsStoragePath;
 
         public IndexUpdateType CalculateUpdateType(SingleIndexConfiguration newConfiguration)
         {

@@ -219,8 +219,16 @@ namespace Raven.Server.Config
 
         public static string GetKey<T>(Expression<Func<RavenConfiguration, T>> getKey)
         {
-            var prop = getKey.ToProperty();
-            return prop.GetCustomAttributes<ConfigurationEntryAttribute>().OrderBy(x => x.Order).First().Key;
+            var property = getKey.ToProperty();
+            var configurationEntryAttribute = property
+                .GetCustomAttributes<ConfigurationEntryAttribute>()
+                .OrderBy(x => x.Order)
+                .FirstOrDefault();
+
+            if (configurationEntryAttribute == null)
+                throw new InvalidOperationException($"Property '{property.Name}' does not contain '{nameof(ConfigurationEntryAttribute)}'. Please make sure that this is a valid configuration property.");
+
+            return configurationEntryAttribute.Key;
         }
 
         public static object GetDefaultValue<T>(Expression<Func<RavenConfiguration, T>> getKey)

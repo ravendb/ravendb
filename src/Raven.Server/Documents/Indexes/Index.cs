@@ -204,9 +204,7 @@ namespace Raven.Server.Documents.Indexes
             var indexTempPath =
                 documentDatabase.Configuration.Indexing.TempPath?.Combine(name);
 
-            var journalPath = documentDatabase.Configuration.Indexing.JournalsStoragePath?.Combine(name);
-
-            var options = StorageEnvironmentOptions.ForPath(indexPath, indexTempPath?.FullPath, journalPath?.FullPath,
+            var options = StorageEnvironmentOptions.ForPath(indexPath, indexTempPath?.FullPath, null,
                 documentDatabase.IoChanges, documentDatabase.CatastrophicFailureNotification);
             try
             {
@@ -320,12 +318,10 @@ namespace Raven.Server.Documents.Indexes
 
                 var indexTempPath = configuration.TempPath?.Combine(name);
 
-                var journalPath = configuration.JournalsStoragePath?.Combine(name);
-
                 var options = configuration.RunInMemory
                     ? StorageEnvironmentOptions.CreateMemoryOnly(indexPath.FullPath, indexTempPath?.FullPath,
                         documentDatabase.IoChanges, documentDatabase.CatastrophicFailureNotification)
-                    : StorageEnvironmentOptions.ForPath(indexPath.FullPath, indexTempPath?.FullPath, journalPath?.FullPath,
+                    : StorageEnvironmentOptions.ForPath(indexPath.FullPath, indexTempPath?.FullPath, null,
                         documentDatabase.IoChanges, documentDatabase.CatastrophicFailureNotification);
 
                 options.OnNonDurableFileSystemError += documentDatabase.HandleNonDurableFileSystemError;
@@ -720,7 +716,7 @@ namespace Raven.Server.Documents.Indexes
                         stalenessReasons.Add($"There are still some documents to process from collection '{collection}'. The last document etag in that collection is '{lastDocEtag}' ({Constants.Documents.Metadata.Id}: '{lastDoc.Id}', {Constants.Documents.Metadata.LastModified}: '{lastDoc.LastModified}') with cutoff set to '{cutoff.Value}', but last processed document etag for that collection is '{lastProcessedDocEtag}'.");
                     }
 
-                    var hasTombstones = DocumentDatabase.DocumentsStorage.HasTombstonesWithDocumentEtagBetween(databaseContext, 
+                    var hasTombstones = DocumentDatabase.DocumentsStorage.HasTombstonesWithDocumentEtagBetween(databaseContext,
                         collection,
                         lastProcessedTombstoneEtag,
                         cutoff.Value);
@@ -1601,8 +1597,6 @@ namespace Raven.Server.Documents.Indexes
 
             var indexTempPath = Configuration.TempPath?.Combine(name);
 
-            var journalPath = Configuration.JournalsStoragePath?.Combine(name);
-
             var totalSize = 0L;
             foreach (var mapping in NativeMemory.FileMapping)
             {
@@ -1610,9 +1604,8 @@ namespace Raven.Server.Documents.Indexes
 
                 var isIndexPath = string.Equals(indexPath.FullPath, directory, StringComparison.OrdinalIgnoreCase);
                 var isTempPath = indexTempPath != null && string.Equals(indexTempPath.FullPath, directory, StringComparison.OrdinalIgnoreCase);
-                var isJournalPath = journalPath != null && string.Equals(journalPath.FullPath, directory, StringComparison.OrdinalIgnoreCase);
 
-                if (isIndexPath || isTempPath || isJournalPath)
+                if (isIndexPath || isTempPath)
                 {
                     foreach (var singleMapping in mapping.Value)
                         totalSize += singleMapping.Value;
@@ -2167,7 +2160,7 @@ namespace Raven.Server.Documents.Indexes
 
         private static bool WillResultBeAcceptable(bool isStale, IndexQueryBase<BlittableJsonReaderObject> query, AsyncWaitForIndexing wait)
         {
-           
+
             if (isStale == false)
                 return true;
 

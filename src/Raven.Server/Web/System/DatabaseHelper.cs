@@ -63,17 +63,11 @@ namespace Raven.Server.Web.System
             if (configuration.Storage.TempPath != null)
                 IOExtensions.DeleteDirectory(configuration.Storage.TempPath.FullPath);
 
-            if (configuration.Storage.JournalsStoragePath != null)
-                IOExtensions.DeleteDirectory(configuration.Storage.JournalsStoragePath.FullPath);
-
             if (configuration.Indexing.StoragePath != null)
                 IOExtensions.DeleteDirectory(configuration.Indexing.StoragePath.FullPath);
 
             if (configuration.Indexing.TempPath != null)
                 IOExtensions.DeleteDirectory(configuration.Indexing.TempPath.FullPath);
-
-            if (configuration.Indexing.JournalsStoragePath != null)
-                IOExtensions.DeleteDirectory(configuration.Indexing.JournalsStoragePath.FullPath);
         }
 
         public static void Validate(string name, DatabaseRecord record)

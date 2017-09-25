@@ -10,8 +10,6 @@ namespace Raven.Client.ServerWide.PeriodicBackup
 
         public string DataDirectory { get; set; }
 
-        public string JournalsStoragePath { get; set; }
-
         public string IndexingStoragePath { get; set; }
 
         public string TempPath { get; set; }

@@ -628,15 +628,13 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 restoreConfiguration.BackupLocation = backupPath;
                 var emptyFolder = NewDataPath(suffix: "BackupFolderRestore");
-                restoreConfiguration.DataDirectory = emptyFolder; ;
-                restoreConfiguration.JournalsStoragePath = backupPath;
+                restoreConfiguration.DataDirectory = emptyFolder;
                 restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
                 e = Assert.Throws<RavenException>(() => store.Admin.Server.Send(restoreBackupTask));
                 Assert.Contains("Journals directory must be empty of any files or folders", e.InnerException.Message);
 
                 restoreConfiguration.BackupLocation = backupPath;
                 restoreConfiguration.DataDirectory = emptyFolder; ;
-                restoreConfiguration.JournalsStoragePath = emptyFolder;
                 restoreConfiguration.IndexingStoragePath = backupPath;
                 restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
                 e = Assert.Throws<RavenException>(() => store.Admin.Server.Send(restoreBackupTask));
