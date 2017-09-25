@@ -35,10 +35,8 @@ namespace FastTests.Issues
             Assert.Equal(new PathSetting("Databases/foo/Indexes").FullPath, config.Indexing.StoragePath.FullPath);
 
             Assert.Null(config.Indexing.TempPath);
-            Assert.Null(config.Indexing.JournalsStoragePath);
 
             Assert.Null(config.Storage.TempPath);
-            Assert.Null(config.Storage.JournalsStoragePath);
 
             // actual configuration is created in the following manner
 
@@ -51,10 +49,8 @@ namespace FastTests.Issues
             Assert.Equal(new PathSetting("Databases/foo/Indexes").FullPath, config.Indexing.StoragePath.FullPath);
 
             Assert.Null(config.Indexing.TempPath);
-            Assert.Null(config.Indexing.JournalsStoragePath);
 
             Assert.Null(config.Storage.TempPath);
-            Assert.Null(config.Storage.JournalsStoragePath);
         }
 
         [Fact]
@@ -66,10 +62,8 @@ namespace FastTests.Issues
             server.SetSetting(RavenConfiguration.GetKey(x => x.Core.DataDirectory), $@"{_rootPathString}Deployment");
 
             server.SetSetting(RavenConfiguration.GetKey(x => x.Storage.TempPath), $@"{_rootPathString}temp");
-            server.SetSetting(RavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath), $@"{_rootPathString}Journals");
 
             server.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.TempPath), $@"{_rootPathString}indexes-temp");
-            server.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.JournalsStoragePath), $@"{_rootPathString}Indexes-Journals");
 
             server.Initialize();
 
@@ -80,10 +74,8 @@ namespace FastTests.Issues
             Assert.Equal(new PathSetting($@"{_rootPathString}Deployment\Databases\Foo").FullPath, database.Core.DataDirectory.FullPath);
 
             Assert.Equal(new PathSetting($@"{_rootPathString}temp\Databases\Foo").FullPath, database.Storage.TempPath.FullPath);
-            Assert.Equal(new PathSetting($@"{_rootPathString}Journals\Databases\Foo").FullPath, database.Storage.JournalsStoragePath.FullPath);
 
             Assert.Equal(new PathSetting($@"{_rootPathString}indexes-temp\Databases\Foo").FullPath, database.Indexing.TempPath.FullPath);
-            Assert.Equal(new PathSetting($@"{_rootPathString}Indexes-Journals\Databases\Foo").FullPath, database.Indexing.JournalsStoragePath.FullPath);
         }
 
         [Fact]
@@ -95,10 +87,8 @@ namespace FastTests.Issues
             server.SetSetting(RavenConfiguration.GetKey(x => x.Core.DataDirectory), $@"{_rootPathString}Deployment");
 
             server.SetSetting(RavenConfiguration.GetKey(x => x.Storage.TempPath), $@"{_rootPathString}temp");
-            server.SetSetting(RavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath), $@"{_rootPathString}Journals");
 
             server.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.TempPath), $@"{_rootPathString}indexes-temp");
-            server.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.JournalsStoragePath), $@"{_rootPathString}Indexes-Journals");
 
             server.Initialize();
 
@@ -107,20 +97,16 @@ namespace FastTests.Issues
             database.SetSetting(RavenConfiguration.GetKey(x => x.Core.DataDirectory), $@"{_rootPathString}MyDatabase");
 
             database.SetSetting(RavenConfiguration.GetKey(x => x.Storage.TempPath), $@"{_rootPathString}my-temp-path");
-            database.SetSetting(RavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath), $@"{_rootPathString}MyJournals");
 
             database.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.TempPath), $@"{_rootPathString}my-indexes-temp");
-            database.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.JournalsStoragePath), $@"{_rootPathString}My-Indexes-Journals");
 
             database.Initialize();
 
             Assert.Equal(new PathSetting($@"{_rootPathString}MyDatabase").FullPath, database.Core.DataDirectory.FullPath);
 
             Assert.Equal(new PathSetting($@"{_rootPathString}my-temp-path").FullPath, database.Storage.TempPath.FullPath);
-            Assert.Equal(new PathSetting($@"{_rootPathString}MyJournals").FullPath, database.Storage.JournalsStoragePath.FullPath);
 
             Assert.Equal(new PathSetting($@"{_rootPathString}my-indexes-temp").FullPath, database.Indexing.TempPath.FullPath);
-            Assert.Equal(new PathSetting($@"{_rootPathString}My-Indexes-Journals").FullPath, database.Indexing.JournalsStoragePath.FullPath);
         }
 
         [Fact]

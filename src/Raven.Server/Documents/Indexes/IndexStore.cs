@@ -677,15 +677,10 @@ namespace Raven.Server.Documents.Indexes
 
                 var indexTempPath = index.Configuration.TempPath?.Combine(name);
 
-                var journalPath = index.Configuration.JournalsStoragePath?.Combine(name);
-
                 IOExtensions.DeleteDirectory(indexPath.FullPath);
 
                 if (indexTempPath != null)
                     IOExtensions.DeleteDirectory(indexTempPath.FullPath);
-
-                if (journalPath != null)
-                    IOExtensions.DeleteDirectory(journalPath.FullPath);
             }
         }
 
@@ -1147,12 +1142,6 @@ namespace Raven.Server.Documents.Indexes
                                 {
                                     IOExtensions.MoveDirectory(newIndex.Configuration.TempPath.Combine(replacementIndexDirectoryName).FullPath,
                                         newIndex.Configuration.TempPath.Combine(oldIndexDirectoryName).FullPath);
-                                }
-
-                                if (newIndex.Configuration.JournalsStoragePath != null)
-                                {
-                                    IOExtensions.MoveDirectory(newIndex.Configuration.JournalsStoragePath.Combine(replacementIndexDirectoryName).FullPath,
-                                        newIndex.Configuration.JournalsStoragePath.Combine(oldIndexDirectoryName).FullPath);
                                 }
                             }
                             break;
