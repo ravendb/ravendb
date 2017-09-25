@@ -8,6 +8,7 @@ namespace Raven.Server.SqlMigration
         public const string SelectReferantialConstraints = "select CONSTRAINT_NAME, UNIQUE_CONSTRAINT_NAME from information_schema.REFERENTIAL_CONSTRAINTS";
         public const string SelectKeyColumnUsageWhereConstraintName = "select TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME from information_schema.KEY_COLUMN_USAGE where CONSTRAINT_NAME = @constraintName";
         public const string SelectPrimaryKeys = "select tc.TABLE_SCHEMA, tc.TABLE_NAME, COLUMN_NAME from information_schema.TABLE_CONSTRAINTS as tc inner join information_schema.KEY_COLUMN_USAGE as ku on tc.CONSTRAINT_TYPE = 'PRIMARY KEY' and tc.constraint_name = ku.CONSTRAINT_NAME";
+        public const string SelectColumns = "select TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME from information_schema.COLUMNS";
 
         private const string DefaultTableQuery = "select * from {0}";
         private const string SelectSingleRow = "select top 1 * from ({0}) a";

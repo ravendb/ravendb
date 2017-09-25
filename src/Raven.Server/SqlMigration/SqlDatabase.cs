@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.SqlClient;
 using System.Linq;
 using Raven.Client.Documents.Operations;
 using Raven.Server.ServerWide.Context;
@@ -10,23 +9,49 @@ namespace Raven.Server.SqlMigration
 {
     public partial class SqlDatabase
     {
-        public List<SqlTable> Tables;
+        public List<SqlParentTable> ParentTables;
+        public List<SqlEmbeddedTable> EmbeddedTables;
         public readonly IDbConnection Connection;
         public readonly SqlMigrationDocumentFactory Factory;
+        public readonly DocumentsOperationContext Context;
 
         private readonly Validator _validator;
 
-        public SqlDatabase(SqlConnection connection, SqlMigrationDocumentFactory factory, List<SqlMigrationImportOperation.SqlMigrationTable> tablesToWrite)
+        public SqlDatabase(IDbConnection connection)
         {
             Connection = connection;
-            Tables = new List<SqlTable>();
-            SetTablesFromBlittableArray(tablesToWrite);
+            ParentTables = new List<SqlParentTable>();
+            EmbeddedTables = new List<SqlEmbeddedTable>();
 
-            Factory = factory;
-            _validator = new Validator(this);
+            var names = GetAllTablesNamesFromDatabase(Connection);
+            foreach (var name in names)
+                ParentTables.Add(new SqlParentTable(name, null, this, null, null));
 
             SetPrimaryKeys();
             SetForeignKeys();
+        }
+
+        public SqlDatabase(IDbConnection connection, SqlMigrationDocumentFactory factory, DocumentsOperationContext context, List<SqlMigrationImportOperation.SqlMigrationTable> tablesToWrite)
+        {
+            Connection = connection;
+            ParentTables = new List<SqlParentTable>();
+            EmbeddedTables = new List<SqlEmbeddedTable>();
+            Context = context;
+
+            SetTablesFromBlittableArray(tablesToWrite);
+
+            Factory = factory;
+            _validator = new Validator(this, context);
+
+            SetPrimaryKeys();
+            SetForeignKeys();
+        }
+
+        public List<SqlTable> GetAllTables()
+        {
+            var lst = new List<SqlTable>(ParentTables);
+            lst.AddRange(new List<SqlTable>(EmbeddedTables));
+            return lst;
         }
 
         private void SetTablesFromBlittableArray(List<SqlMigrationImportOperation.SqlMigrationTable> tablesToWrite, SqlTable parentTable = null)
@@ -37,15 +62,18 @@ namespace Raven.Server.SqlMigration
 
                 if (parentTable != null)
                 {
-                    table = new SqlEmbeddedTable(item.Name, item.Query, item.Patch, parentTable.Name, item.Property, Connection);
+                    table = new SqlEmbeddedTable(item.Name, item.Query, this, item.NewName, parentTable.Name);
                     parentTable.EmbeddedTables.Add((SqlEmbeddedTable) table);
+                    EmbeddedTables.Add((SqlEmbeddedTable) table);
                 }
-                else table = new SqlTable(item.Name, item.Query, item.Patch, Connection);
+                else
+                {
+                    table = new SqlParentTable(item.Name, item.Query, this, item.NewName, item.Patch);
+                    ParentTables.Add((SqlParentTable) table);
+                }
 
                 if (item.EmbeddedTables != null)
                     SetTablesFromBlittableArray(item.EmbeddedTables, table);
-
-                Tables.Add(table);
             }
         }
 
@@ -54,7 +82,7 @@ namespace Raven.Server.SqlMigration
             return _validator.IsValid;
         }
 
-        public void Validate(out List<string> errors)
+        public void Validate(out List<SqlMigrationImportResult.Error> errors)
         {
             _validator.Validate(out var validationErrors);
 
@@ -82,6 +110,24 @@ namespace Raven.Server.SqlMigration
             }
 
             return lst;
+        }
+
+        public static Dictionary<string, List<string>> GetSchemaResultTablesColumns(IDbConnection connection)
+        {
+            using (var reader = new SqlReader(connection, SqlQueries.SelectColumns))
+            {
+                var temp = new Dictionary<string, List<string>>();
+
+                while (reader.Read())
+                {
+                    var name = GetTableNameFromReader(reader);
+                    if (temp.ContainsKey(name) == false)
+                        temp[name] = new List<string>();
+                   temp[name].Add(reader["COLUMN_NAME"].ToString());
+                }
+
+                return temp;
+            }
         }
 
         private void SetForeignKeys()
@@ -132,7 +178,7 @@ namespace Raven.Server.SqlMigration
                 if (temp.Any(table => parentColumnName.Where((t, i) => table.ForeignKeys.TryAdd(t, childTableName[i]) == false).Any()))
                     throw new InvalidOperationException($"Column '{parentColumnName}' cannot reference multiple tables.");
             }
-        }
+        }      
 
         private void SetPrimaryKeys()
         {
@@ -150,13 +196,29 @@ namespace Raven.Server.SqlMigration
 
         private List<SqlTable> GetAllTablesByName(string tableName)
         {
-            var lst = new List<SqlTable>();
+            return GetAllTables().Where(table => table.Name == tableName).ToList();
+        }
 
-            foreach (var table in Tables)
-                if (table.Name == tableName)
-                    lst.Add(table);
+        public string GetParentTableNewName(string tableName)
+        {
+            return (from table in ParentTables
+                       where table.Name == tableName
+                       select table.NewName).FirstOrDefault() ?? tableName;
+        }
 
-            return lst;
+        public bool TryGetNewName(string foreignKeyTableName, out string newName)
+        {
+            newName = null;
+
+            foreach (var table in ParentTables)
+            {
+                if (table.Name != foreignKeyTableName) continue;
+
+                newName = table.NewName;
+                return true;
+            }
+
+            return false;
         }
     }
 }

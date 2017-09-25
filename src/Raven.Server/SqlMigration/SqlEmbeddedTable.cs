@@ -1,21 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data;
-using Raven.Server.ServerWide.Context;
+﻿using System.Collections.Generic;
+using System.Linq;
 
 namespace Raven.Server.SqlMigration
 {
     public class SqlEmbeddedTable : SqlTable
     {
         private List<string> _parentColumns;
-        private readonly string _parentTableName;
-        public readonly string PropertyName;
+        public readonly string ParentTableName;
 
-        public SqlEmbeddedTable(string tableName, string query, string patch, string parentTable, string property, IDbConnection connection) : base(tableName, query, patch, connection)
+        public SqlEmbeddedTable(string tableName, string query, SqlDatabase database, string newName, string parentTable) : base(tableName, query, database, newName)
         {
-            PropertyName = string.IsNullOrWhiteSpace(property) ? tableName : property;
-            _parentTableName = parentTable;
-
+            ParentTableName = parentTable;
             IsEmbedded = true;
         }
 
@@ -24,23 +19,21 @@ namespace Raven.Server.SqlMigration
             if (_parentColumns != null)
                 return _parentColumns;
 
-            var lst = new List<string>();
-
-            foreach (var item in ForeignKeys)
-                if (item.Value == _parentTableName)
-                    lst.Add(item.Key);
+            var lst = (from item in ForeignKeys
+                where item.Value == ParentTableName
+                select item.Key).ToList();
 
             _parentColumns = lst;
             return lst;
         }
 
-        public new SqlReader GetReader()
+        public override SqlReader GetReader()
         {
             if (Reader != null)
                 return Reader;
 
             var query = InitialQuery + SqlQueries.OrderByColumns(GetColumnsReferencingParentTable());
-            Reader = new SqlReader(Connection, query, true);
+            Reader = new SqlReader(Database.Connection, query, true);
             Reader.ExecuteReader();
             return Reader;
         }
@@ -55,7 +48,7 @@ namespace Raven.Server.SqlMigration
                 return Reader;
             }
 
-            Reader = new SqlReader(Connection, query, true);
+            Reader = new SqlReader(Database.Connection, query, true);
             Reader.ExecuteReader();
             return Reader;
         }

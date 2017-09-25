@@ -1,42 +1,55 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Client.Documents.Operations;
+using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 
 namespace Raven.Server.SqlMigration
 {
     public partial class SqlDatabase
     {
-        private class Validator
+        public class Validator
         {
-            private readonly List<string> _errors = new List<string>();
+            public readonly List<SqlMigrationImportResult.Error> Errors;
             private readonly SqlDatabase _database;
+            private readonly DocumentsOperationContext _context;
             public bool IsValid;
 
-            public Validator(SqlDatabase database)
+            public Validator(SqlDatabase database, DocumentsOperationContext context)
             {
                 _database = database;
+                _context = context;
                 IsValid = false;
+                Errors = new List<SqlMigrationImportResult.Error>();
             }
 
-            private void AddError(string message)
+            public void AddError(SqlMigrationImportResult.Error.ErrorType errorType, string message, string tableName = null, string columnName = null)
             {
-                _errors.Add(message);
+                Errors.Add(new SqlMigrationImportResult.Error
+                {
+                    Type = errorType,
+                    Message = message,
+                    TableName = tableName,
+                    ColumnName = columnName
+                });
             }
 
-            private void AddErrors(IEnumerable<string> messages)
+            private void AddErrors(IEnumerable<SqlMigrationImportResult.Error> messages)
             {
-                _errors.AddRange(messages);
+                Errors.AddRange(messages);
             }
 
-            public void Validate(out List<string> errs)
+            public void Validate(out List<SqlMigrationImportResult.Error> errs)
             {
-                _errors.Clear();
+                Errors.Clear();
 
-                var tablesToValidate = _database.Tables.ToList();
+                var tablesToValidate = _database.GetAllTables();
 
                 ValidateExistanceOfTables(tablesToValidate);
-                ValidateEmbeddedTables(tablesToValidate);
-                ValidateDuplicateTables(tablesToValidate);
+                ValidateDuplicateTables(_database.ParentTables);
+                ValidateDuplicateNames(tablesToValidate);
+                ValidateEmbeddedTables(_database.EmbeddedTables.Intersect(tablesToValidate).ToList());
 
                 foreach (var table in tablesToValidate)
                 {
@@ -53,12 +66,32 @@ namespace Raven.Server.SqlMigration
                         continue;
 
                     ValidateQueryContainsAllKeys(document, table);
-                    ValidatePatch(table, document);
+
+                    var doc = ValidateConvertableToBlittable(table, document);
+
+                    if (doc == null)
+                        continue;
+
+                    if (table is SqlParentTable t)
+                        ValidatePatch(t, doc);
                 }
 
-                errs = _errors;
+                errs = Errors;
 
-                IsValid = _errors.Count == 0;
+                IsValid = Errors.Count == 0;
+            }
+
+            private BlittableJsonReaderObject ValidateConvertableToBlittable(SqlTable table, SqlMigrationDocument document)
+            {
+                try
+                {
+                    return document.ToBllitable(_context);
+                }
+                catch (Exception e)
+                {
+                    AddError(SqlMigrationImportResult.Error.ErrorType.ParseError, $"Cannot convert document to bllittable. Error: {e}", table.Name);
+                    return null;
+                }
             }
 
             private void ValidateExistanceOfTables(List<SqlTable> tables)
@@ -73,68 +106,57 @@ namespace Raven.Server.SqlMigration
 
                     if (string.IsNullOrEmpty(table.Name))
                     {
-                        AddError("A table is missing a name");
+                        AddError(SqlMigrationImportResult.Error.ErrorType.TableMissingName, "A table is missing a name");
                         tables.Remove(table);
                     }
 
                     else if (allTables.Contains(table.Name) == false)
                     {
-                        AddError($"Couldn't find table '{table.Name}' in the sql database (Table name must include schema name)");
+                        AddError(SqlMigrationImportResult.Error.ErrorType.TableNotExist, $"Couldn't find table '{table.Name}' in the SQL database (Table name must include schema name)", table.Name);
                         tables.Remove(table);
                     }
                     else count++;
                 }
             }
 
-            private void ValidateEmbeddedTables(List<SqlTable> tables)
+            private void ValidateEmbeddedTables(List<SqlTable> embeddedTables)
             {
-                AddErrors(
-
-                    from sqlTable in tables
-                    from embeddedTable in sqlTable.EmbeddedTables
-
-                    where embeddedTable.ForeignKeys.ContainsValue(sqlTable.Name) == false && tables.Contains(embeddedTable)
-
-                    select $"Table '{embeddedTable.Name}' cannot embed into '{sqlTable.Name}'"
-
-                );
-            }
-
-            private void ValidateDuplicateTables(List<SqlTable> tables)
-            {
-
-                AddErrors(tables.Where(table => !table.IsEmbedded).GroupBy(table =>
-                    {
-                        ValidateDuplicateEmbeddedTables(table.EmbeddedTables);
-                        return table.Name;
-                    })
-                    .Where(g => g.Count() > 1).Select(y => $"Duplicate table '{y.Key}'"));
-            }
-
-            private void ValidateDuplicateEmbeddedTables(List<SqlEmbeddedTable> tableEmbeddedTables)
-            {
-                var properties = new List<string>();
-                var tables = new List<SqlTable>();
-
-                foreach (var embeddedTable in tableEmbeddedTables)
+                foreach (var embeddedTable in embeddedTables)
                 {
-                    if (properties.Contains(embeddedTable.PropertyName))
-                        AddError($"Duplicate property name '{embeddedTable.PropertyName}'");
-
-                    else
-                        properties.Add(embeddedTable.PropertyName);
-
-                    if (tables.Contains(embeddedTable))
-                        AddError($"Duplicate table '{embeddedTable.Name}' (try give them property name)");
-
-                    else
-                        tables.Add(embeddedTable);
-
-                    ValidateDuplicateEmbeddedTables(embeddedTable.EmbeddedTables);
+                    ValidateEmbeddedTables(new List<SqlTable>(embeddedTable.EmbeddedTables));
+                    if (embeddedTable is SqlEmbeddedTable t && embeddedTable.ForeignKeys.ContainsValue(t.ParentTableName) == false)
+                        AddError(SqlMigrationImportResult.Error.ErrorType.InvalidEmbed, $"Table '{embeddedTable.Name}' cannot embed into '{t.ParentTableName}'", embeddedTable.Name);
                 }
             }
 
-            private void ValidatePatch(SqlTable table, SqlMigrationDocument document)
+            private void ValidateDuplicateTables(List<SqlParentTable> tables)
+            {
+                AddErrors(tables.GroupBy(table => table.Name)
+                    .Where(g => g.Count() > 1).Select(y => new SqlMigrationImportResult.Error
+                    {
+                        Type = SqlMigrationImportResult.Error.ErrorType.DuplicateParentTable,
+                        Message = $"Duplicate parent table '{y.Key}'",
+                        TableName = y.Key
+                    }));
+            }
+
+            private void ValidateDuplicateNames(List<SqlTable> tables, bool first = true)
+            {
+                AddErrors(tables.Where(table =>
+                    {
+                        if (!first) return true;
+                        ValidateDuplicateNames(new List<SqlTable>(table.EmbeddedTables), false);
+                        return table.IsEmbedded == false;
+                    }).GroupBy(table => table.NewName)
+                    .Where(g => g.Count() > 1).Select(y => new SqlMigrationImportResult.Error
+                    {
+                        Type = SqlMigrationImportResult.Error.ErrorType.DuplicateName,
+                        Message = $"Duplicate name '{y.Key}'",
+                        TableName = y.Key
+                    }));
+            }
+
+            private void ValidatePatch(SqlParentTable table, BlittableJsonReaderObject document)
             {
                 try
                 {
@@ -142,14 +164,14 @@ namespace Raven.Server.SqlMigration
                 }
                 catch (Exception e)
                 {
-                    AddError($"Cannot patch table '{table.Name}' using the given script. Error: " + e);
+                    AddError(SqlMigrationImportResult.Error.ErrorType.InvalidPatch, $"Cannot patch table '{table.Name}' using the given script. Error: {e}", table.Name);
                 }
             }
 
             private void ValidateHasPrimaryKeys(SqlTable table)
             {
                 if (table.PrimaryKeys.Count == 0)
-                    AddError($"Table '{table.Name}' must have at list 1 primary key");
+                    AddError(SqlMigrationImportResult.Error.ErrorType.TableMissingPrimaryKeys, $"Table '{table.Name}' must have at list 1 primary key", table.Name);
             }
 
             private SqlReader ValidateQuery(SqlTable table)
@@ -157,7 +179,7 @@ namespace Raven.Server.SqlMigration
 
                 if (table.InitialQuery.IndexOf("order by", StringComparison.OrdinalIgnoreCase) != -1)
                 {
-                    AddError($"Query cannot contain an 'ORDER BY' clause ({table.Name})");
+                    AddError(SqlMigrationImportResult.Error.ErrorType.InvalidOrderBy, $"Query cannot contain an 'ORDER BY' clause ({table.Name})", table.Name);
                     return null;
                 }
 
@@ -169,7 +191,7 @@ namespace Raven.Server.SqlMigration
                 }
                 catch (Exception e)
                 {
-                    AddError($"Failed to read table '{table.Name}' using the given query. Error: {e}");
+                    AddError(SqlMigrationImportResult.Error.ErrorType.InvalidQuery, $"Failed to read table '{table.Name}' using the given query. Error: {e}");
                     return null;
                 }
 
@@ -184,11 +206,11 @@ namespace Raven.Server.SqlMigration
                     {
                         try
                         {
-                            return  _database.Factory.FromReader(reader, table, out _, true);
+                            return _database.Factory.FromReader(reader, table, out _, this);                           
                         }
                         catch (Exception e)
                         {
-                            AddError(e.Message);
+                            AddError(SqlMigrationImportResult.Error.ErrorType.UnsupportedType, e.Message, table.Name);
                         }
                     }
                 }
@@ -202,12 +224,7 @@ namespace Raven.Server.SqlMigration
                 var count = id.Count(c => c == '/');
 
                 if (count < table.PrimaryKeys.Count)
-                    AddError($"Query for table '{table.Name}' must select all primary keys");
-
-                if (!(table is SqlEmbeddedTable embeddedTable)) return;
-
-                if (embeddedTable.GetColumnsReferencingParentTable().Any(column => document.Properties.All(property => property.Name != column)))
-                    AddError($"Query for table '{embeddedTable.Name}' must select all referential keys");
+                    AddError(SqlMigrationImportResult.Error.ErrorType.InvalidQuery, $"Query for table '{table.Name}' must select all primary keys", table.Name);
             }
         }
     }

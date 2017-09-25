@@ -1,7 +1,9 @@
 ﻿using System;
-using System.Data.SqlClient;
+using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Operations;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents;
 using Raven.Server.Json;
@@ -9,8 +11,6 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.SqlMigration;
 using Sparrow.Json;
-
-// ReSharper disable InconsistentNaming
 
 namespace Raven.Server.Web.Studio
 {
@@ -34,11 +34,11 @@ namespace Raven.Server.Web.Studio
                 if (databaseRecord.SqlConnectionStrings.TryGetValue(ConnectionStringName, out var ConnectionString) == false)
                     throw new InvalidOperationException($"{nameof(ConnectionString)} with the name '{ConnectionStringName}' not found");
 
-                SqlConnection connection;
+                IDbConnection connection;
 
                 try
                 {
-                    connection = (SqlConnection)ConnectionFactory.OpenConnection(ConnectionString.ConnectionString);
+                    connection = ConnectionFactory.OpenConnection(ConnectionString.ConnectionString);
                 }
                 catch (Exception e)
                 {
@@ -46,9 +46,48 @@ namespace Raven.Server.Web.Studio
                     return Task.CompletedTask;
                 }
 
-                var Tables = SqlDatabase.GetAllTablesNamesFromDatabase(connection);
-                WriteSchemaResponse(context, Tables.ToArray());
+                var database = new SqlDatabase(connection);
 
+                var tableColumns = SqlDatabase.GetSchemaResultTablesColumns(connection);
+
+                var tables = new List<SqlSchemaResultTable>();
+
+                foreach (var table in database.GetAllTables())
+                {
+                    var columns = table.PrimaryKeys.Select(column => new SqlSchemaResultTable.Column
+                        {
+                            Name = column,
+                            Type = SqlSchemaResultTable.Column.ColumnType.Primary
+                        })
+                        .ToList();
+
+                    columns.AddRange(table.ForeignKeys.Keys.Select(column => new SqlSchemaResultTable.Column
+                    {
+                        Name = column,
+                        Type = SqlSchemaResultTable.Column.ColumnType.Foreign
+                    }));
+
+                    foreach (var column in tableColumns[table.Name])
+                    {
+                        if (columns.Any(col => col.Name == column))
+                            continue;
+
+                        columns.Add(new SqlSchemaResultTable.Column
+                        {
+                            Name = column,
+                            Type = SqlSchemaResultTable.Column.ColumnType.None
+                        });
+                    }
+
+                    tables.Add(new SqlSchemaResultTable
+                    {
+                        Name = table.Name,
+                        Columns = columns.ToArray(),
+                        EmbeddedTables = table.ForeignKeys.Values.ToArray()
+                    });
+                }
+
+                WriteSchemaResponse(context, tables.ToArray());
             }
             return Task.CompletedTask;
         }
@@ -74,15 +113,19 @@ namespace Raven.Server.Web.Studio
                     if (databaseRecord.SqlConnectionStrings.TryGetValue(ConnectionStringName, out var ConnectionString) == false)
                         throw new InvalidOperationException($"{nameof(ConnectionString)} with the name '{ConnectionStringName}' not found");
 
-                    SqlConnection connection;
+                    IDbConnection connection;
                     
                     try
                     {
-                        connection = (SqlConnection)ConnectionFactory.OpenConnection(ConnectionString.ConnectionString);
+                        connection = ConnectionFactory.OpenConnection(ConnectionString.ConnectionString);
                     }
                     catch (Exception e)
                     {
-                        WriteImportResponse(context, Errors: "Cannot open connection using the given connection string. Error: " + e);
+                        WriteImportResponse(context, Errors: new SqlMigrationImportResult.Error
+                        {
+                            Type = SqlMigrationImportResult.Error.ErrorType.BadConnectionString,
+                            Message = "Cannot open connection using the given connection string. Error: " + e
+                        });
                         return;
                     }
 
@@ -98,10 +141,6 @@ namespace Raven.Server.Web.Studio
                     if (sqlImportDoc.TryGet(nameof(BinaryToAttachment), out BinaryToAttachment))
                         options.BinaryToAttachment = BinaryToAttachment;
 
-                    bool IncludeSchema;
-                    if (sqlImportDoc.TryGet(nameof(IncludeSchema), out IncludeSchema))
-                        options.IncludeSchema = IncludeSchema;
-
                     bool TrimStrings;
                     if (sqlImportDoc.TryGet(nameof(TrimStrings), out TrimStrings))
                         options.TrimStrings = TrimStrings;
@@ -116,7 +155,7 @@ namespace Raven.Server.Web.Studio
 
                     var factory = new SqlMigrationDocumentFactory(options);
 
-                    var database = new SqlDatabase(connection, factory, sqlMigrationTables);
+                    var database = new SqlDatabase(connection, factory, context, sqlMigrationTables);
 
                     database.Validate(out var errors);
 
@@ -124,33 +163,28 @@ namespace Raven.Server.Web.Studio
                     {
                         using (var writer = new SqlMigrationWriter(context, database))
                         {
-                            try
-                            {
-                                await writer.WriteDatabase();
-                            }
-                            catch (Exception e)
-                            {
-                                errors.Add(e.Message);
-                            }
+                            await writer.WriteDatabase();
                         }
                     }
 
-                    WriteImportResponse(context, factory.ColumnsSkipped.ToArray(), errors.ToArray());
+                    WriteImportResponse(context, errors.ToArray());
                 }
             }
         }
 
 
-        private void WriteSchemaResponse(DocumentsOperationContext context, string[] Tables = null, string Error = null)
+        private void WriteSchemaResponse(DocumentsOperationContext context, SqlSchemaResultTable[] Tables = null, string Error = null)
         {
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
 
-                writer.WriteArray(nameof(Tables), Tables);
+                WriteTablesArray(nameof(Tables), Tables, writer);
+                writer.WriteComma();
 
                 writer.WritePropertyName(nameof(Error));
                 writer.WriteString(Error);
+                writer.WriteComma();
 
                 var Success = Error == null;
                 writer.WritePropertyName(nameof(Success));
@@ -160,14 +194,59 @@ namespace Raven.Server.Web.Studio
             }
         }
 
-        private void WriteImportResponse(DocumentsOperationContext context, string[] ColumnsSkipped = null, params string[] Errors)
+        private void WriteTablesArray(string name, SqlSchemaResultTable[] tables, BlittableJsonTextWriter writer)
+        {
+            writer.WritePropertyName(name);
+            writer.WriteStartArray();
+
+            foreach (var table in tables)
+            {
+                writer.WriteStartObject();
+
+                writer.WritePropertyName(nameof(table.Name));
+                writer.WriteString(table.Name);
+                writer.WriteComma();
+
+                WriteColumnsArray(nameof(table.Columns), table.Columns, writer);
+                writer.WriteComma();
+
+                writer.WriteArray(nameof(table.EmbeddedTables), table.EmbeddedTables);
+
+                writer.WriteEndObject();
+            }
+
+            writer.WriteEndArray();
+        }
+
+        private void WriteColumnsArray(string name, SqlSchemaResultTable.Column[] columns, BlittableJsonTextWriter writer)
+        {
+            writer.WritePropertyName(name);
+            writer.WriteStartArray();
+
+            foreach (var column in columns)
+            {
+                writer.WriteStartObject();
+
+                writer.WritePropertyName(nameof(column.Name));
+                writer.WriteString(column.Name);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(column.Type));
+                writer.WriteString(column.Type.ToString());
+
+                writer.WriteEndObject();
+            }
+
+            writer.WriteEndArray();
+        }
+
+        private void WriteImportResponse(DocumentsOperationContext context, params SqlMigrationImportResult.Error[] Errors)
         {
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
 
-                writer.WriteArray(nameof(Errors), Errors);
-                writer.WriteArray(nameof(ColumnsSkipped), ColumnsSkipped);
+                WriteErrorsArray(nameof(Errors), Errors, writer);
               
                 writer.WriteComma();
 
@@ -180,5 +259,34 @@ namespace Raven.Server.Web.Studio
             }
         }
 
+        private void WriteErrorsArray(string name, SqlMigrationImportResult.Error[] errors, BlittableJsonTextWriter writer)
+        {
+            writer.WritePropertyName(name);
+            writer.WriteStartArray();
+
+            foreach (var error in errors)
+            {
+                writer.WriteStartObject();
+
+                writer.WritePropertyName(nameof(error.Type));
+                writer.WriteString(error.Type.ToString());
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(error.Message));
+                writer.WriteString(error.Message);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(error.TableName));
+                writer.WriteString(error.TableName);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(error.ColumnName));
+                writer.WriteString(error.ColumnName);
+
+                writer.WriteEndObject();
+            }
+
+            writer.WriteEndArray();
+        }
     }
 }
