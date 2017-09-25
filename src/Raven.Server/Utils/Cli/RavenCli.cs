@@ -960,8 +960,8 @@ namespace Raven.Server.Utils.Cli
                                 return true;
                             }
 
-                            WriteText("Server is not running as Service. Restart from a remote connection is not allowed." + Environment.NewLine +
-                                      "Restart the server from it's main console" + Environment.NewLine, WarningColor, this);
+                            WriteText("Server is not running as Service. Restarting from a remote connection is not allowed." + Environment.NewLine +
+                                      "Please restart the server from its main console" + Environment.NewLine, WarningColor, this);
                         }
                         if (parsedCommand.Command == Command.Shutdown)
                         {
@@ -975,8 +975,8 @@ namespace Raven.Server.Utils.Cli
                                 return false;
                             }
 
-                            WriteText("Server is not running as Service. Shutdown from a remote connection is not allowed." + Environment.NewLine +
-                                      "Shutdown the server from it's main console" + Environment.NewLine, WarningColor, this);
+                            WriteText("Server is not running as Service. Shutting down from a remote connection is not allowed." + Environment.NewLine +
+                                      "Please shutdown the server from its main console" + Environment.NewLine, WarningColor, this);
                         }
                         if (parsedCommand.Command == Command.Logout)
                         {
