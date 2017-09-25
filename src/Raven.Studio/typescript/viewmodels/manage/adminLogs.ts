@@ -72,12 +72,17 @@ class adminLogs extends viewModelBase {
     
     private configuration = ko.observable<adminLogsConfig>(adminLogsConfig.empty());
     
+    editedConfiguration = ko.observable<adminLogsConfig>(adminLogsConfig.empty());
+    editedSourceName = ko.observable<string>();
+    
+    isBufferFull = ko.observable<boolean>();
+    
     tailEnabled = ko.observable<boolean>(true);
-
+    
     constructor() {
         super();
         
-        this.bindToCurrentInstance("toggleTail", "itemHeightProvider");
+        this.bindToCurrentInstance("toggleTail", "itemHeightProvider", "applyConfiguration", "includeSource", "excludeSource", "removeConfigurationEntry");
         
         this.filter.throttle(500).subscribe(() => this.filterLogEntries());
     }
@@ -108,12 +113,24 @@ class adminLogs extends viewModelBase {
         }
     }
 
+    applyConfiguration() {
+        this.editedConfiguration().copyTo(this.configuration());
+        
+        // restart websocket
+        this.isBufferFull(false);
+        this.pauseLogs();
+        this.resumeLogs();
+    }
+    
     itemHeightProvider(item: string, row: virtualListRow<string>) {
         return this.heightCalculator.measure(item, row);
     }
     
+    // noinspection JSMethodCanBeStatic
     itemHtmlProvider(item: string) {
         const itemLower = item.toLocaleLowerCase();
+        
+        //TODO: this logic doesn't work well in every case - it creates false positives 
         const hasError = itemLower.includes("exception") || itemLower.includes("error") || itemLower.includes("failure");
         
         return $("<pre class='item'></pre>")
@@ -136,8 +153,10 @@ class adminLogs extends viewModelBase {
     
     pauseLogs() {
         eventsCollector.default.reportEvent("admin-logs", "pause");
-        this.liveClient().dispose();
-        this.liveClient(null);
+        if (this.liveClient()) {
+            this.liveClient().dispose();
+            this.liveClient(null);
+        }
     }
     
     resumeLogs() {
@@ -145,8 +164,8 @@ class adminLogs extends viewModelBase {
     }
     
     private onData(data: string) {
-        
         if (this.listController().getTotalCount() + this.pendingMessages.length >= this.configuration().maxEntries()) {
+            this.isBufferFull(true);
             this.pauseLogs();
             return;
         }
@@ -181,6 +200,7 @@ class adminLogs extends viewModelBase {
     clear() {
         eventsCollector.default.reportEvent("admin-logs", "clear");
         this.allData.length = 0;
+        this.isBufferFull(false);
         this.listController().reset();
     }
     
@@ -203,6 +223,28 @@ class adminLogs extends viewModelBase {
         if (this.tailEnabled()) {
             this.listController().scrollDown();
         }
+    }
+
+    includeSource() {
+        const source = this.editedSourceName();
+        if (source) {
+            const configItem = new adminLogsConfigEntry(source, "include");
+            this.editedConfiguration().entries.unshift(configItem);
+            this.editedSourceName("");
+        }
+    }
+    
+    excludeSource() {
+        const source = this.editedSourceName();
+        if (source) {
+            const configItem = new adminLogsConfigEntry(source, "exclude");
+            this.editedConfiguration().entries.push(configItem);
+            this.editedSourceName("");
+        }
+    }
+
+    removeConfigurationEntry(entry: adminLogsConfigEntry) {
+        this.editedConfiguration().entries.remove(entry);
     }
 }
 

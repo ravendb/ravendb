@@ -19,24 +19,24 @@
         <div class="flex-separator"></div>
 
         <div class="btn-group dropdown-right">
-            <button class="btn btn-default btn-sm dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+            <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown">
                 <i class="icon-settings"></i><span>Options</span>
                 <span class="caret"></span>
             </button>
-            <div class="dropdown-menu colselect-dropdown slidein-style">
-                <div class="columns-list-container flex-vertical">
+            <div class="dropdown-menu colselect-dropdown slidein-style" data-bind="dropdownPanel: true">
+                <div class="columns-list-container flex-vertical" data-bind="with: editedConfiguration">
                     <div class="form flex-horizontal margin-bottom margin-bottom-sm">
                         <div>
                             Max log entries
                         </div>
                         <div class="flex-grow">
-                            <input class="form-control input-sm" type="number" placeholder="10000 (default)" value="10000" />
+                            <input class="form-control input-sm" type="number" data-bind="numericInput: maxEntries" />
                         </div>
                     </div>
                     <h4>Log source filters</h4>
                     <div class="flex-horizontal margin-bottom margin-bottom-sm">
                         <div class="btn-group flex-grow">
-                            <input type="text" placeholder="Source name" class="form-control input-sm dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                            <input type="text" placeholder="Source name" class="form-control input-sm" data-toggle="dropdown" data-bind="textInput: $root.editedSourceName">
                             <span class="caret"></span>
                             <ul class="dropdown-menu">
                                 <li>
@@ -47,38 +47,31 @@
                             </ul>
                         </div>
                         <div>
-                            <button class="btn btn-sm btn-default"><i class="icon-plus"></i> <span>Include</span></button>
-                            <button class="btn btn-sm btn-default"><i class="icon-minus"></i> <span>Exclude</span></button>
+                            <button class="btn btn-sm btn-default" data-bind="click: $root.includeSource"><i class="icon-plus"></i> <span>Include</span></button>
+                            <button class="btn btn-sm btn-default" data-bind="click: $root.excludeSource"><i class="icon-minus"></i> <span>Exclude</span></button>
                         </div>
                     </div>
                     <div class="flex-grow">
-                        <ul class="column-list scroll">
+                        <ul class="column-list scroll" data-bind="foreach: entries">
                             <li>
                                 <div class="column-name flex-center">
-                                    <div class="padding padding-xs">Raven/Server</div>
+                                    <div class="padding padding-xs" data-bind="text: logSource"></div>
                                 </div>
                                 <div class="flex-center">
-                                    <div class="padding padding-xs text-success"><i class="icon-plus"></i><span>Include</span></div>
+                                    <div class="padding padding-xs" data-bind="css: { 'text-success': mode() === 'include', 'text-warning': mode() === 'exclude' }">
+                                        <i data-bind="css: { 'icon-plus': mode() === 'include', 'icon-minus': mode() === 'exclude' }"></i>
+                                        <span data-bind="text: mode"></span>
+                                    </div>
                                 </div>
-                                <a href="#" class="column-remove"><i class="icon-trash"></i></a>
-                            </li>
-                            <li>
-                                <div class="column-name flex-center">
-                                    <div class="padding padding-xs">Raven/Replication</div>
-                                </div>
-                                <div class="flex-center">
-                                    <div class="padding padding-xs text-warning"><i class="icon-minus"></i><span>Exclude</span></div>
-                                </div>
-                                <a href="#" class="column-remove"><i class="icon-trash"></i></a>
+                                <a href="#" class="column-remove" data-bind="click: $root.removeConfigurationEntry"><i class="icon-trash"></i></a>
                             </li>
                         </ul>
                     </div>
                     <div class="flex-horizontal margin-top margin-top-sm">
                         <div class="flex-separator"></div>
-                        <button class="btn btn-success btn-sm"><i class="icon-save"></i> <span>Apply</span></button>
+                        <button class="btn btn-success btn-sm close-panel" data-bind="click: $root.applyConfiguration"><i class="icon-save"></i> <span>Apply</span></button>
                     </div>
                 </div>
-
             </div>
         </div>
 
@@ -94,6 +87,11 @@
 
     <div class="log-list flex-grow scroll">
         <list-view params="controller: listController, emptyTemplate: 'empty-admin-logs-template', itemHeightProvider: itemHeightProvider, itemHtmlProvider: itemHtmlProvider"></list-view>
+        <div class="has-error results-error" data-bind="visible: isBufferFull">
+            <div class="help-block">
+                <i class="icon-danger"></i><span>Log buffer is full. Either increase buffer size in 'Options' panel or <a href="#" data-bind="click: clear">clear all entries.</a></span>
+            </div>
+        </div>
     </div>
 
 </div>

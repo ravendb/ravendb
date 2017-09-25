@@ -13,7 +13,7 @@ class adminLogsConfig {
     
     static empty() {
         const config = new adminLogsConfig();
-        config.maxEntries(10000);
+        config.maxEntries(100000);
         return config;
     }
 }
