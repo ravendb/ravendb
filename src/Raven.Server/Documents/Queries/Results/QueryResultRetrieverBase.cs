@@ -123,7 +123,7 @@ namespace Raven.Server.Documents.Queries.Results
                     {
                         if (fieldVal is BlittableJsonReaderObject nested)
                             doc.Data = nested;
-                        if (fieldVal is Document d)
+                        else if (fieldVal is Document d)
                             doc = d;
                         else
                             ThrowInvalidQueryBodyResponse(fieldVal);
