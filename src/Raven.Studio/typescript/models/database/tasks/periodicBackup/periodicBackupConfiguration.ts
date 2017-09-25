@@ -248,7 +248,8 @@ class periodicBackupConfiguration {
             S3Settings: this.s3Settings().toDto(),
             GlacierSettings: this.glacierSettings().toDto(),
             AzureSettings: this.azureSettings().toDto(),
-            FtpSettings: this.ftpSettings().toDto()
+            FtpSettings: this.ftpSettings().toDto(),
+            MentorNode: null
         };
     }
 
@@ -264,7 +265,8 @@ class periodicBackupConfiguration {
             S3Settings: s3Settings.empty().toDto(),
             GlacierSettings: glacierSettings.empty().toDto(),
             AzureSettings: azureSettings.empty().toDto(),
-            FtpSettings: ftpSettings.empty().toDto()
+            FtpSettings: ftpSettings.empty().toDto(),
+            MentorNode: null
         });
     }
 }
