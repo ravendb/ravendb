@@ -154,7 +154,7 @@ namespace FastTests.Server
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-8758")]
         public async Task Server_store_write_should_throw_concurrency_exception_if_relevant()
         {
             using (GetDocumentStore())
