@@ -52,7 +52,7 @@ namespace Raven.Server.Commercial
                         return (LicenseType)typeAsInt;
                 }
 
-                return LicenseType.Free;
+                return LicenseType.Community;
             }
         }
 

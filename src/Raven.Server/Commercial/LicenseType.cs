@@ -6,7 +6,7 @@ namespace Raven.Server.Commercial
 
         None = 0,
 
-        Free = 1,
+        Community = 1,
 
         Trial = 2,
 
