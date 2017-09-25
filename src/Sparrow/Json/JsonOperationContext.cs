@@ -109,8 +109,9 @@ namespace Sparrow.Json
 
         public unsafe class ManagedPinnedBuffer : IDisposable
         {
-            public const int Size = 32 * Constants.Size.Kilobyte;
-            public const int WholeBufferSize = 128 * Constants.Size.Kilobyte;
+            public const int WholeBufferSize = 256 * Constants.Size.Kilobyte;
+            public const int Size = WholeBufferSize / 4;
+            
 
             public readonly ArraySegment<byte> Buffer;
             public readonly int Length;
