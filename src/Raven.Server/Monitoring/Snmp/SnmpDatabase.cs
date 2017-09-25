@@ -84,8 +84,7 @@ namespace Raven.Server.Monitoring.Snmp
             _objectStore.Add(new DatabaseIndexStorageAllocatedSize(_databaseName, _databaseLandlord, _databaseIndex));
             _objectStore.Add(new DatabaseIndexStorageUsedSize(_databaseName, _databaseLandlord, _databaseIndex));
             _objectStore.Add(new DatabaseTotalStorageSize(_databaseName, _databaseLandlord, _databaseIndex));
-            //_objectStore.Add(new DatabaseIndexStorageDiskRemainingSpace(_databaseName, _databaseLandlord, _databaseIndex));
-            //_objectStore.Add(new DatabaseTransactionalStorageDiskRemainingSpace(_databaseName, _databaseLandlord, _databaseIndex));
+            _objectStore.Add(new DatabaseStorageDiskRemainingSpace(_databaseName, _databaseLandlord, _databaseIndex));
 
             //AddIndexesFromMappingDocument();
         }
