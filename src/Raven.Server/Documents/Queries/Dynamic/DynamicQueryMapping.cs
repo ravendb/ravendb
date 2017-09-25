@@ -162,7 +162,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     if (mapFields.ContainsKey(field.Name))
                         continue;
 
-                    mapFields.Add(field.Name, DynamicQueryMappingItem.Create(fieldName));
+                    mapFields.Add(field.Name, DynamicQueryMappingItem.Create(fieldName, field.AggregationOperation));
                 }
             }
 

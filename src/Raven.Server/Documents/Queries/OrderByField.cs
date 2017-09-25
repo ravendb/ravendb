@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Parser;
 using Sparrow.Json;
@@ -14,6 +15,7 @@ namespace Raven.Server.Documents.Queries
             OrderingType = orderingType;
             Ascending = ascending;
             Arguments = arguments;
+            AggregationOperation = AggregationOperation.None;
         }
 
         public readonly string Name;
@@ -60,5 +62,7 @@ namespace Raven.Server.Documents.Queries
                 return value;
             }
         }
+
+        public AggregationOperation AggregationOperation;
     }
 }

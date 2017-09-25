@@ -63,6 +63,15 @@ update {
 }");
         }
 
+        [Fact]
+        public void UseCountInOrderByAndNonInSelect()
+        {
+            ExecuteQuery(@"from Orders 
+group by ShippedAt
+order by count() asc
+select key()");
+
+        }
 
         [Fact]
         public void ProjectReferenceWithAliasFromLoad()

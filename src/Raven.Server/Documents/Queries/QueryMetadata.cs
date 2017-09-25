@@ -445,7 +445,10 @@ namespace Raven.Server.Documents.Queries
                 if (me.Name.Equals("count", StringComparison.OrdinalIgnoreCase))
                 {
                     if (me.Arguments == null || me.Arguments.Count == 0)
-                        return new OrderByField(Constants.Documents.Indexing.Fields.CountFieldName, OrderByFieldType.Long, asc);
+                        return new OrderByField(Constants.Documents.Indexing.Fields.CountFieldName, OrderByFieldType.Long, asc)
+                        {
+                            AggregationOperation = AggregationOperation.Count
+                        };
 
                     throw new InvalidQueryException("Invalid ORDER BY 'count()' call, expected zero arguments, got " + me.Arguments.Count, QueryText,
                         parameters);
@@ -469,7 +472,10 @@ namespace Raven.Server.Documents.Queries
                         orderingType = OrderByFieldType.Double;
                     }
 
-                    return new OrderByField(sumFieldToken.Field, orderingType, asc);
+                    return new OrderByField(sumFieldToken.Field, orderingType, asc)
+                    {
+                        AggregationOperation = AggregationOperation.Sum
+                    };
                 }
             }
 
