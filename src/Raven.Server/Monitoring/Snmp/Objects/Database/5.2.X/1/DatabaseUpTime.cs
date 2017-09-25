@@ -2,7 +2,7 @@ using Lextm.SharpSnmpLib;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 
-namespace Raven.Server.Monitoring.Snmp.Objects.Server
+namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
     internal class DatabaseUpTime : DatabaseScalarObjectBase<TimeTicks>
     {

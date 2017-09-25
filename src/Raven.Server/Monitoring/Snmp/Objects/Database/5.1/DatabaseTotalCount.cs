@@ -4,7 +4,7 @@ using Raven.Client;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
-namespace Raven.Server.Monitoring.Snmp.Objects.Documents
+namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
     public class DatabaseTotalCount : ScalarObjectBase<Integer32>
     {

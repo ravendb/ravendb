@@ -1,7 +1,7 @@
 using Lextm.SharpSnmpLib;
 using Raven.Server.Documents;
 
-namespace Raven.Server.Monitoring.Snmp.Objects.Documents
+namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
     public class DatabaseLoadedCount : ScalarObjectBase<Integer32>
     {
