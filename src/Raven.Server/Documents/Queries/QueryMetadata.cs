@@ -123,7 +123,7 @@ namespace Raven.Server.Documents.Queries
                 {
                     EnsureValidGroupByField(Query.GroupBy[i], parameters);
 
-                    GroupBy[i] = Query.GroupBy[i].Compound[0];
+                    GroupBy[i] = Query.GroupBy[i].FieldValue;
                 }
             }
 
@@ -633,7 +633,7 @@ namespace Raven.Server.Documents.Queries
         private SelectField GetSelectValue(string alias, FieldExpression expressionField)
         {
             (string Path, bool Array) sourceAlias;
-            string name = expressionField.Compound[0];
+            string name = expressionField.FieldValue;
             bool hasSourceAlias = false;
             bool array = false;
             if (expressionField.Compound.Count > 1)
@@ -642,7 +642,7 @@ namespace Raven.Server.Documents.Queries
                 {
                     array = true;
                 }
-                if (RootAliasPaths.TryGetValue(expressionField.Compound[1], out sourceAlias))
+                if (RootAliasPaths.TryGetValue(expressionField.Compound[0], out sourceAlias))
                 {
                     name = expressionField.FieldValueWithoutAlias;
                     hasSourceAlias = true;
@@ -650,7 +650,7 @@ namespace Raven.Server.Documents.Queries
                 }
                 else if (RootAliasPaths.Count != 0)
                 {
-                    throw new InvalidOperationException($"Unknown alias {expressionField.Compound[1]}, but there are aliases specified in the query ({string.Join(", ", RootAliasPaths.Keys)})");
+                    throw new InvalidOperationException($"Unknown alias {expressionField.Compound[0]}, but there are aliases specified in the query ({string.Join(", ", RootAliasPaths.Keys)})");
                 }
             }
             else if (RootAliasPaths.TryGetValue(expressionField.Compound[0], out sourceAlias))
