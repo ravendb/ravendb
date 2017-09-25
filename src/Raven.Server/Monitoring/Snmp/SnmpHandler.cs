@@ -13,12 +13,6 @@ namespace Raven.Server.Monitoring.Snmp
         [RavenAction("/monitoring/snmp/oids", "GET", AuthorizationStatus.ClusterAdmin)]
         public Task GetOids()
         {
-            if (ServerStore.Configuration.Monitoring.Snmp.Enabled == false)
-            {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                return Task.CompletedTask;
-            }
-
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
