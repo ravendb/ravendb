@@ -17,14 +17,22 @@ var RqlHighlightRules = function() {
     this.clauseAppendKeywords = clauseAppendKeywords.split("|");
 
     var insideClauseKeywords = (
-        "as|not|all|between"
+        "as|not"
     );
     var functions = (
         "count|sum|id|key"
     );
-    var whereFunctions = (
-        "in|search|boost|startsWith|endsWith|lucene|exact|within|circle"
+    
+    var binaryOperators = (
+        "=|==|<>|!=|>|<|>=|<=|in|all in|between"
     );
+    this.binaryOperators = binaryOperators.split("|");
+
+    var whereFunctions = (
+        "search|boost|startsWith|endsWith|lucene|exact|within|circle"
+    );
+    this.whereFunctions = binaryOperators.split("|");
+    
     var orderByFunctions = (
         "random|score"
     );
@@ -90,8 +98,8 @@ var RqlHighlightRules = function() {
             token : keywordMapper,
             regex : "[a-zA-Z_$@][a-zA-Z0-9_$@]*\\b"
         }, {
-            token : "keyword.operator",
-            regex : "\\+|\\-|\\/|\\/\\/|%|<@>|@>|<@|&|\\^|~|<|>|<=|=>|==|!=|<>|="
+            token : "binary.operator",
+            regex : binaryOperators
         }, {
             token : "paren.lparen",
             regex : /[\[({]/

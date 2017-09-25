@@ -221,7 +221,7 @@ class queryCompleter {
                     result.keywordsBefore = this.getKeywordsBefore(iterator);
                     result.keyword = "__function";
                     return result;
-                case "keyword.operator":
+                case "binary.operator":
                     if (!isBeforeCommaOrBinaryOperation) {
                         result.operator = token.value;
                     }
@@ -311,6 +311,11 @@ class queryCompleter {
             .done((wordList) => {
                 if (functions) {
                     wordList.push(...functions);
+                }
+                if (!prefix) {
+                    wordList.push(
+                        {value: "ID", score: 0, meta: "function"}
+                    );
                 }
                 this.completeWords(callback, wordList);
             });
@@ -439,15 +444,19 @@ class queryCompleter {
                     {value: ",", score: 23, meta: "separator"}
                 ];
                 if (lastKeyword.dividersCount === 2) {
-                    keywords.push(...[
+                    keywords.push(
                         {value: "desc", score: 22, meta: "descending sort"},
                         {value: "asc", score: 21, meta: "ascending sort"}
-                    ]);
+                    );
                 }
                 this.completeKeywordEnd(callback, lastKeyword, keywords);
                 return;
             }
             case "where": {
+                if (lastKeyword.dividersCount === 0) {
+                    this.completeKeywordEnd(callback, lastKeyword);
+                    return;
+                }
                 if (lastKeyword.dividersCount === 4 ||
                     (lastKeyword.dividersCount === 0 && lastKeyword.binaryOperation)) {
                     const binaryOperations = this.rules.binaryOperations.map((binaryOperation, i) => {
@@ -617,7 +626,7 @@ class queryCompleter {
 
     private completeFrom(callback: (errors: any[], wordList: autoCompleteWordList[]) => void) {
         this.providers.collections(collections => {
-            const wordList = collections.map(name => {
+            const wordList: autoCompleteWordList[] = collections.map(name => {
                 return {
                     caption: name, 
                     value: queryCompleter.escapeCollectionOrFieldName(name),
@@ -627,8 +636,8 @@ class queryCompleter {
             });
 
             wordList.push(
-                {caption: "index", value: "index", score: 4, meta: "keyword"},
-                {caption: "@all_docs", value: "@all_docs", score: 3, meta: "collection"}
+                {value: "index", score: 4, meta: "keyword"},
+                {value: "@all_docs", score: 3, meta: "collection"}
             );
 
             this.completeWords(callback, wordList);
@@ -644,19 +653,19 @@ class queryCompleter {
     }
 
     private completeKeywordEnd(callback: (errors: any[], wordList: autoCompleteWordList[]) => void, lastKeyword: autoCompleteLastKeyword, additions: autoCompleteWordList[] = null) {
-        let keywordEnoutered = false;
+        let keywordEncountered = false;
         const lastInitialKeyword = this.getInitialKeyword(lastKeyword);
 
         const keywords: autoCompleteWordList[] = this.rules.clausesKeywords.filter(keyword => {
-            if (keywordEnoutered) {
+            if (keywordEncountered) {
                 if (keyword === "group") { // group cluase is not shown when querying an index
                     return lastKeyword.keyword === "from";
                 }
             } else if (lastInitialKeyword === keyword) {
-                keywordEnoutered = true;
+                keywordEncountered = true;
                 return lastKeyword.dividersCount === 0 && !lastKeyword.binaryOperation;
             }
-            return keywordEnoutered;
+            return keywordEncountered;
         }).filter(keyword => {
             if (keyword === "select" || keyword === "include") {
                 return this.queryType === "Select";
@@ -666,7 +675,7 @@ class queryCompleter {
             }
             return true;
         }).map((keyword, i) => {
-            return {caption: keyword, value: keyword, score: 20 - i, meta: "keyword"};
+            return {value: keyword, score: 20 - i, meta: "keyword"};
         });
 
         if (additions) {

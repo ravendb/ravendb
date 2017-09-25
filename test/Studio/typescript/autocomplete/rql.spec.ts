@@ -38,6 +38,10 @@ describe("RQL Autocomplete", () => {
         {caption: "Index With ' And \" in name", value: "'Index With '' And \" in name' ", score: 1, meta: "index"},
     ];
 
+    const functionsList = [
+        {caption: "ID", value: "ID(", score: 0, meta: "function"}
+    ];
+
     const fieldsList = [
         {caption: "Company", value: "Company ", score: 1, meta: "string field"},
         {caption: "Employee", value: "Employee ", score: 1, meta: "string field"},
@@ -53,7 +57,48 @@ describe("RQL Autocomplete", () => {
         {caption: "With Space", value: "'With Space' ", score: 1, meta: "string field"},
         {caption: "With ' and \" quotes", value: "'With '' and \" quotes' ", score: 1, meta: "string field"},
         {caption: "@metadata", value: "@metadata ", score: 1, meta: "object field"}
-    ];
+    ].concat(functionsList);
+
+    const allDocsFieldsList = [
+        {caption: "Max", value: "Max ", score: 1, meta: "number field"},
+        {caption: "@metadata", value: "@metadata ", score: 1, meta: "object field"},
+        {caption: "Name", value: "Name ", score: 1, meta: "string field"},
+        {caption: "Description", value: "Description ", score: 1, meta: "string field"},
+        {caption: "ExternalId", value: "ExternalId ", score: 1, meta: "string field"},
+        {caption: "Contact", value: "Contact ", score: 1, meta: "object field"},
+        {caption: "Address", value: "Address ", score: 1, meta: "object field"},
+        {caption: "Phone", value: "Phone ", score: 1, meta: "string field"},
+        {caption: "Fax", value: "Fax ", score: 1, meta: "string field"},
+        {caption: "LastName", value: "LastName ", score: 1, meta: "string field"},
+        {caption: "FirstName", value: "FirstName ", score: 1, meta: "string field"},
+        {caption: "Title", value: "Title ", score: 1, meta: "string field"},
+        {caption: "HiredAt", value: "HiredAt ", score: 1, meta: "string field"},
+        {caption: "Birthday", value: "Birthday ", score: 1, meta: "string field"},
+        {caption: "HomePhone", value: "HomePhone ", score: 1, meta: "string field"},
+        {caption: "Extension", value: "Extension ", score: 1, meta: "string field"},
+        {caption: "ReportsTo", value: "ReportsTo ", score: 1, meta: "string field"},
+        {caption: "Notes", value: "Notes ", score: 1, meta: "null field"},
+        {caption: "Territories", value: "Territories ", score: 1, meta: "object[] | string[] field"},
+        {caption: "Company", value: "Company ", score: 1, meta: "string field"},
+        {caption: "Employee", value: "Employee ", score: 1, meta: "string field"},
+        {caption: "OrderedAt", value: "OrderedAt ", score: 1, meta: "string field"},
+        {caption: "RequireAt", value: "RequireAt ", score: 1, meta: "string field"},
+        {caption: "ShippedAt", value: "ShippedAt ", score: 1, meta: "null field"},
+        {caption: "ShipTo", value: "ShipTo ", score: 1, meta: "object field"},
+        {caption: "ShipVia", value: "ShipVia ", score: 1, meta: "string field"},
+        {caption: "Freight", value: "Freight ", score: 1, meta: "number field"},
+        {caption: "Lines", value: "Lines ", score: 1, meta: "object[] field"},
+        {caption: "Na.me", value: "'Na.me' ", score: 1, meta: "string field"},
+        {caption: "Supplier", value: "Supplier ", score: 1, meta: "string field"},
+        {caption: "Category", value: "Category ", score: 1, meta: "string field"},
+        {caption: "QuantityPerUnit", value: "QuantityPerUnit ", score: 1, meta: "string field"},
+        {caption: "PricePerUnit", value: "PricePerUnit ", score: 1, meta: "number field"},
+        {caption: "UnitsInStock", value: "UnitsInStock ", score: 1, meta: "number field"},
+        {caption: "UnitsOnOrder", value: "UnitsOnOrder ", score: 1, meta: "number field"},
+        {caption: "Discontinued", value: "Discontinued ", score: 1, meta: "boolean field"},
+        {caption: "ReorderLevel", value: "ReorderLevel ", score: 1, meta: "number field"},
+        {caption: "HomePage", value: "HomePage ", score: 1, meta: "null field"}
+    ].concat(functionsList);
     
     const orderByFieldsList = fieldsList.concat([
         {caption: "score", value: "score(", score: 22, meta: "function"},
@@ -347,46 +392,7 @@ select ShipTo.City,|`, northwindProvider(), (errors, wordlist, prefix, lastKeywo
         rqlTestUtils.autoComplete(`from @all_docs
 select |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
-            assert.deepEqual(wordlist, [
-                {caption: "Max", value: "Max ", score: 1, meta: "number field"},
-                {caption: "@metadata", value: "@metadata ", score: 1, meta: "object field"},
-                {caption: "Name", value: "Name ", score: 1, meta: "string field"},
-                {caption: "Description", value: "Description ", score: 1, meta: "string field"},
-                {caption: "ExternalId", value: "ExternalId ", score: 1, meta: "string field"},
-                {caption: "Contact", value: "Contact ", score: 1, meta: "object field"},
-                {caption: "Address", value: "Address ", score: 1, meta: "object field"},
-                {caption: "Phone", value: "Phone ", score: 1, meta: "string field"},
-                {caption: "Fax", value: "Fax ", score: 1, meta: "string field"},
-                {caption: "LastName", value: "LastName ", score: 1, meta: "string field"},
-                {caption: "FirstName", value: "FirstName ", score: 1, meta: "string field"},
-                {caption: "Title", value: "Title ", score: 1, meta: "string field"},
-                {caption: "HiredAt", value: "HiredAt ", score: 1, meta: "string field"},
-                {caption: "Birthday", value: "Birthday ", score: 1, meta: "string field"},
-                {caption: "HomePhone", value: "HomePhone ", score: 1, meta: "string field"},
-                {caption: "Extension", value: "Extension ", score: 1, meta: "string field"},
-                {caption: "ReportsTo", value: "ReportsTo ", score: 1, meta: "string field"},
-                {caption: "Notes", value: "Notes ", score: 1, meta: "null field"},
-                {caption: "Territories", value: "Territories ", score: 1, meta: "object[] | string[] field"},
-                {caption: "Company", value: "Company ", score: 1, meta: "string field"},
-                {caption: "Employee", value: "Employee ", score: 1, meta: "string field"},
-                {caption: "OrderedAt", value: "OrderedAt ", score: 1, meta: "string field"},
-                {caption: "RequireAt", value: "RequireAt ", score: 1, meta: "string field"},
-                {caption: "ShippedAt", value: "ShippedAt ", score: 1, meta: "null field"},
-                {caption: "ShipTo", value: "ShipTo ", score: 1, meta: "object field"},
-                {caption: "ShipVia", value: "ShipVia ", score: 1, meta: "string field"},
-                {caption: "Freight", value: "Freight ", score: 1, meta: "number field"},
-                {caption: "Lines", value: "Lines ", score: 1, meta: "object[] field"},
-                {caption: "Na.me", value: "'Na.me' ", score: 1, meta: "string field"},
-                {caption: "Supplier", value: "Supplier ", score: 1, meta: "string field"},
-                {caption: "Category", value: "Category ", score: 1, meta: "string field"},
-                {caption: "QuantityPerUnit", value: "QuantityPerUnit ", score: 1, meta: "string field"},
-                {caption: "PricePerUnit", value: "PricePerUnit ", score: 1, meta: "number field"},
-                {caption: "UnitsInStock", value: "UnitsInStock ", score: 1, meta: "number field"},
-                {caption: "UnitsOnOrder", value: "UnitsOnOrder ", score: 1, meta: "number field"},
-                {caption: "Discontinued", value: "Discontinued ", score: 1, meta: "boolean field"},
-                {caption: "ReorderLevel", value: "ReorderLevel ", score: 1, meta: "number field"},
-                {caption: "HomePage", value: "HomePage ", score: 1, meta: "null field"}
-            ]);
+            assert.deepEqual(wordlist, allDocsFieldsList);
 
             assert.equal(lastKeyword.keyword, "select");
             assert.equal(lastKeyword.dividersCount, 1);
@@ -413,18 +419,6 @@ select |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.deepEqual(wordlist, collectionsList);
 
             assert.equal(lastKeyword.keyword, "from");
-            assert.equal(lastKeyword.dividersCount, 1);
-
-            done();
-        });
-    });
-
-    it('from Collection where | should list fields', done => {
-        rqlTestUtils.autoComplete("from Orders where |", northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
-            assert.equal(prefix, "");
-            assert.deepEqual(wordlist, fieldsList);
-
-            assert.equal(lastKeyword.keyword, "where");
             assert.equal(lastKeyword.dividersCount, 1);
 
             done();
@@ -468,6 +462,18 @@ where|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
 
             assert.equal(lastKeyword.keyword, "where");
             assert.equal(lastKeyword.dividersCount, 0);
+
+            done();
+        });
+    });
+
+    it('from Collection where | should list fields', done => {
+        rqlTestUtils.autoComplete("from Orders where |", northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, fieldsList);
+
+            assert.equal(lastKeyword.keyword, "where");
+            assert.equal(lastKeyword.dividersCount, 1);
 
             done();
         });
@@ -921,7 +927,7 @@ group by ShippedAt, |`, northwindProvider(), (errors, wordlist, prefix, lastKeyw
                 {caption: "Employee", value: "Employee ", score: 1, meta: "field"},
                 {caption: "Company", value: "Company ", score: 1, meta: "field"},
                 {caption: "Total", value: "Total ", score: 1, meta: "field"}
-            ]);
+            ].concat(functionsList));
 
             assert.equal(lastKeyword.keyword, "select");
             assert.equal(lastKeyword.dividersCount, 1);
