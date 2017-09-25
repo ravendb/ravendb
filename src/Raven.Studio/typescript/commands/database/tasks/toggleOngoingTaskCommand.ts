@@ -10,7 +10,7 @@ class toggleOngoingTaskCommand extends commandBase {
 
     execute(): JQueryPromise<Raven.Client.ServerWide.Operations.ModifyOngoingTaskResult> {
         const args = { key: this.taskId, type: this.taskType, disable: this.disable, taskName: this.taskName };
-        const url = endpoints.databases.ongoingTasks.adminTasksState + this.urlEncodeArgs(args);
+        const url = endpoints.databases.ongoingTasks.tasksState + this.urlEncodeArgs(args);
         const operationText = this.disable ? "disable" : "enable";
      
         return this.post(url, null, this.db)

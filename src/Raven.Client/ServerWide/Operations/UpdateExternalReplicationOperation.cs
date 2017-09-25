@@ -39,7 +39,7 @@ namespace Raven.Client.ServerWide.Operations
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{_databaseName}/admin/tasks/external-replication";
+                url = $"{node.Url}/databases/{_databaseName}/tasks/external-replication";
 
                 var request = new HttpRequestMessage
                 {
