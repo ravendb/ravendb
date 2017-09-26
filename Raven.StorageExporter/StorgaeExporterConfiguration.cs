@@ -11,6 +11,7 @@ namespace Raven.StorageExporter
         public string JournalsPath { get; set; }
         public string TableName { get; set; }
         public int BatchSize { get; set; }
+        public bool IsRavendbFs { get; set; }
 
         public static int DefaultBatchSize = 1024;
         public bool HasCompression { get; set; }
@@ -32,9 +33,17 @@ namespace Raven.StorageExporter
             {
                 int batchSize = BatchSize == 0 ? DefaultBatchSize : BatchSize;
 
-                using (var storageExporter = new StorageExporter(DatabaseDataDir, OutputDumpPath, batchSize, DocumentsStartEtag, HasCompression, Encryption, JournalsPath))
+                using (var storageExporter = new StorageExporter(DatabaseDataDir, OutputDumpPath, batchSize, DocumentsStartEtag, HasCompression, Encryption, JournalsPath, IsRavendbFs))
                 {
-                    storageExporter.ExportDatabase();
+                    if (IsRavendbFs)
+                    {
+                        storageExporter.ExportFilesystemAsAttachments();
+                    }
+                    else
+                    {
+                        storageExporter.ExportDatabase();
+                    }
+                    
                 }  
             }
         }

@@ -252,7 +252,7 @@ namespace Raven.Client.FileSystem
             {
                 var requestUriBuilder = new StringBuilder(operation.Url)
                     .Append("/search/?query=")
-                    .Append(Uri.EscapeUriString(query))
+                    .Append(Uri.EscapeDataString(query))
                     .Append("&start=")
                     .Append(start)
                     .Append("&pageSize=")
@@ -285,7 +285,7 @@ namespace Raven.Client.FileSystem
         {
             return ExecuteWithReplication(HttpMethods.Delete, async (operation, requestTimeMetric) =>
             {
-                var requestUriString = string.Format("{0}/search?query={1}", operation.Url, query);
+                var requestUriString = string.Format("{0}/search?query={1}", operation.Url, Uri.EscapeDataString(query));
 
                 using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Delete, operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
                 {
@@ -383,7 +383,7 @@ namespace Raven.Client.FileSystem
         {
             var path = new StringBuilder(operationMetadata.Url)
                 .Append("/streams/query?query=")
-                .Append(Uri.EscapeUriString(query))
+                .Append(Uri.EscapeDataString(query))
                 .Append("&start=")
                 .Append(start)
                 .Append("&pageSize=")
@@ -854,7 +854,7 @@ namespace Raven.Client.FileSystem
                 if (path.StartsWith("/"))
                     path = path.Substring(1);
 
-                var requestUriString = operation.Url + "/folders/subdirectories/" + Uri.EscapeUriString(path) + "?pageSize=" +
+                var requestUriString = operation.Url + "/folders/subdirectories/" + Uri.EscapeDataString(path) + "?pageSize=" +
                                        pageSize + "&start=" + start;
 
                 using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Get, operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
@@ -1077,7 +1077,7 @@ namespace Raven.Client.FileSystem
                 {
                     var requestUriBuilder = new StringBuilder(operation.Url)
                         .Append("/config/search/?prefix=")
-                        .Append(Uri.EscapeUriString(prefix))
+                        .Append(Uri.EscapeDataString(prefix))
                         .Append("&start=")
                         .Append(start)
                         .Append("&pageSize=")

@@ -227,7 +227,7 @@ namespace Raven.Database.FileSystem
             }
         }
 
-        internal static ITransactionalStorage CreateTransactionalStorage(InMemoryRavenConfiguration configuration)
+        public static ITransactionalStorage CreateTransactionalStorage(InMemoryRavenConfiguration configuration)
         {
             var storageType = configuration.FileSystem.SelectFileSystemStorageEngineAndFetchTypeName();
 
