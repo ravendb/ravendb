@@ -464,6 +464,19 @@ namespace Raven.Tests.FileSystem
             Assert.NotNull(client.GetMetadataForAsync("name#.bin").Result);
         }
 
+        [Fact]
+        public void Can_query_file_with_hash_in_name()
+        {
+            var client = NewAsyncClient();
+
+            client.UploadAsync("name#.bin", new MemoryStream(new byte[] { 1, 2, 3 })).Wait();
+
+            var results = client.SearchAsync("__rfileName:nib.#eman*").Result;
+
+            Assert.Equal(1, results.FileCount);
+            Assert.Equal("name#.bin", results.Files[0].Name);
+        }
+
         private void ExecuteWithSimplifiedException ( Action action )
         {
             try
