@@ -35,16 +35,16 @@
     <Compile Remove="Web\Studio\EmbeddedData\NorthwindModel.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\libs\libsodium\x64\libsodium.dll" Link="libsodium.x64.dll">
+    <None Include="..\..\libs\libsodium\x64\libsodium.x64.dll" Link="libsodium.x64.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\libs\libsodium\x86\libsodium.dll" Link="libsodium.x86.dll">
+    <None Include="..\..\libs\libsodium\x86\libsodium.x86.dll" Link="libsodium.x86.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\libs\libsodium\x64\libsodium.so" Link="libsodium.x64.so">
+    <None Include="..\..\libs\libsodium\x64\libsodium.x64.so" Link="libsodium.x64.so">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\libs\libsodium\x86\libsodium.so" Link="libsodium.x86.so">
+    <None Include="..\..\libs\libsodium\x86\libsodium.x86.so" Link="libsodium.x86.so">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="..\..\libs\libsodium\x86\libsodium.arm.so" Link="libsodium.arm.so">
