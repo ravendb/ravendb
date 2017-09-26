@@ -8,15 +8,17 @@ namespace Raven.Client.ServerWide.Commands
     public class GetTopologyCommand : RavenCommand<Topology>
     {
         private readonly string _forcedUrl;
+        private readonly string _database;
 
-        public GetTopologyCommand(string forcedUrl = null)
+        public GetTopologyCommand(string forcedUrl = null, string database = null)
         {
             _forcedUrl = forcedUrl;
+            _database = database;
         }
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/topology?name={node.Database}";
+            url = $"{node.Url}/topology?name={_database ?? node.Database}";
             if (string.IsNullOrEmpty(_forcedUrl) == false)
             {
                 url += $"&url={_forcedUrl}";
