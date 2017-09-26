@@ -123,7 +123,14 @@ namespace Raven.Server.Documents.Queries
                 {
                     EnsureValidGroupByField(Query.GroupBy[i], parameters);
 
-                    GroupBy[i] = Query.GroupBy[i].FieldValue;
+                    var expressionField = Query.GroupBy[i];
+
+                    if (expressionField.Compound.Count == 1 || TryGetFieldValueWithoutAlias(expressionField, out var name, out _) == false)
+                    {
+                        name = expressionField.FieldValue;
+                    }
+                    
+                    GroupBy[i] = name;
                 }
             }
 
@@ -644,15 +651,12 @@ namespace Raven.Server.Documents.Queries
                 {
                     array = true;
                 }
-                if (RootAliasPaths.TryGetValue(expressionField.Compound[0], out sourceAlias))
+
+                if (TryGetFieldValueWithoutAlias(expressionField, out var value, out sourceAlias))
                 {
-                    name = expressionField.FieldValueWithoutAlias;
+                    name = value;
                     hasSourceAlias = true;
                     array = sourceAlias.Array;
-                }
-                else if (RootAliasPaths.Count != 0)
-                {
-                    throw new InvalidOperationException($"Unknown alias {expressionField.Compound[0]}, but there are aliases specified in the query ({string.Join(", ", RootAliasPaths.Keys)})");
                 }
             }
             else if (RootAliasPaths.TryGetValue(expressionField.Compound[0], out sourceAlias))
@@ -664,6 +668,24 @@ namespace Raven.Server.Documents.Queries
                 name = string.Empty;
             }
             return SelectField.Create(name, alias, sourceAlias.Path, array, hasSourceAlias);
+        }
+
+        private bool TryGetFieldValueWithoutAlias(FieldExpression expressionField, out string value, out (string Path, bool Array) sourceAlias)
+        {
+            if (RootAliasPaths.TryGetValue(expressionField.Compound[0], out sourceAlias))
+            {
+                value = expressionField.FieldValueWithoutAlias;
+                return true;
+            }
+
+            if (RootAliasPaths.Count != 0)
+            {
+                throw new InvalidOperationException(
+                    $"Unknown alias {expressionField.Compound[0]}, but there are aliases specified in the query ({string.Join(", ", RootAliasPaths.Keys)})");
+            }
+
+            value = null;
+            return false;
         }
 
         public string GetIndexFieldName(FieldExpression fe)
