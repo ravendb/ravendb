@@ -120,7 +120,11 @@ describe("RQL Autocomplete", () => {
         {caption: ",", value: ", ", score: 23, meta: "separator"},
         {caption: "load", value: "load ", score: 20, meta: "keyword"},
         {caption: "select", value: "select ", score: 19, meta: "keyword"},
-        {caption: "include", value: "include ", score: 18, meta: "keyword"}
+        {caption: "select {", value: "select { ", score: 18, meta: "JS projection", snippet: `select {
+    \${1:Name}: \${2:Value}
+}
+`},
+        {caption: "include", value: "include ", score: 17, meta: "keyword"}
     ];
     
     const groupByAfterList = [
@@ -129,7 +133,11 @@ describe("RQL Autocomplete", () => {
         {caption: "order", value: "order ", score: 19, meta: "keyword"},
         {caption: "load", value: "load ", score: 18, meta: "keyword"},
         {caption: "select", value: "select ", score: 17, meta: "keyword"},
-        {caption: "include", value: "include ", score: 16, meta: "keyword"}
+        {caption: "select {", value: "select { ", score: 16, meta: "JS projection", snippet: `select {
+    \${1:Name}: \${2:Value}
+}
+`},
+        {caption: "include", value: "include ", score: 15, meta: "keyword"}
     ];
     
     const orderBySortList =  _.sortBy(orderBySortAfterList.concat([
@@ -153,7 +161,24 @@ describe("RQL Autocomplete", () => {
         {caption: "order", value: "order ", score: 18, meta: "keyword"},
         {caption: "load", value: "load ", score: 17, meta: "keyword"},
         {caption: "select", value: "select ", score: 16, meta: "keyword"},
-        {caption: "include", value: "include ", score: 15, meta: "keyword"}
+        {caption: "select {", value: "select { ", score: 15, meta: "JS projection", snippet: `select {
+    \${1:Name}: \${2:Value}
+}
+`},
+        {caption: "include", value: "include ", score: 14, meta: "keyword"}
+    ];
+
+    const afterFromAsList = [
+        {caption: "group", value: "group ", score: 20, meta: "keyword"},
+        {caption: "where", value: "where ", score: 19, meta: "keyword"},
+        {caption: "order", value: "order ", score: 18, meta: "keyword"},
+        {caption: "load", value: "load ", score: 17, meta: "keyword"},
+        {caption: "select", value: "select ", score: 16, meta: "keyword"},
+        {caption: "select {", value: "select { ", score: 15, meta: "JS projection", snippet: `select {
+    \${1:Name}: \${2:Value}
+}
+`},
+        {caption: "include", value: "include ", score: 14, meta: "keyword"}
     ];
 
     const afterFromIndexList = [
@@ -162,7 +187,11 @@ describe("RQL Autocomplete", () => {
         {caption: "order", value: "order ", score: 19, meta: "keyword"},
         {caption: "load", value: "load ", score: 18, meta: "keyword"},
         {caption: "select", value: "select ", score: 17, meta: "keyword"},
-        {caption: "include", value: "include ", score: 16, meta: "keyword"}
+        {caption: "select {", value: "select { ", score: 16, meta: "JS projection", snippet: `select {
+    \${1:Name}: \${2:Value}
+}
+`},
+        {caption: "include", value: "include ", score: 15, meta: "keyword"}
     ];
 
     const afterGroupWithoutSpaceList = [
@@ -171,7 +200,11 @@ describe("RQL Autocomplete", () => {
         {caption: "order", value: "order ", score: 18, meta: "keyword"},
         {caption: "load", value: "load ", score: 17, meta: "keyword"},
         {caption: "select", value: "select ", score: 16, meta: "keyword"},
-        {caption: "include", value: "include ", score: 15, meta: "keyword"}
+        {caption: "select {", value: "select { ", score: 15, meta: "JS projection", snippet: `select {
+    \${1:Name}: \${2:Value}
+}
+`},
+        {caption: "include", value: "include ", score: 14, meta: "keyword"}
     ];
 
     const afterIncludeWithoutSpaceList = [
@@ -184,7 +217,11 @@ describe("RQL Autocomplete", () => {
         {caption: "order", value: "order ", score: 20, meta: "keyword"},
         {caption: "load", value: "load ", score: 19, meta: "keyword"},
         {caption: "select", value: "select ", score: 18, meta: "keyword"},
-        {caption: "include", value: "include ", score: 17, meta: "keyword"}
+        {caption: "select {", value: "select { ", score: 17, meta: "JS projection", snippet: `select {
+    \${1:Name}: \${2:Value}
+}
+`},
+        {caption: "include", value: "include ", score: 16, meta: "keyword"}
     ];
 
     const afterWhereWithoutSpaceList = [
@@ -192,14 +229,22 @@ describe("RQL Autocomplete", () => {
         {caption: "order", value: "order ", score: 19, meta: "keyword"},
         {caption: "load", value: "load ", score: 18, meta: "keyword"},
         {caption: "select", value: "select ", score: 17, meta: "keyword"},
-        {caption: "include", value: "include ", score: 16, meta: "keyword"}
+        {caption: "select {", value: "select { ", score: 16, meta: "JS projection", snippet: `select {
+    \${1:Name}: \${2:Value}
+}
+`},
+        {caption: "include", value: "include ", score: 15, meta: "keyword"}
     ];
 
     const afterOrderWithoutSpaceList = [
         {caption: "order", value: "order ", score: 20, meta: "keyword"},
         {caption: "load", value: "load ", score: 19, meta: "keyword"},
         {caption: "select", value: "select ", score: 18, meta: "keyword"},
-        {caption: "include", value: "include ", score: 17, meta: "keyword"}
+        {caption: "select {", value: "select { ", score: 17, meta: "JS projection", snippet: `select {
+    \${1:Name}: \${2:Value}
+}
+`},
+        {caption: "include", value: "include ", score: 16, meta: "keyword"}
     ];
 
     const afterOrderOrGroupList = [
@@ -308,6 +353,58 @@ describe("RQL Autocomplete", () => {
 
             assert.equal(lastKeyword.keyword, "from");
             assert.equal(lastKeyword.dividersCount, 2);
+
+            done();
+        });
+    });
+
+    it('from collection as without space | should list as with prefix', done => {
+        rqlTestUtils.autoComplete(`from Orders as|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "as");
+            assert.deepEqual(wordlist, afterFromList);
+
+            assert.equal(lastKeyword.keyword, "from");
+            assert.equal(lastKeyword.keywordModifier, "as");
+            assert.equal(lastKeyword.dividersCount, 2);
+
+            done();
+        });
+    });
+
+    it('from collection as | should not list anything', done => {
+        rqlTestUtils.autoComplete(`from Orders as |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.isNull(wordlist);
+
+            assert.equal(lastKeyword.keyword, "from");
+            assert.equal(lastKeyword.keywordModifier, "as");
+            assert.equal(lastKeyword.dividersCount, 3);
+
+            done();
+        });
+    });
+
+    it('from collection as alias without space', done => {
+        rqlTestUtils.autoComplete(`from Orders as o|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "o");
+            assert.isNull(wordlist);
+
+            assert.equal(lastKeyword.keyword, "from");
+            assert.equal(lastKeyword.keywordModifier, "as");
+            assert.equal(lastKeyword.dividersCount, 3);
+
+            done();
+        });
+    });
+
+    it('from collection as alias | should list next keywords', done => {
+        rqlTestUtils.autoComplete(`from Orders as o |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, afterFromAsList);
+
+            assert.equal(lastKeyword.keyword, "from");
+            assert.equal(lastKeyword.keywordModifier, "as");
+            assert.equal(lastKeyword.dividersCount, 4);
 
             done();
         });
