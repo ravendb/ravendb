@@ -211,7 +211,7 @@ class exportDatabase extends viewModelBase {
             });
     }
 
-    private startDownload(args: Raven.Client.Documents.Smuggler.DatabaseSmugglerOptions) {
+    private startDownload(args: Raven.Client.Documents.Smuggler.DatabaseSmugglerExportOptions) {
         const $form = $("#exportDownloadForm");
         const db = this.activeDatabase();
         const $downloadOptions = $("[name=DownloadOptions]", $form);
