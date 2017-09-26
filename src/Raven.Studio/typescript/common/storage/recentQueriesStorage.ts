@@ -11,6 +11,11 @@ class recentQueriesStorage {
         return $.when(recentQueries);
     }
 
+    static getLastQueryWithPromise(db: database): JQueryPromise<storedQueryDto> {
+        const lastQuery = this.getLastQuery(db);
+        return $.when(lastQuery);
+    }
+
     static getRecentQueries(db: database): storedQueryDto[] {
         const localStorageName = recentQueriesStorage.getLocalStorageKey(db.name);
         let recentQueriesFromLocalStorage: storedQueryDto[] = this.getRecentQueriesFromLocalStorage(localStorageName);
@@ -23,9 +28,21 @@ class recentQueriesStorage {
         return recentQueriesFromLocalStorage;
     }
 
+    static getLastQuery(db: database): storedQueryDto {
+        const localStorageName = recentQueriesStorage.getLocalStorageKeyForLastQuery(db.name);
+        let recentQueriesFromLocalStorage: storedQueryDto = this.getLastQueryFromLocalStorage(localStorageName);
+
+        return recentQueriesFromLocalStorage;
+    }
+
     static saveRecentQueries(db: database, recentQueries: storedQueryDto[]) {
         const localStorageName = recentQueriesStorage.getLocalStorageKey(db.name);
         localStorage.setObject(localStorageName, recentQueries);
+    }
+
+    static saveLastQuery(db: database, lastQuery: storedQueryDto) {
+        const localStorageName = recentQueriesStorage.getLocalStorageKeyForLastQuery(db.name);
+        localStorage.setObject(localStorageName, lastQuery);
     }
 
     static removeRecentQueryByQueryText(db: database, queryText: string) {
@@ -47,11 +64,25 @@ class recentQueriesStorage {
         return storageKeyProvider.storageKeyFor("recentQueries." + dbName);
     }
 
+    private static getLocalStorageKeyForLastQuery(dbName: string) {
+        return storageKeyProvider.storageKeyFor("lastQuery." + dbName);
+    }
+
     private static getRecentQueriesFromLocalStorage(localStorageName: string): storedQueryDto[]  {
         let recentQueriesFromLocalStorage: storedQueryDto[] = null;
         try {
             recentQueriesFromLocalStorage = localStorage.getObject(localStorageName);
         } catch(err) {
+            //no need to do anything
+        }
+        return recentQueriesFromLocalStorage;
+    }
+
+    private static getLastQueryFromLocalStorage(localStorageName: string): storedQueryDto {
+        let recentQueriesFromLocalStorage: storedQueryDto = null;
+        try {
+            recentQueriesFromLocalStorage = localStorage.getObject(localStorageName);
+        } catch (err) {
             //no need to do anything
         }
         return recentQueriesFromLocalStorage;
