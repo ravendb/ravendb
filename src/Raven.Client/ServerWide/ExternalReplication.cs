@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Replication;
 using Sparrow.Json;
@@ -10,7 +11,18 @@ namespace Raven.Client.ServerWide
     {
         public long TaskId;
         public string Name;
+        public string[] TopologyDiscoveryUrls;
         public string MentorNode;
+
+        public ExternalReplication() { }
+
+        public ExternalReplication(string[] urls)
+        {
+            if(urls == null || urls.Length == 0)
+                throw new ArgumentNullException(nameof(TopologyDiscoveryUrls));
+
+            TopologyDiscoveryUrls = urls;
+        }
 
         public static void RemoveWatcher(ref List<ExternalReplication> watchers, long taskId)
         {
@@ -22,7 +34,7 @@ namespace Raven.Client.ServerWide
                 return;
             }
         }
-
+        
         public static void EnsureUniqueDbAndUrl(List<ExternalReplication> watchers, ExternalReplication watcher)
         {
             var dbName = watcher.Database;
@@ -66,13 +78,13 @@ namespace Raven.Client.ServerWide
             return (addDestinations, removeDestinations);
         }
 
-
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
             json[nameof(TaskId)] = TaskId;
             json[nameof(Name)] = Name;
             json[nameof(MentorNode)] = MentorNode;
+            json[nameof(TopologyDiscoveryUrls)] = new DynamicJsonArray(TopologyDiscoveryUrls);
             return json;
         }
 

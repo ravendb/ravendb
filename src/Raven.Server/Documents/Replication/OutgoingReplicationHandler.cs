@@ -12,6 +12,7 @@ using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Json;
@@ -70,6 +71,7 @@ namespace Raven.Server.Documents.Replication
 
         private readonly ConcurrentQueue<OutgoingReplicationStatsAggregator> _lastReplicationStats = new ConcurrentQueue<OutgoingReplicationStatsAggregator>();
         private OutgoingReplicationStatsAggregator _lastStats;
+        public TcpConnectionInfo ConnectionInfo;
 
         public OutgoingReplicationHandler(ReplicationLoader parent, DocumentDatabase database, ReplicationNode node, bool external)
         {
@@ -118,15 +120,17 @@ namespace Raven.Server.Documents.Replication
         private void ReplicateToDestination()
         {
             AddReplicationPulse(ReplicationPulseDirection.OutgoingInitiate);
-
             NativeMemory.EnsureRegistered();
             try
             {
-                var connectionInfo = ReplicationUtils.GetTcpInfo(Destination.Url, GetNode(), "Replication",
-                    _parent._server.Server.ClusterCertificateHolder.Certificate);
+                if (ConnectionInfo == null)
+                {
+                    ConnectionInfo = ReplicationUtils.GetTcpInfo(Destination.Url, GetNode(), "Replication",
+                        _parent._server.Server.ClusterCertificateHolder.Certificate);
+                }
 
                 if (_log.IsInfoEnabled)
-                    _log.Info($"Will replicate to {Destination.FromString()} via {connectionInfo.Url}");
+                    _log.Info($"Will replicate to {Destination.FromString()} via {ConnectionInfo.Url}");
 
                 using (_parent._server.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
@@ -140,11 +144,11 @@ namespace Raven.Server.Documents.Replication
                             $"{record.DatabaseName} is encrypted, and require HTTPS for replication, but had endpoint with url {Destination.Url} to database {Destination.Database}");
                 }
 
-                var task = TcpUtils.ConnectSocketAsync(connectionInfo, _parent._server.Engine.TcpConnectionTimeout, _log);
+                var task = TcpUtils.ConnectSocketAsync(ConnectionInfo, _parent._server.Engine.TcpConnectionTimeout, _log);
                 task.Wait(CancellationToken);
                 using (_tcpClient = task.Result)
                 {
-                    var wrapSsl = TcpUtils.WrapStreamWithSslAsync(_tcpClient, connectionInfo, _parent._server.Server.ClusterCertificateHolder.Certificate);
+                    var wrapSsl = TcpUtils.WrapStreamWithSslAsync(_tcpClient, ConnectionInfo, _parent._server.Server.ClusterCertificateHolder.Certificate);
 
                     wrapSsl.Wait(CancellationToken);
 
@@ -727,7 +731,7 @@ namespace Raven.Server.Documents.Replication
             _waitForChanges.Set();
         }
 
-        private SingleUseFlag _disposed = new SingleUseFlag();
+        private readonly SingleUseFlag _disposed = new SingleUseFlag();
         private readonly DateTime _startedAt = DateTime.UtcNow;
 
         public void Dispose()

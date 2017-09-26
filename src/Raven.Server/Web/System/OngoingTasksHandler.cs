@@ -64,7 +64,7 @@ namespace Raven.Server.Web.System
 
                 foreach (var tasks in new[]
                 {
-                    CollectExternalReplicationTasks(databaseRecord.ExternalReplication, dbTopology,clusterTopology, store),
+                    CollectExternalReplicationTasks(databaseRecord.DatabaseName, databaseRecord.ExternalReplication, dbTopology,clusterTopology, store),
                     CollectEtlTasks(databaseRecord, dbTopology, clusterTopology, store),
                     CollectBackupTasks(databaseRecord, dbTopology, clusterTopology, store)
                 })
@@ -104,7 +104,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private static IEnumerable<OngoingTask> CollectExternalReplicationTasks(List<ExternalReplication> watchers, DatabaseTopology dbTopology, ClusterTopology clusterTopology, ServerStore store)
+        private static IEnumerable<OngoingTask> CollectExternalReplicationTasks(string name, List<ExternalReplication> watchers, DatabaseTopology dbTopology, ClusterTopology clusterTopology, ServerStore store)
         {
             if (dbTopology == null)
                 yield break;
@@ -123,6 +123,20 @@ namespace Raven.Server.Web.System
                     };
                 }
 
+                string dstUrl = null;
+                if (tag == store.NodeTag)
+                {
+                    try
+                    {
+                        store.DatabasesLandlord.DatabasesCache.TryGetValue(name, out var task);
+                        dstUrl = task.Result.ReplicationLoader.OutgoingConnections.Single(o => o is ExternalReplication ex && ex.TaskId == watcher.TaskId).Url;
+                    }
+                    catch
+                    {
+                        // failed to restive the destination url
+                    }
+                }
+
                 yield return new OngoingTaskReplication
                 {
                     TaskId = watcher.TaskId,
@@ -130,7 +144,7 @@ namespace Raven.Server.Web.System
                     ResponsibleNode = responsibale,
                     DestinationDatabase = watcher.Database,
                     TaskState = watcher.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
-                    DestinationUrl = watcher.Url
+                    DestinationUrl = dstUrl
                 };
             }
         }

@@ -56,12 +56,12 @@ namespace Tests.Infrastructure
             }
         }
 
-        protected async Task CreateAndWaitForClusterDatabase(string databaseName, IDocumentStore store)
+        protected async Task CreateAndWaitForClusterDatabase(string databaseName, IDocumentStore store, int replicationFactor = 2)
         {
             if (Servers.Count == 0)
                 throw new InvalidOperationException("You cannot create a database on an empty cluster...");
 
-            var databaseResult = CreateClusterDatabase(databaseName, store);
+            var databaseResult = CreateClusterDatabase(databaseName, store, replicationFactor);
 
             Assert.True(databaseResult.RaftCommandIndex > 0); //sanity check                
             await WaitForRaftIndexToBeAppliedInCluster(databaseResult.RaftCommandIndex, TimeSpan.FromSeconds(5));
@@ -203,7 +203,7 @@ namespace Tests.Infrastructure
 
         protected async Task<bool> WaitForDocumentInClusterAsync<T>(IReadOnlyList<ServerNode> topology, string docId, Func<T, bool> predicate, TimeSpan timeout)
         {
-            var stores = GetStoresFromTopology(topology);
+            var stores = GetDocumentStores(topology, disableTopologyUpdates: true);
             return await WaitForDocumentInClusterAsyncInternal(docId, predicate, timeout, stores);
         }
 
@@ -377,6 +377,7 @@ namespace Tests.Infrastructure
             leaderIndex = leaderIndex ?? _random.Next(0, numberOfNodes);
             RavenServer leader = null;
             var serversToPorts = new Dictionary<RavenServer, string>();
+            var clustersServers = new List<RavenServer>();
             for (var i = 0; i < numberOfNodes; i++)
             {
                 var customSettings = new Dictionary<string, string>();
@@ -395,6 +396,7 @@ namespace Tests.Infrastructure
 
                 var server = GetNewServer(customSettings, runInMemory: shouldRunInMemory);
                 Servers.Add(server);
+                clustersServers.Add(server);
 
                 serversToPorts.Add(server, serverUrl);
                 if (i == leaderIndex)
@@ -409,7 +411,7 @@ namespace Tests.Infrastructure
                 {
                     continue;
                 }
-                var follower = Servers[i];
+                var follower = clustersServers[i];
                 // ReSharper disable once PossibleNullReferenceException
                 await leader.ServerStore.AddNodeToClusterAsync(serversToPorts[follower]);
                 await follower.ServerStore.WaitForTopology(Leader.TopologyModification.Voter);
@@ -528,14 +530,14 @@ namespace Tests.Infrastructure
             {
                 databaseResult = store.Admin.Server.Send(new CreateDatabaseOperation(record, replicationFactor));
             }
-
+            var currentServers = Servers.Where(s => s.ServerStore.GetClusterTopology().TryGetNodeTagByUrl(leadersUrl).HasUrl).ToArray();
             int numberOfInstances = 0;
-            foreach (var server in Servers)
+            foreach (var server in currentServers)
             {
                 await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.RaftCommandIndex);
             }
 
-            foreach (var server in Servers.Where(s => databaseResult.Topology.RelevantFor(s.ServerStore.NodeTag)))
+            foreach (var server in currentServers.Where(s => databaseResult.Topology.RelevantFor(s.ServerStore.NodeTag)))
             {
                 await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(record.DatabaseName);
                 numberOfInstances++;
@@ -543,7 +545,7 @@ namespace Tests.Infrastructure
             if (numberOfInstances != replicationFactor)
                 throw new InvalidOperationException("Couldn't create the db on all nodes, just on " + numberOfInstances + " out of " + replicationFactor);
             return (databaseResult.RaftCommandIndex,
-                Servers.Where(s => databaseResult.Topology.RelevantFor(s.ServerStore.NodeTag)).ToList());
+                currentServers.Where(s => databaseResult.Topology.RelevantFor(s.ServerStore.NodeTag)).ToList());
         }
 
         public Task<(long Index, List<RavenServer> Servers)> CreateDatabaseInCluster(string databaseName, int replicationFactor, string leadersUrl)
