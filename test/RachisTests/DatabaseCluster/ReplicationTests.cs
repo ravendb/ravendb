@@ -188,10 +188,7 @@ namespace RachisTests.DatabaseCluster
                     await server.ServerStore.Cluster.WaitForIndexNotification(res.RaftCommandIndex);
                     await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore($"Watcher{i}");
 
-                    var watcher = new ExternalReplication(res.NodesAddedTo.ToArray())
-                    {
-                        Database = $"Watcher{i}",
-                    };
+                    var watcher = new ExternalReplication($"Watcher{i}", res.NodesAddedTo.ToArray());
                     watchers.Add(watcher);
 
                     await AddWatcherToReplicationTopology((DocumentStore)store, watcher);
@@ -338,9 +335,8 @@ namespace RachisTests.DatabaseCluster
                 await node.ServerStore.Cluster.WaitForIndexNotification(res.RaftCommandIndex);
                 await node.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore("Watcher");
 
-                watcher = new ExternalReplication(res.NodesAddedTo.ToArray())
+                watcher = new ExternalReplication("Watcher", res.NodesAddedTo.ToArray())
                 {
-                    Database = "Watcher",
                     Name = "MyExternalReplication1"
                 };
 
@@ -609,11 +605,8 @@ namespace RachisTests.DatabaseCluster
                 CreateDatabase = false
             }))
             {
-                var watcher2 = new ExternalReplication(store2.Urls)
-                {
-                    Database = store2.Database,
-                };
-
+                var watcher2 = new ExternalReplication(store2.Database, store2.Urls);
+                
                 await AddWatcherToReplicationTopology(store1, watcher2);
 
                 using (var session = store1.OpenAsyncSession())
@@ -655,11 +648,8 @@ namespace RachisTests.DatabaseCluster
                 CreateDatabase = false
             }))
             {
-                var watcher2 = new ExternalReplication(store2.Urls)
-                {
-                    Database = store2.Database,
-                };
-
+                var watcher2 = new ExternalReplication(store2.Database, store2.Urls);
+                
                 await AddWatcherToReplicationTopology(store1, watcher2);
 
                 using (var session = store1.OpenAsyncSession())
@@ -672,7 +662,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [NightlyBuildFact]
+        [Fact]
         public async Task ExternalReplicationFailover()
         {
             var clusterSize = 3;
@@ -703,10 +693,7 @@ namespace RachisTests.DatabaseCluster
             }
 
             // add watcher with invalid url to test the failover on database topology discovery
-            var watcher = new ExternalReplication(new[] { "http://127.0.0.1:1234",dstLeader.WebUrl })
-            {
-                Database = dstDB
-            };
+            var watcher = new ExternalReplication(dstDB, new[] {"http://127.0.0.1:1234", dstLeader.WebUrl});
             var res = await AddWatcherToReplicationTopology((DocumentStore)srcStore, watcher);
 
             var dstStore = new DocumentStore

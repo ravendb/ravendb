@@ -59,9 +59,8 @@ loadToOrders(orderData);
                     await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
                 }
 
-                watcher = new ExternalReplication(new []{ "http://127.0.0.1:9090" })
+                watcher = new ExternalReplication("Watcher1", new []{ "http://127.0.0.1:9090" })
                 {
-                    Database = "Watcher1",
                     Name = "MyExternalReplication"
                 };
 
@@ -215,10 +214,7 @@ loadToOrders(orderData);
                     await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
                 }
 
-                var watcher = new ExternalReplication(new []{ "http://127.0.0.1:9090" })
-                {
-                    Database = "Watcher1",
-                };
+                var watcher = new ExternalReplication("Watcher1", new[] {"http://127.0.0.1:9090"});
 
                 addWatcherRes = await AddWatcherToReplicationTopology((DocumentStore)store, watcher);
 

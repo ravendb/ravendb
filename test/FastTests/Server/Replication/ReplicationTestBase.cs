@@ -203,10 +203,7 @@ namespace FastTests.Server.Replication
             var resList = new List<ModifyOngoingTaskResult>();
             foreach (var store in toStores)
             {
-                var databaseWatcher = new ExternalReplication(store.Urls)
-                {
-                    Database = store.Database
-                };
+                var databaseWatcher = new ExternalReplication(store.Database, store.Urls);
                 ModifyReplicationDestination(databaseWatcher);
                 tasks.Add(AddWatcherToReplicationTopology(fromStore, databaseWatcher));
             }
@@ -251,10 +248,7 @@ namespace FastTests.Server.Replication
         {
             foreach (var node in toNodes)
             {
-                var databaseWatcher = new ExternalReplication(new []{node.Url})
-                {
-                    Database = node.Database
-                };
+                var databaseWatcher = new ExternalReplication(node.Database, new[] {node.Url});
                 await AddWatcherToReplicationTopology(fromStore, databaseWatcher);
             }
         }
