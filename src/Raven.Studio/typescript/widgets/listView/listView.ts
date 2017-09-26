@@ -250,7 +250,7 @@ class listView<T> {
     }
     
     /*
-    Gets first and list items index which will be visible on screen
+    Gets first and last items index which will be visible on screen
      */
     private visibleItemsRange(yStart: number,  yEnd: number) : [number, number] {
         yEnd = Math.min(yEnd, this.virtualHeight());
