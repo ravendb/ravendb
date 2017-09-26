@@ -145,9 +145,6 @@ namespace SlowTests.Bugs.Stacey
                     //Assert.Equal(1, session.Advanced.NumberOfRequests);
 
                     session.SaveChanges();
-
-                    Console.WriteLine(JsonConvert.SerializeObject(results.Path.Steps[0].Requirements[0]));
-                    Console.WriteLine(JsonConvert.SerializeObject(results.Path.Steps[0].Requirements[1]));
                 }
             }
 
@@ -217,7 +214,7 @@ namespace SlowTests.Bugs.Stacey
                         .Where(n => n.Name == "Strength")
                         .ToList();
 
-                    Console.WriteLine(JsonConvert.SerializeObject(results));
+                    Assert.NotEmpty(results);
                 }
 
             }
