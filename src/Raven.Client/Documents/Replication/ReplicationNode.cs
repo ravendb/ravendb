@@ -10,27 +10,22 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Replication
 {
+    /// <inheritdoc />
     /// <summary>
     /// Data class for replication destination
     /// </summary>
     public abstract class ReplicationNode : IEquatable<ReplicationNode>
     {
-        /// <summary>
-        /// The name of the connection string specified in the 
-        /// server configuration file. 
-        /// Override all other properties of the destination
-        /// </summary>
-
-        private string _url;
+        protected string LastKnownUrl;
 
         /// <summary>
         /// Gets or sets the URL of the replication destination
         /// </summary>
         /// <value>The URL.</value>
-        public string Url
+        public virtual string Url
         {
-            get => _url;
-            set => _url = value?.TrimEnd('/');
+            get => LastKnownUrl;
+            set => LastKnownUrl = value?.TrimEnd('/');
         }
 
         /// <summary>

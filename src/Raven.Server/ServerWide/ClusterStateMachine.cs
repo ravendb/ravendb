@@ -178,6 +178,9 @@ namespace Raven.Server.ServerWide
                     case nameof(RemoveSqlConnectionString):
                         UpdateDatabase(context, type, cmd, index, leader, serverStore);
                         break;
+                    case nameof(UpdateExternalReplicationCommandSilently):
+                        UpdateDatabase(context, type, cmd, index, leader, serverStore, silently: true);
+                        break;
                     case nameof(UpdatePeriodicBackupStatusCommand):
                     case nameof(AcknowledgeSubscriptionBatchCommand):
                     case nameof(PutSubscriptionCommand):
@@ -597,7 +600,7 @@ namespace Raven.Server.ServerWide
             };
         }
 
-        private void NotifyDatabaseChanged(TransactionOperationContext context, string databaseName, long index, string type)
+        private void NotifyDatabaseChanged(TransactionOperationContext context, string databaseName, long index, string type, bool silently = false)
         {
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += transaction =>
             {
@@ -606,7 +609,9 @@ namespace Raven.Server.ServerWide
                     {
                         try
                         {
-                            DatabaseChanged?.Invoke(this, (databaseName, index, type));
+                            if(silently == false) 
+                                DatabaseChanged?.Invoke(this, (databaseName, index, type));
+
                             _rachisLogIndexNotifications.NotifyListenersAbout(index, null);
                         }
                         catch (Exception e)
@@ -637,9 +642,9 @@ namespace Raven.Server.ServerWide
             };
         }
 
-        private void UpdateDatabase(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore)
+        private void UpdateDatabase(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore, bool silently = false)
         {
-            if (cmd.TryGet(DatabaseName, out string databaseName) == false)
+            if (cmd.TryGet(DatabaseName, out string databaseName) == false || string.IsNullOrEmpty(databaseName))
                 throw new ArgumentException("Update database command must contain a DatabaseName property");
 
             try
@@ -703,7 +708,7 @@ namespace Raven.Server.ServerWide
             }
             finally
             {
-                NotifyDatabaseChanged(context, databaseName, index, type);
+                NotifyDatabaseChanged(context, databaseName, index, type, silently);
             }
         }
 
