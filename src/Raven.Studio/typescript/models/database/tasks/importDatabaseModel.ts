@@ -19,7 +19,7 @@ class importDatabaseModel {
         this.initValidation();
     }
 
-    toDto(): Raven.Client.Documents.Smuggler.DatabaseSmugglerOptions {
+    toDto(): Raven.Client.Documents.Smuggler.DatabaseSmugglerImportOptions {
         const operateOnTypes: Array<Raven.Client.Documents.Smuggler.DatabaseItemType> = [];
         if (this.includeDocuments()) {
             operateOnTypes.push("Documents");
@@ -39,7 +39,7 @@ class importDatabaseModel {
             TransformScript: this.transformScript(),
             RemoveAnalyzers: this.removeAnalyzers(),
             OperateOnTypes: operateOnTypes.join(",") as Raven.Client.Documents.Smuggler.DatabaseItemType
-        } as Raven.Client.Documents.Smuggler.DatabaseSmugglerOptions;
+        } as Raven.Client.Documents.Smuggler.DatabaseSmugglerImportOptions;
     }
 
     private initValidation() {
