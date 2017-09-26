@@ -121,8 +121,6 @@ namespace Raven.Server.Documents.Queries
 
                 for (var i = 0; i < Query.GroupBy.Count; i++)
                 {
-                    EnsureValidGroupByField(Query.GroupBy[i], parameters);
-
                     var expressionField = Query.GroupBy[i];
 
                     if (expressionField.Compound.Count == 1 || TryGetFieldValueWithoutAlias(expressionField, out var name, out _) == false)
