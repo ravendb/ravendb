@@ -5,11 +5,11 @@ import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
  * A virtual row. Contains an element displayed as a row in the list view. Gets recycled as the list view scrolls in order to create and manage fewer elements.
  */
 class virtualListRow<T> {
-    private item: T | null = null; // The last item populated into this virtual list row.
+    private _item: T | null = null; // The last item populated into this virtual list row.
     readonly element: JQuery;
     private _top = -9999;
     private _index = -1;
-    private even: boolean | null = null;
+    private _even: boolean | null = null;
 
     private _height: number;
     
@@ -29,7 +29,7 @@ class virtualListRow<T> {
     }
 
     get data(): T {
-        return this.item;
+        return this._item;
     }
 
     /**
@@ -40,14 +40,14 @@ class virtualListRow<T> {
     }
 
     get hasData(): boolean {
-        return !!this.item;
+        return !!this._item;
     }
 
     populate(item: T | null, rowIndex: number, top: number, height: number) {
         // Optimization: don't regenerate this row HTML if nothing's changed since last render.
-        const alreadyDisplayingData = !!item && this.item === item && this._index === rowIndex;
+        const alreadyDisplayingData = !!item && this._item === item && this._index === rowIndex;
         if (!alreadyDisplayingData) {
-            this.item = item;
+            this._item = item;
             this._index = rowIndex;
 
             // If we have data, fill up this row content.
@@ -59,10 +59,10 @@ class virtualListRow<T> {
 
             // Update the "even" status. Used for striping the virtual rows.
             const newEvenState = rowIndex % 2 === 0;
-            const hasChangedEven = this.even !== newEvenState;
+            const hasChangedEven = this._even !== newEvenState;
             if (hasChangedEven) {
-                this.even = newEvenState;
-                this.element.toggleClass("even", this.even);
+                this._even = newEvenState;
+                this.element.toggleClass("even", this._even);
             }
 
             // Move it to its proper position.
@@ -72,10 +72,10 @@ class virtualListRow<T> {
     }
 
     reset() {
-        this.item = null;
+        this._item = null;
         this.setElementTop(-9999);
         this._index = -1;
-        this.even = null;
+        this._even = null;
         this.element.text("");
     }
 
