@@ -74,8 +74,8 @@ namespace Raven.Database.Bundles.PeriodicExports
         {
             lock (this)
             {
-                ReleaseTimerIfNeeded(incrementalBackupTimer);
-                ReleaseTimerIfNeeded(fullBackupTimer);
+                ReleaseTimerIfNeeded(ref incrementalBackupTimer);
+                ReleaseTimerIfNeeded(ref fullBackupTimer);
 
                 ReadSetupValuesFromDocument();
             }
@@ -188,12 +188,12 @@ namespace Raven.Database.Bundles.PeriodicExports
             {
                 if (fullBackup)
                 {
-                    ReleaseTimerIfNeeded(fullBackupTimer);
+                    ReleaseTimerIfNeeded(ref fullBackupTimer);
                     fullBackupTimer = RescheduleLongTimer(true);
                 }
                 else
                 {
-                    ReleaseTimerIfNeeded(incrementalBackupTimer);
+                    ReleaseTimerIfNeeded(ref incrementalBackupTimer);
                     incrementalBackupTimer = RescheduleLongTimer(false);
                 }
             }
@@ -236,7 +236,7 @@ namespace Raven.Database.Bundles.PeriodicExports
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void ReleaseTimerIfNeeded(Timer timer)
+        private void ReleaseTimerIfNeeded(ref Timer timer)
         {
             if (timer != null)
             {
