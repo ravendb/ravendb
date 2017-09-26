@@ -33,7 +33,7 @@ namespace Raven.Server.TrafficWatch
 
                 if (connection.TenantSpecific != null)
                 {
-                    if (string.Equals(connection.TenantSpecific, trafficWatchData.TenantName, StringComparison.OrdinalIgnoreCase) == false)
+                    if (string.Equals(connection.TenantSpecific, trafficWatchData.DatabaseName, StringComparison.OrdinalIgnoreCase) == false)
                         continue;
                 }
                 connection.EnqueMsg(trafficWatchData);

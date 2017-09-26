@@ -210,7 +210,7 @@ namespace Raven.Traffic
                                     notification.HttpMethod = GetStringFromJson(reader, "HttpMethod");
                                     notification.ElapsedMilliseconds = GetIntFromJson(reader, "ElapsedMilliseconds");
                                     notification.ResponseStatusCode = GetIntFromJson(reader, "ResponseStatusCode");
-                                    notification.TenantName = GetStringFromJson(reader, "TenantName");
+                                    notification.DatabaseName = GetStringFromJson(reader, "DatabaseName");
                                     notification.CustomInfo = GetStringFromJson(reader, "CustomInfo");
                                     notification.InnerRequestsCount = GetIntFromJson(reader, "InnerRequestsCount");
                                     // notification.QueryTimings = GetRavenJObjectFromJson(reader, "QueryTimings"); // TODO (TrafficWatch) : Handle this both server and client sides

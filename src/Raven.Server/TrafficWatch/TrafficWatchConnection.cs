@@ -97,7 +97,7 @@ namespace Raven.Server.TrafficWatch
                 ["ResponseStatusCode"] = change.ResponseStatusCode,
                 ["RequestUri"] = change.RequestUri,
                 ["AbsoluteUri"] = change.AbsoluteUri,
-                ["TenantName"] = change.TenantName,
+                ["DatabaseName"] = change.DatabaseName,
                 ["CustomInfo"] = change.CustomInfo,
                 ["InnerRequestsCount"] = change.InnerRequestsCount
                 //["QueryTimings"] = notification.QueryTimings // TODO :: implement this
