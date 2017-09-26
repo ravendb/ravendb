@@ -145,9 +145,9 @@ class databases extends viewModelBase {
             searchText = searchText.toLowerCase();
         }
 
-        const matchesFilters = (rs: databaseInfo) => {
-            const matchesText = !hasSearchText || rs.name.toLowerCase().indexOf(searchText) >= 0;
-            const matchesLocal = !localOnly || _.some(rs.nodes(), x => x.tag() === nodeTag && (x.type() === "Member" || x.type() === "Promotable" || x.type() === "Rehab"));
+        const matchesFilters = (db: databaseInfo) => {
+            const matchesText = !hasSearchText || db.name.toLowerCase().indexOf(searchText) >= 0;
+            const matchesLocal = !localOnly || db.isLocal(nodeTag);
 
             return matchesText && matchesLocal;
         };
@@ -441,35 +441,9 @@ class databases extends viewModelBase {
     createIsLocalDatabaseObservable(dbName: string) {
         return ko.pureComputed(() => {
             const nodeTag = this.clusterManager.localNodeTag();
-            const dbInfo = this.databases().getByName(dbName);
-
-            const nodeTags = new Set<string>();
-            const clusterNodes = dbInfo.nodes();
-
-            // using foreach to register knockout dependencies
-            clusterNodes.forEach(n => {
-                if (n.type() === "Member" || n.type() === "Promotable" || n.type() === "Rehab") {
-                    nodeTags.add(n.tag());
-                }
-            });
-            return nodeTags.has(nodeTag);
+            return this.databases().getByName(dbName).isLocal(nodeTag);
         });
     }
-
-    /* TODO: cluster related work
-
-    clusterMode = ko.computed(() => shell.clusterMode());
-    developerLicense = ko.computed(() => !license.licenseStatus() || !license.licenseStatus().IsCommercial);
-    showCreateCluster = ko.computed(() => !shell.clusterMode());
-    canCreateCluster = ko.computed(() => license.licenseStatus() && (!license.licenseStatus().IsCommercial || license.licenseStatus().Attributes.clustering === "true"));
-    canNavigateToAdminSettings = ko.computed(() =>
-            accessHelper.isGlobalAdmin() || accessHelper.canReadWriteSettings() || accessHelper.canReadSettings());
-
-      navigateToCreateCluster() {
-        this.navigate(this.appUrls.adminSettingsCluster());
-        shell.disconnectFromResourceChangesApi();
-    }
-    */
 }
 
 export = databases;
