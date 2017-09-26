@@ -651,8 +651,9 @@ class queryCompleter {
 
     private completeEmpty(callback: (errors: any[], wordList: autoCompleteWordList[]) => void) {
         const keywords: autoCompleteWordList[] = [
-            {value: "from", score: 2, meta: "keyword"},
-            {value: "declare", score: 1, meta: "keyword", snippet: `declare function \${1:Name}() {
+            {value: "from", score: 3, meta: "clause", snippet: "from ${1:Collection} as ${2:alias}\r\n"},
+            {value: "from index", score: 2, meta: "clause", snippet: "from index ${1:Index} as ${2:alias}\r\n"},
+            {value: "declare", score: 1, meta: "custom function", snippet: `declare function \${1:Name}() {
     \${0}
 }
 
