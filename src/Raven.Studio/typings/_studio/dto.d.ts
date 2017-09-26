@@ -91,6 +91,10 @@ interface canActivateResultDto {
     can?: boolean;   
 }
 
+interface canDeactivateResultDto {
+    can?: boolean;
+}
+
 interface confirmDialogResult {
     can: boolean;
 }
