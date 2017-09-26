@@ -794,11 +794,6 @@ namespace Raven.Server.Documents.Queries
             throw new InvalidQueryException($"Invalid type of operator in ORDER BY clause. Operator: {type}", queryText, parameters);
         }
 
-        private static void ThrowGroupByCollectionIsNotSupported(string queryText, BlittableJsonReaderObject parameters)
-        {
-            throw new InvalidQueryException("Grouping by collections in auto map reduce indexes is not supported", queryText, parameters);
-        }
-
         private class FillWhereFieldsAndParametersVisitor : WhereExpressionVisitor
         {
             private readonly QueryMetadata _metadata;
@@ -1109,14 +1104,6 @@ namespace Raven.Server.Documents.Queries
             sb.Append(updateBody);
 
             return sb.ToString();
-        }
-
-        private void EnsureValidGroupByField(FieldExpression groupByFieldName, BlittableJsonReaderObject parameters)
-        {
-            if (groupByFieldName.Compound[groupByFieldName.Compound.Count - 1] == "[]")
-            {
-                ThrowGroupByCollectionIsNotSupported(QueryText, parameters);
-            }
         }
     }
 }
