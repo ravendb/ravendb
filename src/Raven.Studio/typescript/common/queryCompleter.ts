@@ -370,6 +370,10 @@ class queryCompleter {
                     this.completeFromEnd(callback, lastKeyword);
                     return;
                 }
+                if (lastKeyword.dividersCount === 4 && lastKeyword.keywordModifier === "as") {
+                    this.completeFromEnd(callback, lastKeyword);
+                    return;
+                }
                 if (lastKeyword.dividersCount > 2) {
                     callback(["empty completion"], null);
                     return;
@@ -689,7 +693,7 @@ class queryCompleter {
 
     private completeFromEnd(callback: (errors: any[], wordList: autoCompleteWordList[]) => void, lastKeyword: autoCompleteLastKeyword) {
         const keywords: autoCompleteWordList[] = [];
-        if (!lastKeyword.keywordModifier) {
+        if (lastKeyword.dividersCount === 2) {
             keywords.push({value: "as", score: 21, meta: "keyword"});
         }
         this.completeKeywordEnd(callback, lastKeyword, keywords);
@@ -698,6 +702,8 @@ class queryCompleter {
     private completeKeywordEnd(callback: (errors: any[], wordList: autoCompleteWordList[]) => void, lastKeyword: autoCompleteLastKeyword, additions: autoCompleteWordList[] = null) {
         let keywordEncountered = false;
         const lastInitialKeyword = this.getInitialKeyword(lastKeyword);
+        let position = 0;
+        let projectionSelectPosition: number;
 
         const keywords: autoCompleteWordList[] = this.rules.clausesKeywords.filter(keyword => {
             if (keywordEncountered) {
@@ -717,10 +723,21 @@ class queryCompleter {
                 return this.queryType === "Update";
             }
             return true;
-        }).map((keyword, i) => {
-            return {value: keyword, score: 20 - i, meta: "keyword"};
+        }).map(keyword => {
+            const currentPosition = position++;
+            if (keyword === "select") {
+                projectionSelectPosition = position++;
+            }
+            return {value: keyword, score: 20 - currentPosition, meta: "keyword"};
         });
 
+        if (projectionSelectPosition) {
+            keywords.push({value: "select {", score: 20 - projectionSelectPosition, meta: "JS projection", snippet: `select {
+    \${1:Name}: \${2:Value}
+}
+`});
+        }
+        
         if (additions) {
             keywords.push(...additions);
         }
