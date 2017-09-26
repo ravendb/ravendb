@@ -56,11 +56,13 @@ namespace SlowTests.Bugs.Queries
                     QueryStatistics stats;
                     var query = session.Advanced.DocumentQuery<User>()
                         .Statistics(out stats)
-                        .WhereLucene("Email", "ayende");
+                        .WhereLucene("Email", "ayende")
+                        .WaitForNonStaleResults();
 
                     var result = query.ToArray();
                     Assert.NotEqual(0, stats.TotalResults);
                     Assert.Equal(stats.TotalResults, query.QueryResult.TotalResults);
+                    Assert.Equal("Auto/Users/BySearch(Email)", stats.IndexName);
                 }
             }
         }

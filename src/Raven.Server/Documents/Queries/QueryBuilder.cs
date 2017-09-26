@@ -376,6 +376,9 @@ namespace Raven.Server.Documents.Queries
             if (valueType != ValueTokenType.String)
                 ThrowMethodExpectsArgumentOfTheFollowingType("lucene", ValueTokenType.String, valueType, metadata.QueryText, parameters);
 
+            if (metadata.IsDynamic)
+                fieldName = AutoIndexField.GetSearchAutoIndexFieldName(fieldName);
+
             var parser = new Lucene.Net.QueryParsers.QueryParser(Version.LUCENE_29, fieldName, analyzer);
             return parser.Parse(GetValueAsString(value));
         }
