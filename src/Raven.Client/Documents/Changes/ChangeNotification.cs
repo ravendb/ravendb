@@ -179,7 +179,7 @@ namespace Raven.Client.Documents.Changes
         public int ResponseStatusCode { get; set; }
         public string RequestUri { get; set; }
         public string AbsoluteUri { get; set; }
-        public string TenantName { get; set; }
+        public string DatabaseName { get; set; }
         public string CustomInfo { get; set; }
         public int InnerRequestsCount { get; set; }
         public object QueryTimings { get; set; } // TODO: fix this
