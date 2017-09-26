@@ -89,7 +89,7 @@ class viewModelBase {
         this.dirtyFlag().reset(); //Resync Changes
     }
    
-    canDeactivate(isClose: boolean) {
+    canDeactivate(isClose: boolean): boolean | JQueryPromise<canDeactivateResultDto> {
         if (this.dirtyFlag().isDirty()) {
             return this.discardStayResult();
         }
