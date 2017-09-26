@@ -123,18 +123,24 @@ namespace Raven.Server.Web.System
                     };
                 }
 
-                string dstUrl = null;
+                (string Url, OngoingTaskReplication.ReplicationStatus Status) res = (null, OngoingTaskReplication.ReplicationStatus.None);
+                string error = null;
                 if (tag == store.NodeTag)
                 {
                     try
                     {
                         store.DatabasesLandlord.DatabasesCache.TryGetValue(name, out var task);
-                        dstUrl = task.Result.ReplicationLoader.OutgoingConnections.Single(o => o is ExternalReplication ex && ex.TaskId == watcher.TaskId).Url;
+                        res = task.Result.ReplicationLoader.GetExternalReplicationDestination(watcher.TaskId);
                     }
-                    catch
+                    catch (Exception e)
                     {
-                        // failed to restive the destination url
+                        // failed to retrive the destination url
+                        error = e.ToString();
                     }
+                }
+                else
+                {
+                    res.Status = OngoingTaskReplication.ReplicationStatus.NotOnThisNode;
                 }
 
                 yield return new OngoingTaskReplication
@@ -144,7 +150,9 @@ namespace Raven.Server.Web.System
                     ResponsibleNode = responsibale,
                     DestinationDatabase = watcher.Database,
                     TaskState = watcher.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
-                    DestinationUrl = dstUrl
+                    DestinationUrl = res.Url,
+                    Status = res.Status,
+                    Error = error
                 };
             }
         }

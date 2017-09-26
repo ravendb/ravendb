@@ -16,11 +16,11 @@ namespace Raven.Client.ServerWide
 
         public ExternalReplication() { }
 
-        public ExternalReplication(string[] urls)
+        public ExternalReplication(string database, string[] urls)
         {
             if(urls == null || urls.Length == 0)
                 throw new ArgumentNullException(nameof(TopologyDiscoveryUrls));
-
+            Database = database;
             TopologyDiscoveryUrls = urls;
         }
 

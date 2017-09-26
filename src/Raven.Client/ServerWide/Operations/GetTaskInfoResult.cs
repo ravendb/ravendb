@@ -36,6 +36,7 @@ namespace Raven.Client.ServerWide.Operations
         public OngoingTaskState TaskState { get; set; }
         public OngoingTaskConnectionStatus TaskConnectionStatus { get; set; }
         public string TaskName { get; set; }
+        public string Error { get; set; }
 
         public virtual DynamicJsonValue ToJson()
         {
@@ -46,7 +47,8 @@ namespace Raven.Client.ServerWide.Operations
                 [nameof(ResponsibleNode)] = ResponsibleNode?.ToJson(),
                 [nameof(TaskState)] = TaskState,
                 [nameof(TaskConnectionStatus)] = TaskConnectionStatus,
-                [nameof(TaskName)] = TaskName
+                [nameof(TaskName)] = TaskName,
+                [nameof(Error)] = Error
             };
         }
     }
@@ -70,6 +72,14 @@ namespace Raven.Client.ServerWide.Operations
 
     public class OngoingTaskReplication : OngoingTask
     {
+        public enum ReplicationStatus
+        {
+            None,
+            Active,
+            Reconnect,
+            NotOnThisNode
+        }
+
         public OngoingTaskReplication()
         {
             TaskType = OngoingTaskType.Replication;
@@ -77,12 +87,13 @@ namespace Raven.Client.ServerWide.Operations
 
         public string DestinationUrl { get; set; }
         public string DestinationDatabase { get; set; }
-
+        public ReplicationStatus Status { get; set; }
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
             json[nameof(DestinationUrl)] = DestinationUrl;
             json[nameof(DestinationDatabase)] = DestinationDatabase;
+            json[nameof(Status)] = Status;
             return json;
         }
     }

@@ -73,14 +73,14 @@ namespace Raven.Server.Documents.Replication
         private OutgoingReplicationStatsAggregator _lastStats;
         public TcpConnectionInfo ConnectionInfo;
 
-        public OutgoingReplicationHandler(ReplicationLoader parent, DocumentDatabase database, ReplicationNode node, bool external)
+        public OutgoingReplicationHandler(ReplicationLoader parent, DocumentDatabase database, ReplicationNode node, bool external, TcpConnectionInfo connectionInfo)
         {
             _parent = parent;
             _database = database;
             Destination = node;
             _external = external;
             _log = LoggingSource.Instance.GetLogger<OutgoingReplicationHandler>(_database.Name);
-
+            ConnectionInfo = connectionInfo;
             _database.Changes.OnDocumentChange += OnDocumentChange;
             _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
         }
@@ -123,12 +123,6 @@ namespace Raven.Server.Documents.Replication
             NativeMemory.EnsureRegistered();
             try
             {
-                if (ConnectionInfo == null)
-                {
-                    ConnectionInfo = ReplicationUtils.GetTcpInfo(Destination.Url, GetNode(), "Replication",
-                        _parent._server.Server.ClusterCertificateHolder.Certificate);
-                }
-
                 if (_log.IsInfoEnabled)
                     _log.Info($"Will replicate to {Destination.FromString()} via {ConnectionInfo.Url}");
 

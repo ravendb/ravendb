@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Replication;
@@ -12,6 +13,7 @@ using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
@@ -508,43 +510,16 @@ namespace Raven.Server.Documents.Replication
 
         private void AddAndStartOutgoingReplication(ReplicationNode node, bool external)
         {
-            var outgoingReplication = new OutgoingReplicationHandler(this, Database, node, external);
+            var info = GetConnectionInfo(node, external);
+            if (info == null)
+            {
+                // this means that we were unable to retrive the tcp connection info and will try it again later
+                return;
+            }
+            var outgoingReplication = new OutgoingReplicationHandler(this, Database, node, external, info);
             outgoingReplication.Failed += OnOutgoingSendingFailed;
             outgoingReplication.SuccessfulTwoWaysCommunication += OnOutgoingSendingSucceeded;
             _outgoing.TryAdd(outgoingReplication); // can't fail, this is a brand new instance
-
-            if (node is ExternalReplication exNode)
-            {
-                try
-                {
-                    using (var requestExecutor = RequestExecutor.Create(exNode.TopologyDiscoveryUrls, exNode.Database, _server.Server.ClusterCertificateHolder.Certificate,
-                        DocumentConventions.Default))
-                    using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                    {
-                        var cmd = new GetTcpInfoCommand("extrenal-replication");
-                        requestExecutor.Execute(cmd, ctx);
-                        node.Url = requestExecutor.Url;
-                        outgoingReplication.ConnectionInfo = cmd.Result;
-                    }
-                }
-                catch (Exception e)
-                {
-                    // will try to fetch it again later
-                    if (_log.IsInfoEnabled)
-                        _log.Info($"External replication failed to fetch connection information for database '{node.Database}', the connection will be retried later.", e);
-
-                    _reconnectQueue.TryAdd(new ConnectionShutdownInfo
-                    {
-                        Node = node,
-                        External = external
-                    });
-                    return;
-                }
-            }
-            else
-            {
-                node.Url = node.Url.Trim();
-            }
 
             _outgoingFailureInfo.TryAdd(node, new ConnectionShutdownInfo
             {
@@ -554,6 +529,61 @@ namespace Raven.Server.Documents.Replication
             outgoingReplication.Start();
 
             OutgoingReplicationAdded?.Invoke(outgoingReplication);
+        }
+
+        private TcpConnectionInfo GetConnectionInfo(ReplicationNode node, bool external)
+        {
+            try
+            {
+                if (node is ExternalReplication exNode)
+                {
+                    using (var requestExecutor = RequestExecutor.Create(exNode.TopologyDiscoveryUrls, exNode.Database, _server.Server.ClusterCertificateHolder.Certificate,
+                        DocumentConventions.Default))
+                    using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                    {
+                        var cmd = new GetTcpInfoCommand("extrenal-replication");
+                        requestExecutor.Execute(cmd, ctx);
+                        node.Url = requestExecutor.Url;
+                        return cmd.Result;
+                    }
+                }
+                if (node is InternalReplication internalNode)
+                {
+                    var info = ReplicationUtils.GetTcpInfo(internalNode.Url, internalNode.NodeTag, "Replication", _server.Server.ClusterCertificateHolder.Certificate);
+                    node.Url = node.Url.Trim();
+                    return info;
+                }
+                throw new InvalidOperationException($"Unexpected replication node type, Expected to be '{typeof(ExternalReplication)}' or '{typeof(InternalReplication)}', but got '{node.GetType()}'");
+            }
+            catch (Exception e)
+            {
+                // will try to fetch it again later
+                if (_log.IsInfoEnabled)
+                    _log.Info($"Failed to fetch tcp connection information for the destination '{node.FromString()}' , the connection will be retried later.", e);
+
+                _reconnectQueue.TryAdd(new ConnectionShutdownInfo
+                {
+                    Node = node,
+                    External = external
+                });
+            }
+            return null;
+        }
+
+        public (string Url, OngoingTaskReplication.ReplicationStatus Status) GetExternalReplicationDestination(long taskId)
+        {
+            // this is thread-safe because OutgoingConnections and ReconnectQueue getting a snapshot of the collections
+            foreach (var outgoing in OutgoingConnections) 
+            {
+                if (outgoing is ExternalReplication ex && ex.TaskId == taskId)
+                    return (ex.Url, OngoingTaskReplication.ReplicationStatus.Active);
+            }
+            foreach (var reconnect in ReconnectQueue)
+            {
+                if (reconnect is ExternalReplication ex && ex.TaskId == taskId)
+                    return (ex.Url, OngoingTaskReplication.ReplicationStatus.Reconnect);
+            }
+            return (null, OngoingTaskReplication.ReplicationStatus.None);
         }
 
         private void OnIncomingReceiveFailed(IncomingReplicationHandler instance, Exception e)
