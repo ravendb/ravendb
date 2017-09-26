@@ -194,6 +194,18 @@ describe("RQL Autocomplete", () => {
         {caption: "include", value: "include ", score: 15, meta: "keyword"}
     ];
 
+    const afterFromIndexAsList = [
+        {caption: "where", value: "where ", score: 20, meta: "keyword"},
+        {caption: "order", value: "order ", score: 19, meta: "keyword"},
+        {caption: "load", value: "load ", score: 18, meta: "keyword"},
+        {caption: "select", value: "select ", score: 17, meta: "keyword"},
+        {caption: "select {", value: "select { ", score: 16, meta: "JS projection", snippet: `select {
+    \${1:Name}: \${2:Value}
+}
+`},
+        {caption: "include", value: "include ", score: 15, meta: "keyword"}
+    ];
+
     const afterGroupWithoutSpaceList = [
         {caption: "group", value: "group ", score: 20, meta: "keyword"},
         {caption: "where", value: "where ", score: 19, meta: "keyword"},
@@ -374,6 +386,7 @@ describe("RQL Autocomplete", () => {
     it('from collection as | should not list anything', done => {
         rqlTestUtils.autoComplete(`from Orders as |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
+            assert.deepEqual(errors, ["empty completion"]);
             assert.isNull(wordlist);
 
             assert.equal(lastKeyword.keyword, "from");
@@ -387,6 +400,7 @@ describe("RQL Autocomplete", () => {
     it('from collection as alias without space', done => {
         rqlTestUtils.autoComplete(`from Orders as o|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "o");
+            assert.deepEqual(errors, ["empty completion"]);
             assert.isNull(wordlist);
 
             assert.equal(lastKeyword.keyword, "from");
@@ -405,6 +419,32 @@ describe("RQL Autocomplete", () => {
             assert.equal(lastKeyword.keyword, "from");
             assert.equal(lastKeyword.keywordModifier, "as");
             assert.equal(lastKeyword.dividersCount, 4);
+
+            done();
+        });
+    });
+
+    it('from collection as alias without as and without space', done => {
+        rqlTestUtils.autoComplete(`from Orders o|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "o");
+            assert.deepEqual(wordlist, afterFromList);
+
+            assert.equal(lastKeyword.keyword, "from");
+            assert.isUndefined(lastKeyword.keywordModifier);
+            assert.equal(lastKeyword.dividersCount, 2);
+
+            done();
+        });
+    });
+
+    it('from collection as alias without as | should list next keywords', done => {
+        rqlTestUtils.autoComplete(`from Orders o |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, afterFromAsList);
+
+            assert.equal(lastKeyword.keyword, "from");
+            assert.isUndefined(lastKeyword.keywordModifier);
+            assert.equal(lastKeyword.dividersCount, 3);
 
             done();
         });
@@ -1179,7 +1219,20 @@ group by ShippedAt, |`, northwindProvider(), (errors, wordlist, prefix, lastKeyw
         });
     });
 
-    it('from index as', done => {
+    it('from index as without space | should list as with prefix', done => {
+        rqlTestUtils.autoComplete("from index 'Orders/Totals' as|", northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "as");
+            assert.deepEqual(wordlist, afterFromIndexList);
+
+            assert.equal(lastKeyword.keyword, "from index");
+            assert.equal(lastKeyword.keywordModifier, "as");
+            assert.equal(lastKeyword.dividersCount, 2);
+            
+            done();
+        });
+    });
+
+    it('from index as | should not list anything', done => {
         rqlTestUtils.autoComplete("from index 'Orders/Totals' as |", northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
             assert.deepEqual(errors, ["empty completion"]);
@@ -1189,6 +1242,59 @@ group by ShippedAt, |`, northwindProvider(), (errors, wordlist, prefix, lastKeyw
             assert.equal(lastKeyword.keywordModifier, "as");
             assert.equal(lastKeyword.dividersCount, 3);
             
+            done();
+        });
+    });
+
+    it('from index as alias without space', done => {
+        rqlTestUtils.autoComplete(`from index 'Orders/Totals' as o|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "o");
+            assert.deepEqual(errors, ["empty completion"]);
+            assert.isNull(wordlist);
+
+            assert.equal(lastKeyword.keyword, "from index");
+            assert.equal(lastKeyword.keywordModifier, "as");
+            assert.equal(lastKeyword.dividersCount, 3);
+
+            done();
+        });
+    });
+
+    it('from index as alias | should list next keywords', done => {
+        rqlTestUtils.autoComplete(`from index 'Orders/Totals' as o |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, afterFromIndexAsList);
+
+            assert.equal(lastKeyword.keyword, "from index");
+            assert.equal(lastKeyword.keywordModifier, "as");
+            assert.equal(lastKeyword.dividersCount, 4);
+
+            done();
+        });
+    });
+
+    it('from index as alias without as and without space', done => {
+        rqlTestUtils.autoComplete(`from index 'Orders/Totals' o|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "o");
+            assert.deepEqual(wordlist, afterFromIndexList);
+
+            assert.equal(lastKeyword.keyword, "from index");
+            assert.isUndefined(lastKeyword.keywordModifier);
+            assert.equal(lastKeyword.dividersCount, 2);
+
+            done();
+        });
+    });
+
+    it('from index as alias without as | should list next keywords', done => {
+        rqlTestUtils.autoComplete(`from index 'Orders/Totals' o |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, afterFromIndexAsList);
+
+            assert.equal(lastKeyword.keyword, "from index");
+            assert.isUndefined(lastKeyword.keywordModifier);
+            assert.equal(lastKeyword.dividersCount, 3);
+
             done();
         });
     });

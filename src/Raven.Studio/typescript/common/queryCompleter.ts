@@ -359,55 +359,34 @@ class queryCompleter {
         }
         
         switch (lastKeyword.keyword) {
-            case "from": {
-                if (lastKeyword.dividersCount === 2) {
-                    if (lastKeyword.parentheses > 0) {
-                        // from (Collection, {show fields here})
-                        this.completeFields(session, lastKeyword.getFieldPrefix, callback);
-                        return;
-                    }
-
-                    this.completeFromEnd(callback, lastKeyword);
-                    return;
-                }
-                if (lastKeyword.dividersCount === 4 && lastKeyword.keywordModifier === "as") {
-                    this.completeFromEnd(callback, lastKeyword);
-                    return;
-                }
-                if (lastKeyword.dividersCount > 2) {
-                    callback(["empty completion"], null);
-                    return;
-                }
-                if (lastKeyword.dividersCount === 0) {
-                    this.completeEmpty(callback);
-                    return;
-                }
-
-                this.completeFrom(callback);
-                break;
-            }
+            case "from":
             case "from index": {
-                if (lastKeyword.dividersCount === 2) { // index name already specified
-                    this.completeFromEnd(callback, lastKeyword);
-                    return;
-                }
-                if (lastKeyword.dividersCount > 2) {
-                    callback(["empty completion"], null);
+                if (lastKeyword.dividersCount === 1) {
+                    if (lastKeyword.keyword === "from") {
+                        this.completeFrom(callback);
+                    }
+                    else {
+                        this.providers.indexNames(names => {
+                            this.completeWords(callback, names.map(name => ({
+                                caption: name,
+                                value: queryCompleter.escapeCollectionOrFieldName(name),
+                                score: 101,
+                                meta: "index"
+                            })));
+                        });
+                    }
                     return;
                 }
                 if (lastKeyword.dividersCount === 0) {
                     this.completeEmpty(callback);
                     return;
                 }
+                if (lastKeyword.dividersCount === 3 && lastKeyword.keywordModifier === "as") {
+                    callback(["empty completion"], null);
+                    return;
+                }
 
-                this.providers.indexNames(names => {
-                    this.completeWords(callback, names.map(name => ({
-                        caption: name,
-                        value: queryCompleter.escapeCollectionOrFieldName(name),
-                        score: 101,
-                        meta: "index"
-                    })));
-                });
+                this.completeFromEnd(callback, lastKeyword);
                 break;
             }
             case "__function":
