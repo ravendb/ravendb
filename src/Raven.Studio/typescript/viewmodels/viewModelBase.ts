@@ -40,7 +40,6 @@ class viewModelBase {
 
     currentHelpLink = ko.observable<string>().subscribeTo('globalHelpLink', true);
 
-
     //holds full studio version eg. 4.0.40000
     static clientVersion = ko.observable<string>();
 
@@ -81,7 +80,7 @@ class viewModelBase {
     }
 
     attached() {
-        window.addEventListener("beforeunload", this.beforeUnloadListener, false);
+        window.addEventListener("beforeunload", this.beforeUnloadListener);
         this.isAttached = true;
         viewModelBase.showSplash(false);
     }
@@ -90,7 +89,7 @@ class viewModelBase {
         this.dirtyFlag().reset(); //Resync Changes
     }
    
-    canDeactivate(isClose: boolean): any {
+    canDeactivate(isClose: boolean) {
         if (this.dirtyFlag().isDirty()) {
             return this.discardStayResult();
         }
@@ -102,13 +101,14 @@ class viewModelBase {
         const discard = "Discard changes";
         const stay = "Stay on this page";
         const discardStayResult = $.Deferred<confirmDialogResult>();
-        const confirmation = this.confirmationMessage("Unsaved changes", "You have unsaved changes. How do you want to proceed?", [discard, stay], true);
+        const confirmation = this.confirmationMessage("Unsaved changes", "You have unsaved changes. How do you want to proceed?",
+            [discard, stay], true, stay);
 
         confirmation.done((result: confirmDialogResult) => {
             if (!result.can) {
                 this.dirtyFlag().reset(); 
             }
-            result.can = !result.can;  // TODO: Check why this toggle is needed..
+            result.can = !result.can;
             discardStayResult.resolve(result);
         });
 
@@ -120,7 +120,7 @@ class viewModelBase {
         this.cleanupNotifications();
         this.cleanupPostboxSubscriptions();
 
-        window.removeEventListener("beforeunload", this.beforeUnloadListener, false);
+        window.removeEventListener("beforeunload", this.beforeUnloadListener);
 
         this.isAttached = true;
         viewModelBase.showSplash(false);
@@ -242,12 +242,12 @@ class viewModelBase {
         viewModelBase.modelPollingHandle = null;
     }
 
-    protected confirmationMessage(title: string, confirmationMessage: string, options: string[] = ["No", "Yes"], forceRejectWithResolve: boolean = false): JQueryPromise<confirmDialogResult> {
-        return viewHelpers.confirmationMessage(title, confirmationMessage, options, forceRejectWithResolve);
+    protected confirmationMessage(title: string, confirmationMessage: string, options: string[] = ["No", "Yes"], forceRejectWithResolve: boolean = false, defaultOption: string = null): JQueryPromise<confirmDialogResult> {
+        return viewHelpers.confirmationMessage(title, confirmationMessage, options, forceRejectWithResolve, defaultOption);
     }
 
     canContinueIfNotDirty(title: string, confirmationMessage: string) {
-        var deferred = $.Deferred<void>();
+        const deferred = $.Deferred<void>();
 
         const isDirty = this.dirtyFlag().isDirty();
         if (isDirty) {
@@ -272,12 +272,13 @@ class viewModelBase {
         });
     }
 
-    private beforeUnloadListener: EventListener = (e: any): any => {
-        var isDirty = this.dirtyFlag().isDirty();
+    private beforeUnloadListener: EventListener = (e: BeforeUnloadEvent): string => {
+        const isDirty = this.dirtyFlag().isDirty();
         if (isDirty) {
+            
             const message = "You have unsaved data.";
             e = e || window.event;
-
+            
             // For IE and Firefox
             if (e) {
                 e.returnValue = message;
@@ -286,19 +287,19 @@ class viewModelBase {
             // For Safari
             return message;
         }
-    }
+    };
 
     updateHelpLink(hash: string = null) {
         if (hash) {
-            var version = viewModelBase.clientVersion();
+            const version = viewModelBase.clientVersion();
             if (version) {
-                var href = "http://ravendb.net/l/" + hash + "/" + version + "/";
+                const href = "http://ravendb.net/l/" + hash + "/" + version + "/";
                 ko.postbox.publish('globalHelpLink', href);
                 return;
             }
 
-            var subscribtion = viewModelBase.clientVersion.subscribe(v => {
-                var href = "http://ravendb.net/l/" + hash + "/" + v + "/";
+            const subscribtion = viewModelBase.clientVersion.subscribe(v => {
+                const href = "http://ravendb.net/l/" + hash + "/" + v + "/";
                 ko.postbox.publish('globalHelpLink', href);
 
                 if (subscribtion) {

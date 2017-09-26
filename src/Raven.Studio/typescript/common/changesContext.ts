@@ -26,7 +26,7 @@ class changesContext {
     private globalDatabaseSubscriptions: changeSubscription[] = [];
 
     constructor() {
-        window.addEventListener("beforeunload", () => {
+        window.addEventListener("unload", () => {
             this.disconnectFromDatabaseChangesApi("ChangingDatabase");
             this.serverNotifications().dispose();
 
