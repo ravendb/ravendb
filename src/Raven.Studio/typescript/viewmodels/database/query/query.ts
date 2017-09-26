@@ -285,10 +285,7 @@ class query extends viewModelBase {
     }
 
     private saveLastQuery() {
-        const criteria = this.criteria();
-
-        const lastQuery: storedQueryDto = criteria.toStorageDto();
-
+        const lastQuery = this.criteria().queryText();
         recentQueriesStorage.saveLastQuery(this.activeDatabase(), lastQuery);
     }
 
@@ -364,11 +361,10 @@ class query extends viewModelBase {
 
         const criteria = this.criteria();
 
-        recentQueriesStorage.getLastQueryWithPromise(db)
-            .done(query => {
-                if (query != null)
-                    criteria.updateUsing(query);
-            });
+        const lastQuery = recentQueriesStorage.getLastQuery(db);
+
+        if (lastQuery != null)
+            criteria.queryText(lastQuery);
     }
 
     private fetchAllIndexes(db: database): JQueryPromise<any> {
