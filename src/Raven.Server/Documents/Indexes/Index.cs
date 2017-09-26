@@ -2166,7 +2166,7 @@ namespace Raven.Server.Documents.Indexes
 
             if (query.WaitForNonStaleResults && query.WaitForNonStaleResultsTimeout == null)
             {
-                query.WaitForNonStaleResultsTimeout = TimeSpan.FromSeconds(30);
+                query.WaitForNonStaleResultsTimeout = TimeSpan.FromSeconds(15); // this matches default timeout from client
                 return false;
             }
 
