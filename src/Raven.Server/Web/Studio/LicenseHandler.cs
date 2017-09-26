@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Net;
+using System.Threading.Tasks;
 using Raven.Server.Commercial;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -44,6 +45,12 @@ namespace Raven.Server.Web.Studio
         [RavenAction("/admin/license/deactivate", "POST", AuthorizationStatus.ClusterAdmin)]
         public async Task Deactivate()
         {
+            if (ServerStore.Configuration.Licensing.CanDeactivate == false)
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.MethodNotAllowed;
+                return;
+            }
+
             await ServerStore.LicenseManager.DeactivateLicense();
 
             NoContentStatus();
