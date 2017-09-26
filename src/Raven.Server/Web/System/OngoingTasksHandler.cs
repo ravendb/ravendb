@@ -465,6 +465,13 @@ namespace Raven.Server.Web.System
             }
         }
 
+        [RavenAction("/databases/*/tasks/state", "POST", AuthorizationStatus.ValidUser)]
+        public async Task callToggleTaskState()
+        {
+            // Note: Subscription task needs User authentication, All other tasks need Admin authentication
+            await ToggleTaskState();
+        }
+
         [RavenAction("/databases/*/admin/tasks/state", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task ToggleTaskState()
         {
