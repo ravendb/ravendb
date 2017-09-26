@@ -34,7 +34,7 @@ class indexDefinition {
     reduce = ko.observable<string>();
     isTestIndex = ko.observable<boolean>(false);
     fields = ko.observableArray<indexFieldOptions>();
-    defaultFieldOptions = ko.observable<indexFieldOptions>();
+    defaultFieldOptions = ko.observable<indexFieldOptions>(null);
     isAutoIndex = ko.observable<boolean>(false);
 
     outputReduceToCollection = ko.observable<boolean>();

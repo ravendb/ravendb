@@ -194,7 +194,7 @@ class editIndex extends viewModelBase {
                 checkedFieldsArray.push(configItem.value);
             });
         }
-
+        
         indexDef.fields().forEach(field => {
             checkedFieldsArray.push(field.name);
             checkedFieldsArray.push(field.analyzer);
@@ -216,6 +216,32 @@ class editIndex extends viewModelBase {
                 checkedFieldsArray.push(spatial.units);
             }
         });
+
+        const hasDefaultFieldOptions = ko.pureComputed(() => indexDef.defaultFieldOptions() == null);
+        checkedFieldsArray.push(hasDefaultFieldOptions);
+
+        const defaultFieldOptions = indexDef.defaultFieldOptions();
+        if (defaultFieldOptions) {
+            checkedFieldsArray.push(defaultFieldOptions.name);
+            checkedFieldsArray.push(defaultFieldOptions.analyzer);
+            checkedFieldsArray.push(defaultFieldOptions.indexing);
+            checkedFieldsArray.push(defaultFieldOptions.storage);
+            checkedFieldsArray.push(defaultFieldOptions.suggestions);
+            checkedFieldsArray.push(defaultFieldOptions.termVector);
+            checkedFieldsArray.push(defaultFieldOptions.hasSpatialOptions);
+
+            const spatial = defaultFieldOptions.spatial();
+            if (spatial) {
+                checkedFieldsArray.push(spatial.type);
+                checkedFieldsArray.push(spatial.strategy);
+                checkedFieldsArray.push(spatial.maxTreeLevel);
+                checkedFieldsArray.push(spatial.minX);
+                checkedFieldsArray.push(spatial.maxX);
+                checkedFieldsArray.push(spatial.minY);
+                checkedFieldsArray.push(spatial.maxY);
+                checkedFieldsArray.push(spatial.units);
+            }
+        }
 
         this.dirtyFlag = new ko.DirtyFlag(checkedFieldsArray, false, jsonUtil.newLineNormalizingHashFunction);
 
