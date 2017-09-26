@@ -35,11 +35,45 @@ namespace SlowTests.Issues
             }
         }
 
+        [Fact]
+        public void Can_use_alias_in_sum_by()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Product
+                    {
+                        Supplier = "suppliers/1",
+                        UnitsInStock = 10
+                    });
+
+                    session.Store(new Product
+                    {
+                        Supplier = "suppliers/1",
+                        UnitsInStock = 20
+                    });
+
+                    session.SaveChanges();
+
+                    var names = session.Advanced.RawQuery<Result>("from Products as p group by p.Supplier select key(), sum(p.UnitsInStock)").ToList();
+
+                    Assert.Equal(1, names.Count);
+                    Assert.Equal("suppliers/1", names[0].Supplier);
+                    Assert.Equal(30, names[0].UnitsInStock);
+                }
+            }
+        }
+
         private class Result
         {
             public string FirstName { get; set; }
 
             public int Count { get; set; }
+
+            public int UnitsInStock { get; set; }
+
+            public string Supplier { get; set; }
         }
     }
 }
