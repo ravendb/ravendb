@@ -6,10 +6,12 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Commands;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
@@ -27,8 +29,6 @@ namespace Raven.Server.Documents.Replication
 {
     public class ReplicationLoader : IDisposable, IDocumentTombstoneAware
     {
-        public event Action<string, Exception> ReplicationFailed;
-
         public event Action<IncomingReplicationHandler> IncomingReplicationAdded;
         public event Action<IncomingReplicationHandler> IncomingReplicationRemoved;
 
@@ -299,6 +299,12 @@ namespace Raven.Server.Documents.Replication
                     $"Cannot have replication with source and destination being the same database. They share the same db id ({connectionInfo} - {Database.DbId})");
             }
 
+            if (_server.IsPassive())
+            {
+                throw new InvalidOperationException(
+                    $"Cannot accept the incoming replication connection from {connectionInfo.SourceUrl}, because this node is in passive state.");
+            }
+
             if (_incoming.TryRemove(connectionInfo.SourceDatabaseId, out IncomingReplicationHandler value))
             {
                 if (_log.IsInfoEnabled)
@@ -507,7 +513,38 @@ namespace Raven.Server.Documents.Replication
             outgoingReplication.SuccessfulTwoWaysCommunication += OnOutgoingSendingSucceeded;
             _outgoing.TryAdd(outgoingReplication); // can't fail, this is a brand new instance
 
-            node.Url = node.Url.Trim();
+            if (node is ExternalReplication exNode)
+            {
+                try
+                {
+                    using (var requestExecutor = RequestExecutor.Create(exNode.TopologyDiscoveryUrls, exNode.Database, _server.Server.ClusterCertificateHolder.Certificate,
+                        DocumentConventions.Default))
+                    using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                    {
+                        var cmd = new GetTcpInfoCommand("extrenal-replication");
+                        requestExecutor.Execute(cmd, ctx);
+                        node.Url = requestExecutor.Url;
+                        outgoingReplication.ConnectionInfo = cmd.Result;
+                    }
+                }
+                catch (Exception e)
+                {
+                    // will try to fetch it again later
+                    if (_log.IsInfoEnabled)
+                        _log.Info($"External replication failed to fetch connection information for database '{node.Database}', the connection will be retried later.", e);
+
+                    _reconnectQueue.TryAdd(new ConnectionShutdownInfo
+                    {
+                        Node = node,
+                        External = external
+                    });
+                    return;
+                }
+            }
+            else
+            {
+                node.Url = node.Url.Trim();
+            }
 
             _outgoingFailureInfo.TryAdd(node, new ConnectionShutdownInfo
             {
@@ -531,7 +568,6 @@ namespace Raven.Server.Documents.Replication
                 if (_log.IsInfoEnabled)
                     _log.Info($"Incoming replication handler has thrown an unhandled exception. ({instance.FromToString})", e);
 
-                ReplicationFailed?.Invoke(instance.FromToString, e);
             }
         }
 
@@ -559,7 +595,6 @@ namespace Raven.Server.Documents.Replication
                 if (_log.IsInfoEnabled)
                     _log.Info($"Document replication connection ({instance.Node}) failed, and the connection will be retried later.", e);
 
-                ReplicationFailed?.Invoke(instance.Node.ToString(), e);
             }
         }
 

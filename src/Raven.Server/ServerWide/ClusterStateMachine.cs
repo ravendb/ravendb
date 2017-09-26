@@ -639,7 +639,7 @@ namespace Raven.Server.ServerWide
 
         private void UpdateDatabase(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore)
         {
-            if (cmd.TryGet(DatabaseName, out string databaseName) == false)
+            if (cmd.TryGet(DatabaseName, out string databaseName) == false || string.IsNullOrEmpty(databaseName))
                 throw new ArgumentException("Update database command must contain a DatabaseName property");
 
             try
