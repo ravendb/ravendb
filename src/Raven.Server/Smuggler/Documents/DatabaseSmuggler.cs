@@ -83,7 +83,7 @@ namespace Raven.Server.Smuggler.Documents
 
         private void ProcessType(DatabaseItemType type, SmugglerResult result, BuildVersionType buildType)
         {
-            if ((_options.OperateOnTypes & type) != type)
+            if ((_options.OperateOnTypes & type) != type && type != DatabaseItemType.LegacyAttachments) //TODO:Add legacy attachment option in the studio
             {
                 SkipType(type, result);
                 return;
@@ -109,6 +109,9 @@ namespace Raven.Server.Smuggler.Documents
                     break;
                 case DatabaseItemType.Identities:
                     counts = ProcessIdentities(result);
+                    break;
+                case DatabaseItemType.LegacyAttachments:
+                    counts = ProcessLegacyAttachments(result);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
@@ -378,6 +381,42 @@ namespace Raven.Server.Smuggler.Documents
                     }
 
                     // TODO: RavenDB-6931 - Make sure that patching cannot change the @attachments and @collection in metadata
+
+                    item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
+
+                    actions.WriteDocument(item, result.Documents);
+
+                    result.Documents.LastEtag = item.Document.Etag;
+                }
+            }
+
+            return result.Documents;
+        }
+
+        private SmugglerProgressBase.Counts ProcessLegacyAttachments(SmugglerResult result)
+        {
+            using (var actions = _destination.Documents())
+            {
+                foreach (var item in _source.GetLegacyAttachments(actions))
+                {
+                    _token.ThrowIfCancellationRequested();
+                    result.LegacyAttachments.ReadCount++;
+
+                    if (result.LegacyAttachments.ReadCount % 1000 == 0)
+                    {
+                        var message = $"Read {result.LegacyAttachments.ReadCount:#,#;;0} legacy attachments.";
+                        result.AddInfo(message);
+                        _onProgress.Invoke(result.Progress);
+                    }
+                    //TODO:return null if reading the attachment fails
+                    if (item.Document == null)
+                    {
+                        result.LegacyAttachments.ErroredCount++;
+                        continue;
+                    }
+
+                    if (item.Document.Id == null)
+                        ThrowInvalidData();
 
                     item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
 

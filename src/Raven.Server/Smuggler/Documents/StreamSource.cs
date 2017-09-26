@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
+using Org.BouncyCastle.Cms;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
@@ -13,6 +15,8 @@ using Raven.Server.Smuggler.Documents.Processors;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Threading;
+using Sparrow.Utils;
 using Voron;
 using Size = Sparrow.Size;
 
@@ -80,8 +84,7 @@ namespace Raven.Server.Smuggler.Documents
             if (type == null)
                 return DatabaseItemType.None;
 
-            while (type.Equals("Attachments", StringComparison.OrdinalIgnoreCase) ||
-                type.Equals("Transformers", StringComparison.OrdinalIgnoreCase))
+            while (type.Equals("Transformers", StringComparison.OrdinalIgnoreCase))
             {
                 SkipArray();
                 type = ReadType();
@@ -118,6 +121,11 @@ namespace Raven.Server.Smuggler.Documents
         public IEnumerable<DocumentItem> GetRevisionDocuments(List<string> collectionsToExport, INewDocumentActions actions)
         {
             return ReadDocuments(actions);
+        }
+
+        public IEnumerable<DocumentItem> GetLegacyAttachments(INewDocumentActions actions)
+        {
+            return ReadLegacyAttachments(actions);
         }
 
         public IEnumerable<DocumentTombstone> GetTombstones(List<string> collectionsToExport, INewDocumentActions actions)
@@ -282,6 +290,97 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
+        private IEnumerable<DocumentItem> ReadLegacyAttachments(INewDocumentActions actions)
+        {
+            if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
+                ThrowInvalidJson("Unexpected end of json");
+
+            if (_state.CurrentTokenType != JsonParserToken.StartArray)
+                ThrowInvalidJson("Expected start array, but got " + _state.CurrentTokenType);
+
+            var context = _context;
+            var modifier = new BlittableMetadataModifier(context);
+            var builder = CreateBuilder(context, modifier);
+            try
+            {
+                while (true)
+                {
+                    if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
+                        ThrowInvalidJson("Unexpected end of json while reading legacy attachments");
+
+                    if (_state.CurrentTokenType == JsonParserToken.EndArray)
+                        break;
+
+                    if (actions != null)
+                    {
+                        var oldContext = context;
+                        context = actions.GetContextForNewDocument();
+                        if (oldContext != context)
+                        {
+                            builder.Dispose();
+                            builder = CreateBuilder(context, modifier);
+                        }
+                    }
+                    builder.Renew("import/object", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+
+                    ReadObject(builder);
+
+                    var data = builder.CreateReader();
+                    builder.Reset();
+
+                    var attachment = new DocumentItem.AttachmentStream
+                    {
+                        Stream = actions.GetTempStream()
+                    };
+
+                    var attachmentInfo = ProcessLegacyAttachment(context, data, ref attachment);
+                    var dummyDoc = new DocumentItem()
+                    {
+                        Document = new Document()
+                        {
+                            Data = WriteDummyDocumentForAttachment(context, attachmentInfo),//TODO:this is wrong i need to generate a dummy document just like in the DR tool
+                            Id = attachmentInfo.Id,
+                            ChangeVector = string.Empty,
+                            Flags = DocumentFlags.HasAttachments,
+                            NonPersistentFlags = NonPersistentDocumentFlags.FromSmuggler
+                        }
+                    };
+                    dummyDoc.Attachments = new List<DocumentItem.AttachmentStream>();
+                    dummyDoc.Attachments.Add(attachment);
+                    yield return dummyDoc;
+                }
+            }
+            finally
+            {
+                builder.Dispose();
+            }
+
+        }
+
+        private BlittableJsonReaderObject WriteDummyDocumentForAttachment(DocumentsOperationContext context, LegacyAttachmentDetails details)
+        {
+            var attachment = new DynamicJsonValue
+            {
+                ["Name"] = details.Key,
+                ["Hash"] = details.Hash,
+                ["ContentType"] = string.Empty,
+                ["size"] = details.Size,
+            };
+            var attachmets = new DynamicJsonArray();
+            attachmets.Add(attachment);
+            var metadata = new DynamicJsonValue
+            {
+                [Constants.Documents.Metadata.Collection] = "@empty",
+                [Constants.Documents.Metadata.Attachments] = attachmets,
+            };
+            var djv = new DynamicJsonValue
+            {
+                [Constants.Documents.Metadata.Key] = metadata,
+
+            };
+            return context.ReadObject(djv, details.Id);
+        }
+
         private IEnumerable<DocumentItem> ReadDocuments(INewDocumentActions actions = null)
         {
             if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
@@ -396,7 +495,7 @@ namespace Raven.Server.Smuggler.Documents
                     builder.Reset();
 
                     var tombstone = new DocumentTombstone();
-                    if (data.TryGet("Key", out tombstone.LowerId) && 
+                    if (data.TryGet("Key", out tombstone.LowerId) &&
                         data.TryGet(nameof(DocumentTombstone.Type), out string type) &&
                         data.TryGet(nameof(DocumentTombstone.Collection), out tombstone.Collection))
                     {
@@ -410,6 +509,61 @@ namespace Raven.Server.Smuggler.Documents
                 builder.Dispose();
             }
         }
+
+        internal unsafe LegacyAttachmentDetails ProcessLegacyAttachment(DocumentsOperationContext context, BlittableJsonReaderObject data, ref DocumentItem.AttachmentStream attachment)
+        {
+            BlittableJsonReaderObject bjr;
+            string base64data;
+            string key;
+            if (data.TryGet("Metadata", out bjr) == false ||
+                data.TryGet("Data", out base64data) == false ||
+                data.TryGet("Key", out key) == false)
+            {
+                throw new ArgumentException($"Data of legacy attachment is not valid: {data}");
+            }
+
+            var memoryStream = new MemoryStream();
+
+            fixed (char* pdata = base64data)
+            {
+                memoryStream.SetLength(Base64.FromBase64_ComputeResultLength(pdata, base64data.Length));
+                fixed (byte* buffer = memoryStream.GetBuffer())
+                    Base64.FromBase64_Decode(pdata, base64data.Length, buffer, (int)memoryStream.Length);
+            }
+
+            memoryStream.Position = 0;
+            var stream = attachment.Stream;
+            var hash = AsyncHelpers.RunSync(() => AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(context, memoryStream, stream, CancellationToken.None));
+            var lazyHash = context.GetLazyString(hash);
+            attachment.Base64HashDispose = Slice.External(context.Allocator, lazyHash, out attachment.Base64Hash);
+            var tag = $"{_dummyDocument}{key}{_recordSeperator}d{_recordSeperator}{key}{_recordSeperator}{hash}{_recordSeperator}";
+            var lazyTag = context.GetLazyString(tag);
+            attachment.TagDispose = Slice.External(context.Allocator, lazyTag, out attachment.Tag);
+            var id = $"{_dummyDocument}{key}";
+            var lazyId = context.GetLazyString(id);
+
+            attachment.Data = context.ReadObject(bjr, id); 
+            return new LegacyAttachmentDetails
+            {
+                Id = lazyId,
+                Hash = hash,
+                Key = key,
+                Size = attachment.Stream.Length,
+                Tag = tag
+            };
+        }
+
+        internal struct LegacyAttachmentDetails
+        {
+            public LazyStringValue Id;
+            public string Hash;
+            public string Key;
+            public long Size;
+            public string Tag;
+        }
+
+        private readonly char _recordSeperator = (char)SpecialChars.RecordSeparator;
+        private readonly string _dummyDocument = "dummy/";
 
         public unsafe void ProcessAttachmentStream(DocumentsOperationContext context, BlittableJsonReaderObject data, ref DocumentItem.AttachmentStream attachment)
         {
@@ -468,7 +622,9 @@ namespace Raven.Server.Smuggler.Documents
 
             if (type.Equals(nameof(DatabaseItemType.Identities), StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.Identities;
-
+            if (type.Equals("Attachments", StringComparison.OrdinalIgnoreCase))
+                return DatabaseItemType.LegacyAttachments;
+            //Attachments
             throw new InvalidOperationException("Got unexpected property name '" + type + "' on " + _parser.GenerateErrorState());
         }
     }
