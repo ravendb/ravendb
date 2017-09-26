@@ -2,18 +2,12 @@
 
 import database = require("models/resources/database");
 import storageKeyProvider = require("common/storage/storageKeyProvider");
-import getIndexNamesCommand = require("commands/database/index/getIndexNamesCommand");
 
 class recentQueriesStorage {
 
     static getRecentQueriesWithIndexNameCheck(db: database): JQueryPromise<storedQueryDto[]> {
         const recentQueries = this.getRecentQueries(db);
         return $.when(recentQueries);
-    }
-
-    static getLastQueryWithPromise(db: database): JQueryPromise<storedQueryDto> {
-        const lastQuery = this.getLastQuery(db);
-        return $.when(lastQuery);
     }
 
     static getRecentQueries(db: database): storedQueryDto[] {
@@ -28,11 +22,9 @@ class recentQueriesStorage {
         return recentQueriesFromLocalStorage;
     }
 
-    static getLastQuery(db: database): storedQueryDto {
+    static getLastQuery(db: database): string {
         const localStorageName = recentQueriesStorage.getLocalStorageKeyForLastQuery(db.name);
-        let recentQueriesFromLocalStorage: storedQueryDto = this.getLastQueryFromLocalStorage(localStorageName);
-
-        return recentQueriesFromLocalStorage;
+        return this.getLastQueryFromLocalStorage(localStorageName);
     }
 
     static saveRecentQueries(db: database, recentQueries: storedQueryDto[]) {
@@ -40,7 +32,7 @@ class recentQueriesStorage {
         localStorage.setObject(localStorageName, recentQueries);
     }
 
-    static saveLastQuery(db: database, lastQuery: storedQueryDto) {
+    static saveLastQuery(db: database, lastQuery: string) {
         const localStorageName = recentQueriesStorage.getLocalStorageKeyForLastQuery(db.name);
         localStorage.setObject(localStorageName, lastQuery);
     }
@@ -78,14 +70,14 @@ class recentQueriesStorage {
         return recentQueriesFromLocalStorage;
     }
 
-    private static getLastQueryFromLocalStorage(localStorageName: string): storedQueryDto {
-        let recentQueriesFromLocalStorage: storedQueryDto = null;
+    private static getLastQueryFromLocalStorage(localStorageName: string): string {
+        let lastQueriesFromLocalStorage: string = null;
         try {
-            recentQueriesFromLocalStorage = localStorage.getObject(localStorageName);
+            lastQueriesFromLocalStorage = localStorage.getObject(localStorageName);
         } catch (err) {
             //no need to do anything
         }
-        return recentQueriesFromLocalStorage;
+        return lastQueriesFromLocalStorage;
     }
 
     static appendQuery(query: storedQueryDto, recentQueries: KnockoutObservableArray<storedQueryDto>): void {
@@ -103,10 +95,12 @@ class recentQueriesStorage {
         }
     }
 
-
     static onDatabaseDeleted(qualifer: string, name: string) {
         const localStorageName = recentQueriesStorage.getLocalStorageKey(name);
         localStorage.removeItem(localStorageName);
+
+        const localStorageLastQueryName = recentQueriesStorage.getLocalStorageKeyForLastQuery(name);
+        localStorage.removeItem(localStorageLastQueryName);
     }
 
 }
