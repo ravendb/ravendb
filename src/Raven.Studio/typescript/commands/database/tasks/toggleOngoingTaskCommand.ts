@@ -10,10 +10,15 @@ class toggleOngoingTaskCommand extends commandBase {
 
     execute(): JQueryPromise<Raven.Client.ServerWide.Operations.ModifyOngoingTaskResult> {
         const args = { key: this.taskId, type: this.taskType, disable: this.disable, taskName: this.taskName };
-        const url = endpoints.databases.ongoingTasks.adminTasksState + this.urlEncodeArgs(args);
+
+        // Subscription is the only task that needs only *User* authenication for toggling state
+        // All others use *Admin* authentication
+        const url = this.taskType === "Subscription" ? endpoints.databases.ongoingTasks.tasksState :
+                                                       endpoints.databases.ongoingTasks.adminTasksState;
+
         const operationText = this.disable ? "disable" : "enable";
      
-        return this.post(url, null, this.db)
+        return this.post(url + this.urlEncodeArgs(args), null, this.db)
             .done(() => this.reportSuccess(`Successfully ${operationText}d ${this.taskType} task`))
             .fail((response: JQueryXHR) => this.reportError(`Failed to ${operationText} ${this.taskType} task. `, response.responseText));
     }
