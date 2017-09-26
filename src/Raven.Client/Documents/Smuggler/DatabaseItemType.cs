@@ -11,6 +11,7 @@ namespace Raven.Client.Documents.Smuggler
         RevisionDocuments = 1 << 1,
         Indexes = 1 << 2,
         Identities = 1 << 4,
-        Tombstones = 1 << 5
+        Tombstones = 1 << 5,
+        LegacyAttachments = 1 << 6
     }
 }

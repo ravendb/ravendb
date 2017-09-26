@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Util;
@@ -90,6 +91,11 @@ namespace Raven.Server.Smuggler.Documents
                     Document = document
                 };
             }
+        }
+
+        public IEnumerable<DocumentItem> GetLegacyAttachments(INewDocumentActions actions)
+        {
+            return Enumerable.Empty<DocumentItem>();
         }
 
         public Stream GetAttachmentStream(LazyStringValue hash, out string tag)
