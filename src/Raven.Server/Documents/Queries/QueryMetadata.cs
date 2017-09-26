@@ -949,7 +949,7 @@ namespace Raven.Server.Documents.Queries
                             throw new InvalidQueryException($"Method {methodName}() expects value token as second argument, got {arguments[1]} type", QueryText,
                                 parameters);
 
-                        if (methodType == MethodType.Search)
+                        if (methodType == MethodType.Search || methodType == MethodType.Lucene)
                             _metadata.AddWhereField(fieldName, search: true);
                         else
                             _metadata.AddWhereField(fieldName, exact: _insideExact > 0);
