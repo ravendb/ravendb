@@ -617,7 +617,11 @@ namespace Raven.Server.Documents.Queries
                             return null; //never hit
                         }
 
-                        fieldName = sumFieldToken.FieldValue;
+                        if (sumFieldToken.Compound.Count == 1 || TryGetFieldValueWithoutAlias(sumFieldToken, out fieldName, out _) == false)
+                        {
+                            fieldName = sumFieldToken.FieldValue;
+                        }
+
                         break;
                 }
 
