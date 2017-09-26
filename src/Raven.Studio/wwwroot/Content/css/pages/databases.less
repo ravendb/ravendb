@@ -70,19 +70,18 @@
             }
         }
 
-        &.relevant {
-            background-color: desaturate(darken(@brand-info-dark, 15%), 10%);
+        &:not(.relevant) {
+            background-color: darken(@gray-darker, 4%);
 
             &:hover {
-                background-color: darken(@brand-info-dark, 13%);
+                background-color: darken(@gray-darker, 2%);
             }
 
-            .dbgroup-node-type a {
-                color: @brand-info;
-                font-weight: bold;
+            border: 1px dashed @gray-dark;
 
-                &:hover {
-                    color: @brand-info-light;
+            &:not(:hover) {
+                .dbgroup-node-type, .properties-item {
+                    opacity: .6;
                 }
             }
         }

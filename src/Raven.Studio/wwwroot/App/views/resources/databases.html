@@ -8,7 +8,7 @@
             <div class="input-group">
                 <input type="text" class="form-control" placeholder="Filter" accesskey="/" title="Filter databases (Alt+/)" data-bind="textInput: filters.searchText">
             </div>
-            <div class="btn-group">
+            <!--<div class="btn-group">
                 <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" title="Filter visible databases">
                     <span data-bind="visible: !filters.localOnly()">Show all</span>
                     <span data-bind="visible: filters.localOnly">Show local (Node <span data-bind="text: clusterManager.localNodeTag"></span>)</span>
@@ -28,7 +28,7 @@
                         </a>
                     </li>
                 </ul>
-            </div>
+            </div>-->
             <div class="databasesToolbar-actions">
 
                 <div class="btn-group-label" data-bind="css: { active: selectedDatabases().length }" data-label="Selection" role="group">
@@ -104,6 +104,10 @@
     </div>
 
     <div class="flex-grow scroll" data-bind="if: databases().sortedDatabases().length, visible: databases().sortedDatabases().length">
+        <div class="hr-title">
+            <h5>LOCAL</h5>
+            <hr />
+        </div>
         <div data-bind="foreach: databases().sortedDatabases">
             <div id="databaseItem" class="panel database-item" data-bind="scrollTo: isCurrentlyActiveDatabase(), visible: !filteredOut(),
                                                                           attr: { class: 'panel database-item ' + badgeClass() + ' ' + (isCurrentlyActiveDatabase() ? 'active' : '') },
@@ -209,6 +213,10 @@
                     </div>
                 </div>
             </div>
+        </div>
+        <div class="hr-title">
+            <h5>REMOTE</h5>
+            <hr />
         </div>
     </div>
 </div>
