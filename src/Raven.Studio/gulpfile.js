@@ -234,7 +234,7 @@ gulp.task('z_mochaTests', function () {
 });
 
 gulp.task('test', [ 'z_compile:test' ], function (cb) {
-    return runSequence('z_generate-test-list', /*'z_mochaTests', */cb);
+    return runSequence('z_generate-test-list', 'z_mochaTests', cb);
 });
 
 gulp.task('z_watch:test', ['test'], function () {
