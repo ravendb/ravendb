@@ -10,9 +10,13 @@ const northwindProvider = rqlTestUtils.northwindProvider;
 
 describe("RQL Autocomplete", () => {
 
-    const emptyList = [
+    const emptyList: autoCompleteWordList[] = [
         {caption: "from", value: "from ", score: 2, meta: "keyword"},
-        {caption: "declare", value: "declare ", score: 1, meta: "keyword"}
+        {caption: "declare", value: "declare ", score: 1, meta: "keyword", snippet: `declare function \${1:Name}() {
+    \${0}
+}
+
+`}
     ];
 
     const collectionsList = [
@@ -43,7 +47,7 @@ describe("RQL Autocomplete", () => {
     ];
 
     const whereFunctionsList: autoCompleteWordList[] = [
-        {caption: "search", value: null, snippet: "search(${1}, ${2:'search text'}, ${3:or}) ", score: 21, meta: "function"}
+        {caption: "search", value: "search ", snippet: "search(${1:alias.Field.Name}, ${2:'*term1* term2*'}, ${3:or}) ", score: 21, meta: "function"}
     ];
 
     const fieldsList: autoCompleteWordList[] = [
@@ -107,8 +111,8 @@ describe("RQL Autocomplete", () => {
     ].concat(functionsList);
     
     const orderByFieldsList = _.sortBy(fieldsList.concat([
-        {caption: "score", value: null, snippet: "score() ", score: 22, meta: "function"}, // TODO: snippet
-        {caption: "random", value: null, snippet: "random() ", score: 21, meta: "function"} // TODO: snippet
+        {caption: "score", value: "score() ", snippet: "score() ", score: 22, meta: "function"}, // TODO: snippet
+        {caption: "random", value: "random() ", snippet: "random() ", score: 21, meta: "function"} // TODO: snippet
     ]), (x: autoCompleteWordList) => x.score).reverse(); 
     
     const orderBySortAfterList = [
@@ -649,6 +653,19 @@ where search|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => 
         });
     });
 
+    it.skip('After where function first parameter | should list fields without where functions', done => {
+        rqlTestUtils.autoComplete(`from Orders
+where search(|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, fieldsList);
+
+            assert.equal(lastKeyword.keyword, "where");
+            assert.equal(lastKeyword.dividersCount, 1);
+
+            done();
+        });
+    });
+
     it('After where we should list binary operation and other keywords', done => {
         rqlTestUtils.autoComplete(`from Orders
 where ShipTo.Country = 'France' |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
@@ -1095,6 +1112,17 @@ group by ShippedAt, |`, northwindProvider(), (errors, wordlist, prefix, lastKeyw
         });
     });
 
+    it('dec| should list the declare function with prefix', done => {
+        rqlTestUtils.autoComplete(`dec|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "dec");
+            assert.deepEqual(wordlist, emptyList);
+
+            assert.isNull(lastKeyword);
+
+            done();
+        });
+    });
+
     it('declare should suggest function', done => {
         rqlTestUtils.autoComplete("declare |", northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
@@ -1116,8 +1144,8 @@ group by ShippedAt, |`, northwindProvider(), (errors, wordlist, prefix, lastKeyw
             assert.equal(prefix, "");
             assert.deepEqual(wordlist, emptyList);
 
-            assert.equal(lastKeyword.keyword, "declare function");
-            assert.equal(lastKeyword.dividersCount, 2);
+            assert.isUndefined(lastKeyword.keyword);
+            assert.equal(lastKeyword.dividersCount, 1);
 
             done();
         });
@@ -1130,7 +1158,24 @@ group by ShippedAt, |`, northwindProvider(), (errors, wordlist, prefix, lastKeyw
             assert.equal(prefix, "");
             assert.deepEqual(wordlist, emptyList);
 
-            assert.equal(lastKeyword.keyword, "declare function");
+            assert.isUndefined(lastKeyword.keyword);
+            assert.equal(lastKeyword.dividersCount, 1);
+
+            done();
+        });
+    });
+
+    it('decalre function with 3 new lines should list empty list', done => {
+        rqlTestUtils.autoComplete(`declare function Name() {
+    
+}
+
+
+|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, emptyList);
+
+            assert.isUndefined(lastKeyword.keyword);
             assert.equal(lastKeyword.dividersCount, 1);
 
             done();

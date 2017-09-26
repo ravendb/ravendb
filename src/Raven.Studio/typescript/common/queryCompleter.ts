@@ -276,6 +276,11 @@ class queryCompleter {
                     result.parentheses++;
                     break;
                 case "paren.rparen":
+                    if (token.value === "}" && result.parentheses === 0) {
+                        result.keywordsBefore = this.getKeywordsBefore(iterator); // todo: do we need this?
+                        return result;
+                    }
+                    
                     result.parentheses--;
                     break;
                 case "space":
@@ -453,8 +458,8 @@ class queryCompleter {
                 }
                 if (lastKeyword.dividersCount === 1) {
                     const additions: autoCompleteWordList[] = lastKeyword.fieldPrefix ? null : [
-                        {caption: "score", value: null, snippet: "score() ", score: 22, meta: "function"},// todo: snippet
-                        {caption: "random", value: null, snippet: "random() ", score: 21, meta: "function"} // todo: snippet
+                        {caption: "score", value: "score() ", snippet: "score() ", score: 22, meta: "function"},// todo: snippet
+                        {caption: "random", value: "random() ", snippet: "random() ", score: 21, meta: "function"} // todo: snippet
                     ];
                     this.completeFields(session, lastKeyword.getFieldPrefix, callback, additions);
                     return;
@@ -492,7 +497,7 @@ class queryCompleter {
                 
                 if (lastKeyword.dividersCount === 1) {
                     const additions: autoCompleteWordList[] = [
-                        {caption: "search",value: null, snippet: "search(${1}, ${2:'search text'}, ${3:or}) ", score: 21, meta: "function"}
+                        {caption: "search", value: "search ", snippet: "search(${1:alias.Field.Name}, ${2:'*term1* term2*'}, ${3:or}) ", score: 21, meta: "function"}
                     ];
                     this.completeFields(session, lastKeyword.getFieldPrefix, callback, additions);
                     return;
@@ -645,9 +650,13 @@ class queryCompleter {
     }
 
     private completeEmpty(callback: (errors: any[], wordList: autoCompleteWordList[]) => void) {
-        const keywords = [
+        const keywords: autoCompleteWordList[] = [
             {value: "from", score: 2, meta: "keyword"},
-            {value: "declare", score: 1, meta: "keyword"}
+            {value: "declare", score: 1, meta: "keyword", snippet: `declare function \${1:Name}() {
+    \${0}
+}
+
+`}
         ];
         this.completeWords(callback, keywords);
     }
