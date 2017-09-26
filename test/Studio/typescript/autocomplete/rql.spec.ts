@@ -11,8 +11,9 @@ const northwindProvider = rqlTestUtils.northwindProvider;
 describe("RQL Autocomplete", () => {
 
     const emptyList: autoCompleteWordList[] = [
-        {caption: "from", value: "from ", score: 2, meta: "keyword"},
-        {caption: "declare", value: "declare ", score: 1, meta: "keyword", snippet: `declare function \${1:Name}() {
+        {caption: "from", value: "from ", score: 3, meta: "clause", snippet: "from ${1:Collection} as ${2:alias}\r\n"},
+        {caption: "from index", value: "from index ", score: 2, meta: "clause", snippet: "from index ${1:Index} as ${2:alias}\r\n"},
+        {caption: "declare", value: "declare ", score: 1, meta: "custom function", snippet: `declare function \${1:Name}() {
     \${0}
 }
 
