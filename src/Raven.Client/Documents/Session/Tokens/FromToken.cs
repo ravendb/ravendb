@@ -11,16 +11,19 @@ namespace Raven.Client.Documents.Session.Tokens
 
         public bool IsDynamic { get; }
 
-        private FromToken(string indexName, string collectionName)
+        public string Alias { get; }
+
+        private FromToken(string indexName, string collectionName, string alias = null)
         {
             CollectionName = collectionName;
             IndexName = indexName;
             IsDynamic = CollectionName != null;
+            Alias = alias;
         }
 
-        public static FromToken Create(string indexName, string collectionName)
+        public static FromToken Create(string indexName, string collectionName, string alias = null)
         {
-            return new FromToken(indexName, collectionName);
+            return new FromToken(indexName, collectionName, alias);
         }
 
         private static readonly char[] _whiteSpaceChars = { ' ', '\t', '\r', '\n', '\v' };
@@ -44,6 +47,10 @@ namespace Raven.Client.Documents.Session.Tokens
                 else
                 {
                    WriteField(writer, CollectionName);
+                }
+                if (Alias != null)
+                {
+                    writer.Append(" as ").Append(Alias);
                 }
 
                 return;

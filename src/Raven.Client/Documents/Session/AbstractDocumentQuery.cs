@@ -165,13 +165,14 @@ namespace Raven.Client.Documents.Session
         protected AbstractDocumentQuery(InMemoryDocumentSessionOperations session,
                                      string indexName,
                                      string collectionName,
-                                     bool isGroupBy)
+                                     bool isGroupBy,
+                                     string fromAlias = null)
         {
             IsGroupBy = isGroupBy;
             IndexName = indexName;
             CollectionName = collectionName;
 
-            FromToken = FromToken.Create(indexName, collectionName);
+            FromToken = FromToken.Create(indexName, collectionName, fromAlias);
 
             TheSession = session;
             AfterQueryExecuted(UpdateStatsAndHighlightings);

@@ -7,22 +7,24 @@ namespace Raven.Client.Documents.Session.Tokens
     {
         public readonly string[] FieldsToFetch;
         public readonly string[] Projections;
+        public readonly bool IsCustomFunction;
 
-        private FieldsToFetchToken(string[] fieldsToFetch, string[] projections)
+        private FieldsToFetchToken(string[] fieldsToFetch, string[] projections, bool isCustomFunction)
         {
             FieldsToFetch = fieldsToFetch;
             Projections = projections;
+            IsCustomFunction = isCustomFunction;
         }
 
-        public static FieldsToFetchToken Create(string[] fieldsToFetch, string[] projections)
+        public static FieldsToFetchToken Create(string[] fieldsToFetch, string[] projections, bool isCustomFunction)
         {
             if (fieldsToFetch == null || fieldsToFetch.Length == 0)
                 throw new ArgumentNullException(nameof(fieldsToFetch));
 
-            if (projections != null && projections.Length != fieldsToFetch.Length)
+            if (isCustomFunction == false && projections != null && projections.Length != fieldsToFetch.Length)
                 throw new ArgumentNullException(nameof(projections), "Length of projections must be the same as length of fields to fetch.");
 
-            return new FieldsToFetchToken(fieldsToFetch, projections);
+            return new FieldsToFetchToken(fieldsToFetch, projections, isCustomFunction);
         }
 
         public override void WriteTo(StringBuilder writer)
@@ -36,7 +38,10 @@ namespace Raven.Client.Documents.Session.Tokens
                     writer.Append(", ");
 
                 WriteField(writer, fieldToFetch);
-                if (projection == null || string.Equals(fieldToFetch, projection))
+
+                if (IsCustomFunction || 
+                    projection == null || 
+                    string.Equals(fieldToFetch, projection))
                     continue;
 
                 writer.Append(" as ");

@@ -124,7 +124,8 @@ namespace Raven.Client.Documents.Session
         /// <typeparam name="TProjection">Type of the projection.</typeparam>
         /// <param name="fields">Array of fields to load.</param>
         /// <param name="projections">Array of field projections.</param>
-        IAsyncDocumentQuery<TProjection> SelectFields<TProjection>(string[] fields, string[] projections);
+        /// <param name="fromAlias">From token alias.</param>
+        IAsyncDocumentQuery<TProjection> SelectFields<TProjection>(string[] fields, string[] projections, string fromAlias = null);
 
         /// <summary>
         ///     Selects the specified fields directly from the index if the are stored. If the field is not stored in index, value
