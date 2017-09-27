@@ -75,6 +75,7 @@ var RqlHighlightRules = function() {
         "function.orderBy": orderByFunctions,
         "constant.language": constants,
         "constant.language.boolean": constantsBoolean,
+        "operations.type.binary": binaryOperations,
         "operations.type": operations
     }, "identifier", true);
 
@@ -101,16 +102,17 @@ var RqlHighlightRules = function() {
         token : "paren.lparen",
         regex : /[\[({]/
     }, {
+        token : "comma",
+        regex : /,/
+    }, {
         token : "space",
         regex : /\s+/
     } ];
     
     var startRule = [ {
-        token :  "operations.type.binary",
-        regex : "(?:" + binaryOperations +")(?!\\s*[),])"
-    }, {
         token :  "function.where",
-        regex : whereFunctions
+        regex : whereFunctions,
+        next: "whereFunction"
     }, {
         token : keywordMapper,
         regex : "[a-zA-Z_$@][a-zA-Z0-9_$@]*\\b"
@@ -118,11 +120,14 @@ var RqlHighlightRules = function() {
         token : "operator.where",
         regex : whereOperators
     }, {
-            token : "paren.rparen",
-            regex : /[\])}]/
+        token : "paren.rparen",
+        regex : /[\])}]/
     } ];
     
     var whereFunctionsRules = [ {
+        token : "identifier",
+        regex : "[a-zA-Z_$@][a-zA-Z0-9_$@]*\\b"
+    }, {
         token : "paren.rparen",
         regex : /[\])}]/,
         next: "start"
@@ -131,8 +136,12 @@ var RqlHighlightRules = function() {
     this.$rules = {
         "start" : commonRules.concat(startRule),    
         "whereFunction" : commonRules.map(function (rule) {
-            rule.token += ".whereFunction";
-            return rule;
+            return {
+                token: rule.token + ".whereFunction",
+                regex: rule.regex,
+                start: rule.start,
+                end: rule.end
+            };
         }).concat(whereFunctionsRules)
     };
     this.normalizeRules();

@@ -262,6 +262,11 @@ describe("RQL Autocomplete", () => {
     const afterOrderOrGroupList = [
         {caption: "by", value: "by ", score: 21, meta: "keyword"}
     ];
+
+    const searchOrAndList = [
+        {caption: "or", value: "or ", score: 22, meta: "any term"},
+        {caption: "and", value: "and ", score: 21, meta: "all terms"}
+    ];
     
     it('empty query should start with from or declare', done => {
         rqlTestUtils.autoComplete("|", northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
@@ -785,26 +790,152 @@ where search|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => 
             assert.deepEqual(wordlist, whereFieldsList);
 
             assert.equal(lastKeyword.keyword, "where");
+            assert.equal(lastKeyword.whereFunction, "search");
+            assert.equal(lastKeyword.whereFunctionParameters, 0);
             assert.equal(lastKeyword.dividersCount, 1);
 
             done();
         });
     });
 
-    it.skip('After where function first parameter | should list fields without where functions', done => {
+    it('After where function first parameter | should list fields without where functions', done => {
         rqlTestUtils.autoComplete(`from Orders
 where search(|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
             assert.deepEqual(wordlist, fieldsList);
 
             assert.equal(lastKeyword.keyword, "where");
+            assert.equal(lastKeyword.whereFunction, "search");
+            assert.equal(lastKeyword.whereFunctionParameters, 1);
             assert.equal(lastKeyword.dividersCount, 1);
 
             done();
         });
     });
 
-    it('After where we should list binary operation and other keywords', done => {
+    it('After where function first parameter with prefix | should list itself with prefix.', done => {
+        rqlTestUtils.autoComplete(`from Orders
+where search(OrderedAt|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "OrderedAt");
+            assert.deepEqual(wordlist, fieldsList);
+
+            assert.equal(lastKeyword.keyword, "where");
+            assert.equal(lastKeyword.whereFunction, "search");
+            assert.equal(lastKeyword.whereFunctionParameters, 1);
+            assert.equal(lastKeyword.dividersCount, 1);
+
+            done();
+        });
+    });
+
+    it('After where function second parameter without space | should list terms. TODO.', done => {
+        rqlTestUtils.autoComplete(`from Orders
+where search(OrderedAt,|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.isNull(wordlist);
+
+            assert.equal(lastKeyword.keyword, "where");
+            assert.equal(lastKeyword.whereFunction, "search");
+            assert.equal(lastKeyword.whereFunctionParameters, 2);
+            assert.equal(lastKeyword.dividersCount, 1);
+
+            done();
+        });
+    });
+
+    it('After where function second parameter | should list terms. TODO.', done => {
+        rqlTestUtils.autoComplete(`from Orders
+where search(OrderedAt, |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.isNull(wordlist);
+
+            assert.equal(lastKeyword.keyword, "where");
+            assert.equal(lastKeyword.whereFunction, "search");
+            assert.equal(lastKeyword.whereFunctionParameters, 2);
+            assert.equal(lastKeyword.dividersCount, 1);
+
+            done();
+        });
+    });
+
+    it('After where function third parameter | should list OR and AND.', done => {
+        rqlTestUtils.autoComplete(`from Orders
+where search(OrderedAt, '1996*', |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, searchOrAndList);
+
+            assert.equal(lastKeyword.keyword, "where");
+            assert.equal(lastKeyword.whereFunction, "search");
+            assert.equal(lastKeyword.whereFunctionParameters, 3);
+            assert.equal(lastKeyword.dividersCount, 1);
+
+            done();
+        });
+    });
+
+    it('After where function third parameter with prefix | should list OR and AND with prefix.', done => {
+        rqlTestUtils.autoComplete(`from Orders
+where search(OrderedAt  ,   '1996*'  ,   and|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "and");
+            assert.deepEqual(wordlist, searchOrAndList);
+
+            assert.equal(lastKeyword.keyword, "where");
+            assert.equal(lastKeyword.whereFunction, "search");
+            assert.equal(lastKeyword.whereFunctionParameters, 3);
+            assert.equal(lastKeyword.dividersCount, 1);
+
+            done();
+        });
+    });
+
+    it('After where function without space | should list binary operation and next keywords', done => {
+        rqlTestUtils.autoComplete(`from Orders
+where search(OrderedAt, '1996*')|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, afterWhereList);
+
+            assert.equal(lastKeyword.keyword, "where");
+            assert.equal(lastKeyword.whereFunction, "search");
+            assert.equal(lastKeyword.dividersCount, 2);
+
+            done();
+        });
+    });
+
+    it('After where function | should list binary operation and next keywords', done => {
+        rqlTestUtils.autoComplete(`from Orders
+where search(OrderedAt, '1996*') |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, afterWhereList);
+
+            assert.equal(lastKeyword.keyword, "where");
+            assert.equal(lastKeyword.whereFunction, "search");
+            assert.equal(lastKeyword.dividersCount, 2);
+
+            done();
+        });
+    });
+
+    it('After where function | complex combination of where functions', done => {
+        rqlTestUtils.autoComplete(`from Orders 
+where search(OrderedAt, "*1997*", or) or Freight = "" or (Freight = "" or Freight = "") 
+and (Freight = "" and Freight = "") and search(OrderedAt, "*1997*", and)|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, afterWhereList);
+
+            assert.equal(lastKeyword.keyword, "where");
+            assert.equal(lastKeyword.binaryOperation, "and");
+            assert.equal(lastKeyword.whereFunction, "search");
+            assert.equal(lastKeyword.whereFunctionParameters, 3);
+            assert.equal(lastKeyword.parentheses, 0);
+            assert.isUndefined(lastKeyword.keywordModifier);
+            assert.equal(lastKeyword.dividersCount, 3);
+
+            done();
+        });
+    });
+
+    it('After where | should list binary operation and next keywords', done => {
         rqlTestUtils.autoComplete(`from Orders
 where ShipTo.Country = 'France' |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
