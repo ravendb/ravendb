@@ -24,8 +24,8 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Initializes a new instance of the <see cref="AsyncDocumentQuery{T}"/> class.
         /// </summary>
-        public AsyncDocumentQuery(InMemoryDocumentSessionOperations session, string indexName, string collectionName, bool isGroupBy)
-            : base(session, indexName, collectionName, isGroupBy)
+        public AsyncDocumentQuery(InMemoryDocumentSessionOperations session, string indexName, string collectionName, bool isGroupBy, string fromAlias = null)
+            : base(session, indexName, collectionName, isGroupBy, fromAlias)
         {
         }
 
@@ -462,9 +462,9 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public IAsyncDocumentQuery<TProjection> SelectFields<TProjection>(string[] fields, string[] projections)
+        public IAsyncDocumentQuery<TProjection> SelectFields<TProjection>(string[] fields, string[] projections, string fromAlias = null)
         {
-            return CreateDocumentQueryInternal<TProjection>(fields.Length > 0 ? FieldsToFetchToken.Create(fields, projections) : null);
+            return CreateDocumentQueryInternal<TProjection>(fields.Length > 0 ? FieldsToFetchToken.Create(fields, projections, fromAlias != null) : null, fromAlias);
         }
 
         /// <inheritdoc />
@@ -791,7 +791,7 @@ namespace Raven.Client.Documents.Session
             InvokeAfterQueryExecuted(QueryOperation.CurrentQueryResults);
         }
 
-        private AsyncDocumentQuery<TResult> CreateDocumentQueryInternal<TResult>(FieldsToFetchToken newFieldsToFetch = null)
+        private AsyncDocumentQuery<TResult> CreateDocumentQueryInternal<TResult>(FieldsToFetchToken newFieldsToFetch = null, string fromAlias = null)
         {
             if (newFieldsToFetch != null)
                 UpdateFieldsToFetchToken(newFieldsToFetch);
@@ -800,7 +800,8 @@ namespace Raven.Client.Documents.Session
                 TheSession,
                 IndexName,
                 CollectionName,
-                IsGroupBy)
+                IsGroupBy,
+                fromAlias)
             {
                 PageSize = PageSize,
                 SelectTokens = SelectTokens,
