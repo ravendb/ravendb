@@ -150,6 +150,86 @@ namespace FastTests.Client.Subscriptions
         }
 
         [Fact]
+        public async Task CanHandleAll_Nested()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Node
+                    {
+                        Name = "Node1",
+                        Children = new List<Node>
+                        {
+                            new Node { Name = "Child1_1" , Children = new List<Node>
+                            {
+                                new Node { Name = "a"},
+                                new Node { Name = "b"}
+
+                            }},
+                            new Node {Name = "Child1_2" , Children = new List<Node>
+                            {
+                                new Node { Name = "x"},
+                                new Node { Name = "y"}
+                            }}                            
+                        }
+                    });
+
+                    await session.StoreAsync(new Node
+                    {
+                        Name = "Node2",
+                        Children = new List<Node>
+                        {
+                            new Node { Name = "Child2_1" , Children = new List<Node>
+                            {
+                                new Node { Name = "Parent"},
+                                new Node { Name = "Parent"}
+                            }}
+                        }
+                    });
+
+                    await session.StoreAsync(new Node
+                    {
+                        Name = "Node3",
+                        Children = new List<Node>
+                        {
+                            new Node { Name = "Child3_1" , Children = new List<Node>
+                            {
+                                new Node { Name = "Parent"},
+                                new Node { Name = "z"}
+                            }}
+                        }
+                    });
+
+                    await session.SaveChangesAsync();
+                }
+
+                var id = await store.Subscriptions.CreateAsync<Node>(
+                    node => node.Children.All(x =>
+                        x.Children.All(i => i.Name == "Parent")));
+
+                using (
+                    var subscription =
+                        store.Subscriptions.Open<Node>(new SubscriptionConnectionOptions(id)))
+                {
+                    var nodes = new BlockingCollection<Node>();
+
+                    GC.KeepAlive(subscription.Run(supportCall =>
+                    {
+                        foreach (var item in supportCall.Items)
+                        {
+                            nodes.Add(item.Result);
+                        }
+                    }));
+
+                    Assert.True(nodes.TryTake(out var node, 5000));
+                    Assert.Equal("Node2", node.Name);
+                    Assert.False(nodes.TryTake(out node, 5000));
+                }
+            }
+        }
+
+        [Fact]
         public async Task CanHandleWhere()
         {
             using (var store = GetDocumentStore())
@@ -764,6 +844,13 @@ namespace FastTests.Client.Subscriptions
             public Person Person { get; set; }
             public DateTime Started { get; set; }
         }
+
+        private class Node
+        {
+            public string Name { get; set; }
+            public List<Node> Children { get; set; }
+        }
+
 
         private class Person
         {
