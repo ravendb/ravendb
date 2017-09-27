@@ -61,20 +61,15 @@ namespace FastTests.Client.Subscriptions
                 var id = store.Subscriptions.Create(
                     new SubscriptionCreationOptions<PersonWithAddress>
                     {
-                        Filter = p => p.Name == "James" && p.Address.ZipCode != 54321,
-                        Project = p => new
-                        {
-                            Name = p.Name,
-                            ZipCode = p.Address.ZipCode
-                        }
+                        Filter = p => p.Name == "James" && p.Address.ZipCode != 54321
                     }
                 );
 
                 using (
                     var subscription =
-                        store.Subscriptions.Open<PersonWithZipcode>(new SubscriptionConnectionOptions(id)))
+                        store.Subscriptions.Open<PersonWithAddress>(new SubscriptionConnectionOptions(id)))
                 {
-                    var users = new BlockingCollection<PersonWithZipcode>();
+                    var users = new BlockingCollection<PersonWithAddress>();
 
                     GC.KeepAlive(subscription.Run(address =>
                     {
@@ -84,12 +79,12 @@ namespace FastTests.Client.Subscriptions
                         }
                     }));
 
-                    PersonWithZipcode userToTake;
+                    PersonWithAddress userToTake;
                     for (var i = 0; i < 5; i++)
                     {
                         Assert.True(users.TryTake(out userToTake, 500000));
                         Assert.Equal("James", userToTake.Name);
-                        Assert.Equal(12345, userToTake.ZipCode);
+                        Assert.Equal(12345, userToTake.Address.ZipCode);
                     }
 
                     Assert.False(users.TryTake(out userToTake, 50));
