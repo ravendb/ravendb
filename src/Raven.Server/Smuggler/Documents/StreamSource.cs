@@ -338,7 +338,7 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         Document = new Document()
                         {
-                            Data = WriteDummyDocumentForAttachment(context, attachmentInfo),//TODO:this is wrong i need to generate a dummy document just like in the DR tool
+                            Data = WriteDummyDocumentForAttachment(context, attachmentInfo),
                             Id = attachmentInfo.Id,
                             ChangeVector = string.Empty,
                             Flags = DocumentFlags.HasAttachments,
@@ -370,7 +370,7 @@ namespace Raven.Server.Smuggler.Documents
             attachmets.Add(attachment);
             var metadata = new DynamicJsonValue
             {
-                [Constants.Documents.Metadata.Collection] = "@empty",
+                [Constants.Documents.Metadata.Collection] = "@files",
                 [Constants.Documents.Metadata.Attachments] = attachmets,
             };
             var djv = new DynamicJsonValue
@@ -514,12 +514,16 @@ namespace Raven.Server.Smuggler.Documents
         {
             BlittableJsonReaderObject bjr;
             string base64data;
-            string key;
+            string key = null;
             if (data.TryGet("Metadata", out bjr) == false ||
                 data.TryGet("Data", out base64data) == false ||
                 data.TryGet("Key", out key) == false)
             {
-                throw new ArgumentException($"Data of legacy attachment is not valid: {data}");
+                if (key != null)
+                {
+                    throw new ArgumentException($"Data of legacy attachment with key={key} is not valid");
+                }
+                throw new ArgumentException($"Data of legacy attachment was not valid and it is missing its key property.");
             }
 
             var memoryStream = new MemoryStream();
