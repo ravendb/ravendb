@@ -194,8 +194,8 @@ class editIndex extends viewModelBase {
                 checkedFieldsArray.push(configItem.value);
             });
         }
-        
-        indexDef.fields().forEach(field => {
+
+        const addDirtyFlagInput = (field: indexFieldOptions) => {
             checkedFieldsArray.push(field.name);
             checkedFieldsArray.push(field.analyzer);
             checkedFieldsArray.push(field.indexing);
@@ -215,34 +215,17 @@ class editIndex extends viewModelBase {
                 checkedFieldsArray.push(spatial.maxY);
                 checkedFieldsArray.push(spatial.units);
             }
-        });
+        }
 
-        const hasDefaultFieldOptions = ko.pureComputed(() => indexDef.defaultFieldOptions() == null);
+        indexDef.fields().forEach(field => addDirtyFlagInput(field));
+
+        const hasDefaultFieldOptions = ko.pureComputed(() => !!indexDef.defaultFieldOptions());
         checkedFieldsArray.push(hasDefaultFieldOptions);
 
         const defaultFieldOptions = indexDef.defaultFieldOptions();
-        if (defaultFieldOptions) {
-            checkedFieldsArray.push(defaultFieldOptions.name);
-            checkedFieldsArray.push(defaultFieldOptions.analyzer);
-            checkedFieldsArray.push(defaultFieldOptions.indexing);
-            checkedFieldsArray.push(defaultFieldOptions.storage);
-            checkedFieldsArray.push(defaultFieldOptions.suggestions);
-            checkedFieldsArray.push(defaultFieldOptions.termVector);
-            checkedFieldsArray.push(defaultFieldOptions.hasSpatialOptions);
-
-            const spatial = defaultFieldOptions.spatial();
-            if (spatial) {
-                checkedFieldsArray.push(spatial.type);
-                checkedFieldsArray.push(spatial.strategy);
-                checkedFieldsArray.push(spatial.maxTreeLevel);
-                checkedFieldsArray.push(spatial.minX);
-                checkedFieldsArray.push(spatial.maxX);
-                checkedFieldsArray.push(spatial.minY);
-                checkedFieldsArray.push(spatial.maxY);
-                checkedFieldsArray.push(spatial.units);
-            }
-        }
-
+        if (defaultFieldOptions) 
+            addDirtyFlagInput(defaultFieldOptions);
+        
         this.dirtyFlag = new ko.DirtyFlag(checkedFieldsArray, false, jsonUtil.newLineNormalizingHashFunction);
 
         this.isSaveEnabled = ko.pureComputed(() => {
