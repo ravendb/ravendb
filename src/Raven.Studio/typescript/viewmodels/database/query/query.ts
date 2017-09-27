@@ -48,7 +48,7 @@ class query extends viewModelBase {
     static readonly RangeSearchTypes: rangeSearchType[] = ["Numeric Double", "Numeric Long", "Alphabetical", "Datetime"];
     static readonly SortTypes: querySortType[] = ["Ascending", "Descending", "Range Ascending", "Range Descending"];
 
-    static LastQuery = "";
+    static lastQuery = new Map<string, string>();
 
     private gridController = ko.observable<virtualGridController<any>>();
 
@@ -283,7 +283,9 @@ class query extends viewModelBase {
 
     deactivate(): void {
         super.deactivate();
-        query.LastQuery = this.criteria().queryText();
+
+        const queryText = this.criteria().queryText();
+        query.lastQuery.set(this.activeDatabase().name, queryText);
     }
 
     attached() {
@@ -356,7 +358,10 @@ class query extends viewModelBase {
         recentQueriesStorage.getRecentQueriesWithIndexNameCheck(db)
             .done(queries => this.recentQueries(queries));
 
-        this.criteria().queryText(query.LastQuery);
+        const myLastQuery = query.lastQuery.get(db.name);
+
+        if (myLastQuery)
+            this.criteria().queryText(myLastQuery);
     }
 
     private fetchAllIndexes(db: database): JQueryPromise<any> {
