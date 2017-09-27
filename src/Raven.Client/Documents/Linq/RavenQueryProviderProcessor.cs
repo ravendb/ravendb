@@ -1946,12 +1946,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             if (_jsSelectBody != null)
             {
-                return documentQuery.SelectFields<T>(new[] { _jsSelectBody }, _jsProjectionNames, _fromAlias);
+                return documentQuery.SelectFields<T>(new QueryData(new[] { _jsSelectBody }, _jsProjectionNames, _fromAlias));
             }
 
             var (fields, projections) = GetProjections();
 
-            return documentQuery.SelectFields<T>(fields, projections);
+            return documentQuery.SelectFields<T>(new QueryData(fields, projections, null));
         }
 
         /// <summary>
@@ -1979,12 +1979,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             if (_jsSelectBody != null)
             {
-                return asyncDocumentQuery.SelectFields<T>(new[] { _jsSelectBody }, _jsProjectionNames, _fromAlias);
+                return asyncDocumentQuery.SelectFields<T>(new QueryData(new[] { _jsSelectBody }, _jsProjectionNames, _fromAlias));
             }
 
             var (fields, projections) = GetProjections();
 
-            return asyncDocumentQuery.SelectFields<T>(fields, projections);
+            return asyncDocumentQuery.SelectFields<T>(new QueryData(fields, projections, null));
         }
 
         /// <summary>
@@ -2026,7 +2026,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
         {
             var (fields, projections) = GetProjections();
 
-            var finalQuery = ((IDocumentQuery<T>)_documentQuery).SelectFields<TProjection>(fields, projections, _fromAlias);
+            var finalQuery = ((IDocumentQuery<T>)_documentQuery).SelectFields<TProjection>(new QueryData(fields, projections, _fromAlias));
 
             //no reason to override a value that may or may not exist there
             if (!String.IsNullOrEmpty(_resultsTransformer))
