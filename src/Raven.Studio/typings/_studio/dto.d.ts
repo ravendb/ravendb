@@ -334,14 +334,14 @@ interface autoCompleteWordList {
 interface autoCompleteLastKeyword {
     keywordsBefore: string[],
     keyword: string,
-    keywordModifier: string,
+    asSpecified: boolean,
+    notSpecified: boolean,
     binaryOperation: string,
     whereFunction: string,
     whereFunctionParameters: number,
     fieldPrefix: string[],
     readonly getFieldPrefix: string,
-    identifiers: string[],
-    text: string,
+    fieldName: string,
     dividersCount: number,
     parentheses: number
 }
