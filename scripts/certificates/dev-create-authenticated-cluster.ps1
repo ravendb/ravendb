@@ -1,15 +1,19 @@
 ﻿#Requires -RunAsAdministrator
 param(
     [Parameter(Mandatory=$true)]
-    [SecureString]$CertificatePassword,
+    $CertificatePassword="test",
     $serverDir = "C:\work\ravendb-v4.0",
     $nodeCount = 5,
     $licensePath = "C:\work\license.json"
 )
 
+$ErrorActionPreference = "Stop"
+
+$SecurePassword = ConvertTo-SecureString $CertificatePassword -asplaintext -force
+
 # generate server certificate 
 pushd "$serverDir\scripts\certificates\" 
-./generate-server-cert.ps1 -CN localhost -CertificatePassword $CertificatePassword
+./generate-server-cert.ps1 -CN localhost -CertificatePassword $SecurePassword
 popd 
 
 # build 
@@ -27,20 +31,25 @@ for($i=1; $i -le $nodeCount; $i++){
         Remove-Item .\$i\* -recurse
     }
 } 
+popd
 
-$commonArgs = "Cluster.TimeBeforeAddingReplicaInSec=15" 
-$BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($CertificatePassword)
-$UnsecurePassword = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
-$authArgs = "Security.Certificate.Path=$serverDir\scripts\certificates\server.pfx Security.Certificate.Password=UnsecurePassword" 
+pushd $serverDir
+
+$commonArgs = "--Cluster.TimeBeforeAddingReplicaInSec=15" 
+
+$authArgs = "--Security.Certificate.Path=$serverDir\scripts\certificates\server.pfx --Security.Certificate.Password=$CertificatePassword" 
 
 for($i=1; $i -le $nodeCount; $i++){    
-    start dotnet ".\Raven.Server.dll ServerUrl=https://localhost:808$i DataDir=$i Logs.Path=$i License.Path=$licensePath $commonArgs $authArgs" 
+    start powershell "-NoExit -NoProfile dotnet run -p .\src\Raven.Server\Raven.Server.csproj --ServerUrl=https://localhost:808$i --DataDir=$i --Logs.Path=$i --License.Path=$licensePath $commonArgs $authArgs" 
 } 
 popd 
 
+write-host "Before you continue, make sure that server https://localhost:8081 has finished loading."
+sleep 3
+
 # obtain client cert using server cert 
 pushd "$serverDir\scripts\certificates\" 
-./obtain-cluster-admin-client-cert.ps1 -ServerUrl https://localhost:8081 
+./obtain-cluster-admin-client-cert.ps1 -ServerUrl https://localhost:8081 -ClientCertPassword $CertificatePassword
 
 # add client cert to trusted root (for chrome)
 $rootStore = new-object System.Security.Cryptography.X509Certificates.X509Store(
@@ -56,12 +65,41 @@ $rootStore.Add($clientCert);
 sleep 3 
 
 # create cluster 
-for($i=2; $i -le $nodeCount; $i++){    
-    Invoke-WebRequest -URI https://localhost:8081/admin/cluster/node?url=https://localhost:808$i -Method Put -Certificate $clientCert 
+for($i=2; $i -le $nodeCount; $i++){
+    Try
+    {    
+        Invoke-WebRequest -URI https://localhost:8081/admin/cluster/node?url=https://localhost:808$i -Method Put -Certificate $clientCert 
+    }
+    Catch
+    {
+        if($_.Exception.Response -ne $null) 
+        {
+            Write-Host $_.Exception.Message
+
+            $stream = $_.Exception.Response.GetResponseStream()
+            $reader = New-Object System.IO.StreamReader($stream)
+            Write-Host $reader.ReadToEnd()
+        }
+        Write-Error $_.Exception
+    }
 }
 
 # create database group 
 $payload = '{"DatabaseName":"Northwind","Settings":{"DataDir":null},"SecuredSettings":{},"Disabled":false,"Encrypted":false,"Topology":{"DynamicNodesDistribution":true}}' 
-Invoke-WebRequest -Uri 'https://localhost:8081/admin/databases?name=Northwind&replication-factor=5' -Method PUT -Body $payload -Certificate $clientCert 
+Try
+{
+    Invoke-WebRequest -Uri 'https://localhost:8081/admin/databases?name=Northwind&replication-factor=5' -Method PUT -Body $payload -Certificate $clientCert 
+}
+Catch
+{
+    if($_.Exception.Response -ne $null) 
+    {
+        Write-Host $_.Exception.Message
 
+        $stream = $_.Exception.Response.GetResponseStream()
+        $reader = New-Object System.IO.StreamReader($stream)
+        Write-Host $reader.ReadToEnd()
+    }
+    Write-Error $_.Exception
+}
 popd

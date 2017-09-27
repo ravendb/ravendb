@@ -12,16 +12,19 @@
 
 param(
     [Parameter(Mandatory=$true)]
-    [SecureString]$CertificatePassword,
+    $CertificatePassword = "test",
     $serverDir = "C:\work\ravendb-v4.0",
     $nodeCount = 5,
     $licensePath = "C:\work\license.json"
 )
 
+$ErrorActionPreference = "Stop"
+
+$SecurePassword = ConvertTo-SecureString $CertificatePassword -asplaintext -force
 
 # generate server certificate
 pushd "$serverDir\scripts\certificates\"
-./generate-server-cert.ps1 -CN *.hrhinos.local -CertificatePassword $CertificatePassword
+./generate-server-cert.ps1 -CN *.hrhinos.local -CertificatePassword $SecurePassword
 popd
 
 # build
@@ -39,19 +42,24 @@ for($i=1; $i -le $nodeCount; $i++){
         Remove-Item .\$i\* -recurse
     }
 }
+popd
 
-$commonArgs = "Cluster.TimeBeforeAddingReplicaInSec=15"
+pushd $serverDir
+$commonArgs = "--Cluster.TimeBeforeAddingReplicaInSec=15"
 
-$authArgs = "Security.Certificate.Path=$serverDir\scripts\certificates\server.pfx Security.Certificate.Password=$CertificatePassword"
+$authArgs = "--Security.Certificate.Path=$serverDir\scripts\certificates\server.pfx --Security.Certificate.Password=$CertificatePassword"
 
 for($i=1; $i -le $nodeCount; $i++){
-    start dotnet ".\Raven.Server.dll ServerUrl=https://rvn$i.hrhinos.local:8080 DataDir=$i Logs.Path=$i License.Path=$licensePath $commonArgs $authArgs"
+    start powershell "-NoExit -NoProfile dotnet run -p .\src\Raven.Server\Raven.Server.csproj --ServerUrl=https://rvn$i.hrhinos.local:8080 DataDir=$i --Logs.Path=$i --License.Path=$licensePath $commonArgs $authArgs"
 }
 popd
 
+write-host "Before you continue, make sure that server https://rvn1.hrhinos.local:8080 has finished loading."
+sleep 3
+
 # obtain client cert using server cert
 pushd "$serverDir\scripts\certificates\"
-./obtain-cluster-admin-client-cert.ps1 -ServerUrl https://rvn1.hrhinos.local:8080
+./obtain-cluster-admin-client-cert.ps1 -ServerUrl https://rvn1.hrhinos.local:8080 -ClientCertPassword $CertificatePassword
 
 
 # add client cert to trusted root (for chrome)
@@ -67,14 +75,39 @@ $rootStore.Add($clientCert);
     write-host "Added self signed client certificate client-test.pfx to current user certificate store: $($clientCert.Thumbprint)"
 
 sleep 3
-
+    
 # create cluster
 for($i=2; $i -le $nodeCount; $i++){
-    Invoke-WebRequest -URI https://rvn1.hrhinos.local:8080/admin/cluster/node?url=https://rvn$i.hrhinos.local:8080 -Method Put -Certificate $clientCert
+    Try{
+        Invoke-WebRequest -URI https://rvn1.hrhinos.local:8080/admin/cluster/node?url=https://rvn$i.hrhinos.local:8080 -Method Put -Certificate $clientCert
+    }
+    Catch{
+        if($_.Exception.Response -ne $null) 
+        {
+            Write-Host $_.Exception.Message
+
+            $stream = $_.Exception.Response.GetResponseStream()
+            $reader = New-Object System.IO.StreamReader($stream)
+            Write-Host $reader.ReadToEnd()
+        }
+        Write-Error $_.Exception
+    }
 }
 
 # create database group
 $payload = '{"DatabaseName":"Northwind","Settings":{"DataDir":null},"SecuredSettings":{},"Disabled":false,"Encrypted":false,"Topology":{"DynamicNodesDistribution":true}}'
-Invoke-WebRequest -Uri 'https://rvn1.hrhinos.local:8080/admin/databases?name=Northwind&replication-factor=5' -Method PUT -Body $payload -Certificate $clientCert
+Try{
+    Invoke-WebRequest -Uri 'https://rvn1.hrhinos.local:8080/admin/databases?name=Northwind&replication-factor=5' -Method PUT -Body $payload -Certificate $clientCert
+}
+Catch{
+    if($_.Exception.Response -ne $null) 
+    {
+        Write-Host $_.Exception.Message
 
+        $stream = $_.Exception.Response.GetResponseStream()
+        $reader = New-Object System.IO.StreamReader($stream)
+        Write-Host $reader.ReadToEnd()
+    }
+    Write-Error $_.Exception
+}
 popd
