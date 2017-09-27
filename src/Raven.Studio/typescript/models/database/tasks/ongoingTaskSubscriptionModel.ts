@@ -57,7 +57,8 @@ class ongoingTaskSubscriptionModel extends ongoingTask {
                 TaskName: dtoEditModel.SubscriptionName,
                 TaskState: state,
                 Query: dtoEditModel.Query,
-                TaskType: 'Subscription'
+                TaskType: 'Subscription',
+                Error: null
             };
 
             super.update(dtoListModel);
