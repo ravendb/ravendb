@@ -104,6 +104,9 @@
                                             <span class="etl-collections" data-bind="foreach: transformScriptCollections" title="The Collections transformed">
                                                 <span data-bind="text: $data, attr: { class: 'collection-color-' + $parent.getCollectionEntry($data) }"></span>
                                             </span>
+                                            <span data-bind="visible: transformScriptCollections().length == 0">
+                                                No collections selected..
+                                            </span>
                                         </div>
                                     </div>
                                     <div class="actions">
@@ -160,22 +163,19 @@
                         </div>
                         <div data-bind="collapse: !applyScriptForAllCollections(), css: {'invisible': applyScriptForAllCollections }">
                             <label><strong>Collections Selected:</strong></label>
-                            <div data-bind="validationElement: transformScriptCollections">
-                                <ul class="well collection-list">
-                                    <!-- ko foreach: transformScriptCollections -->
-                                    <li>
-                                        <div class="name" data-bind="text: $data"></div>
-                                        <a title="Remove collection" href="#" data-bind="click: $parent.removeCollection.bind($parent, $data)"><i class="icon-trash"></i></a>
-                                    </li>
-                                    <!-- /ko -->
-                                    <!-- ko if: transformScriptCollections().length === 0 && !applyScriptForAllCollections()-->
-                                    <li>
-                                        <div class="name">No collections have been defined yet..</div>
-                                    </li>
-                                    <!-- /ko -->
-                                </ul>
-                                <span class="help-block" data-bind="validationMessage: transformScriptCollections"></span>
-                            </div>
+                            <ul class="well collection-list">
+                                <!-- ko foreach: transformScriptCollections -->
+                                <li>
+                                    <div class="name" data-bind="text: $data"></div>
+                                    <a title="Remove collection" href="#" data-bind="click: $parent.removeCollection.bind($parent, $data)"><i class="icon-trash"></i></a>
+                                </li>
+                                <!-- /ko -->
+                                <!-- ko if: transformScriptCollections().length === 0 && !applyScriptForAllCollections()-->
+                                <li>
+                                    <div class="name">No collections have been defined yet..</div>
+                                </li>
+                                <!-- /ko -->
+                            </ul>
                         </div>
                     </div>
                 </div>
