@@ -595,6 +595,9 @@ namespace Raven.Server.Web.System
 
                 var restorePoints = new RestorePoints();
 
+                if (Directory.Exists(restorePathJson.Path) == false)
+                    throw new InvalidOperationException($"Path '{restorePathJson.Path}' doesn't exist");
+
                 var directories = Directory.GetDirectories(restorePathJson.Path).OrderBy(x => x).ToList();
                 if (directories.Count == 0)
                 {
@@ -602,11 +605,16 @@ namespace Raven.Server.Web.System
                     // will scan the directory for backup files
                     Restore.FetchRestorePoints(restorePathJson.Path, restorePoints.List, assertLegacyBackups: true);
                 }
-
-                foreach (var directory in directories)
+                else
                 {
-                    Restore.FetchRestorePoints(directory, restorePoints.List);
+                    foreach (var directory in directories)
+                    {
+                        Restore.FetchRestorePoints(directory, restorePoints.List);
+                    }
                 }
+
+                if (restorePoints.List.Count == 0)
+                    throw new InvalidOperationException("Couldn't locate any backup files!");
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
