@@ -16,15 +16,21 @@ namespace FastTests.Client.Subscriptions
         [Fact]
         public async Task SmugglerShouldNotExportImportSubscribtionIdentities()
         {
-            using (var store1 = GetDocumentStore(dbSuffixIdentifier: "store1"))
-            using (var store2 = GetDocumentStore(dbSuffixIdentifier: "store2"))
+            using (var store1 = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = x=> x + "store1"
+            }))
+            using (var store2 = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = x => x + "store2"
+            }))
             {
                 var subscriptionId = store1.Subscriptions.Create<User>(new SubscriptionCreationOptions<User>()
                 {
                     Name = "Foo"
                 });
 
-                await store1.Smuggler.ExportAsync(new DatabaseSmugglerOptions(), store2.Smuggler);
+                await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(),  store2.Smuggler);
                 var subscription = store2.Subscriptions.Open(new SubscriptionConnectionOptions(subscriptionId));
                 await Assert.ThrowsAsync<SubscriptionDoesNotExistException>(() => subscription.Run(x => { }));
             }
