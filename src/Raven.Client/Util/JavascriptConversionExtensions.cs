@@ -77,6 +77,23 @@ namespace Raven.Client.Util
         {
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
+                var node = context.Node as MemberExpression;
+                if (node != null && node.Member.Name == "Count" && IsCollection(node.Member.DeclaringType))
+                {
+                    var writer = context.GetWriter();
+                    context.PreventDefault();
+
+                    context.Visitor.Visit(node.Expression);
+
+                    using (writer.Operation(node))
+                    {
+                        writer.Write(".");
+                        writer.Write("length");
+                    }
+
+                    return;
+                }
+
                 var methodCallExpression = context.Node as MethodCallExpression;
                 var methodName = methodCallExpression?
                     .Method.Name;
@@ -138,32 +155,41 @@ namespace Raven.Client.Util
                     javascriptWriter.Write(">=0");
                 }
             }
+
+            private static bool IsCollection(Type type)
+            {
+                if (type.GetGenericArguments().Length == 0)
+                    return false;
+
+                return typeof(IEnumerable).IsAssignableFrom(type.GetGenericTypeDefinition());
+            }
         }
 
-        public class DatesAndConstantsSupport : JavascriptConversionExtension
+        public class ReplaceParameterWithThis : JavascriptConversionExtension
         {
             public ParameterExpression Parameter;
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
-                var nodeAsConst = context.Node as ConstantExpression;
-
-                if (nodeAsConst != null && nodeAsConst.Type == typeof(bool))
-                {
-                    context.PreventDefault();
-                    var writer = context.GetWriter();
-                    var val = nodeAsConst.Value.ToString().ToLower();
-
-                    using (writer.Operation(nodeAsConst))
-                    {
-                        writer.Write(val);
-                    }
-
+                var parameter = context.Node as ParameterExpression;
+                if (parameter == null || parameter != Parameter)
                     return;
+
+                context.PreventDefault();
+                var writer = context.GetWriter();
+
+                using (writer.Operation(parameter))
+                {
+                    writer.Write("this");
                 }
+            }
+        }
 
+        public class DateTimeSupport : JavascriptConversionExtension
+        {
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
                 var newExp = context.Node as NewExpression;
-
                 if (newExp != null && newExp.Type == typeof(DateTime))
                 {
                     context.PreventDefault();
@@ -199,29 +225,19 @@ namespace Raven.Client.Util
                 if (node == null)
                     return;
 
-                context.PreventDefault();
-                var javascriptWriter = context.GetWriter();
-
-                using (javascriptWriter.Operation(node))
+                if (node.Type == typeof(DateTime))
                 {
-                    if (node.Type == typeof(DateTime))
+                    var writer = context.GetWriter();
+                    context.PreventDefault();
+
+                    using (writer.Operation(node))
                     {
-                        //match DateTime expressions like call.Started, user.DateOfBirth, etc
-                        if (node.Expression == Parameter)
-                        {
-                            //translate it to Date.parse(this.Started)
-                            javascriptWriter.Write($"Date.parse(this.{node.Member.Name})");
-                            return;
-
-                        }
-
-                        //match expression where DateTime object is nested, like order.ShipmentInfo.DeliveryDate
+                        //match DateTime expressions like user.DateOfBirth, order.ShipmentInfo.DeliveryDate, etc
                         if (node.Expression != null)
                         {
-
-                            javascriptWriter.Write("Date.parse(");
-                            context.Visitor.Visit(node.Expression); //visit inner expression (i.e order.ShipmentInfo)
-                            javascriptWriter.Write($".{node.Member.Name})");
+                            writer.Write("Date.parse(");
+                            context.Visitor.Visit(node.Expression); //visit inner expression (user ,order.ShipmentInfo, etc)
+                            writer.Write($".{node.Member.Name})");
                             return;
                         }
 
@@ -229,57 +245,89 @@ namespace Raven.Client.Util
                         switch (node.Member.Name)
                         {
                             case "Now":
-                                javascriptWriter.Write("Date.now()");
+                                writer.Write("Date.now()");
                                 break;
                             case "UtcNow":
-                                javascriptWriter.Write(@"(function (date) { return new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), date.getUTCHours(), date.getUTCMinutes(), date.getUTCSeconds(), date.getUTCMilliseconds());})(new Date()).getTime()");
+                                writer.Write(
+                                    @"(function (date) { return new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), date.getUTCHours(), date.getUTCMinutes(), date.getUTCSeconds(), date.getUTCMilliseconds());})(new Date()).getTime()");
                                 break;
                             case "Today":
-                                javascriptWriter.Write("new Date().setHours(0,0,0,0)");
+                                writer.Write("new Date().setHours(0,0,0,0)");
                                 break;
                         }
-                        return;
                     }
 
-                    if (node.Expression == Parameter)
-                    {
-                        javascriptWriter.Write($"this.{node.Member.Name}");
-                        return;
-                    }
-
-                    switch (node.Expression)
-                    {
-                        case null:
-                            return;
-                        case MemberExpression member:
-                            context.Visitor.Visit(member);
-                            break;
-                        default:
-                            context.Visitor.Visit(node.Expression);
-                            break;
-                    }
-
-                    javascriptWriter.Write(".");
-
-                    if (node.Member.Name == "Count" && IsCollection(node.Member.DeclaringType))
-                    {
-                        javascriptWriter.Write("length");
-                    }
-                    else
-                    {
-                        javascriptWriter.Write(node.Member.Name);
-                    }
+                    return;
                 }
-            }
 
-            private static bool IsCollection(Type type)
-            {
-                if (type.GetGenericArguments().Length == 0)
-                    return false;
+                if (node.Expression.Type == typeof(DateTime) && node.Expression is MemberExpression memberExpression)
+                {
+                    var writer = context.GetWriter();
+                    context.PreventDefault();
 
-                return typeof(IEnumerable).IsAssignableFrom(type.GetGenericTypeDefinition());
+                    using (writer.Operation(node))
+                    {
+                        //match expressions like : DateTime.Today.Year , DateTime.Now.Day , user.Birthday.Month , etc
+
+                        writer.Write("new Date(");
+
+                        if (memberExpression.Member.DeclaringType != typeof(DateTime))
+                        {
+                            writer.Write($"Date.parse({node.Expression})");
+                        }
+
+                        writer.Write(")");
+
+                        switch (node.Member.Name)
+                        {
+                            case "Year":
+                                writer.Write(memberExpression.Member.Name == "UtcNow" ? ".getUTCFullYear()" : ".getFullYear()");
+                                break;
+                            case "Month":
+                                writer.Write(memberExpression.Member.Name == "UtcNow" ? ".getUTCMonth()+1" : ".getMonth()+1");
+                                break;
+                            case "Day":
+                                writer.Write(memberExpression.Member.Name == "UtcNow" ? ".getUTCDate()" : ".getDate()");
+                                break;
+                            case "Hour":
+                                writer.Write(memberExpression.Member.Name == "UtcNow" ? ".getUTCHours()" : ".getHours()");
+                                break;
+                            case "Minute":
+                                writer.Write(memberExpression.Member.Name == "UtcNow" ? ".getUTCMinutes()" : ".getMinutes()");
+                                break;
+                            case "Second":
+                                writer.Write(memberExpression.Member.Name == "UtcNow" ? ".getUTCSeconds()" : ".getSeconds()");
+                                break;
+                            case "Millisecond":
+                                writer.Write(memberExpression.Member.Name == "UtcNow" ? ".getUTCMilliseconds()" : ".getMilliseconds()");
+                                break;
+                            case "Ticks":
+                                writer.Write(".getTime()*10000");
+                                break;
+                        }
+                    }                 
+                }                
             }
         }
 
+        public class BooleanSupport : JavascriptConversionExtension
+        {
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                var nodeAsConst = context.Node as ConstantExpression;
+
+                if (nodeAsConst != null && nodeAsConst.Type == typeof(bool))
+                {
+                    context.PreventDefault();
+                    var writer = context.GetWriter();
+                    var val = nodeAsConst.Value.ToString().ToLower();
+
+                    using (writer.Operation(nodeAsConst))
+                    {
+                        writer.Write(val);
+                    }
+                } 
+            }
+        }
     }
 }
