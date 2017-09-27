@@ -90,17 +90,17 @@ namespace Raven.Server.TrafficWatch
         {
             var json = new DynamicJsonValue
             {
-                ["TimeStamp"] = change.TimeStamp,
-                ["RequestId"] = change.RequestId,
-                ["HttpMethod"] = change.HttpMethod,
-                ["ElapsedMilliseconds"] = change.ElapsedMilliseconds,
-                ["ResponseStatusCode"] = change.ResponseStatusCode,
-                ["RequestUri"] = change.RequestUri,
-                ["AbsoluteUri"] = change.AbsoluteUri,
-                ["DatabaseName"] = change.DatabaseName,
-                ["CustomInfo"] = change.CustomInfo,
-                ["InnerRequestsCount"] = change.InnerRequestsCount
-                //["QueryTimings"] = notification.QueryTimings // TODO :: implement this
+                [nameof(change.TimeStamp)] = change.TimeStamp,
+                [nameof(change.RequestId)] = change.RequestId,
+                [nameof(change.HttpMethod)] = change.HttpMethod,
+                [nameof(change.ElapsedMilliseconds)] = change.ElapsedMilliseconds,
+                [nameof(change.ResponseStatusCode)] = change.ResponseStatusCode,
+                [nameof(change.RequestUri)] = change.RequestUri,
+                [nameof(change.AbsoluteUri)] = change.AbsoluteUri,
+                [nameof(change.DatabaseName)] = change.DatabaseName,
+                [nameof(change.CustomInfo)] = change.CustomInfo,
+                [nameof(change.InnerRequestsCount)] = change.InnerRequestsCount
+                //[nameof(change.QueryTimings)] = notification.QueryTimings // TODO :: implement this
             };
 
             _bufferStream.SetLength(0);

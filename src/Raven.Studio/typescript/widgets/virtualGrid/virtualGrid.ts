@@ -76,6 +76,7 @@ class virtualGrid<T> {
             setSelectedItems: (selection: Array<T>) => this.setSelectedItems(selection),
             dirtyResults: this.dirtyResults,
             resultEtag: () => this.previousResultsEtag(),
+            scrollDown: () => this.scrollDown()
         }
     }
 
@@ -310,6 +311,11 @@ class virtualGrid<T> {
         }
         
         return newHeight;
+    }
+    
+    private scrollDown() {
+        const element = this.$viewportElement[0];
+        element.scrollTop = element.scrollHeight;
     }
 
     private checkGridVisibility(): boolean {
