@@ -114,13 +114,6 @@ class editRavenEtlTask extends viewModelBase {
 
     useConnectionString(connectionStringToUse: string) {
         this.editedRavenEtl().connectionStringName(connectionStringToUse);
-      
-        return getConnectionStringInfoCommand.forRavenEtl(this.activeDatabase(), connectionStringToUse)
-            .execute()
-            .done((result: Raven.Client.ServerWide.ETL.RavenConnectionString) => {
-                this.editedRavenEtl().destinationURL(result.Url);
-                this.editedRavenEtl().destinationDB(result.Database);
-            });
     }
 
     testConnection() {
@@ -130,15 +123,27 @@ class editRavenEtlTask extends viewModelBase {
                 eventsCollector.default.reportEvent("ravenDB-ETL-connection-string", "test-connection");
                 this.spinners.test(true);
 
-                new testClusterNodeConnectionCommand(this.editedRavenEtl().destinationURL())
-                    .execute()
-                    .done(result => this.testConnectionResult(result))
-                    .always(() => this.spinners.test(false));
-            } else {
+                this.getConnectionStringDetails()
+                    .done(() => new testClusterNodeConnectionCommand(this.editedRavenEtl().destinationURL())
+                                       .execute()
+                                       .done(result => this.testConnectionResult(result))
+                                       .always(() => this.spinners.test(false))
+                );
+            }
+            else {
                 // 2. Input connection string name was Not yet defined
                 this.testConnectionResult({ Error: "Connection string Not yet defined", Success: false });
             }
         }
+    }
+
+    getConnectionStringDetails() {
+        return getConnectionStringInfoCommand.forRavenEtl(this.activeDatabase(), this.editedRavenEtl().connectionStringName())
+            .execute()
+            .done((result: Raven.Client.ServerWide.ETL.RavenConnectionString) => {
+                this.editedRavenEtl().destinationURL(result.Url);
+                this.editedRavenEtl().destinationDB(result.Database);
+            });
     }
 
     trySaveRavenEtl() {
