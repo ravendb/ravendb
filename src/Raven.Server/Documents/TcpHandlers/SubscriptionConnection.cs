@@ -114,7 +114,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
 
             _options.SubscriptionName = _options.SubscriptionName ?? SubscriptionId.ToString();
-            SubscriptionState = await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionIdIsApplicable(SubscriptionId, _options.SubscriptionName, TimeSpan.FromSeconds(15));
+            SubscriptionState = await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionConnectionDetails(SubscriptionId,_options.SubscriptionName, TimeSpan.FromSeconds(15));
 
             (Collection, (Script, Functions), Revisions) = ParseSubscriptionQuery(SubscriptionState.Query);
 
@@ -396,16 +396,15 @@ namespace Raven.Server.Documents.TcpHandlers
             using (RegisterForNotificationOnNewDocuments())
             {
                 var replyFromClientTask = GetReplyFromClientAsync();
-                var startEtag = GetStartEtagForSubscription(docsContext, SubscriptionState);
 
                 string lastChangeVector = null;
-
+                string subscriptionChangeVectorBeforeCurrentBatch = SubscriptionState.ChangeVectorForNextBatchStartingPoint;
+                var startEtag = GetStartEtagForSubscription(docsContext, SubscriptionState);
                 var patch = SetupFilterScript();
                 var fetcher = new SubscriptionDocumentsFetcher(TcpConnection.DocumentDatabase, _options.MaxDocsPerBatch, SubscriptionId, TcpConnection.TcpClient.Client.RemoteEndPoint);
                 while (CancellationTokenSource.IsCancellationRequested == false)
                 {
                     bool anyDocumentsSentInCurrentIteration = false;
-
 
                     var sendingCurrentBatchStopwatch = Stopwatch.StartNew();
 
@@ -416,7 +415,6 @@ namespace Raven.Server.Documents.TcpHandlers
                     using (TcpConnection.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                     using (var writer = new BlittableJsonTextWriter(context, _buffer))
                     {
-
                         using (docsContext.OpenReadTransaction())
                         {
                             foreach (var result in fetcher.GetDataToSend(docsContext, Collection, Revisions, SubscriptionState, patch, startEtag))
@@ -507,7 +505,12 @@ namespace Raven.Server.Documents.TcpHandlers
                             _logger.Info(
                                 $"Finished sending a batch with {docsToFlush} documents for subscription {Options.SubscriptionName}");
                         }
-                        await TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(SubscriptionId, Options.SubscriptionName, startEtag, lastChangeVector,SubscriptionState.MentorNode);
+                        await TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(SubscriptionId,
+                            Options.SubscriptionName, 
+                            lastChangeVector, 
+                            subscriptionChangeVectorBeforeCurrentBatch,
+							SubscriptionState.MentorNode);
+                        subscriptionChangeVectorBeforeCurrentBatch = lastChangeVector;
 
                         if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
                             await SendHeartBeat();
@@ -553,9 +556,10 @@ namespace Raven.Server.Documents.TcpHandlers
                             await TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(
                                 SubscriptionId,
                                 Options.SubscriptionName,
-                                startEtag,
                                 lastChangeVector,
-                                SubscriptionState.MentorNode);
+                                subscriptionChangeVectorBeforeCurrentBatch,
+								SubscriptionState.MentorNode);
+                            subscriptionChangeVectorBeforeCurrentBatch = lastChangeVector;
                             Stats.LastAckReceivedAt = DateTime.UtcNow;
                             Stats.AckRate.Mark();
                             await WriteJsonAsync(new DynamicJsonValue
