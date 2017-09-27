@@ -200,7 +200,7 @@ namespace RachisTests.DatabaseCluster
             {
                 using (var store = new DocumentStore
                 {
-                    Urls = new[] { watcher.Url },
+                    Urls = watcher.TopologyDiscoveryUrls ,
                     Database = watcher.Database,
                     Certificate = adminCertificate,
                     Conventions =
@@ -212,10 +212,16 @@ namespace RachisTests.DatabaseCluster
                     Assert.True(WaitForDocument<User>(store, "users/1", u => u.Name == "Karmel"));
                 }
             }
+            var count = 0;
+            foreach (var server in Servers)
+            {
+                count += OngoingTasksHandler.GetOngoingTasksFor(databaseName, server.ServerStore).OngoingTasksList.Count(t => t is OngoingTaskReplication rep && rep.Status != OngoingTaskReplication.ReplicationStatus.NotOnThisNode);
+            }
+            Assert.Equal(5, count);
         }
 
         [NightlyBuildFact]
-        public async Task SetMetorToExternalReplication()
+        public async Task SetMentorToExternalReplication()
         {
             var clusterSize = 5;
             var databaseName = GetDatabaseName();
@@ -259,10 +265,8 @@ namespace RachisTests.DatabaseCluster
                     await server.ServerStore.Cluster.WaitForIndexNotification(res.RaftCommandIndex);
                     await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore($"Watcher{i}");
 
-                    var watcher = new ExternalReplication
+                    var watcher = new ExternalReplication($"Watcher{i}", res.NodesAddedTo.ToArray())
                     {
-                        Database = $"Watcher{i}",
-                        Url = res.NodesAddedTo[0],
                         MentorNode = "C"
                     };
                     watchers.Add(watcher);
@@ -277,7 +281,7 @@ namespace RachisTests.DatabaseCluster
             {
                 using (var store = new DocumentStore
                 {
-                    Urls = new[] { watcher.Url },
+                    Urls = watcher.TopologyDiscoveryUrls,
                     Database = watcher.Database,
                 }.Initialize())
                 {
@@ -354,7 +358,7 @@ namespace RachisTests.DatabaseCluster
 
             using (var store = new DocumentStore
             {
-                Urls = new[] { watcher.Url },
+                Urls = watcher.TopologyDiscoveryUrls,
                 Database = watcher.Database,
                 Conventions =
                 {
@@ -383,7 +387,7 @@ namespace RachisTests.DatabaseCluster
 
                 //modify watcher
                 watcher.Database = "Watcher2";
-                watcher.Url = res.NodesAddedTo[0];
+                watcher.TopologyDiscoveryUrls = res.NodesAddedTo.ToArray();
                 watcher.Name = "MyExternalReplication2";
 
                 await AddWatcherToReplicationTopology((DocumentStore)store, watcher);
@@ -398,7 +402,7 @@ namespace RachisTests.DatabaseCluster
 
             using (var store = new DocumentStore
             {
-                Urls = new[] { watcher.Url },
+                Urls = watcher.TopologyDiscoveryUrls,
                 Database = watcher.Database,
                 Conventions =
                 {
@@ -662,7 +666,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [NightlyBuildFact]
         public async Task ExternalReplicationFailover()
         {
             var clusterSize = 3;
@@ -710,8 +714,6 @@ namespace RachisTests.DatabaseCluster
                 u => u.Name.Equals("Karmel"),
                 TimeSpan.FromSeconds(60)));
 
-
-
             var responsibale = srcLeader.ServerStore.GetClusterTopology().GetUrlFromTag(res.ResponsibleNode);
             var server = Servers.Single(s => s.WebUrl == responsibale);
 
@@ -732,7 +734,7 @@ namespace RachisTests.DatabaseCluster
                     u => u.Name.Equals("Karmel2"),
                     TimeSpan.FromSeconds(clusterSize + 5)));
             }
-
+            WaitForUserToContinueTheTest(dstStore as DocumentStore);
             Assert.True(WaitForDocument(dstStore, "users/2",30_000));
 
             srcStore.Dispose();

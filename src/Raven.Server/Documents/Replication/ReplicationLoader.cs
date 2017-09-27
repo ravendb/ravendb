@@ -407,18 +407,13 @@ namespace Raven.Server.Documents.Replication
         private void HandleExternalReplication(DatabaseRecord newRecord, ref List<OutgoingReplicationHandler> instancesToDispose)
         {
             var changes = ExternalReplication.FindChanges(_externalDestinations, newRecord.ExternalReplication);
-            if (changes.RemovedDestiantions.Count > 0)
-            {
-                var removed = _externalDestinations.Where(n => changes.RemovedDestiantions.Contains(n.Url + "@" + n.Database));
-                DropOutgoingConnections(removed, ref instancesToDispose);
-            }
-            if (changes.AddedDestinations.Count > 0)
-            {
-                var added = newRecord.ExternalReplication.Where(n => changes.AddedDestinations.Contains(n.Url + "@" + n.Database));
-                StartOutgoingConnections(added.ToList(), external: true);
-            }
-            _externalDestinations.Clear();
-            _externalDestinations.AddRange(newRecord.ExternalReplication);
+
+            DropOutgoingConnections(changes.RemovedDestiantions, ref instancesToDispose);
+            var newDestinations = changes.AddedDestinations.Where(o => newRecord.Topology.WhoseTaskIsIt(o, false) == _server.NodeTag).ToList();
+            StartOutgoingConnections(newDestinations, external: true);
+
+            _externalDestinations.RemoveAll(changes.RemovedDestiantions.Contains);
+            _externalDestinations.AddRange(newDestinations);
         }
 
         private void HandleInternalReplication(DatabaseRecord newRecord, ref List<OutgoingReplicationHandler> instancesToDispose)
@@ -511,6 +506,7 @@ namespace Raven.Server.Documents.Replication
         private void AddAndStartOutgoingReplication(ReplicationNode node, bool external)
         {
             var info = GetConnectionInfo(node, external);
+
             if (info == null)
             {
                 // this means that we were unable to retrive the tcp connection info and will try it again later
@@ -520,12 +516,7 @@ namespace Raven.Server.Documents.Replication
             outgoingReplication.Failed += OnOutgoingSendingFailed;
             outgoingReplication.SuccessfulTwoWaysCommunication += OnOutgoingSendingSucceeded;
             _outgoing.TryAdd(outgoingReplication); // can't fail, this is a brand new instance
-
-            _outgoingFailureInfo.TryAdd(node, new ConnectionShutdownInfo
-            {
-                Node = node,
-                External = external
-            });
+            
             outgoingReplication.Start();
 
             OutgoingReplicationAdded?.Invoke(outgoingReplication);
@@ -533,11 +524,18 @@ namespace Raven.Server.Documents.Replication
 
         private TcpConnectionInfo GetConnectionInfo(ReplicationNode node, bool external)
         {
+            var shutdownInfo = new ConnectionShutdownInfo
+            {
+                Node = node,
+                External = external
+            };
+            _outgoingFailureInfo.TryAdd(node, shutdownInfo);
             try
             {
                 if (node is ExternalReplication exNode)
                 {
-                    using (var requestExecutor = RequestExecutor.Create(exNode.TopologyDiscoveryUrls, exNode.Database, _server.Server.ClusterCertificateHolder.Certificate,
+                    using (var requestExecutor = RequestExecutor.Create(exNode.TopologyDiscoveryUrls, exNode.Database,
+                        _server.Server.ClusterCertificateHolder.Certificate,
                         DocumentConventions.Default))
                     using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                     {
@@ -549,11 +547,10 @@ namespace Raven.Server.Documents.Replication
                 }
                 if (node is InternalReplication internalNode)
                 {
-                    var info = ReplicationUtils.GetTcpInfo(internalNode.Url, internalNode.NodeTag, "Replication", _server.Server.ClusterCertificateHolder.Certificate);
-                    node.Url = node.Url.Trim();
-                    return info;
+                    return ReplicationUtils.GetTcpInfo(internalNode.Url, internalNode.NodeTag, "Replication", _server.Server.ClusterCertificateHolder.Certificate);
                 }
-                throw new InvalidOperationException($"Unexpected replication node type, Expected to be '{typeof(ExternalReplication)}' or '{typeof(InternalReplication)}', but got '{node.GetType()}'");
+                throw new InvalidOperationException(
+                    $"Unexpected replication node type, Expected to be '{typeof(ExternalReplication)}' or '{typeof(InternalReplication)}', but got '{node.GetType()}'");
             }
             catch (Exception e)
             {
@@ -561,11 +558,7 @@ namespace Raven.Server.Documents.Replication
                 if (_log.IsInfoEnabled)
                     _log.Info($"Failed to fetch tcp connection information for the destination '{node.FromString()}' , the connection will be retried later.", e);
 
-                _reconnectQueue.TryAdd(new ConnectionShutdownInfo
-                {
-                    Node = node,
-                    External = external
-                });
+                _reconnectQueue.TryAdd(shutdownInfo);
             }
             return null;
         }
