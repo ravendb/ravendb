@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
@@ -11,6 +13,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Utils;
+using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents.Queries.Dynamic
 {
@@ -63,6 +66,20 @@ namespace Raven.Server.Documents.Queries.Dynamic
             }
 
             return index.IndexEntries(query, context, token);
+        }
+
+        public override async Task<IOperationResult> ExecuteDeleteQuery(IndexQueryServerSide query, QueryOperationOptions options, DocumentsOperationContext context, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        {
+            var index = await MatchIndex(query, true, token.Token);
+
+            return await ExecuteDelete(query, index, options, context, onProgress, token);
+        }
+
+        public override async Task<IOperationResult> ExecutePatchQuery(IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch, BlittableJsonReaderObject patchArgs, DocumentsOperationContext context, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        {
+            var index = await MatchIndex(query, true, token.Token);
+
+            return await ExecutePatch(query, index, options, patch, patchArgs, context, onProgress, token);
         }
 
         private async Task<Index> MatchIndex(IndexQueryServerSide query, bool createAutoIndexIfNoMatchIsFound, CancellationToken token)

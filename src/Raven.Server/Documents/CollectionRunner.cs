@@ -61,9 +61,7 @@ namespace Raven.Server.Documents
                 totalCount = GetTotalCountForCollection(context, collectionName, isAllDocs);
             }
             progress.Total = totalCount;
-
             
-
             // send initial progress with total count set, and 0 as processed count
             onProgress(progress);
 

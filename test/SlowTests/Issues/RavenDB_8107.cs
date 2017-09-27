@@ -3,7 +3,6 @@ using FastTests;
 using FastTests.Server.Basic.Entities;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Exceptions;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -33,29 +32,6 @@ namespace SlowTests.Issues
 
                     Assert.Equal("HR", order.Company);
                 }
-            }
-        }
-
-        [Fact]
-        public void Patch_and_delete_by_dynamic_collection_query_with_filtering_should_throw()
-        {
-            using (var store = GetDocumentStore())
-            {
-                var ex = Assert.Throws<BadRequestException>(() => store.Operations.Send(new PatchByQueryOperation(
-                    new IndexQuery { Query = "FROM Orders WHERE Company = 'companies/1' UPDATE { this.Company = 'HR'; } " })));
-
-                Assert.Contains("Patch and delete documents by a dynamic query is supported only for queries having just FROM clause and" +
-                                " optionally simple WHERE filtering using '=' or 'IN' operators on document identifiers," +
-                                " e.g. FROM Orders, FROM Orders WHERE id() = 'orders/1', FROM Orders WHERE id() IN ('orders/1', 'orders/2'). " +
-                                "If you need to perform different filtering please issue the query to the static index", ex.Message);
-
-                ex = Assert.Throws<BadRequestException>(() => store.Operations.Send(new DeleteByQueryOperation(
-                    new IndexQuery { Query = "FROM Orders WHERE Company = 'companies/1'" })));
-
-                Assert.Contains("Patch and delete documents by a dynamic query is supported only for queries having just FROM clause and" +
-                                " optionally simple WHERE filtering using '=' or 'IN' operators on document identifiers," +
-                                " e.g. FROM Orders, FROM Orders WHERE id() = 'orders/1', FROM Orders WHERE id() IN ('orders/1', 'orders/2'). " +
-                                "If you need to perform different filtering please issue the query to the static index", ex.Message);
             }
         }
 

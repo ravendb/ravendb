@@ -3,7 +3,6 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Client;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions;
@@ -14,7 +13,6 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Faceted;
 using Raven.Server.Documents.Queries.MoreLikeThis;
-using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Documents.Queries.Suggestion;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -292,20 +290,9 @@ namespace Raven.Server.Documents.Handlers
             var reader = context.Read(RequestBodyStream(), "queries/delete");
             var query = IndexQueryServerSide.Create(reader, context, Database.QueryMetadataCache);
 
-            if (query.Metadata.IsDynamic == false)
-            {
-                ExecuteQueryOperation(query,
-                    (runner, options, onProgress, token) => runner.Query.ExecuteDeleteQuery(query, options.Query, context, onProgress, token),
-                    context, returnContextToPool, Operations.Operations.OperationType.DeleteByIndex);
-            }
-            else
-            {
-                EnsureQueryHasOnlyFromClause(query.Metadata, query.Metadata.CollectionName);
-
-                ExecuteQueryOperation(query,
-                    (runner, options, onProgress, token) => runner.Collection.ExecuteDelete(query.Metadata.CollectionName, options.Collection, onProgress, token),
-                    context, returnContextToPool, Operations.Operations.OperationType.DeleteByCollection);
-            }
+            ExecuteQueryOperation(query,
+                (runner, options, onProgress, token) => runner.ExecuteDeleteQuery(query, options, context, onProgress, token),
+                context, returnContextToPool, Operations.Operations.OperationType.DeleteByIndex);
 
             return Task.CompletedTask;
 
@@ -440,45 +427,17 @@ namespace Raven.Server.Documents.Handlers
 
             var patch = new PatchRequest(query.Metadata.GetUpdateBody(query.QueryParameters), PatchRequestType.Patch);
 
-            if (query.Metadata.IsDynamic == false)
-            {
-                ExecuteQueryOperation(query,
-                    (runner, options, onProgress, token) => runner.Query.ExecutePatchQuery(
-                        query, options.Query, patch, query.QueryParameters, context, onProgress, token),
+            ExecuteQueryOperation(query,
+                (runner, options, onProgress, token) => runner.ExecutePatchQuery(
+                    query, options, patch, query.QueryParameters, context, onProgress, token),
                 context, returnContextToPool, Operations.Operations.OperationType.UpdateByIndex);
-            }
-            else
-            {
-                EnsureQueryHasOnlyFromClause(query.Metadata, query.Metadata.CollectionName);
-
-                ExecuteQueryOperation(query,
-                    (runner, options, onProgress, token) =>
-                    runner.Collection.ExecutePatch(query.Metadata.CollectionName, options.Collection, patch, query.QueryParameters, onProgress, token),
-                    context, returnContextToPool, Operations.Operations.OperationType.UpdateByCollection);
-            }
 
             return Task.CompletedTask;
         }
 
-        private void EnsureQueryHasOnlyFromClause(QueryMetadata metadata, string collection)
-        {
-            if (metadata.IsCollectionQuery == false ||
-                metadata.Query.Select != null ||
-                metadata.Query.Include != null ||
-                metadata.Query.From.Filter != null)
-            {
-                var docPrefix = $"{DocumentConventions.DefaultTransformCollectionNameToDocumentIdPrefix(collection)}";
-
-                throw new BadRequestException("Patch and delete documents by a dynamic query is supported only for queries having just FROM clause " +
-                                              "and optionally simple WHERE filtering using '=' or 'IN' operators on document identifiers, " +
-                                              $"e.g. FROM {collection}, FROM {collection} WHERE id() = '{docPrefix}/1', FROM {collection} WHERE id() IN ('{docPrefix}/1', '{docPrefix}/2'). " +
-                                              "If you need to perform different filtering please issue the query to the static index.");
-            }
-        }
-
         private void ExecuteQueryOperation(IndexQueryServerSide query,
-                Func<(QueryRunner Query, CollectionRunner Collection),
-                (QueryOperationOptions Query, CollectionOperationOptions Collection),
+                Func<QueryRunner,
+                QueryOperationOptions,
                 Action<IOperationProgress>, OperationCancelToken,
                 Task<IOperationResult>> operation,
                 DocumentsOperationContext context,
@@ -490,23 +449,8 @@ namespace Raven.Server.Documents.Handlers
 
             var operationId = Database.Operations.GetNextOperationId();
 
-            Task<IOperationResult> task;
-
-            if (query.Metadata.IsDynamic == false)
-            {
-                task = Database.Operations.AddOperation(Database, query.Metadata.IndexName, operationType,
-                    onProgress => operation((Database.QueryRunner, null), (options, null), onProgress, token), operationId, token);
-            }
-            else
-            {
-                var collectionRunner = new CollectionRunner(Database, context, query);
-
-                task = Database.Operations.AddOperation(Database, query.Metadata.CollectionName, operationType,
-                    onProgress => operation((null, collectionRunner), (null, new CollectionOperationOptions()
-                    {
-                        MaxOpsPerSecond = options.MaxOpsPerSecond
-                    }), onProgress, token), operationId, token);
-            }
+            var task = Database.Operations.AddOperation(Database, query.Metadata.IndexName, operationType,
+                onProgress => operation(Database.QueryRunner, options, onProgress, token), operationId, token);
 
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
