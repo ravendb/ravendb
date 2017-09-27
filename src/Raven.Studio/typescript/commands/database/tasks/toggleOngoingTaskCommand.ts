@@ -13,7 +13,7 @@ class toggleOngoingTaskCommand extends commandBase {
 
         // Subscription is the only task that needs only *User* authenication for toggling state
         // All others use *Admin* authentication
-        const url = this.taskType === "Subscription" ? endpoints.databases.ongoingTasks.tasksState :
+        const url = this.taskType === "Subscription" ? endpoints.databases.ongoingTasks.subscriptionTasksState :
                                                        endpoints.databases.ongoingTasks.adminTasksState;
 
         const operationText = this.disable ? "disable" : "enable";
