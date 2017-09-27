@@ -5,11 +5,15 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Raven.Client;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Commands;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
@@ -27,8 +31,6 @@ namespace Raven.Server.Documents.Replication
 {
     public class ReplicationLoader : IDisposable, IDocumentTombstoneAware
     {
-        public event Action<string, Exception> ReplicationFailed;
-
         public event Action<IncomingReplicationHandler> IncomingReplicationAdded;
         public event Action<IncomingReplicationHandler> IncomingReplicationRemoved;
 
@@ -299,6 +301,12 @@ namespace Raven.Server.Documents.Replication
                     $"Cannot have replication with source and destination being the same database. They share the same db id ({connectionInfo} - {Database.DbId})");
             }
 
+            if (_server.IsPassive())
+            {
+                throw new InvalidOperationException(
+                    $"Cannot accept the incoming replication connection from {connectionInfo.SourceUrl}, because this node is in passive state.");
+            }
+
             if (_incoming.TryRemove(connectionInfo.SourceDatabaseId, out IncomingReplicationHandler value))
             {
                 if (_log.IsInfoEnabled)
@@ -399,18 +407,13 @@ namespace Raven.Server.Documents.Replication
         private void HandleExternalReplication(DatabaseRecord newRecord, ref List<OutgoingReplicationHandler> instancesToDispose)
         {
             var changes = ExternalReplication.FindChanges(_externalDestinations, newRecord.ExternalReplication);
-            if (changes.RemovedDestiantions.Count > 0)
-            {
-                var removed = _externalDestinations.Where(n => changes.RemovedDestiantions.Contains(n.Url + "@" + n.Database));
-                DropOutgoingConnections(removed, ref instancesToDispose);
-            }
-            if (changes.AddedDestinations.Count > 0)
-            {
-                var added = newRecord.ExternalReplication.Where(n => changes.AddedDestinations.Contains(n.Url + "@" + n.Database));
-                StartOutgoingConnections(added.ToList(), external: true);
-            }
-            _externalDestinations.Clear();
-            _externalDestinations.AddRange(newRecord.ExternalReplication);
+
+            DropOutgoingConnections(changes.RemovedDestiantions, ref instancesToDispose);
+            var newDestinations = changes.AddedDestinations.Where(o => newRecord.Topology.WhoseTaskIsIt(o, false) == _server.NodeTag).ToList();
+            StartOutgoingConnections(newDestinations, external: true);
+
+            _externalDestinations.RemoveAll(changes.RemovedDestiantions.Contains);
+            _externalDestinations.AddRange(newDestinations);
         }
 
         private void HandleInternalReplication(DatabaseRecord newRecord, ref List<OutgoingReplicationHandler> instancesToDispose)
@@ -502,21 +505,78 @@ namespace Raven.Server.Documents.Replication
 
         private void AddAndStartOutgoingReplication(ReplicationNode node, bool external)
         {
-            var outgoingReplication = new OutgoingReplicationHandler(this, Database, node, external);
+            var info = GetConnectionInfo(node, external);
+
+            if (info == null)
+            {
+                // this means that we were unable to retrive the tcp connection info and will try it again later
+                return;
+            }
+            var outgoingReplication = new OutgoingReplicationHandler(this, Database, node, external, info);
             outgoingReplication.Failed += OnOutgoingSendingFailed;
             outgoingReplication.SuccessfulTwoWaysCommunication += OnOutgoingSendingSucceeded;
             _outgoing.TryAdd(outgoingReplication); // can't fail, this is a brand new instance
-
-            node.Url = node.Url.Trim();
-
-            _outgoingFailureInfo.TryAdd(node, new ConnectionShutdownInfo
-            {
-                Node = node,
-                External = external
-            });
+            
             outgoingReplication.Start();
 
             OutgoingReplicationAdded?.Invoke(outgoingReplication);
+        }
+
+        private TcpConnectionInfo GetConnectionInfo(ReplicationNode node, bool external)
+        {
+            var shutdownInfo = new ConnectionShutdownInfo
+            {
+                Node = node,
+                External = external
+            };
+            _outgoingFailureInfo.TryAdd(node, shutdownInfo);
+            try
+            {
+                if (node is ExternalReplication exNode)
+                {
+                    using (var requestExecutor = RequestExecutor.Create(exNode.TopologyDiscoveryUrls, exNode.Database,
+                        _server.Server.ClusterCertificateHolder.Certificate,
+                        DocumentConventions.Default))
+                    using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                    {
+                        var cmd = new GetTcpInfoCommand("extrenal-replication");
+                        requestExecutor.Execute(cmd, ctx);
+                        node.Url = requestExecutor.Url;
+                        return cmd.Result;
+                    }
+                }
+                if (node is InternalReplication internalNode)
+                {
+                    return ReplicationUtils.GetTcpInfo(internalNode.Url, internalNode.NodeTag, "Replication", _server.Server.ClusterCertificateHolder.Certificate);
+                }
+                throw new InvalidOperationException(
+                    $"Unexpected replication node type, Expected to be '{typeof(ExternalReplication)}' or '{typeof(InternalReplication)}', but got '{node.GetType()}'");
+            }
+            catch (Exception e)
+            {
+                // will try to fetch it again later
+                if (_log.IsInfoEnabled)
+                    _log.Info($"Failed to fetch tcp connection information for the destination '{node.FromString()}' , the connection will be retried later.", e);
+
+                _reconnectQueue.TryAdd(shutdownInfo);
+            }
+            return null;
+        }
+
+        public (string Url, OngoingTaskReplication.ReplicationStatus Status) GetExternalReplicationDestination(long taskId)
+        {
+            // this is thread-safe because OutgoingConnections and ReconnectQueue getting a snapshot of the collections
+            foreach (var outgoing in OutgoingConnections) 
+            {
+                if (outgoing is ExternalReplication ex && ex.TaskId == taskId)
+                    return (ex.Url, OngoingTaskReplication.ReplicationStatus.Active);
+            }
+            foreach (var reconnect in ReconnectQueue)
+            {
+                if (reconnect is ExternalReplication ex && ex.TaskId == taskId)
+                    return (ex.Url, OngoingTaskReplication.ReplicationStatus.Reconnect);
+            }
+            return (null, OngoingTaskReplication.ReplicationStatus.None);
         }
 
         private void OnIncomingReceiveFailed(IncomingReplicationHandler instance, Exception e)
@@ -531,7 +591,6 @@ namespace Raven.Server.Documents.Replication
                 if (_log.IsInfoEnabled)
                     _log.Info($"Incoming replication handler has thrown an unhandled exception. ({instance.FromToString})", e);
 
-                ReplicationFailed?.Invoke(instance.FromToString, e);
             }
         }
 
@@ -559,7 +618,6 @@ namespace Raven.Server.Documents.Replication
                 if (_log.IsInfoEnabled)
                     _log.Info($"Document replication connection ({instance.Node}) failed, and the connection will be retried later.", e);
 
-                ReplicationFailed?.Invoke(instance.Node.ToString(), e);
             }
         }
 

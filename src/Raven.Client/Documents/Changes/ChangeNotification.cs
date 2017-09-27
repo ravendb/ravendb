@@ -170,7 +170,7 @@ namespace Raven.Client.Documents.Changes
         public string OldIndexName { get; set; }
     }
 
-    internal class TrafficWatchChange : DatabaseChange
+    public class TrafficWatchChange : DatabaseChange
     {
         public DateTime TimeStamp { get; set; }
         public int RequestId { get; set; }

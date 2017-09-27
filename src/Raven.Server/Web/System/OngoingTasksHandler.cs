@@ -64,7 +64,7 @@ namespace Raven.Server.Web.System
 
                 foreach (var tasks in new[]
                 {
-                    CollectExternalReplicationTasks(databaseRecord.ExternalReplication, dbTopology,clusterTopology, store),
+                    CollectExternalReplicationTasks(databaseRecord.DatabaseName, databaseRecord.ExternalReplication, dbTopology,clusterTopology, store),
                     CollectEtlTasks(databaseRecord, dbTopology, clusterTopology, store),
                     CollectBackupTasks(databaseRecord, dbTopology, clusterTopology, store)
                 })
@@ -104,7 +104,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private static IEnumerable<OngoingTask> CollectExternalReplicationTasks(List<ExternalReplication> watchers, DatabaseTopology dbTopology, ClusterTopology clusterTopology, ServerStore store)
+        private static IEnumerable<OngoingTask> CollectExternalReplicationTasks(string name, List<ExternalReplication> watchers, DatabaseTopology dbTopology, ClusterTopology clusterTopology, ServerStore store)
         {
             if (dbTopology == null)
                 yield break;
@@ -123,6 +123,26 @@ namespace Raven.Server.Web.System
                     };
                 }
 
+                (string Url, OngoingTaskReplication.ReplicationStatus Status) res = (null, OngoingTaskReplication.ReplicationStatus.None);
+                string error = null;
+                if (tag == store.NodeTag)
+                {
+                    try
+                    {
+                        store.DatabasesLandlord.DatabasesCache.TryGetValue(name, out var task);
+                        res = task.Result.ReplicationLoader.GetExternalReplicationDestination(watcher.TaskId);
+                    }
+                    catch (Exception e)
+                    {
+                        // failed to retrive the destination url
+                        error = e.ToString();
+                    }
+                }
+                else
+                {
+                    res.Status = OngoingTaskReplication.ReplicationStatus.NotOnThisNode;
+                }
+
                 yield return new OngoingTaskReplication
                 {
                     TaskId = watcher.TaskId,
@@ -130,7 +150,9 @@ namespace Raven.Server.Web.System
                     ResponsibleNode = responsibale,
                     DestinationDatabase = watcher.Database,
                     TaskState = watcher.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
-                    DestinationUrl = watcher.Url
+                    DestinationUrl = res.Url,
+                    Status = res.Status,
+                    Error = error
                 };
             }
         }

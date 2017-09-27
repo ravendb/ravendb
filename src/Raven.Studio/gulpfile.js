@@ -237,13 +237,17 @@ gulp.task('test', [ 'z_compile:test' ], function (cb) {
     return runSequence('z_generate-test-list', 'z_mochaTests', cb);
 });
 
+gulp.task('generate-tests', [ 'z_compile:test' ], function (cb) {
+    return runSequence('z_generate-test-list', cb);
+});
+
 gulp.task('z_watch:test', ['test'], function () {
     gulp.watch(PATHS.tsSource, ['z_mochaTests']);
     gulp.watch(PATHS.test.tsSource, ['test']);
 });
 
-gulp.task('z_watch_test', ['compile', 'test'], function () {
-    gulp.watch(PATHS.watchDirectories, ['z_compile:app-changed', 'test']);
+gulp.task('z_watch_test', ['compile', 'generate-tests'], function () {
+    gulp.watch(PATHS.watchDirectories, ['z_compile:app-changed', 'generate-tests']);
     gulp.watch(PATHS.lessSourcesToWatch, ['less']);
 });
 

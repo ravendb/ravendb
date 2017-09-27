@@ -17,16 +17,15 @@ var RqlHighlightRules = function() {
     this.clauseAppendKeywords = clauseAppendKeywords.split("|");
 
     var insideClauseKeywords = (
-        "as|not"
+        "as|not" // TODO: not should be after AND or OR
     );
     var functions = (
         "count|sum|id|key"
     );
 
     var whereOperators = (
-        "=|==|<>|!=|>|<|>=|<=|in|all in|between"
+        "all|in|between"
     );
-    this.whereOperators = whereOperators.split("|");
 
     var whereFunctions = (
         "search|boost|startsWith|endsWith|lucene|exact|within|exists|contains|disjoint|intersects"
@@ -70,8 +69,8 @@ var RqlHighlightRules = function() {
         "keyword.insideClause": insideClauseKeywords,
         "keyword.orderByOptions": orderByOptions,
         "keyword.orderByAsOptions": orderByAsOptions,
+        "keyword.whereOperators": whereOperators,
         "function": functions,
-        "function.where": whereFunctions,
         "function.where.within": withinFunctions,
         "function.orderBy": orderByFunctions,
         "constant.language": constants,
@@ -80,42 +79,70 @@ var RqlHighlightRules = function() {
         "operations.type": operations
     }, "identifier", true);
 
+    var commonRules = [ {
+        token : "comment",
+        regex : "//.*$"
+    },  {
+        token : "comment",
+        start : "/\\*",
+        end : "\\*/"
+    }, {
+        token : "string",           // " string
+        regex : '"[^"]*"?'
+    }, {
+        token : "string",           // ' string
+        regex : "'[^']*'?"
+    }, {
+        token : "string",           // ` string (apache drill)
+        regex : "`[^`]*`?"
+    }, {
+        token : "constant.numeric", // float
+        regex : "[+-]?\\d+(?:(?:\\.\\d*)?(?:[eE][+-]?\\d+)?)?\\b"
+    }, {
+        token : "paren.lparen",
+        regex : /[\[({]/
+    }, {
+        token : "comma",
+        regex : /,/
+    }, {
+        token : "space",
+        regex : /\s+/
+    } ];
+    
+    var startRule = [ {
+        token :  "function.where",
+        regex : whereFunctions,
+        next: "whereFunction"
+    }, {
+        token : keywordMapper,
+        regex : "[a-zA-Z_$@][a-zA-Z0-9_$@]*\\b"
+    }, {
+        token : "operator.where",
+        regex : /(?:==|!=|>=|<=|=|<>|>|<)(?=\s)/
+    }, {
+        token : "paren.rparen",
+        regex : /[\])}]/
+    } ];
+    
+    var whereFunctionsRules = [ {
+        token : "identifier",
+        regex : "[a-zA-Z_$@][a-zA-Z0-9_$@]*\\b"
+    }, {
+        token : "paren.rparen",
+        regex : /[\])}]/,
+        next: "start"
+    } ];
+    
     this.$rules = {
-        "start" : [ {
-            token : "comment",
-            regex : "//.*$"
-        },  {
-            token : "comment",
-            start : "/\\*",
-            end : "\\*/"
-        }, {
-            token : "string",           // " string
-            regex : '"[^"]*"?'
-        }, {
-            token : "string",           // ' string
-            regex : "'[^']*'?"
-        }, {
-            token : "string",           // ` string (apache drill)
-            regex : "`[^`]*`?"
-        }, {
-            token : "constant.numeric", // float
-            regex : "[+-]?\\d+(?:(?:\\.\\d*)?(?:[eE][+-]?\\d+)?)?\\b"
-        }, {
-            token : keywordMapper,
-            regex : "[a-zA-Z_$@][a-zA-Z0-9_$@]*\\b"
-        }, {
-            token : "where.operator",
-            regex : whereOperators
-        }, {
-            token : "paren.lparen",
-            regex : /[\[({]/
-        }, {
-            token : "paren.rparen",
-            regex : /[\])}]/
-        }, {
-            token : "space",
-            regex : /\s+/
-        } ]
+        "start" : commonRules.concat(startRule),    
+        "whereFunction" : commonRules.map(function (rule) {
+            return {
+                token: rule.token + ".whereFunction",
+                regex: rule.regex,
+                start: rule.start,
+                end: rule.end
+            };
+        }).concat(whereFunctionsRules)
     };
     this.normalizeRules();
 };
@@ -135,7 +162,7 @@ var RqlHighlightRules = require("./rql_highlight_rules").RqlHighlightRules;
 var Mode = function() {
     this.HighlightRules = RqlHighlightRules;
     this.$behaviour = this.$defaultBehaviour;
-    this.prefixRegexps = [/[a-zA-Z_0-9@'"\\\/\$\-\u00A2-\uFFFF]/]
+    this.prefixRegexps = [/[a-zA-Z_0-9@'"\\\/\$\-\u00A2-\uFFFF=!<>]/]
 };
 oop.inherits(Mode, TextMode);
 

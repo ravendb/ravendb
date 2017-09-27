@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Replication;
 using Sparrow.Json;
@@ -10,7 +11,18 @@ namespace Raven.Client.ServerWide
     {
         public long TaskId;
         public string Name;
+        public string[] TopologyDiscoveryUrls;
         public string MentorNode;
+
+        public ExternalReplication() { }
+
+        public ExternalReplication(string database, string[] urls)
+        {
+            if(urls == null || urls.Length == 0)
+                throw new ArgumentNullException(nameof(TopologyDiscoveryUrls));
+            Database = database;
+            TopologyDiscoveryUrls = urls;
+        }
 
         public static void RemoveWatcher(ref List<ExternalReplication> watchers, long taskId)
         {
@@ -22,7 +34,7 @@ namespace Raven.Client.ServerWide
                 return;
             }
         }
-
+        
         public static void EnsureUniqueDbAndUrl(List<ExternalReplication> watchers, ExternalReplication watcher)
         {
             var dbName = watcher.Database;
@@ -36,36 +48,20 @@ namespace Raven.Client.ServerWide
             }
         }
 
-        internal static (HashSet<string> AddedDestinations, HashSet<string> RemovedDestiantions) FindChanges(
-            List<ExternalReplication> oldDestinations, List<ExternalReplication> newDestinations)
+        internal static (IEnumerable<ExternalReplication> AddedDestinations, IEnumerable<ExternalReplication> RemovedDestiantions) FindChanges(
+            List<ExternalReplication> current, List<ExternalReplication> newDestinations)
         {
-            var oldList = new List<string>();
-            var newList = new List<string>();
-
-            if (oldDestinations != null)
+            if (current == null)
             {
-                oldList.AddRange(oldDestinations.Select(s => s.Url + "@" + s.Database));
+                current = new List<ExternalReplication>();
             }
-            if (newDestinations != null)
+            if (newDestinations == null)
             {
-                newList.AddRange(newDestinations.Select(s => s.Url + "@" + s.Database));
+                newDestinations = new List<ExternalReplication>();
             }
 
-            var addDestinations = new HashSet<string>(newList);
-            var removeDestinations = new HashSet<string>(oldList);
-
-            foreach (var destination in newList)
-            {
-                if (removeDestinations.Contains(destination))
-                {
-                    removeDestinations.Remove(destination);
-                    addDestinations.Remove(destination);
-                }
-            }
-
-            return (addDestinations, removeDestinations);
+            return (newDestinations.Except(current), current.Except(newDestinations));
         }
-
 
         public override DynamicJsonValue ToJson()
         {
@@ -73,6 +69,7 @@ namespace Raven.Client.ServerWide
             json[nameof(TaskId)] = TaskId;
             json[nameof(Name)] = Name;
             json[nameof(MentorNode)] = MentorNode;
+            json[nameof(TopologyDiscoveryUrls)] = new DynamicJsonArray(TopologyDiscoveryUrls);
             return json;
         }
 
@@ -84,8 +81,21 @@ namespace Raven.Client.ServerWide
         public ulong GetTaskKey()
         {
             var hashCode = CalculateStringHash(Database);
-            hashCode = (hashCode * 397) ^ CalculateStringHash(Url);
+            hashCode = (hashCode * 397) ^ CalculateStringHash(string.Join(",", TopologyDiscoveryUrls));
             return hashCode;
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = CalculateStringHash(Database);
+                hashCode = (hashCode * 397) ^ CalculateStringHash(string.Join(",",TopologyDiscoveryUrls));
+                hashCode = (hashCode * 397) ^ (ulong)TaskId;
+                hashCode = (hashCode * 397) ^ CalculateStringHash(MentorNode);
+                hashCode = (hashCode * 397) ^ CalculateStringHash(Name);
+                return (int)hashCode;
+            }
         }
 
         public string GetMentorNode()

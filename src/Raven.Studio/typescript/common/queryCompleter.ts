@@ -13,6 +13,18 @@ class queryCompleter {
     private tokenIterator: new(session : AceAjax.IEditSession, initialRow: number, initialColumn: number) => AceAjax.TokenIterator = ace.require("ace/token_iterator").TokenIterator;
     private indexOrCollectionFieldsCache = new Map<string, autoCompleteWordList[]>();
     
+    public static whereOperators: autoCompleteWordList[] = [
+        {caption: "in", value: "in ", score: 20, meta: "any in array", snippet: "in (${1:value1, value2}) "},
+        {caption: "all in", value: "all in ", score: 19, meta: "all in array", snippet: "all in (${1:value1, value2}) "},
+        {caption: "between",value: "between ", score: 18, meta: "two numbers", snippet: "between ${1:number1} and ${2:number2} "},
+        {caption: "=", value: "= ", score: 17, meta: "operator"},
+        {caption: "!=", value: "!= ", score: 16, meta: "operator"}, 
+        {caption: ">", value: "> ", score: 15, meta: "operator"},
+        {caption: "<", value: "< ", score: 14, meta: "operator"},
+        {caption: ">=", value: ">= ", score: 13, meta: "operator"},
+        {caption: "<=", value: "<= ", score: 12, meta: "operator"}
+    ];
+    
     constructor(private providers: queryCompleterProviders, private queryType: rqlQueryType) {
         _.bindAll(this, "complete");
     }
@@ -165,6 +177,8 @@ class queryCompleter {
             keyword: undefined,
             keywordModifier: undefined,
             binaryOperation: undefined,
+            whereFunction: undefined,
+            whereFunctionParameters: 0,
             fieldPrefix: undefined,
             get getFieldPrefix():string {
                 return this.fieldPrefix ? this.fieldPrefix.join(".") : undefined;
@@ -175,7 +189,6 @@ class queryCompleter {
             parentheses: 0
         };
             
-        let whereOperator = "";
         let liveAutoCompleteSkippedTriggerToken = false;
         let isFieldPrefixMode = 0;
         let isBeforeCommaOrBinaryOperation = false;
@@ -243,12 +256,10 @@ class queryCompleter {
                     result.keywordsBefore = this.getKeywordsBefore(iterator);
                     result.keyword = "__function";
                     return result;
-                case "where.operator":
+                case "function.where":
                     if (!isBeforeCommaOrBinaryOperation) {
-                        whereOperator = token.value;
+                        result.whereFunction = token.value.toLowerCase();
                     }
-                    break;
-                case "where.function":
                     break;
                 case "identifier":
                     if (!isBeforeCommaOrBinaryOperation) {
@@ -273,15 +284,29 @@ class queryCompleter {
                     }
                     break;
                 case "paren.lparen":
-                    result.parentheses++;
+                case "paren.lparen.whereFunction":
+                    if (!isBeforeCommaOrBinaryOperation) {
+                        result.parentheses++;
+                        
+                        if (token.type === "paren.lparen.whereFunction") {
+                            result.whereFunctionParameters++;
+                        }
+                    }
                     break;
                 case "paren.rparen":
-                    if (token.value === "}" && result.parentheses === 0) {
-                        result.keywordsBefore = this.getKeywordsBefore(iterator); // todo: do we need this?
-                        return result;
+                case "paren.rparen.whereFunction":
+                    if (!isBeforeCommaOrBinaryOperation) {
+                        if (token.type === "paren.rparen" && token.value === "}" && result.parentheses === 0) {
+                            result.keywordsBefore = this.getKeywordsBefore(iterator); // todo: do we need this?
+                            return result;
+                        }
+
+                        if (!lastToken || lastToken.type !== "space") {
+                            result.dividersCount++;
+                        }
+
+                        result.parentheses--;
                     }
-                    
-                    result.parentheses--;
                     break;
                 case "space":
                     if (!isBeforeCommaOrBinaryOperation && !result.keyword) {
@@ -295,31 +320,31 @@ class queryCompleter {
                     }
                     break;
                 case "text":
-                    if (!isBeforeCommaOrBinaryOperation) {
+                    if (!isBeforeCommaOrBinaryOperation && !result.whereFunction) {
                         const text = token.value;
-                        const isComma = text === ",";
 
-                        if (isComma) {
-                            isBeforeCommaOrBinaryOperation = true;
-
-                            if (!lastToken || lastToken.type !== "space") {
-                                result.dividersCount++;
-                            }
-                        }
-
-                        if (isFieldPrefixMode === 0 && (text === "." || text === "[].")) {
+                        if (isFieldPrefixMode === 0 && (text === "." || text === "[].")) { // TODO: Intorudce regex rule for fieldPrefix /(?:.|[].)/
                             isFieldPrefixMode = 1;
                             result.fieldPrefix = [];
                         }
 
-                        if (result.identifiers.length > 0 && !isComma) {
-                            if (text === ",") {
-                                result.text = ",";
-                            }
-                            else {
-                                result.text = token.value;
-                            }
+                        if (result.identifiers.length > 0) {
+                            result.text = token.value;
                         }
+                    }
+                    break;
+                case "comma":
+                    if (!isBeforeCommaOrBinaryOperation) {
+                        isBeforeCommaOrBinaryOperation = true;
+
+                        if (!lastToken || lastToken.type !== "space") {
+                            result.dividersCount++;
+                        }
+                    }
+                    break;
+                case "comma.whereFunction":
+                    if (!result.whereFunction) {
+                        result.whereFunctionParameters++;
                     }
                     break;
             }
@@ -344,7 +369,33 @@ class queryCompleter {
                 }
                 callback(null, wordList);
             });
-    } 
+    }
+
+    private completeWhereFunctionParameters(lastKeyword: autoCompleteLastKeyword ,session: AceAjax.IEditSession,
+                                            callback: (errors: any[], wordList: autoCompleteWordList[]) => void) {
+        if (lastKeyword.whereFunctionParameters === 1) {
+            this.completeFields(session, lastKeyword.getFieldPrefix, callback);
+            return;
+        }
+
+        switch (lastKeyword.whereFunction) {
+            case "search":
+                switch (lastKeyword.whereFunctionParameters) {
+                    case 2:
+                        callback(["todo: show terms here?"], null); // TODO
+                        return;
+                    case 3:
+                        this.completeWords(callback, [
+                            {value: "or", score: 22, meta: "any term"},
+                            {value: "and", score: 21, meta: "all terms"}
+                        ]);
+                        return;
+                }
+        }
+
+        callback(["empty completion"], null);
+        return;
+    }
 
     complete(editor: AceAjax.Editor,
              session: AceAjax.IEditSession,
@@ -462,7 +513,8 @@ class queryCompleter {
             }
             case "where": {
                 if (lastKeyword.dividersCount === 4 ||
-                    (lastKeyword.dividersCount === 0 && lastKeyword.binaryOperation)) {
+                    (lastKeyword.dividersCount === 0 && lastKeyword.binaryOperation) ||
+                    (lastKeyword.dividersCount === 2 && lastKeyword.whereFunction)) {
                     const binaryOperations = this.rules.binaryOperations.map((binaryOperation, i) => {
                         return {value: binaryOperation, score: 22 - i, meta: "binary operation"};
                     });
@@ -479,6 +531,11 @@ class queryCompleter {
                 }
                 
                 if (lastKeyword.dividersCount === 1) {
+                    if (lastKeyword.whereFunction && lastKeyword.whereFunctionParameters > 0) {
+                        this.completeWhereFunctionParameters(lastKeyword, session, callback);
+                        return;
+                    }
+                    
                     const additions: autoCompleteWordList[] = [
                         {caption: "search", value: "search ", snippet: "search(${1:alias.Field.Name}, ${2:'*term1* term2*'}, ${3:or}) ", score: 21, meta: "function"}
                     ];
@@ -486,10 +543,7 @@ class queryCompleter {
                     return;
                 }
                 if (lastKeyword.dividersCount === 2) {
-                    const whereOperators = this.rules.whereOperators.map((operator, i) => {
-                        return {value: operator, score: 40 - i, meta: "operator"};
-                    });
-                    this.completeWords(callback, whereOperators);
+                    callback(null, queryCompleter.whereOperators);
                     return;
                 }
                 
