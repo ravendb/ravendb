@@ -6,7 +6,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
     public class DatabaseRehabs : DatabaseScalarObjectBase<Integer32>
     {
         public DatabaseRehabs(string databaseName, DatabasesLandlord landlord, int index)
-            : base(databaseName, landlord, "5.2.{0}.1.14", index)
+            : base(databaseName, landlord, SnmpOids.Databases.Rehabs, index)
         {
         }
 

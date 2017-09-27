@@ -13,11 +13,6 @@ namespace Raven.Server.Config.Categories
         [LegacyConfigurationEntry("Raven/Voron/TempPath")]
         public PathSetting TempPath { get; set; }
 
-        [DefaultValue(null)]
-        [ConfigurationEntry("Storage.TransactionJournalsPath", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        [LegacyConfigurationEntry("Raven/TransactionJournalsPath")]
-        public PathSetting JournalsStoragePath { get; set; }
-
         [Description("Use the 32 bits memory mapped pager, even when running in 64 bits")]
         [DefaultValue(false)]
         [ConfigurationEntry("Storage.ForceUsing32BitsPager", ConfigurationEntryScope.ServerWideOnly)]

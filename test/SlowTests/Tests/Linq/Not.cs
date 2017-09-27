@@ -43,7 +43,9 @@ namespace SlowTests.Tests.Linq
 
                 using (var session = store.OpenSession())
                 {
-                    Assert.NotNull(session.Query<TestDoc>().FirstOrDefault(doc => doc.SomeProperty == "OR"));
+                    Assert.NotNull(session.Query<TestDoc>()
+                        .Customize(x=>x.WaitForNonStaleResults())
+                        .FirstOrDefault(doc => doc.SomeProperty == "OR"));
                 }
             }
         }

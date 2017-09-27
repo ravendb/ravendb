@@ -56,7 +56,7 @@ namespace Raven.Server.Web.Studio
                 if (_buffers == null)
                     _buffers = new BlittableJsonReaderObject.PropertiesInsertionBuffer();
 
-                var fields = new Dictionary<LazyStringValue, FieldType>();
+                var fields = new Dictionary<LazyStringValue, FieldType>(LazyStringValueComparer.Instance);
 
                 if (string.IsNullOrEmpty(collection))
                 {

@@ -318,7 +318,7 @@ namespace Raven.Server.Documents.Queries
         private static string ExtractIndexFieldName(Query query, BlittableJsonReaderObject parameters, QueryExpression field, QueryMetadata metadata)
         {
             if (field is FieldExpression fe)
-                return metadata.GetIndexFieldName(fe.Field.Value);
+                return metadata.GetIndexFieldName(fe, parameters);
 
             if (field is MethodExpression me)
             {
@@ -328,20 +328,21 @@ namespace Raven.Server.Documents.Queries
                     case MethodType.Id:
                         if (me.Arguments == null || me.Arguments.Count == 0)
                             return Constants.Documents.Indexing.Fields.DocumentIdFieldName;
-                        if(me.Arguments[0] is FieldExpression docAlias && docAlias.Field.Equals(query.From.Alias))
+                        if(me.Arguments[0] is FieldExpression docAlias && docAlias.Compound.Count == 1 && docAlias.Compound[0].Equals(query.From.Alias))
                             return Constants.Documents.Indexing.Fields.DocumentIdFieldName;
                         throw new InvalidQueryException("id() can only be used on the root query alias but got: " + me.Arguments[0], query.QueryText, parameters);
                     case MethodType.Count:
                         if (me.Arguments == null || me.Arguments.Count == 0)
                             return Constants.Documents.Indexing.Fields.CountFieldName;
-                        if (me.Arguments[0] is FieldExpression countAlias && countAlias.Field.Equals(query.From.Alias))
+                        if (me.Arguments[0] is FieldExpression countAlias && countAlias.Compound.Count == 1 && countAlias.Compound[0].Equals(query.From.Alias))
                             return Constants.Documents.Indexing.Fields.CountFieldName;
 
                         throw new InvalidQueryException("count() can only be used on the root query alias but got: " + me.Arguments[0], query.QueryText, parameters);
                     case MethodType.Sum:
                         if (me.Arguments != null && me.Arguments.Count == 1 &&
-                            me.Arguments[0] is FieldExpression f)
-                            return f.Field.Value;
+                            me.Arguments[0] is FieldExpression f && 
+                            f.Compound.Count == 1)
+                            return f.Compound[0];
 
                         throw new InvalidQueryException("sum() must be called with a single field name, but was called: " + me, query.QueryText, parameters);
 
@@ -353,11 +354,10 @@ namespace Raven.Server.Documents.Queries
             throw new InvalidQueryException("Expected field, got: " + field, query.QueryText, parameters);
         }
 
-        private static string ExtractIndexFieldName(string queryText, ValueExpression field, QueryMetadata metadata)
+        private static string ExtractIndexFieldName(ValueExpression field, QueryMetadata metadata, BlittableJsonReaderObject parameters)
         {
-            return metadata.GetIndexFieldName(field.Token.Value);
+            return metadata.GetIndexFieldName(field.Token.Value, parameters);
         }
-
 
         private static Lucene.Net.Search.Query HandleExists(Query query, BlittableJsonReaderObject parameters, MethodExpression expression, QueryMetadata metadata)
         {
@@ -374,6 +374,9 @@ namespace Raven.Server.Documents.Queries
 
             if (valueType != ValueTokenType.String)
                 ThrowMethodExpectsArgumentOfTheFollowingType("lucene", ValueTokenType.String, valueType, metadata.QueryText, parameters);
+
+            if (metadata.IsDynamic)
+                fieldName = AutoIndexField.GetSearchAutoIndexFieldName(fieldName);
 
             var parser = new Lucene.Net.QueryParsers.QueryParser(Version.LUCENE_29, fieldName, analyzer);
             return parser.Parse(GetValueAsString(value));
@@ -430,7 +433,7 @@ namespace Raven.Server.Documents.Queries
             if (expression.Arguments[0] is FieldExpression ft)
                 fieldName = ExtractIndexFieldName(query, parameters, ft, metadata);
             else if (expression.Arguments[0] is ValueExpression vt)
-                fieldName = ExtractIndexFieldName(query.QueryText, vt, metadata);
+                fieldName = ExtractIndexFieldName(vt, metadata, parameters);
             else
                 throw new InvalidOperationException("search() method can only be called with an identifier or string, but was called with " + expression.Arguments[0]);
 
@@ -456,8 +459,9 @@ namespace Raven.Server.Documents.Queries
             var occur = Occur.SHOULD;
             if (expression.Arguments.Count == 3)
             {
-                var op = ((FieldExpression)expression.Arguments[2]).Field.Value;
-                if (string.Equals("AND", op, StringComparison.OrdinalIgnoreCase))
+                var fieldExpression = (FieldExpression)expression.Arguments[2];
+                var op = fieldExpression.Compound[0];
+                if (string.Equals("AND", op, StringComparison.OrdinalIgnoreCase) && fieldExpression.Compound.Count == 1)
                     occur = Occur.MUST;
             }
 

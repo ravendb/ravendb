@@ -90,10 +90,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             AddValue(djv, "Id", () => proc.Id);
             AddValue(djv, "Handle", () => proc.Handle.ToInt64());
             AddValue(djv, "BasePriority", () => proc.BasePriority);
-            AddValue(djv, "ExitCode", () => proc.ExitCode);
-            AddValue(djv, "HasExited", () => proc.HasExited);
             AddValue(djv, "StartTime", () => proc.StartTime);
-            AddValue(djv, "ExitTime", () => proc.ExitTime);
             AddValue(djv, "MachineName", () => proc.MachineName);
             AddValue(djv, "MaxWorkingSet", () => proc.MaxWorkingSet.ToInt64());
             AddValue(djv, "MinWorkingSet", () => proc.MinWorkingSet.ToInt64());
@@ -202,25 +199,12 @@ namespace Raven.Server.Documents.Handlers.Debugging
             try
             {
                 var result = func.Invoke();
-
-                if (result == null)
-                {
-                    djv[key] = "null";
-                    return;
-                }
-
                 djv[key] = result;
 
             }
             catch (Exception ex)
             {
-                if (ex.InnerException != null)
-                {
-                    if (ex.InnerException.Message.Contains("Process must exit before requested information can be determined") == false)
-                        djv[key] = "Not Available : " + ex.InnerException.Message;
-                }
-                else
-                    djv[key] = "Not Available : " + ex.Message;
+                djv[key] = "Not Available : " + (ex.InnerException != null ? ex.InnerException.Message : ex.Message);
             }
         }
     }

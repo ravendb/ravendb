@@ -42,14 +42,20 @@ namespace SlowTests.Issues
         }
 
         [Theory]
+        [InlineData(@"from Orders 
+select count()", "count may only be used in group by queries")]
+        [InlineData(@"from Orders 
+group by ShippedAt
+order by count() asc
+select id()", "Cannot use id() method in a group by query")]
         [InlineData(@"from Users
-select 1 as B, 2 as B ")]
+select 1 as B, 2 as B ", "Duplicate alias")]
         [InlineData(@"from Users group by Age 
-select count(), Name as Count ")]
-        public void DuplicateAliases(string q)
+select count(), Name as Count ", "Duplicate alias")]
+        public void InvalidQuery(string q, string err)
         {
             var iqe = Assert.Throws<InvalidQueryException>(() => ExecuteQuery(q));
-            Assert.Contains("Duplicate alias", iqe.Message);
+            Assert.Contains(err, iqe.Message);
         }
 
 
@@ -63,6 +69,14 @@ update {
 }");
         }
 
+        [Fact]
+        public void UseCountInOrderByAndNonInSelect()
+        {
+            ExecuteQuery(@"from Orders 
+group by ShippedAt
+order by count() asc
+select key()");
+        }
 
         [Fact]
         public void ProjectReferenceWithAliasFromLoad()

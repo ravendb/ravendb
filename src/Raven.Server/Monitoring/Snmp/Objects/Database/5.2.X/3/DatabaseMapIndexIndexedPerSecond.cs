@@ -6,7 +6,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
     public class DatabaseMapIndexIndexedPerSecond : DatabaseScalarObjectBase<Gauge32>
     {
         public DatabaseMapIndexIndexedPerSecond(string databaseName, DatabasesLandlord landlord, int index)
-            : base(databaseName, landlord, "5.2.{0}.3.2", index)
+            : base(databaseName, landlord, SnmpOids.Databases.MapIndexIndexesPerSecond, index)
         {
         }
 

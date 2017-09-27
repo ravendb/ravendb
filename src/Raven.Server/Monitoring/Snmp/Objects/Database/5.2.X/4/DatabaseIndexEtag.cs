@@ -6,7 +6,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
     public class DatabaseIndexEtag : DatabaseIndexScalarObjectBase<Integer32>
     {
         public DatabaseIndexEtag(string databaseName, string indexName, DatabasesLandlord landlord, int databaseIndex, int indexIndex)
-            : base(databaseName, indexName, landlord, databaseIndex, indexIndex, "3")
+            : base(databaseName, indexName, landlord, databaseIndex, indexIndex, SnmpOids.Databases.Indexes.Etag)
         {
         }
 

@@ -154,7 +154,7 @@ namespace Raven.Server
                 context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
 
                 var sp = Stopwatch.StartNew();
-                var tenant = await _router.HandlePath(context, context.Request.Method, context.Request.Path.Value);
+                var database = await _router.HandlePath(context, context.Request.Method, context.Request.Path.Value);
                 sp.Stop();
 
                 if (_logger.IsInfoEnabled && SkipHttpLogging == false)
@@ -175,7 +175,7 @@ namespace Raven.Server
                         ResponseStatusCode = context.Response.StatusCode,
                         RequestUri = context.Request.GetEncodedUrl(),
                         AbsoluteUri = $@"{context.Request.Scheme}://{context.Request.Host}",
-                        TenantName = tenant ?? "N/A",
+                        DatabaseName = database ?? "N/A",
                         CustomInfo = "", // TODO: Implement
                         InnerRequestsCount = 0, // TODO: Implement
                         QueryTimings = null // TODO: Implement

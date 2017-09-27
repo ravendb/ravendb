@@ -9,11 +9,11 @@ namespace Raven.Server.Documents.Queries.Parser
 {
     public class QueryParser
     {
-        private static readonly string[] OperatorStartMatches = {">=", "<=", "<>", "<", ">", "==", "=", "!=", "BETWEEN", "IN", "ALL IN", "("};
-        private static readonly string[] BinaryOperators = {"OR", "AND"};
-        private static readonly string[] StaticValues = {"true", "false", "null"};
-        private static readonly string[] OrderByOptions = {"ASC", "DESC", "ASCENDING", "DESCENDING"};
-        private static readonly string[] OrderByAsOptions = {"string", "long", "double", "alphaNumeric"};
+        private static readonly string[] OperatorStartMatches = { ">=", "<=", "<>", "<", ">", "==", "=", "!=", "BETWEEN", "IN", "ALL IN", "(" };
+        private static readonly string[] BinaryOperators = { "OR", "AND" };
+        private static readonly string[] StaticValues = { "true", "false", "null" };
+        private static readonly string[] OrderByOptions = { "ASC", "DESC", "ASCENDING", "DESCENDING" };
+        private static readonly string[] OrderByAsOptions = { "string", "long", "double", "alphaNumeric" };
 
 
         private int _depth;
@@ -139,8 +139,7 @@ namespace Raven.Server.Documents.Queries.Parser
             if (Scanner.TryScan('(') == false)
                 ThrowParseException("Unable to parse function " + name + " signature");
 
-            if (Method(new FieldExpression(name, false), out _) == false)
-                ThrowParseException("Unable to parse function " + name + " signature");
+            ReadMethodArguments();
 
             if (Scanner.FunctionBody() == false)
                 ThrowParseException("Unable to get function body for " + name);
@@ -292,34 +291,18 @@ namespace Raven.Server.Documents.Queries.Parser
             FieldExpression field;
             QueryExpression filter = null;
             bool index = false;
-            bool isQuoted;
             if (Scanner.TryScan("INDEX"))
             {
-                isQuoted = false;
-                if (!Scanner.Identifier() && !(isQuoted = Scanner.String()))
+                if (Field(out field) == false)
                     ThrowParseException("Expected FROM INDEX source");
-
-                field = new FieldExpression(
-                    isQuoted
-                        ? new StringSegment(Scanner.Input, Scanner.TokenStart + 1, Scanner.TokenLength - 2)
-                        : new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength),
-                    isQuoted
-                );
 
                 index = true;
             }
             else
             {
-                isQuoted = false;
-                if (!Scanner.Identifier() && !(isQuoted = Scanner.String()))
-                    ThrowParseException("Expected FROM source");
 
-                field = new FieldExpression(
-                    isQuoted
-                        ? new StringSegment(Scanner.Input, Scanner.TokenStart + 1, Scanner.TokenLength - 2)
-                        : new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength),
-                    isQuoted
-                );
+                if (Field(out field) == false)
+                    ThrowParseException("Expected FROM source");
 
                 if (Scanner.TryScan('(')) // FROM  Collection ( filter )
                 {
@@ -369,9 +352,9 @@ namespace Raven.Server.Documents.Queries.Parser
                 return false;
             }
 
-            if (Field(out var f))
+            if (Field(out var token))
             {
-                alias = f.Field;
+                alias = token.FieldValue;
                 return true;
             }
 
@@ -636,6 +619,14 @@ namespace Raven.Server.Documents.Queries.Parser
 
         private bool Method(FieldExpression field, out MethodExpression op)
         {
+            var args = ReadMethodArguments();
+
+            op = new MethodExpression(field.FieldValue, args);
+            return true;
+        }
+
+        private List<QueryExpression> ReadMethodArguments()
+        {
             var args = new List<QueryExpression>();
             do
             {
@@ -658,7 +649,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     {
                         // this is not a simple field ref, let's parse as full expression
 
-                        Scanner.Reset(fieldRef.Field.Offset);
+                        Scanner.Reset(fieldRef.Compound[0].Offset);
                     }
                     else
                     {
@@ -672,9 +663,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 else
                     ThrowParseException("parsing method, expected an argument");
             } while (true);
-
-            op = new MethodExpression(field.Field, args);
-            return true;
+            return args;
         }
 
         private void ThrowParseException(string msg)
@@ -724,12 +713,11 @@ namespace Raven.Server.Documents.Queries.Parser
                 );
                 return true;
             }
-            if (Scanner.String())
+            if (Scanner.String(out var token))
             {
                 val = new ValueExpression(
-                    new StringSegment(Scanner.Input, Scanner.TokenStart + 1, Scanner.TokenLength - 2),
-                    ValueTokenType.String,
-                    Scanner.EscapeChars != 0
+                    token,
+                    ValueTokenType.String
                 );
                 return true;
             }
@@ -772,19 +760,19 @@ namespace Raven.Server.Documents.Queries.Parser
 
         internal bool Field(out FieldExpression token)
         {
-            var tokenStart = -1;
-            var tokenLength = 0;
             var part = 0;
-            var isQuoted = false;
 
+            var parts = new List<StringSegment>(1);
+            bool quoted = false;
             while (true)
             {
                 if (Scanner.Identifier(beginning: part++ == 0) == false)
                 {
-                    if (Scanner.String())
+                    if (Scanner.String(out var str))
                     {
-                        if(part == 1)
-                            isQuoted = true;
+                        if (part == 1)
+                            quoted = true;
+                        parts.Add(str);
                     }
                     else
                     {
@@ -792,7 +780,11 @@ namespace Raven.Server.Documents.Queries.Parser
                         return false;
                     }
                 }
-                if (part == 1 && isQuoted == false)
+                else
+                {
+                    parts.Add(new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength));
+                }
+                if (part == 1)
                 {
                     // need to ensure that this isn't a keyword
                     if (Scanner.CurrentTokenMatchesAnyOf(AliasKeywords))
@@ -802,19 +794,22 @@ namespace Raven.Server.Documents.Queries.Parser
                         return false;
                     }
                 }
-                if (tokenStart == -1)
-                    tokenStart = Scanner.TokenStart;
-                tokenLength += Scanner.TokenLength;
 
                 if (Scanner.TryScan('['))
                 {
                     switch (Scanner.TryNumber())
                     {
                         case NumberToken.Long:
+                            if (Scanner.TryScan(']') == false)
+                                ThrowParseException("Expected to find closing ]");
+                            parts.Add(new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength));
+                            break;
+
                         case null:
                             if (Scanner.TryScan(']') == false)
                                 ThrowParseException("Expected to find closing ]");
-                            tokenLength = Scanner.Position - tokenStart;
+                            parts.Add("[]");
+
                             break;
                         case NumberToken.Double:
                             ThrowParseException("Array indexer must be integer, but got double");
@@ -824,14 +819,12 @@ namespace Raven.Server.Documents.Queries.Parser
 
                 if (Scanner.TryScan('.') == false)
                     break;
-
-                tokenLength += 1;
             }
 
-            token = new FieldExpression(
-                isQuoted ? new StringSegment(Scanner.Input, tokenStart + 1, tokenLength - 2) : new StringSegment(Scanner.Input, tokenStart, tokenLength),
-                isQuoted
-            );
+            token = new FieldExpression(parts)
+            {
+                IsQuoted = quoted
+            };
             return true;
         }
 

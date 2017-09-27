@@ -135,6 +135,12 @@ namespace Raven.Server.Json
                 return path.Length;
             }
 
+            if (path.Length == 0)
+            {
+                consumed = 0;
+                return path;
+            }
+
             if (path[0] == '"' || path[0] == '\'')
             {
                 consumed = SkipQoute(path[0], 1);

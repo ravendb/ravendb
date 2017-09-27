@@ -8,7 +8,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
         private readonly OctetString _name;
 
         public DatabaseName(string databaseName, DatabasesLandlord landlord, int index)
-            : base(databaseName, landlord, "5.2.{0}.1.1", index)
+            : base(databaseName, landlord, SnmpOids.Databases.Name, index)
         {
             _name = new OctetString(databaseName);
         }

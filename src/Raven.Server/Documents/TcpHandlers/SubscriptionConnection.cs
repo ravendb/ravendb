@@ -705,8 +705,9 @@ namespace Raven.Server.Documents.TcpHandlers
                 {
                     case OperatorType.Equal:
                     case OperatorType.NotEqual:
-                        var field = (filter.Left as FieldExpression)?.Field;
-                        if (field == null || string.Equals(field, "Revisions", StringComparison.OrdinalIgnoreCase) == false)
+                        if(!(filter.Left is FieldExpression fe) || fe.Compound.Count != 1)
+                            throw new NotSupportedException("Subscription collection filter can only specify 'Revisions = true'");
+                        if (string.Equals(fe.Compound[0], "Revisions", StringComparison.OrdinalIgnoreCase) == false)
                             throw new NotSupportedException("Subscription collection filter can only specify 'Revisions = true'");
                         if (filter.Right is ValueExpression ve)
                         {
@@ -728,7 +729,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 throw new NotSupportedException("Subscription must not specify a collection filter (move it to the where clause)");
             }
 
-            var collectionName = q.From.From.Field.Value;
+            var collectionName = q.From.From.FieldValue;
             if (q.Where == null && q.Select == null && q.SelectFunctionBody == null)
                 return (collectionName, (null, null), revisions);
 
@@ -754,12 +755,10 @@ namespace Raven.Server.Documents.TcpHandlers
                     writer.Write("var ");
                     writer.Write(tuple.Alias);
                     writer.Write(" = loadPath(this,'");
-                    var fullFieldPath = ((FieldExpression)tuple.Expression).Field.Value;
-                    if (fullFieldPath.StartsWith(fromAlias) == false)
+                    var fieldExpression = ((FieldExpression)tuple.Expression);
+                    if (fieldExpression.Compound[0] != fromAlias)
                         throw new InvalidOperationException("Load clause can only load paths starting from the from alias: " + fromAlias);
-                    var indexOfDot = fullFieldPath.IndexOf('.', fromAlias.Length);
-                    fullFieldPath = fullFieldPath.Substring(indexOfDot + 1);
-                    writer.Write(fullFieldPath.Trim());
+                    writer.Write(fieldExpression.FieldValueWithoutAlias);
                     writer.WriteLine("');");
                 }
             }

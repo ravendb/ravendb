@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class validateExportDatabaseOptionsCommand extends commandBase {
 
-    constructor(private smugglerOptions: Raven.Client.Documents.Smuggler.DatabaseSmugglerOptions, private db: database) {
+    constructor(private smugglerOptions: Raven.Client.Documents.Smuggler.DatabaseSmugglerExportOptions, private db: database) {
         super();
     }
 

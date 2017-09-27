@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Text;
 using Raven.Server.Documents.Queries.AST;
+using Sparrow;
 
 namespace Raven.Server.Documents.Queries.Parser
 {
@@ -8,7 +10,6 @@ namespace Raven.Server.Documents.Queries.Parser
         private int _pos;
         private string _q;
         public int Column, Line;
-        public int EscapeChars;
         public int TokenStart, TokenLength;
         public string Input => _q;
 
@@ -242,37 +243,116 @@ namespace Raven.Server.Documents.Queries.Parser
             return false;
         }
 
-        public bool String()
+        public bool String(out StringSegment str)
         {
-            EscapeChars = 0;
             if (SkipWhitespace() == false)
+            {
+                str = default(StringSegment);
                 return false;
+            }
 
             var quoteChar = _q[_pos];
 
             if (quoteChar != '"' && quoteChar != '\'')
+            {
+                str = default(StringSegment);
                 return false;
+            }
+
             TokenStart = _pos;
             var i = _pos + 1;
+            bool hasEscape = false;
             for (; i < _q.Length; i++)
             {
+                if (_q[i] == '\\')
+                    hasEscape = true;
+
                 if (_q[i] != quoteChar)
                     continue;
 
                 if (i + 1 < _q.Length && _q[i + 1] == quoteChar)
                 {
                     i++; // escape char
-                    EscapeChars++;
+                    hasEscape = true;
                     continue;
                 }
                 Column += i + 1 - _pos;
 
                 _pos = i + 1;
                 TokenLength = _pos - TokenStart;
+
+                str = hasEscape ? 
+                    GetEscapedString(quoteChar) :
+                    new StringSegment(Input, TokenStart + 1, TokenLength - 2);
+
                 return true;
             }
-
+            str = default(StringSegment);
             return false;
+        }
+
+        private StringSegment GetEscapedString(char quoteChar)
+        {
+            var sb = new StringBuilder(Input, TokenStart + 1, TokenLength - 2, TokenLength - 2);
+            for (int i = 0; i < sb.Length; i++)
+            {
+                if (sb[i] == quoteChar)
+                {
+                    sb.Remove(i, 1);
+                    continue;
+                }
+
+                switch (sb[i])
+                {
+                    case '\\':
+                        if (i + 1 >= sb.Length)
+                            goto Fail;
+
+                        switch (sb[i+1])
+                        {
+                            case '\'':
+                            case '"':
+                            case '\\':
+                                sb.Remove(i, 1);
+                                break;
+                            case 'T':
+                            case 't':
+                                sb.Remove(i, 1);
+                                sb[i] = '\t';
+                                break;
+                            case 'N':
+                            case 'n':
+                                sb.Remove(i, 1);
+                                sb[i] = '\n';
+                                break;
+                            case 'R':
+                            case 'r':
+                                sb.Remove(i, 1);
+                                sb[i] = '\r';
+                                break;
+                            case 'F':
+                            case 'f':
+                                sb.Remove(i, 1);
+                                sb[i] = '\f';
+                                break;
+                            case 'B':
+                            case 'b':
+                                sb.Remove(i, 1);
+                                sb[i] = '\b';
+                                break;
+                            default:
+                                goto Fail;
+                        }
+
+                        break;
+                }
+            }
+
+            return sb.ToString();
+
+            Fail:
+            throw new QueryParser.ParseException(Column + ":" + Line + " unrecognized escape character found in string in query: '" + Input + "'");
+
         }
 
         public void Reset(int pos)
@@ -297,7 +377,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 {
                     case '"':
                     case '\'':
-                        if (String() == false)
+                        if (String(out _) == false)
                             goto Failed;
                         // we are now positioned at the _next_character, but we'll increment it
                         // need to go back to stay in the same place :-)

@@ -1,187 +1,250 @@
 import app = require("durandal/app");
 import viewModelBase = require("viewmodels/viewModelBase");
-import adminLogsClient = require("common/adminLogsClient");
-import fileDownloader = require("common/fileDownloader");
-import adminLogsConfigureDialog = require("viewmodels/manage/adminLogsConfigureDialog");
+import adminLogsWebSocketClient = require("common/adminLogsWebSocketClient");
 import adminLogsConfig = require("models/database/debug/adminLogsConfig");
 import adminLogsConfigEntry = require("models/database/debug/adminLogsConfigEntry");
-import accessHelper = require("viewmodels/shell/accessHelper");
 import eventsCollector = require("common/eventsCollector");
+import listViewController = require("widgets/listView/listViewController");
+import fileDownloader = require("common/fileDownloader");
+import virtualListRow = require("widgets/listView/virtualListRow");
+
+class heightCalculator {
+    
+    private charactersPerLine = undefined as number;
+    private padding = undefined as number;
+    private lineHeight = undefined as number;
+    
+    measure(item: string, row: virtualListRow<string>) {
+        this.ensureCacheFilled(row);
+        
+        const lines = item.split("\r\n");
+        const totalLinesCount = _.sum(lines.map(l => {
+            if (l.length > this.charactersPerLine) {
+                return Math.ceil(l.length  * 1.0 / this.charactersPerLine);
+            }
+            return 1;
+        }));
+        
+        return this.padding + totalLinesCount * this.lineHeight;
+    }
+    
+    // try to compute max numbers of characters in single line
+    ensureCacheFilled(row: virtualListRow<string>) {
+        if (!_.isUndefined(this.charactersPerLine)) {
+            return;
+        }
+        
+        row.populate("A", 0, -200, undefined);
+        const initialHeight = row.element.height();
+        let charactersInline = 1;
+        
+        while (true) {
+            row.populate(_.repeat("A", charactersInline), 0, -200, undefined);
+            if (row.element.height() > initialHeight) {
+                break;
+            }
+            charactersInline++;
+        }
+        
+        charactersInline -= 3; // substract few character to have extra space for scrolls
+        
+        const doubleLinesHeight = row.element.height();
+        
+        this.lineHeight = doubleLinesHeight - initialHeight;
+        this.padding = doubleLinesHeight - 2 * this.lineHeight;
+        this.charactersPerLine = charactersInline;
+    }
+}
 
 class adminLogs extends viewModelBase {
-   
-    adminLogsClient = ko.observable<adminLogsClient>(null);
-    pendingLogs: logDto[] = [];
-    keepDown = ko.observable(false);
-    rawLogs = ko.observable<logDto[]>([]);
-    intervalId: number;
-    connected = ko.observable(false);
-    logsContainer: Element;
-    entriesCount = ko.computed(() => this.rawLogs().length);
-    adminLogsConfig = ko.observable<adminLogsConfig>();
-    isForbidden = ko.observable<boolean>();
 
-    canActivate(args: any): any {
-        this.isForbidden(accessHelper.isGlobalAdmin() === false);
-        return true;
+    private liveClient = ko.observable<adminLogsWebSocketClient>();
+    private listController = ko.observable<listViewController<string>>();
+    private headerSeen = false;
+    
+    private allData = [] as string[];
+    
+    filter = ko.observable<string>();
+    
+    private appendElementsTask: number;
+    private pendingMessages = [] as string[];
+    private heightCalculator = new heightCalculator();
+    
+    private configuration = ko.observable<adminLogsConfig>(adminLogsConfig.empty());
+    
+    editedConfiguration = ko.observable<adminLogsConfig>(adminLogsConfig.empty());
+    editedSourceName = ko.observable<string>();
+    
+    isBufferFull = ko.observable<boolean>();
+    
+    tailEnabled = ko.observable<boolean>(true);
+    
+    constructor() {
+        super();
+        
+        this.bindToCurrentInstance("toggleTail", "itemHeightProvider", "applyConfiguration", "includeSource", "excludeSource", "removeConfigurationEntry");
+        
+        this.filter.throttle(500).subscribe(() => this.filterLogEntries());
     }
     
     activate(args: any) {
         super.activate(args);
         this.updateHelpLink('57BGF7');
     }
-
-    redraw() {
-        if (this.pendingLogs.length > 0) {
-            var pendingCopy = this.pendingLogs;
-            this.pendingLogs = [];
-            var logsAsText = "";
-            pendingCopy.forEach(log => {
-                var line = log.TimeStamp + ";" + log.Level.toUpperCase() + ";" + log.Database + ";" + log.LoggerName + ";" + log.Message + (log.Exception || "") + "\n";
-
-                if (log.StackTrace != null) {
-                    line += log.StackTrace + "\n\n";
-                }
-
-                logsAsText += line;
-            });
-            // text: allows us to escape values
-            $("<div/>").text(logsAsText).appendTo("#rawLogsContainer pre");
-            this.rawLogs().push(...pendingCopy);
-            this.rawLogs.valueHasMutated();
-
-            if (this.keepDown()) {
-                var logsPre = document.getElementById('adminLogsPre');
-                logsPre.scrollTop = logsPre.scrollHeight;
-            }
-        }
-    }
-
-    clearLogs() {
-        eventsCollector.default.reportEvent("admin-logs", "clear");
-
-        this.pendingLogs = [];
-        this.rawLogs([]);
-        $("#rawLogsContainer pre").empty();
-    }
-
-    defaultLogsConfig() {
-        var logConfig = new adminLogsConfig();
-        logConfig.maxEntries(10000);
-        logConfig.entries.push(new adminLogsConfigEntry("Raven.", "Debug", false));
-        return logConfig;
-    }
-
-    configureConnection() {
-        eventsCollector.default.reportEvent("admin-logs", "configure");
-
-        this.intervalId = setInterval(function () { this.redraw(); }.bind(this), 1000);
-
-        var currentConfig = this.adminLogsConfig() ? this.adminLogsConfig().clone() : this.defaultLogsConfig();
-        var adminLogsConfigViewModel = new adminLogsConfigureDialog(currentConfig);
-        app.showBootstrapDialog(adminLogsConfigViewModel);
-        adminLogsConfigViewModel.configurationTask.done((x: any) => {
-            this.adminLogsConfig(x);
-            this.reconnect();
-        });
-    }
-
-    connect() {
-        eventsCollector.default.reportEvent("admin-logs", "connect");
-
-        if (!!this.adminLogsClient()) {
-            this.reconnect();
-            return;
-        }
-        if (!this.adminLogsConfig()) {
-            this.configureConnection();
-            return;
-        }
-
-        this.adminLogsClient(new adminLogsClient());
-        this.adminLogsClient().connect();
-        var categoriesConfig = this.adminLogsConfig().entries().map(e => e.toDto());
-        this.adminLogsClient().configureCategories(categoriesConfig);
-        this.adminLogsClient().connectionOpeningTask.done(() => {
-            this.connected(true);
-            this.adminLogsClient().watchAdminLogs((event: logDto) => {
-                this.onLogMessage(event);
-            });
-        });
-    }
-
-    disconnect(): JQueryPromise<any> {
-        eventsCollector.default.reportEvent("admin-logs", "disconnect");
-
-        if (!!this.adminLogsClient()) {
-            this.adminLogsClient().dispose();
-            return this.adminLogsClient().connectionClosingTask.then(() => {
-                this.adminLogsClient(null);
-                this.connected(false);
-            });
-        } else {
-            app.showBootstrapMessage("Cannot disconnect, connection does not exist", "Disconnect");
-            return $.Deferred().reject();
-        }
-    }
-
-    reconnect() {
-        eventsCollector.default.reportEvent("admin-logs", "reconnect");
-        if (!this.adminLogsClient()) {
-            this.connect();
-        } else {
-            this.disconnect().done(() => {
-                this.connect();
-            });
-        }
-    }
-
-    attached() {
-        super.attached();
-        this.logsContainer = document.getElementById("rawLogsContainer");
-    }
-
+    
     deactivate() {
-        clearInterval(this.intervalId);
-        if (this.adminLogsClient()) {
-            this.adminLogsClient().dispose();
+        super.deactivate();
+        
+        if (this.liveClient()) {
+            this.liveClient().dispose();
         }
     }
+    
+    filterLogEntries() {
+        const searchText = this.filter().toLocaleLowerCase();
 
-    detached() {
-        super.detached();
-        this.disposeAdminLogsClient();
-    }
-
-    disposeAdminLogsClient() {
-        var client = this.adminLogsClient();
-        if (client) {
-            client.dispose();
-        }
-    }
-
-    onLogMessage(entry: logDto) {
-        if (this.entriesCount() + this.pendingLogs.length < this.adminLogsConfig().maxEntries()) {
-            this.pendingLogs.push(entry);
+        this.listController().reset();
+        
+        if (searchText) {
+            const filteredItems = this.allData.filter(x => x.toLocaleLowerCase().includes(searchText));
+            this.listController().pushElements(filteredItems);
         } else {
-            // stop logging
-            var client = this.adminLogsClient();
-            this.connected(false);
-            client.dispose();
+            this.listController().pushElements(this.allData);
         }
     }
 
-    exportLogs() {
+    applyConfiguration() {
+        this.editedConfiguration().copyTo(this.configuration());
+        
+        // restart websocket
+        this.isBufferFull(false);
+        this.pauseLogs();
+        this.resumeLogs();
+    }
+    
+    itemHeightProvider(item: string, row: virtualListRow<string>) {
+        return this.heightCalculator.measure(item, row);
+    }
+    
+    // noinspection JSMethodCanBeStatic
+    itemHtmlProvider(item: string) {
+        const itemLower = item.toLocaleLowerCase();
+        
+        //TODO: this logic doesn't work well in every case - it creates false positives 
+        const hasError = itemLower.includes("exception") || itemLower.includes("error") || itemLower.includes("failure");
+        
+        return $("<pre class='item'></pre>")
+            .toggleClass("bg-danger", hasError)
+            .text(item);
+    }
+    
+    compositionComplete() {
+        super.compositionComplete();
+        this.connectWebSocket();
+    }
+    
+    connectWebSocket() {
+        eventsCollector.default.reportEvent("admin-logs", "connect");
+        const ws = new adminLogsWebSocketClient(null, this.configuration(), data => this.onData(data));
+        this.liveClient(ws);
+        
+        this.headerSeen = false;
+    }
+    
+    pauseLogs() {
+        eventsCollector.default.reportEvent("admin-logs", "pause");
+        if (this.liveClient()) {
+            this.liveClient().dispose();
+            this.liveClient(null);
+        }
+    }
+    
+    resumeLogs() {
+        this.connectWebSocket();
+    }
+    
+    private onData(data: string) {
+        if (this.listController().getTotalCount() + this.pendingMessages.length >= this.configuration().maxEntries()) {
+            this.isBufferFull(true);
+            this.pauseLogs();
+            return;
+        }
+        
+        data = data.trim();
+        
+        if (!this.headerSeen) {
+            
+            this.headerSeen = true;
+            return;
+        }
+        
+        this.allData.push(data);
+        this.pendingMessages.push(data);
+        
+        if (!this.appendElementsTask) {
+            this.appendElementsTask = setTimeout(() => this.onAppendPendingMessages(), 333);
+        }
+    }
+    
+    private onAppendPendingMessages() {
+        this.appendElementsTask = null;
+        this.listController().pushElements(this.pendingMessages);
+        
+        this.pendingMessages.length = 0;
+
+        if (this.tailEnabled()) {
+            this.listController().scrollDown();
+        }
+    }
+    
+    clear() {
+        eventsCollector.default.reportEvent("admin-logs", "clear");
+        this.allData.length = 0;
+        this.isBufferFull(false);
+        this.listController().reset();
+    }
+    
+    exportToFile() {
         eventsCollector.default.reportEvent("admin-logs", "export");
-        fileDownloader.downloadAsJson(this.rawLogs(), "logs.json");
+        const items = this.listController().getItems();
+        const lines = [] as string[];
+        items.forEach(v => {
+            lines.push(v);
+        });
+        
+        const joinedFile = lines.join("\r\n");
+        const now = moment().format("YYYY-MM-DD HH-mm");
+        fileDownloader.downloadAsTxt(joinedFile, "admin-log-" + now + ".txt");
+    }
+    
+    toggleTail() {
+        this.tailEnabled.toggle();
+        
+        if (this.tailEnabled()) {
+            this.listController().scrollDown();
+        }
     }
 
-    toggleKeepDown() {
-        this.keepDown.toggle();
-        if (this.keepDown()) {
-            var logsPre = document.getElementById('adminLogsPre');
-            logsPre.scrollTop = logsPre.scrollHeight;
+    includeSource() {
+        const source = this.editedSourceName();
+        if (source) {
+            const configItem = new adminLogsConfigEntry(source, "include");
+            this.editedConfiguration().entries.unshift(configItem);
+            this.editedSourceName("");
         }
+    }
+    
+    excludeSource() {
+        const source = this.editedSourceName();
+        if (source) {
+            const configItem = new adminLogsConfigEntry(source, "exclude");
+            this.editedConfiguration().entries.push(configItem);
+            this.editedSourceName("");
+        }
+    }
+
+    removeConfigurationEntry(entry: adminLogsConfigEntry) {
+        this.editedConfiguration().entries.remove(entry);
     }
 }
 

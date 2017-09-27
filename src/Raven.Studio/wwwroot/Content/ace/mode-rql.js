@@ -22,21 +22,26 @@ var RqlHighlightRules = function() {
     var functions = (
         "count|sum|id|key"
     );
-    
-    var binaryOperators = (
+
+    var whereOperators = (
         "=|==|<>|!=|>|<|>=|<=|in|all in|between"
     );
-    this.binaryOperators = binaryOperators.split("|");
+    this.whereOperators = whereOperators.split("|");
 
     var whereFunctions = (
-        "search|boost|startsWith|endsWith|lucene|exact|within|circle"
+        "search|boost|startsWith|endsWith|lucene|exact|within|exists|contains|disjoint|intersects"
     );
-    this.whereFunctions = binaryOperators.split("|");
-    
+    this.whereFunctions = whereFunctions.split("|");
+
+    var withinFunctions = (
+        "circle"
+    );
+    this.withinFunctions = withinFunctions.split("|");
+
     var orderByFunctions = (
         "random|score"
     );
-    
+
     var orderByOptions = (
         "desc|asc|descending|ascending"
     );
@@ -67,6 +72,7 @@ var RqlHighlightRules = function() {
         "keyword.orderByAsOptions": orderByAsOptions,
         "function": functions,
         "function.where": whereFunctions,
+        "function.where.within": withinFunctions,
         "function.orderBy": orderByFunctions,
         "constant.language": constants,
         "constant.language.boolean": constantsBoolean,
@@ -98,8 +104,8 @@ var RqlHighlightRules = function() {
             token : keywordMapper,
             regex : "[a-zA-Z_$@][a-zA-Z0-9_$@]*\\b"
         }, {
-            token : "binary.operator",
-            regex : binaryOperators
+            token : "where.operator",
+            regex : whereOperators
         }, {
             token : "paren.lparen",
             regex : /[\[({]/

@@ -8,7 +8,14 @@ class deactivateLicenseCommand extends commandBase {
 
         return this.post(url, null, null, { dataType: undefined })
             .fail((response: JQueryXHR) => {
-                this.reportError("Failed to deactivate license", response.responseText, response.statusText);
+                let message;
+                if (response.status == 405) {
+                    message = "License deactivation feature has been disabled on this server";
+                } else {
+                    message = "Failed to deactivate license";
+                }
+
+                this.reportError(message, response.responseText, response.statusText);
             });
     }
 }

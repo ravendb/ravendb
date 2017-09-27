@@ -5,18 +5,23 @@ import confirmationDialog = require("viewmodels/common/confirmationDialog");
 
 class viewHelpers {
 
-    static confirmationMessage(title: string, confirmationMessage: string, options: string[] = ["No", "Yes"], forceRejectWithResolve: boolean = false): JQueryPromise<confirmDialogResult> {
+    static confirmationMessage(title: string, confirmationMessage: string, options: string[] = ["No", "Yes"], forceRejectWithResolve: boolean = false, defaultOption: string = null): JQueryPromise<confirmDialogResult> {
         const viewTask = $.Deferred<confirmDialogResult>();
 
         app.showBootstrapDialog(new confirmationDialog(confirmationMessage, title, options))
             .done((answer) => {
-                var isConfirmed = answer === _.last(options);
+                const isConfirmed = answer === _.last(options);
                 if (isConfirmed) {
                     viewTask.resolve({ can: true });
                 } else if (!forceRejectWithResolve) {
                     viewTask.reject();
                 } else {
-                    viewTask.resolve({ can: false });
+                    // answer is null when user 
+                    if (answer != null) {
+                        viewTask.resolve({ can: false });
+                    } else {
+                        viewTask.resolve({ can: _.last(options) === defaultOption });
+                    }
                 }
             });
 

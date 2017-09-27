@@ -50,11 +50,6 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.TempPath", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public virtual PathSetting TempPath { get; protected set; }
 
-        [DefaultValue(null)]
-        [IndexUpdateType(IndexUpdateType.Reset)]
-        [ConfigurationEntry("Indexing.JournalsStoragePath", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public virtual PathSetting JournalsStoragePath { get; protected set; }
-
         [Description("How long indexing will keep document transaction open when indexing. After this the transaction will be reopened.")]
         [DefaultValue(15)]
         [TimeUnit(TimeUnit.Seconds)]

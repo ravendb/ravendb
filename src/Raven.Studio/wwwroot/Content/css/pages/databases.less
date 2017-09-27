@@ -53,6 +53,10 @@
     .database-item {
         padding-left: 30px;
         position: relative;
+        
+        .state-remote {
+            background-color: #43495e;
+        }
 
         @media (min-width:@screen-sm) and (max-width:@screen-lg-max) {
             .info-grow {
@@ -70,6 +74,22 @@
             }
         }
 
+        &:not(.relevant) {
+            background-color: darken(@gray-darker, 4%);
+
+            &:hover {
+                background-color: darken(@gray-darker, 2%);
+            }
+
+            border: 1px dashed @gray-dark;
+
+            &:not(:hover) {
+                .dbgroup-node-type, .properties-item {
+                    opacity: .6;
+                }
+            }
+        }
+
         &:hover {
             background-color: lighten(@gray-darker, 3%);
             transition: background-color 0.15s ease;
@@ -80,6 +100,10 @@
 
             a {
                 color: @gray-light;
+
+                &:hover {
+                    color: @gray-lighter;
+                }
             }
         }
 

@@ -41,9 +41,9 @@ namespace Raven.Server.Documents.Queries
             var fromToken = Query.From.From;
 
             if (IsDynamic)
-                CollectionName = fromToken.Field;
+                CollectionName = fromToken.FieldValue;
             else
-                IndexName = fromToken.Field;
+                IndexName = fromToken.FieldValue;
 
             if (IsDynamic == false || IsGroupBy)
                 IsCollectionQuery = false;
@@ -89,15 +89,15 @@ namespace Raven.Server.Documents.Queries
 
         public string[] Includes;
 
-        private void AddExistField(string fieldName)
+        private void AddExistField(string fieldName, BlittableJsonReaderObject parameters)
         {
-            IndexFieldNames.Add(GetIndexFieldName(fieldName));
+            IndexFieldNames.Add(GetIndexFieldName(fieldName, parameters));
             IsCollectionQuery = false;
         }
 
-        private void AddWhereField(string fieldName, bool search = false, bool exact = false)
+        private void AddWhereField(string fieldName, BlittableJsonReaderObject parameters, bool search = false, bool exact = false)
         {
-            var indexFieldName = GetIndexFieldName(fieldName);
+            var indexFieldName = GetIndexFieldName(fieldName, parameters);
 
             if (IsCollectionQuery && indexFieldName != Constants.Documents.Indexing.Fields.DocumentIdFieldName)
                 IsCollectionQuery = false;
@@ -121,11 +121,7 @@ namespace Raven.Server.Documents.Queries
 
                 for (var i = 0; i < Query.GroupBy.Count; i++)
                 {
-                    var name = Query.GroupBy[i].Field;
-
-                    EnsureValidGroupByField(name, parameters);
-
-                    GroupBy[i] = name;
+                    GroupBy[i] = GetIndexFieldName(Query.GroupBy[i], parameters);
                 }
             }
 
@@ -169,7 +165,7 @@ namespace Raven.Server.Documents.Queries
                     }
                     else if (order.Expression is FieldExpression fe)
                     {
-                        OrderBy[i] = new OrderByField(GetIndexFieldName(fe.Field), order.FieldType, order.Ascending);
+                        OrderBy[i] = new OrderByField(GetIndexFieldName(fe, parameters), order.FieldType, order.Ascending);
                     }
                     else
                     {
@@ -199,7 +195,7 @@ namespace Raven.Server.Documents.Queries
 
                 if (include is FieldExpression fe)
                 {
-                    path = fe.Field;
+                    path = fe.FieldValue;
                 }
                 else if (include is ValueExpression ve)
                 {
@@ -207,7 +203,7 @@ namespace Raven.Server.Documents.Queries
                 }
                 else
                 {
-                    throw new InvalidOperationException("Unable to figure out how to deal with include of type " + include.Type);
+                    throw new InvalidQueryException("Unable to figure out how to deal with include of type " + include.Type, QueryText, parameters);
                 }
 
                 var expressionPath = ParseExpressionPath(include, path, parameters);
@@ -319,7 +315,7 @@ namespace Raven.Server.Documents.Queries
                 string path;
                 if (load.Expression is FieldExpression fe)
                 {
-                    path = fe.Field;
+                    path = fe.FieldValue;
                 }
                 else if (load.Expression is ValueExpression ve)
                 {
@@ -433,7 +429,7 @@ namespace Raven.Server.Documents.Queries
                 }
 
                 return new OrderByField(
-                    fieldToken.Field,
+                    fieldToken.FieldValue,
                     OrderByFieldType.Distance,
                     asc,
                     methodType,
@@ -445,7 +441,10 @@ namespace Raven.Server.Documents.Queries
                 if (me.Name.Equals("count", StringComparison.OrdinalIgnoreCase))
                 {
                     if (me.Arguments == null || me.Arguments.Count == 0)
-                        return new OrderByField(Constants.Documents.Indexing.Fields.CountFieldName, OrderByFieldType.Long, asc);
+                        return new OrderByField(Constants.Documents.Indexing.Fields.CountFieldName, OrderByFieldType.Long, asc)
+                        {
+                            AggregationOperation = AggregationOperation.Count
+                        };
 
                     throw new InvalidQueryException("Invalid ORDER BY 'count()' call, expected zero arguments, got " + me.Arguments.Count, QueryText,
                         parameters);
@@ -469,7 +468,10 @@ namespace Raven.Server.Documents.Queries
                         orderingType = OrderByFieldType.Double;
                     }
 
-                    return new OrderByField(sumFieldToken.Field, orderingType, asc);
+                    return new OrderByField(sumFieldToken.FieldValue, orderingType, asc)
+                    {
+                        AggregationOperation = AggregationOperation.Sum
+                    };
                 }
             }
 
@@ -527,12 +529,7 @@ namespace Raven.Server.Documents.Queries
         {
             throw new InvalidQueryException("Duplicate alias " + finalAlias + " detected", QueryText, parameters);
         }
-
-        private void ThrowInvalidDuplicateAlias(BlittableJsonReaderObject parameters, string finalAlias)
-        {
-            throw new InvalidQueryException("Duplicate alias " + finalAlias + " detected", QueryText, parameters);
-        }
-
+        
         private SelectField GetSelectField(BlittableJsonReaderObject parameters, QueryExpression expression, string alias)
         {
             if (expression is ValueExpression ve)
@@ -541,11 +538,9 @@ namespace Raven.Server.Documents.Queries
             }
             if (expression is FieldExpression fe)
             {
-                if (fe.IsQuoted)
-                {
-                    return SelectField.CreateValue(fe.Field, alias, ValueTokenType.String);
-                }
-                return GetSelectValue(alias, fe);
+                if(fe.IsQuoted && fe.Compound.Count == 1)
+                    return SelectField.CreateValue(fe.Compound[0], alias, ValueTokenType.String);
+                return GetSelectValue(alias, fe, parameters);
             }
             if (expression is MethodExpression me)
             {
@@ -560,7 +555,7 @@ namespace Raven.Server.Documents.Queries
                             if (me.Arguments[i] is ValueExpression vt)
                                 args[i] = SelectField.CreateValue(vt.Token, alias, vt.Value);
                             else if (me.Arguments[i] is FieldExpression ft)
-                                args[i] = GetSelectValue(null, ft);
+                                args[i] = GetSelectValue(null, ft, parameters);
                             else
                                 args[i] = GetSelectField(parameters, me.Arguments[i], null);
                         }
@@ -570,6 +565,8 @@ namespace Raven.Server.Documents.Queries
 
                     if (string.Equals("id", methodName, StringComparison.OrdinalIgnoreCase))
                     {
+                        if(IsGroupBy)
+                            ThrowInvalidIdInGroupByQuery(parameters);
                         return SelectField.Create(Constants.Documents.Indexing.Fields.DocumentIdFieldName, alias);
                     }
 
@@ -590,9 +587,13 @@ namespace Raven.Server.Documents.Queries
                 switch (aggregation)
                 {
                     case AggregationOperation.Count:
+                        if(IsGroupBy == false)
+                            ThrowInvalidAggregationMethod(parameters, methodName);
                         fieldName = Constants.Documents.Indexing.Fields.CountFieldName;
                         break;
                     case AggregationOperation.Sum:
+                        if(IsGroupBy == false)
+                            ThrowInvalidAggregationMethod(parameters, methodName);
                         if (me.Arguments == null)
                         {
                             ThrowMissingFieldNameArgumentOfSumMethod(QueryText, parameters);
@@ -607,7 +608,7 @@ namespace Raven.Server.Documents.Queries
                             return null; //never hit
                         }
 
-                        fieldName = sumFieldToken.Field.Value;
+                        fieldName = GetIndexFieldName(sumFieldToken, parameters);
                         break;
                 }
 
@@ -619,45 +620,81 @@ namespace Raven.Server.Documents.Queries
             return null; // never hit
         }
 
-        private SelectField GetSelectValue(string alias, FieldExpression expressionField)
+        private void ThrowInvalidAggregationMethod(BlittableJsonReaderObject parameters, string methodName)
         {
-            var name = expressionField.Field.Value;
-            var indexOf = name.IndexOf('.');
-            (string Path, bool Array) sourceAlias;
+            throw new InvalidQueryException(methodName + " may only be used in group by queries", QueryText, parameters);
+        }
 
+        private void ThrowInvalidIdInGroupByQuery(BlittableJsonReaderObject parameters)
+        {
+            throw new InvalidQueryException("Cannot use id() method in a group by query", QueryText, parameters);
+        }
+
+        private SelectField GetSelectValue(string alias, FieldExpression expressionField, BlittableJsonReaderObject parameters)
+        {
+            (string Path, bool Array) sourceAlias;
+            string name = expressionField.FieldValue;
             bool hasSourceAlias = false;
             bool array = false;
-            if (indexOf != -1)
+            if (expressionField.Compound.Count > 1)
             {
-                var key = new StringSegment(name, 0, indexOf);
-                if (key.Length > 2 && key[key.Length - 1] == ']' && key[key.Length - 2] == '[')
+                if (expressionField.Compound.Last() == "[]")
                 {
-                    key = key.Subsegment(0, key.Length - 2);
                     array = true;
                 }
-                if (RootAliasPaths.TryGetValue(key, out sourceAlias))
+
+                if (RootAliasPaths.TryGetValue(expressionField.Compound[0], out sourceAlias))
                 {
-                    name = name.Substring(indexOf + 1);
+                    name = expressionField.FieldValueWithoutAlias;
                     hasSourceAlias = true;
                     array = sourceAlias.Array;
                 }
                 else if (RootAliasPaths.Count != 0)
                 {
-                    throw new InvalidOperationException($"Unknown alias {key}, but there are aliases specified in the query ({string.Join(", ", RootAliasPaths.Keys)})");
+                    ThrowUnknownAlias(expressionField.Compound[0], parameters);
                 }
             }
-            else if (RootAliasPaths.TryGetValue(name, out sourceAlias))
+            else if (RootAliasPaths.TryGetValue(expressionField.Compound[0], out sourceAlias))
             {
                 hasSourceAlias = true;
                 if (string.IsNullOrEmpty(alias))
-                    alias = name;
+                    alias = expressionField.Compound[0];
                 array = sourceAlias.Array;
                 name = string.Empty;
             }
             return SelectField.Create(name, alias, sourceAlias.Path, array, hasSourceAlias);
         }
 
-        public string GetIndexFieldName(string fieldNameOrAlias)
+        public string GetIndexFieldName(FieldExpression fe, BlittableJsonReaderObject parameters)
+        {
+            if (_aliasToName.TryGetValue(fe.Compound[0], out var indexFieldName))
+            {
+                if(fe.Compound.Count != 1)
+                    throw new InvalidQueryException("Field alias " + fe.Compound[0] + " cannot be used in a compound field, but got: " + fe, QueryText, parameters);
+
+                return indexFieldName;
+            }
+            if (fe.Compound.Count == 1)
+                return fe.Compound[0];
+
+            if (RootAliasPaths.TryGetValue(fe.Compound[0], out _))
+            {
+                if (fe.Compound.Count == 2)
+                {
+                    return fe.Compound[1];
+                }
+                return fe.FieldValueWithoutAlias;
+            }
+
+            if (RootAliasPaths.Count != 0)
+            {
+                ThrowUnknownAlias(fe.Compound[0], parameters);
+            }
+
+            return fe.FieldValue;
+        }
+
+        public string GetIndexFieldName(string fieldNameOrAlias, BlittableJsonReaderObject parameters)
         {
             if (_aliasToName.TryGetValue(fieldNameOrAlias, out var indexFieldName))
                 return indexFieldName;
@@ -675,7 +712,7 @@ namespace Raven.Server.Documents.Queries
 
             if (RootAliasPaths.Count != 0)
             {
-                throw new InvalidOperationException($"Unknown alias {key}, but there are aliases specified in the query ({string.Join(", ", RootAliasPaths.Keys)})");
+                ThrowUnknownAlias(key, parameters);
             }
 
             return fieldNameOrAlias;
@@ -731,9 +768,10 @@ namespace Raven.Server.Documents.Queries
             throw new InvalidQueryException($"Invalid type of operator in ORDER BY clause. Operator: {type}", queryText, parameters);
         }
 
-        private static void ThrowGroupByCollectionIsNotSupported(string queryText, BlittableJsonReaderObject parameters)
+        private void ThrowUnknownAlias(string alias, BlittableJsonReaderObject parameters)
         {
-            throw new InvalidQueryException("Grouping by collections in auto map reduce indexes is not supported", queryText, parameters);
+            throw new InvalidQueryException($"Unknown alias {alias}, but there are aliases specified in the query ({string.Join(", ", RootAliasPaths.Keys)})",
+                QueryText, parameters);
         }
 
         private class FillWhereFieldsAndParametersVisitor : WhereExpressionVisitor
@@ -758,17 +796,17 @@ namespace Raven.Server.Documents.Queries
             public override void VisitFieldToken(QueryExpression fieldName, QueryExpression value, BlittableJsonReaderObject parameters)
             {
                 if (fieldName is FieldExpression fe)
-                    _metadata.AddWhereField(fe.Field, exact: _insideExact > 0);
+                    _metadata.AddWhereField(fe.FieldValue, parameters, exact: _insideExact > 0);
                 if (fieldName is MethodExpression me)
                 {
                     var methodType = QueryMethod.GetMethodType(me.Name);
                     switch (methodType)
                     {
                         case MethodType.Id:
-                            _metadata.AddWhereField(Constants.Documents.Indexing.Fields.DocumentIdFieldName, exact: _insideExact > 0);
+                            _metadata.AddWhereField(Constants.Documents.Indexing.Fields.DocumentIdFieldName, parameters, exact: _insideExact > 0);
                             break;
                         case MethodType.Count:
-                            _metadata.AddWhereField(Constants.Documents.Indexing.Fields.CountFieldName, exact: _insideExact > 0);
+                            _metadata.AddWhereField(Constants.Documents.Indexing.Fields.CountFieldName, parameters, exact: _insideExact > 0);
                             break;
                         case MethodType.Sum:
                             if (me.Arguments != null && me.Arguments[0] is FieldExpression f)
@@ -782,7 +820,7 @@ namespace Raven.Server.Documents.Queries
             {
                 if (fieldName is FieldExpression fe)
                 {
-                    _metadata.AddWhereField(fe.Field, exact: _insideExact > 0);
+                    _metadata.AddWhereField(fe.FieldValue, parameters, exact: _insideExact > 0);
                 }
                 else if (fieldName is MethodExpression me)
                 {
@@ -838,7 +876,7 @@ namespace Raven.Server.Documents.Queries
                         previousType = valueType;
                 }
                 if (fieldName is FieldExpression fieldExpression)
-                    _metadata.AddWhereField(fieldExpression.Field, exact: _insideExact > 0);
+                    _metadata.AddWhereField(fieldExpression.FieldValue, parameters, exact: _insideExact > 0);
             }
 
             private void ThrowInvalidInValue(BlittableJsonReaderObject parameters)
@@ -870,13 +908,13 @@ namespace Raven.Server.Documents.Queries
                             if (!(arguments[0] is FieldExpression idAliasToken))
                                 throw new InvalidQueryException($"Method 'id()' expects field token as a first argument, got {arguments[0]} type", QueryText, parameters);
 
-                            if (idAliasToken.Field.Equals(_fromAlias) == false)
+                            if (idAliasToken.Compound.Count != 1 || idAliasToken.Compound[0].Equals(_fromAlias) == false)
                                 throw new InvalidQueryException(
-                                    $"Alias passed to method 'id({idAliasToken.Field})' does not match specified document alias ('{_fromAlias}').", QueryText,
+                                    $"Alias passed to method 'id({idAliasToken.Compound[0]})' does not match specified document alias ('{_fromAlias}').", QueryText,
                                     parameters);
                         }
 
-                        _metadata.AddWhereField(Constants.Documents.Indexing.Fields.DocumentIdFieldName);
+                        _metadata.AddWhereField(Constants.Documents.Indexing.Fields.DocumentIdFieldName, parameters);
                         break;
                     case MethodType.StartsWith:
                     case MethodType.EndsWith:
@@ -891,14 +929,14 @@ namespace Raven.Server.Documents.Queries
                             throw new InvalidQueryException($"Method {methodName}() expects value token as second argument, got {arguments[1]} type", QueryText,
                                 parameters);
 
-                        if (methodType == MethodType.Search)
-                            _metadata.AddWhereField(fieldName, search: true);
+                        if (methodType == MethodType.Search || methodType == MethodType.Lucene)
+                            _metadata.AddWhereField(fieldName, parameters, search: true);
                         else
-                            _metadata.AddWhereField(fieldName, exact: _insideExact > 0);
+                            _metadata.AddWhereField(fieldName, parameters, exact: _insideExact > 0);
                         break;
                     case MethodType.Exists:
                         fieldName = ExtractFieldNameFromFirstArgument(arguments, methodName, parameters);
-                        _metadata.AddExistField(fieldName);
+                        _metadata.AddExistField(fieldName, parameters);
                         break;
                     case MethodType.Boost:
 
@@ -982,7 +1020,7 @@ namespace Raven.Server.Documents.Queries
                         break;
                 }
 
-                _metadata.AddWhereField(fieldName, exact: _insideExact > 0);
+                _metadata.AddWhereField(fieldName, parameters, exact: _insideExact > 0);
             }
 
 
@@ -994,7 +1032,7 @@ namespace Raven.Server.Documents.Queries
                 if (!(arguments[0] is FieldExpression f))
                     throw new InvalidQueryException($"Method sum() expects first argument to be field token, got {arguments[0]}", QueryText, parameters);
 
-                _metadata.AddWhereField(f.Field.Value);
+                _metadata.AddWhereField(f.FieldValue, parameters);
             }
 
             private string ExtractFieldNameFromFirstArgument(List<QueryExpression> arguments, string methodName, BlittableJsonReaderObject parameters)
@@ -1002,21 +1040,21 @@ namespace Raven.Server.Documents.Queries
                 if (!(arguments[0] is FieldExpression fieldArgument))
                     throw new InvalidQueryException($"Method {methodName}() expects a field name as its first argument", QueryText, parameters);
 
-                return fieldArgument.Field;
+                return fieldArgument.FieldValue;
             }
         }
 
-        public string GetUpdateBody()
+        public string GetUpdateBody(BlittableJsonReaderObject parameters)
         {
             if (Query.UpdateBody == null)
-                throw new InvalidOperationException("UPDATE cluase was not specified");
+                throw new InvalidQueryException("UPDATE cluase was not specified", QueryText, parameters);
 
             var updateBody = Query.UpdateBody;
 
             if (Query.From.Alias == null) // will have to use this 
             {
                 if (Query.Load != null)
-                    throw new InvalidOperationException("When using LOAD, a from alias is required");
+                    throw new InvalidQueryException("When using LOAD, a from alias is required", QueryText, parameters);
                 return updateBody;
             }
 
@@ -1030,43 +1068,22 @@ namespace Raven.Server.Documents.Queries
             {
                 foreach (var load in Query.Load)
                 {
-                    var fieldExpression = load.Expression as FieldExpression;
-                    if (fieldExpression == null)
-                        throw new InvalidOperationException("Load clause can only load paths with fields, but got " + load.Expression);
-                    var fullFieldPath = fieldExpression.Field.Value;
-                    if (fullFieldPath.StartsWith(fromAlias) == false)
-                        throw new InvalidOperationException("Load clause can only load paths starting from the from alias: " + fromAlias);
-                    var indexOfDot = fullFieldPath.IndexOf('.', fromAlias.Length);
-                    fullFieldPath = fullFieldPath.Substring(indexOfDot + 1);
+                    if (!(load.Expression is FieldExpression fieldExpression))
+                        throw new InvalidQueryException("Load clause can only load paths with fields, but got " + load.Expression, QueryText, parameters);
+                    if (fieldExpression.Compound[0] != fromAlias)
+                        throw new InvalidQueryException("Load clause can only load paths starting from the from alias: " + fromAlias, QueryText, parameters);
 
                     sb.Append("var ").Append(load.Alias)
                         .Append(" = loadPath(")
                         .Append(fromAlias)
                         .Append(", '")
-                        .Append(fullFieldPath.Trim())
+                        .Append(string.Join(".",fieldExpression.Compound.Skip(1)).Trim())
                         .AppendLine("');");
                 }
             }
             sb.Append(updateBody);
 
             return sb.ToString();
-        }
-
-        private void EnsureValidGroupByField(string groupByFieldName, BlittableJsonReaderObject parameters)
-        {
-            var indexOfSeparatorStart = groupByFieldName.IndexOf(BlittableJsonTraverser.CollectionSeparator[0]);
-
-            if (indexOfSeparatorStart != -1)
-            {
-                if (groupByFieldName.Length > indexOfSeparatorStart + BlittableJsonTraverser.CollectionSeparator.Length)
-                {
-                    if (groupByFieldName[indexOfSeparatorStart + 1] == BlittableJsonTraverser.CollectionSeparator[1] &&
-                        groupByFieldName[indexOfSeparatorStart + 2] == BlittableJsonTraverser.CollectionSeparator[2])
-                    {
-                        ThrowGroupByCollectionIsNotSupported(QueryText, parameters);
-                    }
-                }
-            }
         }
     }
 }

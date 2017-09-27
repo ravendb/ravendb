@@ -63,8 +63,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 var result = new RestoreResult
                 {
-                    DataDirectory = _restoreConfiguration.DataDirectory,
-                    JournalStoragePath = _restoreConfiguration.JournalsStoragePath
+                    DataDirectory = _restoreConfiguration.DataDirectory
                 };
 
                 onProgress.Invoke(result.Progress);
@@ -81,7 +80,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                     // restore the snapshot
                     restoreSettings = SnapshotRestore(firstFile,
                         _restoreConfiguration.DataDirectory,
-                        _restoreConfiguration.JournalsStoragePath,
                         onProgress,
                         result);
                     
@@ -112,7 +110,6 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 databaseRecord.Settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false";
                 databaseRecord.Settings[RavenConfiguration.GetKey(x => x.Core.DataDirectory)] = _restoreConfiguration.DataDirectory;
-                databaseRecord.Settings[RavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)] = _restoreConfiguration.JournalsStoragePath;
 
                 if (_hasEncryptionKey)
                 {
@@ -128,10 +125,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                         {
                             DataDirectory = new PathSetting(_restoreConfiguration.DataDirectory),
                             RunInMemory = false
-                        },
-                        Storage =
-                        {
-                            JournalsStoragePath = new PathSetting(_restoreConfiguration.JournalsStoragePath)
                         }
                     }, _serverStore))
                 {
@@ -252,15 +245,6 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             if (hasRestoreDataDirectory == false)
                 _restoreConfiguration.DataDirectory = GetDataDirectory();
-
-            var hasJournalStoragePath = string.IsNullOrWhiteSpace(_restoreConfiguration.JournalsStoragePath) == false;
-            if (hasJournalStoragePath &&
-                HasFilesOrDirectories(_restoreConfiguration.JournalsStoragePath))
-                throw new ArgumentException("Journals directory must be empty of any files or folders, " +
-                                            $"path: {_restoreConfiguration.JournalsStoragePath}");
-
-            if (hasJournalStoragePath == false)
-                _restoreConfiguration.JournalsStoragePath = _restoreConfiguration.DataDirectory;
 
             if (string.IsNullOrWhiteSpace(_restoreConfiguration.IndexingStoragePath) == false &&
                 HasFilesOrDirectories(_restoreConfiguration.IndexingStoragePath))
@@ -423,7 +407,6 @@ namespace Raven.Server.Documents.PeriodicBackup
         private RestoreSettings SnapshotRestore(
             string backupPath,
             string dataDirectory,
-            string journalStoragePath,
             Action<IOperationProgress> onProgress,
             RestoreResult restoreResult)
         {
@@ -434,7 +417,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             BackupMethods.Full.Restore(
                 backupPath,
                 dataDirectory,
-                journalStoragePath,
+                journalDir: null,
                 settingsKey: RestoreSettings.FileName,
                 onSettings: settingsStream =>
                 {

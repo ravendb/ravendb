@@ -1,14 +1,14 @@
 using Lextm.SharpSnmpLib;
 using Raven.Server.ServerWide;
 
-namespace Raven.Server.Monitoring.Snmp.Objects.Server
+namespace Raven.Server.Monitoring.Snmp.Objects.Cluster
 {
     public class ClusterNodeState : ScalarObjectBase<OctetString>
     {
         private readonly ServerStore _store;
 
         public ClusterNodeState(ServerStore store)
-            : base("3.1.2")
+            : base(SnmpOids.Cluster.NodeState)
         {
             _store = store;
         }

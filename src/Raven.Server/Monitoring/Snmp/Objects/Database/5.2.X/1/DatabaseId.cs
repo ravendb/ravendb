@@ -8,7 +8,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
         private OctetString _id;
 
         public DatabaseId(string databaseName, DatabasesLandlord landlord, int index)
-            : base(databaseName, landlord, "5.2.{0}.1.11", index)
+            : base(databaseName, landlord, SnmpOids.Databases.Id, index)
         {
 
         }

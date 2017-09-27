@@ -151,18 +151,15 @@ namespace Raven.Server.Documents.Queries.AST
 
         public override void VisitField(FieldExpression field)
         {
-            var fieldValue = field.Field.Value;
-            var firstPeriod = fieldValue.IndexOf('.');
-
-            if ((firstPeriod == -1 && _knownAliases.Contains(fieldValue) == false) ||
-                
-                (firstPeriod != -1 && _knownAliases.Contains(fieldValue.Substring(0, firstPeriod)) == false) 
-                )
-            {
+            if(_knownAliases.Contains(field.Compound[0]) == false)
                 _sb.Append("this.");
+
+            for (int i = 0; i < field.Compound.Count; i++)
+            {
+                _sb.Append(field.Compound[i]);
+                if (i + 1 != field.Compound.Count)
+                    _sb.Append(".");
             }
-            
-            _sb.Append(fieldValue);
         }
 
         public override void VisitTrue()

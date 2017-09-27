@@ -3,14 +3,18 @@
 import adminLogsConfigEntry = require("models/database/debug/adminLogsConfigEntry");
 
 class adminLogsConfig {
-    entries = ko.observableArray<adminLogsConfigEntry>();
+    entries = ko.observableArray<adminLogsConfigEntry>([]);
     maxEntries = ko.observable<number>();
 
-    clone(): adminLogsConfig {
-        var newConfig = new adminLogsConfig();
-        newConfig.maxEntries(this.maxEntries());
-        newConfig.entries($.map(this.entries() || [], (e, idx) => e.clone()));
-        return newConfig;
+    copyTo(targetConfig: adminLogsConfig) {
+        targetConfig.maxEntries(this.maxEntries());
+        targetConfig.entries(this.entries().map(x => x.clone()));
+    }
+    
+    static empty() {
+        const config = new adminLogsConfig();
+        config.maxEntries(100000);
+        return config;
     }
 }
 

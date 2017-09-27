@@ -41,7 +41,7 @@ namespace Raven.Server.Documents
         private static readonly Slice TombstonesPrefix;
         private static readonly Slice DeletedEtagsSlice;
 
-        public static readonly TableSchema DocsSchema = new TableSchema()
+        public static readonly TableSchema DocsSchema = new TableSchema
         {
             TableType = (byte)TableType.Documents
         };
@@ -237,9 +237,7 @@ namespace Raven.Server.Documents
                 ? config.Storage.TempPath.FullPath
                 : basePath.Combine("Scratch").FullPath;
 
-            var journalPath = config.Storage.JournalsStoragePath != null
-                ? config.Storage.JournalsStoragePath.FullPath
-                : basePath.Combine("Journal").FullPath;
+            var journalPath = basePath.Combine("Journal").FullPath;
 
             if (config.Core.RunInMemory)
                 return StorageEnvironmentOptions.CreateMemoryOnly(
@@ -716,7 +714,7 @@ namespace Raven.Server.Documents
             return false;
         }
 
-        public IEnumerable<DocumentTombstone> GetTombstonesFrom(DocumentsOperationContext context,  long etag, int start, int take)
+        public IEnumerable<DocumentTombstone> GetTombstonesFrom(DocumentsOperationContext context, long etag, int start, int take)
         {
             var table = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
 
@@ -845,7 +843,7 @@ namespace Raven.Server.Documents
         }
 
         public bool HasTombstonesWithDocumentEtagBetween(DocumentsOperationContext context, string collection,
-            long start, 
+            long start,
             long end)
         {
             if (start >= end)
@@ -1581,7 +1579,7 @@ namespace Raven.Server.Documents
             return Slice.From(context.Allocator, ptr, size, ByteStringType.Immutable, out slice);
         }
     }
-    
+
     public enum TableType : byte
     {
         None = 0,

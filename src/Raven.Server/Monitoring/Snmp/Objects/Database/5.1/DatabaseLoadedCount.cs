@@ -1,14 +1,14 @@
 using Lextm.SharpSnmpLib;
 using Raven.Server.Documents;
 
-namespace Raven.Server.Monitoring.Snmp.Objects.Documents
+namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
     public class DatabaseLoadedCount : ScalarObjectBase<Integer32>
     {
         private readonly DatabasesLandlord _landlord;
 
         public DatabaseLoadedCount(DatabasesLandlord landlord)
-            : base("5.1.2")
+            : base(SnmpOids.Databases.General.LoadedCount)
         {
             _landlord = landlord;
         }

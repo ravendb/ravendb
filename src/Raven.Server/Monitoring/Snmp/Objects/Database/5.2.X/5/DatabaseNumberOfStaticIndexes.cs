@@ -4,7 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
 using System.Linq;
 using Lextm.SharpSnmpLib;
 using Raven.Client.Documents.Indexes;
@@ -15,7 +14,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
     public class DatabaseNumberOfStaticIndexes : DatabaseScalarObjectBase<Integer32>
     {
         public DatabaseNumberOfStaticIndexes(string databaseName, DatabasesLandlord landlord, int index)
-            : base(databaseName, landlord, "5.2.{0}.5.2", index)
+            : base(databaseName, landlord, SnmpOids.Databases.NumberOfStaticIndexes, index)
         {
         }
 

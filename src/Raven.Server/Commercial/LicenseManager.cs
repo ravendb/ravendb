@@ -516,35 +516,37 @@ namespace Raven.Server.Commercial
             if (CanActivateLicense(newLicenseStatus, out var licenseLimit) == false)
                 return licenseLimit;
 
-            if (ensureNotPassive)
-                _serverStore.EnsureNotPassive();
-
-            try
+            using (DisableCalculatingCoresCount())
             {
-                using (DisableCalculatingCoresCount())
+                if (ensureNotPassive)
+                    _serverStore.EnsureNotPassive();
+
+                try
+                {
+
                     await _serverStore.PutLicenseAsync(license);
 
-                _licenseStatus.Attributes = licenseAttributes;
-                _licenseStatus.Error = false;
-                _licenseStatus.Message = null;
-                _licenseStatus.Id = license.Id;
+                    _licenseStatus.Attributes = licenseAttributes;
+                    _licenseStatus.Error = false;
+                    _licenseStatus.Message = null;
+                    _licenseStatus.Id = license.Id;
+                }
+                catch (Exception e)
+                {
+                    var message = $"Could not save the following license:{Environment.NewLine}" +
+                                  $"Id: {license.Id}{Environment.NewLine}" +
+                                  $"Name: {license.Name}{Environment.NewLine}" +
+                                  $"Keys: [{(license.Keys != null ? string.Join(", ", license.Keys) : "N/A")}]";
 
-                CalculateLicenseLimits(forceFetchingNodeInfo: true);
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info(message, e);
 
-                return null;
+                    throw new InvalidDataException("Could not save license!", e);
+                }
             }
-            catch (Exception e)
-            {
-                var message = $"Could not save the following license:{Environment.NewLine}" +
-                              $"Id: {license.Id}{Environment.NewLine}" +
-                              $"Name: {license.Name}{Environment.NewLine}" +
-                              $"Keys: [{(license.Keys != null ? string.Join(", ", license.Keys) : "N/A")}]";
 
-                if (Logger.IsInfoEnabled)
-                    Logger.Info(message, e);
-
-                throw new InvalidDataException("Could not save license!", e);
-            }
+            CalculateLicenseLimits(forceFetchingNodeInfo: true);
+            return null;
         }
 
         private IDisposable DisableCalculatingCoresCount()

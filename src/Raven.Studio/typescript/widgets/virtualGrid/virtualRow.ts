@@ -5,12 +5,12 @@ import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
  * A virtual row. Contains an element displayed as a row in the grid. Gets recycled as the grid scrolls in order to create and manage fewer elements.
  */
 class virtualRow {
-    private item: Object | null = null; // The last item populated into this virtual row.
+    private _item: Object | null = null; // The last item populated into this virtual row.
     private isItemSelected = false;
     readonly element: JQuery;
     private _top = -9999;
     private _index = -1;
-    private even: boolean | null = null;
+    private _even: boolean | null = null;
 
     static readonly height = 36;
 
@@ -23,7 +23,7 @@ class virtualRow {
     }
 
     get data(): Object {
-        return this.item;
+        return this._item;
     }
 
     /**
@@ -34,7 +34,7 @@ class virtualRow {
     }
 
     get hasData(): boolean {
-        return !!this.item;
+        return !!this._item;
     }
 
     isOffscreen(scrollTop: number, scrollBottom: number) {
@@ -49,9 +49,9 @@ class virtualRow {
 
     populate(item: Object | null, rowIndex: number, isSelected: boolean, columns: virtualColumn[]) {
         // Optimization: don't regenerate this row HTML if nothing's changed since last render.
-        const alreadyDisplayingData = !!item && this.item === item && this._index === rowIndex && this.isItemSelected === isSelected;
+        const alreadyDisplayingData = !!item && this._item === item && this._index === rowIndex && this.isItemSelected === isSelected;
         if (!alreadyDisplayingData) {
-            this.item = item;
+            this._item = item;
             this._index = rowIndex;
 
             // If we have data, fill up this row content.
@@ -71,10 +71,10 @@ class virtualRow {
 
             // Update the "even" status. Used for striping the virtual rows.
             const newEvenState = rowIndex % 2 === 0;
-            const hasChangedEven = this.even !== newEvenState;
+            const hasChangedEven = this._even !== newEvenState;
             if (hasChangedEven) {
-                this.even = newEvenState;
-                if (this.even) {
+                this._even = newEvenState;
+                if (this._even) {
                     this.element.addClass("even");
                 } else {
                     this.element.removeClass("even");
@@ -88,11 +88,11 @@ class virtualRow {
     }
 
     reset() {
-        this.item = null;
+        this._item = null;
         this.isItemSelected = false;
         this.setElementTop(-9999);
         this._index = -1;
-        this.even = null;
+        this._even = null;
         this.element.text("");
         this.element.removeClass("selected");
     }

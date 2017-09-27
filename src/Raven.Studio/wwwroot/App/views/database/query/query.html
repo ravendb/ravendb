@@ -167,13 +167,13 @@
             </div>
         </div>
         <div class="flex-window-head">
-            <button type="button" class="btn btn-sm btn-default" 
+            <button type="button" class="btn btn-sm" 
                     data-bind="css: { active: currentTab() === 'results'}, click: goToResultsTab">
-                Results <span data-bind="text: totalResults().toLocaleString()"></span>
+                Results &nbsp; <span class="label" data-bind="text: totalResults().toLocaleString(), css: { 'label-primary': totalResults(), 'label-default': !totalResults() }"></span>
             </button>
-            <button type="button" class="btn btn-sm btn-default" 
+            <button type="button" class="btn btn-sm" 
                     data-bind="css: { active: currentTab() === 'includes' }, click: goToIncludesTab">
-                Includes <span data-bind="text: totalIncludes().toLocaleString()"></span>
+                Includes &nbsp; <span class="label" data-bind="text: totalIncludes().toLocaleString(), css: { 'label-primary': totalIncludes(), 'label-default': !totalIncludes()}"></span>
             </button>
         </div>
     </div>

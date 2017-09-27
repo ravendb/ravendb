@@ -8,6 +8,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Collections;
+using Sparrow.Global;
 using Sparrow.Json.Parsing;
 using Sparrow.LowMemory;
 using Sparrow.Threading;
@@ -108,6 +109,10 @@ namespace Sparrow.Json
 
         public unsafe class ManagedPinnedBuffer : IDisposable
         {
+            public const int WholeBufferSize = 256 * Constants.Size.Kilobyte;
+            public const int Size = WholeBufferSize / 4;
+            
+
             public readonly ArraySegment<byte> Buffer;
             public readonly int Length;
             public int Valid,Used;
@@ -123,7 +128,7 @@ namespace Sparrow.Json
 
             public static ManagedPinnedBuffer LongLivedInstance()
             {
-                var buffer = new byte[1024 * 128]; // making sure that this is on the LOH
+                var buffer = new byte[WholeBufferSize]; // making sure that this is on the LOH
                 var handle = GCHandle.Alloc(buffer, GCHandleType.Pinned);
                 try
                 {
@@ -139,15 +144,15 @@ namespace Sparrow.Json
 
             public static void Add(Stack<ManagedPinnedBuffer> stack)
             {
-                var buffer = new byte[1024 * 128]; // making sure that this is on the LOH
+                var buffer = new byte[WholeBufferSize]; // making sure that this is on the LOH
                 var handle = GCHandle.Alloc(buffer, GCHandleType.Pinned);
                 try
                 {
                     var ptr = (byte*)handle.AddrOfPinnedObject();
-                    stack.Push(new ManagedPinnedBuffer(new ArraySegment<byte>(buffer, 0, 32 * 1024), ptr));
-                    stack.Push(new ManagedPinnedBuffer(new ArraySegment<byte>(buffer, 32 * 1024, 32 * 1024), ptr + 32 * 1024));
-                    stack.Push(new ManagedPinnedBuffer(new ArraySegment<byte>(buffer, 64 * 1024, 32 * 1024), ptr + 64 * 1024));
-                    stack.Push(new ManagedPinnedBuffer(new ArraySegment<byte>(buffer, 96 * 1024, 32 * 1024), ptr + 96 * 1024) { _handle = handle });
+                    stack.Push(new ManagedPinnedBuffer(new ArraySegment<byte>(buffer, 0 * Size, Size), ptr));
+                    stack.Push(new ManagedPinnedBuffer(new ArraySegment<byte>(buffer, 1 * Size, Size), ptr + 1 * Size));
+                    stack.Push(new ManagedPinnedBuffer(new ArraySegment<byte>(buffer, 2 * Size, Size), ptr + 2 * Size));
+                    stack.Push(new ManagedPinnedBuffer(new ArraySegment<byte>(buffer, 3 * Size, Size), ptr + 3 * Size) { _handle = handle });
                 }
                 catch (Exception)
                 {

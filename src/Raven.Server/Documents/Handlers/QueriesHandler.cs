@@ -330,8 +330,8 @@ namespace Raven.Server.Documents.Handlers
                     throw new BadRequestException("Missing 'Query' property.");
 
                 var query = IndexQueryServerSide.Create(queryJson, context, Database.QueryMetadataCache, QueryType.Update);
-
-                var patch = new PatchRequest(query.Metadata.GetUpdateBody(), PatchRequestType.Patch);
+                
+                var patch = new PatchRequest(query.Metadata.GetUpdateBody(query.QueryParameters), PatchRequestType.Patch);
 
                 var docId = GetDocumentId(query);
 
@@ -445,7 +445,7 @@ namespace Raven.Server.Documents.Handlers
 
             var query = IndexQueryServerSide.Create(queryJson, context, Database.QueryMetadataCache, QueryType.Update);
 
-            var patch = new PatchRequest(query.Metadata.GetUpdateBody(), PatchRequestType.Patch);
+            var patch = new PatchRequest(query.Metadata.GetUpdateBody(query.QueryParameters), PatchRequestType.Patch);
 
             if (query.Metadata.IsDynamic == false)
             {

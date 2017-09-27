@@ -30,21 +30,39 @@ namespace Sparrow.Json
         public static readonly byte[] TrueBuffer = { (byte)'t', (byte)'r', (byte)'u', (byte)'e', };
         public static readonly byte[] FalseBuffer = { (byte)'f', (byte)'a', (byte)'l', (byte)'s', (byte)'e', };
 
+        private static readonly byte[] EscapeCharacters;
+
         private int _pos;
         private readonly byte* _buffer;
-        private readonly int _bufferLen;
         private JsonOperationContext.ReturnBuffer _returnBuffer;
         private readonly JsonOperationContext.ManagedPinnedBuffer _pinnedBuffer;
-        private readonly AllocatedMemoryData _dateTimeMemory;
+        private readonly AllocatedMemoryData _parserAuxiliarMemory;
+
+        static BlittableJsonTextWriter()
+        {
+            EscapeCharacters = new byte[256];
+            for (int i = 0; i < EscapeCharacters.Length; i++)
+                EscapeCharacters[i] = 255;
+
+            EscapeCharacters[(byte)'\b'] = (byte)'b';
+            EscapeCharacters[(byte)'\t'] = (byte)'t';
+            EscapeCharacters[(byte)'\n'] = (byte)'n';
+            EscapeCharacters[(byte)'\f'] = (byte)'f';
+            EscapeCharacters[(byte)'\r'] = (byte)'r';
+            EscapeCharacters[(byte)'\\'] = (byte)'\\';
+            EscapeCharacters[(byte)'/'] = (byte)'/';
+            EscapeCharacters[(byte)'"'] = (byte)'"';
+        }
 
         public BlittableJsonTextWriter(JsonOperationContext context, Stream stream)
         {
             _context = context;
             _stream = stream;
+
             _returnBuffer = context.GetManagedBuffer(out _pinnedBuffer);
             _buffer = _pinnedBuffer.Pointer;
-            _bufferLen = _pinnedBuffer.Length;
-            _dateTimeMemory = context.GetMemory(32);
+
+            _parserAuxiliarMemory = context.GetMemory(32);
         }
 
         public int Position => _pos;
@@ -160,9 +178,9 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteDateTime(DateTime value, bool isUtc)
         {
-            int size = value.GetDefaultRavenFormat(_dateTimeMemory, isUtc);
+            int size = value.GetDefaultRavenFormat(_parserAuxiliarMemory, isUtc);
 
-            var strBuffer = _dateTimeMemory.Address;
+            var strBuffer = _parserAuxiliarMemory.Address;
 
             WriteRawStringWhichMustBeWithoutEscapeChars(strBuffer, size);
         }
@@ -187,107 +205,180 @@ namespace Sparrow.Json
             var strBuffer = str.Buffer;
             var size = str.Size;
 
-            EnsureBuffer(1);
-            _buffer[_pos++] = Quote;
             var escapeSequencePos = size;
             var numberOfEscapeSequences = BlittableJsonReaderBase.ReadVariableSizeInt(str.Buffer, ref escapeSequencePos);
-            if (numberOfEscapeSequences == 0)
+
+            // We ensure our buffer will have enough space to deal with the whole string.
+            int bufferSize = 2 * numberOfEscapeSequences + size + 1;
+            if (bufferSize >= JsonOperationContext.ManagedPinnedBuffer.Size)
             {
-                WriteRawString(strBuffer, size);
-
-                EnsureBuffer(1);
-                _buffer[_pos++] = Quote;
-
+                UnlikelyWriteLargeString(strBuffer, size, numberOfEscapeSequences, escapeSequencePos); // OK, do it the slow way. 
                 return;
             }
 
-            UnlikelyWriteEscapeSequences(strBuffer, size, numberOfEscapeSequences, escapeSequencePos);
+            EnsureBuffer(size + 2);
+            _buffer[_pos++] = Quote;
+
+            if (numberOfEscapeSequences == 0)
+            {
+                // PERF: Fast Path. 
+                WriteRawString(strBuffer, size);
+            }
+            else
+            {
+                UnlikelyWriteEscapeSequences(strBuffer, size, numberOfEscapeSequences, escapeSequencePos);
+            }
+
+            _buffer[_pos++] = Quote;
         }
 
         private void UnlikelyWriteEscapeSequences(byte* strBuffer, int size, int numberOfEscapeSequences, int escapeSequencePos)
         {
+            // We ensure our buffer will have enough space to deal with the whole string.
+            int bufferSize = 2 * numberOfEscapeSequences + size + 1;
+
+            EnsureBuffer(bufferSize);
+
             var ptr = strBuffer;
+            var buffer = _buffer;
             while (numberOfEscapeSequences > 0)
-            {
+            {                
                 numberOfEscapeSequences--;
                 var bytesToSkip = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, ref escapeSequencePos);
                 WriteRawString(strBuffer, bytesToSkip);
                 strBuffer += bytesToSkip;
                 size -= bytesToSkip + 1 /*for the escaped char we skip*/;
                 var b = *(strBuffer++);
+
+                int auxPos = _pos;
+                buffer[auxPos++] = (byte)'\\';
+                buffer[auxPos++] = GetEscapeCharacter(b);
+                _pos = auxPos;
+            }
+
+            // write remaining (or full string) to the buffer in one shot
+            WriteRawString(strBuffer, size);
+        }
+
+        private void UnlikelyWriteLargeString(byte* strBuffer, int size, int numberOfEscapeSequences, int escapeSequencePos)
+        {
+            var ptr = strBuffer;
+
+            EnsureBuffer(1);
+            _buffer[_pos++] = Quote;
+
+            while (numberOfEscapeSequences > 0)
+            {
+                numberOfEscapeSequences--;
+                var bytesToSkip = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, ref escapeSequencePos);
+
+                EnsureBuffer(bytesToSkip);
+                UnlikelyWriteLargeRawString(strBuffer, bytesToSkip);
+                strBuffer += bytesToSkip;
+                size -= bytesToSkip + 1 /*for the escaped char we skip*/;
+                var b = *(strBuffer++);
+
                 EnsureBuffer(2);
                 _buffer[_pos++] = (byte)'\\';
                 _buffer[_pos++] = GetEscapeCharacter(b);
             }
+
             // write remaining (or full string) to the buffer in one shot
-            WriteRawString(strBuffer, size);
+            UnlikelyWriteLargeRawString(strBuffer, size);
 
             EnsureBuffer(1);
             _buffer[_pos++] = Quote;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private byte GetEscapeCharacter(byte b)
         {
-            switch (b)
-            {
-                case (byte)'\b':
-                    return (byte)'b';
-                case (byte)'\t':
-                    return (byte)'t';
-                case (byte)'\n':
-                    return (byte)'n';
-                case (byte)'\f':
-                    return (byte)'f';
-                case (byte)'\r':
-                    return (byte)'r';
-                case (byte)'\\':
-                    return (byte)'\\';
-                case (byte)'/':
-                    return (byte)'/';
-                case (byte)'"':
-                    return (byte)'"';
-                default:
-                    throw new InvalidOperationException("Invalid escape char '" + (char)b + "' numeric value is: " + b);
-            }
+            byte r = EscapeCharacters[b];
+            if (r == 255)
+                ThrowInvalidEscapeCharacter(b);
+            return r;
+        }
+
+        private void ThrowInvalidEscapeCharacter(byte b)
+        {
+            throw new InvalidOperationException("Invalid escape char '" + (char)b + "' numeric value is: " + b);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteString(LazyCompressedStringValue str)
         {
-            AllocatedMemoryData allocated;
-            var strBuffer = str.DecompressToTempBuffer(out allocated);
+            var strBuffer = str.DecompressToTempBuffer(out AllocatedMemoryData allocated);
 
             try
             {
-                var size = str.UncompressedSize;
+                var strSrcBuffer = str.Buffer;
 
-                EnsureBuffer(1);
-                _buffer[_pos++] = Quote;
+                var size = str.UncompressedSize;
                 var escapeSequencePos = str.CompressedSize;
-                var numberOfEscapeSequences = BlittableJsonReaderBase.ReadVariableSizeInt(str.Buffer, ref escapeSequencePos);
+                var numberOfEscapeSequences = BlittableJsonReaderBase.ReadVariableSizeInt(strSrcBuffer, ref escapeSequencePos);
+
+                // We ensure our buffer will have enough space to deal with the whole string.
+                int bufferSize = 2 * numberOfEscapeSequences + size + 2;
+                if (bufferSize >= JsonOperationContext.ManagedPinnedBuffer.Size)
+                    goto WriteLargeCompressedString; // OK, do it the slow way instead.
+
+                EnsureBuffer(bufferSize);
+
+                _buffer[_pos++] = Quote;
                 while (numberOfEscapeSequences > 0)
                 {
                     numberOfEscapeSequences--;
-                    var bytesToSkip = BlittableJsonReaderBase.ReadVariableSizeInt(str.Buffer, ref escapeSequencePos);
+                    var bytesToSkip = BlittableJsonReaderBase.ReadVariableSizeInt(strSrcBuffer, ref escapeSequencePos);
                     WriteRawString(strBuffer, bytesToSkip);
                     strBuffer += bytesToSkip;
                     size -= bytesToSkip + 1 /*for the escaped char we skip*/;
                     var b = *(strBuffer++);
-                    EnsureBuffer(2);
-                    _buffer[_pos++] = (byte)'\\';
-                    _buffer[_pos++] = GetEscapeCharacter(b);
+
+                    var auxPos = _pos;
+                    _buffer[auxPos++] = (byte)'\\';
+                    _buffer[auxPos++] = GetEscapeCharacter(b);
+                    _pos = auxPos;
                 }
+
                 // write remaining (or full string) to the buffer in one shot
                 WriteRawString(strBuffer, size);
 
-                EnsureBuffer(1);
                 _buffer[_pos++] = Quote;
+
+                return;
+
+                WriteLargeCompressedString: UnlikelyWriteCompressedString(numberOfEscapeSequences, strSrcBuffer, escapeSequencePos, strBuffer, size);
             }
             finally
             {
                 if (allocated != null) //precaution
                     _context.ReturnMemory(allocated);
             }
+        }
+
+        private void UnlikelyWriteCompressedString(int numberOfEscapeSequences, byte* strSrcBuffer, int escapeSequencePos, byte* strBuffer, int size)
+        {
+            EnsureBuffer(1);
+            _buffer[_pos++] = Quote;
+            while (numberOfEscapeSequences > 0)
+            {
+                numberOfEscapeSequences--;
+                var bytesToSkip = BlittableJsonReaderBase.ReadVariableSizeInt(strSrcBuffer, ref escapeSequencePos);
+                WriteRawString(strBuffer, bytesToSkip);
+                strBuffer += bytesToSkip;
+                size -= bytesToSkip + 1 /*for the escaped char we skip*/;
+                var b = *(strBuffer++);
+
+                EnsureBuffer(2);
+                _buffer[_pos++] = (byte)'\\';
+                _buffer[_pos++] = GetEscapeCharacter(b);
+            }
+
+            // write remaining (or full string) to the buffer in one shot
+            WriteRawString(strBuffer, size);
+
+            EnsureBuffer(1);
+            _buffer[_pos++] = Quote;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -299,11 +390,12 @@ namespace Sparrow.Json
             _buffer[_pos++] = Quote;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void WriteRawString(byte* buffer, int size)
         {
-            if (size < _bufferLen)
+            // PERF: We are no longer ensuring the buffer has enough size anymore. Caller must ensure it is so.
+            if (size < JsonOperationContext.ManagedPinnedBuffer.Size)
             {
-                EnsureBuffer(size);
                 Memory.Copy(_buffer + _pos, buffer, size);
                 _pos += size;
                 return;
@@ -318,7 +410,7 @@ namespace Sparrow.Json
             var posInStr = 0;
             while (posInStr < size)
             {
-                var amountToCopy = Math.Min(size - posInStr, _bufferLen);
+                var amountToCopy = Math.Min(size - posInStr, JsonOperationContext.ManagedPinnedBuffer.Size);
                 Flush();
                 Memory.Copy(_buffer, buffer + posInStr, amountToCopy);
                 posInStr += amountToCopy;
@@ -354,26 +446,17 @@ namespace Sparrow.Json
             _buffer[_pos++] = EndObject;
         }
 
-
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void EnsureBuffer(int len)
         {
-            if (_pos + len < _bufferLen)
-                return;
-            if (len >= _bufferLen)
+            if (len >= JsonOperationContext.ManagedPinnedBuffer.Size)
                 ThrowValueTooBigForBuffer();
+            if (_pos + len < JsonOperationContext.ManagedPinnedBuffer.Size)
+                return;
 
             Flush();
         }
 
-        private static void ThrowValueTooBigForBuffer()
-        {
-            // ReSharper disable once NotResolvedInText
-            throw new ArgumentOutOfRangeException("len");
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Flush()
         {
             if (_stream == null)
@@ -382,6 +465,12 @@ namespace Sparrow.Json
                 return;
             _stream.Write(_pinnedBuffer.Buffer.Array, _pinnedBuffer.Buffer.Offset, _pos);
             _pos = 0;
+        }
+
+        private static void ThrowValueTooBigForBuffer()
+        {
+            // ReSharper disable once NotResolvedInText
+            throw new ArgumentOutOfRangeException("len");
         }
 
         private void ThrowStreamClosed()
@@ -452,27 +541,37 @@ namespace Sparrow.Json
                 _buffer[_pos++] = (byte)'0';
                 return;
             }
-            int len = 1;
 
-            for (var i = val / 10; i != 0; i /= 10)
-            {
-                len++;
-            }
+            var localBuffer = _parserAuxiliarMemory.Address;
+
+            int idx = 0;
+            bool negative = false;
             if (val < 0)
             {
-                EnsureBuffer(len + 1);
-                _buffer[_pos++] = (byte)'-';
+                negative = true;
+                val = -val; // value is positive now.
             }
-            else
+
+            do
             {
-                EnsureBuffer(len);
-            }
-            for (int i = len - 1; i >= 0; i--)
-            {
-                _buffer[_pos + i] = (byte)('0' + Math.Abs(val % 10));
+                localBuffer[idx++] = (byte)('0' + val % 10);
                 val /= 10;
             }
-            _pos += len;
+            while (val != 0);
+
+            if (negative)
+                localBuffer[idx++] = (byte)'-';
+
+            EnsureBuffer(idx);
+
+            var buffer = _buffer;
+            int auxPos = _pos;
+
+            do
+                buffer[auxPos++] = localBuffer[--idx];
+            while (idx > 0);
+
+            _pos = auxPos;          
         }
 
         public void WriteDouble(LazyNumberValue val)
@@ -496,6 +595,7 @@ namespace Sparrow.Json
             }
 
             var lazyStringValue = val.Inner;
+            EnsureBuffer(lazyStringValue.Size);
             WriteRawString(lazyStringValue.Buffer, lazyStringValue.Size);
         }
 
@@ -530,6 +630,7 @@ namespace Sparrow.Json
 
             using (var lazyStr = _context.GetLazyString(val.ToString(CultureInfo.InvariantCulture)))
             {
+                EnsureBuffer(lazyStr.Size);
                 WriteRawString(lazyStr.Buffer, lazyStr.Size);
             }
         }
@@ -547,7 +648,7 @@ namespace Sparrow.Json
             finally
             {
                 _returnBuffer.Dispose();
-                _context.ReturnMemory(_dateTimeMemory);
+                _context.ReturnMemory(_parserAuxiliarMemory);
             }
         }
 
@@ -580,7 +681,7 @@ namespace Sparrow.Json
             var totalWritten = 0;
             while (leftToWrite > 0)
             {
-                var toWrite = Math.Min(_bufferLen, leftToWrite);
+                var toWrite = Math.Min(JsonOperationContext.ManagedPinnedBuffer.Size, leftToWrite);
                 Memory.Copy(_buffer, p + totalWritten, toWrite);
                 _pos += toWrite;
                 totalWritten += toWrite;

@@ -279,6 +279,16 @@ class query extends viewModelBase {
             .done(() => this.selectInitialQuery(indexNameOrRecentQueryHash));
     }
 
+    deactivate(): void {
+        super.deactivate();
+        this.saveLastQuery();
+    }
+
+    private saveLastQuery() {
+        const lastQuery = this.criteria().queryText();
+        recentQueriesStorage.saveLastQuery(this.activeDatabase(), lastQuery);
+    }
+
     attached() {
         super.attached();
 
@@ -343,8 +353,18 @@ class query extends viewModelBase {
     }
 
     private loadRecentQueries() {
-        recentQueriesStorage.getRecentQueriesWithIndexNameCheck(this.activeDatabase())
+
+        const db = this.activeDatabase();
+
+        recentQueriesStorage.getRecentQueriesWithIndexNameCheck(db)
             .done(queries => this.recentQueries(queries));
+
+        const criteria = this.criteria();
+
+        const lastQuery = recentQueriesStorage.getLastQuery(db);
+
+        if (lastQuery != null)
+            criteria.queryText(lastQuery);
     }
 
     private fetchAllIndexes(db: database): JQueryPromise<any> {

@@ -411,7 +411,7 @@
             margin-top:2px;
             border: 1px solid @gray;
             border-radius: 50%;
-            background-color: @gray;
+            background-color: @gray-dark;
             .transition(border 0.15s ease-in-out);
         }
 
@@ -419,13 +419,13 @@
             display: inline-block;
             position: absolute;
             content: " ";
-            width: 12px;
-            height: 12px;
-            left: 2px;
-            top: 6px;
+            width: 8px;
+            height: 8px;
+            left: 4px;
+            top: 8px;
             margin-left: -20px;
             border-radius: 50%;
-            background-color: @brand-primary;
+            background-color: @gray-lighter;
             .scale(0, 0);
             .transition-transform(.1s cubic-bezier(.8,-0.33,.2,1.33));
             //curve - http://cubic-bezier.com/#.8,-0.33,.2,1.33
@@ -445,8 +445,8 @@
         }
 
         &:checked + label::before {
-            background-color: @gray-lighter;
-            border-color: @gray-lighter;
+            background-color: @gray;
+            border-color: @gray;
         }
 
         &:disabled + label {

@@ -6,7 +6,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
     public class DatabaseDocPutsPerSecond : DatabaseScalarObjectBase<Gauge32>
     {
         public DatabaseDocPutsPerSecond(string databaseName, DatabasesLandlord landlord, int index)
-            : base(databaseName, landlord, "5.2.{0}.3.1", index)
+            : base(databaseName, landlord, SnmpOids.Databases.DocPutsPerSecond, index)
         {
         }
 

@@ -7,15 +7,13 @@ namespace Raven.Server.Monitoring.Snmp.Objects
     public abstract class ScalarObjectBase<TData> : ScalarObject
         where TData : ISnmpData
     {
-        private const string RootOid = "1.3.6.1.4.1.45751.1.1.";
-
         protected ScalarObjectBase(string dots)
-            : base(RootOid + dots)
+            : base(SnmpOids.Root + dots)
         {
         }
 
         protected ScalarObjectBase(string dots, int index)
-            : base(RootOid + dots, index)
+            : base(SnmpOids.Root + dots, index)
         {
         }
 

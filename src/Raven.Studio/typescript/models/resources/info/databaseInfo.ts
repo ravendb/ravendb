@@ -88,6 +88,10 @@ class databaseInfo {
 
         return dto.IntervalUntilNextBackupInSec === 0 ? "text-warning" : "text-success";
     }
+    
+    isLocal(currentNodeTag: string) {
+        return _.includes(this.nodes().map(x => x.tag()), currentNodeTag);
+    }
 
     private initializeObservables() {
         this.hasLoadError = ko.pureComputed(() => !!this.loadError());

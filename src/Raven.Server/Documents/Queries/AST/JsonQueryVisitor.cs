@@ -205,7 +205,7 @@ namespace Raven.Server.Documents.Queries.AST
 
         public override void VisitField(FieldExpression field)
         {
-            _writer.WriteValue(field.Field.Value);
+            _writer.WriteValue(field.FieldValue);
         }
 
         public override void VisitTrue()
@@ -232,7 +232,7 @@ namespace Raven.Server.Documents.Queries.AST
         public override void VisitFromClause(FieldExpression from, StringSegment? alias, QueryExpression filter, bool index)
         {
             _writer.WritePropertyName("From");
-            _writer.WriteValue(from.Field);
+            VisitField(from);
             if (index)
             {
                 _writer.WritePropertyName("Index");

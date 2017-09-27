@@ -7,7 +7,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
     public class DatabaseIndexStorageAllocatedSize : DatabaseScalarObjectBase<Gauge32>
     {
         public DatabaseIndexStorageAllocatedSize(string databaseName, DatabasesLandlord landlord, int index)
-            : base(databaseName, landlord, "5.2.{0}.2.3", index)
+            : base(databaseName, landlord, SnmpOids.Databases.IndexStorageAllocatedSize, index)
         {
         }
 

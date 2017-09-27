@@ -6,7 +6,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
     public class DatabaseDocumentsStorageUsedSize : DatabaseScalarObjectBase<Gauge32>
     {
         public DatabaseDocumentsStorageUsedSize(string databaseName, DatabasesLandlord landlord, int index)
-            : base(databaseName, landlord, "5.2.{0}.2.2", index)
+            : base(databaseName, landlord, SnmpOids.Databases.DocumentsStorageUsedSize, index)
         {
         }
 

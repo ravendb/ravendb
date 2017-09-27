@@ -16,12 +16,12 @@ abstract class abstractWebSocketClient<T> {
 
     protected abstract get autoReconnect(): boolean;
    
-    protected constructor(protected db: database) {
+    protected constructor(protected db: database, connectArgs: any = null) {
         this.resourcePath = appUrl.forDatabaseQuery(this.db);
         this.connectToWebSocketTask = $.Deferred<void>();
 
         if ("WebSocket" in window) {
-            this.connect(this.connectWebSocket);
+            this.connect(() => this.connectWebSocket(connectArgs));
         } else {
             //The browser doesn't support websocket
             //or we are in IE10 or IE11 and the server doesn't support WebSockets.
@@ -37,7 +37,7 @@ abstract class abstractWebSocketClient<T> {
     protected abstract get connectionDescription(): string;
 
     // it should return something like: /changes?foo=bar
-    protected abstract webSocketUrlFactory(): string;
+    protected abstract webSocketUrlFactory(connectArgs: any): string;
 
     protected isHeartBeat(e: any): boolean {
         return !e.data.trim();
@@ -60,21 +60,30 @@ abstract class abstractWebSocketClient<T> {
         // empty
     }
 
-    private connectWebSocket() {
+    protected isJsonBasedClient() {
+        return true;
+    }
+    
+    private connectWebSocket(connectArgs: any) {
         let connectionOpened: boolean = false;
         
         const wsProtocol = window.location.protocol === "https:" ? "wss://" : "ws://";
-        const queryString = this.webSocketUrlFactory();
+        const queryString = this.webSocketUrlFactory(connectArgs);
         const url = wsProtocol + window.location.host + this.resourcePath + queryString;
         this.webSocket = new WebSocket(url);
 
-        this.webSocket.onmessage = (e) => {
-            if (this.isHeartBeat(e)) {
-                this.onHeartBeat();
-            } else {
-                this.onMessage(JSON.parse(e.data));
-            }
+        if (this.isJsonBasedClient()) {
+            this.webSocket.onmessage = (e) => {
+                if (this.isHeartBeat(e)) {
+                    this.onHeartBeat();
+                } else {
+                    this.onMessage(JSON.parse(e.data));
+                }
+            };    
+        } else {
+            this.webSocket.onmessage = e => this.onMessage(e.data);
         }
+        
         this.webSocket.onerror = (e) => {
             if (connectionOpened === false) {
                 this.onError(e);
@@ -87,10 +96,10 @@ abstract class abstractWebSocketClient<T> {
 
                 if (this.autoReconnect) {
                     // Connection has closed uncleanly, so try to reconnect.
-                    this.connect(this.connectWebSocket);
+                    this.connect(() => this.connectWebSocket(connectArgs));
                 }
             }
-        }
+        };
         this.webSocket.onopen = () => {
             this.onOpen();
             connectionOpened = true;

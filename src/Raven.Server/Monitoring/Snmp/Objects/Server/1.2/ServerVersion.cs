@@ -7,7 +7,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
         private readonly OctetString _productVersion;
 
         public ServerVersion()
-            : base("1.2.1")
+            : base(SnmpOids.Server.Version)
         {
             _productVersion = new OctetString(ServerWide.ServerVersion.Version);
         }

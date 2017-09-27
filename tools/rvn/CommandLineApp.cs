@@ -1,12 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
 using Microsoft.Extensions.CommandLineUtils;
-using Raven.Server.Config;
 using Sparrow.Platform;
 
 namespace rvn
@@ -218,11 +212,12 @@ namespace rvn
 
                 cmd.Command("init-keys", subcmd =>
                 {
-                    subcmd.ExtendedHelpText = subcmd.Description = "Initialize keys";
+                    subcmd.ExtendedHelpText = subcmd.Description = "Initializes keys";
                     subcmd.HelpOption(HelpOptionString);
                     subcmd.OnExecute(() =>
                     {
-                        OfflineOperations.InitKeys();
+                        var result = OfflineOperations.InitKeys();
+                        Console.WriteLine(result);
                         return 0;
                     });
                 });
@@ -312,6 +307,12 @@ namespace rvn
                                 () => OfflineOperations.Decrypt(systemDir.Value), systemDir, subcmd);
                         });
                     });
+                });
+
+                cmd.OnExecute(() =>
+                {
+                    cmd.ShowHelp();
+                    return 1;
                 });
             });
         }
