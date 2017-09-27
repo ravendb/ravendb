@@ -17,11 +17,15 @@ namespace SlowTests.Issues
                     session.Store(new Employee
                     {
                         FirstName = "joe",
+                        Address = new Address
+                        {
+                            City = "Seattle"
+                        }
                     });
 
                     session.Store(new Employee
                     {
-                        FirstName = "joe"
+                        FirstName = "joe",
                     });
 
                     session.SaveChanges();
@@ -31,6 +35,15 @@ namespace SlowTests.Issues
                     Assert.Equal(1, names.Count);
                     Assert.Equal("joe", names[0].FirstName);
                     Assert.Equal(2, names[0].Count);
+
+                    var results = session.Advanced.RawQuery<Result>(@"from Employees as e
+group by e.Address.City
+where e.Address.City != null
+select count(), key() as City").ToList();
+
+                    Assert.Equal(1, results.Count);
+                    Assert.Equal("Seattle", results[0].City);
+                    Assert.Equal(1, results[0].Count);
                 }
             }
         }
@@ -74,6 +87,8 @@ namespace SlowTests.Issues
             public int UnitsInStock { get; set; }
 
             public string Supplier { get; set; }
+
+            public string City { get; set; }
         }
     }
 }
