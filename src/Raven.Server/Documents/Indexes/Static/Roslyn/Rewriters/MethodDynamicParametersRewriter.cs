@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                     sb.Append(param);
                     continue;
                 }
-                sb.Append($"{DynamicString} d_{param.Identifier.WithLeadingTrivia()}");
+                sb.Append($"{DynamicString} d_{param.Identifier.WithoutTrivia()}");
             }
             sb.Append(')');
             var modifiedParameterList = node.WithParameterList(SyntaxFactory.ParseParameterList(sb.ToString()));
@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             {
                 if (param.Type.ToString() == DynamicString)
                     continue;
-                statements.Add(SyntaxFactory.ParseStatement($"{param.Type} {param.Identifier.WithLeadingTrivia()} = ({param.Type})d_{param.Identifier.WithLeadingTrivia()};"));
+                statements.Add(SyntaxFactory.ParseStatement($"{param.Type} {param.Identifier.WithoutTrivia()} = ({param.Type})d_{param.Identifier.WithoutTrivia()};"));
             }
             if (statements.Count == 0)
                 return modifiedParameterList;
