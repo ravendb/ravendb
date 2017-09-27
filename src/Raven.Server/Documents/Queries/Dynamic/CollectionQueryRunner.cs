@@ -3,12 +3,15 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Includes;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
+using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents.Queries.Dynamic
 {
@@ -56,7 +59,27 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         public override Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext context, long? existingResultEtag, OperationCancelToken token)
         {
-            throw new System.NotImplementedException();
+            throw new NotSupportedException("Collection query is handled directly by documents storage so index entries aren't created underneath");
+        }
+
+        public override Task<IOperationResult> ExecuteDeleteQuery(IndexQueryServerSide query, QueryOperationOptions options, DocumentsOperationContext context, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        {
+            var runner = new CollectionRunner(Database, context, query);
+
+            return runner.ExecuteDelete(query.Metadata.CollectionName, new CollectionOperationOptions
+            {
+                MaxOpsPerSecond = options.MaxOpsPerSecond
+            }, onProgress, token);
+        }
+
+        public override Task<IOperationResult> ExecutePatchQuery(IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch, BlittableJsonReaderObject patchArgs, DocumentsOperationContext context, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        {
+            var runner = new CollectionRunner(Database, context, query);
+
+            return runner.ExecutePatch(query.Metadata.CollectionName, new CollectionOperationOptions
+            {
+                MaxOpsPerSecond = options.MaxOpsPerSecond
+            }, patch, patchArgs, onProgress, token);
         }
 
         private void ExecuteCollectionQuery(QueryResultServerSide resultToFill, IndexQueryServerSide query, string collection, DocumentsOperationContext context, CancellationToken cancellationToken)

@@ -2,6 +2,8 @@
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
@@ -10,6 +12,7 @@ using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents.Queries
 {
@@ -92,6 +95,20 @@ namespace Raven.Server.Documents.Queries
             }
 
             return await index.FacetedQuery(query, facetsEtag.Value, documentsContext, token);
+        }
+
+        public override Task<IOperationResult> ExecuteDeleteQuery(IndexQueryServerSide query, QueryOperationOptions options, DocumentsOperationContext context, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        {
+            var index = GetIndex(query.Metadata.IndexName);
+
+            return ExecuteDelete(query, index, options, context, onProgress, token);
+        }
+
+        public override Task<IOperationResult> ExecutePatchQuery(IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch, BlittableJsonReaderObject patchArgs, DocumentsOperationContext context, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        {
+            var index = GetIndex(query.Metadata.IndexName);
+
+            return ExecutePatch(query, index, options, patch, patchArgs, context, onProgress, token);
         }
     }
 }
