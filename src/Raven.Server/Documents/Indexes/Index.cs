@@ -841,7 +841,9 @@ namespace Raven.Server.Documents.Indexes
                                         // possibilities: either the batch was not cancelled, and we really
                                         // did finish the work, or the batch was cancelled, but not because of
                                         // a database shutdown
-                                        batchCompleted = !_batchProcessCancellationTokenSource.IsCancellationRequested;
+
+                                        batchCompleted = _batchProcessCancellationTokenSource != null && 
+                                            _batchProcessCancellationTokenSource.IsCancellationRequested == false;
                                         _batchProcessCancellationTokenSource = null;
                                     }
 
