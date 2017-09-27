@@ -71,17 +71,8 @@ class ongoingTaskEtlTransformationModel {
             required: true
         });
 
-        this.transformScriptCollections.extend({
-            validation: [
-                {
-                    validator: () => this.transformScriptCollections().length > 0,
-                    message: "No collections have been selected"
-                }]
-        });
-
         this.validationGroup = ko.validatedObservable({
-            name: this.name,
-            transformScriptCollections: this.transformScriptCollections
+            name: this.name
         });
     }
 
