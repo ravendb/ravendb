@@ -22,19 +22,9 @@ class recentQueriesStorage {
         return recentQueriesFromLocalStorage;
     }
 
-    static getLastQuery(db: database): string {
-        const localStorageName = recentQueriesStorage.getLocalStorageKeyForLastQuery(db.name);
-        return this.getLastQueryFromLocalStorage(localStorageName);
-    }
-
     static saveRecentQueries(db: database, recentQueries: storedQueryDto[]) {
         const localStorageName = recentQueriesStorage.getLocalStorageKey(db.name);
         localStorage.setObject(localStorageName, recentQueries);
-    }
-
-    static saveLastQuery(db: database, lastQuery: string) {
-        const localStorageName = recentQueriesStorage.getLocalStorageKeyForLastQuery(db.name);
-        localStorage.setObject(localStorageName, lastQuery);
     }
 
     static removeRecentQueryByQueryText(db: database, queryText: string) {
@@ -55,11 +45,7 @@ class recentQueriesStorage {
     private static getLocalStorageKey(dbName: string) {
         return storageKeyProvider.storageKeyFor("recentQueries." + dbName);
     }
-
-    private static getLocalStorageKeyForLastQuery(dbName: string) {
-        return storageKeyProvider.storageKeyFor("lastQuery." + dbName);
-    }
-
+   
     private static getRecentQueriesFromLocalStorage(localStorageName: string): storedQueryDto[]  {
         let recentQueriesFromLocalStorage: storedQueryDto[] = null;
         try {
@@ -68,16 +54,6 @@ class recentQueriesStorage {
             //no need to do anything
         }
         return recentQueriesFromLocalStorage;
-    }
-
-    private static getLastQueryFromLocalStorage(localStorageName: string): string {
-        let lastQueriesFromLocalStorage: string = null;
-        try {
-            lastQueriesFromLocalStorage = localStorage.getObject(localStorageName);
-        } catch (err) {
-            //no need to do anything
-        }
-        return lastQueriesFromLocalStorage;
     }
 
     static appendQuery(query: storedQueryDto, recentQueries: KnockoutObservableArray<storedQueryDto>): void {
@@ -98,9 +74,6 @@ class recentQueriesStorage {
     static onDatabaseDeleted(qualifer: string, name: string) {
         const localStorageName = recentQueriesStorage.getLocalStorageKey(name);
         localStorage.removeItem(localStorageName);
-
-        const localStorageLastQueryName = recentQueriesStorage.getLocalStorageKeyForLastQuery(name);
-        localStorage.removeItem(localStorageLastQueryName);
     }
 
 }
