@@ -318,7 +318,7 @@ namespace Raven.Server.Documents.Queries
         private static string ExtractIndexFieldName(Query query, BlittableJsonReaderObject parameters, QueryExpression field, QueryMetadata metadata)
         {
             if (field is FieldExpression fe)
-                return metadata.GetIndexFieldName(fe);
+                return metadata.GetIndexFieldName(fe, parameters);
 
             if (field is MethodExpression me)
             {
@@ -354,11 +354,10 @@ namespace Raven.Server.Documents.Queries
             throw new InvalidQueryException("Expected field, got: " + field, query.QueryText, parameters);
         }
 
-        private static string ExtractIndexFieldName(ValueExpression field, QueryMetadata metadata)
+        private static string ExtractIndexFieldName(ValueExpression field, QueryMetadata metadata, BlittableJsonReaderObject parameters)
         {
-            return metadata.GetIndexFieldName(field.Token.Value);
+            return metadata.GetIndexFieldName(field.Token.Value, parameters);
         }
-
 
         private static Lucene.Net.Search.Query HandleExists(Query query, BlittableJsonReaderObject parameters, MethodExpression expression, QueryMetadata metadata)
         {
@@ -434,7 +433,7 @@ namespace Raven.Server.Documents.Queries
             if (expression.Arguments[0] is FieldExpression ft)
                 fieldName = ExtractIndexFieldName(query, parameters, ft, metadata);
             else if (expression.Arguments[0] is ValueExpression vt)
-                fieldName = ExtractIndexFieldName(vt, metadata);
+                fieldName = ExtractIndexFieldName(vt, metadata, parameters);
             else
                 throw new InvalidOperationException("search() method can only be called with an identifier or string, but was called with " + expression.Arguments[0]);
 
