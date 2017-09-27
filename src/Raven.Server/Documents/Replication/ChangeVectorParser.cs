@@ -169,6 +169,70 @@ namespace Raven.Server.Documents.Replication
             return default(ChangeVectorEntry[]); // never hit
         }
 
+        public static bool IsChangeVectorValid(this string changeVector)
+        {
+            if (string.IsNullOrEmpty(changeVector))
+                return true;
+
+            var start = 0;
+            var current = 0;
+            var state = State.Tag;
+            int tag = -1;
+
+            while (current < changeVector.Length)
+            {
+                switch (state)
+                {
+                    case State.Tag:
+                        if (changeVector[current] == ':')
+                        {
+                            tag = ParseNodeTag(changeVector, start, current - 1);
+                            state = State.Etag;
+                            start = current + 1;
+                        }
+                        current++;
+                        break;
+                    case State.Etag:
+                        if (changeVector[current] == '-')
+                        {
+                            var etag = ParseEtag(changeVector, start, current - 1);
+                            if (current + 23 > changeVector.Length)
+                                ThrowInvalidEndOfString("DbId", changeVector);
+                            
+                            start = current + 23;
+                            current = start;
+                            state = State.Whitespace;
+                        }
+                        current++;
+                        break;
+                    case State.Whitespace:
+                        if (char.IsWhiteSpace(changeVector[current]) ||
+                            changeVector[current] == '=' || // TODO: Remove me
+                            changeVector[current] == ',')
+                        {
+                            start++;
+                            current++;
+                        }
+                        else
+                        {
+                            start = current;
+                            current++;
+                            state = State.Tag;
+                        }
+                        break;
+
+                    default:
+                        ThrowInvalidState(state, changeVector);
+                        break;
+                }
+            }
+
+            if (state == State.Whitespace)
+                return true;
+            
+            return false;
+        }
+
 
         public static void MergeChangeVector(string changeVector, List<ChangeVectorEntry> entries)
         {
