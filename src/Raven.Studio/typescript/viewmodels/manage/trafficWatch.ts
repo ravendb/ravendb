@@ -81,13 +81,18 @@ class trafficWatch extends viewModelBase {
             this.stats.max("n/a");
             this.stats.count("0");
         } else {
-            let count = this.filteredData.length;
+            let countForAvg = 0;
             let sum = 0;
             let min = this.filteredData[0].ElapsedMilliseconds;
             let max = this.filteredData[0].ElapsedMilliseconds;
             
             for (let i = 0; i < this.filteredData.length; i++) {
                 const item = this.filteredData[i];
+                
+                if (item.ResponseStatusCode === 101) {
+                    // it is websocket - don't include in stats
+                    continue;
+                }
 
                 if (item.ElapsedMilliseconds < min) {
                     min = item.ElapsedMilliseconds;
@@ -97,19 +102,24 @@ class trafficWatch extends viewModelBase {
                     max = item.ElapsedMilliseconds;
                 }
 
+                countForAvg++;
                 sum += item.ElapsedMilliseconds;
             }
             
             this.stats.min(min.toLocaleString() + " ms");
             this.stats.max(max.toLocaleString() + " ms");
-            this.stats.count(count.toLocaleString());
-            this.stats.avg(generalUtils.formatNumberToStringFixed(sum * 1.0 / count, 2) + " ms");
+            this.stats.count(this.filteredData.length.toLocaleString());
+            
+            const avg = countForAvg ? generalUtils.formatNumberToStringFixed(sum * 1.0 / countForAvg, 2) + " ms" : "n/a"; 
+            this.stats.avg(avg);
         }
     }
     
     compositionComplete() {
         super.compositionComplete();
 
+        $('.traffic-watch [data-toggle="tooltip"]').tooltip();
+        
         this.updateStats();
 
         const rowHighlightRules = {
