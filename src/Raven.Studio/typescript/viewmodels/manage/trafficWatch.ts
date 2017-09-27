@@ -1,15 +1,13 @@
 import app = require("durandal/app");
 import viewModelBase = require("viewmodels/viewModelBase");
-import watchTrafficConfigDialog = require("viewmodels/manage/watchTrafficConfigDialog");
-import trafficWatchClient = require("common/trafficWatchClient");
 import moment = require("moment");
 import fileDownloader = require("common/fileDownloader");
-import enableQueryTimings = require("commands/database/query/enableQueryTimings");
 import database = require("models/resources/database");
 import accessHelper = require("viewmodels/shell/accessHelper");
 import eventsCollector = require("common/eventsCollector");
 
 class trafficWatch extends viewModelBase {
+    /*
     logConfig = ko.observable<{ Resource: database; ResourceName:string; ResourcePath: string; MaxEntries: number; WatchedResourceMode: string }>();
     watchClient: trafficWatchClient;
     isConnected = ko.observable(false);
@@ -345,7 +343,7 @@ class trafficWatch extends viewModelBase {
         if (this.keepDown()) {
             this.logRecordsElement.scrollTop = this.logRecordsElement.scrollHeight * 1.1;
         }
-    }
+    }*/
 }
 
-export =trafficWatch;
+export = trafficWatch;
