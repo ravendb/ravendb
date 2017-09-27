@@ -1,86 +1,42 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
-using Raven.Client;
 using Raven.Client.Exceptions.Documents.Indexes;
-using Raven.Server.Config;
-using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Queries.Dynamic
 {
-    public class DynamicQueryRunner
+    public class DynamicQueryRunner : AbstractQueryRunner
     {
-        public const string CollectionIndexPrefix = "collection/";
-
         private readonly IndexStore _indexStore;
-        private readonly DocumentDatabase _database;
-        private readonly DocumentsOperationContext _context;
-        private readonly RavenConfiguration _configuration;
-        private readonly DocumentsStorage _documents;
-        private readonly OperationCancelToken _token;
 
-        public DynamicQueryRunner(IndexStore indexStore, DocumentDatabase database,  DocumentsStorage documents, DocumentsOperationContext context, RavenConfiguration configuration, OperationCancelToken token)
+        public DynamicQueryRunner(DocumentDatabase database) : base(database)
         {
-            _indexStore = indexStore;
-            _database = database;
-            _context = context;
-            _configuration = configuration;
-            _token = token;
-            _documents = documents;
+            _indexStore = database.IndexStore;
         }
 
-        public async Task ExecuteStream(HttpResponse response, BlittableJsonTextWriter writer, IndexQueryServerSide query)
+        public override async Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, BlittableJsonTextWriter writer,
+            OperationCancelToken token)
         {
-            var tuple = await MatchIndex(query, false);
-            var index = tuple.Index;
-            var collection = tuple.Collection;
+            var index = await MatchIndex(query, false, token.Token);
+
             if (index == null)
-            {
-                using (var result = new StreamDocumentQueryResult(response, writer, _context))
-                {
-                    _context.OpenReadTransaction();
+                IndexDoesNotExistException.ThrowFor("There was no auto index able to handle streaming query"); // TODO arek - pretty sure we want to change that behavior
 
-                    FillCountOfResultsAndIndexEtag(result, collection);
-
-                    ExecuteCollectionQuery(result, query, collection);
-                }
-
-                return;
-            }
-
-            await index.StreamQuery(response, writer, query, _context, _token);
+            await index.StreamQuery(response, writer, query, documentsContext, token);
         }
 
-        public async Task<DocumentQueryResult> Execute(IndexQueryServerSide query, long? existingResultEtag)
+        public override async Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token)
         {
-            var tuple = await MatchIndex(query, true);
-            var index = tuple.Index;
-            var collection = tuple.Collection;
-            if (index == null)
-            {
-                var result = new DocumentQueryResult();
-                _context.OpenReadTransaction();
-                FillCountOfResultsAndIndexEtag(result, collection);
-
-                if (existingResultEtag.HasValue)
-                {
-                    if (result.ResultEtag == existingResultEtag)
-                        return DocumentQueryResult.NotModifiedResult;
-                }
-
-                ExecuteCollectionQuery(result, query, collection);
-
-                return result;
-            }
+            var index = await MatchIndex(query, true, token.Token);
 
             if (existingResultEtag.HasValue)
             {
@@ -89,13 +45,12 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     return DocumentQueryResult.NotModifiedResult;
             }
 
-            return await index.Query(query, _context, _token);
+            return await index.Query(query, documentsContext, token);
         }
 
-        public async Task<IndexEntriesQueryResult> ExecuteIndexEntries(IndexQueryServerSide query, long? existingResultEtag)
+        public override async Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext context, long? existingResultEtag, OperationCancelToken token)
         {
-            var tuple = await MatchIndex(query, false);
-            var index = tuple.Index;
+            var index = await MatchIndex(query, false, token.Token);
 
             if (index == null)
                 IndexDoesNotExistException.ThrowFor(query.Metadata.CollectionName);
@@ -107,86 +62,13 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     return IndexEntriesQueryResult.NotModifiedResult;
             }
 
-            return index.IndexEntries(query, _context, _token);
+            return index.IndexEntries(query, context, token);
         }
 
-        private void ExecuteCollectionQuery(QueryResultServerSide resultToFill, IndexQueryServerSide query, string collection)
+        private async Task<Index> MatchIndex(IndexQueryServerSide query, bool createAutoIndexIfNoMatchIsFound, CancellationToken token)
         {
-            var isAllDocsCollection = collection == Constants.Documents.Collections.AllDocumentsCollection;
-
-            // we optimize for empty queries without sorting options, appending CollectionIndexPrefix to be able to distinguish index for collection vs. physical index
-            resultToFill.IndexName = isAllDocsCollection ? "AllDocs" : CollectionIndexPrefix + collection;
-            resultToFill.IsStale = false;
-            resultToFill.LastQueryTime = DateTime.MinValue;
-            resultToFill.IndexTimestamp = DateTime.MinValue;
-            resultToFill.IncludedPaths = query.Metadata.Includes;
-
-            var includeDocumentsCommand = new IncludeDocumentsCommand(_documents, _context, query.Metadata.Includes);
-            var fieldsToFetch = new FieldsToFetch(query, null);
-            var totalResults = new Reference<int>();
-            var documents = new CollectionQueryEnumerable(_database, _documents, fieldsToFetch, collection, query, _context, includeDocumentsCommand, totalResults);
-            var cancellationToken = _token.Token;
-
-            try
-            {
-                foreach (var document in documents)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    resultToFill.AddResult(document);
-
-                    includeDocumentsCommand.Gather(document);
-                }
-            }
-            catch (Exception e)
-            {
-                if (resultToFill.SupportsExceptionHandling == false)
-                    throw;
-
-                resultToFill.HandleException(e);
-            }
-
-            includeDocumentsCommand.Fill(resultToFill.Includes);
-            resultToFill.TotalResults = totalResults.Value;
-        }
-
-        private unsafe void FillCountOfResultsAndIndexEtag(QueryResultServerSide resultToFill, string collection)
-        {
-            var buffer = stackalloc long[3];
-
-            if (collection == Constants.Documents.Collections.AllDocumentsCollection)
-            {
-                var numberOfDocuments = _documents.GetNumberOfDocuments(_context);
-                buffer[0] = DocumentsStorage.ReadLastDocumentEtag(_context.Transaction.InnerTransaction);
-                buffer[1] = DocumentsStorage.ReadLastTombstoneEtag(_context.Transaction.InnerTransaction);
-                buffer[2] = numberOfDocuments;
-                resultToFill.TotalResults = (int)numberOfDocuments;
-            }
-            else
-            {
-                var collectionStats = _documents.GetCollection(collection, _context);
-
-                buffer[0] = _documents.GetLastDocumentEtag(_context, collection);
-                buffer[1] = _documents.GetLastTombstoneEtag(_context, collection);
-                buffer[2] = collectionStats.Count;
-            }
-
-            resultToFill.ResultEtag = (long)Hashing.XXHash64.Calculate((byte*)buffer, sizeof(long) * 3);
-        }
-
-        private async Task<(Index Index, string Collection)> MatchIndex(IndexQueryServerSide query, bool createAutoIndexIfNoMatchIsFound)
-        {
-            var collection = query.Metadata.CollectionName;
-
             if (query.Metadata.DynamicIndexName != null)
-            {
-                var previousIndex = _indexStore.GetIndex(query.Metadata.DynamicIndexName);
-                if (previousIndex != null)
-                    return (previousIndex, collection);
-            }
-
-            if (query.Metadata.IsCollectionQuery)
-                return (null, collection);
+                return _indexStore.GetIndex(query.Metadata.DynamicIndexName);
 
             var map = DynamicQueryMapping.Create(query);
 
@@ -200,12 +82,12 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 var id = await _indexStore.CreateIndex(definition);
                 index = _indexStore.GetIndex(id);
 
-                var t = CleanupSupercededAutoIndexes(index, map)
+                var t = CleanupSupercededAutoIndexes(index, map, token)
                     .ContinueWith(task =>
                     {
                         if (task.Exception != null)
                         {
-                            if (_token.Token.IsCancellationRequested)
+                            if (token.IsCancellationRequested)
                                 return;
 
                             if (_indexStore.Logger.IsInfoEnabled)
@@ -216,7 +98,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     });
 
                 if (query.WaitForNonStaleResults && 
-                    _configuration.Indexing.TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan ==
+                    Database.Configuration.Indexing.TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan ==
                     TimeSpan.Zero)
                     await t; // this is used in testing, mainly
 
@@ -224,10 +106,10 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     query.WaitForNonStaleResultsTimeout = TimeSpan.FromSeconds(15); // allow new auto indexes to have some results
             }
 
-            return (index, collection);
+            return index;
         }
 
-        private async Task CleanupSupercededAutoIndexes(Index index, DynamicQueryMapping map)
+        private async Task CleanupSupercededAutoIndexes(Index index, DynamicQueryMapping map, CancellationToken token)
         {
             if (map.SupersededIndexes == null || map.SupersededIndexes.Count == 0)
                 return;
@@ -236,7 +118,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             // however, they'll also be cleaned by the idle timer, so we don't worry too much
             // about this being in memory only operation
 
-            while (_token.Token.IsCancellationRequested == false)
+            while (token.IsCancellationRequested == false)
             {
                 AsyncManualResetEvent.FrozenAwaiter indexingBatchCompleted;
                 try
@@ -261,7 +143,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     // we'll give it a few seconds to drain any pending queries,
                     // and because it make it easier to demonstrate how we auto
                     // clear the old auto indexes.
-                    var timeout = _configuration.Indexing.TimeBeforeDeletionOfSupersededAutoIndex.AsTimeSpan;
+                    var timeout = Database.Configuration.Indexing.TimeBeforeDeletionOfSupersededAutoIndex.AsTimeSpan;
                     if (timeout != TimeSpan.Zero)
                     {
                         await TimeoutManager.WaitFor(

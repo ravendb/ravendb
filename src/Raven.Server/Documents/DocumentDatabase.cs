@@ -115,6 +115,7 @@ namespace Raven.Server.Documents
                 DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);
                 DocumentsStorage = new DocumentsStorage(this);
                 IndexStore = new IndexStore(this, serverStore);
+                QueryRunner = new QueryRunner(this);
                 EtlLoader = new EtlLoader(this, serverStore);
                 ReplicationLoader = new ReplicationLoader(this, serverStore);
                 SubscriptionStorage = new SubscriptionStorage(this, serverStore);
@@ -160,6 +161,8 @@ namespace Raven.Server.Documents
         public string DbBase64Id => DocumentsStorage.Environment?.Base64Id ?? "";
 
         public RavenConfiguration Configuration { get; }
+
+        public QueryRunner QueryRunner { get; }
 
         public CancellationToken DatabaseShutdown => _databaseShutdown.Token;
 
