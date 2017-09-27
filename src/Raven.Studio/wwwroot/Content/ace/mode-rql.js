@@ -71,51 +71,69 @@ var RqlHighlightRules = function() {
         "keyword.orderByOptions": orderByOptions,
         "keyword.orderByAsOptions": orderByAsOptions,
         "function": functions,
-        "function.where": whereFunctions,
         "function.where.within": withinFunctions,
         "function.orderBy": orderByFunctions,
         "constant.language": constants,
         "constant.language.boolean": constantsBoolean,
-        "operations.type.binary": binaryOperations,
         "operations.type": operations
     }, "identifier", true);
 
-    this.$rules = {
-        "start" : [ {
-            token : "comment",
-            regex : "//.*$"
-        },  {
-            token : "comment",
-            start : "/\\*",
-            end : "\\*/"
-        }, {
-            token : "string",           // " string
-            regex : '"[^"]*"?'
-        }, {
-            token : "string",           // ' string
-            regex : "'[^']*'?"
-        }, {
-            token : "string",           // ` string (apache drill)
-            regex : "`[^`]*`?"
-        }, {
-            token : "constant.numeric", // float
-            regex : "[+-]?\\d+(?:(?:\\.\\d*)?(?:[eE][+-]?\\d+)?)?\\b"
-        }, {
-            token : keywordMapper,
-            regex : "[a-zA-Z_$@][a-zA-Z0-9_$@]*\\b"
-        }, {
-            token : "where.operator",
-            regex : whereOperators
-        }, {
-            token : "paren.lparen",
-            regex : /[\[({]/
-        }, {
+    var commonRules = [ {
+        token : "comment",
+        regex : "//.*$"
+    },  {
+        token : "comment",
+        start : "/\\*",
+        end : "\\*/"
+    }, {
+        token : "string",           // " string
+        regex : '"[^"]*"?'
+    }, {
+        token : "string",           // ' string
+        regex : "'[^']*'?"
+    }, {
+        token : "string",           // ` string (apache drill)
+        regex : "`[^`]*`?"
+    }, {
+        token : "constant.numeric", // float
+        regex : "[+-]?\\d+(?:(?:\\.\\d*)?(?:[eE][+-]?\\d+)?)?\\b"
+    }, {
+        token : "paren.lparen",
+        regex : /[\[({]/
+    }, {
+        token : "space",
+        regex : /\s+/
+    } ];
+    
+    var startRule = [ {
+        token :  "operations.type.binary",
+        regex : "(?:" + binaryOperations +")(?!\\s*[),])"
+    }, {
+        token :  "function.where",
+        regex : whereFunctions
+    }, {
+        token : keywordMapper,
+        regex : "[a-zA-Z_$@][a-zA-Z0-9_$@]*\\b"
+    }, {
+        token : "operator.where",
+        regex : whereOperators
+    }, {
             token : "paren.rparen",
             regex : /[\])}]/
-        }, {
-            token : "space",
-            regex : /\s+/
-        } ]
+    } ];
+    
+    var whereFunctionsRules = [ {
+        token : "paren.rparen",
+        regex : /[\])}]/,
+        next: "start"
+    } ];
+    
+    this.$rules = {
+        "start" : commonRules.concat(startRule),    
+        "whereFunction" : commonRules.map(function (rule) {
+            rule.token += ".whereFunction";
+            return rule;
+        }).concat(whereFunctionsRules)
     };
     this.normalizeRules();
 };
