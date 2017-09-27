@@ -24,7 +24,6 @@ namespace Raven.Client.Documents.Smuggler
             Tombstones = new CountsWithLastEtag();
             Identities = new Counts();
             Indexes = new Counts();
-            LegacyAttachments = new Counts();
         }
 
         public string Message { get; private set; }
@@ -125,8 +124,6 @@ namespace Raven.Client.Documents.Smuggler
 
         public virtual Counts Indexes { get; set; }
 
-        public virtual Counts LegacyAttachments { get; set; }
-
         public virtual DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue(GetType())
@@ -136,7 +133,6 @@ namespace Raven.Client.Documents.Smuggler
                 [nameof(Tombstones)] = Tombstones.ToJson(),
                 [nameof(Identities)] = Identities.ToJson(),
                 [nameof(Indexes)] = Indexes.ToJson(),
-                [nameof(LegacyAttachments)] = LegacyAttachments.ToJson(),
             };
         }
 
