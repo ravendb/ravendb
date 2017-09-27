@@ -8,13 +8,8 @@ using Raven.Abstractions.OAuth;
 
 namespace Raven.Powershell
 {
-    public class RavenDBOAuthToken
-    {
-        public string Token { get; set; }
-    }
-
     [Cmdlet(VerbsLifecycle.Request, "RavenDBOAuthToken")]
-    [OutputType(typeof(RavenDBOAuthToken))]
+    [OutputType(typeof(string))]
     public class OAuthAuthenticatorCmdlet : Cmdlet
     {
         [Parameter(ValueFromPipelineByPropertyName = true, Mandatory = true, HelpMessage = "Url of RavenDB server, including the port. Example --> http://localhost:8080")]
@@ -64,10 +59,7 @@ namespace Raven.Powershell
             }
             else
             {
-                WriteObject(new RavenDBOAuthToken
-                {
-                    Token = fetchTokenTask.Result
-                });
+                WriteObject(fetchTokenTask.Result);
             }
         }
 
