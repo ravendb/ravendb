@@ -4,6 +4,7 @@ import chai = require("chai");
 const assert = chai.assert;
 
 import rqlTestUtils = require("autocomplete/rqlTestUtils");
+import queryCompleter = require("src/Raven.Studio/typescript/common/queryCompleter");
 
 const emptyProvider = rqlTestUtils.emptyProvider;
 const northwindProvider = rqlTestUtils.northwindProvider;
@@ -267,7 +268,7 @@ describe("RQL Autocomplete", () => {
         {caption: "or", value: "or ", score: 22, meta: "any term"},
         {caption: "and", value: "and ", score: 21, meta: "all terms"}
     ];
-    
+
     it('empty query should start with from or declare', done => {
         rqlTestUtils.autoComplete("|", northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
@@ -640,11 +641,11 @@ where OrderedAt|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) 
         });
     });
 
-    it.skip('After where field | should list binary operators', done => {
+    it('After where field | should list binary operators', done => {
         rqlTestUtils.autoComplete(`from Orders
-where OrderedAt |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+where Freight |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
-            assert.deepEqual(wordlist, [/*binary operators*/]);
+            assert.deepEqual(wordlist, queryCompleter.whereOperators);
 
             assert.equal(lastKeyword.keyword, "where");
             assert.equal(lastKeyword.dividersCount, 2);
@@ -653,11 +654,11 @@ where OrderedAt |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword)
         });
     });
 
-    it.skip('After where field and equal operator without space | ?????????????????????????????', done => {
+    it('After where field and equal operator without space | should list binray operators with prefix', done => {
         rqlTestUtils.autoComplete(`from Orders
 where OrderedAt =|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
-            assert.equal(prefix, "");
-            assert.deepEqual(wordlist, fieldsList);
+            assert.equal(prefix, "=");
+            assert.deepEqual(wordlist, queryCompleter.whereOperators);
 
             assert.equal(lastKeyword.keyword, "where");
             assert.equal(lastKeyword.dividersCount, 2);

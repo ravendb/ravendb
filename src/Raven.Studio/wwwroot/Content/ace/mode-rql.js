@@ -17,16 +17,15 @@ var RqlHighlightRules = function() {
     this.clauseAppendKeywords = clauseAppendKeywords.split("|");
 
     var insideClauseKeywords = (
-        "as|not"
+        "as|not" // TODO: not should be after AND or OR
     );
     var functions = (
         "count|sum|id|key"
     );
 
     var whereOperators = (
-        "=|==|<>|!=|>|<|>=|<=|in|all in|between"
+        "all|in|between"
     );
-    this.whereOperators = whereOperators.split("|");
 
     var whereFunctions = (
         "search|boost|startsWith|endsWith|lucene|exact|within|exists|contains|disjoint|intersects"
@@ -70,6 +69,7 @@ var RqlHighlightRules = function() {
         "keyword.insideClause": insideClauseKeywords,
         "keyword.orderByOptions": orderByOptions,
         "keyword.orderByAsOptions": orderByAsOptions,
+        "keyword.whereOperators": whereOperators,
         "function": functions,
         "function.where.within": withinFunctions,
         "function.orderBy": orderByFunctions,
@@ -118,7 +118,7 @@ var RqlHighlightRules = function() {
         regex : "[a-zA-Z_$@][a-zA-Z0-9_$@]*\\b"
     }, {
         token : "operator.where",
-        regex : whereOperators
+        regex : /(?:==|!=|>=|<=|=|<>|>|<)(?=\s)/
     }, {
         token : "paren.rparen",
         regex : /[\])}]/
@@ -162,7 +162,7 @@ var RqlHighlightRules = require("./rql_highlight_rules").RqlHighlightRules;
 var Mode = function() {
     this.HighlightRules = RqlHighlightRules;
     this.$behaviour = this.$defaultBehaviour;
-    this.prefixRegexps = [/[a-zA-Z_0-9@'"\\\/\$\-\u00A2-\uFFFF]/]
+    this.prefixRegexps = [/[a-zA-Z_0-9@'"\\\/\$\-\u00A2-\uFFFF=!<>]/]
 };
 oop.inherits(Mode, TextMode);
 

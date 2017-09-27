@@ -13,6 +13,18 @@ class queryCompleter {
     private tokenIterator: new(session : AceAjax.IEditSession, initialRow: number, initialColumn: number) => AceAjax.TokenIterator = ace.require("ace/token_iterator").TokenIterator;
     private indexOrCollectionFieldsCache = new Map<string, autoCompleteWordList[]>();
     
+    public static whereOperators: autoCompleteWordList[] = [
+        {caption: "in", value: "in ", score: 20, meta: "any in array", snippet: "in (${1:value1, value2}) "},
+        {caption: "all in", value: "all in ", score: 19, meta: "all in array", snippet: "all in (${1:value1, value2}) "},
+        {caption: "between",value: "between ", score: 18, meta: "two numbers", snippet: "between ${1:number1} and ${2:number2} "},
+        {caption: "=", value: "= ", score: 17, meta: "operator"},
+        {caption: "!=", value: "!= ", score: 16, meta: "operator"}, 
+        {caption: ">", value: "> ", score: 15, meta: "operator"},
+        {caption: "<", value: "< ", score: 14, meta: "operator"},
+        {caption: ">=", value: ">= ", score: 13, meta: "operator"},
+        {caption: "<=", value: "<= ", score: 12, meta: "operator"}
+    ];
+    
     constructor(private providers: queryCompleterProviders, private queryType: rqlQueryType) {
         _.bindAll(this, "complete");
     }
@@ -177,7 +189,6 @@ class queryCompleter {
             parentheses: 0
         };
             
-        let whereOperator = "";
         let liveAutoCompleteSkippedTriggerToken = false;
         let isFieldPrefixMode = 0;
         let isBeforeCommaOrBinaryOperation = false;
@@ -245,11 +256,6 @@ class queryCompleter {
                     result.keywordsBefore = this.getKeywordsBefore(iterator);
                     result.keyword = "__function";
                     return result;
-                case "operator.where":
-                    if (!isBeforeCommaOrBinaryOperation) {
-                        whereOperator = token.value;
-                    }
-                    break;
                 case "function.where":
                     if (!isBeforeCommaOrBinaryOperation) {
                         result.whereFunction = token.value.toLowerCase();
@@ -537,10 +543,7 @@ class queryCompleter {
                     return;
                 }
                 if (lastKeyword.dividersCount === 2) {
-                    const whereOperators = this.rules.whereOperators.map((operator, i) => {
-                        return {value: operator, score: 40 - i, meta: "operator"};
-                    });
-                    this.completeWords(callback, whereOperators);
+                    callback(null, queryCompleter.whereOperators);
                     return;
                 }
                 
