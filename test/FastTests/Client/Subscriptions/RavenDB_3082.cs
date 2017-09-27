@@ -9,6 +9,13 @@ namespace FastTests.Client.Subscriptions
 {
     public class RavenDB_3082 : RavenTestBase
     {
+
+        public class PersonWithZipcode
+        {
+            public string Name { get; set; }
+            public int ZipCode { get; set; }
+        }
+
         [Fact]
         public async Task StronglyTypedDataSubscriptions()
         {
@@ -51,14 +58,23 @@ namespace FastTests.Client.Subscriptions
                     await session.SaveChangesAsync();
                 }
 
-                var id = await store.Subscriptions.CreateAsync<PersonWithAddress>(
-                    p => p.Name == "James" && p.Address.ZipCode != 54321);
+                var id = store.Subscriptions.Create(
+                    new SubscriptionCreationOptions<PersonWithAddress>
+                    {
+                        Filter = p => p.Name == "James" && p.Address.ZipCode != 54321,
+                        Project = p => new
+                        {
+                            Name = p.Name,
+                            ZipCode = p.Address.ZipCode
+                        }
+                    }
+                );
 
                 using (
                     var subscription =
-                        store.Subscriptions.Open<PersonWithAddress>(new SubscriptionConnectionOptions(id)))
+                        store.Subscriptions.Open<PersonWithZipcode>(new SubscriptionConnectionOptions(id)))
                 {
-                    var users = new BlockingCollection<PersonWithAddress>();
+                    var users = new BlockingCollection<PersonWithZipcode>();
 
                     GC.KeepAlive(subscription.Run(address =>
                     {
@@ -68,12 +84,12 @@ namespace FastTests.Client.Subscriptions
                         }
                     }));
 
-                    PersonWithAddress userToTake;
+                    PersonWithZipcode userToTake;
                     for (var i = 0; i < 5; i++)
                     {
                         Assert.True(users.TryTake(out userToTake, 500000));
                         Assert.Equal("James", userToTake.Name);
-                        Assert.Equal(12345, userToTake.Address.ZipCode);
+                        Assert.Equal(12345, userToTake.ZipCode);
                     }
 
                     Assert.False(users.TryTake(out userToTake, 50));
