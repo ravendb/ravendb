@@ -121,14 +121,7 @@ namespace Raven.Server.Documents.Queries
 
                 for (var i = 0; i < Query.GroupBy.Count; i++)
                 {
-                    var expressionField = Query.GroupBy[i];
-
-                    if (expressionField.Compound.Count == 1 || TryGetFieldValueWithoutAlias(expressionField, parameters, out var name, out _) == false)
-                    {
-                        name = expressionField.FieldValue;
-                    }
-                    
-                    GroupBy[i] = name;
+                    GroupBy[i] = GetIndexFieldName(Query.GroupBy[i], parameters);
                 }
             }
 
@@ -615,11 +608,7 @@ namespace Raven.Server.Documents.Queries
                             return null; //never hit
                         }
 
-                        if (sumFieldToken.Compound.Count == 1 || TryGetFieldValueWithoutAlias(sumFieldToken, parameters, out fieldName, out _) == false)
-                        {
-                            fieldName = sumFieldToken.FieldValue;
-                        }
-
+                        fieldName = GetIndexFieldName(sumFieldToken, parameters);
                         break;
                 }
 
@@ -654,11 +643,15 @@ namespace Raven.Server.Documents.Queries
                     array = true;
                 }
 
-                if (TryGetFieldValueWithoutAlias(expressionField, parameters, out var value, out sourceAlias))
+                if (RootAliasPaths.TryGetValue(expressionField.Compound[0], out sourceAlias))
                 {
-                    name = value;
+                    name = expressionField.FieldValueWithoutAlias;
                     hasSourceAlias = true;
                     array = sourceAlias.Array;
+                }
+                else if (RootAliasPaths.Count != 0)
+                {
+                    ThrowUnknownAlias(expressionField.Compound[0], parameters);
                 }
             }
             else if (RootAliasPaths.TryGetValue(expressionField.Compound[0], out sourceAlias))
@@ -672,24 +665,6 @@ namespace Raven.Server.Documents.Queries
             return SelectField.Create(name, alias, sourceAlias.Path, array, hasSourceAlias);
         }
 
-        private bool TryGetFieldValueWithoutAlias(FieldExpression expressionField, BlittableJsonReaderObject parameters, out string value,
-            out (string Path, bool Array) sourceAlias)
-        {
-            if (RootAliasPaths.TryGetValue(expressionField.Compound[0], out sourceAlias))
-            {
-                value = expressionField.FieldValueWithoutAlias;
-                return true;
-            }
-
-            if (RootAliasPaths.Count != 0)
-            {
-                ThrowUnknownAlias(expressionField.Compound[0], parameters);
-            }
-
-            value = null;
-            return false;
-        }
-
         public string GetIndexFieldName(FieldExpression fe, BlittableJsonReaderObject parameters)
         {
             if (_aliasToName.TryGetValue(fe.Compound[0], out var indexFieldName))
@@ -701,6 +676,7 @@ namespace Raven.Server.Documents.Queries
             }
             if (fe.Compound.Count == 1)
                 return fe.Compound[0];
+
             if (RootAliasPaths.TryGetValue(fe.Compound[0], out _))
             {
                 if (fe.Compound.Count == 2)
