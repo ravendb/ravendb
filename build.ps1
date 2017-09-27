@@ -9,6 +9,7 @@ param(
     [switch]$DontBuildStudio,
     [switch]$JustStudio,
     [switch]$JustNuget,
+    [switch]$Debug,
     [switch]$Help)
 
 $ErrorActionPreference = "Stop"
@@ -136,8 +137,8 @@ Foreach ($spec in $targets) {
     $specOutDir = [io.path]::combine($OUT_DIR, $spec.Name)
     CleanDir $specOutDir
 
-    BuildServer $SERVER_SRC_DIR $specOutDir $spec
-    BuildRvn $RVN_SRC_DIR $specOutDir $spec
+    BuildServer $SERVER_SRC_DIR $specOutDir $spec $Debug
+    BuildRvn $RVN_SRC_DIR $specOutDir $spec $Debug
     
     $specOutDirs = @{
         "Main" = $specOutDir;

@@ -1,4 +1,4 @@
-function BuildServer ( $srcDir, $outDir, $spec ) {
+function BuildServer ( $srcDir, $outDir, $spec, $debug ) {
     write-host "Building Server for $($spec.Name)..."
     $command = "dotnet" 
     $commandArgs = @( "publish" )
@@ -6,7 +6,10 @@ function BuildServer ( $srcDir, $outDir, $spec ) {
     $output = [io.path]::combine($outDir, "Server");
     $quotedOutput = '"' + $output + '"'
     $commandArgs += @( "--output", $quotedOutput )
-    $commandArgs += @( "--configuration", "Release" )
+
+    $configuration = if ($debug) { 'Debug' } else { 'Release' }
+    $commandArgs += @( "--configuration", $configuration )
+    
     $commandArgs += $( "--runtime", "$($spec.Runtime)" )
     $commandArgs += "$srcDir"
 
@@ -88,7 +91,8 @@ function BuildRvn ( $srcDir, $outDir, $spec ) {
     $output = [io.path]::combine($outDir, "rvn");
     $quotedOutput = '"' + $output + '"'
     $commandArgs += @( "--output", $quotedOutput )
-    $commandArgs += @( "--configuration", "Release" )
+    $configuration = if ($debug) { 'Debug' } else { 'Release' }
+    $commandArgs += @( "--configuration", $configuration )
     $commandArgs += $( "--runtime", "$($spec.Runtime)" )
     $commandArgs += "$srcDir"
 
