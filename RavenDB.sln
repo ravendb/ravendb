@@ -1,6 +1,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26430.14
+VisualStudioVersion = 15.0.26730.16
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{561AA2B3-B289-43D7-AF86-2DEEC2ECCD66}"
 	ProjectSection(SolutionItems) = preProject
@@ -137,6 +137,8 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Raven.Test.CoreWLog4net", "NetCore\Raven.Test.CoreWLog4net\Raven.Test.CoreWLog4net.csproj", "{6351109F-FEC8-45EB-ABBE-7629F247CBD9}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Raven.Tests.Core", "NetCore\Raven.Tests.Core\Raven.Tests.Core.csproj", "{4B88EFDD-7FEC-4A98-930F-ADA89AE2D02D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Powershell", "Raven.Powershell\Raven.Powershell.csproj", "{47F4F294-C619-40B1-87D4-5BD04B848A4C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -473,6 +475,12 @@ Global
 		{4B88EFDD-7FEC-4A98-930F-ADA89AE2D02D}.Profiling|Any CPU.Build.0 = Release|Any CPU
 		{4B88EFDD-7FEC-4A98-930F-ADA89AE2D02D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4B88EFDD-7FEC-4A98-930F-ADA89AE2D02D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{47F4F294-C619-40B1-87D4-5BD04B848A4C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{47F4F294-C619-40B1-87D4-5BD04B848A4C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{47F4F294-C619-40B1-87D4-5BD04B848A4C}.Profiling|Any CPU.ActiveCfg = Release|Any CPU
+		{47F4F294-C619-40B1-87D4-5BD04B848A4C}.Profiling|Any CPU.Build.0 = Release|Any CPU
+		{47F4F294-C619-40B1-87D4-5BD04B848A4C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{47F4F294-C619-40B1-87D4-5BD04B848A4C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -526,6 +534,10 @@ Global
 		{F31BBDFC-47DB-499C-AC24-E75AFA67DA37} = {DACEBB9C-8BAC-4A0B-B9AD-A2BFC7C0C5DD}
 		{6351109F-FEC8-45EB-ABBE-7629F247CBD9} = {DACEBB9C-8BAC-4A0B-B9AD-A2BFC7C0C5DD}
 		{4B88EFDD-7FEC-4A98-930F-ADA89AE2D02D} = {DACEBB9C-8BAC-4A0B-B9AD-A2BFC7C0C5DD}
+		{47F4F294-C619-40B1-87D4-5BD04B848A4C} = {702CE58F-C8D5-4C3E-8138-98D20B0E26F9}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {44544B14-DB2E-4BDE-9FA4-A38362E5D2BC}
 	EndGlobalSection
 	GlobalSection(CodealikeProperties) = postSolution
 		SolutionGuid = 6944aade-3195-477c-8aed-9ebe2902fc57
