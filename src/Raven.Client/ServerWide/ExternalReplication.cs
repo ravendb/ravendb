@@ -48,34 +48,19 @@ namespace Raven.Client.ServerWide
             }
         }
 
-        internal static (HashSet<string> AddedDestinations, HashSet<string> RemovedDestiantions) FindChanges(
-            List<ExternalReplication> oldDestinations, List<ExternalReplication> newDestinations)
+        internal static (IEnumerable<ExternalReplication> AddedDestinations, IEnumerable<ExternalReplication> RemovedDestiantions) FindChanges(
+            List<ExternalReplication> current, List<ExternalReplication> newDestinations)
         {
-            var oldList = new List<string>();
-            var newList = new List<string>();
-
-            if (oldDestinations != null)
+            if (current == null)
             {
-                oldList.AddRange(oldDestinations.Select(s => s.Url + "@" + s.Database));
+                current = new List<ExternalReplication>();
             }
-            if (newDestinations != null)
+            if (newDestinations == null)
             {
-                newList.AddRange(newDestinations.Select(s => s.Url + "@" + s.Database));
+                newDestinations = new List<ExternalReplication>();
             }
 
-            var addDestinations = new HashSet<string>(newList);
-            var removeDestinations = new HashSet<string>(oldList);
-
-            foreach (var destination in newList)
-            {
-                if (removeDestinations.Contains(destination))
-                {
-                    removeDestinations.Remove(destination);
-                    addDestinations.Remove(destination);
-                }
-            }
-
-            return (addDestinations, removeDestinations);
+            return (newDestinations.Except(current), current.Except(newDestinations));
         }
 
         public override DynamicJsonValue ToJson()
@@ -96,8 +81,21 @@ namespace Raven.Client.ServerWide
         public ulong GetTaskKey()
         {
             var hashCode = CalculateStringHash(Database);
-            hashCode = (hashCode * 397) ^ CalculateStringHash(Url);
+            hashCode = (hashCode * 397) ^ CalculateStringHash(string.Join(",", TopologyDiscoveryUrls));
             return hashCode;
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = CalculateStringHash(Database);
+                hashCode = (hashCode * 397) ^ CalculateStringHash(string.Join(",",TopologyDiscoveryUrls));
+                hashCode = (hashCode * 397) ^ (ulong)TaskId;
+                hashCode = (hashCode * 397) ^ CalculateStringHash(MentorNode);
+                hashCode = (hashCode * 397) ^ CalculateStringHash(Name);
+                return (int)hashCode;
+            }
         }
 
         public string GetMentorNode()

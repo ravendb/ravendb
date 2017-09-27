@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Replication
 
         private readonly ConcurrentQueue<OutgoingReplicationStatsAggregator> _lastReplicationStats = new ConcurrentQueue<OutgoingReplicationStatsAggregator>();
         private OutgoingReplicationStatsAggregator _lastStats;
-        public TcpConnectionInfo ConnectionInfo;
+        private readonly TcpConnectionInfo _connectionInfo;
 
         public OutgoingReplicationHandler(ReplicationLoader parent, DocumentDatabase database, ReplicationNode node, bool external, TcpConnectionInfo connectionInfo)
         {
@@ -80,7 +80,7 @@ namespace Raven.Server.Documents.Replication
             Destination = node;
             _external = external;
             _log = LoggingSource.Instance.GetLogger<OutgoingReplicationHandler>(_database.Name);
-            ConnectionInfo = connectionInfo;
+            _connectionInfo = connectionInfo;
             _database.Changes.OnDocumentChange += OnDocumentChange;
             _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
         }
@@ -124,7 +124,7 @@ namespace Raven.Server.Documents.Replication
             try
             {
                 if (_log.IsInfoEnabled)
-                    _log.Info($"Will replicate to {Destination.FromString()} via {ConnectionInfo.Url}");
+                    _log.Info($"Will replicate to {Destination.FromString()} via {_connectionInfo.Url}");
 
                 using (_parent._server.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
@@ -138,11 +138,11 @@ namespace Raven.Server.Documents.Replication
                             $"{record.DatabaseName} is encrypted, and require HTTPS for replication, but had endpoint with url {Destination.Url} to database {Destination.Database}");
                 }
 
-                var task = TcpUtils.ConnectSocketAsync(ConnectionInfo, _parent._server.Engine.TcpConnectionTimeout, _log);
+                var task = TcpUtils.ConnectSocketAsync(_connectionInfo, _parent._server.Engine.TcpConnectionTimeout, _log);
                 task.Wait(CancellationToken);
                 using (_tcpClient = task.Result)
                 {
-                    var wrapSsl = TcpUtils.WrapStreamWithSslAsync(_tcpClient, ConnectionInfo, _parent._server.Server.ClusterCertificateHolder.Certificate);
+                    var wrapSsl = TcpUtils.WrapStreamWithSslAsync(_tcpClient, _connectionInfo, _parent._server.Server.ClusterCertificateHolder.Certificate);
 
                     wrapSsl.Wait(CancellationToken);
 
