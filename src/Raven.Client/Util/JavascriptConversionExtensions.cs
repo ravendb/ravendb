@@ -140,7 +140,8 @@ namespace Raven.Client.Util
                 else
                 {
                     context.PreventDefault();
-                    javascriptWriter.Write($"this.{obj.Member.Name}.{newName}");
+                    context.Visitor.Visit(obj.Expression);
+                    javascriptWriter.Write($".{obj.Member.Name}.{newName}");
                 }
 
                 if (methodCallExpression.Arguments.Count < 2)
