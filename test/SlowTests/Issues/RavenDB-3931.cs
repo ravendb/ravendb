@@ -15,7 +15,7 @@ namespace SlowTests.Issues
 {
     public class RavenDB_3931 : NoDisposalNeeded
     {
-        public class Item
+        private class Item
         {
             public IEnumerable<string> Foo
             {

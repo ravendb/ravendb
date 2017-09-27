@@ -47,6 +47,14 @@ namespace Raven.Client.Documents.Session
             WhereTokens.AddLast(relationToken);
         }
 
+        public void Spatial(SpatialDynamicField dynamicField, SpatialCriteria criteria)
+        {
+            AppendOperatorIfNeeded(WhereTokens);
+            NegateIfNeeded(null);
+
+            WhereTokens.AddLast(criteria.ToQueryToken(dynamicField.ToField(EnsureValidFieldName), AddQueryParameter));
+        }
+
         /// <inheritdoc />
         public void Spatial(string fieldName, SpatialCriteria criteria)
         {

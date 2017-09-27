@@ -1365,6 +1365,25 @@ namespace Raven.Client.Documents
             return (IRavenQueryable<T>)queryable;
         }
 
+        public static IRavenQueryable<T> Spatial<T>(this IQueryable<T> source, Func<SpatialDynamicFieldFactory<T>, SpatialDynamicField> field, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
+        {
+            return source.Spatial(field(new SpatialDynamicFieldFactory<T>()), clause);
+        }
+
+        public static IRavenQueryable<T> Spatial<T>(this IQueryable<T> source, SpatialDynamicField field, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
+        {
+#if NETSTANDARD2_0
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+#else
+            var currentMethod = GetSpatialMethod(); // TODO [ppekrol]
+#endif
+
+            var expression = ConvertExpressionIfNecessary(source);
+
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(field), Expression.Constant(clause)));
+            return (IRavenQueryable<T>)queryable;
+        }
+
         public static IOrderedQueryable<T> OrderByDistance<T>(this IQueryable<T> source, Expression<Func<T, object>> path, double latitude, double longitude)
         {
             return source.OrderByDistance(path.ToPropertyPath(), latitude, longitude);

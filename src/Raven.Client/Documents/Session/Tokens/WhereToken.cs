@@ -229,8 +229,6 @@ namespace Raven.Client.Documents.Session.Tokens
             };
         }
 
-
-      
         public override void WriteTo(StringBuilder writer)
         {
             if (Boost.HasValue)

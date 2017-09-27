@@ -24,7 +24,7 @@ https://www.talentous.comSenior consultantWorking as software architect and seni
 •	Microsoft development technologies and security development trainer.Hardware support technician";
 
 
-        public class Item
+        private class Item
         {
             public string Name { get; set; }
         }
