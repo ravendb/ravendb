@@ -81,6 +81,15 @@ function getManageServerMenuItem() {
             dynamicHash: appUrl.forAdminLogs,
             enabled: accessHelper.isGlobalAdmin
         }),
+        new leafMenuItem({
+            route: 'admin/settings/trafficWatch',
+            moduleId: 'viewmodels/manage/trafficWatch',
+            title: 'Traffic Watch',
+            nav: true,
+            css: 'icon-trafic-watch',
+            dynamicHash: appUrl.forTrafficWatch,
+            enabled: accessHelper.isGlobalAdmin
+        }),
         /* TODO
         new leafMenuItem({
             route: 'admin/settings/compact',
@@ -101,15 +110,7 @@ function getManageServerMenuItem() {
             dynamicHash: appUrl.forServerTopology,
             enabled: accessHelper.isGlobalAdmin
         }),
-        new leafMenuItem({
-            route: 'admin/settings/trafficWatch',
-            moduleId: 'viewmodels/manage/trafficWatch',
-            title: 'Traffic Watch',
-            nav: true,
-            css: 'icon-trafic-watch',
-            dynamicHash: appUrl.forTrafficWatch,
-            enabled: accessHelper.isGlobalAdmin
-        }),
+        
         new leafMenuItem({
             route: 'admin/settings/licenseInformation',
             moduleId: 'viewmodels/manage/licenseInformation',
