@@ -578,6 +578,8 @@ namespace Raven.Server.Documents.TcpHandlers
                                                         clientReply.Type);
                     }
                 }
+
+                CancellationTokenSource.Token.ThrowIfCancellationRequested();
             }
         }
 
