@@ -315,19 +315,18 @@ namespace Raven.Client.Util
         {
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
-                var nodeAsConst = context.Node as ConstantExpression;
+                if (!(context.Node is ConstantExpression nodeAsConst) ||
+                    nodeAsConst.Type != typeof(bool))
+                    return;
 
-                if (nodeAsConst != null && nodeAsConst.Type == typeof(bool))
+                context.PreventDefault();
+                var writer = context.GetWriter();
+                var val = (bool)nodeAsConst.Value ? "true" : "false";
+
+                using (writer.Operation(nodeAsConst))
                 {
-                    context.PreventDefault();
-                    var writer = context.GetWriter();
-                    var val = nodeAsConst.Value.ToString().ToLower();
-
-                    using (writer.Operation(nodeAsConst))
-                    {
-                        writer.Write(val);
-                    }
-                } 
+                    writer.Write(val);
+                }
             }
         }
     }

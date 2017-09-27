@@ -16,15 +16,17 @@ namespace FastTests.Client
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Jerry", LastName = "Garcia" }, "users/1");
+                    session.Store(new User { Name = "Bob", LastName = "Weir" }, "users/2");
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<User>()
-                        .Select(u => new { FullName = u.Name + " " + u.LastName, FirstName = u.Name});
+                        .Where(u=> u.Name == "Jerry")
+                        .Select(u=> new { FullName = u.Name + " " + u.LastName, FirstName = u.Name});
 
-                    Assert.Equal("FROM Users as u SELECT { FullName : u.Name+\" \"+u.LastName, FirstName : u.Name }", query.ToString());
+                    Assert.Equal("FROM Users as u WHERE Name = $p0 SELECT { FullName : u.Name+\" \"+u.LastName, FirstName : u.Name }", query.ToString());
 
                     var queryResult = query.ToList();
 
@@ -44,15 +46,17 @@ namespace FastTests.Client
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "Jerry", LastName = "Garcia" }, "users/1");
+                    await session.StoreAsync(new User { Name = "Bob", LastName = "Weir" }, "users/2");
                     await session.SaveChangesAsync();
                 }
 
                 using (var session = store.OpenAsyncSession())
                 {
                     var query = session.Query<User>()
+                        .Where(u => u.Name == "Jerry")
                         .Select(u => new { FullName = u.Name + " " + u.LastName, FirstName = u.Name });
 
-                    Assert.Equal("FROM Users as u SELECT { FullName : u.Name+\" \"+u.LastName, FirstName : u.Name }", query.ToString());
+                    Assert.Equal("FROM Users as u WHERE Name = $p0 SELECT { FullName : u.Name+\" \"+u.LastName, FirstName : u.Name }", query.ToString());
 
                     var queryResult = await query.ToListAsync();
 
@@ -268,6 +272,80 @@ namespace FastTests.Client
             }
         }
 
+        [Fact]
+        public void Can_Define_Custom_Functions_Inside_Select_Nested()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia", Roles = new[] { "Musician", "Song Writer" } }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<User>()
+                        .Select(u => new {
+                            Roles = u.Roles.Select(r => new
+                            {
+                                RoleName = r + "!"
+                            })
+                        });
+
+                    Assert.Equal("FROM Users as u SELECT { Roles : u.Roles.map(function(r){return {RoleName:r+\"!\"};}) }", query.ToString());
+
+                    var queryResult = query.ToList();
+
+                    Assert.Equal(1, queryResult.Count);
+
+                    var roles = queryResult[0].Roles.ToList();
+
+                    Assert.Equal(2 , roles.Count);
+                    Assert.Equal("Musician!", roles[0].RoleName);
+                    Assert.Equal("Song Writer!", roles[1].RoleName);
+
+                }
+            }
+        }
+
+        [Fact]
+        public async Task Can_Define_Custom_Functions_Inside_Select_Nested_Async()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Jerry", LastName = "Garcia", Roles = new[] { "Musician", "Song Writer" } }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var query = session.Query<User>()
+                        .Select(u => new {
+                            Roles = u.Roles.Select(r => new
+                            {
+                                RoleName = r + "!"
+                            })
+                        });
+
+                    Assert.Equal("FROM Users as u SELECT { Roles : u.Roles.map(function(r){return {RoleName:r+\"!\"};}) }", query.ToString());
+
+                    var queryResult = await query.ToListAsync();
+
+                    Assert.Equal(1, queryResult.Count);
+
+                    var roles = queryResult[0].Roles.ToList();
+
+                    Assert.Equal(2, roles.Count);
+                    Assert.Equal("Musician!", roles[0].RoleName);
+                    Assert.Equal("Song Writer!", roles[1].RoleName);
+
+                }
+            }
+        }
+
         private class User
         {
             public string Name { get; set; }
@@ -275,6 +353,7 @@ namespace FastTests.Client
             public DateTime Birthday { get; set; }
             public int IdNumber { get; set; }
             public bool IsActive { get; set; }
+            public string[] Roles { get; set; }
         }
     }
 }

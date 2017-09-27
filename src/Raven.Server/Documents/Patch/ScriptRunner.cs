@@ -391,15 +391,11 @@ namespace Raven.Server.Documents.Patch
                 if (args.Length != 1 || args[0].IsNumber() == false)
                     throw new InvalidOperationException("convertJsTimeToTimeSpanString(ticks) must be called with a single long argument");
 
-                var ticks = Convert.ToInt64(args[0].AsNumber());
+                var ticks = Convert.ToInt64(args[0].AsNumber()) * 10000;
 
-                var days = ticks / (24 * 60 * 60 * 1000);
-                var hours = (ticks / (60 * 60 * 1000) % 24);
-                var mins = (ticks / (60 * 1000) % 60);
-                var secs = (ticks /1000) % 60;
-                var ms = ticks % 1000;
+                var asTimeSpan = new TimeSpan(ticks);
 
-                return new JsValue($"{days}.{hours}:{mins}:{secs}.{ms}");
+                return new JsValue(asTimeSpan.ToString());
             }
 
             private JsValue LoadDocumentInternal(string id)
