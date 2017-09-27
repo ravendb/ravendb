@@ -69,7 +69,9 @@ describe("RQL Autocomplete", () => {
         {caption: "@metadata", value: "@metadata ", score: 101, meta: "object field"}
     ].concat(functionsList);
 
-    const whereFieldsList = _.sortBy(fieldsList.concat(whereFunctionsList), (x: autoCompleteWordList) => x.score).reverse();
+    const whereFieldsList: autoCompleteWordList[] = _.sortBy(fieldsList.concat(whereFunctionsList), (x: autoCompleteWordList) => x.score).reverse();
+    
+    const whereFieldsListAfterOrAnd = queryCompleter.notAfterAndOrList.concat(whereFieldsList);
 
     const allDocsFieldsList = [
         {caption: "Address", value: "Address ", score: 138, meta: "object field"},
@@ -382,7 +384,7 @@ describe("RQL Autocomplete", () => {
             assert.deepEqual(wordlist, afterFromList);
 
             assert.equal(lastKeyword.keyword, "from");
-            assert.equal(lastKeyword.keywordModifier, "as");
+            assert.isTrue(lastKeyword.asSpecified);
             assert.equal(lastKeyword.dividersCount, 2);
 
             done();
@@ -396,7 +398,7 @@ describe("RQL Autocomplete", () => {
             assert.isNull(wordlist);
 
             assert.equal(lastKeyword.keyword, "from");
-            assert.equal(lastKeyword.keywordModifier, "as");
+            assert.isTrue(lastKeyword.asSpecified);
             assert.equal(lastKeyword.dividersCount, 3);
 
             done();
@@ -410,7 +412,7 @@ describe("RQL Autocomplete", () => {
             assert.isNull(wordlist);
 
             assert.equal(lastKeyword.keyword, "from");
-            assert.equal(lastKeyword.keywordModifier, "as");
+            assert.isTrue(lastKeyword.asSpecified);
             assert.equal(lastKeyword.dividersCount, 3);
 
             done();
@@ -423,7 +425,7 @@ describe("RQL Autocomplete", () => {
             assert.deepEqual(wordlist, afterFromAsList);
 
             assert.equal(lastKeyword.keyword, "from");
-            assert.equal(lastKeyword.keywordModifier, "as");
+            assert.isTrue(lastKeyword.asSpecified);
             assert.equal(lastKeyword.dividersCount, 4);
 
             done();
@@ -436,7 +438,7 @@ describe("RQL Autocomplete", () => {
             assert.deepEqual(wordlist, afterFromList);
 
             assert.equal(lastKeyword.keyword, "from");
-            assert.isUndefined(lastKeyword.keywordModifier);
+            assert.isFalse(lastKeyword.asSpecified);
             assert.equal(lastKeyword.dividersCount, 2);
 
             done();
@@ -449,7 +451,7 @@ describe("RQL Autocomplete", () => {
             assert.deepEqual(wordlist, afterFromAsList);
 
             assert.equal(lastKeyword.keyword, "from");
-            assert.isUndefined(lastKeyword.keywordModifier);
+            assert.isFalse(lastKeyword.asSpecified);
             assert.equal(lastKeyword.dividersCount, 3);
 
             done();
@@ -918,7 +920,7 @@ where search(OrderedAt, '1996*') |`, northwindProvider(), (errors, wordlist, pre
     });
 
     it('After where function | complex combination of where functions', done => {
-        rqlTestUtils.autoComplete(`from Orders 
+        rqlTestUtils.autoComplete(`from Orders as o
 where search(OrderedAt, "*1997*", or) or Freight = "" or (Freight = "" or Freight = "") 
 and (Freight = "" and Freight = "") and search(OrderedAt, "*1997*", and)|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
@@ -929,7 +931,7 @@ and (Freight = "" and Freight = "") and search(OrderedAt, "*1997*", and)|`, nort
             assert.equal(lastKeyword.whereFunction, "search");
             assert.equal(lastKeyword.whereFunctionParameters, 3);
             assert.equal(lastKeyword.parentheses, 0);
-            assert.isUndefined(lastKeyword.keywordModifier);
+            assert.isFalse(lastKeyword.asSpecified);
             assert.equal(lastKeyword.dividersCount, 3);
 
             done();
@@ -959,16 +961,54 @@ where ShipTo.Country = 'France' and|`, northwindProvider(), (errors, wordlist, p
             assert.equal(lastKeyword.keyword, "where");
             assert.equal(lastKeyword.dividersCount, 0);
             assert.equal(lastKeyword.binaryOperation, "and");
-            //TODO: assert.isUndefined(lastKeyword.operator);
-            assert.isUndefined(lastKeyword.keywordModifier);
+            assert.isFalse(lastKeyword.asSpecified);
 
             done();
         });
     });
 
-    it('WHERE and than AND should list fields', done => {
+    it('WHERE and than AND | should list fields and NOT keyword', done => {
         rqlTestUtils.autoComplete(`from Orders
 where ShipTo.Country = 'France' and |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, whereFieldsListAfterOrAnd);
+
+            assert.equal(lastKeyword.keyword, "where");
+            assert.equal(lastKeyword.dividersCount, 1);
+
+            done();
+        });
+    });
+
+    it('WHERE and than OR | should list fields and NOT keyword', done => {
+        rqlTestUtils.autoComplete(`from Orders
+where ShipTo.Country = 'France' or |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, whereFieldsListAfterOrAnd);
+
+            assert.equal(lastKeyword.keyword, "where");
+            assert.equal(lastKeyword.dividersCount, 1);
+
+            done();
+        });
+    });
+
+    it('WHERE and than AND and NOT | should list fields with where functions', done => {
+        rqlTestUtils.autoComplete(`from Orders
+where ShipTo.Country = 'France' and not |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, whereFieldsList);
+
+            assert.equal(lastKeyword.keyword, "where");
+            assert.equal(lastKeyword.dividersCount, 1);
+
+            done();
+        });
+    });
+
+    it('WHERE and than OR and NOT | should list fields with where functions', done => {
+        rqlTestUtils.autoComplete(`from Orders
+where ShipTo.Country = 'France' or not |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
             assert.deepEqual(wordlist, whereFieldsList);
 
@@ -1357,7 +1397,7 @@ group by ShippedAt, |`, northwindProvider(), (errors, wordlist, prefix, lastKeyw
             assert.deepEqual(wordlist, afterFromIndexList);
 
             assert.equal(lastKeyword.keyword, "from index");
-            assert.equal(lastKeyword.keywordModifier, "as");
+            assert.isTrue(lastKeyword.asSpecified);
             assert.equal(lastKeyword.dividersCount, 2);
             
             done();
@@ -1371,7 +1411,7 @@ group by ShippedAt, |`, northwindProvider(), (errors, wordlist, prefix, lastKeyw
             assert.isNull(wordlist);
 
             assert.equal(lastKeyword.keyword, "from index");
-            assert.equal(lastKeyword.keywordModifier, "as");
+            assert.isTrue(lastKeyword.asSpecified);
             assert.equal(lastKeyword.dividersCount, 3);
             
             done();
@@ -1385,7 +1425,7 @@ group by ShippedAt, |`, northwindProvider(), (errors, wordlist, prefix, lastKeyw
             assert.isNull(wordlist);
 
             assert.equal(lastKeyword.keyword, "from index");
-            assert.equal(lastKeyword.keywordModifier, "as");
+            assert.isTrue(lastKeyword.asSpecified);
             assert.equal(lastKeyword.dividersCount, 3);
 
             done();
@@ -1398,7 +1438,7 @@ group by ShippedAt, |`, northwindProvider(), (errors, wordlist, prefix, lastKeyw
             assert.deepEqual(wordlist, afterFromIndexAsList);
 
             assert.equal(lastKeyword.keyword, "from index");
-            assert.equal(lastKeyword.keywordModifier, "as");
+            assert.isTrue(lastKeyword.asSpecified);
             assert.equal(lastKeyword.dividersCount, 4);
 
             done();
@@ -1411,7 +1451,7 @@ group by ShippedAt, |`, northwindProvider(), (errors, wordlist, prefix, lastKeyw
             assert.deepEqual(wordlist, afterFromIndexList);
 
             assert.equal(lastKeyword.keyword, "from index");
-            assert.isUndefined(lastKeyword.keywordModifier);
+            assert.isFalse(lastKeyword.asSpecified);
             assert.equal(lastKeyword.dividersCount, 2);
 
             done();
@@ -1424,7 +1464,7 @@ group by ShippedAt, |`, northwindProvider(), (errors, wordlist, prefix, lastKeyw
             assert.deepEqual(wordlist, afterFromIndexAsList);
 
             assert.equal(lastKeyword.keyword, "from index");
-            assert.isUndefined(lastKeyword.keywordModifier);
+            assert.isFalse(lastKeyword.asSpecified);
             assert.equal(lastKeyword.dividersCount, 3);
 
             done();

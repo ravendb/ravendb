@@ -16,9 +16,6 @@ var RqlHighlightRules = function() {
     );
     this.clauseAppendKeywords = clauseAppendKeywords.split("|");
 
-    var insideClauseKeywords = (
-        "as|not" // TODO: not should be after AND or OR
-    );
     var functions = (
         "count|sum|id|key"
     );
@@ -66,7 +63,8 @@ var RqlHighlightRules = function() {
     var keywordMapper = this.createKeywordMapper({
         "keyword.clause": clausesKeywords,
         "keyword.clause.clauseAppend": clauseAppendKeywords,
-        "keyword.insideClause": insideClauseKeywords,
+        "keyword.asKeyword": "as",
+        "keyword.notKeyword": "not",
         "keyword.orderByOptions": orderByOptions,
         "keyword.orderByAsOptions": orderByAsOptions,
         "keyword.whereOperators": whereOperators,

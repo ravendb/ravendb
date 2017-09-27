@@ -24,6 +24,10 @@ class queryCompleter {
         {caption: ">=", value: ">= ", score: 13, meta: "operator"},
         {caption: "<=", value: "<= ", score: 12, meta: "operator"}
     ];
+
+    public static notAfterAndOrList: autoCompleteWordList[] = [
+        {caption: "not", value: "not ", score: Number.MAX_SAFE_INTEGER, meta: "keyword"}
+    ];
     
     constructor(private providers: queryCompleterProviders, private queryType: rqlQueryType) {
         _.bindAll(this, "complete");
@@ -175,7 +179,8 @@ class queryCompleter {
         const result: autoCompleteLastKeyword = {
             keywordsBefore: undefined,
             keyword: undefined,
-            keywordModifier: undefined,
+            asSpecified: false,
+            notSpecified: false,
             binaryOperation: undefined,
             whereFunction: undefined,
             whereFunctionParameters: 0,
@@ -183,8 +188,7 @@ class queryCompleter {
             get getFieldPrefix():string {
                 return this.fieldPrefix ? this.fieldPrefix.join(".") : undefined;
             },
-            identifiers: [],
-            text: undefined, // TODO: Not needed anymore
+            fieldName: undefined,
             dividersCount: 0,
             parentheses: 0
         };
@@ -241,9 +245,15 @@ class queryCompleter {
                 case "keyword.clause.clauseAppend":
                     result.keyword = token.value.toLowerCase();
                     break;
-                case "keyword.insideClause":
-                    if (result.identifiers.length > 0 || !result.keywordModifier) {
-                        result.keywordModifier = token.value.toLowerCase();
+                case "keyword.asKeyword":
+                    if (!isBeforeCommaOrBinaryOperation) {
+                        result.asSpecified = true;
+                    }
+                    break;
+                case "keyword.notKeyword":
+                    if (!isBeforeCommaOrBinaryOperation) {
+                        result.notSpecified = true;
+                        result.dividersCount--;
                     }
                     break;
                 case "operations.type.binary":
@@ -252,10 +262,6 @@ class queryCompleter {
                         isBeforeCommaOrBinaryOperation = true;
                     }
                     break;
-                case "function":
-                    result.keywordsBefore = this.getKeywordsBefore(iterator);
-                    result.keyword = "__function";
-                    return result;
                 case "function.where":
                     if (!isBeforeCommaOrBinaryOperation) {
                         result.whereFunction = token.value.toLowerCase();
@@ -265,18 +271,18 @@ class queryCompleter {
                     if (!isBeforeCommaOrBinaryOperation) {
                         if (isFieldPrefixMode === 1) {
                             result.fieldPrefix.push(token.value);
-                        } else {
-                            result.identifiers.push(token.value);
+                        } else if(!result.fieldName) {
+                            result.fieldName = token.value;
                         }
                     }
                     break;
                 case "string":
-                    if (!isBeforeCommaOrBinaryOperation) {
+                    if (!isBeforeCommaOrBinaryOperation && !result.fieldName) {
                         const lastChar = token.value[token.value.length - 1];
                         if (lastChar === "'" ||
                             lastChar === '"') {
                             const indexName = token.value.substr(1, token.value.length - 2);
-                            result.identifiers.push(indexName);
+                            result.fieldName = indexName;
                         } else {
                             // const partialIndexName = token.value.substr(1);
                             // do nothing with it as of now
@@ -322,14 +328,9 @@ class queryCompleter {
                 case "text":
                     if (!isBeforeCommaOrBinaryOperation && !result.whereFunction) {
                         const text = token.value;
-
                         if (isFieldPrefixMode === 0 && (text === "." || text === "[].")) { // TODO: Intorudce regex rule for fieldPrefix /(?:.|[].)/
                             isFieldPrefixMode = 1;
                             result.fieldPrefix = [];
-                        }
-
-                        if (result.identifiers.length > 0) {
-                            result.text = token.value;
                         }
                     }
                     break;
@@ -432,7 +433,7 @@ class queryCompleter {
                     this.completeEmpty(callback);
                     return;
                 }
-                if (lastKeyword.dividersCount === 3 && lastKeyword.keywordModifier === "as") {
+                if (lastKeyword.dividersCount === 3 && lastKeyword.asSpecified) {
                     callback(["empty completion"], null);
                     return;
                 }
@@ -440,13 +441,6 @@ class queryCompleter {
                 this.completeFromEnd(callback, lastKeyword);
                 break;
             }
-            case "__function":
-                if (lastKeyword.identifiers.length > 0 && lastKeyword.text) { // field already specified
-                    return;
-                }
-
-                this.completeFields(session, lastKeyword.getFieldPrefix, callback);
-                break;
             case "declare":
                 this.completeWords(callback, [
                     {value: "function", score: 0, meta: "keyword"}
@@ -458,8 +452,8 @@ class queryCompleter {
                 }
                 break;
             case "select": {
-                if (lastKeyword.identifiers.length > 0 && lastKeyword.dividersCount >= 2) {
-                    if (!lastKeyword.keywordModifier) {
+                if (lastKeyword.dividersCount >= 2) {
+                    if (!lastKeyword.asSpecified) {
                         this.completeWords(callback, [{value: "as", score: 3, meta: "keyword"}]);
                     }
 
@@ -539,6 +533,11 @@ class queryCompleter {
                     const additions: autoCompleteWordList[] = [
                         {caption: "search", value: "search ", snippet: "search(${1:alias.Field.Name}, ${2:'*term1* term2*'}, ${3:or}) ", score: 21, meta: "function"}
                     ];
+                    
+                    if (lastKeyword.binaryOperation && !lastKeyword.notSpecified) {
+                        additions.push(...queryCompleter.notAfterAndOrList);
+                    }
+                    
                     this.completeFields(session, lastKeyword.getFieldPrefix, callback, additions);
                     return;
                 }
@@ -548,9 +547,7 @@ class queryCompleter {
                 }
                 
                 if (true) { // TODO: refactor this
-                    // first, calculate and validate the column name
-                    let currentField = _.last(lastKeyword.identifiers);
-                    if (!currentField) {
+                    if (!lastKeyword.fieldName) {
                         return;
                     }
 
@@ -562,7 +559,7 @@ class queryCompleter {
 
                     this.getIndexFields(queryIndexName.name, queryIndexName.type, prefix)
                         .done((wordList) => {
-                            if (!wordList.find(x => x.value === currentField)) {
+                            if (!wordList.find(x => x.value === lastKeyword.fieldName)) {
                                 return;
                             }
 
@@ -583,7 +580,7 @@ class queryCompleter {
                             }
 
                             if (queryIndexName.type === "index") {
-                                this.providers.terms(queryIndexName.name, currentField, 20, terms => {
+                                this.providers.terms(queryIndexName.name, lastKeyword.fieldName, 20, terms => {
                                     if (terms && terms.length) {
                                         this.completeWords(callback,
                                             terms.map(term => ({
