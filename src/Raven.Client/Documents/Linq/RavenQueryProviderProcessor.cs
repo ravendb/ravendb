@@ -11,12 +11,15 @@ using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Text;
 using System.Text.RegularExpressions;
+using Lambda2Js;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Spatial;
 using Raven.Client.Documents.Session;
 using Raven.Client.Extensions;
+using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Linq
 {
@@ -42,6 +45,9 @@ namespace Raven.Client.Documents.Linq
         private readonly string _resultsTransformer;
         private readonly Parameters _transformerParameters;
         private Expression _groupByElementSelector;
+        private string _jsSelectBody;
+        private string[] _jsProjectionNames;
+        private string _fromAlias;
 
         private readonly LinqPathProvider _linqPathProvider;
         /// <summary>
@@ -1520,7 +1526,15 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     {
                         var field = newExpression.Arguments[index] as MemberExpression;
                         if (field == null)
-                            continue;
+                        {
+                            // lambda 2 js
+                            TranslateSelectBodyToJs(newExpression);
+                            FieldsToFetch = new HashSet<FieldToFetch>();
+                            _fromAlias = lambdaExpression?.Parameters[0].Name;
+
+                            break;
+                        }
+
                         var expression = _linqPathProvider.GetMemberExpression(newExpression.Arguments[index]);
                         AddToFieldsToFetch(GetSelectPath(expression), GetSelectPath(newExpression.Members[index]));
                     }
@@ -1552,6 +1566,43 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 default:
                     throw new NotSupportedException("Node not supported: " + body.NodeType);
             }
+        }
+
+        private void TranslateSelectBodyToJs(NewExpression expression)
+        {
+            _jsProjectionNames = new string[expression.Arguments.Count];
+            var sb = new StringBuilder();
+
+            sb.Append("{ ");
+
+            for (int index = 0; index < expression.Arguments.Count; index++)
+            {
+                var name = GetSelectPath(expression.Members[index]);
+                _jsProjectionNames[index] = name;
+
+                var js = expression.Arguments[index].CompileToJavascript(
+                    new JavascriptCompilationOptions(
+                        new JavascriptConversionExtensions.LinqMethodsSupport(),
+                        new JavascriptConversionExtensions.BooleanSupport(),
+                        new JavascriptConversionExtensions.DateTimeSupport()));
+
+                if (expression.Arguments[index].Type == typeof(TimeSpan) && expression.Arguments[index].NodeType != ExpressionType.MemberAccess)
+                {
+                    //convert milliseconds to a TimeSpan string
+                    js = $"convertJsTimeToTimeSpanString({js})";
+                }
+
+                if (index > 0)
+                {
+                    sb.Append(", ");
+                }
+
+                sb.Append(name).Append(" : ").Append(js);
+            }
+
+            sb.Append(" }");
+
+            _jsSelectBody = sb.ToString();            
         }
 
         private void VisitSelectAfterGroupBy(Expression operand, Expression elementSelectorPath)
@@ -1893,6 +1944,11 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             _customizeQuery?.Invoke((IDocumentQueryCustomization)_documentQuery);
 
+            if (_jsSelectBody != null)
+            {
+                return documentQuery.SelectFields<T>(new[] { _jsSelectBody }, _jsProjectionNames, _fromAlias);
+            }
+
             var (fields, projections) = GetProjections();
 
             return documentQuery.SelectFields<T>(fields, projections);
@@ -1920,6 +1976,11 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
 
             _customizeQuery?.Invoke((IDocumentQueryCustomization)asyncDocumentQuery);
+
+            if (_jsSelectBody != null)
+            {
+                return asyncDocumentQuery.SelectFields<T>(new[] { _jsSelectBody }, _jsProjectionNames, _fromAlias);
+            }
 
             var (fields, projections) = GetProjections();
 
@@ -1965,7 +2026,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
         {
             var (fields, projections) = GetProjections();
 
-            var finalQuery = ((IDocumentQuery<T>)_documentQuery).SelectFields<TProjection>(fields, projections);
+            var finalQuery = ((IDocumentQuery<T>)_documentQuery).SelectFields<TProjection>(fields, projections, _fromAlias);
 
             //no reason to override a value that may or may not exist there
             if (!String.IsNullOrEmpty(_resultsTransformer))
