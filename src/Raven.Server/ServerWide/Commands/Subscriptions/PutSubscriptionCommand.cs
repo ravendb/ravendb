@@ -9,6 +9,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
 using Voron.Data.Tables;
+using Raven.Server.Documents.Replication;
 
 namespace Raven.Server.ServerWide.Commands.Subscriptions
 {
@@ -37,61 +38,68 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             throw new NotImplementedException();
         }
 
-        public override unsafe void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, bool isPassive, out object result)
+        
+public override unsafe void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, bool isPassive)
         {
-            result = null;
             var subscriptionId = SubscriptionId ?? index;
             SubscriptionName = string.IsNullOrEmpty(SubscriptionName) ? subscriptionId.ToString() : SubscriptionName;
-            var receivedSubscriptionState = context.ReadObject(new SubscriptionState
-            {
-                Query = Query,
-                ChangeVectorForNextBatchStartingPoint = InitialChangeVector,
-                SubscriptionId = subscriptionId,
-                SubscriptionName = SubscriptionName,
-                LastTimeServerMadeProgressWithDocuments = DateTime.UtcNow,
-                Disabled = Disabled,
-                LastClientConnectionTime = DateTime.Now,
-                MentorNode = MentorNode
-            }.ToJson(), SubscriptionName);
-            BlittableJsonReaderObject modifiedSubscriptionState = null;
-            try
-            {
-                string subscriptionItemName = SubscriptionState.GenerateSubscriptionItemKeyName(DatabaseName, SubscriptionName);
+            
+            var subscriptionItemName = SubscriptionState.GenerateSubscriptionItemKeyName(DatabaseName, SubscriptionName);
 
-                using (Slice.From(context.Allocator, subscriptionItemName, out Slice valueName))
-                using (Slice.From(context.Allocator, subscriptionItemName.ToLowerInvariant(), out Slice valueNameLowered))
+            using (Slice.From(context.Allocator, subscriptionItemName, out Slice valueName))
+            using (Slice.From(context.Allocator, subscriptionItemName.ToLowerInvariant(), out Slice valueNameLowered))
+            {
+                if (items.ReadByKey(valueNameLowered, out TableValueReader tvr))
                 {
-                    if (items.ReadByKey(valueNameLowered, out TableValueReader tvr))
+                    var ptr = tvr.Read(2, out int size);
+                    var doc = new BlittableJsonReaderObject(ptr, size, context);
+
+                    var existingSubscriptionState = JsonDeserializationClient.SubscriptionState(doc);
+
+                    if (SubscriptionId != existingSubscriptionState.SubscriptionId)
+                        throw new InvalidOperationException("A subscription could not be modified because the name '" + subscriptionItemName +
+                                                            "' is already in use in a subscription with different Id.");
+
+                    if (string.IsNullOrEmpty(InitialChangeVector) == false && Enum.TryParse(InitialChangeVector,
+                            out Constants.Documents.SubscriptionChangeVectorSpecialStates changeVectorState)
+                        && changeVectorState == Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange)
                     {
-                        var ptr = tvr.Read(2, out int size);
-                        var doc = new BlittableJsonReaderObject(ptr, size, context);
-
-                        var existingSubscriptionState = JsonDeserializationClient.SubscriptionState(doc);
-
-                        if (SubscriptionId != existingSubscriptionState.SubscriptionId)
-                            throw new InvalidOperationException("A subscription could not be modified because the name '" + subscriptionItemName +
-                                                                "' is already in use in a subscription with different Id.");
-
-                        if (Enum.TryParse(InitialChangeVector, out Constants.Documents.SubscriptionChangeVectorSpecialStates changeVectorState) && changeVectorState == Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange)
+                        InitialChangeVector = existingSubscriptionState.ChangeVectorForNextBatchStartingPoint;
+                    }
+                    else
+                    {
+                        if (InitialChangeVector.IsChangeVectorValid() == false)
                         {
-                            if (receivedSubscriptionState.Modifications == null)
-                                receivedSubscriptionState.Modifications = new DynamicJsonValue();
-
-                            receivedSubscriptionState.Modifications[nameof(SubscriptionState.ChangeVectorForNextBatchStartingPoint)] = existingSubscriptionState.ChangeVectorForNextBatchStartingPoint;
-                            modifiedSubscriptionState = context.ReadObject(receivedSubscriptionState, SubscriptionName);
+                            throw new InvalidOperationException(
+                                $"Received change vector {InitialChangeVector} is not in a valid format, therefore update creation request cannot be processed.");
                         }
                     }
+                }
+                else
+                {
+                    if (InitialChangeVector.IsChangeVectorValid() == false)
+                    {
+                        throw new InvalidOperationException(
+                            $"Received change vector {InitialChangeVector} is not in a valid format, therefore subscription creation request cannot be processed.");
+                    }
+                }
 
-                    ClusterStateMachine.UpdateValue(subscriptionId, items, valueNameLowered, valueName, modifiedSubscriptionState ?? receivedSubscriptionState);
+                using (var receivedSubscriptionState = context.ReadObject(new SubscriptionState
+                {
+                    Query = Query,
+                    ChangeVectorForNextBatchStartingPoint = InitialChangeVector,
+                    SubscriptionId = subscriptionId,
+                    SubscriptionName = SubscriptionName,
+                    LastTimeServerMadeProgressWithDocuments = DateTime.UtcNow,
+                    Disabled = Disabled,
+                    LastClientConnectionTime = DateTime.Now
+                }.ToJson(), SubscriptionName))
+                {
+                    ClusterStateMachine.UpdateValue(subscriptionId, items, valueNameLowered, valueName, receivedSubscriptionState);
                 }
             }
-            finally
-            {
-                receivedSubscriptionState.Dispose();
-                modifiedSubscriptionState?.Dispose();
-            }
+           
         }
-
         public override string GetItemId()
         {
             throw new NotImplementedException();
