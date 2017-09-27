@@ -109,6 +109,9 @@ namespace Raven.Server.Documents.Patch
                 ScriptEngine.SetValue("id", new ClrFunctionInstance(ScriptEngine, GetDocumentId));
                 ScriptEngine.SetValue("lastModified", new ClrFunctionInstance(ScriptEngine, GetLastModified));
 
+
+                ScriptEngine.SetValue("convertJsTimeToTimeSpanString", new ClrFunctionInstance(ScriptEngine, ConvertJsTimeToTimeSpanString));
+
                 foreach (var script in scriptsSource)
                 {
                     try
@@ -381,6 +384,22 @@ namespace Raven.Server.Documents.Patch
                     throw new InvalidOperationException("load(id) must be called with a single string argument");
 
                 return LoadDocumentInternal(args[0].AsString());
+            }
+
+            private static JsValue ConvertJsTimeToTimeSpanString(JsValue self, JsValue[] args)
+            {
+                if (args.Length != 1 || args[0].IsNumber() == false)
+                    throw new InvalidOperationException("convertJsTimeToTimeSpanString(ticks) must be called with a single long argument");
+
+                var ticks = Convert.ToInt64(args[0].AsNumber());
+
+                var days = ticks / (24 * 60 * 60 * 1000);
+                var hours = (ticks / (60 * 60 * 1000) % 24);
+                var mins = (ticks / (60 * 1000) % 60);
+                var secs = (ticks /1000) % 60;
+                var ms = ticks % 1000;
+
+                return new JsValue($"{days}.{hours}:{mins}:{secs}.{ms}");
             }
 
             private JsValue LoadDocumentInternal(string id)
