@@ -113,9 +113,7 @@ namespace Raven.Server.Documents.Handlers
 
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
 
-            var runner = new QueryRunner(Database, context);
-
-            var result = await runner.ExecuteFacetedQuery(query.FacetQuery, query.FacetsEtag, existingResultEtag, token);
+            var result = await Database.QueryRunner.ExecuteFacetedQuery(query.FacetQuery, query.FacetsEtag, existingResultEtag, context, token);
 
             if (result.NotModified)
             {
@@ -140,12 +138,10 @@ namespace Raven.Server.Documents.Handlers
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
             var metadataOnly = GetBoolValueQueryString("metadata-only", required: false) ?? false;
 
-            var runner = new QueryRunner(Database, context);
-
             DocumentQueryResult result;
             try
             {
-                result = await runner.ExecuteQuery(indexQuery, existingResultEtag, token).ConfigureAwait(false);
+                result = await Database.QueryRunner.ExecuteQuery(indexQuery, context, existingResultEtag, token).ConfigureAwait(false);
             }
             catch (IndexDoesNotExistException)
             {
@@ -228,9 +224,8 @@ namespace Raven.Server.Documents.Handlers
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
 
             var query = GetSuggestionQuery(context, method);
-            var runner = new QueryRunner(Database, context);
 
-            var result = runner.ExecuteSuggestionQuery(query, context, existingResultEtag, token);
+            var result = Database.QueryRunner.ExecuteSuggestionQuery(query, context, existingResultEtag, token);
             if (result.NotModified)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
@@ -252,9 +247,8 @@ namespace Raven.Server.Documents.Handlers
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
 
             var query = GetMoreLikeThisQuery(context, method);
-            var runner = new QueryRunner(Database, context);
 
-            var result = runner.ExecuteMoreLikeThisQuery(query, context, existingResultEtag, token);
+            var result = Database.QueryRunner.ExecuteMoreLikeThisQuery(query, context, existingResultEtag, token);
 
             if (result.NotModified)
             {
@@ -276,9 +270,8 @@ namespace Raven.Server.Documents.Handlers
         private async Task Explain(DocumentsOperationContext context, HttpMethod method)
         {
             var indexQuery = await GetIndexQuery(context, method);
-            var runner = new QueryRunner(Database, context);
 
-            var explanations = runner.ExplainDynamicIndexSelection(indexQuery);
+            var explanations = Database.QueryRunner.ExplainDynamicIndexSelection(indexQuery);
 
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
@@ -501,9 +494,8 @@ namespace Raven.Server.Documents.Handlers
 
             if (query.Metadata.IsDynamic == false)
             {
-                var queryRunner = new QueryRunner(Database, context);
                 task = Database.Operations.AddOperation(Database, query.Metadata.IndexName, operationType,
-                    onProgress => operation((queryRunner, null), (options, null), onProgress, token), operationId, token);
+                    onProgress => operation((Database.QueryRunner, null), (options, null), onProgress, token), operationId, token);
             }
             else
             {
@@ -550,9 +542,7 @@ namespace Raven.Server.Documents.Handlers
             var indexQuery = await GetIndexQuery(context, method);
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
 
-            var queryRunner = new QueryRunner(Database, context);
-
-            var result = await queryRunner.ExecuteIndexEntriesQuery(indexQuery, existingResultEtag, token);
+            var result = await Database.QueryRunner.ExecuteIndexEntriesQuery(indexQuery, context, existingResultEtag, token);
 
             if (result.NotModified)
             {

@@ -77,13 +77,11 @@ namespace Raven.Server.Documents.Handlers
                 var queryJson = await context.ReadForMemoryAsync(RequestBodyStream(), "index/query");
                 var query = IndexQueryServerSide.Create(queryJson, context, Database.QueryMetadataCache);
 
-                var runner = new QueryRunner(Database, context);
-
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     try
                     {
-                        await runner.ExecuteStreamQuery(query, HttpContext.Response, writer, token).ConfigureAwait(false);
+                        await Database.QueryRunner.ExecuteStreamQuery(query, context, HttpContext.Response, writer, token).ConfigureAwait(false);
                     }
                     catch (IndexDoesNotExistException)
                     {

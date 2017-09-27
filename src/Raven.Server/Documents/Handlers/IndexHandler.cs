@@ -531,9 +531,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 var existingResultEtag = GetLongFromHeaders("If-None-Match");
 
-                var runner = new QueryRunner(Database, context);
-
-                var result = runner.ExecuteGetTermsQuery(name, field, fromValue, existingResultEtag, GetPageSize(), context, token);
+                var result = Database.QueryRunner.ExecuteGetTermsQuery(name, field, fromValue, existingResultEtag, GetPageSize(), context, token);
 
                 if (result.NotModified)
                 {
