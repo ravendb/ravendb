@@ -10,7 +10,8 @@ class getOngoingTaskInfoCommand extends commandBase {
     
     execute(): JQueryPromise<Raven.Client.ServerWide.Operations.OngoingTaskReplication |
                              Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails |
-                             Raven.Client.ServerWide.Operations.OngoingTaskBackup> {
+                             Raven.Client.ServerWide.Operations.OngoingTaskBackup |
+                             Raven.Client.ServerWide.Operations.OngoingTaskRavenEtl> {
 
         return this.getTaskInfo()
             .fail((response: JQueryXHR) => {
@@ -20,7 +21,8 @@ class getOngoingTaskInfoCommand extends commandBase {
 
     private getTaskInfo(): JQueryPromise<Raven.Client.ServerWide.Operations.OngoingTaskReplication |
                                          Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails |
-                                         Raven.Client.ServerWide.Operations.OngoingTaskBackup> {
+                                         Raven.Client.ServerWide.Operations.OngoingTaskBackup |
+                                         Raven.Client.ServerWide.Operations.OngoingTaskRavenEtl> {
 
         const url = endpoints.databases.ongoingTasks.task;
         const args = this.taskName ? { key: this.taskId, type: this.taskType, taskName: this.taskName } :

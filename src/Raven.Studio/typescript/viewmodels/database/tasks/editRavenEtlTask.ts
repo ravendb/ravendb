@@ -3,7 +3,7 @@ import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import router = require("plugins/router");
 import ongoingTaskRavenEtl = require("models/database/tasks/ongoingTaskRavenEtlModel");
-import ongoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskInfoCommand");
+import getOngoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskInfoCommand");
 import eventsCollector = require("common/eventsCollector");
 import testClusterNodeConnectionCommand = require("commands/database/cluster/testClusterNodeConnectionCommand");
 import getConnectionStringInfoCommand = require("commands/database/settings/getConnectionStringInfoCommand");
@@ -45,7 +45,7 @@ class editRavenEtlTask extends viewModelBase {
             this.isAddingNewRavenEtlTask(false);
             this.taskId = args.taskId;
             
-            new ongoingTaskInfoCommand(this.activeDatabase(), "RavenEtl", args.taskId, args.taskName)
+            new getOngoingTaskInfoCommand(this.activeDatabase(), "RavenEtl", args.taskId, args.taskName)
                 .execute()
                 .done((result: Raven.Client.ServerWide.Operations.OngoingTaskRavenEtl) => {
                     this.editedRavenEtl(new ongoingTaskRavenEtl(result, false));

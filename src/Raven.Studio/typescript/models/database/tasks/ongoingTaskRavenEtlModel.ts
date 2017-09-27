@@ -120,7 +120,8 @@ class ongoingTaskRavenEtlModel extends ongoingTask {
                 },
                 DestinationDatabase: "",
                 DestinationUrl: "",
-                ConnectionStringName: ""
+                ConnectionStringName: "",
+                Error: null
             }, false);
     }
 }
