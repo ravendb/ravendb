@@ -15,11 +15,8 @@ namespace Raven.Server.Documents.Subscriptions
         public DateTime ConnectedAt;
 
         public DateTime LastMessageSentAt;
-        
-        public DateTime LastSentEtag;
 
         public DateTime LastAckReceivedAt;
-        public DateTime LastAckedEtag;
 
         internal readonly MeterMetric DocsRate;
         public MeterMetric BytesRate;

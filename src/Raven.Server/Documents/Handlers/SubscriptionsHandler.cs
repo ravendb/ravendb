@@ -267,57 +267,36 @@ namespace Raven.Server.Documents.Handlers
 
                     writer.WriteStartObject();
 
-                    var subscriptionsAsBlittable = subscriptions.Select(x => EntityToBlittable.ConvertEntityToBlittable(new
+                    var subscriptionsAsBlittable = subscriptions.Select(x => new DynamicJsonValue()
                     {
-                        x.SubscriptionId,
-                        x.SubscriptionName,
-                        LatestChangeVectorClientACKnowledged = x.ChangeVectorForNextBatchStartingPoint,
-                        x.Query,
-                        x.Connection?.SubscriptionState.LastTimeServerMadeProgressWithDocuments
-                        ,
-                        Connection = new
+                        [nameof(SubscriptionState.SubscriptionId)] = x.SubscriptionId,
+                        [nameof(SubscriptionState.SubscriptionName)] = x.SubscriptionName,
+                        [nameof(SubscriptionState.ChangeVectorForNextBatchStartingPoint)] = x.ChangeVectorForNextBatchStartingPoint,
+                        [nameof(SubscriptionState.Query)] = x.Query,
+                        [nameof(SubscriptionState.Disabled)] = x.Disabled,
+                        [nameof(SubscriptionState.LastClientConnectionTime)] = x.LastClientConnectionTime,
+                        [nameof(SubscriptionState.LastTimeServerMadeProgressWithDocuments)] = x.LastTimeServerMadeProgressWithDocuments,
+                        ["Connection"] = GetSubscriptionConnectionDJV(x.Connection),
+                        ["RecentConnections"] = x.RecentConnections?.Select(r => new DynamicJsonValue()
+                                {
+                                    ["State"] = new DynamicJsonValue()
+                                    {
+                                        ["LatestChangeVectorClientACKnowledged"] = r.SubscriptionState.ChangeVectorForNextBatchStartingPoint,
+                                        ["Query"] = r.SubscriptionState.Query
+                                    },
+                                    ["Connection"] = GetSubscriptionConnectionDJV(r)
+                            }),
+                        ["FailedConnections"] = x.RecentRejectedConnections?.Select(r => new DynamicJsonValue()
                         {
-                            x.Connection?.ClientUri,
-                            x.Connection?.Strategy,
-                            x.Connection?.Stats,
-                            ConnectionException = x.Connection?.ConnectionException?.Message
-                        },
-                        RecentConnections = x.RecentConnections?.Select(r => new
-                        {
-                            r.SubscriptionState.SubscriptionId,
-                            r.SubscriptionState.SubscriptionName,
-                            State = new
+                            ["State"] = new DynamicJsonValue()
                             {
-                                LatestChangeVectorClientACKnowledged = r.SubscriptionState.ChangeVectorForNextBatchStartingPoint,
-                                r.SubscriptionState.Query
+                                ["LatestChangeVectorClientACKnowledged"] = r.SubscriptionState.ChangeVectorForNextBatchStartingPoint,
+                                ["Query"] = r.SubscriptionState.Query
                             },
-                            Connection = new
-                            {
-                                r.ClientUri,
-                                r.Options.Strategy,
-                                r.Stats,
-                                r.ConnectionException?.Message
-                            }
-                        }).ToList(),
-                        FailedConnections = x.RecentRejectedConnections?.Select(r => new
-                        {
-                            r.SubscriptionState.SubscriptionId,
-                            r.SubscriptionState.SubscriptionName,
-                            State = new
-                            {
-                                LatestChangeVectorClientACKnowledged = r.SubscriptionState.ChangeVectorForNextBatchStartingPoint,
-                                r.SubscriptionState.Query
-                            },
-                            Connection = new
-                            {
-                                r.ClientUri,
-                                r.Options.Strategy,
-                                r.Stats,
-                                r.ConnectionException?.Message
-                            }
+                            ["Connection"] = GetSubscriptionConnectionDJV(r)
                         }).ToList()
+                    });
 
-                    }, DocumentConventions.Default, context));
                     writer.WriteArray(context, "Results", subscriptionsAsBlittable, (w, c, subscription) =>
                     {
                         c.Write(w, subscription);
@@ -328,6 +307,33 @@ namespace Raven.Server.Documents.Handlers
             }
 
             return Task.CompletedTask;
+        }
+
+        private static DynamicJsonValue GetSubscriptionConnectionDJV(SubscriptionConnection x)
+        {
+            if (x == null)
+                return new DynamicJsonValue();
+
+            return new DynamicJsonValue()
+            {
+                [nameof(SubscriptionConnection.ClientUri)] =x.ClientUri,
+                [nameof(SubscriptionConnection.Strategy)] = x.Strategy,
+                [nameof(SubscriptionConnection.Stats)] = GetConnectionStatsDJV(x.Stats),
+                [nameof(SubscriptionConnection.ConnectionException)] = x.ConnectionException?.Message
+            };
+        }
+
+        private static DynamicJsonValue GetConnectionStatsDJV(SubscriptionConnectionStats x)
+        {
+            return new DynamicJsonValue()
+            {
+                [nameof(SubscriptionConnectionStats.AckRate)] = x.AckRate.CreateMeterData(),
+                [nameof(SubscriptionConnectionStats.BytesRate)] = x.BytesRate.CreateMeterData(),
+                [nameof(SubscriptionConnectionStats.ConnectedAt)] = x.ConnectedAt,
+                [nameof(SubscriptionConnectionStats.DocsRate)] = x.DocsRate.CreateMeterData(),
+                [nameof(SubscriptionConnectionStats.LastAckReceivedAt)] = x.LastAckReceivedAt,
+                [nameof(SubscriptionConnectionStats.LastMessageSentAt)] = x.LastMessageSentAt,
+            };
         }
 
         [RavenAction("/databases/*/subscriptions/drop", "POST", AuthorizationStatus.ValidUser)]
