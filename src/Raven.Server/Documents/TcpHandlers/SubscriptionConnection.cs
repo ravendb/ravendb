@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 var subscriptionItemKey = SubscriptionState.GenerateSubscriptionItemKeyName(TcpConnection.DocumentDatabase.Name, _options.SubscriptionName);
                 var translation = TcpConnection.DocumentDatabase.ServerStore.Cluster.Read(context, subscriptionItemKey);
                 if (translation == null)
-                    throw new SubscriptionClosedException("Cannot find any subscription with the name " + _options.SubscriptionName);
+                    throw new SubscriptionDoesNotExistException("Cannot find any subscription with the name " + _options.SubscriptionName);
 
                 if (translation.TryGet(nameof(Client.Documents.Subscriptions.SubscriptionState.SubscriptionId), out long id) == false)
                     throw new SubscriptionClosedException("Could not figure out the subscription id for subscription named " + _options.SubscriptionName);
