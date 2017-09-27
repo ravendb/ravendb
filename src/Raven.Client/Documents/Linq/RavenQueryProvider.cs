@@ -248,7 +248,7 @@ namespace Raven.Client.Documents.Linq
             if (FieldsToFetch.Count > 0)
             {
                 var (fields, projections) = processor.GetProjections();
-                query = query.SelectFields<TS>(fields, projections);
+                query = query.SelectFields<TS>(new QueryData(fields, projections, null));
             }
 
             return query.Lazily(onEval);
@@ -269,7 +269,7 @@ namespace Raven.Client.Documents.Linq
             if (FieldsToFetch.Count > 0)
             {
                 var (fields, projections) = processor.GetProjections();
-                query = query.SelectFields<TS>(fields, projections);
+                query = query.SelectFields<TS>(new QueryData(fields, projections, null));
             }
 
             return query.LazilyAsync(onEval);

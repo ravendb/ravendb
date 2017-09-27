@@ -32,7 +32,7 @@ namespace Raven.Client.Documents.Session
             var projections = propertyInfos.Select(x => x.Name).ToArray();
             var identityProperty = Conventions.GetIdentityProperty(typeof(TProjection));
             var fields = propertyInfos.Select(p => p == identityProperty ? Constants.Documents.Indexing.Fields.DocumentIdFieldName : p.Name).ToArray();
-            return SelectFields<TProjection>(fields, projections);
+            return SelectFields<TProjection>(new QueryData(fields, projections, null));
         }
 
         /// <inheritdoc />
@@ -66,13 +66,13 @@ namespace Raven.Client.Documents.Session
         /// <inheritdoc />
         public IDocumentQuery<TProjection> SelectFields<TProjection>(params string[] fields)
         {
-            return SelectFields<TProjection>(fields, fields);
+            return SelectFields<TProjection>(new QueryData(fields, fields, null));
         }
 
         /// <inheritdoc />
-        public IDocumentQuery<TProjection> SelectFields<TProjection>(string[] fields, string[] projections, string fromAlias = null)
+        public IDocumentQuery<TProjection> SelectFields<TProjection>(QueryData queryData)
         {
-            return CreateDocumentQueryInternal<TProjection>(fields.Length > 0 ? FieldsToFetchToken.Create(fields, projections, fromAlias != null) : null, fromAlias);
+            return CreateDocumentQueryInternal<TProjection>(queryData.Fileds.Length > 0 ? FieldsToFetchToken.Create(queryData.Fileds, queryData.Projections, queryData.FromAlias != null) : null, queryData.FromAlias);
         }
 
         /// <inheritdoc />

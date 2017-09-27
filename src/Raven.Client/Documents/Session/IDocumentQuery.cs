@@ -113,10 +113,8 @@ namespace Raven.Client.Documents.Session
         ///     will come from document directly.
         /// </summary>
         /// <typeparam name="TProjection">Type of the projection.</typeparam>
-        /// <param name="fields">Array of fields to load.</param>
-        /// <param name="projections">Array of field projections.</param>
-        /// <param name="fromAlias">From token alias.</param>
-        IDocumentQuery<TProjection> SelectFields<TProjection>(string[] fields, string[] projections, string fromAlias = null);
+        /// <param name="queryData">An object containing the fields to load, field projections and a From-Token alias name</param>
+        IDocumentQuery<TProjection> SelectFields<TProjection>(QueryData queryData);
 
         /// <summary>
         ///     Selects the specified fields directly from the index if the are stored. If the field is not stored in index, value
