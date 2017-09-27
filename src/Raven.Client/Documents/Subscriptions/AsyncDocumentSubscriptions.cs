@@ -68,7 +68,9 @@ namespace Raven.Client.Documents.Subscriptions
                     new JavascriptCompilationOptions(
                         JsCompilationFlags.BodyOnly,
                         new JavascriptConversionExtensions.LinqMethodsSupport(),
-                        new JavascriptConversionExtensions.DatesAndConstantsSupport { Parameter = predicate.Parameters[0] }
+                        new JavascriptConversionExtensions.BooleanSupport(),
+                        new JavascriptConversionExtensions.ReplaceParameterWithThis { Parameter = predicate.Parameters[0] },
+                        new JavascriptConversionExtensions.DateTimeSupport()
                     ));
                 criteria.Query = "declare function predicate () {\r\n\t return " + 
                     script + "\r\n}\r\n" + criteria.Query + "\r\n" + 
