@@ -147,6 +147,10 @@ namespace Raven.Client.Documents.Session
         /// <param name="clause">function with spatial criteria factory</param>
         IAsyncDocumentQuery<T> Spatial(string fieldName, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
 
+        IAsyncDocumentQuery<T> Spatial(SpatialDynamicField field, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
+
+        IAsyncDocumentQuery<T> Spatial(Func<SpatialDynamicFieldFactory<T>, SpatialDynamicField> field, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
+
         /// <summary>
         /// Changes the return type of the query
         /// </summary>

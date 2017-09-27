@@ -8,7 +8,6 @@ namespace Raven.Client.Documents.Session.Tokens
     {
         public abstract void WriteTo(StringBuilder writer);
 
-
         protected  void WriteField(StringBuilder writer, string field)
         {
             var keyWord = RqlKeywords.Contains(field);
@@ -21,6 +20,7 @@ namespace Raven.Client.Documents.Session.Tokens
             if (keyWord)
                 writer.Append("'");
         }
+
         private static readonly HashSet<string> RqlKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "AS",
@@ -31,6 +31,5 @@ namespace Raven.Client.Documents.Session.Tokens
             "ORDER",
             "INCLUDE"
         };
-
     }
 }

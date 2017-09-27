@@ -22,6 +22,22 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
+        public IAsyncDocumentQuery<T> Spatial(SpatialDynamicField field, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
+        {
+            var criteria = clause(SpatialCriteriaFactory.Instance);
+            Spatial(field, criteria);
+            return this;
+        }
+
+        /// <inheritdoc />
+        public IAsyncDocumentQuery<T> Spatial(Func<SpatialDynamicFieldFactory<T>, SpatialDynamicField> field, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
+        {
+            var criteria = clause(SpatialCriteriaFactory.Instance);
+            var dynamicField = field(new SpatialDynamicFieldFactory<T>());
+            Spatial(dynamicField, criteria);
+            return this;
+        }
+
         /// <inheritdoc />
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WithinRadiusOf<TValue>(Expression<Func<T, TValue>> propertySelector, double radius, double latitude, double longitude, SpatialUnits? radiusUnits, double distanceErrorPct)
         {

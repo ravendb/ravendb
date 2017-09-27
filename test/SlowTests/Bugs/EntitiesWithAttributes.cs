@@ -7,15 +7,15 @@ using Xunit;
 
 namespace SlowTests.Bugs
 {
-    [DataContract]
-    public class Item
-    {
-        [DataMember]
-        public string Version { get; set; }
-    }
-
     public class EntitiesWithAttributes : RavenTestBase
     {
+        [DataContract]
+        private class Item
+        {
+            [DataMember]
+            public string Version { get; set; }
+        }
+
         [Fact]
         public void EntitiesSerializeCorrectlyWithAttributes()
         {

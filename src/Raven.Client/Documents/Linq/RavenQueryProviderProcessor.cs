@@ -899,8 +899,16 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var spatialCriteria);
 
                     var spatialCriteriaFunc = (Func<SpatialCriteriaFactory, SpatialCriteria>)spatialCriteria;
+                    var spatialCriteriaInstance = spatialCriteriaFunc.Invoke(SpatialCriteriaFactory.Instance);
 
-                    _documentQuery.Spatial((string)spatialFieldName, spatialCriteriaFunc.Invoke(SpatialCriteriaFactory.Instance));
+                    if (spatialFieldName is string spatialFieldNameAsString)
+                    {
+                        _documentQuery.Spatial(spatialFieldNameAsString, spatialCriteriaInstance);
+                    }
+                    else if (spatialFieldName is SpatialDynamicField spatialDynamicField)
+                    {
+                        _documentQuery.Spatial(spatialDynamicField, spatialCriteriaInstance);
+                    }
                     break;
                 case nameof(LinqExtensions.OrderByDistance):
                     LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var distanceFieldName);

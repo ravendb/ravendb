@@ -138,6 +138,10 @@ namespace Raven.Client.Documents.Session
         /// <param name="clause">function with spatial criteria factory</param>
         IDocumentQuery<T> Spatial(string fieldName, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
 
+        IDocumentQuery<T> Spatial(SpatialDynamicField field, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
+
+        IDocumentQuery<T> Spatial(Func<SpatialDynamicFieldFactory<T>, SpatialDynamicField> field, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
+
         /// <summary>
         /// Get the facets as per the specified facet document with the given start and pageSize
         /// </summary>
