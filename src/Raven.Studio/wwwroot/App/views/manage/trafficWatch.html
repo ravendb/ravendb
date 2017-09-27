@@ -1,3 +1,74 @@
-<div>
-    
+<div class="flex-vertical absolute-fill content-margin">
+    <div class="flex-horizontal flex-noshrink">
+        <div>
+            <button class="btn btn-primary" data-bind="click: pause, visible: liveClient">
+                <i class="icon-pause"></i> <span>Pause</span>
+            </button>
+            <button class="btn btn-primary" data-bind="click: resume, visible: !liveClient()">
+                <i class="icon-play"></i> <span>Resume</span>
+            </button>
+            <button class="btn btn-default" data-bind="click: exportToFile">
+                <i class="icon-export"></i><span>Export</span>
+            </button>
+        </div>
+        <div>
+            <input class="form-control" placeholder="Filter" data-bind="textInput: filter">
+        </div>
+        <div class="flex-end text-muted">
+            <div class="text-center"><small>Requests:</small></div>
+            <div class="text-center">
+                <small><strong data-bind="text: stats.count"></strong></small>
+            </div>
+        </div>
+        <div class="flex-end text-muted">
+            <div class="text-center"><small>Min duration:</small></div>
+            <div class="text-center">
+                <small><strong data-bind="text: stats.min"></strong></small>
+            </div>
+        </div>
+        <div class="flex-end text-muted">
+            <div class="text-center"><small>Avg duration:</small></div>
+            <div class="text-center">
+                <small><strong data-bind="text: stats.avg"></strong></small>
+            </div>
+        </div>
+        <div class="flex-end text-muted">
+            <div class="text-center"><small>Max duration:</small></div>
+            <div class="text-center">
+                <small><strong data-bind="text: stats.max"></strong></small>
+            </div>
+        </div>
+    </div>
+    <div class="flex-horizontal flex-noshrink">
+        <div class="flex-separator"></div>
+
+        <button class="btn btn-sm btn-info btn-checkable" data-bind="click: toggleTail, css: { active: tailEnabled }">
+            <i class="icon-logs"></i> <span>Monitoring (tail -f)</span>
+        </button>
+
+        <button class="btn btn-sm btn-danger" data-bind="click: clear">
+            <i class="icon-cancel"></i><span>Clear</span>
+        </button>
+    </div>
+
+    <div class="flex-grow">
+        <div class="has-error results-error" data-bind="visible: isBufferFull">
+            <div class="help-block">
+                <i class="icon-danger"></i><span>Log buffer is full. <a href="#" data-bind="click: clear">Clear all entries.</a></span>
+            </div>
+        </div>
+        <div class="scroll-stretch">
+            <div class="panel-body">
+                <virtual-grid class="resizable" params="controller: gridController, emptyTemplate: 'empty-traffic-watch-template'"></virtual-grid>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="text/html" id="empty-traffic-watch-template">
+    No entries for now.
+</script>
+
+<div class="tooltip json-preview lg" style="opacity: 0">
+    <pre><code class="white-space-pre"></code></pre>
 </div>

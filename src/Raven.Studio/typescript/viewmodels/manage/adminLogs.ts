@@ -1,4 +1,3 @@
-import app = require("durandal/app");
 import viewModelBase = require("viewmodels/viewModelBase");
 import adminLogsWebSocketClient = require("common/adminLogsWebSocketClient");
 import adminLogsConfig = require("models/database/debug/adminLogsConfig");
@@ -145,7 +144,7 @@ class adminLogs extends viewModelBase {
     
     connectWebSocket() {
         eventsCollector.default.reportEvent("admin-logs", "connect");
-        const ws = new adminLogsWebSocketClient(null, this.configuration(), data => this.onData(data));
+        const ws = new adminLogsWebSocketClient(this.configuration(), data => this.onData(data));
         this.liveClient(ws);
         
         this.headerSeen = false;

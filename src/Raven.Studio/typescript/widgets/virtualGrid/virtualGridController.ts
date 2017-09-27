@@ -22,6 +22,8 @@ interface virtualGridController<T> {
     dirtyResults: KnockoutObservable<boolean>;
 
     resultEtag: () => string;
+    
+    scrollDown: () => void;
 
 }
 

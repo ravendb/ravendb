@@ -1,349 +1,234 @@
-import app = require("durandal/app");
 import viewModelBase = require("viewmodels/viewModelBase");
 import moment = require("moment");
 import fileDownloader = require("common/fileDownloader");
-import database = require("models/resources/database");
-import accessHelper = require("viewmodels/shell/accessHelper");
+import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import eventsCollector = require("common/eventsCollector");
+import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
+import trafficWatchWebSocketClient = require("common/trafficWatchWebSocketClient");
+import virtualGridController = require("widgets/virtualGrid/virtualGridController");
+import generalUtils = require("common/generalUtils");
 
 class trafficWatch extends viewModelBase {
-    /*
-    logConfig = ko.observable<{ Resource: database; ResourceName:string; ResourcePath: string; MaxEntries: number; WatchedResourceMode: string }>();
-    watchClient: trafficWatchClient;
-    isConnected = ko.observable(false);
-    recentEntries = ko.observableArray<any>([]);
-    now = ko.observable<moment.Moment>();
-    updateNowTimeoutHandle = 0;
-    selectedLog = ko.observable<logDto>();
-    columnWidths: Array<KnockoutObservable<number>>;
-    keepDown = ko.observable(false);
-    watchedRequests = ko.observable<number>(0);
-    averageRequestDuration = ko.observable<string>();
-    summedRequestsDuration:number=0;
-    minRequestDuration = ko.observable<number>(1000000);
-    maxRequestDuration = ko.observable<number>(0);
-    startTraceTime = ko.observable<moment.Moment>();
-    startTraceTimeHumanized :KnockoutComputed<string>;
-    showLogDetails = ko.observable<boolean>(false);
-    logRecordsElement: Element;
-    isForbidden = ko.observable<boolean>();
+    
+    static maxBufferSize = 200000;
+    
+    private liveClient = ko.observable<trafficWatchWebSocketClient>();
+    private allData = [] as Raven.Client.Documents.Changes.TrafficWatchChange[];
+    private filteredData = [] as Raven.Client.Documents.Changes.TrafficWatchChange[];
+    private gridController = ko.observable<virtualGridController<Raven.Client.Documents.Changes.TrafficWatchChange>>();
+    private columnPreview = new columnPreviewPlugin<Raven.Client.Documents.Changes.TrafficWatchChange>();
+    
+    stats = {
+        count: ko.observable<string>(),
+        min: ko.observable<string>(),
+        avg: ko.observable<string>(),
+        max: ko.observable<string>()
+    };
+    
     filter = ko.observable<string>();
-    filterDuration = ko.observable<string>();
 
-    enableTimingsTimer: number;
-
+    private appendElementsTask: number;
+    
+    isBufferFull = ko.observable<boolean>();
+    tailEnabled = ko.observable<boolean>(true);
+    
     constructor() {
         super();
-
-        this.startTraceTimeHumanized = ko.computed(()=> {
-            var a = this.now();
-            if (!!this.startTraceTime()) {
-                return this.parseHumanReadableTimeString(this.startTraceTime().toString(), true, false);
-            }
-            return "";
-        });
-
-        this.isForbidden(accessHelper.isGlobalAdmin() === false);
-        this.filter.throttle(250).subscribe(() => this.filterEntries());
-        this.filterDuration.throttle(250).subscribe(() => this.filterEntries());
-    }
-
-    filterEntries() {
-        this.recentEntries().forEach(entry => {
-            entry.Visible(this.isVisible(entry));
-        });
-    }
-
-    canActivate(args:any): any {
-        return true;
+        
+        this.filter.throttle(500).subscribe(() => this.filterEntries());
     }
     
     activate(args: any) {
-        var widthUnit = 0.075;
-        this.columnWidths = [
-            ko.observable<number>(100 * widthUnit),
-            ko.observable<number>(100 * widthUnit),
-            ko.observable<number>(100 * widthUnit ),
-            ko.observable<number>(100 * widthUnit),
-            ko.observable<number>(100 * widthUnit * 7),
-            ko.observable<number>(100 * widthUnit)
-        ];
-        this.registerColumnResizing();    
+        super.activate(args);
         this.updateHelpLink('EVEP6I');
-    }
-
-    attached() {
-        super.attached();
-        this.showLogDetails.subscribe(x => {
-                $(".logRecords").toggleClass("logRecords-small");
-        });
-        this.updateCurrentNowTime();
-        this.logRecordsElement = document.getElementById("logRecords");
-    }
-
-    registerColumnResizing() {
-        var resizingColumn = false;
-        var startX = 0;
-        var startingWidth = 0;
-        var columnIndex = 0;
-
-        $(document).on("mousedown.logTableColumnResize", ".column-handle", (e: any) => {
-            columnIndex = parseInt($(e.currentTarget).attr("column"));
-            startingWidth = this.columnWidths[columnIndex]();
-            startX = e.pageX;
-            resizingColumn = true;
-        });
-
-        $(document).on("mouseup.logTableColumnResize", "", (e: any) => {
-            resizingColumn = false;
-        });
-
-        $(document).on("mousemove.logTableColumnResize", "", (e: any) => {
-            if (resizingColumn) {
-                var logsRecordsContainerWidth = $("#logRecordsContainer").width();
-                var targetColumnSize = startingWidth + 100 * (e.pageX - startX) / logsRecordsContainerWidth;
-                this.columnWidths[columnIndex](targetColumnSize);
-
-                // Stop propagation of the event so the text selection doesn't fire up
-                if (e.stopPropagation) e.stopPropagation();
-                if (e.preventDefault) e.preventDefault();
-                e.cancelBubble = true;
-                e.returnValue = false;
-
-                return false;
-            }
-        });
-    }
-
-    configureConnection() {
-        eventsCollector.default.reportEvent("traffic-watch", "configure");
-
-        var configDialog = new watchTrafficConfigDialog();
-        app.showBootstrapDialog(configDialog);
-
-        configDialog.configurationTask.done((x: any) => {
-            this.logConfig(x);
-            this.enableTimingsTimer = setInterval(() => this.enableQueryTiming(), 4.8 * 60 * 1000);
-            this.enableQueryTiming();
-            this.reconnect();
-        });
-    }
-
-    enableQueryTiming() {
-        if (this.logConfig().Resource instanceof database) {
-            new enableQueryTimings(<database>this.logConfig().Resource).execute();
-        }
-    }
-
-    reconnect() {
-        eventsCollector.default.reportEvent("traffic-watch", "reconnect");
-
-        if (!this.watchClient) {
-            if (!this.logConfig) {
-                app.showBootstrapMessage("Cannot reconnect, please configure connection properly", "Connection Error");
-                return;
-            }
-            this.connect();
-        } else {
-            this.disconnect().done(() => {
-                this.connect();
-            });
-        }
-    }
-
-    connect() {
-        eventsCollector.default.reportEvent("traffic-watch", "connect");
-
-        if (!!this.watchClient) {
-            this.reconnect();
-            return;
-        }
-        if (!this.logConfig()) {
-            this.configureConnection();
-            return;
-        }
-
-        this.watchClient = new trafficWatchClient(this.logConfig().ResourcePath);
-        this.watchClient.connect();
-        this.watchClient.connectionOpeningTask.done(() => {
-            this.isConnected(true);
-            this.watchClient.watchTraffic((event: logNotificationDto) => {
-                this.processHttpTraceMessage(event);
-            });
-            if (!this.startTraceTime()) {
-                this.startTraceTime(this.now());
-            }
-        });
-    }
-    
-    disconnect(): JQueryPromise<any> {
-        eventsCollector.default.reportEvent("traffic-watch", "disconnect");
-
-        if (!!this.watchClient) {
-            this.watchClient.disconnect();
-            return this.watchClient.connectionClosingTask.done(() => {
-                this.watchClient = null;
-                this.isConnected(false);
-            });
-        } else {
-            app.showBootstrapMessage("Cannot disconnect, connection does not exist", "Disconnect");
-            return $.Deferred().reject();
-        }
     }
 
     deactivate() {
         super.deactivate();
-        if (this.enableTimingsTimer) {
-            clearInterval(this.enableTimingsTimer);
-            this.enableTimingsTimer = null;
+
+        if (this.liveClient()) {
+            this.liveClient().dispose();
         }
-        if (this.isConnected())
-            this.disconnect();
     }
-
-    isVisible(logEntry: any) {
-        if (this.filterDuration() && logEntry.Duration < parseInt(this.filterDuration())) {
-            return false;
+    
+    private filterEntries() {
+        const filter = this.filter();
+        if (filter) {
+            this.filteredData = this.allData.filter(item => this.matchesFilter(item));
+        } else {
+            this.filteredData = this.allData.slice();
         }
 
-        if (this.filter() && logEntry.Url.indexOf(this.filter()) === -1) {
-            return false;
-        }
-        return true;
-    }
-
-    processHttpTraceMessage(e: logNotificationDto) {
-        var logObject: any;
+        this.updateStats();
         
-        var mapTimings = (value: any) => {
-            var result: any = [];
-            if (!value) {
-                return result;
-            }
-            for (var key in value) {
-                if (value.hasOwnProperty(key)) {
-                    result.push({ key: key, value: value[key] });
+        this.gridController().reset(true);
+    }
+    
+    private matchesFilter(item: Raven.Client.Documents.Changes.TrafficWatchChange) {
+        const filter = this.filter();
+        if (!filter) {
+            return true;
+        }
+        const filterLowered = filter.toLocaleLowerCase();
+        const uri = item.RequestUri.toLocaleLowerCase();
+        return uri.includes(filterLowered);
+    }
+    
+    private updateStats() {
+        if (!this.filteredData.length) {
+            this.stats.avg("n/a");
+            this.stats.min("n/a");
+            this.stats.max("n/a");
+            this.stats.count("0");
+        } else {
+            let count = this.filteredData.length;
+            let sum = 0;
+            let min = this.filteredData[0].ElapsedMilliseconds;
+            let max = this.filteredData[0].ElapsedMilliseconds;
+            
+            for (let i = 0; i < this.filteredData.length; i++) {
+                const item = this.filteredData[i];
+
+                if (item.ElapsedMilliseconds < min) {
+                    min = item.ElapsedMilliseconds;
                 }
+
+                if (item.ElapsedMilliseconds > max) {
+                    max = item.ElapsedMilliseconds;
+                }
+
+                sum += item.ElapsedMilliseconds;
             }
-            return result;
-
+            
+            this.stats.min(min.toLocaleString() + " ms");
+            this.stats.max(max.toLocaleString() + " ms");
+            this.stats.count(count.toLocaleString());
+            this.stats.avg(generalUtils.formatNumberToStringFixed(sum * 1.0 / count, 2) + " ms");
         }
+    }
+    
+    compositionComplete() {
+        super.compositionComplete();
 
-        logObject = {
-            Time: this.createHumanReadableTime(e.TimeStamp, false, true),
-            Duration: e.ElapsedMilliseconds,
-            Resource: e.TenantName,
-            Method: e.HttpMethod,
-            Url: e.RequestUri,
-            CustomInfo: e.CustomInfo,
-            TimeStampText: this.createHumanReadableTime(e.TimeStamp, true, false),
-            QueryTimings: mapTimings(e.QueryTimings),
-            Visible: ko.observable()
+        this.updateStats();
+
+        const rowHighlightRules = {
+            extraClass: (item: Raven.Client.Documents.Changes.TrafficWatchChange) => {
+                const responseCode = item.ResponseStatusCode.toString();
+                if (responseCode.startsWith("4")) {
+                    return "bg-warning";
+                } else if (responseCode.startsWith("5")) {
+                    return "bg-danger";
+                }
+                return "";
+            }
         };
+        
+        const grid = this.gridController();
+        grid.headerVisible(true);
+        grid.init((s, t) => this.fetchTraffic(s, t), () =>
+            [
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.TimeStamp, "Timestamp", "20%", rowHighlightRules),
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.ResponseStatusCode, "Status", "8%", rowHighlightRules),
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.DatabaseName, "Database Name", "8%", rowHighlightRules),
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.ElapsedMilliseconds, "Duration", "8%", rowHighlightRules),
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.HttpMethod, "Method", "10%", rowHighlightRules),
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.RequestUri, "URI", "35%", rowHighlightRules)
+            ]
+        );
 
-        if (logObject.CustomInfo) {
-            const withBr = _.replace(decodeURIComponent(logObject.CustomInfo), /\n/g, "<Br />");
-            logObject.CustomInfo = _.replace(withBr).replace(/Inner Request/g, "<strong>Inner Request</strong>");
+        this.columnPreview.install("virtual-grid", ".tooltip", 
+            (item: Raven.Client.Documents.Changes.TrafficWatchChange, column: textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>, 
+             e: JQueryEventObject, onValue: (context: any) => void) => {
+            if (column.header === "URI") {
+                onValue(item.RequestUri);
+            }
+        });
+        
+        this.connectWebSocket();
+    }
+
+    private fetchTraffic(skip: number,  take: number): JQueryPromise<pagedResult<Raven.Client.Documents.Changes.TrafficWatchChange>> {
+        return $.when({
+            totalResultCount: this.filteredData.length,
+            items: _.take(this.filteredData.slice(skip), take)
+        });
+    }
+    
+    connectWebSocket() {
+        eventsCollector.default.reportEvent("traffic-watch", "connect");
+        
+        const ws = new trafficWatchWebSocketClient(data => this.onData(data));
+        this.liveClient(ws);
+    }
+    
+    private onData(data: Raven.Client.Documents.Changes.TrafficWatchChange) {
+        if (this.allData.length === trafficWatch.maxBufferSize) {
+            this.isBufferFull(true);
+            this.pause();
+            return;
         }
-
-        if (e.InnerRequestsCount > 0) {
-            logObject.Url = "(" + e.InnerRequestsCount + " requests) " + logObject.Url;
+        
+        this.allData.push(data);
+        if (this.matchesFilter(data)) {
+            this.filteredData.push(data);
         }
-
-        if (this.recentEntries().length == this.logConfig().MaxEntries) {
-            this.recentEntries.shift();
+        
+        if (!this.appendElementsTask) {
+            this.appendElementsTask = setTimeout(() => this.onAppendPendingEntries(), 333);
         }
-
-        logObject.Visible(this.isVisible(logObject));
-
-        this.recentEntries.push(logObject);
-
-        if (this.keepDown()) {
-            this.logRecordsElement.scrollTop = this.logRecordsElement.scrollHeight * 1.1;
+    }
+    
+    private onAppendPendingEntries() {
+        this.appendElementsTask = null;
+        
+        this.updateStats();
+        
+        this.gridController().reset(false);
+        
+        if (this.tailEnabled()) {
+            this.gridController().scrollDown();
         }
-
-        this.watchedRequests(this.watchedRequests() + 1);
-        this.summedRequestsDuration += e.ElapsedMilliseconds;
-        this.averageRequestDuration((this.summedRequestsDuration / this.watchedRequests()).toFixed(2));
-        this.minRequestDuration(this.minRequestDuration() > e.ElapsedMilliseconds ? e.ElapsedMilliseconds : this.minRequestDuration());
-        this.maxRequestDuration(this.maxRequestDuration() < e.ElapsedMilliseconds ? e.ElapsedMilliseconds : this.maxRequestDuration());
     }
-
-
-    selectLog(log: logDto) {
-        this.selectedLog(log);
-        this.showLogDetails(true);
-        $(".logRecords").addClass("logRecords-small");
-    }
-
-    updateCurrentNowTime() {
-        this.now(moment());
-        if (this.updateNowTimeoutHandle != 0)
-            clearTimeout(this.updateNowTimeoutHandle);
-        this.updateNowTimeoutHandle = setTimeout(() => this.updateCurrentNowTime(), 1000);
-    }
-
-    createHumanReadableTime(time: string, chainHumanized: boolean = true, chainDateTime: boolean= true): KnockoutComputed<string> {
-        if (time) {
-            return ko.computed(() => {
-                return this.parseHumanReadableTimeString(time, chainHumanized, chainDateTime);
-            });
+    
+    pause() {
+        eventsCollector.default.reportEvent("traffic-watch", "pause");
+        
+        if (this.liveClient()) {
+            this.liveClient().dispose();
+            this.liveClient(null);
         }
-
-        return ko.computed(() => time);
+    }
+    
+    resume() {
+        this.connectWebSocket();
     }
 
-    parseHumanReadableTimeString(time: string, chainHumanized: boolean= true, chainDateTime: boolean= true)
-{
-        var dateMoment = moment(time);
-        var humanized = "", formattedDateTime = "";
-        var agoInMs = dateMoment.diff(this.now());
-        if (chainHumanized)
-            humanized = moment.duration(agoInMs).humanize(true);
-        if (chainDateTime)
-            formattedDateTime = dateMoment.format(" (ddd MMM DD YYYY HH:mm:ss.SS[GMT]ZZ)");
-        return humanized + formattedDateTime;
-}
-
-    formatLogRecord(logRecord: logNotificationDto) {
-        return 'Request #' + _.padEnd(logRecord.RequestId.toString(), 4)
-            + ' ' + _.padStart(logRecord.HttpMethod.toString(), 7)
-            + ' - ' + _.padEnd(logRecord.ElapsedMilliseconds.toString(), 5) + ' ms - '
-            + _.padStart(logRecord.TenantName, 10) + ' - '
-            + logRecord.ResponseStatusCode + ' - ' + logRecord.RequestUri;
+    clear() {
+        eventsCollector.default.reportEvent("traffic-watch", "clear");
+        this.allData.length = 0;
+        this.filteredData.length = 0;
+        this.isBufferFull(false);
+        this.gridController().reset();
+        
+        this.resume();
     }
 
-    resetStats() {
-        eventsCollector.default.reportEvent("traffic-watch", "reset-stats");
-
-        this.watchedRequests(0);
-        this.averageRequestDuration("0");
-        this.summedRequestsDuration = 0;
-        this.minRequestDuration(1000000);
-        this.maxRequestDuration(0);
-        this.startTraceTime(null);
-    }
-
-    exportTraffic() {
+    exportToFile() {
         eventsCollector.default.reportEvent("traffic-watch", "export");
 
-        fileDownloader.downloadAsJson(this.recentEntries(), "traffic.json");
+        const now = moment().format("YYYY-MM-DD HH-mm");
+        fileDownloader.downloadAsJson(this.allData, "traffic-watch-" + now + ".json");
     }
 
-    clearLogs() {
-        eventsCollector.default.reportEvent("traffic-watch", "clear");
+    toggleTail() {
+        this.tailEnabled.toggle();
 
-        this.recentEntries.removeAll();
-    }
-
-    toggleKeepDown() {
-        eventsCollector.default.reportEvent("traffic-watch", "keep-down");
-
-        this.keepDown.toggle();
-        if (this.keepDown()) {
-            this.logRecordsElement.scrollTop = this.logRecordsElement.scrollHeight * 1.1;
+        if (this.tailEnabled()) {
+            this.gridController().scrollDown();
         }
-    }*/
+    }
+
 }
 
 export = trafficWatch;
