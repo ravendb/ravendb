@@ -13,6 +13,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Converters;
@@ -21,6 +22,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
@@ -82,7 +84,7 @@ namespace FastTests.Client.Subscriptions
                     }
 
                     var amre = new AsyncManualResetEvent();
-                    subscription.Run(x => amre.Set());
+                    var t = subscription.Run(x => amre.Set());
 
                     await amre.WaitAsync(_reasonableWaitTime);
 
@@ -195,7 +197,7 @@ namespace FastTests.Client.Subscriptions
 
                     Assert.True(names.TryTake(out name, _reasonableWaitTime));
                     Assert.Equal("David", name);
-                
+
                 }
             }
         }
@@ -217,38 +219,28 @@ namespace FastTests.Client.Subscriptions
 
                 var id = store.Subscriptions.Create<Company>();
                 using (var subscription = store.Subscriptions.Open(new SubscriptionConnectionOptions(id)
-                    {
-                        MaxDocsPerBatch = 25
-                    }
+                {
+                    MaxDocsPerBatch = 25
+                }
                 ))
                 {
+                    var cd = new CountdownEvent(100);
 
-                    var batchSizes = new ConcurrentStack<Reference<int>>();
-
-                    batchSizes.Push(new Reference<int>());
-
-                    subscription.AfterAcknowledgment += x =>
+                    var t = subscription.Run(batch =>
                     {
-                        batchSizes.Push(new Reference<int>());
-                        return Task.CompletedTask;
-                    };
-
-                    subscription.Run(batch =>
-                    {
-                        Reference<int> reference;
-                        if (batchSizes.TryPeek(out reference))
-                            reference.Value += batch.Items.Count;
+                        cd.Signal(batch.NumberOfItemsInBatch);
+                        Assert.True(batch.NumberOfItemsInBatch <= 25);
                     });
 
-                    var result = SpinWait.SpinUntil(() => batchSizes.ToList().Sum(x => x.Value) >= 100, TimeSpan.FromSeconds(60));
-
-                    Assert.True(result);
-
-                    Assert.Equal(4, batchSizes.Count);
-
-                    foreach (var reference in batchSizes)
+                    try
                     {
-                        Assert.Equal(25, reference.Value);
+                        Assert.True(cd.Wait(_reasonableWaitTime));
+                    }
+                    catch
+                    {
+                        if (t.IsFaulted)
+                            t.Wait();
+                        throw;
                     }
                 }
             }
@@ -277,9 +269,9 @@ namespace FastTests.Client.Subscriptions
                     MaxDocsPerBatch = 31
                 }))
                 {
-                    var docs = new ConcurrentBag<User>();
-                    subscription.Run(batch => batch.Items.ForEach(x => docs.Add(x.Result)));
-                    Assert.True(SpinWait.SpinUntil(() => docs.Count >= 100, TimeSpan.FromSeconds(60)));
+                    var docs = new CountdownEvent(100);
+                    subscription.Run(batch => docs.Signal(batch.NumberOfItemsInBatch));
+                    Assert.True(docs.Wait(_reasonableWaitTime));
                 }
             }
         }
@@ -309,23 +301,31 @@ namespace FastTests.Client.Subscriptions
                 {
                     MaxDocsPerBatch = 15
                 }))
-                { 
-
-                    var docIDs = new ConcurrentBag<string>();
-
-                subscription.Run(x=>x.Items.ForEach(i=> docIDs.Add(i.Id)));
-
-                Assert.True(SpinWait.SpinUntil(() => docIDs.Count >= 50, TimeSpan.FromSeconds(60)));
-
-
-                foreach (var docId in docIDs)
                 {
-                    Assert.True(docId.StartsWith("users/favorite/"));
-                }
+
+                    var docs = new CountdownEvent(50);
+                    var t = subscription.Run(batch =>
+                    {
+                        foreach (var item in batch.Items)
+                        {
+                            Assert.True(item.Id.StartsWith("users/favorite/"));
+                        }
+                        docs.Signal(batch.NumberOfItemsInBatch);
+                    });
+                    try
+                    {
+                        Assert.True(docs.Wait(_reasonableWaitTime));
+                    }
+                    catch
+                    {
+                        if (t.IsFaulted)
+                            t.Wait();
+                        throw;
+                    }
                 }
             }
         }
-              
+
         [Fact]
         public void CanGetSubscriptionsFromDatabase()
         {
@@ -342,11 +342,11 @@ namespace FastTests.Client.Subscriptions
                 Assert.Equal(1, subscriptionDocuments.Count);
                 Assert.Equal("from Users", subscriptionDocuments[0].Query);
 
-                var subscription = store.Subscriptions.Open(                     
+                var subscription = store.Subscriptions.Open(
                     new SubscriptionConnectionOptions(subscriptionDocuments[0].SubscriptionName));
 
-                var docs = new ConcurrentBag<User>();
-                subscription.Run(x=>x.Items.ForEach(i=>docs.Add(i.Result)));
+                var docs = new CountdownEvent(1);
+                subscription.Run(x => docs.Signal(x.NumberOfItemsInBatch));
 
                 using (var session = store.OpenSession())
                 {
@@ -354,11 +354,11 @@ namespace FastTests.Client.Subscriptions
                     session.SaveChanges();
                 }
 
-                Assert.True(SpinWait.SpinUntil(() => docs.Count >= 1, TimeSpan.FromSeconds(10)));
+                Assert.True(docs.Wait(_reasonableWaitTime));
             }
         }
-      
-        [Fact]        
+
+        [Fact]
         public void WillAcknowledgeEmptyBatches()
         {
             using (var store = GetDocumentStore())
@@ -370,17 +370,17 @@ namespace FastTests.Client.Subscriptions
                 var allId = store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
                 using (var allSubscription = store.Subscriptions.Open(allId))
                 {
-                    var allDocs = new ConcurrentBag<User>();
-                    allSubscription.Run(x => x.Items.ForEach(i => allDocs.Add(i.Result)));
+                    var allDocs = new CountdownEvent(500);
+                    allSubscription.Run(x => allDocs.Signal(x.NumberOfItemsInBatch));
 
                     var filteredUsersId = store.Subscriptions.Create(new SubscriptionCreationOptions
                     {
-                        Query=@"from Users where Age <0"
+                        Query = @"from Users where Age <0"
                     });
                     using (var filteredUsersSubscription = store.Subscriptions.Open(new SubscriptionConnectionOptions(filteredUsersId)))
                     {
-                        var usersDocs = new ConcurrentBag<User>();
-                        filteredUsersSubscription.Run(x => x.Items.ForEach(i => usersDocs.Add(i.Result)));
+                        var usersDocs = new CountdownEvent(1);
+                        filteredUsersSubscription.Run(x => usersDocs.Signal(x.NumberOfItemsInBatch));
 
                         using (var session = store.OpenSession())
                         {
@@ -389,16 +389,8 @@ namespace FastTests.Client.Subscriptions
                             session.SaveChanges();
                         }
 
-                        Assert.True(SpinWait.SpinUntil(() => allDocs.Count == 500, TimeSpan.FromSeconds(10)));
-                        Assert.True(SpinWait.SpinUntil(() =>
-                        {
-                            subscriptionDocuments = store.Subscriptions.GetSubscriptions(0, 10);
-
-                            return subscriptionDocuments[0].ChangeVectorForNextBatchStartingPoint == subscriptionDocuments[1].ChangeVectorForNextBatchStartingPoint;
-                        }, TimeSpan.FromSeconds(10)));
-
-                        Assert.Equal(500, allDocs.Count);
-                        Assert.Equal(0, usersDocs.Count);
+                        Assert.True(allDocs.Wait(_reasonableWaitTime));
+                        Assert.False(usersDocs.Wait(0));
                     }
                 }
             }
@@ -407,27 +399,25 @@ namespace FastTests.Client.Subscriptions
         [Fact]
         public async Task ShouldKeepPullingDocsAfterServerRestart()
         {
-            var dataPath = NewDataPath("RavenDB_2627_after_restart");
+            var dataPath = NewDataPath();
 
             IDocumentStore store = null;
             RavenServer server = null;
             Subscription<dynamic> subscription = null;
             try
             {
-                var serverDisposed = new ManualResetEventSlim(false);
-
                 server = GetNewServer(runInMemory: false, customSettings: new Dictionary<string, string>()
                 {
-                    [RavenConfiguration.GetKey(x=>x.Core.DataDirectory)] = dataPath
+                    [RavenConfiguration.GetKey(x => x.Core.DataDirectory)] = dataPath
                 });
-               
+
                 store = new DocumentStore()
                 {
                     Urls = new[] { server.ServerStore.NodeHttpServerUrl },
                     Database = "RavenDB_2627",
 
                 }.Initialize();
-                
+
                 var doc = new DatabaseRecord(store.Database);
                 var result = store.Admin.Server.Send(new CreateDatabaseOperationWithoutNameValidation(doc));
                 await WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex, _reasonableWaitTime);
@@ -447,27 +437,29 @@ namespace FastTests.Client.Subscriptions
                 subscription = store.Subscriptions.Open(new SubscriptionConnectionOptions(id)
                 {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(1),
-                    MaxDocsPerBatch = 1                    
+                    MaxDocsPerBatch = 1
                 });
-                
 
-                var userIDs = new BlockingCollection<string>();
 
-                var shouldDisposeServer = true;
-                subscription.Run(x=> {
-                    x.Items.ForEach(i => userIDs.Add(i.Id));
-                    if (shouldDisposeServer)
-                    {
-                        Server.ServerStore.DatabasesLandlord.UnloadDatabase(store.Database);
-                    }
-                });               
-
-                serverDisposed.Wait(_reasonableWaitTime);
-                shouldDisposeServer = false;
-                
-                Assert.True(SpinWait.SpinUntil(() =>
+                var gotBatch = new ManualResetEventSlim();
+                var gotArek = new ManualResetEventSlim();
+                var t = subscription.Run(x =>
                 {
-                    var wasAbleToStore = true;
+                    gotBatch.Set();
+
+                    foreach (var item in x.Items)
+                    {
+                        if (item.Id == "users/arek")
+                            gotArek.Set();
+                    }
+                });
+
+                Assert.True(gotBatch.Wait(_reasonableWaitTime));
+
+                Server.ServerStore.DatabasesLandlord.UnloadDatabase(store.Database);
+
+                for (int i = 0; i < 150; i++)
+                {
                     try
                     {
                         using (var session = store.OpenSession())
@@ -475,24 +467,17 @@ namespace FastTests.Client.Subscriptions
                             session.Store(new User(), "users/arek");
                             session.SaveChanges();
                         }
+                        break;
                     }
                     catch
                     {
-                        wasAbleToStore = false;
+                        Thread.Sleep(25);
+                        if (i > 100)
+                            throw;
                     }
-
-                    return wasAbleToStore;
-                }, _reasonableWaitTime));
-
-                for (int i = 0; i < 10; i++)
-                {
-                    string docId;
-                    Assert.True(userIDs.TryTake(out docId, _reasonableWaitTime));
-                    if ("users/arek" == docId)
-                        return;
                 }
-                Assert.False(true, "didn't get the username");
 
+                Assert.True(gotArek.Wait(_reasonableWaitTime));
             }
             finally
             {
@@ -500,8 +485,8 @@ namespace FastTests.Client.Subscriptions
                 store?.Dispose();
                 server.Dispose();
             }
-        }      
-        
+        }
+
         [Fact]
         public async Task CanReleaseSubscription()
         {
@@ -520,9 +505,7 @@ namespace FastTests.Client.Subscriptions
                 });
                 var mre = new AsyncManualResetEvent();
                 PutUserDoc(store);
-#pragma warning disable 4014
-                subscription.Run(x =>
-#pragma warning restore 4014
+                var t = subscription.Run(x =>
                 {
                     mre.Set();
                 });
@@ -534,7 +517,7 @@ namespace FastTests.Client.Subscriptions
                     Strategy = SubscriptionOpeningStrategy.OpenIfFree
                 });
                 var subscriptionTask = throwingSubscription.Run(x => { });
-                
+
                 Assert.True(await Assert.ThrowsAsync<SubscriptionInUseException>(() =>
                 {
                     return subscriptionTask;
@@ -544,9 +527,7 @@ namespace FastTests.Client.Subscriptions
 
                 notThrowingSubscription = store.Subscriptions.Open(new SubscriptionConnectionOptions(id));
 
-#pragma warning disable 4014
-                notThrowingSubscription.Run(x =>
-#pragma warning restore 4014
+                t = notThrowingSubscription.Run(x =>
                 {
                     mre.Set();
                 });
@@ -608,10 +589,10 @@ namespace FastTests.Client.Subscriptions
                 {
                     var subscriptionTask = subscription.Run(x => throw new Exception("Fake exception"));
                     PutUserDoc(store);
-                    
+
                     await subscriptionTask.WaitAsync(_reasonableWaitTime);
                     Assert.True(await Assert.ThrowsAsync<SubscriberErrorException>(() => subscriptionTask).WaitAsync(_reasonableWaitTime));
-                    
+
                     Assert.Equal("Fake exception", subscriptionTask.Exception.InnerExceptions[0].InnerException.Message);
                     var subscriptionConfig = store.Subscriptions.GetSubscriptions(0, 1).First();
                     Assert.True(string.IsNullOrEmpty(subscriptionConfig.ChangeVectorForNextBatchStartingPoint));
@@ -681,11 +662,11 @@ namespace FastTests.Client.Subscriptions
                     session.SaveChanges();
                 }
                 store.Subscriptions.Create<User>();
-                
+
 
                 var id = store.Subscriptions.Create(new SubscriptionCreationOptions<PersonWithAddress>()
                 {
-                    Filter = x=>x.Address.Street == "1st Street" && x.Address.ZipCode != 999
+                    Filter = x => x.Address.Street == "1st Street" && x.Address.ZipCode != 999
                 });
 
                 using (var carolines = store.Subscriptions.Open<PersonWithAddress>(new SubscriptionConnectionOptions(id)
@@ -693,21 +674,32 @@ namespace FastTests.Client.Subscriptions
                     MaxDocsPerBatch = 5
                 }))
                 {
-                    var docs = new BlockingCollection<PersonWithAddress>();
-                    carolines.Run(x => x.Items.ForEach(i => docs.Add(i.Result)));
-
-                    Assert.True(SpinWait.SpinUntil(() => docs.Count >= 5, TimeSpan.FromSeconds(60)));
-
-                    foreach (var user in docs)
+                    var docs = new CountdownEvent(5);
+                    var t = carolines.Run(x =>
                     {
-                        Assert.Equal("1st Street", user.Address.Street);
+                        foreach (var user in x.Items)
+                        {
+                            Assert.Equal("1st Street", user.Result.Address.Street);
+                        }
+                        docs.Signal(x.NumberOfItemsInBatch);
+                    });
+
+                    try
+                    {
+                        Assert.True(docs.Wait(_reasonableWaitTime));
+                    }
+                    catch
+                    {
+                        if (t.IsFaulted)
+                            t.Wait();
+                        throw;
                     }
                 }
             }
         }
 
         [Fact]
-        public void RavenDB_3452_ShouldStopPullingDocsIfReleased()
+        public async Task RavenDB_3452_ShouldStopPullingDocsIfReleased()
         {
             using (var store = GetDocumentStore())
             {
@@ -733,8 +725,16 @@ namespace FastTests.Client.Subscriptions
                     Assert.True(docs.TryTake(out _, _reasonableWaitTime));
                     Assert.True(docs.TryTake(out _, _reasonableWaitTime));
                     store.Subscriptions.DropConnection(id);
-                    
-                    Assert.True(SpinWait.SpinUntil(()=>subscribe.IsCompleted,_reasonableWaitTime));
+
+                    try
+                    {
+                        // this can exit normally or throw on drop connection
+                        // depending on exactly where the drop happens
+                        await subscribe.WaitAsync(_reasonableWaitTime);
+                    }
+                    catch (SubscriptionClosedException)
+                    {
+                    }
 
                     using (var session = store.OpenSession())
                     {
@@ -744,8 +744,8 @@ namespace FastTests.Client.Subscriptions
                     }
 
 
-                    Assert.False(docs.TryTake(out var doc, TimeSpan.FromSeconds(6)), doc != null ? doc.ToString() : string.Empty);
-                    Assert.False(docs.TryTake(out doc, TimeSpan.FromSeconds(6)), doc != null ? doc.ToString() : string.Empty);
+                    Assert.False(docs.TryTake(out var doc, TimeSpan.FromSeconds(0)), doc != null ? doc.ToString() : string.Empty);
+                    Assert.False(docs.TryTake(out doc, TimeSpan.FromSeconds(0)), doc != null ? doc.ToString() : string.Empty);
 
                     Assert.True(subscribe.IsCompleted);
                 }
@@ -874,7 +874,26 @@ namespace FastTests.Client.Subscriptions
                     string cvBigger = null;
                     var database = await GetDatabase(store.Database);
 
-                    subscription.Run(x => x.Items.ForEach(i => users.Add(i.Result)));
+                    var ackFirstCV = new ManualResetEventSlim();
+                    var ackUserPast = new ManualResetEventSlim();
+                    var items = new ConcurrentBag<User>();
+                    subscription.AfterAcknowledgment += batch =>
+                    {
+                        var changeVector = batch.Items.Last().ChangeVector.ToChangeVector();
+                        var savedCV = cvFirst.ToChangeVector();
+                        if (changeVector[0].Etag >= savedCV[0].Etag)
+                        {
+                            ackFirstCV.Set();
+                        }
+                        foreach (var item in batch.Items)
+                        {
+                            items.Add(item.Result);
+                            if (item.Result.Age >= 40)
+                                ackUserPast.Set();
+                        }
+                        return Task.CompletedTask;
+                    };
+                    var t = subscription.Run(x => x.Items.ForEach(i => users.Add(i.Result)));
 
                     using (var session = store.OpenSession())
                     {
@@ -890,41 +909,27 @@ namespace FastTests.Client.Subscriptions
                     }
 
                     var firstItemchangeVector = cvFirst.ToChangeVector();
-                    firstItemchangeVector[0].Etag = 20;
+                    firstItemchangeVector[0].Etag += 10;
                     cvBigger = firstItemchangeVector.SerializeVector();
 
-                    SubscriptionState subscriptionState = null;
-                    Assert.True(SpinWait.SpinUntil(() =>
+                    Assert.True(ackFirstCV.Wait(_reasonableWaitTime));
+
+                    SubscriptionStorage.SubscriptionGeneralDataAndStats subscriptionState;
+                    using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (context.OpenReadTransaction())
                     {
-                        using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                        using (context.OpenReadTransaction())
-                        {
-                            subscriptionState = database.SubscriptionStorage.GetSubscriptionFromServerStore(context, subscriptionId);
-                            var updatedChangeVector = subscriptionState.ChangeVectorForNextBatchStartingPoint;
-                            // ReSharper disable once StringCompareToIsCultureSpecific
-                            
-                            return updatedChangeVector != null && cvFirst.CompareTo(updatedChangeVector) == 0;
-                        }
-                    }, _reasonableWaitTime));
-
-
-                    await database.SubscriptionStorage.PutSubscription(new SubscriptionCreationOptions()
+                        subscriptionState = database.SubscriptionStorage.GetSubscriptionFromServerStore(context, subscriptionId);
+                    }
+                    var index = database.SubscriptionStorage.PutSubscription(new SubscriptionCreationOptions()
                     {
                         ChangeVector = cvBigger,
                         Name = subscriptionState.SubscriptionName,
-                        Query =  subscriptionState.Query
+                        Query = subscriptionState.Query
                     }, subscriptionState.SubscriptionId, false);
 
-                    Assert.True(SpinWait.SpinUntil(() =>
-                    {
-                        using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                        using (context.OpenReadTransaction())
-                        {
-                            subscriptionState = database.SubscriptionStorage.GetSubscriptionFromServerStore(context, subscriptionId);
-                            var updatedEtag = subscriptionState.ChangeVectorForNextBatchStartingPoint;
-                            return updatedEtag != null && cvBigger.CompareTo(updatedEtag) == 0;
-                        }
-                    }, _reasonableWaitTime));
+                    await index.WaitWithTimeout(_reasonableWaitTime);
+
+                    await database.RachisLogIndexNotifications.WaitForIndexNotification(index.Result).WaitWithTimeout(_reasonableWaitTime);
 
                     using (var session = store.OpenSession())
                     {
@@ -933,34 +938,19 @@ namespace FastTests.Client.Subscriptions
                             session.Store(new User
                             {
                                 Name = "Adam",
-                                Age = 21 +i
+                                Age = 21 + i
                             }, "users/");
                         }
                         session.SaveChanges();
                     }
-                    var usersSkipped = 0;
-                    
-                    Assert.True(SpinWait.SpinUntil(() =>
+
+                    Assert.True(ackUserPast.Wait(_reasonableWaitTime));
+
+                    foreach (var item in items)
                     {
-                        if (users.TryTake(out var user, TimeSpan.FromSeconds(1)))
-                        {
-                            usersSkipped++;
-                            return user?.Age == 40;
-                        }
-                        return false;
-
-                    }, _reasonableWaitTime));
-
-                    Assert.Equal(usersSkipped,2);
-
-                    string afterAnotherUpdateEtag = null;
-                    using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                    using (context.OpenReadTransaction())
-                    {
-                        subscriptionState = database.SubscriptionStorage.GetSubscriptionFromServerStore(context, subscriptionId);
-                        afterAnotherUpdateEtag = subscriptionState.ChangeVectorForNextBatchStartingPoint;
+                        if (item.Age > 20 && item.Age < 30)
+                            Assert.True(false, "Got age " + item.Age);
                     }
-                    Assert.True(cvBigger.CompareTo(afterAnotherUpdateEtag) == 0);
                 }
             }
         }
@@ -1085,5 +1075,5 @@ namespace FastTests.Client.Subscriptions
         }
 
     }
-   
+
 }
