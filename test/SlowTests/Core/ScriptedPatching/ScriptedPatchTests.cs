@@ -1,5 +1,9 @@
+using System;
 using FastTests;
+using Orders;
+using Raven.Client;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Server.Config;
 using Xunit;
@@ -8,22 +12,38 @@ namespace SlowTests.Core.ScriptedPatching
 {
     public class ScriptedPatchTests : RavenTestBase
     {
-        public class Foo
+        [Fact]
+        public void PatchingWithParametersShouldWork()
         {
-            public string Id { get; set; }
+            var store = this.GetDocumentStore();
 
-            public string BarId { get; set; }
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Company
+                {
+                    Name = "The Wall"
+                }, "companies/1");
 
-            public string FirstName { get; set; }
+                session.SaveChanges();
+            }
 
-            public string Fullname { get; set; }
-        }
+            var operation = store.Operations.Send(new PatchByQueryOperation(new IndexQuery()
+            {
+                Query = "from Companies update { this.Name = args.name }",
+                QueryParameters = new Parameters()
+                {
+                    {"name", "Jon"}
+                }
+            }));
 
-        public class Bar
-        {
-            public string Id { get; set; }
+            operation.WaitForCompletion(TimeSpan.FromSeconds(15));
 
-            public string LastName { get; set; }
+            using (var session = store.OpenSession())
+            {
+                var c = session.Load<Company>("companies/1");
+
+                Assert.Equal("Jon", c.Name);
+            }
         }
     }
 }
