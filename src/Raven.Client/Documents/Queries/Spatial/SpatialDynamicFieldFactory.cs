@@ -13,5 +13,13 @@ namespace Raven.Client.Documents.Queries.Spatial
 
             return new PointField(latitude, longitude);
         }
+
+        public WktField Wkt(Expression<Func<TEntity, object>> wktPath)
+        {
+            var wkt = wktPath.ToPropertyPath();
+
+            return new WktField(wkt);
+
+        }
     }
 }

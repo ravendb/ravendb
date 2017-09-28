@@ -991,28 +991,47 @@ namespace Raven.Server.Documents.Queries
                     fieldName = ExtractFieldNameFromFirstArgument(arguments, methodName, parameters);
                 else
                 {
-                    if (!(arguments[0] is MethodExpression pointExpression))
+                    if (!(arguments[0] is MethodExpression spatialExpression))
                         throw new InvalidQueryException($"Method {methodName}() expects first argument to be a method expression", QueryText, parameters);
 
-                    var pointType = QueryMethod.GetMethodType(pointExpression.Name);
-                    if (pointType != MethodType.Point)
-                        throw new InvalidQueryException($"Method {methodName}() expects first argument to be a point() method", QueryText, parameters);
-
-                    if (pointExpression.Arguments.Count != 2)
-                        throw new InvalidQueryException($"Method {methodName}() expects first argument to be a point() method with 2 arguments", QueryText, parameters);
-
-                    var latitudeToken = pointExpression.Arguments[0] as FieldExpression;
-                    var longitudeToken = pointExpression.Arguments[1] as FieldExpression;
-
-                    if (latitudeToken == null || longitudeToken == null)
-                        throw new InvalidQueryException($"Method {methodName}() expects first argument to be a point() method with 2 field arguments", QueryText, parameters);
-
-                    fieldName = pointExpression.GetText();
-                    fieldOptions = new AutoSpatialOptions(AutoSpatialOptions.AutoSpatialMethodType.Point, new List<string>
+                    var spatialType = QueryMethod.GetMethodType(spatialExpression.Name);
+                    switch (spatialType)
                     {
-                        latitudeToken.FieldValue,
-                        longitudeToken.FieldValue
-                    });
+                        case MethodType.Wkt:
+                            if (spatialExpression.Arguments.Count != 1)
+                                throw new InvalidQueryException($"Method {methodName}() expects first argument to be a wkt() method with 1 argument", QueryText, parameters);
+
+                            var wktToken = spatialExpression.Arguments[0] as FieldExpression;
+
+                            if (wktToken == null)
+                                throw new InvalidQueryException($"Method {methodName}() expects first argument to be a wkt() method with 1 field argument", QueryText, parameters);
+
+                            fieldOptions = new AutoSpatialOptions(AutoSpatialOptions.AutoSpatialMethodType.Wkt, new List<string>
+                            {
+                                wktToken.FieldValue
+                            });
+                            break;
+                        case MethodType.Point:
+                            if (spatialExpression.Arguments.Count != 2)
+                                throw new InvalidQueryException($"Method {methodName}() expects first argument to be a point() method with 2 arguments", QueryText, parameters);
+
+                            var latitudeToken = spatialExpression.Arguments[0] as FieldExpression;
+                            var longitudeToken = spatialExpression.Arguments[1] as FieldExpression;
+
+                            if (latitudeToken == null || longitudeToken == null)
+                                throw new InvalidQueryException($"Method {methodName}() expects first argument to be a point() method with 2 field arguments", QueryText, parameters);
+
+                            fieldOptions = new AutoSpatialOptions(AutoSpatialOptions.AutoSpatialMethodType.Point, new List<string>
+                            {
+                                latitudeToken.FieldValue,
+                                longitudeToken.FieldValue
+                            });
+                            break;
+                        default:
+                            throw new InvalidQueryException($"Method {methodName}() expects first argument to be a point() or wkt() method", QueryText, parameters);
+                    }
+
+                    fieldName = spatialExpression.GetText();
                 }
 
                 if (arguments.Count < 2 || arguments.Count > 3)

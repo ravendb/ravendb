@@ -29,6 +29,7 @@ namespace SlowTests.Issues
                         Longitude = 20,
                         Latitude2 = 10,
                         Longitude2 = 20,
+                        ShapeWkt = "POINT(20 10)",
                         Name = "Name1"
                     });
 
@@ -42,15 +43,18 @@ namespace SlowTests.Issues
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
                     Assert.Equal("FROM Items WHERE within(point(Latitude, Longitude), circle($p0, $p1, $p2))", iq.Query);
-                }
 
-                using (var session = store.OpenSession())
-                {
-                    var q = session.Advanced.DocumentQuery<Item>()
+                    var dq = session.Advanced.DocumentQuery<Item>()
                         .Spatial(factory => factory.Point(x => x.Latitude, x => x.Longitude), factory => factory.WithinRadius(10, 10, 20));
 
-                    var iq = q.GetIndexQuery();
+                    iq = dq.GetIndexQuery();
                     Assert.Equal("FROM Items WHERE within(point(Latitude, Longitude), circle($p0, $p1, $p2))", iq.Query);
+
+                    dq = session.Advanced.DocumentQuery<Item>()
+                        .Spatial(factory => factory.Wkt(x => x.ShapeWkt), factory => factory.WithinRadius(10, 10, 20));
+
+                    iq = dq.GetIndexQuery();
+                    Assert.Equal("FROM Items WHERE within(wkt(ShapeWkt), circle($p0, $p1, $p2))", iq.Query);
                 }
 
                 using (var session = store.OpenSession())
@@ -96,6 +100,14 @@ namespace SlowTests.Issues
 
                     Assert.Equal(1, results.Count);
                     Assert.Equal("Auto/Items/ByPoint(Latitude|Longitude)AndPoint(Latitude2|Longitude2)", stats.IndexName);
+
+                    results = session.Query<Item>()
+                        .Statistics(out stats)
+                        .Spatial(factory => factory.Wkt(x => x.ShapeWkt), factory => factory.WithinRadius(10, 10, 20))
+                        .ToList();
+
+                    Assert.Equal(1, results.Count);
+                    Assert.Equal("Auto/Items/ByPoint(Latitude|Longitude)AndPoint(Latitude2|Longitude2)AndWkt(ShapeWkt)", stats.IndexName);
                 }
             }
         }
@@ -113,6 +125,8 @@ namespace SlowTests.Issues
             public double Latitude2 { get; set; }
 
             public double Longitude2 { get; set; }
+
+            public string ShapeWkt { get; set; }
         }
     }
 }
