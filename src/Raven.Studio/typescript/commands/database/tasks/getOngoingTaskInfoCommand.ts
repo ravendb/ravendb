@@ -26,20 +26,20 @@ class getOngoingTaskInfoCommand<T extends Raven.Client.ServerWide.Operations.Ong
         return this.query<T>(url, args, this.db);
     }
 
-    static forExternalReplication(db: database, taskId: number, taskName?: string) {
-        return new getOngoingTaskInfoCommand<Raven.Client.ServerWide.Operations.OngoingTaskReplication>(db, "Replication", taskId, taskName);
+    static forExternalReplication(db: database, taskId: number) {
+        return new getOngoingTaskInfoCommand<Raven.Client.ServerWide.Operations.OngoingTaskReplication>(db, "Replication", taskId);
     }
 
-    static forSubscription(db: database, taskId: number, taskName?: string) {
+    static forSubscription(db: database, taskId: number, taskName: string) {
         return new getOngoingTaskInfoCommand<Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails>(db, "Subscription", taskId, taskName);
     }
 
-    static forBackup(db: database, taskId: number, taskName?: string) {
-        return new getOngoingTaskInfoCommand<Raven.Client.ServerWide.Operations.OngoingTaskBackup>(db, "Backup", taskId, taskName);
+    static forBackup(db: database, taskId: number) { 
+        return new getOngoingTaskInfoCommand<Raven.Client.ServerWide.Operations.OngoingTaskBackup>(db, "Backup", taskId);
     }
 
-    static forRavenEtl(db: database, taskId: number, taskName?: string) {
-        return new getOngoingTaskInfoCommand<Raven.Client.ServerWide.Operations.OngoingTaskRavenEtl>(db, "RavenEtl", taskId, taskName);
+    static forRavenEtl(db: database, taskId: number) {
+        return new getOngoingTaskInfoCommand<Raven.Client.ServerWide.Operations.OngoingTaskRavenEtl>(db, "RavenEtl", taskId);
     }
 }
 
