@@ -8,14 +8,18 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using NCrontab.Advanced;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Http;
@@ -41,8 +45,11 @@ using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.Rachis;
 using Raven.Server.Smuggler.Migration;
 using Raven.Server.ServerWide.Commands;
+using Raven.Server.Smuggler.Documents;
+using Sparrow;
 using Sparrow.Utils;
 using Constants = Raven.Client.Constants;
+using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 
 namespace Raven.Server.Web.System
 {
@@ -1309,5 +1316,115 @@ namespace Raven.Server.Web.System
                 NoContentStatus();
             }
         }
+
+        [RavenAction("/admin/offline-migrate", "POST", AuthorizationStatus.ClusterAdmin)]
+        public async Task MigrateDatabaseOffline()
+        {
+            OfflineMigrationConfiguration configuration;
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var migrationConfiguration = await context.ReadForMemoryAsync(RequestBodyStream(), "migration-configuration");
+                configuration = JsonDeserializationServer.OfflineMigrationConfiguration(migrationConfiguration);
+            }
+                
+            var dataDir = configuration.DataDirectory;
+            if(Directory.Exists(dataDir) == false)
+                throw new DirectoryNotFoundException($"Could not find directory {dataDir}");
+
+            //var timeout = GetTimeSpanQueryString("timeout");
+            var dataExporter = configuration.DataExporterFullPath;
+            var databaseName = configuration.DatabaseName;
+            var database = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName, true);
+            if (database == null)
+            {
+                throw new DatabaseDoesNotExistException($"Can't import into database {databaseName} because it doesn't exist.");
+            }
+            var commandline = configuration.GenerateExporterCommandLine();
+            var processStartInfo = new ProcessStartInfo(dataExporter, commandline);
+            Stopwatch timeout = null;
+            if (configuration.Timeout.HasValue)
+            {
+                timeout = Stopwatch.StartNew();
+            }
+            processStartInfo.RedirectStandardOutput = true;
+            var processDone = new AsyncManualResetEvent();
+            var process = new Process
+            {
+                StartInfo = processStartInfo,
+                EnableRaisingEvents = true,
+            };
+            var token = new OperationCancelToken(database.DatabaseShutdown);
+            process.Exited += (sender, e) => { processDone.Set(); };
+            process.Start();
+            var progress = new IndeterminateProgress();
+            var result = new SmugglerResult();
+            var operationId = database.Operations.GetNextOperationId();
+            var timer = new Stopwatch();
+
+            await database.Operations.AddOperation(database, $"Migration of {dataDir} to {databaseName}", Documents.Operations.Operations.OperationType.DatabaseExport,
+                Onprogress =>
+                {
+                    return Task.Run(async () =>
+                    {
+                        try
+                        {
+                            timer.Start();
+                            while (processDone.IsSet == false)
+                            {
+                                progress.Progress +=$"{await process.StandardOutput.ReadLineAsync()}{Environment.NewLine}";
+                                if (timer.ElapsedMilliseconds > 1000)
+                                {
+                                    Onprogress(progress);
+                                    progress.Progress = string.Empty;
+                                    timer.Restart();
+                                }
+                                ThrowIfTimeout(configuration.Timeout, timeout);
+
+                            }
+                            progress.Progress += $"{await process.StandardOutput.ReadToEndAsync()}{Environment.NewLine}";
+                            Onprogress(progress);
+                            if (process.ExitCode != 0)
+                            {
+                                throw new ApplicationException($"The data export tool have exited with code {process.ExitCode}.");
+                            }
+
+                            if (File.Exists(configuration.OutputFilePath) == false)
+                            {
+                                throw new FileNotFoundException($"Was expecting the output file to be located at {configuration.OutputFilePath}, but it is not there.");
+                            }
+
+                            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                            using (var reader = File.OpenRead(configuration.OutputFilePath))
+                            using (var stream = new GZipStream(reader, CompressionMode.Decompress))
+                            {
+                                var source = new StreamSource(stream, context);
+                                var destination = new DatabaseDestination(database);                                
+                                var smuggler = new DatabaseSmuggler(database, source, destination, database.Time, result: result,onProgress: Onprogress);
+
+                                smuggler.Execute();
+                                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                                {
+                                    var json = result.ToJson();
+                                    context.Write(writer, json);
+                                }
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            result.AddError(e.ToString());
+                            throw e;
+                        }                        
+                        return (IOperationResult)result;
+                    });
+                }, operationId, token);
+
+            void ThrowIfTimeout(TimeSpan? timespan, Stopwatch t)
+            {
+                if (timespan.HasValue && t.Elapsed > timespan.Value)
+                {
+                    throw new TimeoutException($"Export is taking more than the configured timeout {timespan.Value}");
+                }
+            }
+        }        
     }
 }
