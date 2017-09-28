@@ -4,6 +4,7 @@ import dialog = require("plugins/dialog");
 import licenseActivateCommand = require("commands/licensing/licenseActivateCommand");
 import moment = require("moment");
 import license = require("models/auth/licenseModel");
+import messagePublisher = require("common/messagePublisher");
 
 class licenseKeyModel {
 
@@ -188,8 +189,8 @@ class registration extends dialogViewModelBase {
             .execute()
             .done(() => {
                 license.fetchLicenseStatus();
-
                 dialog.close(this);
+                messagePublisher.reportSuccess("Your license was successfully registered. Thank you for choosing RavenDB.");
             })
             .always(() => this.isBusy(false));
     }
