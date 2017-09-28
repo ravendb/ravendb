@@ -50,7 +50,7 @@ $commonArgs = "--Cluster.TimeBeforeAddingReplicaInSec=15"
 $authArgs = "--Security.Certificate.Path=$serverDir\scripts\certificates\server.pfx --Security.Certificate.Password=$CertificatePassword"
 
 for($i=1; $i -le $nodeCount; $i++){
-    start powershell "-NoExit -NoProfile dotnet run -p .\src\Raven.Server\Raven.Server.csproj --ServerUrl=https://rvn$i.hrhinos.local:8080 DataDir=$i --Logs.Path=$i --License.Path=$licensePath $commonArgs $authArgs"
+    start powershell "-NoExit -NoProfile dotnet run -p .\src\Raven.Server\Raven.Server.csproj --ServerUrl=https://rvn$i.hrhinos.local:8080 DataDir=$serverDir\src\Raven.Server\bin\$conf\netcoreapp2.0\$i --Logs.Path=$serverDir\src\Raven.Server\bin\$conf\netcoreapp2.0\$i --License.Path=$licensePath $commonArgs $authArgs"
 }
 popd
 
