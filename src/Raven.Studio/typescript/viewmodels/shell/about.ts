@@ -4,6 +4,7 @@ import license = require("models/auth/licenseModel");
 import registration = require("viewmodels/shell/registration");
 import deactivateLicenseCommand = require("commands/licensing/deactivateLicenseCommand");
 import buildInfo = require("models/resources/buildInfo");
+import messagePublisher = require("common/messagePublisher");
 
 class about extends viewModelBase {
 
@@ -71,7 +72,10 @@ class about extends viewModelBase {
 
                 this.spinners.deactivatingLicense(true);
                 new deactivateLicenseCommand().execute()
-                    .done(() => this.licenseStatus(null))
+                    .done(() => {
+                        this.licenseStatus(null);
+                        messagePublisher.reportWarning("Your license was successfully deactivated");
+                    })
                     .always(() => this.spinners.deactivatingLicense(false));
             });
     }
