@@ -79,7 +79,7 @@ namespace Raven.Server.Documents.Subscriptions
             return subscriptionState;
         }
 
-        public async Task AcknowledgeBatchProcessed(long id, string name, long lastEtag, string changeVector, string mentor)
+		public async Task AcknowledgeBatchProcessed(long id, string name, string changeVector, string previousChangeVector, string mentor)
         {
             var command = new AcknowledgeSubscriptionBatchCommand(_db.Name)
             {
@@ -87,8 +87,8 @@ namespace Raven.Server.Documents.Subscriptions
                 NodeTag = _serverStore.NodeTag,
                 SubscriptionId = id,
                 SubscriptionName = name,
-                LastDocumentEtagAckedInNode = lastEtag,
                 LastTimeServerMadeProgressWithDocuments = DateTime.UtcNow,
+                LastKnownSubscriptionChangeVector = previousChangeVector,
                 MentorNode = mentor
             };
 
@@ -119,7 +119,7 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        public async Task<SubscriptionState> AssertSubscriptionIdIsApplicable(long id, string name, TimeSpan timeout)
+        public async Task<SubscriptionState> AssertSubscriptionConnectionDetails(long id, string name, TimeSpan timeout)
         {
             await _serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, id);
 

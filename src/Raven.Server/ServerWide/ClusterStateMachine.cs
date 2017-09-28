@@ -324,7 +324,7 @@ namespace Raven.Server.ServerWide
                 catch (Exception e)
                 {
                     NotifyLeaderAboutError(index, leader,
-                        new CommandExecutionException($"Cannot set typed value of type {type} for database {updateCommand.DatabaseName}, because does not exist", e));
+                        new CommandExecutionException($"Operation of type {type} for database {updateCommand.DatabaseName} was failed", e));
                 }
             }
             finally

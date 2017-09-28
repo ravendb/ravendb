@@ -33,6 +33,9 @@ namespace Raven.Client.Documents.Subscriptions
 {
     public class SubscriptionBatch<T>
     {
+        /// <summary>
+        /// Represents a single item in a subscription batch results. This class should be used only inside the subscription's Run delegate, using it outside this scope might cause unexpected behavior.
+        /// </summary>
         public struct Item
         {
             private T _result;
@@ -64,7 +67,7 @@ namespace Raven.Client.Documents.Subscriptions
             public IMetadataDictionary Metadata => _metadata ?? (_metadata = new MetadataAsDictionary(RawMetadata));
         }
 
-        public int NumberOfItemsInBatch;
+        public int NumberOfItemsInBatch => Items?.Count??0;
 
         private readonly RequestExecutor _requestExecutor;
         private readonly IDocumentStore _store;

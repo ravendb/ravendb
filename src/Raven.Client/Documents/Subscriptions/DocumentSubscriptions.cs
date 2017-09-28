@@ -8,12 +8,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
 using System.Threading.Tasks;
 using Lambda2Js;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Extensions;
-using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Sparrow.Collections;
 using Sparrow.Json;
@@ -30,11 +28,22 @@ namespace Raven.Client.Documents.Subscriptions
             _store = store;
         }
 
+        public string Create<T>(SubscriptionCreationOptions<T> options, string database = null)
+        {
+            return Create(EnsureCriteria(new SubscriptionCreationOptions
+            {
+                Name = options.Name,
+                ChangeVector = options.ChangeVector
+            }, options.Filter, options.Project), database);
+
+        }
+
+
         public string Create<T>(Expression<Func<T, bool>> predicate = null,
             SubscriptionCreationOptions options = null,
             string database = null)
         {
-            return Create(EnsureCriteria(options, predicate), database);
+            return Create(EnsureCriteria(options, predicate, null), database);
         }
 
         public Task<string> CreateAsync<T>(
@@ -42,10 +51,13 @@ namespace Raven.Client.Documents.Subscriptions
             SubscriptionCreationOptions options = null, 
             string database = null)
         {
-            return CreateAsync(EnsureCriteria(options, predicate), database);
+            return CreateAsync(EnsureCriteria(options, predicate, null), database);
         }
 
-        private SubscriptionCreationOptions EnsureCriteria<T>(SubscriptionCreationOptions criteria, Expression<Func<T, bool>> predicate)
+        private SubscriptionCreationOptions EnsureCriteria<T>(
+            SubscriptionCreationOptions criteria, 
+            Expression<Func<T, bool>> predicate,
+            Expression<Func<T, object>> project)
         {
             criteria = criteria ?? new SubscriptionCreationOptions();
             var collectionName = _store.Conventions.GetCollectionName(typeof(T));
@@ -75,6 +87,16 @@ namespace Raven.Client.Documents.Subscriptions
                 criteria.Query = "declare function predicate () {\r\n\t return " + 
                     script + "\r\n}\r\n" + criteria.Query + "\r\n" + 
                     "where predicate.call(this)";
+            }
+            if (project != null)
+            {
+                var script = project.CompileToJavascript(
+                    new JavascriptCompilationOptions(
+                        JsCompilationFlags.BodyOnly,
+                        new JavascriptConversionExtensions.LinqMethodsSupport(),
+                        new JavascriptConversionExtensions.DatesAndConstantsSupport { Parameter = project.Parameters[0] }
+                    ));
+                criteria.Query += Environment.NewLine + "select " + script;
             }
             return criteria;
         }
@@ -107,6 +129,11 @@ namespace Raven.Client.Documents.Subscriptions
             return Open<dynamic>(options, database);
         }
 
+        public Subscription<dynamic> Open(string subscriptionName, string database = null)
+        {
+            return Open<dynamic>(new SubscriptionConnectionOptions(subscriptionName), database);
+        }
+
         public Subscription<T> Open<T>(SubscriptionConnectionOptions options, string database = null) where T : class
         {
             if (options == null)
@@ -119,26 +146,20 @@ namespace Raven.Client.Documents.Subscriptions
             return subscription;
         }
 
+        public Subscription<T> Open<T>(string subscriptionName, string database = null) where T : class
+        {
+            return Open<T>(new SubscriptionConnectionOptions(subscriptionName), database);
+        }
+
         public async Task<List<SubscriptionState>> GetSubscriptionsAsync(int start, int take, string database = null)
         {
-            JsonOperationContext jsonOperationContext;
             var requestExecutor = _store.GetRequestExecutor(database ?? _store.Database);
-            requestExecutor.ContextPool.AllocateOperationContext(out jsonOperationContext);
+            requestExecutor.ContextPool.AllocateOperationContext(out var jsonOperationContext);
 
             var command = new GetSubscriptionsCommand(start, take);
             await requestExecutor.ExecuteAsync(command, jsonOperationContext).ConfigureAwait(false);
 
             return command.Result.ToList();
-        }
-
-        public async Task DeleteAsync(long id, string database = null)
-        {
-            JsonOperationContext jsonOperationContext;
-            var requestExecutor = _store.GetRequestExecutor(database ?? _store.Database);
-            requestExecutor.ContextPool.AllocateOperationContext(out jsonOperationContext);
-
-            var command = new DeleteSubscriptionCommand(id.ToString());
-            await requestExecutor.ExecuteAsync(command, jsonOperationContext).ConfigureAwait(false);
         }
 
         public async Task DeleteAsync(string name, string database = null)
@@ -149,6 +170,11 @@ namespace Raven.Client.Documents.Subscriptions
 
             var command = new DeleteSubscriptionCommand(name);
             await requestExecutor.ExecuteAsync(command, jsonOperationContext).ConfigureAwait(false);
+        }
+
+        public void Delete(string name, string database = null)
+        {
+            AsyncHelpers.RunSync(() => DeleteAsync(name, database));
         }
 
         public SubscriptionState GetSubscriptionState(string subscriptionName, string database = null)
@@ -189,6 +215,24 @@ namespace Raven.Client.Documents.Subscriptions
             {
                 throw new InvalidOperationException("Failed to dispose active data subscriptions", ae.ExtractSingleInnerException());
             }
+        }
+                
+        public List<SubscriptionState> GetSubscriptions(int start, int take, string database = null)
+        {            
+            return AsyncHelpers.RunSync(() => GetSubscriptionsAsync(start, take, database));
+        }
+
+        public void DropConnection(string id, string database = null)
+        {
+            AsyncHelpers.RunSync(() => DropConnectionAsync(id, database));
+        }
+
+        public async Task DropConnectionAsync(string id, string database = null)
+        {
+            var requestExecutor = _store.GetRequestExecutor(database ?? _store.Database);
+            requestExecutor.ContextPool.AllocateOperationContext(out var jsonOperationContext);
+            var command = new DropSubscriptionConnectionCommand(id);
+            await requestExecutor.ExecuteAsync(command, jsonOperationContext).ConfigureAwait(false);
         }
     }
 }

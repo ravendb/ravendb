@@ -9,6 +9,13 @@ namespace FastTests.Client.Subscriptions
 {
     public class RavenDB_3082 : RavenTestBase
     {
+
+        public class PersonWithZipcode
+        {
+            public string Name { get; set; }
+            public int ZipCode { get; set; }
+        }
+
         [Fact]
         public async Task StronglyTypedDataSubscriptions()
         {
@@ -51,8 +58,12 @@ namespace FastTests.Client.Subscriptions
                     await session.SaveChangesAsync();
                 }
 
-                var id = await store.Subscriptions.CreateAsync<PersonWithAddress>(
-                    p => p.Name == "James" && p.Address.ZipCode != 54321);
+                var id = store.Subscriptions.Create(
+                    new SubscriptionCreationOptions<PersonWithAddress>
+                    {
+                        Filter = p => p.Name == "James" && p.Address.ZipCode != 54321
+                    }
+                );
 
                 using (
                     var subscription =
