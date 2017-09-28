@@ -45,7 +45,7 @@ class editRavenEtlTask extends viewModelBase {
             this.isAddingNewRavenEtlTask(false);
             this.taskId = args.taskId;
             
-            new getOngoingTaskInfoCommand(this.activeDatabase(), "RavenEtl", args.taskId, args.taskName)
+            getOngoingTaskInfoCommand.forRavenEtl(this.activeDatabase(), args.taskId, args.taskName)
                 .execute()
                 .done((result: Raven.Client.ServerWide.Operations.OngoingTaskRavenEtl) => {
                     this.editedRavenEtl(new ongoingTaskRavenEtl(result, false));

@@ -104,7 +104,7 @@
                                             <span class="etl-collections" data-bind="foreach: transformScriptCollections" title="The Collections transformed">
                                                 <span data-bind="text: $data, attr: { class: 'collection-color-' + $parent.getCollectionEntry($data) }"></span>
                                             </span>
-                                            <span data-bind="visible: transformScriptCollections().length == 0">
+                                            <span data-bind="visible: transformScriptCollections().length === 0">
                                                 No collections selected..
                                             </span>
                                         </div>

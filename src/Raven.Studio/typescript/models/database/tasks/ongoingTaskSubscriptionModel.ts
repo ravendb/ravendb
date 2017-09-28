@@ -83,7 +83,7 @@ class ongoingTaskSubscriptionModel extends ongoingTask {
 
     refreshSubscriptionInfo() {
         // 1. Get general info
-        new ongoingTaskInfoCommand(this.activeDatabase(), "Subscription", this.taskId, this.taskName())
+        ongoingTaskInfoCommand.forSubscription(this.activeDatabase(), this.taskId, this.taskName())
             .execute()
             .done((result: Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails) => {
 
