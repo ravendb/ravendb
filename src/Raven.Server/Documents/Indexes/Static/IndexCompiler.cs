@@ -340,33 +340,42 @@ namespace Raven.Server.Documents.Indexes.Static
                 var expression = SyntaxFactory.ParseExpression(reduce).NormalizeWhitespace();
                 fieldNamesValidator?.Validate(reduce, expression);
                 methodsDetector.Visit(expression);
-                var queryExpression = expression as QueryExpressionSyntax;
-                if (queryExpression != null)
+
+                StatementSyntax result;
+
+                switch (expression)
                 {
-                    return
-                        HandleSyntaxInReduce(
+                    case QueryExpressionSyntax queryExpression:
+                        result = HandleSyntaxInReduce(
                             new ReduceFunctionProcessor(
                                 ResultsVariableNameRewriter.QuerySyntax,
                                 GroupByFieldsRetriever.QuerySyntax,
                                 SelectManyRewriter.QuerySyntax),
                             MethodsInGroupByValidator.QuerySyntaxValidator,
                             queryExpression, out groupByFields);
-                }
-
-                var invocationExpression = expression as InvocationExpressionSyntax;
-                if (invocationExpression != null)
-                {
-                    return
-                        HandleSyntaxInReduce(
+                        break;
+                    case InvocationExpressionSyntax invocationExpression:
+                        result = HandleSyntaxInReduce(
                             new ReduceFunctionProcessor(
                                 ResultsVariableNameRewriter.MethodSyntax,
                                 GroupByFieldsRetriever.MethodSyntax,
                                 SelectManyRewriter.MethodSyntax),
                             MethodsInGroupByValidator.MethodSyntaxValidator,
                             invocationExpression, out groupByFields);
+                        break;
+                    default:
+                        throw new InvalidOperationException("Not supported expression type.");
                 }
 
-                throw new InvalidOperationException("Not supported expression type.");
+                foreach (var groupByField in groupByFields)
+                {
+                    if (fieldNamesValidator?.Fields.Contains(groupByField) == false)
+                    {
+                        throw new InvalidOperationException($"Group by field '{groupByField}' was not found on the list of index fields ({string.Join(", ",fieldNamesValidator.Fields)})");
+                    }
+                }
+
+                return result;
             }
             catch (Exception ex)
             {
