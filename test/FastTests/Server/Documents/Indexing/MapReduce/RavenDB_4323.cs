@@ -204,7 +204,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        public class YearlyToDailyInfiniteLoopIndex : AbstractIndexCreationTask<MonthlyInvoice, YearlyInvoice>
+        public class YearlyToDailyInfiniteLoopIndex : AbstractIndexCreationTask<MonthlyInvoice, Invoice>
         {
             public YearlyToDailyInfiniteLoopIndex()
             {
@@ -218,7 +218,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
 
                 Reduce = results =>
                     from r in results
-                    group r by r.Date
+                    group r by r.IssuedAt
                     into g
                     select new Invoice
                     {
