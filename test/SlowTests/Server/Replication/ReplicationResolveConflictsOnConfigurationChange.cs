@@ -77,56 +77,22 @@ namespace SlowTests.Server.Replication
 
                 await SetReplicationConflictResolutionAsync(store1, StraightforwardConflictResolution.ResolveToLatest);
 
+                WaitForUserToContinueTheTest(store1);
+
+
                 Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Store2"));
                 Assert.True(WaitForDocument<User>(store2, "foo/bar", u => u.Name == "Store2"));
 
+
                 var database = Servers.Single(s => s.WebUrl == store2.Urls[0]).ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database).Result;
+
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
                     context.OpenReadTransaction();
-                    var count = database.DocumentsStorage.ConflictsGraveyard.GetNumberOfRevisionDocuments(context);
+                    var count = database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(context);
                     Assert.Equal(3, count);
                 }
-            }
-        }
 
-        [Fact]
-        public async Task ResolveWhenSettingDatabaseResolver()
-        {
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
-            {
-                await GenerateConflicts(store1, store2);
-                var storage1 = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database).Result;
-
-                var config = new ConflictSolver
-                {
-                    DatabaseResolverId = storage1.DbBase64Id
-                };
-                await SetupReplicationAsync(store1, config, store2);
-
-                Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Store1"));
-                Assert.True(WaitForDocument<User>(store2, "foo/bar", u => u.Name == "Store1"));
-            }
-        }
-
-        [Fact]
-        public async Task ResolveManyConflicts()
-        {
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
-            {
-                var list = await GenerateConflicts(store1, store2, "users/1");
-                await DeleteOngoingTask(store1, list[0].TaskId, OngoingTaskType.Replication);
-                await DeleteOngoingTask(store2, list[1].TaskId, OngoingTaskType.Replication);
-                await GenerateConflicts(store1, store2, "users/2");
-                var storage1 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database);
-                await UpdateConflictResolver(store1, storage1.DbBase64Id);
-
-                Assert.True(WaitForDocument<User>(store1, "users/1", u => u.Name == "Store1"));
-                Assert.True(WaitForDocument<User>(store2, "users/1", u => u.Name == "Store1"));
-                Assert.True(WaitForDocument<User>(store1, "users/2", u => u.Name == "Store1"));
-                Assert.True(WaitForDocument<User>(store2, "users/2", u => u.Name == "Store1"));
             }
         }
     }

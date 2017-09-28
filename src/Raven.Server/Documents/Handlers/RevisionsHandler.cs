@@ -56,42 +56,12 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/revisions", "GET", AuthorizationStatus.ValidUser)]
         public Task GetRevisionsFor()
         {
-            var revisionsStorage = Database.DocumentsStorage.RevisionsStorage;
-            if (revisionsStorage.Configuration == null)
-                throw new RevisionsDisabledException();
-
             var changeVector = GetStringQueryString("changeVector", required: false);
             if (changeVector != null)
             {
                 return GetRevision(changeVector);
             }
             return GetRevisions();
-        }
-
-        [RavenAction("/databases/*/conflicts/auto-resolved", "GET", AuthorizationStatus.ValidUser)]
-        public Task GetDeadConflictsFor()
-        {
-            var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
-            var graveyard = Database.DocumentsStorage.ConflictsGraveyard;
-
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var revisions = graveyard.GetRevisions(context, id, 0, int.MaxValue);
-                if (revisions.Count == 0)
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    return Task.CompletedTask;
-                }
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteStartObject();
-                    writer.WritePropertyName("Results");
-                    writer.WriteDocuments(context, revisions.Revisions , metadataOnly: false, numberOfResults: out int _);
-                    writer.WriteEndObject();
-                }
-            }
-            return Task.CompletedTask;
         }
 
         private Task GetRevision(string changeVector)

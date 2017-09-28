@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.Revisions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -93,18 +94,6 @@ namespace Raven.Server.Documents.Replication
                                 }
                             }
 
-                            if (TryResolveUsingDefaultResolverInternal(
-                                context,
-                                ConflictSolver?.DatabaseResolverId,
-                                conflicts,
-                                out resolved))
-                            {
-                                resolvedConflicts.Add((resolved, maxConflictEtag));
-
-                                //stats.AddResolvedBy("DatabaseResolver", conflictList.Count);
-                                continue;
-                            }
-
                             if (ConflictSolver?.ResolveToLatest == true)
                             {
                                 resolvedConflicts.Add((ResolveToLatest(context, conflicts), maxConflictEtag));
@@ -165,11 +154,6 @@ namespace Raven.Server.Documents.Replication
                         RequiresRetry = true;
                     }
 
-                    if (item.ResolvedConflict.Flags.HasFlag(DocumentFlags.AutoResolved))
-                    {
-                        var conflicts = _conflictsStorage.GetConflictsFor(context, item.ResolvedConflict.Id);
-                        _resolver.AddToGraveyard(context, conflicts, item.ResolvedConflict);
-                    }
                     _resolver.PutResolvedDocument(context, item.ResolvedConflict);
                 }
 
@@ -200,49 +184,6 @@ namespace Raven.Server.Documents.Replication
                 };
             }
             ScriptConflictResolversCache = copy;
-        }
-
-        public bool TryResolveUsingDefaultResolverInternal(
-            DocumentsOperationContext context,
-            string resolver,
-            IReadOnlyList<DocumentConflict> conflicts,
-            out DocumentConflict resolved)
-        {
-            resolved = null;
-
-            if (resolver == null)
-                return false;
-
-            long maxEtag = -1;
-            long duplicateResolverEtagAt = -1;
-
-            foreach (var documentConflict in conflicts)
-            {
-                foreach (var changeVectorEntry in documentConflict.ChangeVector.ToChangeVector())
-                {
-                    if (changeVectorEntry.DbId.Equals(resolver))
-                    {
-                        if (changeVectorEntry.Etag == maxEtag)
-                        {
-                            duplicateResolverEtagAt = maxEtag;
-                            continue;
-                        }
-                        if (changeVectorEntry.Etag < maxEtag)
-                            continue;
-
-                        duplicateResolverEtagAt = -1;
-                        maxEtag = changeVectorEntry.Etag;
-                        resolved = documentConflict;
-                        break;
-                    }
-                }
-            }
-
-            if (resolved == null || duplicateResolverEtagAt == maxEtag)
-                return false;
-
-            resolved.ChangeVector = ChangeVectorUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
-            return true;
         }
 
         private bool ValidatedResolveByScriptInput(ScriptResolver scriptResolver,
@@ -279,20 +220,6 @@ namespace Raven.Server.Documents.Replication
             return true;
         }
 
-        public void AddToGraveyard(DocumentsOperationContext documentsContext, IReadOnlyCollection<DocumentConflict> conflicts, DocumentConflict resolved)
-        {
-            var collection = _database.DocumentsStorage.ExtractCollectionName(documentsContext, resolved.Collection);
-            foreach (var conflict in conflicts)
-            {
-                _database.DocumentsStorage.ConflictsGraveyard.Put(
-                    documentsContext, resolved.Id, conflict.Doc, conflict.Flags, NonPersistentDocumentFlags.None, conflict.ChangeVector, conflict.LastModified.Ticks,
-                    collectionName: collection);
-            }
-            _database.DocumentsStorage.ConflictsGraveyard.Put(
-                documentsContext, resolved.Id, resolved.Doc, resolved.Flags, NonPersistentDocumentFlags.None, resolved.ChangeVector, resolved.LastModified.Ticks,
-                collectionName: collection);
-        }
-
         public void PutResolvedDocument(
            DocumentsOperationContext context,
            DocumentConflict conflict)
@@ -319,7 +246,7 @@ namespace Raven.Server.Documents.Replication
                 DeleteDocumentFromDifferentCollectionIfNeeded(context, conflict);
 
                 ReplicationUtils.EnsureCollectionTag(clone, conflict.Collection);
-                _database.DocumentsStorage.Put(context, conflict.LowerId, null, clone, null, conflict.ChangeVector);
+                _database.DocumentsStorage.Put(context, conflict.LowerId, null, clone, null, conflict.ChangeVector, DocumentFlags.Resolved);
             }
         }
 
@@ -386,7 +313,6 @@ namespace Raven.Server.Documents.Replication
             }
 
             latestDoc.ChangeVector = ChangeVectorUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
-            latestDoc.Flags |= DocumentFlags.AutoResolved;
 
             return latestDoc;
         }

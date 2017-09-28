@@ -190,10 +190,9 @@ namespace FastTests.Server.Replication
             return await store.Admin.Server.SendAsync(op);
         }
 
-        protected static async Task<ModifySolverResult> UpdateConflictResolver(IDocumentStore store, string resovlerDbId = null, Dictionary<string, ScriptResolver> collectionByScript = null, bool resolveToLatest = false)
+        protected static async Task<ModifySolverResult> UpdateConflictResolver(IDocumentStore store, Dictionary<string, ScriptResolver> collectionByScript = null, bool resolveToLatest = false)
         {
-            var op = new ModifyConflictSolverOperation(store.Database,
-                resovlerDbId, collectionByScript, resolveToLatest);
+            var op = new ModifyConflictSolverOperation(store.Database, collectionByScript, resolveToLatest);
             return await store.Admin.Server.SendAsync(op);
         }
 
@@ -226,18 +225,18 @@ namespace FastTests.Server.Replication
                     }
                 }
             };
-            await UpdateConflictResolver(store, null, resolveByCollection);
+            await UpdateConflictResolver(store, resolveByCollection);
         }
 
         protected async Task SetupReplicationAsync(DocumentStore fromStore, ConflictSolver conflictSolver, params DocumentStore[] toStores)
         {
-            await UpdateConflictResolver(fromStore, conflictSolver.DatabaseResolverId, conflictSolver.ResolveByCollection, conflictSolver.ResolveToLatest);
+            await UpdateConflictResolver(fromStore, conflictSolver.ResolveByCollection, conflictSolver.ResolveToLatest);
             await SetupReplicationAsync(fromStore, toStores);
         }
 
         protected static async Task SetReplicationConflictResolutionAsync(DocumentStore store, StraightforwardConflictResolution conflictResolution)
         {
-            await UpdateConflictResolver(store, null, null, conflictResolution == StraightforwardConflictResolution.ResolveToLatest);
+            await UpdateConflictResolver(store, null, conflictResolution == StraightforwardConflictResolution.ResolveToLatest);
         }
 
         protected virtual void ModifyReplicationDestination(ReplicationNode replicationNode)
