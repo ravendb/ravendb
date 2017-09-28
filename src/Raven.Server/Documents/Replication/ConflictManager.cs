@@ -93,12 +93,16 @@ namespace Raven.Server.Documents.Replication
                     conflicts.Add(local);
 
                 var resolved = _conflictResolver.ResolveToLatest(documentsContext, conflicts);
+
+                _conflictResolver.AddToGraveyard(documentsContext, conflicts, resolved);
                 _conflictResolver.PutResolvedDocument(documentsContext, resolved);
 
                 return;
             }
             _database.DocumentsStorage.ConflictsStorage.AddConflict(documentsContext, id, lastModifiedTicks, doc, changeVector, collection, flags);
         }
+
+       
 
         private bool TryResolveConflictByScript(
             DocumentsOperationContext documentsContext,

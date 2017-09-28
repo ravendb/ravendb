@@ -71,6 +71,13 @@ namespace Raven.Server.Documents.Revisions
             Operations = new RevisionsOperations(_database);
         }
 
+        public RevisionsStorage(DocumentDatabase database, RevisionsConfiguration configuration, Transaction tx):this(database)
+        {
+            Configuration = configuration;
+            tx.CreateTree(RevisionsCountSlice);
+            TombstonesSchema.Create(tx, RevisionsTombstonesSlice, 16);
+        }
+
         private Table EnsureRevisionTableCreated(Transaction tx, CollectionName collection)
         {
             var tableName = collection.GetTableName(CollectionTableType.Revisions);

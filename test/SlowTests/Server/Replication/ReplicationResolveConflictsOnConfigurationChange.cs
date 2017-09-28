@@ -1,10 +1,12 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Replication;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -77,6 +79,14 @@ namespace SlowTests.Server.Replication
 
                 Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Store2"));
                 Assert.True(WaitForDocument<User>(store2, "foo/bar", u => u.Name == "Store2"));
+
+                var database = Servers.Single(s => s.WebUrl == store2.Urls[0]).ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database).Result;
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                {
+                    context.OpenReadTransaction();
+                    var count = database.DocumentsStorage.ConflictsGraveyard.GetNumberOfRevisionDocuments(context);
+                    Assert.Equal(3, count);
+                }
             }
         }
 
