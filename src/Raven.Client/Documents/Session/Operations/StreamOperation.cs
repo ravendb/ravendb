@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Util;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -84,63 +85,65 @@ namespace Raven.Client.Documents.Session.Operations
             using (var parser = new UnmanagedJsonParser(_session.Context, state, "stream contents"))
             using (_session.Context.GetManagedBuffer(out buffer))
             {
-                if (UnmanagedJsonParserHelper.Read(response.Stream, parser, state, buffer) == false)
-                    UnmanagedJsonParserHelper.ThrowInvalidJson();
+                var peepingTomStream = new PeepingTomStream(response.Stream, _session.Context);
+                if (UnmanagedJsonParserHelper.Read(peepingTomStream, parser, state, buffer) == false)
+                    UnmanagedJsonParserHelper.ThrowInvalidJson(peepingTomStream);
 
                 if (state.CurrentTokenType != JsonParserToken.StartObject)
-                    UnmanagedJsonParserHelper.ThrowInvalidJson();
+                    UnmanagedJsonParserHelper.ThrowInvalidJson(peepingTomStream);
 
 
                 if(_isQueryStream)
                     HandleStreamQueryStats(_session.Context, response, parser, state, buffer, _statistics);
 
-                var property = UnmanagedJsonParserHelper.ReadString(_session.Context, response.Stream, parser, state, buffer);
+                var property = UnmanagedJsonParserHelper.ReadString(_session.Context, peepingTomStream, parser, state, buffer);
                 if (string.Equals(property, "Results") == false)
-                    UnmanagedJsonParserHelper.ThrowInvalidJson();
+                    UnmanagedJsonParserHelper.ThrowInvalidJson(peepingTomStream);
                 
-                foreach (var result in UnmanagedJsonParserHelper.ReadArrayToMemory(_session.Context, response.Stream, parser, state, buffer))
+                foreach (var result in UnmanagedJsonParserHelper.ReadArrayToMemory(_session.Context, peepingTomStream, parser, state, buffer))
                     yield return result;
 
-                if (UnmanagedJsonParserHelper.Read(response.Stream, parser, state, buffer) == false)
-                    UnmanagedJsonParserHelper.ThrowInvalidJson();
+                if (UnmanagedJsonParserHelper.Read(peepingTomStream, parser, state, buffer) == false)
+                    UnmanagedJsonParserHelper.ThrowInvalidJson(peepingTomStream);
 
                 if (state.CurrentTokenType != JsonParserToken.EndObject)
-                    UnmanagedJsonParserHelper.ThrowInvalidJson();
+                    UnmanagedJsonParserHelper.ThrowInvalidJson(peepingTomStream);
             }
         }
 
         private static void HandleStreamQueryStats(JsonOperationContext context ,StreamResult response, UnmanagedJsonParser parser, JsonParserState state, JsonOperationContext.ManagedPinnedBuffer buffer, StreamQueryStatistics streamQueryStatistics = null)
         {
-            var property = UnmanagedJsonParserHelper.ReadString(context, response.Stream, parser, state, buffer);
+            var peepingTomStream = new PeepingTomStream(response.Stream, context);
+            var property = UnmanagedJsonParserHelper.ReadString(context, peepingTomStream, parser, state, buffer);
             if (string.Equals(property, nameof(StreamQueryStatistics.ResultEtag)) == false)
-                UnmanagedJsonParserHelper.ThrowInvalidJson();
-            var resultEtag =  UnmanagedJsonParserHelper.ReadLong(context, response.Stream, parser, state, buffer);
+                UnmanagedJsonParserHelper.ThrowInvalidJson(peepingTomStream);
+            var resultEtag =  UnmanagedJsonParserHelper.ReadLong(context, peepingTomStream, parser, state, buffer);
              
-            property = UnmanagedJsonParserHelper.ReadString(context, response.Stream, parser, state, buffer);
+            property = UnmanagedJsonParserHelper.ReadString(context, peepingTomStream, parser, state, buffer);
             if (string.Equals(property, nameof(StreamQueryStatistics.IsStale)) == false)
-                UnmanagedJsonParserHelper.ThrowInvalidJson();
+                UnmanagedJsonParserHelper.ThrowInvalidJson(peepingTomStream);
 
-            if (UnmanagedJsonParserHelper.Read(response.Stream, parser, state, buffer) == false)
-                UnmanagedJsonParserHelper.ThrowInvalidJson();
+            if (UnmanagedJsonParserHelper.Read(peepingTomStream, parser, state, buffer) == false)
+                UnmanagedJsonParserHelper.ThrowInvalidJson(peepingTomStream);
 
             if (state.CurrentTokenType != JsonParserToken.False && state.CurrentTokenType != JsonParserToken.True)
-                UnmanagedJsonParserHelper.ThrowInvalidJson();
+                UnmanagedJsonParserHelper.ThrowInvalidJson(peepingTomStream);
             var isStale = state.CurrentTokenType != JsonParserToken.False;
 
-            property = UnmanagedJsonParserHelper.ReadString(context, response.Stream, parser, state, buffer);
+            property = UnmanagedJsonParserHelper.ReadString(context, peepingTomStream, parser, state, buffer);
             if (string.Equals(property, nameof(StreamQueryStatistics.IndexName)) == false)
-                UnmanagedJsonParserHelper.ThrowInvalidJson();
-            var indexName = UnmanagedJsonParserHelper.ReadString(context, response.Stream, parser, state, buffer);
+                UnmanagedJsonParserHelper.ThrowInvalidJson(peepingTomStream);
+            var indexName = UnmanagedJsonParserHelper.ReadString(context, peepingTomStream, parser, state, buffer);
 
-            property = UnmanagedJsonParserHelper.ReadString(context, response.Stream, parser, state, buffer);
+            property = UnmanagedJsonParserHelper.ReadString(context, peepingTomStream, parser, state, buffer);
             if (string.Equals(property, nameof(StreamQueryStatistics.TotalResults)) == false)
-                UnmanagedJsonParserHelper.ThrowInvalidJson();
-            var totalResults = (int)UnmanagedJsonParserHelper.ReadLong(context, response.Stream, parser, state, buffer);
+                UnmanagedJsonParserHelper.ThrowInvalidJson(peepingTomStream);
+            var totalResults = (int)UnmanagedJsonParserHelper.ReadLong(context, peepingTomStream, parser, state, buffer);
 
-            property = UnmanagedJsonParserHelper.ReadString(context, response.Stream, parser, state, buffer);
+            property = UnmanagedJsonParserHelper.ReadString(context, peepingTomStream, parser, state, buffer);
             if (string.Equals(property, nameof(StreamQueryStatistics.IndexTimestamp)) == false)
-                UnmanagedJsonParserHelper.ThrowInvalidJson();
-            var indexTimestamp = UnmanagedJsonParserHelper.ReadString(context, response.Stream, parser, state, buffer);
+                UnmanagedJsonParserHelper.ThrowInvalidJson(peepingTomStream);
+            var indexTimestamp = UnmanagedJsonParserHelper.ReadString(context, peepingTomStream, parser, state, buffer);
 
             if(streamQueryStatistics == null)
                 return;
@@ -153,7 +156,7 @@ namespace Raven.Client.Documents.Session.Operations
             DateTime timeStamp;
             if (DateTime.TryParseExact(indexTimestamp, "o", CultureInfo.InvariantCulture,
                 DateTimeStyles.RoundtripKind, out timeStamp) == false)
-                UnmanagedJsonParserHelper.ThrowInvalidJson();
+                UnmanagedJsonParserHelper.ThrowInvalidJson(peepingTomStream);
             streamQueryStatistics.IndexTimestamp = timeStamp;
         }
 
@@ -167,6 +170,7 @@ namespace Raven.Client.Documents.Session.Operations
             public YieldStreamResults(InMemoryDocumentSessionOperations session, StreamResult stream, bool isQueryStream)
             {
                 _response = stream;
+                _peepingTomStream = new PeepingTomStream(_response.Stream, session.Context);
                 _session = session;
                 _isQueryStream = isQueryStream;
             }
@@ -179,6 +183,7 @@ namespace Raven.Client.Documents.Session.Operations
             private bool _initialized;
             private JsonOperationContext.ReturnBuffer _returnBuffer;
             private readonly bool _isQueryStream;
+            private PeepingTomStream _peepingTomStream;
 
             public void Dispose()
             {
@@ -193,23 +198,23 @@ namespace Raven.Client.Documents.Session.Operations
                 if (_initialized == false)
                     await InitializeAsync().ConfigureAwait(false);
 
-                if (await UnmanagedJsonParserHelper.ReadAsync(_response.Stream, _parser, _state, _buffer).ConfigureAwait(false) == false)
-                    UnmanagedJsonParserHelper.ThrowInvalidJson();
+                if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer).ConfigureAwait(false) == false)
+                    UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
 
                 if (_state.CurrentTokenType == JsonParserToken.EndArray)
                 {
-                    if (await UnmanagedJsonParserHelper.ReadAsync(_response.Stream, _parser, _state, _buffer).ConfigureAwait(false) == false)
-                        UnmanagedJsonParserHelper.ThrowInvalidJson();
+                    if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer).ConfigureAwait(false) == false)
+                        UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
 
                     if (_state.CurrentTokenType != JsonParserToken.EndObject)
-                        UnmanagedJsonParserHelper.ThrowInvalidJson();
+                        UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
 
                     return false;
                 }
 
                 using (var builder = new BlittableJsonDocumentBuilder(_session.Context, BlittableJsonDocumentBuilder.UsageMode.ToDisk, "readArray/singleResult", _parser, _state))
                 {
-                    await UnmanagedJsonParserHelper.ReadObjectAsync(builder, _response.Stream, _parser, _buffer).ConfigureAwait(false);
+                    await UnmanagedJsonParserHelper.ReadObjectAsync(builder, _peepingTomStream, _parser, _buffer).ConfigureAwait(false);
 
                     Current = builder.CreateReader();
                     return true;
@@ -224,25 +229,25 @@ namespace Raven.Client.Documents.Session.Operations
                 _parser = new UnmanagedJsonParser(_session.Context, _state, "stream contents");
                 _returnBuffer = _session.Context.GetManagedBuffer(out _buffer);
 
-                if (await UnmanagedJsonParserHelper.ReadAsync(_response.Stream, _parser, _state, _buffer).ConfigureAwait(false) == false)
-                    UnmanagedJsonParserHelper.ThrowInvalidJson();
+                if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer).ConfigureAwait(false) == false)
+                    UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
 
                 if (_state.CurrentTokenType != JsonParserToken.StartObject)
-                    UnmanagedJsonParserHelper.ThrowInvalidJson();
+                    UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
 
                 if (_isQueryStream)
                     HandleStreamQueryStats(_session.Context, _response, _parser, _state, _buffer);
 
-                var property = UnmanagedJsonParserHelper.ReadString(_session.Context, _response.Stream, _parser, _state, _buffer);
+                var property = UnmanagedJsonParserHelper.ReadString(_session.Context, _peepingTomStream, _parser, _state, _buffer);
 
                 if (string.Equals(property, "Results") == false)
-                    UnmanagedJsonParserHelper.ThrowInvalidJson();
+                    UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
 
-                if (await UnmanagedJsonParserHelper.ReadAsync(_response.Stream, _parser, _state, _buffer).ConfigureAwait(false) == false)
-                    UnmanagedJsonParserHelper.ThrowInvalidJson();
+                if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer).ConfigureAwait(false) == false)
+                    UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
 
                 if (_state.CurrentTokenType != JsonParserToken.StartArray)
-                    UnmanagedJsonParserHelper.ThrowInvalidJson();
+                    UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
             }
 
             public BlittableJsonReaderObject Current { get; private set; }

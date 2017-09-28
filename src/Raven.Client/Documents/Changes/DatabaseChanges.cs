@@ -10,6 +10,7 @@ using Raven.Client.Exceptions.Changes;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Util;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
@@ -334,7 +335,7 @@ namespace Raven.Client.Documents.Changes
         {
             try
             {
-                await _requestExecutor.GetPreferredNode().ConfigureAwait(false); ;
+                await _requestExecutor.GetPreferredNode().ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -383,7 +384,7 @@ namespace Raven.Client.Documents.Changes
                     if (_cts.IsCancellationRequested)
                         return;
 
-                    using (var client = _client)
+                    using (_client)
                         _client = new ClientWebSocket();
 
                     ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
@@ -417,7 +418,8 @@ namespace Raven.Client.Documents.Changes
                     using (var parser = new UnmanagedJsonParser(context, state, "changes/receive"))
                     using (var builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, "readArray/singleResult", parser, state))
                     {
-                        if (await UnmanagedJsonParserHelper.ReadAsync(stream, parser, state, buffer).ConfigureAwait(false) == false)
+                        var peepingTomStream = new PeepingTomStream(stream, context);
+                        if (await UnmanagedJsonParserHelper.ReadAsync(peepingTomStream, parser, state, buffer).ConfigureAwait(false) == false)
                             continue;
 
                         if (state.CurrentTokenType != JsonParserToken.StartArray)
@@ -425,7 +427,7 @@ namespace Raven.Client.Documents.Changes
 
                         while (true)
                         {
-                            if (await UnmanagedJsonParserHelper.ReadAsync(stream, parser, state, buffer).ConfigureAwait(false) == false)
+                            if (await UnmanagedJsonParserHelper.ReadAsync(peepingTomStream, parser, state, buffer).ConfigureAwait(false) == false)
                                 continue;
 
                             if (state.CurrentTokenType == JsonParserToken.EndArray)
@@ -433,7 +435,7 @@ namespace Raven.Client.Documents.Changes
 
                             builder.Renew("changes/receive", BlittableJsonDocumentBuilder.UsageMode.None);
 
-                            await UnmanagedJsonParserHelper.ReadObjectAsync(builder, stream, parser, buffer).ConfigureAwait(false);
+                            await UnmanagedJsonParserHelper.ReadObjectAsync(builder, peepingTomStream, parser, buffer).ConfigureAwait(false);
 
                             var json = builder.CreateReader();
 
