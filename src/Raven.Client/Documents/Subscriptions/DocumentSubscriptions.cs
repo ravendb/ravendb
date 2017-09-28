@@ -94,7 +94,7 @@ namespace Raven.Client.Documents.Subscriptions
                     new JavascriptCompilationOptions(
                         JsCompilationFlags.BodyOnly,
                         new JavascriptConversionExtensions.LinqMethodsSupport(),
-                        new JavascriptConversionExtensions.DatesAndConstantsSupport { Parameter = project.Parameters[0] }
+                        new JavascriptConversionExtensions.DateTimeSupport()
                     ));
                 criteria.Query += Environment.NewLine + "select " + script;
             }
@@ -230,9 +230,11 @@ namespace Raven.Client.Documents.Subscriptions
         public async Task DropConnectionAsync(string id, string database = null)
         {
             var requestExecutor = _store.GetRequestExecutor(database ?? _store.Database);
-            requestExecutor.ContextPool.AllocateOperationContext(out var jsonOperationContext);
-            var command = new DropSubscriptionConnectionCommand(id);
-            await requestExecutor.ExecuteAsync(command, jsonOperationContext).ConfigureAwait(false);
+            using (requestExecutor.ContextPool.AllocateOperationContext(out var jsonOperationContext))
+            {
+                var command = new DropSubscriptionConnectionCommand(id);
+                await requestExecutor.ExecuteAsync(command, jsonOperationContext).ConfigureAwait(false);
+            }
         }
     }
 }

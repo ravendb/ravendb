@@ -79,7 +79,7 @@ namespace Raven.Server.Documents.Subscriptions
             return subscriptionState;
         }
 
-		public async Task AcknowledgeBatchProcessed(long id, string name, string changeVector, string previousChangeVector, string mentor)
+		public async Task AcknowledgeBatchProcessed(long id, string name, string changeVector, string previousChangeVector)
         {
             var command = new AcknowledgeSubscriptionBatchCommand(_db.Name)
             {
@@ -89,7 +89,6 @@ namespace Raven.Server.Documents.Subscriptions
                 SubscriptionName = name,
                 LastTimeServerMadeProgressWithDocuments = DateTime.UtcNow,
                 LastKnownSubscriptionChangeVector = previousChangeVector,
-                MentorNode = mentor
             };
 
             var (etag, _) = await _serverStore.SendToLeaderAsync(command);

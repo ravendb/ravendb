@@ -508,8 +508,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         await TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(SubscriptionId,
                             Options.SubscriptionName, 
                             lastChangeVector, 
-                            subscriptionChangeVectorBeforeCurrentBatch,
-							SubscriptionState.MentorNode);
+                            subscriptionChangeVectorBeforeCurrentBatch);
                         subscriptionChangeVectorBeforeCurrentBatch = lastChangeVector;
 
                         if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
@@ -557,8 +556,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                 SubscriptionId,
                                 Options.SubscriptionName,
                                 lastChangeVector,
-                                subscriptionChangeVectorBeforeCurrentBatch,
-								SubscriptionState.MentorNode);
+                                subscriptionChangeVectorBeforeCurrentBatch);
                             subscriptionChangeVectorBeforeCurrentBatch = lastChangeVector;
                             Stats.LastAckReceivedAt = DateTime.UtcNow;
                             Stats.AckRate.Mark();

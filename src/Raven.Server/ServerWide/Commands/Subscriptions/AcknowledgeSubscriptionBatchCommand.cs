@@ -8,7 +8,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Subscriptions
 {
-    public class AcknowledgeSubscriptionBatchCommand : UpdateValueForDatabaseCommand, IDatabaseTask
+    public class AcknowledgeSubscriptionBatchCommand : UpdateValueForDatabaseCommand
     {
         public string ChangeVector;
         public string LastKnownSubscriptionChangeVector;
@@ -16,7 +16,6 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         public string SubscriptionName;
         public string NodeTag;
         public DateTime LastTimeServerMadeProgressWithDocuments;
-        public string MentorNode;
 
         // for serializtion
         private AcknowledgeSubscriptionBatchCommand() : base(null) { }
@@ -38,10 +37,11 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             if (existingValue == null)
                 throw new InvalidOperationException($"Subscription with name {subscriptionName} does not exist");
 
-            if (record.Topology.WhoseTaskIsIt(this, isPassive) != NodeTag)
+            var subscription = JsonDeserializationCluster.SubscriptionState(existingValue);
+
+            if (record.Topology.WhoseTaskIsIt(subscription, isPassive) != NodeTag)
                 throw new InvalidOperationException($"Can't update subscription with name {subscriptionName} by node {NodeTag}, because it's not it's task to update this subscription");
 
-            var subscription = JsonDeserializationCluster.SubscriptionState(existingValue);
 
             if (LastKnownSubscriptionChangeVector != subscription.ChangeVectorForNextBatchStartingPoint)
                 throw new ConcurrencyException($"Can't acknowledge subscription with name {subscriptionName} due to inconsistency in change vector progress. Probably there was an admin intervention that changed the change vector value");
@@ -59,19 +59,8 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             json[nameof(SubscriptionId)] = SubscriptionId;
             json[nameof(SubscriptionName)] = SubscriptionName;
             json[nameof(NodeTag)] = NodeTag;
-            json[nameof(MentorNode)] = MentorNode;
             json[nameof(LastTimeServerMadeProgressWithDocuments)] = LastTimeServerMadeProgressWithDocuments;
             json[nameof(LastKnownSubscriptionChangeVector)] = LastKnownSubscriptionChangeVector;
-        }
-
-        public ulong GetTaskKey()
-        {
-            return (ulong)SubscriptionId;
-        }
-
-        public string GetMentorNode()
-        {
-            return MentorNode;
         }
     }
 }

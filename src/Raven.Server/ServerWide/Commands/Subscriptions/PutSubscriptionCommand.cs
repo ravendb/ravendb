@@ -69,20 +69,12 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                     }
                     else
                     {
-                        if (InitialChangeVector.IsChangeVectorValid() == false)
-                        {
-                            throw new InvalidOperationException(
-                                $"Received change vector {InitialChangeVector} is not in a valid format, therefore update creation request cannot be processed.");
-                        }
+                        AssertValidChangeVector();
                     }
                 }
                 else
                 {
-                    if (InitialChangeVector.IsChangeVectorValid() == false)
-                    {
-                        throw new InvalidOperationException(
-                            $"Received change vector {InitialChangeVector} is not in a valid format, therefore subscription creation request cannot be processed.");
-                    }
+                    AssertValidChangeVector();
                 }
 
                 using (var receivedSubscriptionState = context.ReadObject(new SubscriptionState
@@ -101,6 +93,20 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             }
            
         }
+
+        private void AssertValidChangeVector()
+        {
+            try
+            {
+                InitialChangeVector.ToChangeVector();
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException(
+                    $"Received change vector {InitialChangeVector} is not in a valid format, therefore request cannot be processed.", e);
+            }
+        }
+
         public override string GetItemId()
         {
             throw new NotImplementedException();
