@@ -18,5 +18,10 @@ namespace Raven.Server.Documents.Queries.AST
         {
             return Left + " " + Operator + " " + Right;
         }
+
+        public override string GetText()
+        {
+            return ToString();
+        }
     }
 }

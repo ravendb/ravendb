@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Indexes
                 Name = name,
                 Analyzer = options.Analyzer ?? allFields?.Analyzer
             };
-            
+
             if (options.Indexing.HasValue)
                 field.Indexing = options.Indexing.Value;
             else if (string.IsNullOrWhiteSpace(field.Analyzer) == false)
@@ -135,6 +135,8 @@ namespace Raven.Server.Documents.Indexes
 
         public AutoFieldIndexing Indexing { get; set; }
 
+        public AutoSpatialOptions Spatial { get; set; }
+
         public static AutoIndexField Create(string name, AutoIndexDefinition.AutoIndexFieldOptions options)
         {
             var field = new AutoIndexField
@@ -148,20 +150,35 @@ namespace Raven.Server.Documents.Indexes
             if (options.Storage.HasValue)
                 field.Storage = options.Storage.Value;
 
+            if (options.Spatial != null)
+                field.Spatial = new AutoSpatialOptions(options.Spatial);
+
             return field;
         }
 
         public List<IndexField> ToIndexFields()
         {
-            var fields = new List<IndexField>
+            var fields = new List<IndexField>();
+
+            if (Spatial != null)
             {
-                new IndexField
+                fields.Add(new IndexField
                 {
                     Indexing = FieldIndexing.Default,
                     Name = Name,
-                    Storage = Storage
-                }
-            };
+                    Storage = Storage,
+                    Spatial = new AutoSpatialOptions(Spatial)
+                });
+
+                return fields;
+            }
+
+            fields.Add(new IndexField
+            {
+                Indexing = FieldIndexing.Default,
+                Name = Name,
+                Storage = Storage
+            });
 
             if (Indexing == AutoFieldIndexing.Default)
                 return fields;

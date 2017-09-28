@@ -1,5 +1,3 @@
-using Raven.Server.Documents.Queries.Parser;
-
 namespace Raven.Server.Documents.Queries.AST
 {
     public class BetweenExpression : QueryExpression
@@ -19,6 +17,11 @@ namespace Raven.Server.Documents.Queries.AST
         public override string ToString()
         {
             return Source + " BETWEEN " + Min + " AND " + Max;
+        }
+
+        public override string GetText()
+        {
+            return ToString();
         }
     }
 }

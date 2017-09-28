@@ -13,10 +13,15 @@ namespace Raven.Server.Documents.Queries.AST
             Value = type;
             Type = ExpressionType.Value;
         }
-        
+
         public override string ToString()
         {
             return Token + " (" + Value + ")";
+        }
+
+        public override string GetText()
+        {
+            return ToString();
         }
     }
 }

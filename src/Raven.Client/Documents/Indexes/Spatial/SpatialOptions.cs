@@ -1,5 +1,66 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
 namespace Raven.Client.Documents.Indexes.Spatial
 {
+    public class AutoSpatialOptions : SpatialOptions
+    {
+        public AutoSpatialMethodType MethodType { get; set; }
+
+        public List<string> MethodArguments { get; set; }
+
+        public AutoSpatialOptions()
+        {
+            MethodArguments = new List<string>();
+        }
+
+        public AutoSpatialOptions(AutoSpatialMethodType methodType, List<string> methodArguments)
+        {
+            MethodType = methodType;
+            MethodArguments = methodArguments ?? throw new ArgumentNullException(nameof(methodArguments));
+        }
+
+        public AutoSpatialOptions(AutoSpatialOptions options)
+            : base(options)
+        {
+            MethodType = options.MethodType;
+            MethodArguments = new List<string>(options.MethodArguments);
+        }
+
+        protected bool Equals(AutoSpatialOptions other)
+        {
+            return base.Equals(other) && MethodType == other.MethodType && MethodArguments.SequenceEqual(other.MethodArguments);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj))
+                return false;
+            if (ReferenceEquals(this, obj))
+                return true;
+            if (obj.GetType() != GetType())
+                return false;
+            return Equals((AutoSpatialOptions)obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int hashCode = base.GetHashCode();
+                hashCode = (hashCode * 397) ^ (int)MethodType;
+                hashCode = (hashCode * 397) ^ (MethodArguments != null ? MethodArguments.GetHashCode() : 0);
+                return hashCode;
+            }
+        }
+
+        public enum AutoSpatialMethodType
+        {
+            Point
+        }
+    }
+
     public class SpatialOptions
     {
         // about 4.78 meters at equator, should be good enough (see: http://unterbahn.com/2009/11/metric-dimensions-of-geohash-partitions-at-the-equator/)
