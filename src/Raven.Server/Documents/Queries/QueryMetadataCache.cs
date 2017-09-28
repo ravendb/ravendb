@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.Queries
                 return;
 
             if (metadata.IsDynamic)
-                metadata.DynamicIndexName = indexName;
+                metadata.AutoIndexName = indexName;
 
             // we are intentionally racy here, to avoid locking
             var bestLocation = metadata.CacheKey % CacheSize;
