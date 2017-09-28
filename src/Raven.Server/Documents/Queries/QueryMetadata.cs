@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.Queries
 
         public readonly string IndexName;
 
-        public string DynamicIndexName;
+        public string AutoIndexName;
 
         public readonly Query Query;
 

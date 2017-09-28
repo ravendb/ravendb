@@ -84,12 +84,18 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         private async Task<Index> MatchIndex(IndexQueryServerSide query, bool createAutoIndexIfNoMatchIsFound, CancellationToken token)
         {
-            if (query.Metadata.DynamicIndexName != null)
-                return _indexStore.GetIndex(query.Metadata.DynamicIndexName);
+            Index index;
+            if (query.Metadata.AutoIndexName != null)
+            {
+                index = _indexStore.GetIndex(query.Metadata.AutoIndexName);
+
+                if (index != null)
+                    return index;
+            }
 
             var map = DynamicQueryMapping.Create(query);
 
-            if (TryMatchExistingIndexToQuery(map, out Index index) == false)
+            if (TryMatchExistingIndexToQuery(map, out index) == false)
             {
                 if (createAutoIndexIfNoMatchIsFound == false)
                     throw new IndexDoesNotExistException("Could not find index for a given query.");
