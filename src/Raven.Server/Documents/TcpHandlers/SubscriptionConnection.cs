@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Lucene.Net.Util;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Util;
@@ -22,6 +23,7 @@ using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Rachis;
+using Constants = Voron.Global.Constants;
 using QueryParser = Raven.Server.Documents.Queries.Parser.QueryParser;
 
 namespace Raven.Server.Documents.TcpHandlers
@@ -465,8 +467,9 @@ namespace Raven.Server.Documents.TcpHandlers
                                 writer.WriteEndObject();
                                 docsToFlush++;
 
-                                // perform flush for current batch after 1000ms of running
-                                if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
+                                // perform flush for current batch after 1000ms of running or 1 MB
+                                if (_buffer.Length > Constants.Size.Megabyte ||
+                                    sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
                                 {
                                     if (docsToFlush > 0)
                                     {
@@ -603,11 +606,13 @@ namespace Raven.Server.Documents.TcpHandlers
 
         private async Task SendHeartBeat()
         {
-            // Todo: this is temporary, we should try using TcpConnection's receive and send timeout properties
-            var writeAsync = TcpConnection.Stream.WriteAsync(Heartbeat, 0, Heartbeat.Length);
-            if (writeAsync != await Task.WhenAny(writeAsync, TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(3000))).ConfigureAwait(false))
+            try
             {
-                throw new SubscriptionClosedException($"Cannot contact client anymore, closing subscription ({Options?.SubscriptionName})");
+                await TcpConnection.Stream.WriteAsync(Heartbeat, 0, Heartbeat.Length);
+            }
+            catch(Exception ex)
+            {
+                throw new SubscriptionClosedException($"Cannot contact client anymore, closing subscription ({Options?.SubscriptionName})",ex);
             }
 
             TcpConnection.RegisterBytesSent(Heartbeat.Length);
