@@ -22,6 +22,13 @@ namespace Raven.Client.ServerWide
                 throw new ArgumentNullException(nameof(TopologyDiscoveryUrls));
             Database = database;
             TopologyDiscoveryUrls = urls;
+            for (int i = 0; i < TopologyDiscoveryUrls.Length; i++)
+            {
+                if (TopologyDiscoveryUrls[i] == null)
+                    throw new ArgumentNullException(nameof(TopologyDiscoveryUrls));
+
+                TopologyDiscoveryUrls[i] = TopologyDiscoveryUrls[i].Trim();
+            }
         }
 
         public static void RemoveWatcher(ref List<ExternalReplication> watchers, long taskId)

@@ -14,7 +14,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void Whispace_at_the_beginning_of_replication_destination_url_should_not_cause_issues()
+        public void Whitespace_at_the_beginning_of_replication_destination_url_should_not_cause_issues()
         {
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
@@ -25,7 +25,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void Whispace_at_the_end_of_replication_destination_url_should_not_cause_issues()
+        public void Whitespace_at_the_end_of_replication_destination_url_should_not_cause_issues()
         {
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
@@ -36,7 +36,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void Whispace_at_the_beginning_and_end_of_replication_destination_url_should_not_cause_issues()
+        public void Whitespace_at_the_beginning_and_end_of_replication_destination_url_should_not_cause_issues()
         {
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())

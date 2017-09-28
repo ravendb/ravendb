@@ -22,7 +22,7 @@ namespace Raven.Server.ServerWide.Commands
             if (Watcher == null)
                 return null;
 
-            //ExternalReplication.EnsureUniqueDbAndUrl(record.ExternalReplication,Watcher);
+            ExternalReplication.EnsureUniqueDbAndUrl(record.ExternalReplication,Watcher);
 
             if (Watcher.TaskId == 0)
             {
