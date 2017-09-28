@@ -1,5 +1,3 @@
-using Raven.Server.Documents.Queries.Parser;
-
 namespace Raven.Server.Documents.Queries.AST
 {
     public class TrueExpression : QueryExpression
@@ -12,6 +10,11 @@ namespace Raven.Server.Documents.Queries.AST
         public override string ToString()
         {
             return "true";
+        }
+
+        public override string GetText()
+        {
+            return ToString();
         }
     }
 }

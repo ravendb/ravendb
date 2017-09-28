@@ -149,6 +149,22 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             var spatialField = GetOrCreateSpatialField(name);
 
+            return CreateSpatialField(spatialField, lat, lng);
+        }
+
+        public IEnumerable<AbstractField> CreateSpatialField(string name, object shapeWKT)
+        {
+            var spatialField = GetOrCreateSpatialField(name);
+            return spatialField.CreateIndexableFields(shapeWKT);
+        }
+
+        internal static IEnumerable<AbstractField> CreateSpatialField(SpatialField spatialField, object lat, object lng)
+        {
+            return CreateSpatialField(spatialField, ConvertToDouble(lat), ConvertToDouble(lng));
+        }
+
+        internal static IEnumerable<AbstractField> CreateSpatialField(SpatialField spatialField, double? lat, double? lng)
+        {
             if (lng == null || double.IsNaN(lng.Value))
                 return Enumerable.Empty<AbstractField>();
             if (lat == null || double.IsNaN(lat.Value))
@@ -156,12 +172,6 @@ namespace Raven.Server.Documents.Indexes.Static
 
             Shape shape = spatialField.GetContext().MakePoint(lng.Value, lat.Value);
             return spatialField.CreateIndexableFields(shape);
-        }
-
-        public IEnumerable<AbstractField> CreateSpatialField(string name, object shapeWKT)
-        {
-            var spatialField = GetOrCreateSpatialField(name);
-            return spatialField.CreateIndexableFields(shapeWKT);
         }
 
         private static SpatialField GetOrCreateSpatialField(string name)

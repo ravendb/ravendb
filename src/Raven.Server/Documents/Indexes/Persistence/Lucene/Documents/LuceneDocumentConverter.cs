@@ -1,5 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Json;
 using Sparrow.Json;
 
@@ -36,8 +39,33 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             foreach (var indexField in _fields.Values)
             {
-                if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, indexField.OriginalName ?? indexField.Name, out object value) == false)
-                    continue;
+                object value;
+                if (indexField.Spatial is AutoSpatialOptions spatialOptions)
+                {
+                    var spatialField = CurrentIndexingScope.Current.GetOrCreateSpatialField(indexField.Name);
+
+                    switch (spatialOptions.MethodType)
+                    {
+                        case AutoSpatialOptions.AutoSpatialMethodType.Point:
+                            if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, spatialOptions.MethodArguments[0], out object latValue) ==
+                                false)
+                                continue;
+
+                            if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, spatialOptions.MethodArguments[1], out object lngValue) ==
+                                false)
+                                continue;
+
+                            value = StaticIndexBase.CreateSpatialField(spatialField, latValue, lngValue);
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+                }
+                else
+                {
+                    if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, indexField.OriginalName ?? indexField.Name, out value) == false)
+                        continue;
+                }
 
                 newFields += GetRegularFields(instance, indexField, value, indexContext);
             }

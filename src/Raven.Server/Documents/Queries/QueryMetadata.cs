@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Exceptions;
 using Raven.Client.Util;
 using Raven.Server.Documents.Queries.AST;
@@ -101,7 +102,7 @@ namespace Raven.Server.Documents.Queries
                 IsCollectionQuery = false;
 
             IndexFieldNames.Add(indexFieldName);
-            WhereFields[indexFieldName] = new WhereField(isFullTextSearch: search, isExactSearch: exact);
+            WhereFields[indexFieldName] = new WhereField(isFullTextSearch: search, isExactSearch: exact, spatial: spatial);
         }
 
         private void Build(BlittableJsonReaderObject parameters)
@@ -480,7 +481,7 @@ namespace Raven.Server.Documents.Queries
 
         private void FillSelectFields(BlittableJsonReaderObject parameters)
         {
-            if(_duplicateAliasHelper == null)
+            if (_duplicateAliasHelper == null)
                 _duplicateAliasHelper = new HashSet<string>();
             try
             {
@@ -506,7 +507,7 @@ namespace Raven.Server.Documents.Queries
 
                     if (selectField.Alias != null)
                     {
-                      
+
                         if (selectField.IsGroupByKey == false)
                             _aliasToName[selectField.Alias] = selectField.Name;
                         else
@@ -527,7 +528,7 @@ namespace Raven.Server.Documents.Queries
         {
             throw new InvalidQueryException("Duplicate alias " + finalAlias + " detected", QueryText, parameters);
         }
-        
+
         private SelectField GetSelectField(BlittableJsonReaderObject parameters, QueryExpression expression, string alias)
         {
             if (expression is ValueExpression ve)
@@ -536,7 +537,7 @@ namespace Raven.Server.Documents.Queries
             }
             if (expression is FieldExpression fe)
             {
-                if(fe.IsQuoted && fe.Compound.Count == 1)
+                if (fe.IsQuoted && fe.Compound.Count == 1)
                     return SelectField.CreateValue(fe.Compound[0], alias, ValueTokenType.String);
                 return GetSelectValue(alias, fe, parameters);
             }
@@ -563,7 +564,7 @@ namespace Raven.Server.Documents.Queries
 
                     if (string.Equals("id", methodName, StringComparison.OrdinalIgnoreCase))
                     {
-                        if(IsGroupBy)
+                        if (IsGroupBy)
                             ThrowInvalidIdInGroupByQuery(parameters);
                         return SelectField.Create(Constants.Documents.Indexing.Fields.DocumentIdFieldName, alias);
                     }
@@ -585,12 +586,12 @@ namespace Raven.Server.Documents.Queries
                 switch (aggregation)
                 {
                     case AggregationOperation.Count:
-                        if(IsGroupBy == false)
+                        if (IsGroupBy == false)
                             ThrowInvalidAggregationMethod(parameters, methodName);
                         fieldName = Constants.Documents.Indexing.Fields.CountFieldName;
                         break;
                     case AggregationOperation.Sum:
-                        if(IsGroupBy == false)
+                        if (IsGroupBy == false)
                             ThrowInvalidAggregationMethod(parameters, methodName);
                         if (me.Arguments == null)
                         {
@@ -667,7 +668,7 @@ namespace Raven.Server.Documents.Queries
         {
             if (_aliasToName.TryGetValue(fe.Compound[0], out var indexFieldName))
             {
-                if(fe.Compound.Count != 1)
+                if (fe.Compound.Count != 1)
                     throw new InvalidQueryException("Field alias " + fe.Compound[0] + " cannot be used in a compound field, but got: " + fe, QueryText, parameters);
 
                 return indexFieldName;
@@ -984,7 +985,35 @@ namespace Raven.Server.Documents.Queries
 
             private void HandleSpatial(string methodName, List<QueryExpression> arguments, BlittableJsonReaderObject parameters)
             {
-                var fieldName = ExtractFieldNameFromFirstArgument(arguments, methodName, parameters);
+                AutoSpatialOptions fieldOptions = null;
+                string fieldName;
+                if (_metadata.IsDynamic == false)
+                    fieldName = ExtractFieldNameFromFirstArgument(arguments, methodName, parameters);
+                else
+                {
+                    if (!(arguments[0] is MethodExpression pointExpression))
+                        throw new InvalidQueryException($"Method {methodName}() expects first argument to be a method expression", QueryText, parameters);
+
+                    var pointType = QueryMethod.GetMethodType(pointExpression.Name);
+                    if (pointType != MethodType.Point)
+                        throw new InvalidQueryException($"Method {methodName}() expects first argument to be a point() method", QueryText, parameters);
+
+                    if (pointExpression.Arguments.Count != 2)
+                        throw new InvalidQueryException($"Method {methodName}() expects first argument to be a point() method with 2 arguments", QueryText, parameters);
+
+                    var latitudeToken = pointExpression.Arguments[0] as FieldExpression;
+                    var longitudeToken = pointExpression.Arguments[1] as FieldExpression;
+
+                    if (latitudeToken == null || longitudeToken == null)
+                        throw new InvalidQueryException($"Method {methodName}() expects first argument to be a point() method with 2 field arguments", QueryText, parameters);
+
+                    fieldName = pointExpression.GetText();
+                    fieldOptions = new AutoSpatialOptions(AutoSpatialOptions.AutoSpatialMethodType.Point, new List<string>
+                    {
+                        latitudeToken.FieldValue,
+                        longitudeToken.FieldValue
+                    });
+                }
 
                 if (arguments.Count < 2 || arguments.Count > 3)
                     throw new InvalidQueryException($"Method {methodName}() expects 2-3 arguments to be provided", QueryText, parameters);
@@ -1018,7 +1047,7 @@ namespace Raven.Server.Documents.Queries
                         break;
                 }
 
-                _metadata.AddWhereField(fieldName, parameters, exact: _insideExact > 0);
+                _metadata.AddWhereField(fieldName, parameters, exact: _insideExact > 0, spatial: fieldOptions);
             }
 
 
@@ -1075,7 +1104,7 @@ namespace Raven.Server.Documents.Queries
                         .Append(" = loadPath(")
                         .Append(fromAlias)
                         .Append(", '")
-                        .Append(string.Join(".",fieldExpression.Compound.Skip(1)).Trim())
+                        .Append(string.Join(".", fieldExpression.Compound.Skip(1)).Trim())
                         .AppendLine("');");
                 }
             }

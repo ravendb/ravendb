@@ -116,7 +116,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             }
 
             var index = _indexStore.GetIndex(definition.Name);
-            if(index == null)
+            if (index == null)
                 return new DynamicQueryMatchResult(definition.Name, DynamicQueryMatchType.Failure);
 
             var state = index.State;
@@ -145,6 +145,17 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         explanations?.Add(new Explanation(indexName, $"The following field is not exactable {indexField.Name}, while the query needs to perform exact() on it"));
                         return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Partial);
                     }
+
+                    if (field.Spatial != null)
+                    {
+                        Debug.Assert(indexField.Spatial != null);
+
+                        if (field.Spatial.Equals(indexField.Spatial) == false)
+                        {
+                            explanations?.Add(new Explanation(indexName, $"The following field is not a spatial field {indexField.Name}, while the query needs to perform spatial() on it"));
+                            return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
+                        }
+                    }
                 }
                 else
                 {
@@ -152,7 +163,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     currentBestState = DynamicQueryMatchType.Partial;
                 }
             }
-            
+
             if (currentBestState == DynamicQueryMatchType.Complete && state == IndexState.Idle)
             {
                 currentBestState = DynamicQueryMatchType.Partial;

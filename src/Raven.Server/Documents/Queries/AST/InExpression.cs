@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Server.Documents.Queries.Parser;
 
 namespace Raven.Server.Documents.Queries.AST
 {
@@ -21,6 +20,11 @@ namespace Raven.Server.Documents.Queries.AST
         public override string ToString()
         {
             return Source + " IN ( " + string.Join(", ", Values.Select(x => x.ToString())) + ")";
+        }
+
+        public override string GetText()
+        {
+            return $"{Source} IN ({string.Join(", ", Values.Select(x => x.GetText()))})";
         }
     }
 }

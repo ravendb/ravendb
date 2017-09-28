@@ -13,7 +13,6 @@ using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Utils;
-using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries.AST;
@@ -56,81 +55,81 @@ namespace Raven.Server.Documents.Queries
                     case OperatorType.LessThan:
                     case OperatorType.LessThanEqual:
                     case OperatorType.GreaterThanEqual:
-                    {
-                        var fieldName = ExtractIndexFieldName(query, parameters, where.Left, metadata);
-                        var (value, valueType) = GetValue(fieldName, query, metadata, parameters, where.Right);
-
-                        var (luceneFieldName, fieldType, termType) = GetLuceneField(fieldName, valueType);
-
-                        switch (fieldType)
                         {
-                            case LuceneFieldType.String:
-                                var valueAsString = GetValueAsString(value);
+                            var fieldName = ExtractIndexFieldName(query, parameters, where.Left, metadata);
+                            var (value, valueType) = GetValue(fieldName, query, metadata, parameters, where.Right);
+
+                            var (luceneFieldName, fieldType, termType) = GetLuceneField(fieldName, valueType);
+
+                            switch (fieldType)
+                            {
+                                case LuceneFieldType.String:
+                                    var valueAsString = GetValueAsString(value);
 
 
-                                if (exact && metadata.IsDynamic)
-                                    luceneFieldName = AutoIndexField.GetExactAutoIndexFieldName(luceneFieldName);
+                                    if (exact && metadata.IsDynamic)
+                                        luceneFieldName = AutoIndexField.GetExactAutoIndexFieldName(luceneFieldName);
 
-                                switch (where.Operator)
-                                {
-                                    case OperatorType.Equal:
-                                        return LuceneQueryHelper.Equal(luceneFieldName, termType, valueAsString, exact);
-                                    case OperatorType.NotEqual:
-                                        return LuceneQueryHelper.NotEqual(luceneFieldName, termType, valueAsString, exact);
-                                    case OperatorType.LessThan:
-                                        return LuceneQueryHelper.LessThan(luceneFieldName, termType, valueAsString, exact);
-                                    case OperatorType.GreaterThan:
-                                        return LuceneQueryHelper.GreaterThan(luceneFieldName, termType, valueAsString, exact);
-                                    case OperatorType.LessThanEqual:
-                                        return LuceneQueryHelper.LessThanOrEqual(luceneFieldName, termType, valueAsString, exact);
-                                    case OperatorType.GreaterThanEqual:
-                                        return LuceneQueryHelper.GreaterThanOrEqual(luceneFieldName, termType, valueAsString, exact);
-                                }
-                                break;
-                            case LuceneFieldType.Long:
-                                var valueAsLong = (long)value;
+                                    switch (where.Operator)
+                                    {
+                                        case OperatorType.Equal:
+                                            return LuceneQueryHelper.Equal(luceneFieldName, termType, valueAsString, exact);
+                                        case OperatorType.NotEqual:
+                                            return LuceneQueryHelper.NotEqual(luceneFieldName, termType, valueAsString, exact);
+                                        case OperatorType.LessThan:
+                                            return LuceneQueryHelper.LessThan(luceneFieldName, termType, valueAsString, exact);
+                                        case OperatorType.GreaterThan:
+                                            return LuceneQueryHelper.GreaterThan(luceneFieldName, termType, valueAsString, exact);
+                                        case OperatorType.LessThanEqual:
+                                            return LuceneQueryHelper.LessThanOrEqual(luceneFieldName, termType, valueAsString, exact);
+                                        case OperatorType.GreaterThanEqual:
+                                            return LuceneQueryHelper.GreaterThanOrEqual(luceneFieldName, termType, valueAsString, exact);
+                                    }
+                                    break;
+                                case LuceneFieldType.Long:
+                                    var valueAsLong = (long)value;
 
-                                switch (where.Operator)
-                                {
-                                    case OperatorType.Equal:
-                                        return LuceneQueryHelper.Equal(luceneFieldName, termType, valueAsLong);
-                                    case OperatorType.NotEqual:
-                                        return LuceneQueryHelper.NotEqual(luceneFieldName, termType, valueAsLong);
-                                    case OperatorType.LessThan:
-                                        return LuceneQueryHelper.LessThan(luceneFieldName, termType, valueAsLong);
-                                    case OperatorType.GreaterThan:
-                                        return LuceneQueryHelper.GreaterThan(luceneFieldName, termType, valueAsLong);
-                                    case OperatorType.LessThanEqual:
-                                        return LuceneQueryHelper.LessThanOrEqual(luceneFieldName, termType, valueAsLong);
-                                    case OperatorType.GreaterThanEqual:
-                                        return LuceneQueryHelper.GreaterThanOrEqual(luceneFieldName, termType, valueAsLong);
-                                }
-                                break;
-                            case LuceneFieldType.Double:
-                                var valueAsDouble = (double)value;
+                                    switch (where.Operator)
+                                    {
+                                        case OperatorType.Equal:
+                                            return LuceneQueryHelper.Equal(luceneFieldName, termType, valueAsLong);
+                                        case OperatorType.NotEqual:
+                                            return LuceneQueryHelper.NotEqual(luceneFieldName, termType, valueAsLong);
+                                        case OperatorType.LessThan:
+                                            return LuceneQueryHelper.LessThan(luceneFieldName, termType, valueAsLong);
+                                        case OperatorType.GreaterThan:
+                                            return LuceneQueryHelper.GreaterThan(luceneFieldName, termType, valueAsLong);
+                                        case OperatorType.LessThanEqual:
+                                            return LuceneQueryHelper.LessThanOrEqual(luceneFieldName, termType, valueAsLong);
+                                        case OperatorType.GreaterThanEqual:
+                                            return LuceneQueryHelper.GreaterThanOrEqual(luceneFieldName, termType, valueAsLong);
+                                    }
+                                    break;
+                                case LuceneFieldType.Double:
+                                    var valueAsDouble = (double)value;
 
-                                switch (where.Operator)
-                                {
-                                    case OperatorType.Equal:
-                                        return LuceneQueryHelper.Equal(luceneFieldName, termType, valueAsDouble);
-                                    case OperatorType.NotEqual:
-                                        return LuceneQueryHelper.NotEqual(luceneFieldName, termType, valueAsDouble);
-                                    case OperatorType.LessThan:
-                                        return LuceneQueryHelper.LessThan(luceneFieldName, termType, valueAsDouble);
-                                    case OperatorType.GreaterThan:
-                                        return LuceneQueryHelper.GreaterThan(luceneFieldName, termType, valueAsDouble);
-                                    case OperatorType.LessThanEqual:
-                                        return LuceneQueryHelper.LessThanOrEqual(luceneFieldName, termType, valueAsDouble);
-                                    case OperatorType.GreaterThanEqual:
-                                        return LuceneQueryHelper.GreaterThanOrEqual(luceneFieldName, termType, valueAsDouble);
-                                }
-                                break;
-                            default:
-                                throw new ArgumentOutOfRangeException(nameof(fieldType), fieldType, null);
+                                    switch (where.Operator)
+                                    {
+                                        case OperatorType.Equal:
+                                            return LuceneQueryHelper.Equal(luceneFieldName, termType, valueAsDouble);
+                                        case OperatorType.NotEqual:
+                                            return LuceneQueryHelper.NotEqual(luceneFieldName, termType, valueAsDouble);
+                                        case OperatorType.LessThan:
+                                            return LuceneQueryHelper.LessThan(luceneFieldName, termType, valueAsDouble);
+                                        case OperatorType.GreaterThan:
+                                            return LuceneQueryHelper.GreaterThan(luceneFieldName, termType, valueAsDouble);
+                                        case OperatorType.LessThanEqual:
+                                            return LuceneQueryHelper.LessThanOrEqual(luceneFieldName, termType, valueAsDouble);
+                                        case OperatorType.GreaterThanEqual:
+                                            return LuceneQueryHelper.GreaterThanOrEqual(luceneFieldName, termType, valueAsDouble);
+                                    }
+                                    break;
+                                default:
+                                    throw new ArgumentOutOfRangeException(nameof(fieldType), fieldType, null);
+                            }
+
+                            throw new NotSupportedException("Should not happen!");
                         }
-
-                        throw new NotSupportedException("Should not happen!");
-                    }
                     case OperatorType.And:
                     case OperatorType.AndNot:
                         var andPrefix = where.Operator == OperatorType.AndNot ? LucenePrefixOperator.Minus : LucenePrefixOperator.None;
@@ -328,7 +327,7 @@ namespace Raven.Server.Documents.Queries
                     case MethodType.Id:
                         if (me.Arguments == null || me.Arguments.Count == 0)
                             return Constants.Documents.Indexing.Fields.DocumentIdFieldName;
-                        if(me.Arguments[0] is FieldExpression docAlias && docAlias.Compound.Count == 1 && docAlias.Compound[0].Equals(query.From.Alias))
+                        if (me.Arguments[0] is FieldExpression docAlias && docAlias.Compound.Count == 1 && docAlias.Compound[0].Equals(query.From.Alias))
                             return Constants.Documents.Indexing.Fields.DocumentIdFieldName;
                         throw new InvalidQueryException("id() can only be used on the root query alias but got: " + me.Arguments[0], query.QueryText, parameters);
                     case MethodType.Count:
@@ -340,7 +339,7 @@ namespace Raven.Server.Documents.Queries
                         throw new InvalidQueryException("count() can only be used on the root query alias but got: " + me.Arguments[0], query.QueryText, parameters);
                     case MethodType.Sum:
                         if (me.Arguments != null && me.Arguments.Count == 1 &&
-                            me.Arguments[0] is FieldExpression f && 
+                            me.Arguments[0] is FieldExpression f &&
                             f.Compound.Count == 1)
                             return f.Compound[0];
 
@@ -361,7 +360,7 @@ namespace Raven.Server.Documents.Queries
 
         private static Lucene.Net.Search.Query HandleExists(Query query, BlittableJsonReaderObject parameters, MethodExpression expression, QueryMetadata metadata)
         {
-            var fieldName = ExtractIndexFieldName(query, parameters,  (FieldExpression)expression.Arguments[0], metadata);
+            var fieldName = ExtractIndexFieldName(query, parameters, (FieldExpression)expression.Arguments[0], metadata);
 
             return LuceneQueryHelper.Term(fieldName, LuceneQueryHelper.Asterisk, LuceneTermType.WildCard);
         }
@@ -369,7 +368,7 @@ namespace Raven.Server.Documents.Queries
         private static Lucene.Net.Search.Query HandleLucene(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters,
             Analyzer analyzer)
         {
-            var fieldName = ExtractIndexFieldName(query, parameters , (FieldExpression)expression.Arguments[0], metadata);
+            var fieldName = ExtractIndexFieldName(query, parameters, (FieldExpression)expression.Arguments[0], metadata);
             var (value, valueType) = GetValue(fieldName, query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
 
             if (valueType != ValueTokenType.String)
@@ -419,7 +418,7 @@ namespace Raven.Server.Documents.Queries
             BlittableJsonReaderObject parameters, Analyzer analyzer, Func<string, SpatialField> getSpatialField, bool exact)
         {
             var boost = float.Parse(((ValueExpression)expression.Arguments[1]).Token.Value);
-            
+
             var q = ToLuceneQuery(context, query, expression.Arguments[0], metadata, parameters, analyzer, getSpatialField, exact);
             q.Boost = boost;
 
@@ -492,7 +491,15 @@ namespace Raven.Server.Documents.Queries
         private static Lucene.Net.Search.Query HandleSpatial(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters,
             MethodType spatialMethod, Func<string, SpatialField> getSpatialField)
         {
-            var fieldName = ExtractIndexFieldName(query,parameters, (FieldExpression)expression.Arguments[0], metadata);
+            string fieldName;
+            if (metadata.IsDynamic == false)
+                fieldName = ExtractIndexFieldName(query, parameters, (FieldExpression)expression.Arguments[0], metadata);
+            else
+            {
+                var spatialExpression = (MethodExpression)expression.Arguments[0];
+                fieldName = spatialExpression.GetText();
+            }
+            
             var shapeExpression = (MethodExpression)expression.Arguments[1];
 
             var distanceErrorPct = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct;
@@ -842,18 +849,18 @@ namespace Raven.Server.Documents.Queries
                     case '~':
                     case ':':
                     case '\\':
-                    {
-                        if (buffer == null)
                         {
-                            // allocate builder with headroom
-                            buffer = new StringBuilder(length * 2);
+                            if (buffer == null)
+                            {
+                                // allocate builder with headroom
+                                buffer = new StringBuilder(length * 2);
+                            }
+                            // append any leading substring
+                            buffer.Append(term, start, i - start - 1);
+                            buffer.Append(ch);
+                            start = i + 1;
+                            break;
                         }
-                        // append any leading substring
-                        buffer.Append(term, start, i - start - 1);
-                        buffer.Append(ch);
-                        start = i + 1;
-                        break;
-                    }
                 }
             }
 

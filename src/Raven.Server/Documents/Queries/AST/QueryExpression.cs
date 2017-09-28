@@ -1,4 +1,3 @@
-using System;
 
 namespace Raven.Server.Documents.Queries.AST
 {
@@ -6,6 +5,8 @@ namespace Raven.Server.Documents.Queries.AST
     {
         public ExpressionType Type;
 
-        public abstract override String ToString();
+        public abstract override string ToString();
+
+        public abstract string GetText();
     }
 }

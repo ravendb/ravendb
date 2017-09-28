@@ -1,7 +1,5 @@
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using Lucene.Net.Documents;
 using Sparrow;
 
 namespace Raven.Server.Documents.Queries.AST
@@ -58,11 +56,14 @@ namespace Raven.Server.Documents.Queries.AST
             }
         }
 
-
-
         public override string ToString()
         {
             return "<Field>: " + string.Join(".", Compound);
+        }
+
+        public override string GetText()
+        {
+            return FieldValue;
         }
     }
 }

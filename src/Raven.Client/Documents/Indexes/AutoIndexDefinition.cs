@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using Raven.Client.Documents.Indexes.Spatial;
 
 namespace Raven.Client.Documents.Indexes
 {
@@ -63,16 +64,21 @@ namespace Raven.Client.Documents.Indexes
 
             public AggregationOperation Aggregation { get; set; }
 
+            public AutoSpatialOptions Spatial { get; set; }
+
             protected bool Equals(AutoIndexFieldOptions other)
             {
-                return Storage == other.Storage && Indexing == other.Indexing && Aggregation == other.Aggregation;
+                return Storage == other.Storage && Indexing == other.Indexing && Aggregation == other.Aggregation && Equals(Spatial, other.Spatial);
             }
 
             public override bool Equals(object obj)
             {
-                if (ReferenceEquals(null, obj)) return false;
-                if (ReferenceEquals(this, obj)) return true;
-                if (obj.GetType() != this.GetType()) return false;
+                if (ReferenceEquals(null, obj))
+                    return false;
+                if (ReferenceEquals(this, obj))
+                    return true;
+                if (obj.GetType() != GetType())
+                    return false;
                 return Equals((AutoIndexFieldOptions)obj);
             }
 
@@ -83,6 +89,7 @@ namespace Raven.Client.Documents.Indexes
                     var hashCode = Storage.GetHashCode();
                     hashCode = (hashCode * 397) ^ Indexing.GetHashCode();
                     hashCode = (hashCode * 397) ^ (int)Aggregation;
+                    hashCode = (hashCode * 397) ^ (Spatial != null ? Spatial.GetHashCode() : 0);
                     return hashCode;
                 }
             }

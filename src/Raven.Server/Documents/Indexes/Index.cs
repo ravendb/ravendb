@@ -2569,13 +2569,16 @@ namespace Raven.Server.Documents.Indexes
         {
             return _spatialFields.GetOrAdd(name, n =>
             {
-                SpatialOptions spatialOptions;
-                if (Definition.MapFields.TryGetValue(name, out var field) == false || field.As<IndexField>().Spatial == null)
-                    spatialOptions = new SpatialOptions();
-                else
-                    spatialOptions = field.As<IndexField>().Spatial;
+                if (Definition.MapFields.TryGetValue(name, out var field) == false)
+                    return new SpatialField(name,  new SpatialOptions());
 
-                return new SpatialField(name, spatialOptions);
+                if (field is AutoIndexField autoField)
+                    return new SpatialField(name, autoField.Spatial ?? new SpatialOptions());
+
+                if (field is IndexField staticField)
+                    return new SpatialField(name, staticField.Spatial ?? new SpatialOptions());
+
+                return new SpatialField(name, new SpatialOptions());
             });
         }
 

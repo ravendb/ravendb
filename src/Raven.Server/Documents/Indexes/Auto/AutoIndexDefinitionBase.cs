@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Auto
@@ -14,12 +16,12 @@ namespace Raven.Server.Documents.Indexes.Auto
             if (string.IsNullOrEmpty(collection))
                 throw new ArgumentNullException(nameof(collection));
         }
-        
+
         protected abstract override void PersistFields(JsonOperationContext context, BlittableJsonTextWriter writer);
 
         protected override void PersistMapFields(JsonOperationContext context, BlittableJsonTextWriter writer)
         {
-            writer.WritePropertyName((nameof(MapFields)));
+            writer.WritePropertyName(nameof(MapFields));
             writer.WriteStartArray();
             var first = true;
             foreach (var field in MapFields.Values.Select(x => x.As<AutoIndexField>()))
@@ -29,16 +31,23 @@ namespace Raven.Server.Documents.Indexes.Auto
 
                 writer.WriteStartObject();
 
-                writer.WritePropertyName((nameof(field.Name)));
-                writer.WriteString((field.Name));
+                writer.WritePropertyName(nameof(field.Name));
+                writer.WriteString(field.Name);
                 writer.WriteComma();
 
                 writer.WritePropertyName(nameof(field.Indexing));
                 writer.WriteString(field.Indexing.ToString());
                 writer.WriteComma();
 
-                writer.WritePropertyName((nameof(field.Aggregation)));
-                writer.WriteInteger((int)(field.Aggregation));
+                writer.WritePropertyName(nameof(field.Aggregation));
+                writer.WriteInteger((int)field.Aggregation);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(field.Spatial));
+                if (field.Spatial == null)
+                    writer.WriteNull();
+                else
+                    writer.WriteObject(EntityToBlittable.ConvertEntityToBlittable(field.Spatial, DocumentConventions.Default, context));
 
                 writer.WriteEndObject();
 

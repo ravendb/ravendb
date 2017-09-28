@@ -4,12 +4,13 @@ using System.Diagnostics;
 using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Queries.AST;
-using Raven.Server.Documents.Queries.Parser;
+
 namespace Raven.Server.Documents.Queries.Dynamic
 {
     public class DynamicQueryMapping
@@ -45,6 +46,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         if (field.IsExactSearch)
                             indexField.Indexing |= AutoFieldIndexing.Exact;
 
+                        if (field.Spatial != null)
+                            indexField.Spatial = new AutoSpatialOptions(field.Spatial);
+
                         return indexField;
                     }
                 ).ToArray());
@@ -69,6 +73,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     if (field.IsExactSearch)
                         indexField.Indexing |= AutoFieldIndexing.Exact;
 
+                    if (field.Spatial != null)
+                        indexField.Spatial = new AutoSpatialOptions(field.Spatial);
+
                     return indexField;
                 }).ToArray(),
                 GroupByFields.Values.Select(field =>
@@ -85,6 +92,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                     if (field.IsExactSearch)
                         indexField.Indexing |= AutoFieldIndexing.Exact;
+
+                    if (field.Spatial != null)
+                        indexField.Spatial = new AutoSpatialOptions(field.Spatial);
 
                     return indexField;
                 }).ToArray());
@@ -115,13 +125,15 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     {
                         mappingFields[queryField.Name] = DynamicQueryMappingItem.Create(queryField.Name, queryField.AggregationOperation,
                             isFullTextSearch: queryField.IsFullTextSearch || indexField.Indexing.HasFlag(AutoFieldIndexing.Search),
-                            isExactSearch: queryField.IsExactSearch || indexField.Indexing.HasFlag(AutoFieldIndexing.Exact));
+                            isExactSearch: queryField.IsExactSearch || indexField.Indexing.HasFlag(AutoFieldIndexing.Exact),
+                            spatial: queryField.Spatial ?? indexField.Spatial);
                     }
                     else
                     {
                         mappingFields.Add(indexField.Name, DynamicQueryMappingItem.Create(indexField.Name, indexField.Aggregation,
                             isFullTextSearch: indexField.Indexing.HasFlag(AutoFieldIndexing.Search),
-                            isExactSearch: indexField.Indexing.HasFlag(AutoFieldIndexing.Exact)));
+                            isExactSearch: indexField.Indexing.HasFlag(AutoFieldIndexing.Exact),
+                            spatial: indexField.Spatial));
                     }
                 }
             }
@@ -180,7 +192,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     }
                 }
             }
-            
+
             result.MapFields = mapFields;
 
             return result;

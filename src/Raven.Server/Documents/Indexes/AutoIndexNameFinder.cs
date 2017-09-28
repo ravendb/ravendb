@@ -58,7 +58,15 @@ namespace Raven.Server.Documents.Indexes
         private static string GetName(AutoIndexField x)
         {
             if (x.Indexing == AutoFieldIndexing.Default || x.Indexing == AutoFieldIndexing.No)
+            {
+                if (x.Spatial != null)
+                    return x.Name
+                        .Replace(",", "|")
+                        .Replace(" ", string.Empty)
+                        .ToUpperFirstLetter();
+
                 return x.Name;
+            }
 
             var functions = new List<string>();
 
