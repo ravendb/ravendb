@@ -7,6 +7,7 @@ using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Server.Documents.Replication;
 using Raven.Client.Exceptions.Documents;
+using Raven.Client.ServerWide.Revisions;
 using Raven.Server.Config;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.ServerWide.Context;
@@ -171,6 +172,7 @@ namespace Raven.Server.Documents
         public StorageEnvironment Environment { get; private set; }
 
         public RevisionsStorage RevisionsStorage;
+        public RevisionsStorage ConflictsGraveyard;
         public ConflictsStorage ConflictsStorage;
         public AttachmentsStorage AttachmentsStorage;
         public IdentitiesStorage Identities;
@@ -276,6 +278,10 @@ namespace Raven.Server.Documents
                     CollectionsSchema.Create(tx, CollectionsSlice, 32);
 
                     RevisionsStorage = new RevisionsStorage(_documentDatabase);
+                    ConflictsGraveyard = new RevisionsStorage(_documentDatabase, new RevisionsConfiguration
+                    {
+                        Default = new RevisionsCollectionConfiguration { Active = true}
+                    },tx);
                     Identities = new IdentitiesStorage(_documentDatabase, tx);
                     ConflictsStorage = new ConflictsStorage(_documentDatabase, tx);
                     AttachmentsStorage = new AttachmentsStorage(_documentDatabase, tx);

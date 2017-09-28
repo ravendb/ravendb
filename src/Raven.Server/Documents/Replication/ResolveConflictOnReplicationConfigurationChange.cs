@@ -165,6 +165,11 @@ namespace Raven.Server.Documents.Replication
                         RequiresRetry = true;
                     }
 
+                    if (item.ResolvedConflict.Flags.HasFlag(DocumentFlags.AutoResolved))
+                    {
+                        var conflicts = _conflictsStorage.GetConflictsFor(context, item.ResolvedConflict.Id);
+                        _resolver.AddToGraveyard(context, conflicts, item.ResolvedConflict);
+                    }
                     _resolver.PutResolvedDocument(context, item.ResolvedConflict);
                 }
 
@@ -274,6 +279,20 @@ namespace Raven.Server.Documents.Replication
             return true;
         }
 
+        public void AddToGraveyard(DocumentsOperationContext documentsContext, IReadOnlyCollection<DocumentConflict> conflicts, DocumentConflict resolved)
+        {
+            var collection = _database.DocumentsStorage.ExtractCollectionName(documentsContext, resolved.Collection);
+            foreach (var conflict in conflicts)
+            {
+                _database.DocumentsStorage.ConflictsGraveyard.Put(
+                    documentsContext, resolved.Id, conflict.Doc, conflict.Flags, NonPersistentDocumentFlags.None, conflict.ChangeVector, conflict.LastModified.Ticks,
+                    collectionName: collection);
+            }
+            _database.DocumentsStorage.ConflictsGraveyard.Put(
+                documentsContext, resolved.Id, resolved.Doc, resolved.Flags, NonPersistentDocumentFlags.None, resolved.ChangeVector, resolved.LastModified.Ticks,
+                collectionName: collection);
+        }
+
         public void PutResolvedDocument(
            DocumentsOperationContext context,
            DocumentConflict conflict)
@@ -367,6 +386,7 @@ namespace Raven.Server.Documents.Replication
             }
 
             latestDoc.ChangeVector = ChangeVectorUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
+            latestDoc.Flags |= DocumentFlags.AutoResolved;
 
             return latestDoc;
         }
