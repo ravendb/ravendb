@@ -73,7 +73,7 @@ class ongoingTaskBackupModel extends ongoingTask {
     }
 
     refreshBackupInfo() {
-        ongoingTaskInfoCommand.forBackup(this.activeDatabase(), this.taskId, this.taskName())
+        ongoingTaskInfoCommand.forBackup(this.activeDatabase(), this.taskId)
             .execute()
             .done((result: Raven.Client.ServerWide.Operations.OngoingTaskBackup) => {
                 this.update(result);
