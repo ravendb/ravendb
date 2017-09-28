@@ -10,14 +10,13 @@ class about extends viewModelBase {
 
     clientVersion = shell.clientVersion;
     serverVersion = buildInfo.serverBuildVersion;
-    licenseStatus = license.licenseStatus;
 
     spinners = {
         deactivatingLicense: ko.observable<boolean>(false)
     }
 
     formattedExpiration = ko.pureComputed(() => {
-        const licenseStatus = this.licenseStatus();
+        const licenseStatus = license.licenseStatus();
 
         if (!licenseStatus || !licenseStatus.FormattedExpiration) {
             return null;
@@ -27,7 +26,7 @@ class about extends viewModelBase {
     });
 
     licenseType = ko.pureComputed(() => {
-        const licenseStatus = this.licenseStatus();
+        const licenseStatus = license.licenseStatus();
         if (!licenseStatus || licenseStatus.Type === "None") {
             return "No license";
         }
@@ -40,7 +39,7 @@ class about extends viewModelBase {
     });
 
     shortDescription = ko.pureComputed(() => {
-        const licenseStatus = this.licenseStatus();
+        const licenseStatus = license.licenseStatus();
         if (!licenseStatus || !license.licenseShortDescription()) {
             return null;
         }
@@ -49,7 +48,7 @@ class about extends viewModelBase {
     });
 
     registered = ko.pureComputed(() => {
-        const licenseStatus = this.licenseStatus();
+        const licenseStatus = license.licenseStatus();
         if (!licenseStatus) {
             return false;
         }
@@ -58,7 +57,7 @@ class about extends viewModelBase {
     });
 
     register() {
-        registration.showRegistrationDialog(this.licenseStatus(), false, true);
+        registration.showRegistrationDialog(license.licenseStatus(), false, true);
     }
 
     deactivateLicense() {
@@ -69,11 +68,10 @@ class about extends viewModelBase {
                 if (!can) {
                     return;
                 }
-
                 this.spinners.deactivatingLicense(true);
                 new deactivateLicenseCommand().execute()
-                    .done(() => {
-                        this.licenseStatus(null);
+	    	    .done(() => {
+                        license.fetchLicenseStatus()
                         messagePublisher.reportWarning("Your license was successfully deactivated");
                     })
                     .always(() => this.spinners.deactivatingLicense(false));
