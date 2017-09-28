@@ -24,8 +24,7 @@ import getIndexNamesCommand = require("commands/database/index/getIndexNamesComm
 import eventsCollector = require("common/eventsCollector");
 import popoverUtils = require("common/popoverUtils");
 import showDataDialog = require("viewmodels/common/showDataDialog");
-import FormatIndexCommand = require("../../../commands/database/index/formatIndexCommand");
-import FormatedExpression = Raven.Server.Web.Studio.StudioTasksHandler.FormatedExpression;
+import formatIndexCommand = require("commands/database/index/formatIndexCommand");
 
 class editIndex extends viewModelBase {
 
@@ -511,35 +510,26 @@ class editIndex extends viewModelBase {
     */
     formatIndex(mapIndex: number) {
         eventsCollector.default.reportEvent("index", "format-index");
-        var index: indexDefinition = this.editedIndex();
-        var mapToFormat = index.maps()[mapIndex].map;
+        const index: indexDefinition = this.editedIndex();
+        const mapToFormat = index.maps()[mapIndex].map;
 
-        this.setFormattedTextAndReport(mapToFormat, false);
+        this.setFormattedText(mapToFormat);
     }
 
     formatReduce() {
         eventsCollector.default.reportEvent("index", "format-index");
-        var index: indexDefinition = this.editedIndex();
+        const index: indexDefinition = this.editedIndex();
 
-        var reduceToFormat = index.reduce;
+        const reduceToFormat = index.reduce;
 
-        this.setFormattedTextAndReport(reduceToFormat, true);
+        this.setFormattedText(reduceToFormat);
     }
 
-    private setFormattedTextAndReport(textToFormat: KnockoutObservable<string>, isReduce: boolean) {
-        new FormatIndexCommand(this.activeDatabase(), textToFormat())
+    private setFormattedText(textToFormat: KnockoutObservable<string>) {
+        new formatIndexCommand(this.activeDatabase(), textToFormat())
             .execute()
             .done((formatedText) => {
-
-                if (!formatedText)
-                    return;
-
-                if (formatedText.Expression.indexOf("Could not format:") === -1) {
-                    textToFormat(formatedText.Expression);
-                } else {
-                    var errorMessage = isReduce ? "Failed to format reduce!" : "Failed to format map!";
-                    messagePublisher.reportError(errorMessage, formatedText.Expression);
-                }
+                textToFormat(formatedText.Expression);             
             });
     }
 

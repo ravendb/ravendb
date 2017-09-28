@@ -1,15 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Net;
-using System.Security.Cryptography;
-using System.Text;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Formatting;
-using Raven.Client;
 using Raven.Client.Exceptions;
 using Raven.Server.Routing;
 using Sparrow.Json;
@@ -42,6 +35,9 @@ namespace Raven.Server.Web.Studio
 
                     var result = Formatter.Format(expression, workspace);
 
+                    if (result.ToString().IndexOf("Could not format:", StringComparison.Ordinal) > -1)
+                        throw new BadRequestException();
+
                     var formatedExpression = new FormatedExpression
                     {
                         Expression = result.ToString()
@@ -50,7 +46,6 @@ namespace Raven.Server.Web.Studio
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         context.Write(writer, formatedExpression.ToJson());
-                        writer.Flush();
                     }
                 }
             }
