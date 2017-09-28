@@ -17,7 +17,7 @@ namespace Sparrow.Json
         /// <returns></returns>
         public LazyStringValue ToLazyStringValue()
         {
-            var allocatedUncompressedData = DecompressToAllocatedMemoryData();
+            var allocatedUncompressedData = DecompressToAllocatedMemoryData(_context);
 
             var lazyStringValue = _context.AllocateStringValue(null, allocatedUncompressedData.Address, UncompressedSize);
 
@@ -60,17 +60,17 @@ namespace Sparrow.Json
             }
         }
 
-        public byte* DecompressToTempBuffer(out AllocatedMemoryData allocatedData)
+        public byte* DecompressToTempBuffer(out AllocatedMemoryData allocatedData, JsonOperationContext externalContext = null)
         {
             var sizeOfEscapePositions = GetSizeOfEscapePositions();
-            allocatedData = _context.GetMemory(UncompressedSize + sizeOfEscapePositions);
+            allocatedData = (externalContext??_context).GetMemory(UncompressedSize + sizeOfEscapePositions);
             return DecompressToBuffer(allocatedData.Address, sizeOfEscapePositions);
         }
 
-        public AllocatedMemoryData DecompressToAllocatedMemoryData()
+        public AllocatedMemoryData DecompressToAllocatedMemoryData(JsonOperationContext externalContext)
         {
             var sizeOfEscapePositions = GetSizeOfEscapePositions();
-            var allocatedBuffer = _context.GetMemory(UncompressedSize + sizeOfEscapePositions);
+            var allocatedBuffer = externalContext.GetMemory(UncompressedSize + sizeOfEscapePositions);
             DecompressToBuffer(allocatedBuffer.Address, sizeOfEscapePositions);
 
             return allocatedBuffer;
