@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
-using Org.BouncyCastle.Cms;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
@@ -15,7 +14,6 @@ using Raven.Server.Smuggler.Documents.Processors;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
 using Size = Sparrow.Size;
@@ -24,7 +22,7 @@ namespace Raven.Server.Smuggler.Documents
 {
     public class StreamSource : ISmugglerSource
     {
-        private readonly Stream _stream;
+        private readonly PeepingTomStream _peepingTomStream;
         private readonly DocumentsOperationContext _context;
         private JsonOperationContext.ManagedPinnedBuffer _buffer;
         private JsonOperationContext.ReturnBuffer _returnBuffer;
@@ -42,7 +40,7 @@ namespace Raven.Server.Smuggler.Documents
 
         public StreamSource(Stream stream, DocumentsOperationContext context)
         {
-            _stream = stream;
+            _peepingTomStream = new PeepingTomStream(stream, context);
             _context = context;
         }
 
@@ -53,11 +51,11 @@ namespace Raven.Server.Smuggler.Documents
             _state = new JsonParserState();
             _parser = new UnmanagedJsonParser(_context, _state, "file");
 
-            if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
-                ThrowInvalidJson("Unexpected end of json.");
+            if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
+                UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json.", _peepingTomStream, _parser);
 
             if (_state.CurrentTokenType != JsonParserToken.StartObject)
-                ThrowInvalidJson("Expected start object, but got " + _state.CurrentTokenType);
+                UnmanagedJsonParserHelper.ThrowInvalidJson("Expected start object, but got " + _state.CurrentTokenType, _peepingTomStream, _parser);
 
             buildVersion = ReadBuildVersion();
             _buildVersionType = BuildVersion.Type(buildVersion);
@@ -192,26 +190,21 @@ namespace Raven.Server.Smuggler.Documents
 
         private unsafe string ReadType()
         {
-            if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
-                ThrowInvalidJson("Unexpected end of object when reading type");
+            if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
+                UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of object when reading type", _peepingTomStream, _parser);
 
             if (_state.CurrentTokenType == JsonParserToken.EndObject)
                 return null;
 
             if (_state.CurrentTokenType != JsonParserToken.String)
-                ThrowInvalidJson("Expected property type to be string, but was " + _state.CurrentTokenType);
+                UnmanagedJsonParserHelper.ThrowInvalidJson("Expected property type to be string, but was " + _state.CurrentTokenType, _peepingTomStream, _parser);
 
             return _context.AllocateStringValue(null, _state.StringBuffer, _state.StringSize).ToString();
         }
 
-        private void ThrowInvalidJson(string msg)
-        {
-            throw new InvalidOperationException("Invalid JSON. " + msg + " on " + _parser.GenerateErrorState());
-        }
-
         private void ReadObject(BlittableJsonDocumentBuilder builder)
         {
-            UnmanagedJsonParserHelper.ReadObject(builder, _stream, _parser, _buffer);
+            UnmanagedJsonParserHelper.ReadObject(builder, _peepingTomStream, _parser, _buffer);
 
             _totalObjectsRead.Add(builder.SizeInBytes, SizeUnit.Bytes);
         }
@@ -228,11 +221,11 @@ namespace Raven.Server.Smuggler.Documents
                 return 0;
             }
 
-            if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
-                ThrowInvalidJson("Unexpected end of json.");
+            if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
+                UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json.", _peepingTomStream, _parser);
 
             if (_state.CurrentTokenType != JsonParserToken.Integer)
-                ThrowInvalidJson("Expected integer BuildVersion, but got " + _state.CurrentTokenType);
+                UnmanagedJsonParserHelper.ThrowInvalidJson("Expected integer BuildVersion, but got " + _state.CurrentTokenType, _peepingTomStream, _parser);
 
             return _state.Long;
         }
@@ -250,19 +243,19 @@ namespace Raven.Server.Smuggler.Documents
 
         private IEnumerable<BlittableJsonReaderObject> ReadArray(INewDocumentActions actions = null)
         {
-            if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
-                ThrowInvalidJson("Unexpected end of json");
+            if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
+                UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json", _peepingTomStream, _parser);
 
             if (_state.CurrentTokenType != JsonParserToken.StartArray)
-                ThrowInvalidJson("Expected start array, got " + _state.CurrentTokenType);
+                UnmanagedJsonParserHelper.ThrowInvalidJson("Expected start array, got " + _state.CurrentTokenType, _peepingTomStream, _parser);
 
             var builder = CreateBuilder(_context, null);
             try
             {
                 while (true)
                 {
-                    if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
-                        ThrowInvalidJson("Unexpected end of json while reading array");
+                    if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
+                        UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json while reading array", _peepingTomStream, _parser);
 
                     if (_state.CurrentTokenType == JsonParserToken.EndArray)
                         break;
@@ -292,11 +285,11 @@ namespace Raven.Server.Smuggler.Documents
 
         private IEnumerable<DocumentItem> ReadLegacyAttachments(INewDocumentActions actions)
         {
-            if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
-                ThrowInvalidJson("Unexpected end of json");
+            if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
+                UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json", _peepingTomStream, _parser);
 
             if (_state.CurrentTokenType != JsonParserToken.StartArray)
-                ThrowInvalidJson("Expected start array, but got " + _state.CurrentTokenType);
+                UnmanagedJsonParserHelper.ThrowInvalidJson("Expected start array, but got " + _state.CurrentTokenType, _peepingTomStream, _parser);
 
             var context = _context;
             var modifier = new BlittableMetadataModifier(context);
@@ -305,8 +298,8 @@ namespace Raven.Server.Smuggler.Documents
             {
                 while (true)
                 {
-                    if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
-                        ThrowInvalidJson("Unexpected end of json while reading legacy attachments");
+                    if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
+                        UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json while reading legacy attachments", _peepingTomStream, _parser);
 
                     if (_state.CurrentTokenType == JsonParserToken.EndArray)
                         break;
@@ -383,11 +376,11 @@ namespace Raven.Server.Smuggler.Documents
 
         private IEnumerable<DocumentItem> ReadDocuments(INewDocumentActions actions = null)
         {
-            if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
-                ThrowInvalidJson("Unexpected end of json");
+            if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
+                UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json", _peepingTomStream, _parser);
 
             if (_state.CurrentTokenType != JsonParserToken.StartArray)
-                ThrowInvalidJson("Expected start array, but got " + _state.CurrentTokenType);
+                UnmanagedJsonParserHelper.ThrowInvalidJson("Expected start array, but got " + _state.CurrentTokenType, _peepingTomStream, _parser);
 
             var context = _context;
             var modifier = new BlittableMetadataModifier(context);
@@ -397,8 +390,8 @@ namespace Raven.Server.Smuggler.Documents
                 List<DocumentItem.AttachmentStream> attachments = null;
                 while (true)
                 {
-                    if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
-                        ThrowInvalidJson("Unexpected end of json while reading docs");
+                    if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
+                        UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json while reading docs", _peepingTomStream, _parser);
 
                     if (_state.CurrentTokenType == JsonParserToken.EndArray)
                         break;
@@ -459,11 +452,11 @@ namespace Raven.Server.Smuggler.Documents
 
         private IEnumerable<DocumentTombstone> ReadTombstones(INewDocumentActions actions = null)
         {
-            if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
-                ThrowInvalidJson("Unexpected end of json");
+            if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
+                UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json", _peepingTomStream, _parser);
 
             if (_state.CurrentTokenType != JsonParserToken.StartArray)
-                ThrowInvalidJson("Expected start array, but got " + _state.CurrentTokenType);
+                UnmanagedJsonParserHelper.ThrowInvalidJson("Expected start array, but got " + _state.CurrentTokenType, _peepingTomStream, _parser);
 
             var context = _context;
             var builder = CreateBuilder(context, null);
@@ -471,8 +464,8 @@ namespace Raven.Server.Smuggler.Documents
             {
                 while (true)
                 {
-                    if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
-                        ThrowInvalidJson("Unexpected end of json while reading docs");
+                    if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
+                        UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json while reading docs", _peepingTomStream, _parser);
 
                     if (_state.CurrentTokenType == JsonParserToken.EndArray)
                         break;
@@ -590,7 +583,7 @@ namespace Raven.Server.Smuggler.Documents
                 attachment.Stream.Write(_writeBuffer.Buffer.Array, _writeBuffer.Buffer.Offset, read.bytesRead);
                 if (read.done == false)
                 {
-                    var read2 = _stream.Read(_buffer.Buffer.Array, _buffer.Buffer.Offset, _buffer.Length);
+                    var read2 = _peepingTomStream.Read(_buffer.Buffer.Array, _buffer.Buffer.Offset, _buffer.Length);
                     if (read2 == 0)
                         throw new EndOfStreamException("Stream ended without reaching end of stream content");
 

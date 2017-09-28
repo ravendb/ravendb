@@ -1,11 +1,9 @@
+using Raven.Client.Documents;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using Raven.Client.Documents;
-using Raven.Server.Utils;
 
-namespace Tryouts
+namespace RavenDB4RCTests
 {
     class Program
     {
@@ -24,16 +22,16 @@ namespace Tryouts
                 InitializeData(documentStore);
             }
 
-            using (var session = documentStore.OpenSession())
+            using (var session = documentStore.OpenAsyncSession())
             {
                 var query = session.Query<Doc>(collectionName: "Docs");
-                var stream = session.Advanced.Stream(query);
+                var stream = session.Advanced.StreamAsync(query).Result;
 
                 var position = 0;
-                while (stream.MoveNext())
+                while (stream.MoveNextAsync().Result)
                 {
                     ++position;
-                    if (position % 10 == 0)
+                    if (position % 1000 == 0)
                     {
                         Console.WriteLine(DateTime.Now.ToLongTimeString() + ": Processing item " + position);
                     }
