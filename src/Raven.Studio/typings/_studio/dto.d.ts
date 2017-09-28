@@ -337,6 +337,7 @@ interface autoCompleteWordList {
 }
 
 interface autoCompleteLastKeyword {
+    info: rqlQueryInfo, 
     keywordsBefore: string[],
     keyword: string,
     asSpecified: boolean,
@@ -345,10 +346,16 @@ interface autoCompleteLastKeyword {
     whereFunction: string,
     whereFunctionParameters: number,
     fieldPrefix: string[],
-    readonly getFieldPrefix: string,
     fieldName: string,
     dividersCount: number,
     parentheses: number
+}
+
+interface rqlQueryInfo {
+    collection: string;
+    index: string;
+    alias: string;
+    collectionMap: dictionary<string>;
 }
 
 interface queryCompleterProviders {

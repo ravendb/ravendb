@@ -14,7 +14,7 @@ describe("RQL Autocomplete", () => {
     const emptyList: autoCompleteWordList[] = [
         {caption: "from", value: "from ", score: 3, meta: "clause", snippet: "from ${1:Collection} as ${2:alias}\r\n"},
         {caption: "from index", value: "from index ", score: 2, meta: "clause", snippet: "from index ${1:Index} as ${2:alias}\r\n"},
-        {caption: "declare", value: "declare ", score: 1, meta: "custom function", snippet: `declare function \${1:Name}() {
+        {caption: "declare", value: "declare ", score: 1, meta: "JS function", snippet: `declare function \${1:Name}() {
     \${0}
 }
 
@@ -48,9 +48,18 @@ describe("RQL Autocomplete", () => {
         {caption: "ID", value: "ID() ", score: 11, meta: "document ID"}
     ];
 
-    const whereFunctionsList: autoCompleteWordList[] = [
-        {caption: "search", value: "search ", snippet: "search(${1:alias.Field.Name}, ${2:'*term1* term2*'}, ${3:or}) ", score: 21, meta: "function"}
+    const aliasList: autoCompleteWordList[] = [
+        {caption: "o", value: "o.", score: 999, meta: "Orders"}
     ];
+
+    const aliasesList: autoCompleteWordList[] = [
+        {caption: "o", value: "o.", score: 999, meta: "Orders"},
+        {caption: "c", value: "c.", score: 998, meta: "Company"},
+        {caption: "e", value: "e.", score: 997, meta: "Employee"},
+        {caption: "s", value: "s.", score: 996, meta: "ShipVia"}
+    ].concat(functionsList);
+
+    const aliasesListAfterWhere: autoCompleteWordList[] =  _.sortBy(aliasesList.concat(queryCompleter.whereFunctionsOnly), (x: autoCompleteWordList) => x.score).reverse();
 
     const fieldsList: autoCompleteWordList[] = [
         {caption: "Company", value: "Company ", score: 114, meta: "string field"},
@@ -67,11 +76,13 @@ describe("RQL Autocomplete", () => {
         {caption: "With*Star", value: "'With*Star' ", score: 103, meta: "string field"},
         {caption: "With.Dot", value: "'With.Dot' ", score: 102, meta: "string field"},
         {caption: "@metadata", value: "@metadata ", score: 101, meta: "object field"}
-    ].concat(functionsList);
+    ];
 
-    const whereFieldsList: autoCompleteWordList[] = _.sortBy(fieldsList.concat(whereFunctionsList), (x: autoCompleteWordList) => x.score).reverse();
+    const fieldsListWithFunctions: autoCompleteWordList[] = fieldsList.concat(functionsList);
+
+    const whereFieldsList: autoCompleteWordList[] = _.sortBy(fieldsListWithFunctions.concat(queryCompleter.whereFunctionsOnly), (x: autoCompleteWordList) => x.score).reverse();
     
-    const whereFieldsListAfterOrAnd = queryCompleter.notAfterAndOrList.concat(whereFieldsList);
+    const whereFieldsListAfterOrAnd = queryCompleter.notList.concat(whereFieldsList);
 
     const allDocsFieldsList = [
         {caption: "Address", value: "Address ", score: 138, meta: "object field"},
@@ -121,7 +132,7 @@ describe("RQL Autocomplete", () => {
     
     const orderBySortAfterList = [
         {caption: ",", value: ", ", score: 23, meta: "separator"},
-        {caption: "load", value: "load ", score: 20, meta: "keyword"},
+        {caption: "load", value: "load ", score: 20, meta: "clause", snippet: "load alias.${1:field} as ${2:alias} "},
         {caption: "select", value: "select ", score: 19, meta: "keyword"},
         {caption: "select {", value: "select { ", score: 18, meta: "JS projection", snippet: `select {
     \${1:Name}: \${2:Value}
@@ -134,7 +145,7 @@ describe("RQL Autocomplete", () => {
         {caption: ",", value: ", ", score: 23, meta: "separator"},
         {caption: "where", value: "where ", score: 20, meta: "keyword"},
         {caption: "order", value: "order ", score: 19, meta: "keyword"},
-        {caption: "load", value: "load ", score: 18, meta: "keyword"},
+        {caption: "load", value: "load ", score: 18, meta: "clause", snippet: "load alias.${1:field} as ${2:alias} "},
         {caption: "select", value: "select ", score: 17, meta: "keyword"},
         {caption: "select {", value: "select { ", score: 16, meta: "JS projection", snippet: `select {
     \${1:Name}: \${2:Value}
@@ -162,7 +173,7 @@ describe("RQL Autocomplete", () => {
         {caption: "group", value: "group ", score: 20, meta: "keyword"},
         {caption: "where", value: "where ", score: 19, meta: "keyword"},
         {caption: "order", value: "order ", score: 18, meta: "keyword"},
-        {caption: "load", value: "load ", score: 17, meta: "keyword"},
+        {caption: "load", value: "load ", score: 17, meta: "clause", snippet: "load alias.${1:field} as ${2:alias} "},
         {caption: "select", value: "select ", score: 16, meta: "keyword"},
         {caption: "select {", value: "select { ", score: 15, meta: "JS projection", snippet: `select {
     \${1:Name}: \${2:Value}
@@ -175,7 +186,7 @@ describe("RQL Autocomplete", () => {
         {caption: "group", value: "group ", score: 20, meta: "keyword"},
         {caption: "where", value: "where ", score: 19, meta: "keyword"},
         {caption: "order", value: "order ", score: 18, meta: "keyword"},
-        {caption: "load", value: "load ", score: 17, meta: "keyword"},
+        {caption: "load", value: "load ", score: 17, meta: "clause", snippet: "load o.${1:field} as ${2:alias} "},
         {caption: "select", value: "select ", score: 16, meta: "keyword"},
         {caption: "select {", value: "select { ", score: 15, meta: "JS projection", snippet: `select {
     \${1:Name}: \${2:Value}
@@ -188,7 +199,7 @@ describe("RQL Autocomplete", () => {
         {caption: "as", value: "as ", score: 21, meta: "keyword"},
         {caption: "where", value: "where ", score: 20, meta: "keyword"},
         {caption: "order", value: "order ", score: 19, meta: "keyword"},
-        {caption: "load", value: "load ", score: 18, meta: "keyword"},
+        {caption: "load", value: "load ", score: 18, meta: "clause", snippet: "load alias.${1:field} as ${2:alias} "},
         {caption: "select", value: "select ", score: 17, meta: "keyword"},
         {caption: "select {", value: "select { ", score: 16, meta: "JS projection", snippet: `select {
     \${1:Name}: \${2:Value}
@@ -200,7 +211,7 @@ describe("RQL Autocomplete", () => {
     const afterFromIndexAsList = [
         {caption: "where", value: "where ", score: 20, meta: "keyword"},
         {caption: "order", value: "order ", score: 19, meta: "keyword"},
-        {caption: "load", value: "load ", score: 18, meta: "keyword"},
+        {caption: "load", value: "load ", score: 18, meta: "clause", snippet: "load o.${1:field} as ${2:alias} "},
         {caption: "select", value: "select ", score: 17, meta: "keyword"},
         {caption: "select {", value: "select { ", score: 16, meta: "JS projection", snippet: `select {
     \${1:Name}: \${2:Value}
@@ -213,7 +224,7 @@ describe("RQL Autocomplete", () => {
         {caption: "group", value: "group ", score: 20, meta: "keyword"},
         {caption: "where", value: "where ", score: 19, meta: "keyword"},
         {caption: "order", value: "order ", score: 18, meta: "keyword"},
-        {caption: "load", value: "load ", score: 17, meta: "keyword"},
+        {caption: "load", value: "load ", score: 17, meta: "clause", snippet: "load alias.${1:field} as ${2:alias} "},
         {caption: "select", value: "select ", score: 16, meta: "keyword"},
         {caption: "select {", value: "select { ", score: 15, meta: "JS projection", snippet: `select {
     \${1:Name}: \${2:Value}
@@ -230,7 +241,20 @@ describe("RQL Autocomplete", () => {
         {caption: "and", value: "and ", score: 22, meta: "binary operation"},
         {caption: "or", value: "or ", score: 21, meta: "binary operation"},
         {caption: "order", value: "order ", score: 20, meta: "keyword"},
-        {caption: "load", value: "load ", score: 19, meta: "keyword"},
+        {caption: "load", value: "load ", score: 19, meta: "clause", snippet: "load alias.${1:field} as ${2:alias} "},
+        {caption: "select", value: "select ", score: 18, meta: "keyword"},
+        {caption: "select {", value: "select { ", score: 17, meta: "JS projection", snippet: `select {
+    \${1:Name}: \${2:Value}
+}
+`},
+        {caption: "include", value: "include ", score: 16, meta: "keyword"}
+    ];
+
+    const afterWhereListWithFromAs = [
+        {caption: "and", value: "and ", score: 22, meta: "binary operation"},
+        {caption: "or", value: "or ", score: 21, meta: "binary operation"},
+        {caption: "order", value: "order ", score: 20, meta: "keyword"},
+        {caption: "load", value: "load ", score: 19, meta: "clause", snippet: "load o.${1:field} as ${2:alias} "},
         {caption: "select", value: "select ", score: 18, meta: "keyword"},
         {caption: "select {", value: "select { ", score: 17, meta: "JS projection", snippet: `select {
     \${1:Name}: \${2:Value}
@@ -242,7 +266,7 @@ describe("RQL Autocomplete", () => {
     const afterWhereWithoutSpaceList = [
         {caption: "where", value: "where ", score: 20, meta: "keyword"},
         {caption: "order", value: "order ", score: 19, meta: "keyword"},
-        {caption: "load", value: "load ", score: 18, meta: "keyword"},
+        {caption: "load", value: "load ", score: 18, meta: "clause", snippet: "load alias.${1:field} as ${2:alias} "},
         {caption: "select", value: "select ", score: 17, meta: "keyword"},
         {caption: "select {", value: "select { ", score: 16, meta: "JS projection", snippet: `select {
     \${1:Name}: \${2:Value}
@@ -253,7 +277,7 @@ describe("RQL Autocomplete", () => {
 
     const afterOrderWithoutSpaceList = [
         {caption: "order", value: "order ", score: 20, meta: "keyword"},
-        {caption: "load", value: "load ", score: 19, meta: "keyword"},
+        {caption: "load", value: "load ", score: 19, meta: "clause", snippet: "load alias.${1:field} as ${2:alias} "},
         {caption: "select", value: "select ", score: 18, meta: "keyword"},
         {caption: "select {", value: "select { ", score: 17, meta: "JS projection", snippet: `select {
     \${1:Name}: \${2:Value}
@@ -453,6 +477,10 @@ describe("RQL Autocomplete", () => {
             assert.equal(lastKeyword.keyword, "from");
             assert.isFalse(lastKeyword.asSpecified);
             assert.equal(lastKeyword.dividersCount, 3);
+            assert.equal(lastKeyword.info.collection, "Orders");
+            assert.isUndefined(lastKeyword.info.index);
+            assert.deepEqual(lastKeyword.info.alias, "o");
+            assert.deepEqual(lastKeyword.info.collectionMap, {o: "Orders"});
 
             done();
         });
@@ -461,7 +489,7 @@ describe("RQL Autocomplete", () => {
     it('from Collection select | should list fields', done => {
         rqlTestUtils.autoComplete("from Orders select |", northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
-            assert.deepEqual(wordlist, fieldsList);
+            assert.deepEqual(wordlist, fieldsListWithFunctions);
 
             assert.equal(lastKeyword.keyword, "select");
             assert.equal(lastKeyword.dividersCount, 1);
@@ -518,7 +546,7 @@ select ShipTo.City |`, northwindProvider(), (errors, wordlist, prefix, lastKeywo
         rqlTestUtils.autoComplete(`from Orders 
 select ShipTo.City, |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
-            assert.deepEqual(wordlist, fieldsList);
+            assert.deepEqual(wordlist, fieldsListWithFunctions);
 
             assert.equal(lastKeyword.keyword, "select");
             assert.equal(lastKeyword.dividersCount, 1);
@@ -532,7 +560,7 @@ select ShipTo.City, |`, northwindProvider(), (errors, wordlist, prefix, lastKeyw
         rqlTestUtils.autoComplete(`from Orders 
 select ShipTo.City,|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
-            assert.deepEqual(wordlist, fieldsList);
+            assert.deepEqual(wordlist, fieldsListWithFunctions);
 
             assert.equal(lastKeyword.keyword, "select");
             assert.equal(lastKeyword.dividersCount, 1);
@@ -549,7 +577,12 @@ select |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.deepEqual(wordlist, allDocsFieldsList);
 
             assert.equal(lastKeyword.keyword, "select");
+            assert.isFalse(lastKeyword.asSpecified);
             assert.equal(lastKeyword.dividersCount, 1);
+            assert.equal(lastKeyword.info.collection, "@all_docs");
+            assert.isUndefined(lastKeyword.info.index);
+            assert.isUndefined(lastKeyword.info.alias);
+            assert.isUndefined(lastKeyword.info.collectionMap);
 
             done();
         });
@@ -924,7 +957,7 @@ where search(OrderedAt, '1996*') |`, northwindProvider(), (errors, wordlist, pre
 where search(OrderedAt, "*1997*", or) or Freight = "" or (Freight = "" or Freight = "") 
 and (Freight = "" and Freight = "") and search(OrderedAt, "*1997*", and)|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
-            assert.deepEqual(wordlist, afterWhereList);
+            assert.deepEqual(wordlist, afterWhereListWithFromAs);
 
             assert.equal(lastKeyword.keyword, "where");
             assert.equal(lastKeyword.binaryOperation, "and");
