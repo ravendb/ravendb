@@ -8,7 +8,7 @@ using Raven.Abstractions.OAuth;
 
 namespace Raven.Powershell
 {
-    [Cmdlet(VerbsLifecycle.Request, "RavenDBOAuthToken")]
+    [Cmdlet(VerbsLifecycle.Request, "OAuthToken")]
     [OutputType(typeof(string))]
     public class OAuthAuthenticatorCmdlet : Cmdlet
     {
