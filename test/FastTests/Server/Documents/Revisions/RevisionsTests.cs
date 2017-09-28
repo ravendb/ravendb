@@ -92,19 +92,6 @@ namespace FastTests.Server.Documents.Revisions
         }
 
         [Fact]
-        public async Task GetRevisionsOfNotExistKey_WithRevisionsDisabled()
-        {
-            using (var store = GetDocumentStore())
-            {
-                using (var session = store.OpenAsyncSession())
-                {
-                    var exception = await Assert.ThrowsAsync<RevisionsDisabledException>(async () => await session.Advanced.GetRevisionsForAsync<Company>("companies/1"));
-                    Assert.Contains("Revisions are disabled", exception.Message);
-                }
-            }
-        }
-
-        [Fact]
         public async Task CanExcludeEntitiesFromRevisions()
         {
             var user = new User { Name = "User Name" };
