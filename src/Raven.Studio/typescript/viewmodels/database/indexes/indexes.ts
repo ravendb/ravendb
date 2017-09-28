@@ -16,6 +16,7 @@ import disableIndexCommand = require("commands/database/index/disableIndexComman
 import computeIndexingProgressCommand = require("commands/database/index/computeIndexingProgressCommand");
 import observableMap = require("common/helpers/observableMap");
 import indexProgress = require("models/database/index/indexProgress");
+import indexStalenessReasons = require("viewmodels/database/indexes/indexStalenessReasons");
 
 type indexGroup = {
     entityName: string;
@@ -60,6 +61,7 @@ class indexes extends viewModelBase {
             "lowPriority", "highPriority", "normalPriority",
             "resetIndex", "deleteIndex",
             "forceSideBySide", "showProgress",
+            "showStaleReasons",
             "unlockIndex", "lockIndex", "lockErrorIndex",
             "enableIndex", "disableIndex", "disableSelectedIndexes", "enableSelectedIndexes",
             "pauseSelectedIndexes", "resumeSelectedIndexes",
@@ -616,6 +618,11 @@ class indexes extends viewModelBase {
             });
             this.selectedIndexesName(namesToSelect);
         }
+    }
+
+    showStaleReasons(idx: index) {
+        const view = new indexStalenessReasons(this.activeDatabase(), idx.name);
+        app.showBootstrapDialog(view);
     }
 }
 

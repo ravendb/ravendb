@@ -1,0 +1,28 @@
+<div class="modal-dialog" role="document">
+    <div class="modal-content">
+        <div class="modal-header">
+            <button type="button" class="close" data-bind="click: close" aria-hidden="true">
+                <i class="icon-cancel"></i>
+            </button>
+            <h4 class="modal-title text-warning" data-bind="visible: reasons().IsStale">
+                    Index <span data-bind="text: $root.indexName"></span> is stale.
+            </h4>
+            <h4 class="modal-title text-success" data-bind="visible: !reasons().IsStale">
+                Index <span data-bind="text: $root.indexName"></span> is up to date.
+            </h4>
+        </div>
+        <div class="modal-body" data-bind="with: reasons">
+            
+            <div data-bind="visible: IsStale">
+                The following reasons are preventing index from being up to date:
+            </div>
+            
+            <ul data-bind="foreach: StalenessReasons">
+                <li data-bind="text: $data"></li>
+            </ul>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-bind="click: close">Close</button>
+        </div>
+    </div>
+</div>
