@@ -369,9 +369,6 @@ namespace Raven.Server.Documents.Operations
             [Description("Delete by collection")]
             DeleteByCollection,
 
-            [Description("Update by collection")]
-            UpdateByCollection,
-
             [Description("Bulk Insert")]
             BulkInsert,
             

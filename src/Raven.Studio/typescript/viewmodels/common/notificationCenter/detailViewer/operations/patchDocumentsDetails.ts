@@ -29,7 +29,7 @@ class patchDocumentsDetails extends abstractOperationDetails {
     }
 
     static supportsDetailsFor(notification: abstractNotification) {
-        return (notification instanceof operation) && (notification.taskType() === "UpdateByCollection" || notification.taskType() === "UpdateByIndex");
+        return (notification instanceof operation) && (notification.taskType() === "UpdateByIndex");
     }
 
     static showDetailsFor(op: operation, center: notificationCenter) {
