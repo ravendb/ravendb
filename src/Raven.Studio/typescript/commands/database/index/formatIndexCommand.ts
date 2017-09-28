@@ -15,7 +15,7 @@ class formatIndexCommand extends commandBase {
             Expression: this.expression
         }
         return this.post(url, JSON.stringify(payload)).fail((response: JQueryXHR) => {
-            this.reportError("Failed to format text!", response.responseText);
+            this.reportError("Failed to format text!", response.responseText, response.statusText);
         });
     }
 }
