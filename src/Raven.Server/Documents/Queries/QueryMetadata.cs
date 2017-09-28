@@ -18,7 +18,6 @@ namespace Raven.Server.Documents.Queries
 {
     public class QueryMetadata
     {
-
         private readonly Dictionary<string, string> _aliasToName = new Dictionary<string, string>();
 
         public readonly Dictionary<StringSegment, (string PropertyPath, bool Array)> RootAliasPaths = new Dictionary<StringSegment, (string PropertyPath, bool Array)>();
@@ -94,7 +93,7 @@ namespace Raven.Server.Documents.Queries
             IsCollectionQuery = false;
         }
 
-        private void AddWhereField(string fieldName, BlittableJsonReaderObject parameters, bool search = false, bool exact = false)
+        private void AddWhereField(string fieldName, BlittableJsonReaderObject parameters, bool search = false, bool exact = false, AutoSpatialOptions spatial = null)
         {
             var indexFieldName = GetIndexFieldName(fieldName, parameters);
 
