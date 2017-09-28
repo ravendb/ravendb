@@ -24,8 +24,10 @@ import getIndexNamesCommand = require("commands/database/index/getIndexNamesComm
 import eventsCollector = require("common/eventsCollector");
 import popoverUtils = require("common/popoverUtils");
 import showDataDialog = require("viewmodels/common/showDataDialog");
+import FormatIndexCommand = require("../../../commands/database/index/formatIndexCommand");
+import FormatedExpression = Raven.Server.Web.Studio.StudioTasksHandler.FormatedExpression;
 
-class editIndex extends viewModelBase { 
+class editIndex extends viewModelBase {
 
     static readonly $body = $("body");
 
@@ -57,8 +59,8 @@ class editIndex extends viewModelBase {
     constructor() {
         super();
 
-        this.bindToCurrentInstance("removeMap", "removeField", "createFieldNameAutocompleter", "removeConfigurationOption");
-      
+        this.bindToCurrentInstance("removeMap", "removeField", "createFieldNameAutocompleter", "removeConfigurationOption", "formatIndex");
+
         aceEditorBindingHandler.install();
         autoCompleteBindingHandler.install();
 
@@ -99,7 +101,7 @@ class editIndex extends viewModelBase {
     canActivate(unescapedIndexToEditName: string): JQueryPromise<canActivateResultDto> {
         const indexToEditName = unescapedIndexToEditName ? decodeURIComponent(unescapedIndexToEditName) : undefined;
         super.canActivate(indexToEditName);
-        
+
         const db = this.activeDatabase();
 
         if (indexToEditName) {
@@ -143,17 +145,17 @@ class editIndex extends viewModelBase {
     }
 
     private initValidation() {
-        
+
         //TODO: aceValidation: true for map and reduce
-        
+
         this.editedIndex().name.extend({
             validation: [
                 {
                     validator: (val: string) => {
                         return val === this.originalIndexName || !_.includes(this.indexesNames(), val);
-                },
-                message: "Already being used by an existing index."
-            }]
+                    },
+                    message: "Already being used by an existing index."
+                }]
         });
     }
 
@@ -223,9 +225,9 @@ class editIndex extends viewModelBase {
         checkedFieldsArray.push(hasDefaultFieldOptions);
 
         const defaultFieldOptions = indexDef.defaultFieldOptions();
-        if (defaultFieldOptions) 
+        if (defaultFieldOptions)
             addDirtyFlagInput(defaultFieldOptions);
-        
+
         this.dirtyFlag = new ko.DirtyFlag(checkedFieldsArray, false, jsonUtil.newLineNormalizingHashFunction);
 
         this.isSaveEnabled = ko.pureComputed(() => {
@@ -366,7 +368,7 @@ class editIndex extends viewModelBase {
                     // Regular Index
                     this.editedIndex(new indexDefinition(result));
                 }
-               
+
                 this.originalIndexName = this.editedIndex().name();
                 this.editedIndex().hasReduce(!!this.editedIndex().reduce());
                 this.updateIndexFields();
@@ -376,7 +378,7 @@ class editIndex extends viewModelBase {
     private validate(): boolean {
         let valid = true;
 
-        const editedIndex = this.editedIndex();   
+        const editedIndex = this.editedIndex();
 
         if (!this.isValid(this.editedIndex().validationGroup))
             valid = false;
@@ -403,7 +405,7 @@ class editIndex extends viewModelBase {
     }
 
     save() {
-        const editedIndex = this.editedIndex();         
+        const editedIndex = this.editedIndex();
 
         if (!this.validate()) {
             return;
@@ -431,23 +433,23 @@ class editIndex extends viewModelBase {
         return new saveIndexDefinitionCommand(indexDto, this.activeDatabase())
             .execute()
             .done(() => {
-            this.dirtyFlag().reset();
-            this.editedIndex().name.valueHasMutated();
-            //TODO: merge suggestion: var isSavingMergedIndex = this.mergeSuggestion() != null;
+                this.dirtyFlag().reset();
+                this.editedIndex().name.valueHasMutated();
+                //TODO: merge suggestion: var isSavingMergedIndex = this.mergeSuggestion() != null;
 
-            if (!this.isEditingExistingIndex()) {
-                this.isEditingExistingIndex(true);
-                this.editExistingIndex(indexDto.Name);
-            }
-            /* TODO merge suggestion
-            if (isSavingMergedIndex) {
-                var indexesToDelete = this.mergeSuggestion().canMerge.filter((indexName: string) => indexName != this.editedIndex().name());
-                this.deleteMergedIndexes(indexesToDelete);
-                this.mergeSuggestion(null);
-            }*/
+                if (!this.isEditingExistingIndex()) {
+                    this.isEditingExistingIndex(true);
+                    this.editExistingIndex(indexDto.Name);
+                }
+                /* TODO merge suggestion
+                if (isSavingMergedIndex) {
+                    var indexesToDelete = this.mergeSuggestion().canMerge.filter((indexName: string) => indexName != this.editedIndex().name());
+                    this.deleteMergedIndexes(indexesToDelete);
+                    this.mergeSuggestion(null);
+                }*/
 
-            this.updateUrl(indexDto.Name, false /* TODO isSavingMergedIndex */);
-        });
+                this.updateUrl(indexDto.Name, false /* TODO isSavingMergedIndex */);
+            });
     }
 
     updateUrl(indexName: string, isSavingMergedIndex: boolean = false) {
@@ -506,32 +508,40 @@ class editIndex extends viewModelBase {
         eventsCollector.default.reportEvent("index", "copy");
         app.showBootstrapDialog(new copyIndexDialog(this.editedIndex().name(), this.activeDatabase(), false));
     }
-
-    formatIndex() {
+    */
+    formatIndex(mapIndex: number) {
         eventsCollector.default.reportEvent("index", "format-index");
         var index: indexDefinition = this.editedIndex();
-        var mapReduceObservableArray = new Array<KnockoutObservable<string>>();
-        mapReduceObservableArray.push(...index.maps());
-        if (!!index.reduce()) {
-            mapReduceObservableArray.push(index.reduce);
-        }
+        var mapToFormat = index.maps()[mapIndex].map;
 
-        var mapReduceArray = mapReduceObservableArray.map((observable: KnockoutObservable<string>) => observable());
+        this.setFormattedTextAndReport(mapToFormat, false);
+    }
 
-        new formatIndexCommand(this.activeDatabase(), mapReduceArray)
+    formatReduce() {
+        eventsCollector.default.reportEvent("index", "format-index");
+        var index: indexDefinition = this.editedIndex();
+
+        var reduceToFormat = index.reduce;
+
+        this.setFormattedTextAndReport(reduceToFormat, true);
+    }
+
+    private setFormattedTextAndReport(textToFormat: KnockoutObservable<string>, isReduce: boolean) {
+        new FormatIndexCommand(this.activeDatabase(), textToFormat())
             .execute()
-            .done((formatedMapReduceArray: string[]) => {
-                formatedMapReduceArray.forEach((element: string, i: number) => {
-                    if (element.indexOf("Could not format:") == -1) {
-                        mapReduceObservableArray[i](element);
-                    } else {
-                        var isReduce = !!index.reduce() && i == formatedMapReduceArray.length - 1;
-                        var errorMessage = isReduce ? "Failed to format reduce!" : "Failed to format map '" + i + "'!";
-                        messagePublisher.reportError(errorMessage, element);
-                    }
-                });
-        });
-    }*/
+            .done((formatedText) => {
+
+                if (!formatedText)
+                    return;
+
+                if (formatedText.Expression.indexOf("Could not format:") === -1) {
+                    textToFormat(formatedText.Expression);
+                } else {
+                    var errorMessage = isReduce ? "Failed to format reduce!" : "Failed to format map!";
+                    messagePublisher.reportError(errorMessage, formatedText.Expression);
+                }
+            });
+    }
 
     /* TODO
 
@@ -602,13 +612,13 @@ class editIndex extends viewModelBase {
 
     */
 
-     /*TODO merged indexes
-    private deleteMergedIndexes(indexesToDelete: string[]) {
-        var db = this.activeDatabase();
-        var deleteViewModel = new deleteIndexesConfirm(indexesToDelete, db, "Delete Merged Indexes?");
-        dialog.show(deleteViewModel);
-    }*/
+    /*TODO merged indexes
+   private deleteMergedIndexes(indexesToDelete: string[]) {
+       var db = this.activeDatabase();
+       var deleteViewModel = new deleteIndexesConfirm(indexesToDelete, db, "Delete Merged Indexes?");
+       dialog.show(deleteViewModel);
+   }*/
 
-    }
+}
 
 export = editIndex;
