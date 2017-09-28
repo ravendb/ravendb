@@ -13,7 +13,7 @@ class formatIndexCommand extends commandBase {
         const url = endpoints.global.studioTasks.studioTasksFormat;
         const payload = {
             Expression: this.expression
-        }
+        };
         return this.post(url, JSON.stringify(payload)).fail((response: JQueryXHR) => {
             this.reportError("Failed to format text!", response.responseText, response.statusText);
         });
