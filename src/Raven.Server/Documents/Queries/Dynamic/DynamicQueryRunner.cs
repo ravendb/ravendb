@@ -29,10 +29,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
         public override async Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, BlittableJsonTextWriter writer,
             OperationCancelToken token)
         {
-            var index = await MatchIndex(query, false, token.Token);
-
-            if (index == null)
-                IndexDoesNotExistException.ThrowFor("There was no auto index able to handle streaming query"); // TODO arek - pretty sure we want to change that behavior
+            var index = await MatchIndex(query, true, token.Token);
 
             await index.StreamQuery(response, writer, query, documentsContext, token);
         }
