@@ -57,7 +57,8 @@ namespace Raven.Client.Documents.Indexes.Spatial
 
         public enum AutoSpatialMethodType
         {
-            Point
+            Point,
+            Wkt
         }
     }
 

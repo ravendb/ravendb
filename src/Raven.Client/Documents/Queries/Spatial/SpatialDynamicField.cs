@@ -19,6 +19,21 @@ namespace Raven.Client.Documents.Queries.Spatial
         }
     }
 
+    public class WktField : SpatialDynamicField
+    {
+        public readonly string Wkt;
+
+        public WktField(string wkt)
+        {
+            Wkt = wkt;
+        }
+
+        public override string ToField(Func<string, bool, string> ensureValidFieldName)
+        {
+            return $"wkt({ensureValidFieldName(Wkt, false)})";
+        }
+    }
+
     public abstract class SpatialDynamicField
     {
         public abstract string ToField(Func<string, bool, string> ensureValidFieldName);

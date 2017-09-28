@@ -85,7 +85,7 @@ namespace Raven.Server.Documents.Indexes.Static
             if (keyOrEnumerable is string keyString)
                 return CurrentIndexingScope.Current.LoadDocument(null, keyString, collectionName);
 
-            if(keyOrEnumerable is DynamicNullObject)
+            if (keyOrEnumerable is DynamicNullObject)
                 return DynamicNullObject.Null;
 
             if (keyOrEnumerable is IEnumerable enumerable)
@@ -155,7 +155,7 @@ namespace Raven.Server.Documents.Indexes.Static
         public IEnumerable<AbstractField> CreateSpatialField(string name, object shapeWKT)
         {
             var spatialField = GetOrCreateSpatialField(name);
-            return spatialField.CreateIndexableFields(shapeWKT);
+            return CreateSpatialField(spatialField, shapeWKT);
         }
 
         internal static IEnumerable<AbstractField> CreateSpatialField(SpatialField spatialField, object lat, object lng)
@@ -174,12 +174,18 @@ namespace Raven.Server.Documents.Indexes.Static
             return spatialField.CreateIndexableFields(shape);
         }
 
+        internal static IEnumerable<AbstractField> CreateSpatialField(SpatialField spatialField, object shapeWKT)
+        {
+            return spatialField.CreateIndexableFields(shapeWKT);
+        }
+
         private static SpatialField GetOrCreateSpatialField(string name)
         {
             if (CurrentIndexingScope.Current == null)
                 throw new InvalidOperationException("Indexing scope was not initialized.");
 
-            return CurrentIndexingScope.Current.GetOrCreateSpatialField(name);;
+            return CurrentIndexingScope.Current.GetOrCreateSpatialField(name);
+            ;
         }
 
         public dynamic MetadataFor(dynamic doc)

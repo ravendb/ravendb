@@ -46,13 +46,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
                     switch (spatialOptions.MethodType)
                     {
-                        case AutoSpatialOptions.AutoSpatialMethodType.Point:
-                            if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, spatialOptions.MethodArguments[0], out object latValue) ==
-                                false)
+                        case AutoSpatialOptions.AutoSpatialMethodType.Wkt:
+                            if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, spatialOptions.MethodArguments[0], out var wktValue) == false)
                                 continue;
 
-                            if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, spatialOptions.MethodArguments[1], out object lngValue) ==
-                                false)
+                            value = StaticIndexBase.CreateSpatialField(spatialField, wktValue);
+                            break;
+                        case AutoSpatialOptions.AutoSpatialMethodType.Point:
+                            if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, spatialOptions.MethodArguments[0], out var latValue) ==false)
+                                continue;
+
+                            if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, spatialOptions.MethodArguments[1], out var lngValue) ==false)
                                 continue;
 
                             value = StaticIndexBase.CreateSpatialField(spatialField, latValue, lngValue);
