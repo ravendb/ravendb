@@ -6,14 +6,14 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 {
     public static class RewritersHelper
     {
-        public static HashSet<string> ExtractFields(AnonymousObjectCreationExpressionSyntax anonymousObjectCreationExpressionSyntax)
+        public static HashSet<string> ExtractFields(AnonymousObjectCreationExpressionSyntax anonymousObjectCreationExpressionSyntax, bool retrieveOriginal = false)
         {
             var fields = new HashSet<string>();
             for (var i = 0; i < anonymousObjectCreationExpressionSyntax.Initializers.Count; i++)
             {
                 var initializer = anonymousObjectCreationExpressionSyntax.Initializers[i];
                 string name;
-                if (initializer.NameEquals != null)
+                if (initializer.NameEquals != null && retrieveOriginal == false)
                 {
                     name = initializer.NameEquals.Name.Identifier.Text;
                 }

@@ -154,7 +154,10 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
 
                     var parts = field.Split('=');
 
-                    GroupByFields[i] = parts[0].Trim();
+                    if (parts.Length == 1)
+                        GroupByFields[i] = parts[0].Trim();
+                    else
+                        GroupByFields[i] = parts[1].Trim();
                 }
 
                 return base.VisitGroupClause(node);
@@ -197,7 +200,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
                 }
                 else if (multipleGroupByFields != null)
                 {
-                    GroupByFields = RewritersHelper.ExtractFields(multipleGroupByFields).ToArray();
+                    GroupByFields = RewritersHelper.ExtractFields(multipleGroupByFields, retrieveOriginal: true).ToArray();
                 }
                 else if (literalGroupByField != null)
                 {
