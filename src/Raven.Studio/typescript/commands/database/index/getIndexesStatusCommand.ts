@@ -10,7 +10,7 @@ class getIndexesStatusCommand extends commandBase {
 
     execute(): JQueryPromise<Raven.Client.Documents.Indexes.IndexingStatus> {
         const url = endpoints.databases.index.indexesStatus;
-        return this.query(url, null, this.db)
+        return this.query<Raven.Client.Documents.Indexes.IndexingStatus>(url, null, this.db)
             .fail((response: JQueryXHR) => {
                 this.reportError("Failed to get indexing status!", response.responseText, response.statusText);
             });

@@ -2,6 +2,8 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import getIndexesStatsCommand = require("commands/database/index/getIndexesStatsCommand");
 import appUrl = require("common/appUrl");
+import app = require("durandal/app");
+import indexStalenessReasons = require("viewmodels/database/indexes/indexStalenessReasons");
 
 import statsModel = require("models/database/stats/statistics");
 
@@ -13,6 +15,12 @@ class statistics extends viewModelBase {
     private refreshStatsObservable = ko.observable<number>();
     private statsSubscription: KnockoutSubscription;
 
+    constructor() {
+        super();
+        
+        this.bindToCurrentInstance("showStaleReasons");
+    }
+    
     attached() {
         super.attached();
         this.statsSubscription = this.refreshStatsObservable.throttle(3000).subscribe((e) => this.fetchStats());
@@ -59,6 +67,11 @@ class statistics extends viewModelBase {
     
     urlForIndexPerformance(indexName: string) {
         return appUrl.forIndexPerformance(this.activeDatabase(), indexName);
+    }
+
+    showStaleReasons(indexName: string) {
+        const view = new indexStalenessReasons(this.activeDatabase(), indexName);
+        app.showBootstrapDialog(view);
     }
 }
 

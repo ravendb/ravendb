@@ -85,9 +85,11 @@
                                 <span class="text" data-bind="text: indexName"></span>
                             </a>
                         </h3>
-                        <span class="badge badge-warning pull-right flex-noshrink" data-bind="visible: isStale">Stale</span>
+                        <a href="#" title="Show stale reason" class=" pull-right flex-noshrink badge badge-warning" 
+                           data-bind="visible: isStale, click: _.partial($root.showStaleReasons, indexName)">
+                            Stale
+                        </a>
                     </div>
-
 
                     <div class="stats-item">
                         <div class="name">Index Etag:</div>

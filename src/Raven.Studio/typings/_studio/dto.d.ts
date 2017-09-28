@@ -322,6 +322,11 @@ interface layoutable {
     y: number;
 }
 
+interface indexStalenessReasonsResponse {
+    IsStale: boolean;
+    StalenessReasons: string[];
+}
+
 
 interface autoCompleteWordList {
     caption?: string; 
