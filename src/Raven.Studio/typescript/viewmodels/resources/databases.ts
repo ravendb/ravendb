@@ -21,6 +21,8 @@ import databaseInfo = require("models/resources/info/databaseInfo");
 import messagePublisher = require("common/messagePublisher");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import databaseGroupNode = require("models/resources/info/databaseGroupNode");
+import databaseNotificationCenterClient = require("common/databaseNotificationCenterClient");
+import changeSubscription = require("common/changeSubscription");
 
 class databases extends viewModelBase {
 
@@ -41,6 +43,8 @@ class databases extends viewModelBase {
 
     private static compactView = ko.observable<boolean>(false);
     compactView = databases.compactView;
+    
+    statsSubscription: changeSubscription;
 
     isGlobalAdmin = accessHelper.isGlobalAdmin;
     
@@ -84,14 +88,42 @@ class databases extends viewModelBase {
 
         this.addNotification(this.changesContext.serverNotifications().watchAllDatabaseChanges((e: Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged) => this.onDatabaseChange(e)));
         this.addNotification(this.changesContext.serverNotifications().watchReconnect(() => this.fetchDatabases()));
-
+        
+        this.registerDisposable(this.changesContext.databaseNotifications.subscribe((dbNotifications) => this.onDatabaseChanged(dbNotifications)));
+        
         return this.fetchDatabases();
+    }
+    
+    private onDatabaseChanged(dbChanges: databaseNotificationCenterClient) {
+        const database = dbChanges.getDatabase();
+        if (dbChanges) {
+            this.statsSubscription = dbChanges.watchAllDatabaseStatsChanged(stats => {
+                const matchedDatabase = this.databases().sortedDatabases().find(x => x.name === database.name);
+                if (matchedDatabase) {
+                    matchedDatabase.documentsCount(stats.CountOfDocuments);
+                    matchedDatabase.indexesCount(stats.CountOfIndexes);
+                }
+            });
+        } else {
+            if (this.statsSubscription) {
+                this.statsSubscription.off();
+                this.statsSubscription = null;
+            }
+        }
+        
     }
 
     attached() {
         super.attached();
         this.updateHelpLink("Z8DC3Q");
         this.updateUrl(appUrl.forDatabases());
+    }
+    
+    deactivate() {
+        if (this.statsSubscription) {
+            this.statsSubscription.off();
+            this.statsSubscription = null;
+        }
     }
 
     private fetchDatabases(): JQueryPromise<Raven.Client.ServerWide.Operations.DatabasesInfo> {

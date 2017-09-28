@@ -23,7 +23,7 @@ class footer {
 
     spinners = {
         loading: ko.observable<boolean>(false)
-    }
+    };
 
     urlForDocuments = ko.pureComputed(() => appUrl.forDocuments(null, this.db()));
     urlForIndexes = ko.pureComputed(() => appUrl.forIndexes(this.db()));
