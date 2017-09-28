@@ -1,172 +1,172 @@
 <div data-bind="if:  !isAutoIndex(), css: { 'content-margin': !isAutoIndex() }">
     <div class="flex-window edit-index">
 
-            <div class="toolbar">
-                <div class="row">
-                    <div class="col-lg-6">
-                        <div class="input-group toolbar" data-bind="validationElement: editedIndex().name">
-                            <div class="input-group-addon">Index name</div>
-                            <input class="form-control" data-bind="textInput: editedIndex().name, enable: canEditIndexName, hasFocus: indexNameHasFocus">
-                        </div>
-                    </div>
-                </div>
-                <div class="clearfix">
-                    <div class="pull-left-sm">
-                        <button class="btn btn-primary" data-bind="click: save, enable: isSaveEnabled(), css: { 'btn-spinner': saveInProgress }"><i class="icon-save"></i><span>Save</span></button>
-                        <a data-bind="attr: { href: indexesUrl }, visible: !isEditingExistingIndex()" class="btn btn-default"><i class="icon-cancel"></i> <span>Cancel</span></a>
-                        <button class="btn btn-default" data-bind="click: cloneIndex, visible: isEditingExistingIndex"><i class="icon-clone"></i><span>Clone</span></button>
-                        <button class="btn btn-danger" data-bind="visible: isEditingExistingIndex, click: deleteIndex"><i class="icon-trash"></i> <span>Delete</span></button>
-                    </div>
-                    <div class="btn-group pull-right-sm">
-                        <a data-bind="click: getCSharpCode, visible: isEditingExistingIndex" class="btn" title="Copy the index c# code"><i class="icon-code"></i> <span>Copy C#</span></a>
-                        <a data-bind="attr: { href: queryUrl }, visible: isEditingExistingIndex" class="btn" title="Query the index"><i class="icon-query"></i> <span>Query</span></a>
-                        <a data-bind="attr: { href: termsUrl }, visible: isEditingExistingIndex" class="btn" title="Navigate to index terms"><i class="icon-terms"></i> <span>Terms</span></a>
+        <div class="toolbar">
+            <div class="row">
+                <div class="col-lg-6">
+                    <div class="input-group toolbar" data-bind="validationElement: editedIndex().name">
+                        <div class="input-group-addon">Index name</div>
+                        <input class="form-control" data-bind="textInput: editedIndex().name, enable: canEditIndexName, hasFocus: indexNameHasFocus">
                     </div>
                 </div>
             </div>
-        
-            <div class="row">
-                <div class="col-sm-2">
-                    <h2 id="map-title">Maps <small><i class="icon-info text-info"></i></small></h2>
+            <div class="clearfix">
+                <div class="pull-left-sm">
+                    <button class="btn btn-primary" data-bind="click: save, enable: isSaveEnabled(), css: { 'btn-spinner': saveInProgress }"><i class="icon-save"></i><span>Save</span></button>
+                    <a data-bind="attr: { href: indexesUrl }, visible: !isEditingExistingIndex()" class="btn btn-default"><i class="icon-cancel"></i> <span>Cancel</span></a>
+                    <button class="btn btn-default" data-bind="click: cloneIndex, visible: isEditingExistingIndex"><i class="icon-clone"></i><span>Clone</span></button>
+                    <button class="btn btn-danger" data-bind="visible: isEditingExistingIndex, click: deleteIndex"><i class="icon-trash"></i> <span>Delete</span></button>
                 </div>
-                <div class="col-sm-10">
-                    <div data-bind="foreach: editedIndex().maps">
-                        <div class="clearfix">
-                            <div class="btn-group btn-group-sm pull-right" role="group" aria-label="...">
-                                <!-- <button type="button" class="btn"><i class="icon-indent"></i> <span>Format</span></button>-->
-                                <button type="button" class="btn btn-danger" data-bind="click: _.partial($root.removeMap, $index()), enable: $root.editedIndex().maps().length > 1"
-                                        title="Remove this map from the index">
-                                    <i class="icon-trash"></i> <span>Delete</span>
-                                </button>
-                            </div>
-                        </div>
-                        <!-- TODO: add ace props:
-                        readOnly: $parent.isSideBySideIndex(),
-                        -->
-                        <div class="margin-bottom">
-                            <pre class="form-control map"
-                                 data-bind="aceEditor: { code: map, allowResize: true, getFocus: true, lang: 'ace/mode/ravenMapLinq', typeName: 'map', completer: $root.indexAutoCompleter.indexMapCompleter  }, validationOptions: { errorsAsTitle: false }, validationElement: map"></pre>
+                <div class="btn-group pull-right-sm">
+                    <a data-bind="click: getCSharpCode, visible: isEditingExistingIndex" class="btn" title="Copy the index c# code"><i class="icon-code"></i> <span>Copy C#</span></a>
+                    <a data-bind="attr: { href: queryUrl }, visible: isEditingExistingIndex" class="btn" title="Query the index"><i class="icon-query"></i> <span>Query</span></a>
+                    <a data-bind="attr: { href: termsUrl }, visible: isEditingExistingIndex" class="btn" title="Navigate to index terms"><i class="icon-terms"></i> <span>Terms</span></a>
+                </div>
+            </div>
+        </div>
 
-                            <div data-bind="validationElement: map">
-                                <div class="help-block" data-bind="validationMessage: map"></div>
-                            </div>
+        <div class="row">
+            <div class="col-sm-2">
+                <h2 id="map-title">Maps <small><i class="icon-info text-info"></i></small></h2>
+            </div>
+            <div class="col-sm-10">
+                <div data-bind="foreach: editedIndex().maps">
+                    <div class="clearfix">
+                        <div class="btn-group btn-group-sm pull-right" role="group" aria-label="...">
+                            <button type="button" class="btn btn-default" data-bind="click: _.partial($root.formatIndex, $index())"><i class="icon-indent"></i><span>Format</span></button>
+                            <button type="button" class="btn btn-danger" data-bind="click: _.partial($root.removeMap, $index()), enable: $root.editedIndex().maps().length > 1"
+                                    title="Remove this map from the index">
+                                <i class="icon-trash"></i> <span>Delete</span>
+                            </button>
                         </div>
                     </div>
+                    <!-- TODO: add ace props:
+                    readOnly: $parent.isSideBySideIndex(),
+                    -->
                     <div class="margin-bottom">
-                        <button class="btn btn-info" data-bind="click: addMap">
-                            <i class="icon-plus"></i><span>Add map</span>
-                        </button>
+                        <pre class="form-control map"
+                             data-bind="aceEditor: { code: map, allowResize: true, getFocus: true, lang: 'ace/mode/ravenMapLinq', typeName: 'map', completer: $root.indexAutoCompleter.indexMapCompleter  }, validationOptions: { errorsAsTitle: false }, validationElement: map"></pre>
+
+                        <div data-bind="validationElement: map">
+                            <div class="help-block" data-bind="validationMessage: map"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="margin-bottom">
+                    <button class="btn btn-info" data-bind="click: addMap">
+                        <i class="icon-plus"></i><span>Add map</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm-2">
+                <h2 id="reduce-title">Reduce <small><i class="icon-info text-info"></i></small></h2>
+            </div>
+            <div class="col-sm-10">
+                <div data-bind="if: editedIndex().hasReduce">
+                    <div class="clearfix">
+                        <div class="btn-group btn-group-sm pull-right" role="group" aria-label="...">
+                            <button type="button" class="btn btn-default" data-bind="click: formatReduce"><i class="icon-indent"></i><span>Format</span></button>
+                            <button type="button" class="btn btn-danger" data-bind="click: removeReduce" title="Remove the Reduce function from the index">
+                                <i class="icon-trash"></i> <span>Delete</span>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- TODO add ace props:
+                    readOnly: $parent.isSideBySideIndex(),
+                    -->
+                    <div class="margin-bottom">
+                        <pre class="form-control map"
+                             data-bind="aceEditor: { code: editedIndex().reduce, allowResize: true, getFocus: true, lang: 'ace/mode/ravenReduceLinq', typeName: 'reduce', completer: $root.indexAutoCompleter.indexReduceCompleter }, validationOptions: { errorsAsTitle: false }, validationElement: editedIndex().reduce"></pre>
+
+                        <div data-bind="validationElement: editedIndex().reduce">
+                            <div class="help-block" data-bind="validationMessage: editedIndex().reduce"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="margin-bottom" data-bind="visible: !editedIndex().hasReduce()">
+                    <button class="btn btn-info" data-bind="click: addReduce">
+                        <i class="icon-plus"></i><span>Add reduction</span>
+                    </button>
+                </div>
+                <div class="flex-horizontal margin-bottom" data-bind="visible: editedIndex().hasReduce">
+                    <div class="checkbox checkbox-inline flex-start">
+                        <input id="outputToCollection" class="styled" type="checkbox" data-bind="checked: editedIndex().outputReduceToCollection">
+                        <label for="outputToCollection">
+                            Output reduce to collection
+                        </label>
+                    </div>
+                    <div data-bind="validationElement: editedIndex().reduceToCollectionName">
+                        <input type="text" class="form-control flex-grow has-error" placeholder="Enter collection name" data-bind="textInput: editedIndex().reduceToCollectionName, visible: editedIndex().outputReduceToCollection">
                     </div>
                 </div>
             </div>
-            <div class="row">
-                <div class="col-sm-2">
-                    <h2 id="reduce-title">Reduce <small><i class="icon-info text-info"></i></small></h2>
-                </div>
-                <div class="col-sm-10">
-                    <div data-bind="if: editedIndex().hasReduce">
-                        <div class="clearfix">
-                            <div class="btn-group btn-group-sm pull-right" role="group" aria-label="...">
-                                <!-- TODO <button type="button" class="btn"><i class="icon-indent"></i> <span>Format</span></button> -->
-                                <button type="button" class="btn btn-danger" data-bind="click: removeReduce" title="Remove the Reduce function from the index">
-                                    <i class="icon-trash"></i> <span>Delete</span>
-                                </button>
-                            </div>
-                        </div>
-                        <!-- TODO add ace props:
-                        readOnly: $parent.isSideBySideIndex(),
-                        -->
-                        <div class="margin-bottom">
-                            <pre class="form-control map"
-                                 data-bind="aceEditor: { code: editedIndex().reduce, allowResize: true, getFocus: true, lang: 'ace/mode/ravenReduceLinq', typeName: 'reduce', completer: $root.indexAutoCompleter.indexReduceCompleter }, validationOptions: { errorsAsTitle: false }, validationElement: editedIndex().reduce"></pre>
+        </div>
+        <div class="tabs">
+            <ul class="nav nav-tabs" role="tablist">
+                <li role="presentation" class="active">
+                    <a href="#fields" aria-controls="fields" role="tab" data-toggle="tab">
+                        <i class="icon-admin-logs"></i><span>Fields</span>
+                    </a>
+                </li>
+                <li role="presentation">
+                    <a href="#configure" aria-controls="configure" role="tab" data-toggle="tab">
+                        <i class="icon-settings"></i><span>Configuration</span>
+                    </a>
+                </li>
+            </ul>
 
-                            <div data-bind="validationElement: editedIndex().reduce">
-                                <div class="help-block" data-bind="validationMessage: editedIndex().reduce"></div>
-                            </div>
-                        </div>
+            <div class="tab-content">
+                <div role="tabpanel" class="tab-pane fade in active" id="fields">
+                    <div class="margin-bottom">
+                        <button class="btn btn-default" data-bind="click: addField"><i class="icon-plus"></i><span>Add field</span></button>
+                        <button class="btn btn-info" data-bind="click: addDefaultField, enable: !editedIndex().defaultFieldOptions()"><i class="icon-plus"></i><span>Add default field options</span></button>
                     </div>
-                    <div class="margin-bottom" data-bind="visible: !editedIndex().hasReduce()">
-                        <button class="btn btn-info" data-bind="click: addReduce">
-                            <i class="icon-plus"></i><span>Add reduction</span>
-                        </button>
+                    <div class="panel panel-info" data-bind="with: editedIndex().defaultFieldOptions">
+                        <div data-bind="template: { name: 'field-template'}"></div>
                     </div>
-                    <div class="flex-horizontal margin-bottom" data-bind="visible: editedIndex().hasReduce">
-                        <div class="checkbox checkbox-inline flex-start">
-                            <input id="outputToCollection" class="styled" type="checkbox" data-bind="checked: editedIndex().outputReduceToCollection">
-                            <label for="outputToCollection">
-                                Output reduce to collection
-                            </label>
-                        </div>
-                        <div data-bind="validationElement: editedIndex().reduceToCollectionName">
-                            <input type="text" class="form-control flex-grow has-error" placeholder="Enter collection name" data-bind="textInput: editedIndex().reduceToCollectionName, visible: editedIndex().outputReduceToCollection">
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="tabs">
-                <ul class="nav nav-tabs" role="tablist">
-                    <li role="presentation" class="active">
-                        <a href="#fields" aria-controls="fields" role="tab" data-toggle="tab">
-                            <i class="icon-admin-logs"></i><span>Fields</span>
-                        </a>
-                    </li>
-                    <li role="presentation">
-                        <a href="#configure" aria-controls="configure" role="tab" data-toggle="tab">
-                            <i class="icon-settings"></i><span>Configuration</span>
-                        </a>
-                    </li>
-                </ul>
 
-                <div class="tab-content">
-                    <div role="tabpanel" class="tab-pane fade in active" id="fields">
-                        <div class="margin-bottom">
-                            <button class="btn btn-default" data-bind="click: addField"><i class="icon-plus"></i><span>Add field</span></button>
-                            <button class="btn btn-info" data-bind="click: addDefaultField, enable: !editedIndex().defaultFieldOptions()"><i class="icon-plus"></i><span>Add default field options</span></button>
-                        </div>
-                        <div class="panel panel-info" data-bind="with: editedIndex().defaultFieldOptions">
+                    <div data-bind="foreach: editedIndex().fields">
+                        <div class="panel">
                             <div data-bind="template: { name: 'field-template'}"></div>
                         </div>
-
-                        <div data-bind="foreach: editedIndex().fields">
-                            <div class="panel">
-                                <div data-bind="template: { name: 'field-template'}"></div>
+                    </div>
+                </div>
+                <div role="tabpanel" class="tab-pane fade" id="configure">
+                    <div class="form-horizontal">
+                        <div data-bind="foreach: editedIndex().configuration">
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label" data-bind="visible: $index() === 0">Customized options</label>
+                                <div class="col-sm-6" data-bind="css: { 'col-sm-offset-2': $index() > 0 }, validationElement: key">
+                                    <input class="form-control" placeholder="Key" data-bind="textInput: key, attr: { id: 'configOption' + $index(), title: key }">
+                                    <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#' + 'configOption' + $index(), foreach: $root.createConfigurationOptionAutocompleter($data)">
+                                        <li role="presentation" data-bind="click: $parent.key.bind($parent, $data)">
+                                            <a role="menuitem" tabindex="-1" href="#">
+                                                <span data-bind="text: $data"></span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <div class="col-sm-3" data-bind="validationElement: value">
+                                    <input class="form-control" placeholder="Value" data-bind="textInput: value">
+                                </div>
+                                <div class="col-sm-1">
+                                    <button class="btn btn-danger" data-bind="click: _.partial($parent.removeConfigurationOption, $data)"><i class="icon-trash"></i></button>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div role="tabpanel" class="tab-pane fade" id="configure">
-                        <div class="form-horizontal">
-                            <div data-bind="foreach: editedIndex().configuration">
-                                <div class="form-group">
-                                    <label class="col-sm-2 control-label" data-bind="visible: $index() === 0">Customized options</label>
-                                    <div class="col-sm-6" data-bind="css: { 'col-sm-offset-2': $index() > 0 }, validationElement: key">
-                                        <input class="form-control" placeholder="Key" data-bind="textInput: key, attr: { id: 'configOption' + $index(), title: key }">
-                                        <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#' + 'configOption' + $index(), foreach: $root.createConfigurationOptionAutocompleter($data)">
-                                            <li role="presentation" data-bind="click: $parent.key.bind($parent, $data)">
-                                                <a role="menuitem" tabindex="-1" href="#">
-                                                    <span data-bind="text: $data"></span>
-                                                </a>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                    <div class="col-sm-3" data-bind="validationElement: value">
-                                        <input class="form-control" placeholder="Value" data-bind="textInput: value">
-                                    </div>
-                                    <div class="col-sm-1">
-                                        <button class="btn btn-danger" data-bind="click: _.partial($parent.removeConfigurationOption, $data)"><i class="icon-trash"></i></button>
-                                    </div>
-                                </div>
-                            </div>
 
-                            <div class="form-group">
-                                <div class="col-sm-offset-2 col-sm-10">
-                                    <button type="button" data-bind="click: addConfigurationOption" class="btn btn-info"><i class="icon-plus"></i> <span>Add customized option</span></button>
-                                </div>
+                        <div class="form-group">
+                            <div class="col-sm-offset-2 col-sm-10">
+                                <button type="button" data-bind="click: addConfigurationOption" class="btn btn-info"><i class="icon-plus"></i> <span>Add customized option</span></button>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        
+        </div>
+
     </div>
 
     <div class="backdrop"></div>
@@ -254,7 +254,7 @@
                     <div class="flex-horizontal flex-content-center">
                         <div class="flex-horizontal" data-bind="foreach: editedIndex().mapFields">
                             <div class="panel padding padding-sm flex-vertical" data-bind="template: { name: 'field-template-auto-index'}"></div>
-                            
+
                         </div>
                     </div>
                 </div>
@@ -274,7 +274,7 @@
         <span class="item" data-bind="css: { active : hasSearch}"><i class="icon-check"></i> <i class="icon-cancel"></i><span>Search</span></span>
         <span class="item" data-bind="css: { active : hasExact}"><i class="icon-check"></i> <i class="icon-cancel"></i><span>Exact</span></span>
     </div>
-    
+
 </script>
 <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ END AUTO INDEX ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 

@@ -43,6 +43,7 @@ using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.Smuggler.Migration;
 using Raven.Server.Utils;
+using Raven.Server.Web.Studio;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -164,6 +165,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(TermsQueryResult));
             scripter.AddType(typeof(IndexProgress));
             scripter.AddType(typeof(IndexErrors));
+            scripter.AddType(typeof(StudioTasksHandler.FormatedExpression));
 
             // cluster 
             scripter.AddType(typeof(ClusterTopology));

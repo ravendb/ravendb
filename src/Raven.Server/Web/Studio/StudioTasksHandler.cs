@@ -13,6 +13,7 @@ using Raven.Client;
 using Raven.Client.Exceptions;
 using Raven.Server.Routing;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.Studio
 {
@@ -41,18 +42,33 @@ namespace Raven.Server.Web.Studio
 
                     var result = Formatter.Format(expression, workspace);
 
+                    var formatedExpression = new FormatedExpression
+                    {
+                        Expression = result.ToString()
+                    };
+
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
-                        writer.WriteStartObject();
-                        writer.WritePropertyName("Expression");
-                        writer.WriteString(result.ToString());
-
-                        writer.WriteEndObject();
+                        context.Write(writer, formatedExpression.ToJson());
+                        writer.Flush();
                     }
                 }
             }
 
             return Task.CompletedTask;
+        }
+
+        public class FormatedExpression : IDynamicJson
+        {
+            public string Expression { get; set; }
+
+            public DynamicJsonValue ToJson()
+            {
+                return new DynamicJsonValue
+                {
+                    [nameof(Expression)] = Expression
+                };
+            }
         }
     }
 }
