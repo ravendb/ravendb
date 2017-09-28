@@ -57,7 +57,7 @@ class editSubscriptionTask extends viewModelBase {
             this.isAddingNewSubscriptionTask(false);
 
             // 1.1 Get general info
-            new ongoingTaskInfoCommand(this.activeDatabase(), "Subscription", args.taskId, args.taskName)
+            ongoingTaskInfoCommand.forSubscription(this.activeDatabase(), args.taskId, args.taskName)
                 .execute()
                 .done((result: Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails) => {
                     this.editedSubscription(new ongoingTaskSubscriptionEdit(result, false));
