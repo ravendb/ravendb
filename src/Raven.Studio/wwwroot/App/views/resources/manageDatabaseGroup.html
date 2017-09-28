@@ -2,17 +2,10 @@
     <div class="row flex-row flex-grow flex-stretch-items">
         <div class="col-sm-12 col-lg-6 flex-vertical">
             <div class="flex-header flex-horizontal">
-                <div class="dropdown flex-grow">
-                    <button class="btn btn-default btn-block dropdown-toggle" data-toggle="dropdown" data-bind="enable: additionalNodes().length">
-                        <span data-bind="text: selectedClusterNode() ? 'Node ' + selectedClusterNode() : 'Select cluster node'"></span>
-                        <span class="caret"></span>
-                    </button>
-                    <ul class="dropdown-menu" data-bind="foreach: additionalNodes">
-                        <li><a href="#" data-bind="text: 'Node ' + $data, click: $root.selectedClusterNode"></a></li>
-                    </ul>
+                <div class="flex-separator">
                 </div>
                 <div>
-                    <button class="btn btn-primary" data-bind="enable: addNodeEnabled, click: addNode, css: { 'btn-spinner': $root.spinners.addNode }">
+                    <button class="btn btn-primary" data-bind="click: addNode, enable: addNodeEnabled">
                         <i class="icon-plus"></i>
                         <span>Add node to group</span>
                     </button>
