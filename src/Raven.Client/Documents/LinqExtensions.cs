@@ -40,7 +40,9 @@ namespace Raven.Client.Documents
 
         private static MethodInfo _whereMethod3;
 
-        private static MethodInfo _spatialMethod;
+        private static MethodInfo _spatialMethodString;
+
+        private static MethodInfo _spatialMethodSpatialDynamicField;
 
         private static MethodInfo _orderByDistanceMethod;
 
@@ -1356,7 +1358,7 @@ namespace Raven.Client.Documents
 #if NETSTANDARD2_0
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 #else
-            var currentMethod = GetSpatialMethod();
+            var currentMethod = GetSpatialMethod(typeof(string));
 #endif
 
             var expression = ConvertExpressionIfNecessary(source);
@@ -1375,7 +1377,7 @@ namespace Raven.Client.Documents
 #if NETSTANDARD2_0
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 #else
-            var currentMethod = GetSpatialMethod(); // TODO [ppekrol]
+            var currentMethod = GetSpatialMethod(typeof(SpatialDynamicField)); // TODO [ppekrol]
 #endif
 
             var expression = ConvertExpressionIfNecessary(source);
@@ -1677,15 +1679,15 @@ namespace Raven.Client.Documents
             }
         }
 
-        private static MethodInfo GetSpatialMethod()
+        private static MethodInfo GetSpatialMethod(Type parameterType)
         {
-            var spatialMethod = _spatialMethod;
+            var spatialMethod = GetSpatialMethodInfo(parameterType);
             if (spatialMethod != null)
                 return spatialMethod;
 
             lock (Locker)
             {
-                spatialMethod = _spatialMethod;
+                spatialMethod = GetSpatialMethodInfo(parameterType);
                 if (spatialMethod != null)
                     return spatialMethod;
 
@@ -1698,14 +1700,14 @@ namespace Raven.Client.Documents
                     if (parameters.Length != 3)
                         continue;
 
-                    if (parameters[1].ParameterType != typeof(string))
+                    if (parameters[1].ParameterType != parameterType)
                         continue;
 
-                    _spatialMethod = method;
+                    SetSpatialMethodInfo(parameterType, method);
                     break;
                 }
 
-                return _spatialMethod;
+                return GetSpatialMethodInfo(parameterType);
             }
         }
 
@@ -1741,6 +1743,34 @@ namespace Raven.Client.Documents
 
                 return GetWhereMethodInfo(numberOfFuncArguments);
             }
+        }
+
+        private static MethodInfo GetSpatialMethodInfo(Type parameterType)
+        {
+            if (parameterType == typeof(string))
+                return _spatialMethodString;
+
+            if (parameterType == typeof(SpatialDynamicField))
+                return _spatialMethodSpatialDynamicField;
+
+            throw new NotSupportedException(parameterType.Name);
+        }
+
+        private static void SetSpatialMethodInfo(Type parameterType, MethodInfo methodInfo)
+        {
+            if (parameterType == typeof(string))
+            {
+                _spatialMethodString = methodInfo;
+                return;
+            }
+
+            if (parameterType == typeof(SpatialDynamicField))
+            {
+                _spatialMethodSpatialDynamicField = methodInfo;
+                return;
+            }
+
+            throw new NotSupportedException(parameterType.Name);
         }
 
         private static MethodInfo GetWhereMethodInfo(int numberOfFuncArguments)
