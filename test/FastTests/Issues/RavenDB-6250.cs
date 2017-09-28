@@ -28,7 +28,6 @@ namespace FastTests.Issues
             {
                 Operations.OperationType.UpdateByIndex,
                 Operations.OperationType.DeleteByIndex,
-                Operations.OperationType.UpdateByCollection,
                 Operations.OperationType.DeleteByCollection,
                 Operations.OperationType.DatabaseExport,
                 Operations.OperationType.DatabaseImport,
