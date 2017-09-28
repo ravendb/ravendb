@@ -4,14 +4,14 @@ import app = require("durandal/app");
 import getDatabaseCommand = require("commands/resources/getDatabaseCommand");
 import databaseInfo = require("models/resources/info/databaseInfo");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
-import addNodeToDatabaseGroupCommand = require("commands/database/dbGroup/addNodeToDatabaseGroupCommand");
+
 import databaseGroupNode = require("models/resources/info/databaseGroupNode");
 import deleteDatabaseFromNodeCommand = require("commands/resources/deleteDatabaseFromNodeCommand");
 import databaseGroupGraph = require("models/database/dbGroup/databaseGroupGraph");
 import ongoingTasksCommand = require("commands/database/tasks/getOngoingTasksCommand");
 import toggleDynamicNodeAssignmentCommand = require("commands/database/dbGroup/toggleDynamicNodeAssignmentCommand");
 import showDataDialog = require("viewmodels/common/showDataDialog");
-import defineNodeEncryptionKey = require("viewmodels/resources/defineNodeEncryptionKey");
+import addNewNodeToDatabaseGroup = require("viewmodels/resources/addNewNodeToDatabaseGroup");
 
 class manageDatabaseGroup extends viewModelBase {
 
@@ -22,12 +22,7 @@ class manageDatabaseGroup extends viewModelBase {
 
     nodeTag = clusterTopologyManager.default.localNodeTag;
     nodes: KnockoutComputed<databaseGroupNode[]>;
-    additionalNodes: KnockoutComputed<string[]>;
     addNodeEnabled: KnockoutComputed<boolean>;
-
-    spinners = {
-        addNode: ko.observable<boolean>(false)
-    };
 
     constructor() {
         super();
@@ -43,16 +38,10 @@ class manageDatabaseGroup extends viewModelBase {
             return dbInfo.nodes();
         });
 
-        this.additionalNodes = ko.pureComputed<string[]>(() => {
+        this.addNodeEnabled = ko.pureComputed(() => {
             const tags = clusterTopologyManager.default.topology().nodes().map(x => x.tag());
             const existingTags = this.nodes().map(x => x.tag());
-            return _.without(tags, ...existingTags);
-        });
-
-        this.addNodeEnabled = ko.pureComputed(() => {
-            const nodeSelected = !!this.selectedClusterNode();
-            const inProgress = this.spinners.addNode();
-            return nodeSelected && !inProgress;
+            return _.without(tags, ...existingTags).length > 0;
         });
     }
 
@@ -110,31 +99,10 @@ class manageDatabaseGroup extends viewModelBase {
     }
 
     addNode() {
-        if (this.currentDatabaseInfo().isEncrypted()) {
-            const addKeyView = new defineNodeEncryptionKey(this.activeDatabase().name, this.selectedClusterNode());
-            
-            app.showBootstrapDialog(addKeyView)
-                .done(result => {
-                    if (result) {
-                        this.addNodeInternal();
-                    }
-                });
-        } else {
-            this.addNodeInternal();
-        }
+        const addKeyView = new addNewNodeToDatabaseGroup(this.currentDatabaseInfo(), this.currentDatabaseInfo().isEncrypted());
+        app.showBootstrapDialog(addKeyView);
     }
     
-    addNodeInternal() {
-        this.spinners.addNode(true);
-
-        new addNodeToDatabaseGroupCommand(this.activeDatabase().name, this.selectedClusterNode())
-            .execute()
-            .done(() => {
-                this.selectedClusterNode(null);
-            })
-            .always(() => this.spinners.addNode(false));
-    }
-
     deleteNodeFromGroup(node: databaseGroupNode, hardDelete: boolean) {
         const db = this.activeDatabase();
         const nodeTag = node.tag();

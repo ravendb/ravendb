@@ -1,17 +1,6 @@
-import dialog = require("plugins/dialog");
-import database = require("models/resources/database");
-import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
-import databasesManager = require("common/shell/databasesManager");
-import createDatabaseCommand = require("commands/resources/createDatabaseCommand");
-import restoreDatabaseFromBackupCommand = require("commands/resources/restoreDatabaseFromBackupCommand");
-import getClusterTopologyCommand = require("commands/database/cluster/getClusterTopologyCommand");
 import generateSecretCommand = require("commands/database/secrets/generateSecretCommand");
 import distributeSecretCommand = require("commands/database/secrets/distributeSecretCommand");
-import clusterTopology = require("models/database/cluster/clusterTopology");
-import clusterNode = require("models/database/cluster/clusterNode");
 import copyToClipboard = require("common/copyToClipboard");
-import databaseCreationModel = require("models/resources/creation/databaseCreationModel");
-import eventsCollector = require("common/eventsCollector");
 import fileDownloader = require("common/fileDownloader")
 
 class setupEncryptionKey {
