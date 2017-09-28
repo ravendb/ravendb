@@ -24,7 +24,7 @@ namespace Raven.Server.Smuggler.Documents
 {
     public class StreamSource : ISmugglerSource
     {
-        private readonly Stream _stream;
+        private readonly PeepingTomStream _peepingTomStream;
         private readonly DocumentsOperationContext _context;
         private JsonOperationContext.ManagedPinnedBuffer _buffer;
         private JsonOperationContext.ReturnBuffer _returnBuffer;
@@ -42,7 +42,7 @@ namespace Raven.Server.Smuggler.Documents
 
         public StreamSource(Stream stream, DocumentsOperationContext context)
         {
-            _stream = stream;
+            _peepingTomStream = new PeepingTomStream(stream);
             _context = context;
         }
 
@@ -53,7 +53,7 @@ namespace Raven.Server.Smuggler.Documents
             _state = new JsonParserState();
             _parser = new UnmanagedJsonParser(_context, _state, "file");
 
-            if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
+            if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
                 ThrowInvalidJson("Unexpected end of json.");
 
             if (_state.CurrentTokenType != JsonParserToken.StartObject)
@@ -192,7 +192,7 @@ namespace Raven.Server.Smuggler.Documents
 
         private unsafe string ReadType()
         {
-            if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
+            if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
                 ThrowInvalidJson("Unexpected end of object when reading type");
 
             if (_state.CurrentTokenType == JsonParserToken.EndObject)
@@ -211,7 +211,7 @@ namespace Raven.Server.Smuggler.Documents
 
         private void ReadObject(BlittableJsonDocumentBuilder builder)
         {
-            UnmanagedJsonParserHelper.ReadObject(builder, _stream, _parser, _buffer);
+            UnmanagedJsonParserHelper.ReadObject(builder, _peepingTomStream, _parser, _buffer);
 
             _totalObjectsRead.Add(builder.SizeInBytes, SizeUnit.Bytes);
         }
@@ -228,7 +228,7 @@ namespace Raven.Server.Smuggler.Documents
                 return 0;
             }
 
-            if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
+            if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
                 ThrowInvalidJson("Unexpected end of json.");
 
             if (_state.CurrentTokenType != JsonParserToken.Integer)
@@ -250,7 +250,7 @@ namespace Raven.Server.Smuggler.Documents
 
         private IEnumerable<BlittableJsonReaderObject> ReadArray(INewDocumentActions actions = null)
         {
-            if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
+            if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
                 ThrowInvalidJson("Unexpected end of json");
 
             if (_state.CurrentTokenType != JsonParserToken.StartArray)
@@ -261,7 +261,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 while (true)
                 {
-                    if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
+                    if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
                         ThrowInvalidJson("Unexpected end of json while reading array");
 
                     if (_state.CurrentTokenType == JsonParserToken.EndArray)
@@ -292,7 +292,7 @@ namespace Raven.Server.Smuggler.Documents
 
         private IEnumerable<DocumentItem> ReadLegacyAttachments(INewDocumentActions actions)
         {
-            if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
+            if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
                 ThrowInvalidJson("Unexpected end of json");
 
             if (_state.CurrentTokenType != JsonParserToken.StartArray)
@@ -305,7 +305,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 while (true)
                 {
-                    if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
+                    if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
                         ThrowInvalidJson("Unexpected end of json while reading legacy attachments");
 
                     if (_state.CurrentTokenType == JsonParserToken.EndArray)
@@ -383,7 +383,7 @@ namespace Raven.Server.Smuggler.Documents
 
         private IEnumerable<DocumentItem> ReadDocuments(INewDocumentActions actions = null)
         {
-            if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
+            if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
                 ThrowInvalidJson("Unexpected end of json");
 
             if (_state.CurrentTokenType != JsonParserToken.StartArray)
@@ -397,7 +397,7 @@ namespace Raven.Server.Smuggler.Documents
                 List<DocumentItem.AttachmentStream> attachments = null;
                 while (true)
                 {
-                    if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
+                    if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
                         ThrowInvalidJson("Unexpected end of json while reading docs");
 
                     if (_state.CurrentTokenType == JsonParserToken.EndArray)
@@ -459,7 +459,7 @@ namespace Raven.Server.Smuggler.Documents
 
         private IEnumerable<DocumentTombstone> ReadTombstones(INewDocumentActions actions = null)
         {
-            if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
+            if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
                 ThrowInvalidJson("Unexpected end of json");
 
             if (_state.CurrentTokenType != JsonParserToken.StartArray)
@@ -471,7 +471,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 while (true)
                 {
-                    if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
+                    if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
                         ThrowInvalidJson("Unexpected end of json while reading docs");
 
                     if (_state.CurrentTokenType == JsonParserToken.EndArray)
@@ -590,7 +590,7 @@ namespace Raven.Server.Smuggler.Documents
                 attachment.Stream.Write(_writeBuffer.Buffer.Array, _writeBuffer.Buffer.Offset, read.bytesRead);
                 if (read.done == false)
                 {
-                    var read2 = _stream.Read(_buffer.Buffer.Array, _buffer.Buffer.Offset, _buffer.Length);
+                    var read2 = _peepingTomStream.Read(_buffer.Buffer.Array, _buffer.Buffer.Offset, _buffer.Length);
                     if (read2 == 0)
                         throw new EndOfStreamException("Stream ended without reaching end of stream content");
 
