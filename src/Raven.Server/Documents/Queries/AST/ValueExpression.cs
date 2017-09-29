@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.Queries.AST
 
         public override string GetText()
         {
-            return ToString();
+            return Token;
         }
     }
 }
