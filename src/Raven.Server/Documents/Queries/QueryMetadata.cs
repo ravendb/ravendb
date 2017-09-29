@@ -987,7 +987,7 @@ namespace Raven.Server.Documents.Queries
                 AutoSpatialOptions fieldOptions = null;
                 string fieldName;
                 if (_metadata.IsDynamic == false)
-                    fieldName = ExtractFieldNameFromFirstArgument(arguments, methodName, parameters);
+                    fieldName = _metadata.ExtractFieldNameFromFirstArgument(arguments, methodName, parameters);
                 else
                 {
                     if (!(arguments[0] is MethodExpression spatialExpression))
