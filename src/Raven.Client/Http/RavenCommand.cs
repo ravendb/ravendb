@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Extensions;
+using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Client.Http
@@ -136,6 +137,21 @@ namespace Raven.Client.Http
         protected static void ThrowInvalidResponse()
         {
             throw new InvalidDataException("Response is invalid.");
+        }
+
+        public static void ThrowInvalidJsonResponse(PeepingTomStream peepingTomStream)
+        {
+            string s;
+            try
+            {
+                s = Encodings.Utf8.GetString(peepingTomStream.PeepInReadStream());
+            }
+            catch (Exception e)
+            {
+                s = e.Message;
+            }
+
+            throw new InvalidDataException("Response is invalid JSON: " + s);
         }
 
         protected void AddChangeVectorIfNotNull(string changeVector, HttpRequestMessage request)

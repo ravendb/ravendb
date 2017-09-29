@@ -1,24 +1,27 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 
 namespace Sparrow.Json.Parsing
 {
+    
+
     public static class UnmanagedJsonParserHelper
     {
-        public static unsafe string ReadString(JsonOperationContext context, Stream stream, UnmanagedJsonParser parser, JsonParserState state, JsonOperationContext.ManagedPinnedBuffer buffer)
+        public static unsafe string ReadString(JsonOperationContext context, PeepingTomStream peepingTomStream, UnmanagedJsonParser parser, JsonParserState state, JsonOperationContext.ManagedPinnedBuffer buffer)
         {
-            if (Read(stream, parser, state, buffer) == false)
-                ThrowInvalidJson();
+            if (Read(peepingTomStream, parser, state, buffer) == false)
+                ThrowInvalidJson(peepingTomStream);
 
             if (state.CurrentTokenType != JsonParserToken.String)
-                ThrowInvalidJson();
+                ThrowInvalidJson(peepingTomStream);
 
             return context.AllocateStringValue(null, state.StringBuffer, state.StringSize).ToString();
         }
 
-        public static bool Read(Stream stream, UnmanagedJsonParser parser, JsonParserState state, JsonOperationContext.ManagedPinnedBuffer buffer)
+        public static bool Read(PeepingTomStream stream, UnmanagedJsonParser parser, JsonParserState state, JsonOperationContext.ManagedPinnedBuffer buffer)
         {
             while (parser.Read() == false)
             {
@@ -54,19 +57,36 @@ namespace Sparrow.Json.Parsing
             return parser.Read();
         }
 
-        public static void ThrowInvalidJson()
+        public static void ThrowInvalidJson(PeepingTomStream peepingTomStream)
         {
-            throw new InvalidOperationException("Invalid JSON.");
+            string s = GetPeepingTomBufferAsString(peepingTomStream);
+
+            throw new InvalidOperationException("Invalid JSON: " + s);
         }
 
-        public static void ReadObject(BlittableJsonDocumentBuilder builder, Stream stream, UnmanagedJsonParser parser, JsonOperationContext.ManagedPinnedBuffer buffer)
+        private static string GetPeepingTomBufferAsString(PeepingTomStream peepingTomStream)
+        {
+            string s;
+            try
+            {
+                s = Encodings.Utf8.GetString(peepingTomStream.PeepInReadStream());
+            }
+            catch (Exception e)
+            {
+                s = e.Message;
+            }
+
+            return s;
+        }
+
+        public static void ReadObject(BlittableJsonDocumentBuilder builder, PeepingTomStream stream, UnmanagedJsonParser parser, JsonOperationContext.ManagedPinnedBuffer buffer)
         {
             builder.ReadNestedObject();
             while (builder.Read() == false)
             {
                 var read = stream.Read(buffer.Buffer.Array, buffer.Buffer.Offset, buffer.Length);
                 if (read == 0)
-                    throw new EndOfStreamException("Stream ended without reaching end of json content");
+                    throw new EndOfStreamException("Stream ended without reaching end of json content" + GetPeepingTomBufferAsString(stream));
 
                 parser.SetBuffer(buffer, 0, read);
             }
@@ -75,11 +95,12 @@ namespace Sparrow.Json.Parsing
 
         public static long ReadLong(JsonOperationContext context, Stream stream, UnmanagedJsonParser parser, JsonParserState state, JsonOperationContext.ManagedPinnedBuffer buffer)
         {
-            if (Read(stream, parser, state, buffer) == false)
-                ThrowInvalidJson();
+            var peepingTomStream = new PeepingTomStream(stream);
+            if (Read(peepingTomStream, parser, state, buffer) == false)
+                ThrowInvalidJson(peepingTomStream);
 
             if (state.CurrentTokenType != JsonParserToken.Integer)
-                ThrowInvalidJson();
+                ThrowInvalidJson(peepingTomStream);
 
             return state.Long;
         }
@@ -98,25 +119,25 @@ namespace Sparrow.Json.Parsing
             builder.FinalizeDocument();
         }
 
-        public static IEnumerable<BlittableJsonReaderObject> ReadArrayToMemory(JsonOperationContext context, Stream stream, UnmanagedJsonParser parser, JsonParserState state, JsonOperationContext.ManagedPinnedBuffer buffer)
+        public static IEnumerable<BlittableJsonReaderObject> ReadArrayToMemory(JsonOperationContext context, PeepingTomStream peepingTomStream, UnmanagedJsonParser parser, JsonParserState state, JsonOperationContext.ManagedPinnedBuffer buffer)
         {
-            if (Read(stream, parser, state, buffer) == false)
-                ThrowInvalidJson();
+            if (Read(peepingTomStream, parser, state, buffer) == false)
+                ThrowInvalidJson(peepingTomStream);
 
             if (state.CurrentTokenType != JsonParserToken.StartArray)
-                ThrowInvalidJson();
+                ThrowInvalidJson(peepingTomStream);
 
             while (true)
             {
-                if (Read(stream, parser, state, buffer) == false)
-                    ThrowInvalidJson();
+                if (Read(peepingTomStream, parser, state, buffer) == false)
+                    ThrowInvalidJson(peepingTomStream);
 
                 if (state.CurrentTokenType == JsonParserToken.EndArray)
                     break;
 
                 using (var builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, "readArray/singleResult", parser, state))
                 {
-                    ReadObject(builder, stream, parser, buffer);
+                    ReadObject(builder, peepingTomStream, parser, buffer);
 
                     yield return builder.CreateReader();
                 }
