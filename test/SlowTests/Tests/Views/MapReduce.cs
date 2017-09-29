@@ -4,9 +4,11 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Threading;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents;
@@ -111,10 +113,18 @@ select new {
 
                     WaitForIndexing(store);
 
-                    var index = store.Admin.Send(new GetIndexStatisticsOperation("CommentsCountPerBlog"));
+                    IndexStats stats = null;
+
+                    Assert.True(SpinWait.SpinUntil(() =>
+                    {
+                        stats = store.Admin.Send(new GetIndexStatisticsOperation("CommentsCountPerBlog"));
+
+                        return stats.ReduceAttempts != null;
+                    }, TimeSpan.FromSeconds(5)));
+
                     // we add 100 because we might have reduces running in the middle of the operation
-                    Assert.True((1024 + 100) >= index.ReduceAttempts.Value,
-                        "1024 + 100 >= " + index.ReduceAttempts + " failed");
+                    Assert.True((1024 + 100) >= stats.ReduceAttempts.Value,
+                        "1024 + 100 >= " + stats.ReduceAttempts + " failed");
                 }
             }
         }
