@@ -2,6 +2,7 @@ import app = require("durandal/app");
 import router = require("plugins/router");
 import viewModelBase = require("viewmodels/viewModelBase");
 import document = require("models/database/documents/document");
+import dialog = require("plugins/dialog");
 import indexDefinition = require("models/database/index/indexDefinition");
 import autoIndexDefinition = require("models/database/index/autoIndexDefinition");
 import getIndexDefinitionCommand = require("commands/database/index/getIndexDefinitionCommand");
