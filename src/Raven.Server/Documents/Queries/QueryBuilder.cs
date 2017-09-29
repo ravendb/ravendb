@@ -458,9 +458,16 @@ namespace Raven.Server.Documents.Queries
             if (expression.Arguments.Count == 3)
             {
                 var fieldExpression = (FieldExpression)expression.Arguments[2];
+                if (fieldExpression.Compound.Count != 1)
+                    ThrowInvalidOperatorInSearch(metadata, parameters, fieldExpression);
+
                 var op = fieldExpression.Compound[0];
-                if (string.Equals("AND", op, StringComparison.OrdinalIgnoreCase) && fieldExpression.Compound.Count == 1)
+                if (string.Equals("AND", op, StringComparison.OrdinalIgnoreCase))
                     occur = Occur.MUST;
+                else if (string.Equals("OR", op, StringComparison.OrdinalIgnoreCase))
+                    occur = Occur.SHOULD;
+                else
+                    ThrowInvalidOperatorInSearch(metadata, parameters, fieldExpression);
             }
 
             var q = new BooleanQuery();
@@ -942,11 +949,9 @@ namespace Raven.Server.Documents.Queries
             throw new NotSupportedException($"Unhandled token type: {type}");
         }
 
-        private static void ThrowInvalidParameterType(ValueTokenType expectedValueType, object parameterValue, ValueTokenType parameterValueType, string queryText,
-            BlittableJsonReaderObject parameters)
+        private static void ThrowInvalidOperatorInSearch(QueryMetadata metadata, BlittableJsonReaderObject parameters, FieldExpression fieldExpression)
         {
-            throw new InvalidQueryException("Expected parameter to be " + expectedValueType + " but was " + parameterValueType + ": " + parameterValue, queryText,
-                parameters);
+            throw new InvalidQueryException($"Supported operators in search() method are 'OR' or 'AND' but was '{fieldExpression.FieldValue}'", metadata.QueryText, parameters);
         }
 
         private static void ThrowInvalidParameterType(ValueTokenType expectedValueType, (object Value, ValueTokenType Type) item, string queryText,
@@ -955,20 +960,10 @@ namespace Raven.Server.Documents.Queries
             throw new InvalidQueryException("Expected query parameter to be " + expectedValueType + " but was " + item.Type + ": " + item.Value, queryText, parameters);
         }
 
-        private static void ThrowUnhandledExpressionOperatorType(string type, string queryText, BlittableJsonReaderObject parameters)
-        {
-            throw new InvalidQueryException($"Unhandled expression operator type: {type}", queryText, parameters);
-        }
-
         private static void ThrowMethodExpectsArgumentOfTheFollowingType(string methodName, ValueTokenType expectedType, ValueTokenType gotType, string queryText,
             BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException($"Method {methodName}() expects to get an argument of type {expectedType} while it got {gotType}", queryText, parameters);
-        }
-
-        private static void ThrowMethodExpectsOperatorAfterInvocation(string methodName, string queryText, BlittableJsonReaderObject parameters)
-        {
-            throw new InvalidQueryException($"Method {methodName}() expects operator after its invocation", queryText, parameters);
         }
 
         public static void ThrowParametersWereNotProvided(string queryText)
