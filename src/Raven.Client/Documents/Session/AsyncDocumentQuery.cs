@@ -319,13 +319,6 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IAsyncDocumentQuery<T> IAsyncRawDocumentQuery<T>.RawQuery(string query)
-        {
-            RawQuery(query);
-            return this;
-        }
-
-        /// <inheritdoc />
         IAsyncDocumentQuery<T> IAsyncRawDocumentQuery<T>.AddParameter(string name, object value)
         {
             AddParameter(name, value);
