@@ -95,14 +95,23 @@ class databases extends viewModelBase {
     }
     
     private onDatabaseChanged(dbChanges: databaseNotificationCenterClient) {
-        const database = dbChanges.getDatabase();
         if (dbChanges) {
+
+            const database = dbChanges.getDatabase();
+
+            const throttledUpdate = _.throttle(() => {
+                this.updateDatabaseInfo(database.name);
+            }, 10000);
+            
             this.statsSubscription = dbChanges.watchAllDatabaseStatsChanged(stats => {
                 const matchedDatabase = this.databases().sortedDatabases().find(x => x.name === database.name);
                 if (matchedDatabase) {
                     matchedDatabase.documentsCount(stats.CountOfDocuments);
                     matchedDatabase.indexesCount(stats.CountOfIndexes);
                 }
+                
+                // schedule update of other properties
+                throttledUpdate();
             });
         } else {
             if (this.statsSubscription) {
