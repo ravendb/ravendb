@@ -918,7 +918,7 @@ namespace Raven.Server.Documents.Queries
                     case MethodType.EndsWith:
                     case MethodType.Search:
                     case MethodType.Lucene:
-                        fieldName = ExtractFieldNameFromFirstArgument(arguments, methodName, parameters);
+                        fieldName = _metadata.ExtractFieldNameFromFirstArgument(arguments, methodName, parameters);
 
                         if (arguments.Count == 1)
                             throw new InvalidQueryException($"Method {methodName}() expects second argument to be provided", QueryText, parameters);
@@ -933,7 +933,7 @@ namespace Raven.Server.Documents.Queries
                             _metadata.AddWhereField(fieldName, parameters, exact: _insideExact > 0);
                         break;
                     case MethodType.Exists:
-                        fieldName = ExtractFieldNameFromFirstArgument(arguments, methodName, parameters);
+                        fieldName = _metadata.ExtractFieldNameFromFirstArgument(arguments, methodName, parameters);
                         _metadata.AddExistField(fieldName, parameters);
                         break;
                     case MethodType.Boost:
@@ -1079,14 +1079,22 @@ namespace Raven.Server.Documents.Queries
 
                 _metadata.AddWhereField(f.FieldValue, parameters);
             }
+        }
 
-            private string ExtractFieldNameFromFirstArgument(List<QueryExpression> arguments, string methodName, BlittableJsonReaderObject parameters)
-            {
-                if (!(arguments[0] is FieldExpression fieldArgument))
-                    throw new InvalidQueryException($"Method {methodName}() expects a field name as its first argument", QueryText, parameters);
+        private string ExtractFieldNameFromFirstArgument(List<QueryExpression> arguments, string methodName, BlittableJsonReaderObject parameters)
+        {
+            if (arguments == null || arguments.Count == 0)
+                throw new InvalidQueryException($"Method {methodName}() expects a field name as its first argument but no arguments were passed", QueryText, parameters);
 
-                return fieldArgument.FieldValue;
-            }
+            var argument = arguments[0];
+
+            if (argument is FieldExpression field)
+                return field.FieldValue;
+
+            if (argument is ValueExpression value) // escaped string will go there
+                return value.Token;
+
+            throw new InvalidQueryException($"Method {methodName}() expects a field name as its first argument", QueryText, parameters);
         }
 
         public string GetUpdateBody(BlittableJsonReaderObject parameters)

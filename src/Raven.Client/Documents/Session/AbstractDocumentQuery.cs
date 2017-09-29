@@ -496,13 +496,12 @@ If you really want to do in memory filtering on the data returned from the query
                 return;
             }
 
-            whereParams.FieldName = EnsureValidFieldName(whereParams.FieldName, whereParams.IsNestedPath);
-
             var transformToEqualValue = TransformValue(whereParams);
             LastEquality = new KeyValuePair<string, object>(whereParams.FieldName, transformToEqualValue);
 
             AppendOperatorIfNeeded(WhereTokens);
 
+            whereParams.FieldName = EnsureValidFieldName(whereParams.FieldName, whereParams.IsNestedPath);
             WhereTokens.AddLast(WhereToken.Equals(whereParams.FieldName, AddQueryParameter(transformToEqualValue), whereParams.Exact));
         }
 
@@ -531,13 +530,12 @@ If you really want to do in memory filtering on the data returned from the query
                 return;
             }
 
-            whereParams.FieldName = EnsureValidFieldName(whereParams.FieldName, whereParams.IsNestedPath);
-
             var transformToEqualValue = TransformValue(whereParams);
             LastEquality = new KeyValuePair<string, object>(whereParams.FieldName, transformToEqualValue);
 
             AppendOperatorIfNeeded(WhereTokens);
 
+            whereParams.FieldName = EnsureValidFieldName(whereParams.FieldName, whereParams.IsNestedPath);
             WhereTokens.AddLast(WhereToken.NotEquals(whereParams.FieldName, AddQueryParameter(transformToEqualValue), whereParams.Exact));
         }
 
@@ -576,12 +574,12 @@ If you really want to do in memory filtering on the data returned from the query
                 AllowWildcards = true
             };
 
-            whereParams.FieldName = EnsureValidFieldName(whereParams.FieldName, whereParams.IsNestedPath);
-
             var transformToEqualValue = TransformValue(whereParams);
             LastEquality = new KeyValuePair<string, object>(whereParams.FieldName, transformToEqualValue);
 
             AppendOperatorIfNeeded(WhereTokens);
+
+            whereParams.FieldName = EnsureValidFieldName(whereParams.FieldName, whereParams.IsNestedPath);
             NegateIfNeeded(whereParams.FieldName);
 
             WhereTokens.AddLast(WhereToken.StartsWith(whereParams.FieldName, AddQueryParameter(transformToEqualValue)));
@@ -601,12 +599,12 @@ If you really want to do in memory filtering on the data returned from the query
                 AllowWildcards = true
             };
 
-            whereParams.FieldName = EnsureValidFieldName(whereParams.FieldName, whereParams.IsNestedPath);
-
             var transformToEqualValue = TransformValue(whereParams);
             LastEquality = new KeyValuePair<string, object>(whereParams.FieldName, transformToEqualValue);
 
             AppendOperatorIfNeeded(WhereTokens);
+
+            whereParams.FieldName = EnsureValidFieldName(whereParams.FieldName, whereParams.IsNestedPath);
             NegateIfNeeded(whereParams.FieldName);
 
             WhereTokens.AddLast(WhereToken.EndsWith(whereParams.FieldName, AddQueryParameter(transformToEqualValue)));
@@ -925,15 +923,15 @@ If you really want to do in memory filtering on the data returned from the query
         /// </summary>
         public void Search(string fieldName, string searchTerms, SearchOperator @operator = SearchOperator.Or)
         {
-            fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
-
-            AppendOperatorIfNeeded(WhereTokens);
-            NegateIfNeeded(fieldName);
-
             var hasWhiteSpace = searchTerms.Any(char.IsWhiteSpace);
             LastEquality = new KeyValuePair<string, object>(fieldName,
                 hasWhiteSpace ? "(" + searchTerms + ")" : searchTerms
             );
+
+            AppendOperatorIfNeeded(WhereTokens);
+
+            fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
+            NegateIfNeeded(fieldName);
 
             WhereTokens.AddLast(WhereToken.Search(fieldName, AddQueryParameter(searchTerms), @operator));
         }
