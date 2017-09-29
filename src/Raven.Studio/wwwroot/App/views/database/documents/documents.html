@@ -71,7 +71,8 @@
 </div>
 
 <script type="text/html" id="empty-collection-template">
-    Collection is empty
+    <div data-bind="text: $root.currentCollection().isAllDocuments ? 'There are no documents in the database' : 'Collection is empty'">
+    </div>
 </script>
 <div class="tooltip json-preview" style="opacity: 0">
     <pre><code></code></pre>
