@@ -292,12 +292,8 @@ namespace Raven.Server.Documents.Queries
                             valueAsString = valueAsLong.ToString(CultureInfo.InvariantCulture);
                             break;
                         case ValueTokenType.Double:
-                            var lnv = (LazyNumberValue)value;
-
-                            if (LuceneDocumentConverterBase.TryToTrimTrailingZeros(lnv, context, out var doubleAsString) == false)
-                                doubleAsString = lnv.Inner;
-
-                            valueAsString = doubleAsString.ToString();
+                            var valueAsDbl = (double)value;
+                            valueAsString = valueAsDbl.ToString("G");
                             break;
                         default:
                             valueAsString = value?.ToString();
@@ -502,7 +498,7 @@ namespace Raven.Server.Documents.Queries
                 var spatialExpression = (MethodExpression)expression.Arguments[0];
                 fieldName = spatialExpression.GetText();
             }
-            
+
             var shapeExpression = (MethodExpression)expression.Arguments[1];
 
             var distanceErrorPct = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct;
@@ -654,7 +650,7 @@ namespace Raven.Server.Documents.Queries
 
                 var parameterValueType = GetValueTokenType(parameterValue, metadata.QueryText, parameters);
 
-                yield return (parameterValue, parameterValueType);
+                yield return (UnwrapParameter(parameterValue, parameterValueType), parameterValueType);
                 yield break;
             }
 
@@ -691,7 +687,6 @@ namespace Raven.Server.Documents.Queries
             var value = expr as ValueExpression;
             if (value == null)
                 throw new InvalidQueryException("Expected value, but got: " + expr, query.QueryText, parameters);
-
 
             if (value.Value == ValueTokenType.Parameter)
             {
@@ -793,8 +788,7 @@ namespace Raven.Server.Documents.Queries
         {
             foreach (var item in array)
             {
-                var innerArray = item as BlittableJsonReaderArray;
-                if (innerArray != null)
+                if (item is BlittableJsonReaderArray innerArray)
                 {
                     foreach (var innerItem in UnwrapArray(innerArray, queryText, parameters))
                         yield return innerItem;
@@ -802,7 +796,8 @@ namespace Raven.Server.Documents.Queries
                     continue;
                 }
 
-                yield return (item, GetValueTokenType(item, queryText, parameters));
+                var parameterType = GetValueTokenType(item, queryText, parameters);
+                yield return (UnwrapParameter(item, parameterType), parameterType);
             }
         }
 
