@@ -3,16 +3,19 @@ import deleteCollectionCommand = require("commands/database/documents/deleteColl
 import collection = require("models/database/documents/collection");
 import database = require("models/resources/database");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
+import collectionsTracker = require("common/helpers/database/collectionsTracker");
 
 class deleteCollection extends dialogViewModelBase {
 
     operationIdTask = $.Deferred<operationIdDto>();
     private deletionStarted = false;
     isAllDocuments: boolean;
+    hasHiloDocuments: boolean;
 
     constructor(private collectionName: string, private db: database, private itemsToDelete: number, private excludedIds: Array<string>) {
         super();
         this.isAllDocuments = collection.allDocumentsCollectionName === collectionName;
+        this.hasHiloDocuments = collectionsTracker.default.getCollectionCount(collection.hiloCollectionName) > 0;
     }
 
     deleteCollection() {

@@ -57,6 +57,16 @@ class collectionsTracker {
         this.conflictsCount(collectionsStats.numberOfConflicts || null);
     }
 
+    getCollectionCount(collectionName: string) {
+        if (collectionName === collection.allDocumentsCollectionName) {
+            return this.getAllDocumentsCollection().documentCount();
+        }
+        
+        const matchedCollection = this.collections().find(x => x.name === collectionName);
+        
+        return matchedCollection ? matchedCollection.documentCount() : 0;
+    }
+    
     onDatabaseStatsChanged(notification: Raven.Server.NotificationCenter.Notifications.DatabaseStatsChanged, db: database) {
         const removedCollections = notification.ModifiedCollections.filter(x => x.Count === -1);
         const changedCollections = notification.ModifiedCollections.filter(x => x.Count !== -1);
