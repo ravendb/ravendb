@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
@@ -994,30 +995,24 @@ namespace Raven.Server.Documents.Queries
                             if (spatialExpression.Arguments.Count != 1)
                                 throw new InvalidQueryException($"Method {methodName}() expects first argument to be a wkt() method with 1 argument", QueryText, parameters);
 
-                            var wktToken = spatialExpression.Arguments[0] as FieldExpression;
-
-                            if (wktToken == null)
-                                throw new InvalidQueryException($"Method {methodName}() expects first argument to be a wkt() method with 1 field argument", QueryText, parameters);
+                            var wkt = ExtractFieldNameFromArgument(spatialExpression.Arguments[0], "wkt", parameters, QueryText);
 
                             fieldOptions = new AutoSpatialOptions(AutoSpatialOptions.AutoSpatialMethodType.Wkt, new List<string>
                             {
-                                wktToken.FieldValue
+                                wkt
                             });
                             break;
                         case MethodType.Point:
                             if (spatialExpression.Arguments.Count != 2)
                                 throw new InvalidQueryException($"Method {methodName}() expects first argument to be a point() method with 2 arguments", QueryText, parameters);
 
-                            var latitudeToken = spatialExpression.Arguments[0] as FieldExpression;
-                            var longitudeToken = spatialExpression.Arguments[1] as FieldExpression;
-
-                            if (latitudeToken == null || longitudeToken == null)
-                                throw new InvalidQueryException($"Method {methodName}() expects first argument to be a point() method with 2 field arguments", QueryText, parameters);
+                            var latitude = ExtractFieldNameFromArgument(spatialExpression.Arguments[0], "point", parameters, QueryText);
+                            var longitude = ExtractFieldNameFromArgument(spatialExpression.Arguments[1], "point", parameters, QueryText);
 
                             fieldOptions = new AutoSpatialOptions(AutoSpatialOptions.AutoSpatialMethodType.Point, new List<string>
                             {
-                                latitudeToken.FieldValue,
-                                longitudeToken.FieldValue
+                                latitude,
+                                longitude
                             });
                             break;
                         default:
@@ -1082,13 +1077,19 @@ namespace Raven.Server.Documents.Queries
 
             var argument = arguments[0];
 
+            return ExtractFieldNameFromArgument(argument, methodName, parameters, QueryText);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static string ExtractFieldNameFromArgument(QueryExpression argument, string methodName, BlittableJsonReaderObject parameters, string queryText)
+        {
             if (argument is FieldExpression field)
                 return field.FieldValue;
 
-            if (argument is ValueExpression value) // escaped string will go there
+            if (argument is ValueExpression value) // escaped string might go there
                 return value.Token;
 
-            throw new InvalidQueryException($"Method {methodName}() expects a field name as its first argument", QueryText, parameters);
+            throw new InvalidQueryException($"Method {methodName}() expects a field name as its argument", queryText, parameters);
         }
 
         public string GetUpdateBody(BlittableJsonReaderObject parameters)
