@@ -229,8 +229,18 @@ class editRavenEtlTask extends viewModelBase {
 
         // 2. Save
         if (transformation.isNew()) {
-            this.editedRavenEtl().transformationScripts.push(transformation);
-        } else {
+            let newTransformationItem = new ongoingTaskEtlTransformationModel({
+                ApplyToAllDocuments: transformation.applyScriptForAllCollections(),
+                Collections: transformation.transformScriptCollections(),
+                Disabled: false,
+                HasLoadAttachment: false,
+                Name: transformation.name(),
+                Script: transformation.script()
+            }, true);
+
+            this.editedRavenEtl().transformationScripts.push(newTransformationItem); 
+        }
+        else {
             let item = this.editedRavenEtl().transformationScripts().find(x => x.name() === transformation.name());
             item.applyScriptForAllCollections(transformation.applyScriptForAllCollections());
             item.transformScriptCollections(transformation.transformScriptCollections());
