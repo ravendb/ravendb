@@ -7,6 +7,7 @@ import generalUtils = require("common/generalUtils");
 class collection {
     static readonly allDocumentsCollectionName = "All Documents";
     static readonly revisionsBinCollectionName = "Revisions Bin";
+    static readonly hiloCollectionName = "@hilo";
 
     documentCount: KnockoutObservable<number> = ko.observable(0);
     name: string;

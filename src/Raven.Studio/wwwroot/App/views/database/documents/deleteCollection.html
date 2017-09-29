@@ -4,17 +4,23 @@
             <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
                 <i class="icon-cancel"></i>
             </button>
-            <h4 class="modal-title">Sure?</h4>
+            <h4 class="modal-title">Are you sure?</h4>
         </div>
         <div class="modal-body">
-            <span>You're deleting </span>
-            <strong data-bind="text: collectionName"></strong>
-            
-            <strong data-bind="text: '(' + pluralize(itemsToDelete, 'document', 'documents') + ')'"></strong>
-            <div data-bind="visible: isAllDocuments">
-                *Note that system documents won't be deleted.<br />
-                In order to do that go to the system documents section.
+            <div>
+                <span>You're deleting </span>
+                <strong data-bind="text: collectionName"></strong>
+
+                <strong data-bind="text: '(' + pluralize(itemsToDelete, 'document', 'documents') + ')'"></strong>.
             </div>
+            
+            <div class="padding">
+                <div data-bind="visible: isAllDocuments && hasHiloDocuments" class="bg-warning padding">
+                    <small>* Note that @hilo documents won't be deleted.<br />
+                        In order to do that go to the @hilo section.</small>
+                </div>
+            </div>
+           
         </div>
 
         <div class="modal-footer">
