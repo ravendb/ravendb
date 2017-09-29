@@ -105,7 +105,7 @@
 
     <div class="flex-grow scroll" data-bind="if: databases().sortedDatabases().length, visible: databases().sortedDatabases().length">
         <div data-bind="foreach: databases().sortedDatabases">
-            <div id="databaseItem" class="panel database-item" data-bind="scrollTo: isCurrentlyActiveDatabase(), visible: !filteredOut(),
+            <div id="databaseItem" class="panel database-item" data-bind="click: $root.activateDatabase, scrollTo: isCurrentlyActiveDatabase(), visible: !filteredOut(),
                                                                           attr: { class: 'panel database-item ' + badgeClass() + ' ' + (isCurrentlyActiveDatabase() ? 'active' : '') + ' ' + ($root.createIsLocalDatabaseObservable(name)() ? 'relevant' : '') }">
                 <div data-bind="attr: { 'data-state-text': $root.createIsLocalDatabaseObservable(name)() ? badgeText : 'remote', class: 'state ' + ($root.createIsLocalDatabaseObservable(name)() ? badgeClass() : 'state-remote') }"></div>
                 <div class="padding padding-sm database-info">
@@ -233,7 +233,7 @@
     <div class="properties-item" data-bind="visible: $root.createIsLocalDatabaseObservable(name)()">
         <div class="properties-value value-only">
             <a class="set-size text-disabled" title="Number of documents. Click to view documents list" 
-               data-bind="attr: { href: $root.createAllDocumentsUrlObservable($data), css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() }">
+               data-bind="attr: { href: $root.createAllDocumentsUrlObservable($data)}, css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() }">
                 <i class="icon-document-group"></i>
                 <span data-bind="text: documentsCount().toLocaleString()"></span>
                 <span class="hidden-compact" data-bind="text: $root.pluralize(documentsCount().toLocaleString(), 'document', 'documents', true)"></span>
