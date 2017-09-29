@@ -600,13 +600,7 @@ namespace Raven.Server.Documents.Queries
                         if (me.Arguments.Count != 1)
                             ThrowIncorrectNumberOfArgumentsOfSumMethod(me.Arguments.Count, QueryText, parameters);
 
-                        if (!(me.Arguments[0] is FieldExpression sumFieldToken))
-                        {
-                            ThrowMissingFieldNameArgumentOfSumMethod(QueryText, parameters);
-                            return null; //never hit
-                        }
-
-                        fieldName = GetIndexFieldName(sumFieldToken, parameters);
+                        fieldName = GetIndexFieldName(ExtractFieldNameFromFirstArgument(me.Arguments, "sum", parameters), parameters);
                         break;
                 }
 
