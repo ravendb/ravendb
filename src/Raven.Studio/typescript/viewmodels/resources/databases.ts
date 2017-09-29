@@ -472,11 +472,13 @@ class databases extends viewModelBase {
     activateDatabase(dbInfo: databaseInfo) {
         const db = this.databasesManager.getDatabaseByName(dbInfo.name);
         if (!db || db.disabled() || !db.relevant())
-            return;
+            return true;
 
         this.databasesManager.activate(db);
 
         this.updateDatabaseInfo(db.name);
+        
+        return true; // don't prevent default action as we have links inside links
     }
 
     createIsLocalDatabaseObservable(dbName: string) {
