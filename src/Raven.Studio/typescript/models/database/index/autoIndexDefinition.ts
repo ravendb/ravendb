@@ -6,6 +6,7 @@ class autoIndexField {
     fieldName = ko.observable<string>();
     hasSearch = ko.observable<boolean>();
     hasExact = ko.observable<boolean>();
+    isSpatial = ko.observable<boolean>();
     operation = ko.observable<string>();
 
     // fieldStr has form: <Name:Count,Operation:Count>
@@ -14,8 +15,14 @@ class autoIndexField {
         const parsedString = this.parse(fieldStr);
         const fieldName = parsedString['Name'];
         this.fieldName(fieldName);
+        this.isSpatial(autoIndexField.isSpatialField(fieldName));
         this.hasSearch(_.includes(fields, autoIndexField.searchFieldName(fieldName)));
         this.hasExact(_.includes(fields, autoIndexField.exactFieldName(fieldName)));
+    }
+    
+    static isSpatialField(fieldName: string) {
+        const fieldNameLowered = fieldName.toLocaleLowerCase();
+        return fieldNameLowered.startsWith("point(") || fieldNameLowered.startsWith("wkt(");
     }
     
     static searchFieldName(fieldName: string) {
@@ -36,7 +43,7 @@ class autoIndexField {
 
         const result = {} as dictionary<string>;
         
-        str.split(",").map(token => {
+        str.split("#").map(token => {
             const [key, value] = token.split(":");
             result[key] = value;
         });
@@ -44,17 +51,6 @@ class autoIndexField {
         return result;
     }
 
-    protected getFieldData(fieldStr: string, searchStr: string, endChar: string): string {
-        let value = "";
-
-        const location = fieldStr.indexOf(searchStr);
-        if (location !== -1) {
-            const leftStr = fieldStr.substr(location + searchStr.length);
-            value = leftStr.substr(0, leftStr.indexOf(endChar));
-        }
-
-        return value;
-    }
 }
 
 class autoIndexMapField extends autoIndexField {

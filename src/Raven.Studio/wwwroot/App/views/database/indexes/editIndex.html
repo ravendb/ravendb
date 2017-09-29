@@ -270,9 +270,12 @@
     <div class="property operation" data-bind="visible: operation">
         <h4 data-bind="text: operation"></h4>
     </div>
-    <div class="indexing-options">
+    <div class="indexing-options" data-bind="visible: !isSpatial()">
         <span class="item" data-bind="css: { active : hasSearch}"><i class="icon-check"></i> <i class="icon-cancel"></i><span>Search</span></span>
         <span class="item" data-bind="css: { active : hasExact}"><i class="icon-check"></i> <i class="icon-cancel"></i><span>Exact</span></span>
+    </div>
+    <div class="indexing-options" data-bind="visible: isSpatial">
+        <span class="item active"><i class="icon-check"></i> <i class="icon-cancel"></i><span>Spatial</span></span>
     </div>
 
 </script>
