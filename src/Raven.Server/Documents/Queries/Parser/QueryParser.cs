@@ -637,13 +637,24 @@ namespace Raven.Server.Documents.Queries.Parser
                     if (Scanner.TryScan(',') == false)
                         ThrowParseException("parsing method expression, expected ','");
 
+                var maybeExpression = false;
                 if (Value(out var argVal))
                 {
-                    args.Add(argVal);
-                    continue;
+                    if (Scanner.TryPeek(',') == false && Scanner.TryPeek(')') == false)
+                    {
+                        // this is not a simple field ref, let's parse as full expression
+
+                        Scanner.Reset(argVal.Token.Offset - 1); // if this was a value then it had to be in ''
+                        maybeExpression = true;
+                    }
+                    else
+                    {
+                        args.Add(argVal);
+                        continue;
+                    }
                 }
 
-                if (Field(out var fieldRef))
+                if (maybeExpression == false && Field(out var fieldRef))
                 {
                     if (Scanner.TryPeek(',') == false && Scanner.TryPeek(')') == false)
                     {

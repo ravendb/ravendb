@@ -319,6 +319,9 @@ namespace Raven.Server.Documents.Queries
             if (field is FieldExpression fe)
                 return metadata.GetIndexFieldName(fe, parameters);
 
+            if (field is ValueExpression ve)
+                return metadata.GetIndexFieldName(ve.Token, parameters);
+
             if (field is MethodExpression me)
             {
                 var methodType = QueryMethod.GetMethodType(me.Name.Value);
@@ -360,7 +363,7 @@ namespace Raven.Server.Documents.Queries
 
         private static Lucene.Net.Search.Query HandleExists(Query query, BlittableJsonReaderObject parameters, MethodExpression expression, QueryMetadata metadata)
         {
-            var fieldName = ExtractIndexFieldName(query, parameters, (FieldExpression)expression.Arguments[0], metadata);
+            var fieldName = ExtractIndexFieldName(query, parameters, expression.Arguments[0], metadata);
 
             return LuceneQueryHelper.Term(fieldName, LuceneQueryHelper.Asterisk, LuceneTermType.WildCard);
         }
@@ -368,7 +371,7 @@ namespace Raven.Server.Documents.Queries
         private static Lucene.Net.Search.Query HandleLucene(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters,
             Analyzer analyzer)
         {
-            var fieldName = ExtractIndexFieldName(query, parameters, (FieldExpression)expression.Arguments[0], metadata);
+            var fieldName = ExtractIndexFieldName(query, parameters, expression.Arguments[0], metadata);
             var (value, valueType) = GetValue(fieldName, query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
 
             if (valueType != ValueTokenType.String)
@@ -383,7 +386,7 @@ namespace Raven.Server.Documents.Queries
 
         private static Lucene.Net.Search.Query HandleStartsWith(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters)
         {
-            var fieldName = ExtractIndexFieldName(query, parameters, (FieldExpression)expression.Arguments[0], metadata);
+            var fieldName = ExtractIndexFieldName(query, parameters, expression.Arguments[0], metadata);
             var (value, valueType) = GetValue(fieldName, query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
 
             if (valueType != ValueTokenType.String)
@@ -400,7 +403,7 @@ namespace Raven.Server.Documents.Queries
 
         private static Lucene.Net.Search.Query HandleEndsWith(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters)
         {
-            var fieldName = ExtractIndexFieldName(query, parameters, (FieldExpression)expression.Arguments[0], metadata);
+            var fieldName = ExtractIndexFieldName(query, parameters, expression.Arguments[0], metadata);
             var (value, valueType) = GetValue(fieldName, query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
 
             if (valueType != ValueTokenType.String)
@@ -493,7 +496,7 @@ namespace Raven.Server.Documents.Queries
         {
             string fieldName;
             if (metadata.IsDynamic == false)
-                fieldName = ExtractIndexFieldName(query, parameters, (FieldExpression)expression.Arguments[0], metadata);
+                fieldName = ExtractIndexFieldName(query, parameters, expression.Arguments[0], metadata);
             else
             {
                 var spatialExpression = (MethodExpression)expression.Arguments[0];
