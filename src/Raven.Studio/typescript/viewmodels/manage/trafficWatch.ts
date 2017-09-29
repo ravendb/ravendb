@@ -31,6 +31,7 @@ class trafficWatch extends viewModelBase {
     
     isBufferFull = ko.observable<boolean>();
     tailEnabled = ko.observable<boolean>(true);
+    private duringManualScrollEvent = false;
     
     constructor() {
         super();
@@ -154,6 +155,14 @@ class trafficWatch extends viewModelBase {
                 onValue(item.RequestUri);
             }
         });
+
+        $(".traffic-watch .viewport").on("scroll", () => {
+            if (!this.duringManualScrollEvent && this.tailEnabled()) {
+                this.tailEnabled(false);
+            }
+
+            this.duringManualScrollEvent = false;
+        });
         
         this.connectWebSocket();
     }
@@ -197,7 +206,7 @@ class trafficWatch extends viewModelBase {
         this.gridController().reset(false);
         
         if (this.tailEnabled()) {
-            this.gridController().scrollDown();
+            this.scrollDown();
         }
     }
     
@@ -216,12 +225,18 @@ class trafficWatch extends viewModelBase {
 
     clear() {
         eventsCollector.default.reportEvent("traffic-watch", "clear");
-        this.allData.length = 0;
-        this.filteredData.length = 0;
+        this.allData = [];
+        this.filteredData = [];
         this.isBufferFull(false);
-        this.gridController().reset();
+        this.gridController().reset(true);
         
-        this.resume();
+        // set flag to true, since grid reset is async
+        this.duringManualScrollEvent = true;
+        this.tailEnabled(true);
+        
+        if (!this.liveClient()) {
+            this.resume();
+        }
     }
 
     exportToFile() {
@@ -235,8 +250,14 @@ class trafficWatch extends viewModelBase {
         this.tailEnabled.toggle();
 
         if (this.tailEnabled()) {
-            this.gridController().scrollDown();
+            this.scrollDown();
         }
+    }
+
+    private scrollDown() {
+        this.duringManualScrollEvent = true;
+
+        this.gridController().scrollDown();
     }
 
 }
