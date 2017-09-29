@@ -12,11 +12,15 @@ import ongoingTasksCommand = require("commands/database/tasks/getOngoingTasksCom
 import toggleDynamicNodeAssignmentCommand = require("commands/database/dbGroup/toggleDynamicNodeAssignmentCommand");
 import showDataDialog = require("viewmodels/common/showDataDialog");
 import addNewNodeToDatabaseGroup = require("viewmodels/resources/addNewNodeToDatabaseGroup");
+import reorderNodesInDatabaseGroupCommand = require("commands/database/dbGroup/reorderNodesInDatabaseGroupCommand");
 
 class manageDatabaseGroup extends viewModelBase {
 
     currentDatabaseInfo = ko.observable<databaseInfo>();
     selectedClusterNode = ko.observable<string>();
+    
+    inSortableMode = ko.observable<boolean>(false);
+    private sortable: any;
 
     private graph = new databaseGroupGraph();
 
@@ -65,9 +69,59 @@ class manageDatabaseGroup extends viewModelBase {
 
         this.graph.init($("#databaseGroupGraphContainer"));
     }
+    
+    deactivate() {
+        super.deactivate();
+        if (this.sortable) {
+            this.sortable.destroy();
+        }
+    }
 
+    enableNodesSort() {
+        this.inSortableMode(true);
+        
+        const list = $(".nodes-list")[0];
+
+        this.sortable = new Sortable(list,
+            {
+                onEnd: (event: { oldIndex: number, newIndex: number }) => {
+                    const nodes = this.currentDatabaseInfo().nodes();
+                    nodes.splice(event.newIndex, 0, nodes.splice(event.oldIndex, 1)[0]);
+                    this.currentDatabaseInfo().nodes(nodes);
+                }
+            });
+    }
+
+    cancelReorder() {
+        this.disableNodesSort();
+    }
+
+    saveNewOrder() {
+        const newOrder = this.currentDatabaseInfo().nodes().map(x => x.tag());
+        
+        new reorderNodesInDatabaseGroupCommand(this.activeDatabase().name, newOrder)
+            .execute()
+            .done(() => {
+                this.disableNodesSort();
+            });
+    }
+    
+    private disableNodesSort() {
+        this.inSortableMode(false);
+        
+        if (this.sortable) {
+            this.sortable.destroy();
+            this.sortable = null;
+        }
+
+        // fetch fresh copy
+        this.refresh();
+    }
+    
     private refresh() {
-        return $.when<any>(this.fetchDatabaseInfo(), this.fetchOngoingTasks());
+        if (!this.inSortableMode()) {
+            $.when<any>(this.fetchDatabaseInfo(), this.fetchOngoingTasks());
+        }
     }
     
     private fetchDatabaseInfo() {
@@ -90,6 +144,11 @@ class manageDatabaseGroup extends viewModelBase {
 
     private onDatabaseInfoFetched(dbInfoDto: Raven.Client.ServerWide.Operations.DatabaseInfo) {
         const dbInfo = new databaseInfo(dbInfoDto);
+        
+        // hack: force list to be empty - sortable (RubaXa version) doesn't play well with ko:foreach
+        // https://github.com/RubaXa/Sortable/issues/533
+        $(".nodes-list").empty();
+        
         this.currentDatabaseInfo(dbInfo);
         
         dbInfo.dynamicNodesDistribution.subscribe((dynamic) => {

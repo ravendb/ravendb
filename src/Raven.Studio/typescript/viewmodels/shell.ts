@@ -244,6 +244,7 @@ class shell extends viewModelBase {
     loadServerConfig(): JQueryPromise<void> {
         const deferred = $.Deferred<void>();
 
+        //TODO: implement this!
         new getServerConfigsCommand()
             .execute()
             .done((serverConfigs: serverConfigsDto) => {

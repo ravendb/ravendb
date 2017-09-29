@@ -2,9 +2,25 @@
     <div class="row flex-row flex-grow flex-stretch-items">
         <div class="col-sm-12 col-lg-6 flex-vertical">
             <div class="flex-header flex-horizontal">
+                <div data-bind="visible: inSortableMode">
+                    Drag elements to set their order. Click 'Save' when finished.
+                </div>
                 <div class="flex-separator">
                 </div>
-                <div>
+                <div data-bind="visible: inSortableMode">
+                    <button class="btn btn-primary" data-bind="click: saveNewOrder">
+                        <i class="icon-save"></i>
+                        <span>Save</span>
+                    </button>
+                    <button class="btn btn-default" data-bind="click: cancelReorder">
+                        <i class="icon-cancel"></i>
+                        <span>Cancel</span>
+                    </button>
+                </div>
+                <div data-bind="visible: !inSortableMode()">
+                    <button class="btn btn-default" data-bind="click: enableNodesSort">
+                        Reorder nodes
+                    </button>
                     <button class="btn btn-primary" data-bind="click: addNode, enable: addNodeEnabled">
                         <i class="icon-plus"></i>
                         <span>Add node to group</span>
@@ -20,7 +36,7 @@
                     </div>
                 </div>
             </div>
-            <div class="scroll flex-grow" data-bind="foreach: nodes">
+            <div class="scroll flex-grow nodes-list" data-bind="foreach: nodes, css: { 'sort-mode' : inSortableMode }">
                 <div class="panel destination-item">
                     <div data-bind="attr: { 'data-state-text': badgeText,  class: 'state ' + badgeClass() } "></div>
                     <div class="padding padding-sm destination-info">
@@ -37,7 +53,7 @@
                                     <span data-bind="text: responsibleNode" title="Database group node that is responsible for caught up of this node"></span>
                                 </div>
                             </div>
-                            <div class="status">
+                            <div class="status" data-bind="visible: !$root.inSortableMode()">
                                 <!-- TODO 
                                 <h5>STATUS</h5>
                                 <div class="btn-group dropdown-right">
@@ -52,7 +68,7 @@
                             </div>
                         </div>
 
-                        <div class="actions-container">
+                        <div class="actions-container" data-bind="visible: !$root.inSortableMode()">
                             <div class="actions">
                                 <!-- TODO: 
                                 <div class="dropdown">
