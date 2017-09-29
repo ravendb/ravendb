@@ -32,9 +32,19 @@ namespace Raven.Server.Documents.Indexes.Static
                     list.Add(kvp.Value);
                 }
             }
+
             var key = new CacheKey(list);
             var result = IndexCache.GetOrAdd(key, _ => new Lazy<StaticIndexBase>(() => IndexCompiler.Compile(definition)));
-            return result.Value;
+
+            try
+            {
+                return result.Value;
+            }
+            catch (Exception)
+            {
+                IndexCache.TryRemove(key, out _);
+                throw;
+            }
         }
 
         private class CacheKey : IEquatable<CacheKey>
