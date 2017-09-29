@@ -77,6 +77,7 @@ class adminLogs extends viewModelBase {
     isBufferFull = ko.observable<boolean>();
     
     tailEnabled = ko.observable<boolean>(true);
+    private duringManualScrollEvent = false;
     
     constructor() {
         super();
@@ -140,6 +141,14 @@ class adminLogs extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
         this.connectWebSocket();
+        
+        $(".admin-logs .viewport").on("scroll", () => {
+            if (!this.duringManualScrollEvent && this.tailEnabled()) {
+                this.tailEnabled(false);
+            }
+            
+            this.duringManualScrollEvent = false;
+        });
     }
     
     connectWebSocket() {
@@ -192,7 +201,7 @@ class adminLogs extends viewModelBase {
         this.pendingMessages.length = 0;
 
         if (this.tailEnabled()) {
-            this.listController().scrollDown();
+            this.scrollDown();
         }
     }
     
@@ -201,6 +210,10 @@ class adminLogs extends viewModelBase {
         this.allData.length = 0;
         this.isBufferFull(false);
         this.listController().reset();
+        
+        // set flag to true, since list reset is async
+        this.duringManualScrollEvent = true;
+        this.tailEnabled(true);
     }
     
     exportToFile() {
@@ -220,8 +233,14 @@ class adminLogs extends viewModelBase {
         this.tailEnabled.toggle();
         
         if (this.tailEnabled()) {
-            this.listController().scrollDown();
+            this.scrollDown();
         }
+    }
+    
+    private scrollDown() {
+        this.duringManualScrollEvent = true;
+
+        this.listController().scrollDown();
     }
 
     includeSource() {
