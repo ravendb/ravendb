@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Net;
 using Raven.Server.Config.Attributes;
+using Raven.Server.Config.Settings;
 using Raven.Server.Utils;
 
 namespace Raven.Server.Config.Categories
@@ -19,6 +20,22 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Security.Certificate.Password", ConfigurationEntryScope.ServerWideOnly)]
         public string CertificatePassword { get; set; }
 
+        [Description("A command or executable providing a .pfx certificate file. If specified, RavenDB will use HTTPS/SSL for all network activities.")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Security.Certificate.Exec", ConfigurationEntryScope.ServerWideOnly)]
+        public string CertificateExec { get; set; }
+
+        [Description("The command line arguments for the 'Security.Certificate.Exec' command or executable.")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Security.Certificate.Exec.Arguments", ConfigurationEntryScope.ServerWideOnly)]
+        public string CertificateExecArguments { get; set; }
+
+        [Description("The number of milliseconds to wait for the certificate executable to exit. Default: 30 seconds")]
+        [DefaultValue(30)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("Security.Certificate.Exec.TimeoutInSec", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting CertificateExecTimeout { get; set; }
+
         [Description("The path to .pfx cluster certificate file. If specified, RavenDB will use this (second) certificate for communications between servers in the cluster.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.ClusterCertificate.Path", ConfigurationEntryScope.ServerWideOnly)]
@@ -29,16 +46,6 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Security.ClusterCertificate.Password", ConfigurationEntryScope.ServerWideOnly)]
         public string ClusterCertificatePassword { get; set; }
 
-        [Description("A command or executable providing a .pfx certificate file. If specified, RavenDB will use HTTPS/SSL for all network activities.")]
-        [DefaultValue(null)]
-        [ConfigurationEntry("Security.Certificate.Exec", ConfigurationEntryScope.ServerWideOnly)]
-        public string CertificateExec { get; set; }
-
-        [Description("The command line arguments for the 'Security.Certificate.Exec' command or executable.")]
-        [DefaultValue(null)]
-        [ConfigurationEntry("Security.Certificate.Arguments", ConfigurationEntryScope.ServerWideOnly)]
-        public string CertificateExecArguments { get; set; }
-
         [Description("A command or executable providing a .pfx cluster certificate file. If specified, RavenDB will use this (second) certificate for communications between servers in the cluster.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.ClusterCertificate.Exec", ConfigurationEntryScope.ServerWideOnly)]
@@ -46,13 +53,8 @@ namespace Raven.Server.Config.Categories
 
         [Description("The command line arguments for the 'Security.ClusterCertificate.Exec' command or executable.")]
         [DefaultValue(null)]
-        [ConfigurationEntry("Security.ClusterCertificate.Arguments", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Security.ClusterCertificate.Exec.Arguments", ConfigurationEntryScope.ServerWideOnly)]
         public string ClusterCertificateExecArguments { get; set; }
-
-        [Description("The number of milliseconds to wait for the certificate executable to exit. Default: 30 seconds")]
-        [DefaultValue(30000)]
-        [ConfigurationEntry("Security.Certificate.Timeout", ConfigurationEntryScope.ServerWideOnly)]
-        public int CertificateExecTimeout { get; set; }
 
         [Description("The path of the (512-bit) Master Key. If specified, RavenDB will use this key to protect secrets.")]
         [DefaultValue(null)]
@@ -66,13 +68,14 @@ namespace Raven.Server.Config.Categories
 
         [Description("The command line arguments for the 'Security.MasterKey.Exec' command or executable.")]
         [DefaultValue(null)]
-        [ConfigurationEntry("Security.MasterKey.Arguments", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Security.MasterKey.Exec.Arguments", ConfigurationEntryScope.ServerWideOnly)]
         public string MasterKeyExecArguments { get; set; }
 
         [Description("The number of milliseconds to wait for the Master Key executable to exit. Default: 30 seconds")]
-        [DefaultValue(30000)]
-        [ConfigurationEntry("Security.MasterKey.Timeout", ConfigurationEntryScope.ServerWideOnly)]
-        public int MasterKeyExecTimeout { get; set; }
+        [DefaultValue(30)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("Security.MasterKey.Exec.TimeoutInSec", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting MasterKeyExecTimeout { get; set; }
 
         [Description("If authentication is disabled, set address range type for which server access is unsecured (None | Local | PrivateNetwork | PublicNetwork).")]
         [DefaultValue(UnsecuredAccessAddressRange.Local)]

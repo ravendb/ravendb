@@ -276,15 +276,15 @@ namespace Raven.Server.ServerWide
                 }
             }
             
-            if (process.WaitForExit(_config.CertificateExecTimeout) == false)
+            if (process.WaitForExit((int)_config.CertificateExecTimeout.AsTimeSpan.TotalMilliseconds) == false)
             {
                 process.Kill();
                 throw new InvalidOperationException($"Unable to get certificate by executing {executable} {args}, waited for {_config.CertificateExecTimeout} ms but the process didn't exit. Stderr: {GetStdError()}");
             }
             try
             {
-                readStdOut.Wait(_config.CertificateExecTimeout);
-                readErrors.Wait(_config.CertificateExecTimeout);
+                readStdOut.Wait(_config.CertificateExecTimeout.AsTimeSpan);
+                readErrors.Wait(_config.CertificateExecTimeout.AsTimeSpan);
             }
             catch (Exception e)
             {
@@ -376,7 +376,7 @@ namespace Raven.Server.ServerWide
                 }
             }
             
-            if (process.WaitForExit(_config.MasterKeyExecTimeout) == false)
+            if (process.WaitForExit((int)_config.MasterKeyExecTimeout.AsTimeSpan.TotalMilliseconds) == false)
             {
                 process.Kill();
                
@@ -384,8 +384,8 @@ namespace Raven.Server.ServerWide
             }
             try
             {
-                readStdOut.Wait(_config.MasterKeyExecTimeout);
-                readErrors.Wait(_config.MasterKeyExecTimeout);
+                readStdOut.Wait(_config.MasterKeyExecTimeout.AsTimeSpan);
+                readErrors.Wait(_config.MasterKeyExecTimeout.AsTimeSpan);
             }
             catch (Exception e)
             {
