@@ -26,6 +26,7 @@ class manageDatabaseGroup extends viewModelBase {
 
     nodeTag = clusterTopologyManager.default.localNodeTag;
     nodes: KnockoutComputed<databaseGroupNode[]>;
+    deletionInProgress: KnockoutComputed<string[]>;
     addNodeEnabled: KnockoutComputed<boolean>;
 
     constructor() {
@@ -47,6 +48,11 @@ class manageDatabaseGroup extends viewModelBase {
             const existingTags = this.nodes().map(x => x.tag());
             return _.without(tags, ...existingTags).length > 0;
         });
+        
+        this.deletionInProgress = ko.pureComputed(() => {
+            const dbInfo = this.currentDatabaseInfo();
+            return dbInfo ? dbInfo.deletionInProgress() : [];
+        })
     }
 
     activate(args: any) {
@@ -80,7 +86,7 @@ class manageDatabaseGroup extends viewModelBase {
     enableNodesSort() {
         this.inSortableMode(true);
         
-        const list = $(".nodes-list")[0];
+        const list = $(".nodes-list .not-deleted-nodes")[0];
 
         this.sortable = new Sortable(list,
             {
@@ -147,7 +153,7 @@ class manageDatabaseGroup extends viewModelBase {
         
         // hack: force list to be empty - sortable (RubaXa version) doesn't play well with ko:foreach
         // https://github.com/RubaXa/Sortable/issues/533
-        $(".nodes-list").empty();
+        $(".nodes-list .not-deleted-nodes").empty();
         
         this.currentDatabaseInfo(dbInfo);
         

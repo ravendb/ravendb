@@ -36,72 +36,90 @@
                     </div>
                 </div>
             </div>
-            <div class="scroll flex-grow nodes-list" data-bind="foreach: nodes, css: { 'sort-mode' : inSortableMode }">
-                <div class="panel destination-item">
-                    <div data-bind="attr: { 'data-state-text': badgeText,  class: 'state ' + badgeClass() } "></div>
-                    <div class="padding padding-sm destination-info">
-                        <div class="info-container flex-horizontal flex-grow">
-                            <div class="node flex-grow">
-                                <h5>NODE</h5>
-                                <h3 class="destination-name" data-bind="attr: { title: type() }">
-                                    <i data-bind="attr: { class: cssIcon }"></i><span data-bind="text: 'Node ' + tag()"></span>
-                                </h3>
-                            </div>
-                            <div data-bind="visible: responsibleNode">
-                                <div class="text-center">
-                                    <i class="icon-cluster-node" title="Database group node that is responsible for caught up of this node"></i>
-                                    <span data-bind="text: responsibleNode" title="Database group node that is responsible for caught up of this node"></span>
+            <div class="scroll flex-grow nodes-list" data-bind="css: { 'sort-mode' : inSortableMode }">
+                <div class="not-deleted-nodes" data-bind="foreach: nodes">
+                    <div class="panel destination-item">
+                        <div data-bind="attr: { 'data-state-text': badgeText,  class: 'state ' + badgeClass() } "></div>
+                        <div class="padding padding-sm destination-info">
+                            <div class="info-container flex-horizontal flex-grow">
+                                <div class="node flex-grow">
+                                    <h5>NODE</h5>
+                                    <h3 class="destination-name" data-bind="attr: { title: type() }">
+                                        <i data-bind="attr: { class: cssIcon }"></i><span data-bind="text: 'Node ' + tag()"></span>
+                                    </h3>
+                                </div>
+                                <div data-bind="visible: responsibleNode">
+                                    <div class="text-center">
+                                        <i class="icon-cluster-node" title="Database group node that is responsible for caught up of this node"></i>
+                                        <span data-bind="text: responsibleNode" title="Database group node that is responsible for caught up of this node"></span>
+                                    </div>
+                                </div>
+                                <div class="status" data-bind="visible: !$root.inSortableMode()">
+                                    <!-- TODO 
+                                    <h5>STATUS</h5>
+                                    <div class="btn-group dropdown-right">
+                                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                                            <span>Enabled</span> <span class="caret"></span>
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li><a href="#">Enable</a></li>
+                                            <li><a href="#">Disable</a></li>
+                                        </ul>
+                                    </div>-->
                                 </div>
                             </div>
-                            <div class="status" data-bind="visible: !$root.inSortableMode()">
-                                <!-- TODO 
-                                <h5>STATUS</h5>
-                                <div class="btn-group dropdown-right">
-                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
-                                        <span>Enabled</span> <span class="caret"></span>
-                                    </button>
-                                    <ul class="dropdown-menu">
-                                        <li><a href="#">Enable</a></li>
-                                        <li><a href="#">Disable</a></li>
-                                    </ul>
-                                </div>-->
-                            </div>
-                        </div>
 
-                        <div class="actions-container" data-bind="visible: !$root.inSortableMode()">
-                            <div class="actions">
-                                <!-- TODO: 
-                                <div class="dropdown">
-                                    <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-                                        <i class="icon-play"></i> <span>Actions</span>
-                                        <span class="caret"></span>
-                                    </button>
-                                    <ul class="dropdown-menu">
-                                        <li><a href="#">Promote node immediately</a></li>
-                                    </ul>
-                                </div>-->
-                                <div class="dropdown dropdown-right">
-                                    <button class="btn btn-danger dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-                                        <i class="icon-disconnected"></i> <span>Delete from group</span>
-                                        <span class="caret"></span>
-                                    </button>
-                                    <ul class="dropdown-menu">
-                                        <li><a href="#" data-bind="click: _.partial($parent.deleteNodeFromGroup, $data, false)"><i class="icon-trash"></i> <span>Soft Delete</span>&nbsp;&nbsp;<small>(stop replication and keep database files on the node)</small></a></li>
-                                        <li><a href="#" data-bind="click: _.partial($parent.deleteNodeFromGroup, $data, true)"><i class="icon-alerts text-danger"></i> <span class="text-danger">Hard Delete</span>&nbsp;&nbsp;<small>(stop replication and remove database files on the node)</small></a></li>
-                                    </ul>
+                            <div class="actions-container" data-bind="visible: !$root.inSortableMode()">
+                                <div class="actions">
+                                    <!-- TODO: 
+                                    <div class="dropdown">
+                                        <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                            <i class="icon-play"></i> <span>Actions</span>
+                                            <span class="caret"></span>
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li><a href="#">Promote node immediately</a></li>
+                                        </ul>
+                                    </div>-->
+                                    <div class="dropdown dropdown-right">
+                                        <button class="btn btn-danger dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                            <i class="icon-disconnected"></i> <span>Delete from group</span>
+                                            <span class="caret"></span>
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li><a href="#" data-bind="click: _.partial($parent.deleteNodeFromGroup, $data, false)"><i class="icon-trash"></i> <span>Soft Delete</span>&nbsp;&nbsp;<small>(stop replication and keep database files on the node)</small></a></li>
+                                            <li><a href="#" data-bind="click: _.partial($parent.deleteNodeFromGroup, $data, true)"><i class="icon-alerts text-danger"></i> <span class="text-danger">Hard Delete</span>&nbsp;&nbsp;<small>(stop replication and remove database files on the node)</small></a></li>
+                                        </ul>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="panel-addon" data-bind="visible: lastError">
-                        <div class="padding small" data-bind="css: { 'bg-danger': badgeClass() === 'state-danger', 'bg-warning': badgeClass() === 'state-warning' }">
-                            <div data-bind="text: lastErrorShort()"></div>
-                            <div>
-                                <a href="#" data-bind="click: _.partial($root.showErrorDetails, tag())">show details</a>
+                        <div class="panel-addon" data-bind="visible: lastError">
+                            <div class="padding small" data-bind="css: { 'bg-danger': badgeClass() === 'state-danger', 'bg-warning': badgeClass() === 'state-warning' }">
+                                <div data-bind="text: lastErrorShort()"></div>
+                                <div>
+                                    <a href="#" data-bind="click: _.partial($root.showErrorDetails, tag())">show details</a>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
+                <div class="deleted-nodes" data-bind="foreach: deletionInProgress">
+                    <div class="panel destination-item">
+                        <div data-state-text="Deleting" class="state state-warning"></div>
+                        <div class="padding padding-sm destination-info">
+                            <div class="info-container flex-horizontal flex-grow">
+                                <div class="node flex-grow">
+                                    <h5>NODE</h5>
+                                    <h3 class="destination-name pulse text-warning" title="Deletion in progress">
+                                        <i class="icon-trash"></i><span data-bind="text: 'Node ' + $data"></span>
+                                    </h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
             </div>
         </div>
         <div class="col-sm-12 col-lg-6 flex-vertical">
