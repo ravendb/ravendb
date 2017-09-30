@@ -513,7 +513,7 @@ namespace Raven.Server.Web.System
         }
 
         [RavenAction("/admin/periodic-backup/test-credentials", "POST", AuthorizationStatus.DatabaseAdmin)]
-        public async Task TestPerioidicBackupCredentials()
+        public async Task TestPeriodicBackupCredentials()
         {
             // here we explictily don't care what db I'm an admin of, since it is just a test endpoint
 
