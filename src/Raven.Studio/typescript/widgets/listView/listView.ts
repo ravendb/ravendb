@@ -155,6 +155,7 @@ class listView<T> {
         if (this.checkListViewVisibility()) {
             this.checkForUpdatedListHeight();
             this.layoutVirtualRowPositionsAndPopulate();
+            this.sortRowsByTopPosition();
         } else {
             throw new Error("List View is not visible!");
         }
@@ -247,6 +248,24 @@ class listView<T> {
     private populate(dataIdx: number, row: virtualListRow<T>) {
         const itemHeight = this.getItemHeight(dataIdx);
         row.populate(this.items.get(dataIdx), dataIdx, this.cumulativeItemsHeight.get(dataIdx) - itemHeight, itemHeight);
+    }
+    
+    private sortRowsByTopPosition() {
+        const parent = this.$viewportElement
+            .find(listView.viewportScrollerSelector)[0];
+
+        let children = [] as HTMLElement[];            
+            
+        for (let i = parent.children.length - 1; i >= 0; i--) {
+            children.push(parent.children.item(i) as HTMLElement);
+            parent.removeChild(parent.childNodes[i]);
+        }
+
+        children = _.sortBy(children, x => parseInt(x.style.top));
+        
+        children.forEach(c => {
+            parent.appendChild(c);
+        })
     }
     
     /*
