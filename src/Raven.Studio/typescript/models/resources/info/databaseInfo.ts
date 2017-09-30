@@ -50,6 +50,7 @@ class databaseInfo {
     indexesCount = ko.observable<number>();
 
     nodes = ko.observableArray<databaseGroupNode>([]);
+    deletionInProgress = ko.observableArray<string>([]);
 
     constructor(dto: Raven.Client.ServerWide.Operations.DatabaseInfo) {
         this.initializeObservables();
@@ -185,6 +186,7 @@ class databaseInfo {
         this.indexingPaused(dto.IndexingStatus === "Paused");
         this.documentsCount(dto.DocumentsCount);
         this.indexesCount(dto.IndexesCount);
+        this.deletionInProgress(dto.DeletionInProgress ? Object.keys(dto.DeletionInProgress) : []);
 
         const topologyDto = dto.NodesTopology;
         const members = this.mapNodes("Member", topologyDto.Members);

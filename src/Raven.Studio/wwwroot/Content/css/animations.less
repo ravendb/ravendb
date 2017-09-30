@@ -341,35 +341,37 @@
     }
 }
 
-@-moz-keyframes spin {
+
+@-moz-keyframes pulse-70 {
     from {
-        -moz-transform: rotate(0deg);
+        opacity:1;
     }
 
     to {
-        -moz-transform: rotate(360deg);
+        opacity:0.3;
     }
 }
 
-@-webkit-keyframes spin {
+@-webkit-keyframes pulse-70 {
     from {
-        -webkit-transform: rotate(0deg);
+        opacity:1;
     }
 
     to {
-        -webkit-transform: rotate(360deg);
+        opacity:0.3;
     }
 }
 
-@keyframes spin {
+@keyframes pulse-70 {
     from {
-        transform: rotate(0deg);
+        opacity:1;
     }
 
     to {
-        transform: rotate(360deg);
+        opacity:0.3;
     }
 }
+
 
 @-moz-keyframes slideup {
     from {
@@ -485,6 +487,14 @@
 @slidein-properties: slidein .25s cubic-bezier(0, 0, 0, 1);
 @topexpand-properties: topexpand .25s cubic-bezier(0, 0, 0, 1);
 @slideup-properties: slideup 1s cubic-bezier(0, 0, 0, 1);
+@pulse-70-properties: pulse-70 1s ease-in alternate infinite;
+
+.pulse {
+    -webkit-animation: @pulse-70-properties;
+    -moz-animation: @pulse-70-properties;
+    -ms-animation: @pulse-70-properties;
+    animation: @pulse-70-properties;
+}
 
 .bounce {
     -webkit-animation: @bounce-properties;

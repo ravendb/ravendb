@@ -125,7 +125,8 @@
                                 </a>
                             </h3>
                         </div>
-                        <div class="dbgroup-node-type flex-horizontal" data-bind="foreach: nodes">
+                        <div class="dbgroup-node-type flex-horizontal">
+                            <!-- ko foreach: nodes -->
                             <div>
                                 <a data-bind="attr: { href: $root.createAllDocumentsUrlObservableForNode($parent, $data), target: tag() === $root.clusterManager.localNodeTag() ? undefined : '_blank', title: type() },
                                               css: { 'link-disabled': $parent.isBeingDeleted }">
@@ -133,6 +134,15 @@
                                     <span data-bind="text: 'Node ' + tag()"></span>
                                 </a>
                             </div>
+                            <!-- /ko -->
+                            <!-- ko foreach: deletionInProgress -->
+                            <div>
+                                <div title="Deletion in progress" class="text-warning pulse">
+                                    <i class="icon-trash"></i>
+                                    <span data-bind="text: 'Node ' + $data"></span>
+                                </div>
+                            </div>
+                            <!-- /ko -->
                         </div>
                     </div>
                     <div class="vertical-divider properties-container"
