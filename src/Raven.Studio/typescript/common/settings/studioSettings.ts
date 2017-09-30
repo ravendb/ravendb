@@ -44,7 +44,7 @@ class studioSettings {
                 });
 
             const dbSettings = currentDatabaseSettings();
-            if (e.key === dbSettings.storageKey && e.newValue) {
+            if (dbSettings && e.key === dbSettings.storageKey && e.newValue) {
                 this.onSettingsChanged(dbSettings, JSON.parse(e.newValue));
             }
         });
