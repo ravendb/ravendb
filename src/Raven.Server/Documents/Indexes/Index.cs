@@ -1738,10 +1738,6 @@ namespace Raven.Server.Documents.Indexes
 
                         FillQueryResult(resultToFill, isStale, documentsContext, indexContext);
 
-                        if (Type.IsMapReduce() && (query.Metadata.Includes == null || query.Metadata.Includes.Length == 0))
-                            documentsContext.CloseTransaction();
-                        // map reduce don't need to access mapResults storage unless we have a transformer. Possible optimization: if we will know if transformer needs transaction then we may reset this here or not
-
                         using (var reader = IndexPersistence.OpenIndexReader(indexTx.InnerTransaction))
                         {
                             var totalResults = new Reference<int>();
