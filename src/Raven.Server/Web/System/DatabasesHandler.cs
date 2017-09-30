@@ -400,7 +400,8 @@ namespace Raven.Server.Web.System
 
                 NodesTopology = nodesTopology,
                 ReplicationFactor = topology?.ReplicationFactor ?? -1,
-                DynamicNodesDistribution = topology?.DynamicNodesDistribution ?? false
+                DynamicNodesDistribution = topology?.DynamicNodesDistribution ?? false,
+                DeletionInProgress = dbRecord.DeletionInProgress
             };
 
             var doc = databaseInfo.ToJson();

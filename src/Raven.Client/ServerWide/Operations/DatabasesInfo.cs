@@ -53,6 +53,7 @@ namespace Raven.Client.ServerWide.Operations
         public NodesTopology NodesTopology { get; set; }
         public int ReplicationFactor { get; set; }
         public bool DynamicNodesDistribution { get; set; }
+        public Dictionary<string, DeletionInProgressStatus> DeletionInProgress { get; set; }
 
         public DynamicJsonValue ToJson()
         {
@@ -83,7 +84,8 @@ namespace Raven.Client.ServerWide.Operations
 
                 [nameof(NodesTopology)] = NodesTopology?.ToJson(),
                 [nameof(ReplicationFactor)] = ReplicationFactor,
-                [nameof(DynamicNodesDistribution)] = DynamicNodesDistribution
+                [nameof(DynamicNodesDistribution)] = DynamicNodesDistribution,
+                [nameof(DeletionInProgress)] = DynamicJsonValue.Convert(DeletionInProgress)
             };
         }
     }
