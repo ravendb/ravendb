@@ -99,6 +99,8 @@ class query extends viewModelBase {
     queriedIndex: KnockoutComputed<string>;
     queriedIndexLabel: KnockoutComputed<string>;
     queriedIndexDescription: KnockoutComputed<string>;
+    
+    isEmptyFieldsResult = ko.observable<boolean>(false);
 
     /*TODO
     isTestIndex = ko.observable<boolean>(false);
@@ -424,6 +426,8 @@ class query extends viewModelBase {
         this.currentTab("results");
         this.includesCache.clear();
         
+        this.isEmptyFieldsResult(false);
+        
         eventsCollector.default.reportEvent("query", "run");
         const criteria = this.criteria();
 
@@ -441,45 +445,44 @@ class query extends viewModelBase {
 
             const resultsFetcher = (skip: number, take: number) => {
                 const command = new queryCommand(database, skip, take, this.criteria(), !this.cacheEnabled());
-                return command.execute()
+                
+                const resultsTask = $.Deferred<pagedResultWithIncludes<document>>();
+                const queryForAllFields = this.criteria().showFields();
+                
+                command.execute()
                     .always(() => {
                         this.isLoading(false);
                     })
-                    .done((queryResults: pagedResultWithIncludes<any>) => {
-                        this.queryStats(queryResults.additionalResultInfo);
-                        this.onIncludesLoaded(queryResults.includes);
-
-                        //TODO: this.indexSuggestions([]);
-                        /* TODO
-                        if (queryResults.totalResultCount == 0) {
-                            var queryFields = this.extractQueryFields();
-                            var alreadyLookedForNull = false;
-                            if (this.selectedIndex().indexOf(this.dynamicPrefix) !== 0) {
-                                alreadyLookedForNull = true;
-                                for (var i = 0; i < queryFields.length; i++) {
-                                    this.getIndexSuggestions(selectedIndex, queryFields[i]);
-                                    if (queryFields[i].FieldValue == 'null') {
-                                        this.isWarning(true);
-                                        this.warningText(<any>("The Query contains '" + queryFields[i].FieldName + ": null', this will check if the field contains the string 'null', is this what you meant?"));
-                                    }
-                                }
-                            }
-                            if (!alreadyLookedForNull) {
-                                for (var i = 0; i < queryFields.length; i++) {
-                                    ;
-                                    if (queryFields[i].FieldValue == 'null') {
-                                        this.isWarning(true);
-                                        this.warningText(<any>("The Query contains '" + queryFields[i].FieldName + ": null', this will check if the field contains the string 'null', is this what you meant?"));
-                                    }
-                                }
-                            }
-                        }*/
+                    .done((queryResults: pagedResultWithIncludes<document>) => {
+                    
+                        const emptyFieldsResult = queryForAllFields 
+                            && queryResults.totalResultCount > 0 
+                            && _.every(queryResults.items, x => x.getDocumentPropertyNames().length === 0);
+                        
+                        if (emptyFieldsResult) {
+                            resultsTask.resolve({
+                               totalResultCount: 0,
+                               includes: {},
+                               items: [] 
+                            });
+                            this.isEmptyFieldsResult(true);
+                            this.queryStats(queryResults.additionalResultInfo);
+                        } else {
+                            resultsTask.resolve(queryResults);
+                            this.queryStats(queryResults.additionalResultInfo);
+                            this.onIncludesLoaded(queryResults.includes);
+                        }
+                        
                     })
                     .fail((request: JQueryXHR) => {
                         const queryText = this.criteria().queryText();
                         recentQueriesStorage.removeRecentQueryByQueryText(database, queryText);
                         this.recentQueries.shift();
+                        
+                        resultsTask.reject(request);
                     });
+                
+                return resultsTask;
             };
 
             this.queryFetcher(resultsFetcher);

@@ -180,7 +180,12 @@
 </div>
 
 <script type="text/html" id="empty-query-template">
-    No results found.
+    <div data-bind="visible: !$root.isEmptyFieldsResult()">
+        No results found.
+    </div>
+    <div data-bind="if: $root.isEmptyFieldsResult">
+        Index <strong data-bind="text: $root.queriedIndexLabel"></strong> doesn't contain any stored fields. 
+    </div>
 </script>
 
 <div class="tooltip json-preview" style="opacity: 0">
