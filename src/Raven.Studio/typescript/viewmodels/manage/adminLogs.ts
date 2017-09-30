@@ -16,7 +16,7 @@ class heightCalculator {
     measure(item: string, row: virtualListRow<string>) {
         this.ensureCacheFilled(row);
         
-        const lines = item.split("\r\n");
+        const lines = item.split(/\r?\n/);
         const totalLinesCount = _.sum(lines.map(l => {
             if (l.length > this.charactersPerLine) {
                 return Math.ceil(l.length  * 1.0 / this.charactersPerLine);

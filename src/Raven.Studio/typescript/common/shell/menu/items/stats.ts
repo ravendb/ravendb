@@ -162,7 +162,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             moduleId: 'viewmodels/database/status/requests/requestTracing',
             title: 'Request tracing',
             tooltip: "Displays recent requests with their status and execution times",
-            nav: accessHelper.canExposeConfigOverTheWire(),
+            nav: true,
             dynamicHash: appUrls.requestsTracing
         }),*/
         /* TODO: 

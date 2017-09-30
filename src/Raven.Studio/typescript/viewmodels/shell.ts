@@ -242,8 +242,15 @@ class shell extends viewModelBase {
     }
 
     loadServerConfig(): JQueryPromise<void> {
-        const deferred = $.Deferred<void>();
+        const deferred = $.Deferred<void>().resolve();
 
+        //TODO: it is temporary fix:
+        
+        accessHelper.isGlobalAdmin(true);
+        accessHelper.canReadWriteSettings(true);
+        accessHelper.canReadSettings(true);
+        
+        /*
         //TODO: implement this!
         new getServerConfigsCommand()
             .execute()
@@ -251,10 +258,9 @@ class shell extends viewModelBase {
                 accessHelper.isGlobalAdmin(serverConfigs.IsGlobalAdmin);
                 accessHelper.canReadWriteSettings(serverConfigs.CanReadWriteSettings);
                 accessHelper.canReadSettings(serverConfigs.CanReadSettings);
-                accessHelper.canExposeConfigOverTheWire(serverConfigs.CanExposeConfigOverTheWire);
             })
             .always(() => deferred.resolve());
-
+        */
         return deferred;
     }
 
