@@ -5,9 +5,11 @@ import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
  * A virtual row. Contains an element displayed as a row in the list view. Gets recycled as the list view scrolls in order to create and manage fewer elements.
  */
 class virtualListRow<T> {
+    static readonly defaultTopPosition = -9999;
+    
     private _item: T | null = null; // The last item populated into this virtual list row.
     readonly element: JQuery;
-    private _top = -9999;
+    private _top = virtualListRow.defaultTopPosition;
     private _index = -1;
     private _even: boolean | null = null;
 
@@ -16,7 +18,7 @@ class virtualListRow<T> {
     private _htmlProvider: (item: T) => string;
     
     constructor(htmlProvider: (item: T) => string) {
-        this.element = $(`<div class="virtual-row" style="height: ${this._height}px; top: ${this.top}px"></div>`);
+        this.element = $(`<div class="virtual-row" style="top: ${this.top}px"></div>`);
         this._htmlProvider = htmlProvider;
     }
 
