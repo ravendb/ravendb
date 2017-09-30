@@ -159,8 +159,8 @@ namespace Raven.Server.Documents.Queries
                 switch (fieldType)
                 {
                     case LuceneFieldType.String:
-                        var valueFirstAsString = valueFirst as string;
-                        var valueSecondAsString = valueSecond as string;
+                        var valueFirstAsString = GetValueAsString(valueFirst);
+                        var valueSecondAsString = GetValueAsString(valueSecond);
                         return LuceneQueryHelper.Between(luceneFieldName, termType, valueFirstAsString, valueSecondAsString, exact);
                     case LuceneFieldType.Long:
                         var valueFirstAsLong = (long)valueFirst;
