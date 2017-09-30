@@ -72,7 +72,10 @@ class editSubscriptionTask extends viewModelBase {
                             this.editedSubscription().liveConnection(!!result.ClientUri);
                         });
                 })
-                .fail(() => router.navigate(appUrl.forOngoingTasks(this.activeDatabase())));
+                .fail(() => { 
+                    deferred.reject();
+                    router.navigate(appUrl.forOngoingTasks(this.activeDatabase()));
+                });
         }
         else {
             // 2. Creating a new task

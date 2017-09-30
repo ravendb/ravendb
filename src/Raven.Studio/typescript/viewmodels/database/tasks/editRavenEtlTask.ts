@@ -51,7 +51,10 @@ class editRavenEtlTask extends viewModelBase {
                     this.editedRavenEtl(new ongoingTaskRavenEtl(result, false));
                     deferred.resolve();
                 })
-                .fail(() => router.navigate(appUrl.forOngoingTasks(this.activeDatabase())));
+                .fail(() => { 
+                    deferred.reject();
+                    router.navigate(appUrl.forOngoingTasks(this.activeDatabase())); 
+                });
         }
         else {
             // 2. Creating a New task

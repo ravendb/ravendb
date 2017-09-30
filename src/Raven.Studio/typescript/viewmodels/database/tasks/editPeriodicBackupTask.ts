@@ -35,8 +35,9 @@ class editPeriodicBackupTask extends viewModelBase {
                     deferred.resolve();
                 })
                 .fail(() => {
-                    router.navigate(appUrl.forOngoingTasks(this.activeDatabase()));
                     deferred.reject();
+                    
+                    router.navigate(appUrl.forOngoingTasks(this.activeDatabase()));
                 });
         }
         else {

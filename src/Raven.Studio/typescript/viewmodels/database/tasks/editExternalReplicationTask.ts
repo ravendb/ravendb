@@ -43,7 +43,11 @@ class editExternalReplicationTask extends viewModelBase {
                     this.editedExternalReplication(new ongoingTaskReplication(result, false));
                     deferred.resolve();
                 })
-                .fail(() => router.navigate(appUrl.forOngoingTasks(this.activeDatabase())));
+                .fail(() => {
+                    deferred.reject();
+                    
+                    router.navigate(appUrl.forOngoingTasks(this.activeDatabase()));
+                });
         }
         else {
             // 2. Creating a new task
@@ -52,7 +56,7 @@ class editExternalReplicationTask extends viewModelBase {
             deferred.resolve();
         }
 
-        deferred.always(() => this.initObservables());
+        deferred.done(() => this.initObservables());
         return deferred;
     }
 
