@@ -18,7 +18,7 @@ class savePeriodicBackupConfigurationCommand extends commandBase {
             })
             .fail(response => {
                 const errorMessage = isNewTask ?
-                    "Failed to save a new perioidc backup task" :
+                    "Failed to save a new periodic backup task" :
                     `Failed to save a periodic backup task with id ${this.configuration.TaskId}`;
                 this.reportError(errorMessage, response.responseText, response.statusText);
             });

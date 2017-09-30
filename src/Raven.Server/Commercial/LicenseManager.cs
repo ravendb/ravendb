@@ -1253,7 +1253,7 @@ namespace Raven.Server.Commercial
                 var hasCloudBackup = configuration.HasCloudBackup();
                 if (hasCloudBackup && _licenseStatus.HasCloudBackups == false)
                 {
-                    const string details = "Your current license doesn't include the backup to cloud feature!";
+                    const string details = "Your current license doesn't include the backup to cloud or ftp feature!";
                     licenseLimit = GenerateLicenseLimit(LimitType.CloudBackup, details);
                     return false;
                 }
