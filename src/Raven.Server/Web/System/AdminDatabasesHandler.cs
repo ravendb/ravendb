@@ -1399,8 +1399,8 @@ namespace Raven.Server.Web.System
                             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                             using (var reader = File.OpenRead(configuration.OutputFilePath))
                             using (var stream = new GZipStream(reader, CompressionMode.Decompress))
+                            using (var source = new StreamSource(stream, context))
                             {
-                                var source = new StreamSource(stream, context);
                                 var destination = new DatabaseDestination(database);
                                 var smuggler = new DatabaseSmuggler(database, source, destination, database.Time, result: result, onProgress: onProgress);
 

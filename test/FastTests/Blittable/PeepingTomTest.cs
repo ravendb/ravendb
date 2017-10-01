@@ -55,8 +55,8 @@ namespace FastTests.Blittable
             }
 
             using (var stream = new MemoryStream())
-            {
-                var peeping = new PeepingTomStream(stream, context);
+            using (var peeping = new PeepingTomStream(stream, context))
+            { 
                 stream.Write(bytes, 0, originalSize);
                 stream.Flush();
                 stream.Position = 0;

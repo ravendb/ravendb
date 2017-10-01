@@ -60,7 +60,7 @@ namespace Raven.Client.Documents.Commands
             Debug.Assert(fromCache == false);
 
             if (response != null)
-                ThrowInvalidResponse(response.AddItemsToStream());
+                ThrowInvalidResponse();
 
             Result = null;
         }

@@ -417,8 +417,8 @@ namespace Raven.Client.Documents.Changes
                     using (context.GetManagedBuffer(out buffer))
                     using (var parser = new UnmanagedJsonParser(context, state, "changes/receive"))
                     using (var builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, "readArray/singleResult", parser, state))
+                    using (var peepingTomStream = new PeepingTomStream(stream, context))
                     {
-                        var peepingTomStream = new PeepingTomStream(stream, context);
                         if (await UnmanagedJsonParserHelper.ReadAsync(peepingTomStream, parser, state, buffer).ConfigureAwait(false) == false)
                             continue;
 
