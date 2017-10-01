@@ -119,8 +119,8 @@ namespace Raven.Client.Documents.Commands.MultiGet
             var state = new JsonParserState();
             using (var parser = new UnmanagedJsonParser(context, state, "multi_get/response"))
             using (context.GetManagedBuffer(out JsonOperationContext.ManagedPinnedBuffer buffer))
+            using (var peepingTomStream = new PeepingTomStream(stream, context))
             {
-                var peepingTomStream = new PeepingTomStream(stream, context);
                 if (UnmanagedJsonParserHelper.Read(peepingTomStream, parser, state, buffer) == false)
                     ThrowInvalidJsonResponse(peepingTomStream);
 

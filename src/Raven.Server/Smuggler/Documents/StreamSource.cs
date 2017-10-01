@@ -20,7 +20,7 @@ using Size = Sparrow.Size;
 
 namespace Raven.Server.Smuggler.Documents
 {
-    public class StreamSource : ISmugglerSource
+    public class StreamSource : ISmugglerSource, IDisposable
     {
         private readonly PeepingTomStream _peepingTomStream;
         private readonly DocumentsOperationContext _context;
@@ -623,6 +623,11 @@ namespace Raven.Server.Smuggler.Documents
                 return DatabaseItemType.LegacyAttachments;
             //Attachments
             throw new InvalidOperationException("Got unexpected property name '" + type + "' on " + _parser.GenerateErrorState());
+        }
+
+        public void Dispose()
+        {
+            _peepingTomStream.Dispose();
         }
     }
 }

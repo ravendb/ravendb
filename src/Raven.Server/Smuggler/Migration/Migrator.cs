@@ -246,8 +246,8 @@ namespace Raven.Server.Smuggler.Migration
             using (var responseStream = await response.Content.ReadAsStreamAsync())
             using (var stream = new GZipStream(responseStream, CompressionMode.Decompress))
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var source = new StreamSource(stream, context))
             {
-                var source = new StreamSource(stream, context);
                 var destination = new DatabaseDestination(database);
                 var options = new DatabaseSmugglerOptionsServerSide();
                 var smuggler = new DatabaseSmuggler(database, source, destination, database.Time, options, result, onProgress, cancelToken.Token);
