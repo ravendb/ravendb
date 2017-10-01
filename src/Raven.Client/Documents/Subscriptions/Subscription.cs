@@ -659,6 +659,10 @@ namespace Raven.Client.Documents.Subscriptions
             {
                 case SubscriptionDoesNotBelongToNodeException se:
                     var requestExecutor = _store.GetRequestExecutor(_dbName);
+
+                    if (se.AppropriateNode == null)
+                        return true;
+
                     var nodeToRedirectTo = requestExecutor.TopologyNodes
                         .FirstOrDefault(x => x.ClusterTag == se.AppropriateNode);
                     _redirectNode = nodeToRedirectTo ?? throw new AggregateException(ex,
