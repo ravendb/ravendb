@@ -278,7 +278,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/admin/smuggler/migrate", "POST", AuthorizationStatus.DatabaseAdmin)]
+        [RavenAction("/databases/*/admin/smuggler/migrate", "POST", AuthorizationStatus.Operator)]
         public async Task Migrate()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))

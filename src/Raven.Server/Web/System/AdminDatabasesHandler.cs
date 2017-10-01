@@ -970,7 +970,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/etl", "PUT", AuthorizationStatus.DatabaseAdmin)]
+        [RavenAction("/admin/etl", "PUT", AuthorizationStatus.Operator)]
         public async Task AddEtl()
         {
             var id = GetLongQueryString("id", required: false);

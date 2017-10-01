@@ -17,7 +17,7 @@ namespace Raven.Server.Web.System
 {
     public class TestConnectionHandler : RequestHandler
     {
-        [RavenAction("/admin/test-connection", "POST", AuthorizationStatus.DatabaseAdmin)]
+        [RavenAction("/admin/test-connection", "POST", AuthorizationStatus.Operator)]
         public async Task TestConnection()
         {
             var url = GetQueryStringValueAndAssertIfSingleAndNotEmpty("url");

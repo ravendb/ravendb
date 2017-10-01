@@ -501,7 +501,7 @@ namespace Raven.Server.Web.System
             await ToggleTaskState();
         }
 
-        [RavenAction("/databases/*/admin/tasks/state", "POST", AuthorizationStatus.DatabaseAdmin)]
+        [RavenAction("/databases/*/admin/tasks/state", "POST", AuthorizationStatus.Operator)]
         public async Task ToggleTaskState()
         {
             if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
@@ -534,7 +534,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/databases/*/admin/tasks/external-replication", "POST", AuthorizationStatus.DatabaseAdmin)]
+        [RavenAction("/databases/*/admin/tasks/external-replication", "POST", AuthorizationStatus.Operator)]
         public async Task UpdateExternalReplication()
         {
             if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
@@ -579,7 +579,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/databases/*/admin/tasks", "DELETE", AuthorizationStatus.DatabaseAdmin)]
+        [RavenAction("/databases/*/admin/tasks", "DELETE", AuthorizationStatus.Operator)]
         public async Task DeleteOngoingTask()
         {
             if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
