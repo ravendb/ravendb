@@ -894,7 +894,7 @@ namespace Raven.Server.Documents.Replication
                         using (var rcvdChangeVector = context.GetLazyString(item.ChangeVector))
                         using (item)
                         {
-                            Debug.Assert(item.Flags.HasFlag(DocumentFlags.Artificial) == false);
+                            Debug.Assert(item.Flags.Contain(DocumentFlags.Artificial) == false);
 
                            
                             maxReceivedChangeVectorByDatabase =
@@ -955,8 +955,8 @@ namespace Raven.Server.Documents.Replication
                                     if ((item.Flags & DocumentFlags.Revision) == DocumentFlags.Revision)
                                     {
                                         if (database.DocumentsStorage.RevisionsStorage.Configuration == null
-                                            && item.Flags.HasFlag(DocumentFlags.Resolved) == false
-                                            && item.Flags.HasFlag(DocumentFlags.Conflicted) == false)
+                                            && item.Flags.Contain(DocumentFlags.Resolved) == false
+                                            && item.Flags.Contain(DocumentFlags.Conflicted) == false)
                                         {
                                             if (_incoming._log.IsOperationsEnabled)
                                                 _incoming._log.Operations("Revisions are disabled but the node got a revision from replication.");

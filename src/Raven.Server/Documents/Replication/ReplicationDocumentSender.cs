@@ -299,7 +299,7 @@ namespace Raven.Server.Documents.Replication
             if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
                 _replicaAttachmentStreams[item.Base64Hash] = item;
 
-            Debug.Assert(item.Flags.HasFlag(DocumentFlags.Artificial) == false);
+            Debug.Assert(item.Flags.Contain(DocumentFlags.Artificial) == false);
             _orderedReplicaItems.Add(item.Etag, item);
             return true;
         }

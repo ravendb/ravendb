@@ -201,7 +201,7 @@ namespace Raven.Server.Documents.Revisions
             {
                 return configuration;
             }
-            if (flags.HasFlag(DocumentFlags.Resolved) || flags.HasFlag(DocumentFlags.Conflicted))
+            if (flags.Contain(DocumentFlags.Resolved) || flags.Contain(DocumentFlags.Conflicted))
             {
                 return ConflictConfiguration.Default;
             }

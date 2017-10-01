@@ -1063,8 +1063,8 @@ namespace Raven.Server.Documents
                     (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
                 {
                     var revisionsStorage = _documentDatabase.DocumentsStorage.RevisionsStorage;
-                    if (nonPersistentFlags.HasFlag(NonPersistentDocumentFlags.FromReplication) == false && 
-                        (revisionsStorage.Configuration != null || flags.HasFlag(DocumentFlags.Resolved)))
+                    if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false && 
+                        (revisionsStorage.Configuration != null || flags.Contain(DocumentFlags.Resolved)))
                     {
                         revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector, modifiedTicks, doc.NonPersistentFlags, flags);
                     }
