@@ -52,14 +52,15 @@ describe("RQL Autocomplete", () => {
         {caption: "o", value: "o.", score: 999, meta: "Orders"}
     ];
 
-    const aliasesList: autoCompleteWordList[] = [
-        {caption: "o", value: "o.", score: 999, meta: "Orders"},
+    const aliasListAfterWhere: autoCompleteWordList[] =  _.sortBy(aliasList.concat(functionsList).concat(queryCompleter.whereFunctionsOnly), (x: autoCompleteWordList) => x.score).reverse();
+
+    const aliasesList: autoCompleteWordList[] = aliasList.concat([
         {caption: "c", value: "c.", score: 998, meta: "Company"},
         {caption: "e", value: "e.", score: 997, meta: "Employee"},
         {caption: "s", value: "s.", score: 996, meta: "ShipVia"}
-    ].concat(functionsList);
+    ]);
 
-    const aliasesListAfterWhere: autoCompleteWordList[] =  _.sortBy(aliasesList.concat(queryCompleter.whereFunctionsOnly), (x: autoCompleteWordList) => x.score).reverse();
+    const aliasesListWithFunctions: autoCompleteWordList[] =  _.sortBy(aliasesList.concat(queryCompleter.functionsList), (x: autoCompleteWordList) => x.score).reverse();
 
     const fieldsList: autoCompleteWordList[] = [
         {caption: "Company", value: "Company ", score: 114, meta: "string field"},
@@ -132,7 +133,7 @@ describe("RQL Autocomplete", () => {
     
     const orderBySortAfterList = [
         {caption: ",", value: ", ", score: 23, meta: "separator"},
-        {caption: "load", value: "load ", score: 20, meta: "clause", snippet: "load alias.${1:field} as ${2:alias} "},
+        {caption: "load", value: "load ", score: 20, meta: "clause", snippet: "load ${1:field} as ${2:alias} "},
         {caption: "select", value: "select ", score: 19, meta: "keyword"},
         {caption: "select {", value: "select { ", score: 18, meta: "JS projection", snippet: `select {
     \${1:Name}: \${2:Value}
@@ -145,7 +146,7 @@ describe("RQL Autocomplete", () => {
         {caption: ",", value: ", ", score: 23, meta: "separator"},
         {caption: "where", value: "where ", score: 20, meta: "keyword"},
         {caption: "order", value: "order ", score: 19, meta: "keyword"},
-        {caption: "load", value: "load ", score: 18, meta: "clause", snippet: "load alias.${1:field} as ${2:alias} "},
+        {caption: "load", value: "load ", score: 18, meta: "clause", snippet: "load ${1:field} as ${2:alias} "},
         {caption: "select", value: "select ", score: 17, meta: "keyword"},
         {caption: "select {", value: "select { ", score: 16, meta: "JS projection", snippet: `select {
     \${1:Name}: \${2:Value}
@@ -173,7 +174,7 @@ describe("RQL Autocomplete", () => {
         {caption: "group", value: "group ", score: 20, meta: "keyword"},
         {caption: "where", value: "where ", score: 19, meta: "keyword"},
         {caption: "order", value: "order ", score: 18, meta: "keyword"},
-        {caption: "load", value: "load ", score: 17, meta: "clause", snippet: "load alias.${1:field} as ${2:alias} "},
+        {caption: "load", value: "load ", score: 17, meta: "clause", snippet: "load ${1:field} as ${2:alias} "},
         {caption: "select", value: "select ", score: 16, meta: "keyword"},
         {caption: "select {", value: "select { ", score: 15, meta: "JS projection", snippet: `select {
     \${1:Name}: \${2:Value}
@@ -199,7 +200,7 @@ describe("RQL Autocomplete", () => {
         {caption: "as", value: "as ", score: 21, meta: "keyword"},
         {caption: "where", value: "where ", score: 20, meta: "keyword"},
         {caption: "order", value: "order ", score: 19, meta: "keyword"},
-        {caption: "load", value: "load ", score: 18, meta: "clause", snippet: "load alias.${1:field} as ${2:alias} "},
+        {caption: "load", value: "load ", score: 18, meta: "clause", snippet: "load ${1:field} as ${2:alias} "},
         {caption: "select", value: "select ", score: 17, meta: "keyword"},
         {caption: "select {", value: "select { ", score: 16, meta: "JS projection", snippet: `select {
     \${1:Name}: \${2:Value}
@@ -224,7 +225,7 @@ describe("RQL Autocomplete", () => {
         {caption: "group", value: "group ", score: 20, meta: "keyword"},
         {caption: "where", value: "where ", score: 19, meta: "keyword"},
         {caption: "order", value: "order ", score: 18, meta: "keyword"},
-        {caption: "load", value: "load ", score: 17, meta: "clause", snippet: "load alias.${1:field} as ${2:alias} "},
+        {caption: "load", value: "load ", score: 17, meta: "clause", snippet: "load ${1:field} as ${2:alias} "},
         {caption: "select", value: "select ", score: 16, meta: "keyword"},
         {caption: "select {", value: "select { ", score: 15, meta: "JS projection", snippet: `select {
     \${1:Name}: \${2:Value}
@@ -241,7 +242,7 @@ describe("RQL Autocomplete", () => {
         {caption: "and", value: "and ", score: 22, meta: "binary operation"},
         {caption: "or", value: "or ", score: 21, meta: "binary operation"},
         {caption: "order", value: "order ", score: 20, meta: "keyword"},
-        {caption: "load", value: "load ", score: 19, meta: "clause", snippet: "load alias.${1:field} as ${2:alias} "},
+        {caption: "load", value: "load ", score: 19, meta: "clause", snippet: "load ${1:field} as ${2:alias} "},
         {caption: "select", value: "select ", score: 18, meta: "keyword"},
         {caption: "select {", value: "select { ", score: 17, meta: "JS projection", snippet: `select {
     \${1:Name}: \${2:Value}
@@ -266,7 +267,7 @@ describe("RQL Autocomplete", () => {
     const afterWhereWithoutSpaceList = [
         {caption: "where", value: "where ", score: 20, meta: "keyword"},
         {caption: "order", value: "order ", score: 19, meta: "keyword"},
-        {caption: "load", value: "load ", score: 18, meta: "clause", snippet: "load alias.${1:field} as ${2:alias} "},
+        {caption: "load", value: "load ", score: 18, meta: "clause", snippet: "load ${1:field} as ${2:alias} "},
         {caption: "select", value: "select ", score: 17, meta: "keyword"},
         {caption: "select {", value: "select { ", score: 16, meta: "JS projection", snippet: `select {
     \${1:Name}: \${2:Value}
@@ -277,13 +278,23 @@ describe("RQL Autocomplete", () => {
 
     const afterOrderWithoutSpaceList = [
         {caption: "order", value: "order ", score: 20, meta: "keyword"},
-        {caption: "load", value: "load ", score: 19, meta: "clause", snippet: "load alias.${1:field} as ${2:alias} "},
+        {caption: "load", value: "load ", score: 19, meta: "clause", snippet: "load ${1:field} as ${2:alias} "},
         {caption: "select", value: "select ", score: 18, meta: "keyword"},
         {caption: "select {", value: "select { ", score: 17, meta: "JS projection", snippet: `select {
     \${1:Name}: \${2:Value}
 }
 `},
         {caption: "include", value: "include ", score: 16, meta: "keyword"}
+    ];
+
+    const afterLoad = [
+        {caption: ",", value: ", ", score: 21, meta: "separator", snippet: ", o.${1:field} as ${2:alias} "},
+        {caption: "select", value: "select ", score: 20, meta: "keyword"},
+        {caption: "select {", value: "select { ", score: 19, meta: "JS projection", snippet: `select {
+    \${1:Name}: \${2:Value}
+}
+`},
+        {caption: "include", value: "include ", score: 18, meta: "keyword"}
     ];
 
     const afterOrderOrGroupList = [
@@ -372,6 +383,7 @@ describe("RQL Autocomplete", () => {
 
             assert.equal(lastKeyword.keyword, "from");
             assert.equal(lastKeyword.dividersCount, 1);
+            assert.isUndefined(lastKeyword.info.alias);
 
             done();
         });
@@ -384,6 +396,7 @@ describe("RQL Autocomplete", () => {
 
             assert.equal(lastKeyword.keyword, "from");
             assert.equal(lastKeyword.dividersCount, 2);
+            assert.isUndefined(lastKeyword.info.alias);
 
             done();
         });
@@ -397,6 +410,7 @@ describe("RQL Autocomplete", () => {
 
             assert.equal(lastKeyword.keyword, "from");
             assert.equal(lastKeyword.dividersCount, 2);
+            assert.isUndefined(lastKeyword.info.alias);
 
             done();
         });
@@ -410,6 +424,7 @@ describe("RQL Autocomplete", () => {
             assert.equal(lastKeyword.keyword, "from");
             assert.isTrue(lastKeyword.asSpecified);
             assert.equal(lastKeyword.dividersCount, 2);
+            assert.isUndefined(lastKeyword.info.alias);
 
             done();
         });
@@ -424,6 +439,7 @@ describe("RQL Autocomplete", () => {
             assert.equal(lastKeyword.keyword, "from");
             assert.isTrue(lastKeyword.asSpecified);
             assert.equal(lastKeyword.dividersCount, 3);
+            assert.isUndefined(lastKeyword.info.alias);
 
             done();
         });
@@ -438,6 +454,7 @@ describe("RQL Autocomplete", () => {
             assert.equal(lastKeyword.keyword, "from");
             assert.isTrue(lastKeyword.asSpecified);
             assert.equal(lastKeyword.dividersCount, 3);
+            assert.isUndefined(lastKeyword.info.alias);
 
             done();
         });
@@ -451,6 +468,188 @@ describe("RQL Autocomplete", () => {
             assert.equal(lastKeyword.keyword, "from");
             assert.isTrue(lastKeyword.asSpecified);
             assert.equal(lastKeyword.dividersCount, 4);
+            assert.equal(lastKeyword.info.alias, "o");
+
+            done();
+        });
+    });
+
+    it('from collection as alias, where | should list aliases with functions', done => {
+        rqlTestUtils.autoComplete(`from Orders as o
+where |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, aliasListAfterWhere);
+
+            assert.equal(lastKeyword.keyword, "where");
+            assert.isFalse(lastKeyword.asSpecified);
+            assert.equal(lastKeyword.dividersCount, 1);
+            assert.equal(lastKeyword.info.collection, "Orders");
+            assert.isUndefined(lastKeyword.info.index);
+            assert.equal(lastKeyword.info.alias, "o");
+            assert.deepEqual(lastKeyword.info.aliases, {o: "Orders"});
+
+            done();
+        });
+    });
+
+    it('from collection as alias, where and alias with dot | should list collection fields', done => {
+        rqlTestUtils.autoComplete(`from Orders as o
+where c.|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, fieldsList);
+
+            assert.equal(lastKeyword.keyword, "where");
+            assert.isFalse(lastKeyword.asSpecified);
+            assert.equal(lastKeyword.dividersCount, 1);
+            assert.equal(lastKeyword.info.collection, "Orders");
+            assert.isUndefined(lastKeyword.info.index);
+            assert.equal(lastKeyword.info.alias, "o");
+            assert.deepEqual(lastKeyword.info.aliases, {o: "Orders"});
+
+            done();
+        });
+    });
+
+    it('from collection as alias, load | should list alias', done => {
+        rqlTestUtils.autoComplete(`from Orders as o
+load |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, aliasList);
+
+            assert.equal(lastKeyword.keyword, "load");
+            assert.isFalse(lastKeyword.asSpecified);
+            assert.equal(lastKeyword.dividersCount, 1);
+            assert.equal(lastKeyword.info.collection, "Orders");
+            assert.isUndefined(lastKeyword.info.index);
+            assert.equal(lastKeyword.info.alias, "o");
+            assert.deepEqual(lastKeyword.info.aliases, {o: "Orders"});
+
+            done();
+        });
+    });
+
+    it('from collection as alias, load and alias with dot | should list collection fields', done => {
+        rqlTestUtils.autoComplete(`from Orders as o
+load o.|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, fieldsList);
+
+            assert.equal(lastKeyword.keyword, "load");
+            assert.isFalse(lastKeyword.asSpecified);
+            assert.equal(lastKeyword.dividersCount, 1);
+            assert.equal(lastKeyword.info.collection, "Orders");
+            assert.isUndefined(lastKeyword.info.index);
+            assert.equal(lastKeyword.info.alias, "o");
+            assert.deepEqual(lastKeyword.info.aliases, {o: "Orders"});
+
+            done();
+        });
+    });
+
+    it('from collection as alias, load and alias with dot than space | should list as only', done => {
+        rqlTestUtils.autoComplete(`from Orders as o
+load o.Company |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, queryCompleter.asList);
+
+            assert.equal(lastKeyword.keyword, "load");
+            assert.isFalse(lastKeyword.asSpecified);
+            assert.equal(lastKeyword.dividersCount, 2);
+            assert.equal(lastKeyword.info.collection, "Orders");
+            assert.isUndefined(lastKeyword.info.index);
+            assert.equal(lastKeyword.info.alias, "o");
+            assert.deepEqual(lastKeyword.info.aliases, {o: "Orders"});
+
+            done();
+        });
+    });
+
+    it('from collection as alias, load and alias with space | should list nothing', done => {
+        rqlTestUtils.autoComplete(`from Orders as o
+load o.Company as |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.isNull(wordlist);
+
+            assert.equal(lastKeyword.keyword, "load");
+            assert.isTrue(lastKeyword.asSpecified);
+            assert.equal(lastKeyword.dividersCount, 3);
+            assert.equal(lastKeyword.info.collection, "Orders");
+            assert.isUndefined(lastKeyword.info.index);
+            assert.equal(lastKeyword.info.alias, "o");
+            assert.deepEqual(lastKeyword.info.aliases, {o: "Orders"});
+
+            done();
+        });
+    });
+
+    it('from collection as alias, load and alias specified | should list separator and next keywords', done => {
+        rqlTestUtils.autoComplete(`from Orders as o
+load o.Company as c |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, afterLoad);
+
+            assert.equal(lastKeyword.keyword, "load");
+            assert.isTrue(lastKeyword.asSpecified);
+            assert.equal(lastKeyword.dividersCount, 4);
+            assert.equal(lastKeyword.info.collection, "Orders");
+            assert.isUndefined(lastKeyword.info.index);
+            assert.equal(lastKeyword.info.alias, "o");
+            assert.deepEqual(lastKeyword.info.aliases, {o: "Orders", c: "Company"});
+
+            done();
+        });
+    });
+
+    it('from collection as alias, load and separator without space | should list separator and next keywords', done => {
+        rqlTestUtils.autoComplete(`from Orders as o
+load o.Company as c,|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, aliasesList.slice(0, 2));
+
+            assert.equal(lastKeyword.keyword, "load");
+            assert.isFalse(lastKeyword.asSpecified);
+            assert.equal(lastKeyword.dividersCount, 1);
+            assert.equal(lastKeyword.info.collection, "Orders");
+            assert.isUndefined(lastKeyword.info.index);
+            assert.equal(lastKeyword.info.alias, "o");
+            assert.deepEqual(lastKeyword.info.aliases, {o: "Orders", c: "Company"});
+
+            done();
+        });
+    });
+
+    it('from collection as alias, load and separator | should list separator and next keywords', done => {
+        rqlTestUtils.autoComplete(`from Orders as o
+load o.Company as c, |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, aliasesList.slice(0, 2));
+
+            assert.equal(lastKeyword.keyword, "load");
+            assert.isFalse(lastKeyword.asSpecified);
+            assert.equal(lastKeyword.dividersCount, 1);
+            assert.equal(lastKeyword.info.collection, "Orders");
+            assert.isUndefined(lastKeyword.info.index);
+            assert.equal(lastKeyword.info.alias, "o");
+            assert.deepEqual(lastKeyword.info.aliases, {o: "Orders", c: "Company"});
+
+            done();
+        });
+    });
+
+    it('from collection as alias, where | should list aliases with functions', done => {
+        rqlTestUtils.autoComplete(`from Orders as o
+load o.Company as c, o.Employee as e, o.ShipVia as s
+select |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, aliasesListWithFunctions);
+
+            assert.equal(lastKeyword.keyword, "select");
+            assert.isFalse(lastKeyword.asSpecified);
+            assert.equal(lastKeyword.dividersCount, 1);
+            assert.equal(lastKeyword.info.collection, "Orders");
+            assert.isUndefined(lastKeyword.info.index);
+            assert.equal(lastKeyword.info.alias, "o");
+            assert.deepEqual(lastKeyword.info.aliases, {o: "Orders", c: "Company", e: "Employee", s: "ShipVia"});
 
             done();
         });
@@ -530,9 +729,7 @@ select ShipTo.City|`, northwindProvider(), (errors, wordlist, prefix, lastKeywor
         rqlTestUtils.autoComplete(`from Orders 
 select ShipTo.City |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
-            assert.deepEqual(wordlist, [
-                    {caption: "as", value: "as ", score: 3, meta: "keyword"},
-                ]);
+            assert.deepEqual(wordlist, queryCompleter.asList);
 
             assert.equal(lastKeyword.keyword, "select");
             assert.equal(lastKeyword.dividersCount, 2);
