@@ -44,6 +44,8 @@ class queryCompleter {
     ];
     
     public static notAfterAndOrList: autoCompleteWordList[] = queryCompleter.notList.concat(queryCompleter.whereFunctionsList);
+
+    public static asList: autoCompleteWordList[] = [{value: "as", score: 21, meta: "keyword"}];
     
     constructor(private providers: queryCompleterProviders, private queryType: rqlQueryType) {
         _.bindAll(this, "complete");
@@ -66,7 +68,17 @@ class queryCompleter {
         let asSpecified = false;
         let handleAfterNextToken = false;
 
-        const iterator: AceAjax.TokenIterator = new this.tokenIterator(this.session, 0, 0);
+        const iterator: AceAjax.TokenIterator = new this.tokenIterator(this.session, pos.row, pos.column);
+        do {
+            const token = iterator.getCurrentToken();
+            if (!token) {
+                break
+            }
+            if (token.type === "keyword.clause" && token.value.toLowerCase() === "from") {
+                break
+            }
+        } while (iterator.stepBackward());
+
         do {
             const token = iterator.getCurrentToken();
             if (!token) {
@@ -91,11 +103,12 @@ class queryCompleter {
                 }
                 else if (keyword === "from") {
                     result.collection = identifier;
+                    asSpecified = true;
                 }
                 else if (keyword === "index") {
                     result.index = identifier;
+                    asSpecified = true;
                 }
-                asSpecified = true;
             }
             
             switch (token.type) {
@@ -519,7 +532,7 @@ class queryCompleter {
             case "select": {
                 if (lastKeyword.dividersCount >= 2) {
                     if (!lastKeyword.asSpecified) {
-                        return this.completeWords([{value: "as", score: 3, meta: "keyword"}]);
+                        return this.completeWords(queryCompleter.asList);
                     }
 
                     return this.completeError("empty completion");
@@ -663,8 +676,19 @@ class queryCompleter {
                 if (lastKeyword.dividersCount === 0) {
                     return this.completeKeywordEnd();
                 }
+                if (lastKeyword.dividersCount === 1) {
+                    return this.completeFields();
+                }
+                if (lastKeyword.dividersCount === 2) {
+                    return this.completeWords(queryCompleter.asList);
+                }
+                if (lastKeyword.dividersCount === 3) {
+                    return this.completeError("empty completion");
+                }
 
-                return this.completeFields();
+                let alias = lastKeyword.info.alias ? lastKeyword.info.alias + "." : "";
+                const separator = {value: ",", score: 21, meta: "separator", snippet: ", " + alias + "${1:field} as ${2:alias} "};
+                return this.completeKeywordEnd([separator]);
             }
             case "include": {
                 if (lastKeyword.dividersCount === 0) {
@@ -798,11 +822,8 @@ class queryCompleter {
             if (keyword === "select") {
                 projectionSelectPosition = position++;
             } else if (keyword === "load") {
-                let alias = lastKeyword.info.alias;
-                if (!alias) {
-                    alias = "alias";
-                }
-                return {value: keyword, score: 20 - currentPosition, meta: "clause", snippet: "load " + alias + ".${1:field} as ${2:alias} "};
+                let alias = lastKeyword.info.alias ? lastKeyword.info.alias + "." : "";
+                return {value: keyword, score: 20 - currentPosition, meta: "clause", snippet: "load " + alias + "${1:field} as ${2:alias} "};
             }
             return {value: keyword, score: 20 - currentPosition, meta: "keyword"};
         });
