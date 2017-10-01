@@ -348,7 +348,8 @@ namespace Raven.Server.Web.System
 
                 foreach (var promotable in topology.Promotables)
                 {
-                    var node = GetNode(databaseName, clusterTopology, promotable, out var promotableTask);
+                    topology.PredefinedMentors.TryGetValue(promotable, out var mentorCandidate);
+                    var node = GetNode(databaseName, clusterTopology, promotable, mentorCandidate, out var promotableTask);
                     var mentor = topology.WhoseTaskIsIt(promotableTask, ServerStore.IsPassive());
                     nodesTopology.Promotables.Add(GetNodeId(node, mentor));
                     SetNodeStatus(topology, promotable, nodesTopology);
@@ -356,7 +357,7 @@ namespace Raven.Server.Web.System
 
                 foreach (var rehab in topology.Rehabs)
                 {
-                    var node = GetNode(databaseName, clusterTopology, rehab, out var promotableTask);
+                    var node = GetNode(databaseName, clusterTopology, rehab, null, out var promotableTask);
                     var mentor = topology.WhoseTaskIsIt(promotableTask, ServerStore.IsPassive());
                     nodesTopology.Rehabs.Add(GetNodeId(node, mentor));
                     SetNodeStatus(topology, rehab, nodesTopology);
@@ -425,7 +426,7 @@ namespace Raven.Server.Web.System
             nodesTopology.Status[nodeTag] = nodeStatus;
         }
 
-        private static InternalReplication GetNode(string databaseName, ClusterTopology clusterTopology, string rehab, out PromotableTask promotableTask)
+        private static InternalReplication GetNode(string databaseName, ClusterTopology clusterTopology, string rehab, string mentor, out PromotableTask promotableTask)
         {
             var url = clusterTopology.GetUrlFromTag(rehab);
             var node = new InternalReplication
@@ -434,7 +435,7 @@ namespace Raven.Server.Web.System
                 NodeTag = rehab,
                 Url = url
             };
-            promotableTask = new PromotableTask(rehab, url, databaseName); // internal replication doesn't have a predefined mentor
+            promotableTask = new PromotableTask(rehab, url, databaseName, mentor);
             return node;
         }
 
