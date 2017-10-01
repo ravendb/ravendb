@@ -12,7 +12,7 @@ class queryCompleter {
     private rules: AceAjax.RqlHighlightRules;
     private session: AceAjax.IEditSession;
     private callback: (errors: any[], wordList: autoCompleteWordList[]) => void;
-    private lastKeyword: autoCompleteLastKeyword;
+    public lastKeyword: autoCompleteLastKeyword;
 
     private tokenIterator: new(session : AceAjax.IEditSession, initialRow: number, initialColumn: number) => AceAjax.TokenIterator = ace.require("ace/token_iterator").TokenIterator;
     private indexOrCollectionFieldsCache = new Map<string, autoCompleteWordList[]>();
@@ -52,7 +52,7 @@ class queryCompleter {
     /**
      * Extracts collection or index used in current query 
      */
-    private extractQueryInfo(session: AceAjax.IEditSession): rqlQueryInfo {
+    private extractQueryInfo(pos: AceAjax.Position): rqlQueryInfo {
         const result: rqlQueryInfo = {
             collection: undefined,
             index: undefined,
@@ -66,7 +66,7 @@ class queryCompleter {
         let asSpecified = false;
         let handleAfterNextToken = false;
 
-        const iterator: AceAjax.TokenIterator = new this.tokenIterator(session, 0, 0);
+        const iterator: AceAjax.TokenIterator = new this.tokenIterator(this.session, 0, 0);
         do {
             const token = iterator.getCurrentToken();
             if (!token) {
@@ -233,12 +233,12 @@ class queryCompleter {
         return keywords;
     }
     
-    getLastKeyword(session: AceAjax.IEditSession, pos: AceAjax.Position): autoCompleteLastKeyword {
-        const mode = session.getMode();
+    private getLastKeyword(pos: AceAjax.Position): autoCompleteLastKeyword {
+        const mode = this.session.getMode();
         this.rules = <AceAjax.RqlHighlightRules>mode.$highlightRules;
         
         const result: autoCompleteLastKeyword = {
-            info: this.extractQueryInfo(session),
+            info: this.extractQueryInfo(pos),
             keywordsBefore: undefined,
             keyword: undefined,
             asSpecified: false,
@@ -258,7 +258,7 @@ class queryCompleter {
 
         let lastRow: number;
         let lastToken: AceAjax.TokenInfo;
-        const iterator: AceAjax.TokenIterator = new this.tokenIterator(session, pos.row, pos.column);
+        const iterator: AceAjax.TokenIterator = new this.tokenIterator(this.session, pos.row, pos.column);
         do {
             const row = iterator.getCurrentTokenRow();
             if (lastRow && lastToken && lastToken.type !== "space" && row - lastRow < 0) {
@@ -473,7 +473,7 @@ class queryCompleter {
 
         this.session = session;
         this.callback = callback;
-        const lastKeyword = this.lastKeyword = this.getLastKeyword(session, pos);
+        const lastKeyword = this.lastKeyword = this.getLastKeyword(pos);
         if (!lastKeyword || !lastKeyword.keyword) {
             return this.completeEmpty();
         }
