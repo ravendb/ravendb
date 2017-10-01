@@ -160,7 +160,7 @@ namespace Raven.Client.Http
 
         public static RequestExecutor CreateForSingleNodeWithoutConfigurationUpdates(string url, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
         {
-            ValidateUrls(new[] { url }, certificate);
+            url = ValidateUrls(new[] { url }, certificate)[0];
             var executor = new RequestExecutor(databaseName, certificate, conventions)
             {
                 _nodeSelector = new NodeSelector(new Topology
@@ -405,7 +405,7 @@ namespace Raven.Client.Http
 
         protected async Task FirstTopologyUpdate(string[] initialUrls)
         {
-            ValidateUrls(initialUrls, Certificate);
+            initialUrls = ValidateUrls(initialUrls, Certificate);
 
             var list = new List<(string, Exception)>();
             foreach (var url in initialUrls)
@@ -470,19 +470,21 @@ namespace Raven.Client.Http
                 , list.Select(x => x.Item2));
         }
 
-        protected static void ValidateUrls(string[] initialUrls, X509Certificate2 certificate)
+        protected static string[] ValidateUrls(string[] initialUrls, X509Certificate2 certificate)
         {
+            var cleanUrls = new string[initialUrls.Length];
             var requireHttps = certificate != null;
-            foreach (var url in initialUrls)
+            for (var index = 0; index < initialUrls.Length; index++)
             {
+                var url = initialUrls[index];
                 if (Uri.TryCreate(url, UriKind.Absolute, out var uri) == false)
                     throw new InvalidOperationException("The url '" + url + "' is not valid");
-
+                cleanUrls[index] = uri.ToString().TrimEnd('/');
                 requireHttps |= string.Equals(uri.Scheme, "https", StringComparison.OrdinalIgnoreCase);
             }
 
             if (requireHttps == false)
-                return;
+                return cleanUrls;
 
             foreach (var url in initialUrls)
             {
@@ -496,6 +498,7 @@ namespace Raven.Client.Http
 
                 throw new InvalidOperationException("The url " + url + " is using HTTP, but other urls are using HTTPS, and mixing of HTTP and HTTPS is not allowed");
             }
+            return cleanUrls;
         }
 
         private void InitializeUpdateTopologyTimer()
