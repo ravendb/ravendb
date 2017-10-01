@@ -135,8 +135,12 @@ namespace Raven.Server.Documents.Queries
             if (query == null)
                 throw new ArgumentNullException(nameof(query));
 
-            if (string.IsNullOrEmpty(query.DocumentId) && query.MapGroupFields.Count == 0)
-                throw new InvalidOperationException("The document id or map group fields are mandatory");
+            if (string.IsNullOrWhiteSpace(query.DocumentId) &&
+                query.MapGroupFields.Count == 0 &&
+                string.IsNullOrWhiteSpace(query.Document))
+            {
+                throw new InvalidOperationException("The document id, document (artificial document property) or map group fields are mandatory");
+            }
 
             var sw = Stopwatch.StartNew();
             var index = GetIndex(query.Metadata.IndexName);

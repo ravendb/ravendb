@@ -245,7 +245,7 @@ namespace Raven.Server.Documents.Handlers
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
 
             var query = GetMoreLikeThisQuery(context, method);
-
+            
             var result = Database.QueryRunner.ExecuteMoreLikeThisQuery(query, context, existingResultEtag, token);
 
             if (result.NotModified)

@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading;
 
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
+using Lucene.Net.Search.Similar;
 using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
@@ -17,7 +19,6 @@ using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.MoreLikeThis;
-using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Sorting.AlphaNumeric;
 using Raven.Server.Exceptions;
@@ -56,11 +57,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 throw new IndexAnalyzerException(e);
             }
-
+            
             _maxNumberOfOutputsPerDocument = index.MaxNumberOfOutputsPerDocument;
             _indexType = index.Type;
             _indexHasBoostedFields = index.HasBoostedFields;
-            _releaseReadTransaction = directory.SetTransaction(readTransaction, out _state);
+            _releaseReadTransaction = directory.SetTransaction(readTransaction, out _state);            
             _releaseSearcher = searcherHolder.GetSearcher(readTransaction, _state, out _searcher);
         }
 
@@ -413,24 +414,37 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return results;
         }
 
-        public IEnumerable<Document> MoreLikeThis(MoreLikeThisQueryServerSide query, HashSet<string> stopWords, Func<SelectField[], IQueryResultRetriever> createRetriever, JsonOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
+        public IEnumerable<Document> MoreLikeThis(
+            MoreLikeThisQueryServerSide query, 
+            HashSet<string> stopWords, 
+            Func<SelectField[], IQueryResultRetriever> createRetriever, 
+            JsonOperationContext context, 
+            Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
-            var documentQuery = new BooleanQuery();
+            int? baseDocId = null;
+            if (string.IsNullOrWhiteSpace(query.DocumentId) == false || query.MapGroupFields.Count > 0)
+            {
+                var documentQuery = new BooleanQuery();
 
-            if (string.IsNullOrWhiteSpace(query.DocumentId) == false)
-                documentQuery.Add(new TermQuery(new Term(Constants.Documents.Indexing.Fields.DocumentIdFieldName, query.DocumentId.ToLowerInvariant())), Occur.MUST);
+                if (string.IsNullOrWhiteSpace(query.DocumentId) == false)
+                    documentQuery.Add(new TermQuery(new Term(Constants.Documents.Indexing.Fields.DocumentIdFieldName, query.DocumentId.ToLowerInvariant())), Occur.MUST);
 
-            foreach (var key in query.MapGroupFields.Keys)
-                documentQuery.Add(new TermQuery(new Term(key, query.MapGroupFields[key])), Occur.MUST);
+                foreach (var key in query.MapGroupFields.Keys)
+                    documentQuery.Add(new TermQuery(new Term(key, query.MapGroupFields[key])), Occur.MUST);
 
-            var td = _searcher.Search(documentQuery, 1, _state);
+                var td = _searcher.Search(documentQuery, 1, _state);
 
-            // get the current Lucene docid for the given RavenDB doc ID
-            if (td.ScoreDocs.Length == 0)
-                throw new InvalidOperationException("Document " + query.DocumentId + " could not be found");
+                // get the current Lucene docid for the given RavenDB doc ID
+                if (td.ScoreDocs.Length == 0)
+                    throw new InvalidOperationException("Document " + query.DocumentId + " could not be found");
+
+                baseDocId = td.ScoreDocs[0].Doc;
+            }
 
             var ir = _searcher.IndexReader;
             var mlt = new RavenMoreLikeThis(ir, query, _state);
+
+            AssignParameters(mlt, query);
 
             if (stopWords != null)
                 mlt.SetStopWords(stopWords);
@@ -442,17 +456,31 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 fieldNames = ir.GetFieldNames(IndexReader.FieldOption.INDEXED)
                     .Where(x => x != Constants.Documents.Indexing.Fields.DocumentIdFieldName && x != Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName)
                     .ToArray();
-
+            
             mlt.SetFieldNames(fieldNames);
             mlt.Analyzer = _analyzer;
 
             var pageSize = GetPageSize(_searcher, query.PageSize);
-            var mltQuery = mlt.Like(td.ScoreDocs[0].Doc);
+
+
+
+            Query mltQuery;
+            if (baseDocId.HasValue)
+            {
+                mltQuery = mlt.Like(baseDocId.Value);
+            }
+            else
+            {
+                using (var blittableJson = ParseJsonStringIntoBlittable(query.Document, context))
+                    mltQuery = mlt.Like(blittableJson);
+            }
+
             var tsdc = TopScoreDocCollector.Create(pageSize, true);
 
             if (query.Metadata.WhereFields.Count > 0)
             {
-                var additionalQuery = QueryBuilder.BuildQuery(documentsContext, query.Metadata, query.Metadata.Query.Where, null, _analyzer, getSpatialField);
+                var additionalQuery = QueryBuilder.BuildQuery(context, query.Metadata, query.Metadata.Query.Where, null, _analyzer, getSpatialField);
+
                 mltQuery = new BooleanQuery
                     {
                         {mltQuery, Occur.MUST},
@@ -462,13 +490,19 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             _searcher.Search(mltQuery, tsdc, _state);
             var hits = tsdc.TopDocs().ScoreDocs;
-            var baseDocId = td.ScoreDocs[0].Doc;
 
             var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            var fieldsToFetch = string.IsNullOrWhiteSpace(query.DocumentId)
-                ? _searcher.Doc(baseDocId, _state).GetFields().Cast<AbstractField>().Select(x => x.Name).Distinct().Select(x => SelectField.Create(x)).ToArray()
-                : null;
+            var fieldsToFetch = baseDocId.HasValue ?
+                _searcher.Doc(baseDocId.Value, _state).GetFields().Cast<AbstractField>().Select(x => x.Name).Distinct()
+                                                                                        .Union(mlt.GetFieldNames())
+                                                                                        .Select(x => SelectField.Create(x)).ToArray()
+                : 
+                hits.Length > 0 ?
+                    _searcher.Doc(hits[0].Doc, _state).GetFields().Cast<AbstractField>().Select(x => x.Name).Distinct()
+                                                                                        .Union(mlt.GetFieldNames())
+                                                                                        .Select(x => SelectField.Create(x)).ToArray()
+                        : null;
 
             var retriever = createRetriever(fieldsToFetch);
 
@@ -487,6 +521,30 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 yield return retriever.Get(doc, hit.Score, _state);
             }
+        }
+
+        private static void AssignParameters(MoreLikeThis mlt, MoreLikeThisQueryServerSide parameters)
+        {
+            if (parameters.Boost != null)
+                mlt.Boost = parameters.Boost.Value;
+            if (parameters.BoostFactor != null)
+                mlt.BoostFactor = parameters.BoostFactor.Value;
+            if (parameters.MaximumNumberOfTokensParsed != null)
+                mlt.MaxNumTokensParsed = parameters.MaximumNumberOfTokensParsed.Value;
+            if (parameters.MaximumQueryTerms != null)
+                mlt.MaxQueryTerms = parameters.MaximumQueryTerms.Value;
+            if (parameters.MinimumWordLength != null)
+                mlt.MinWordLen = parameters.MinimumWordLength.Value;
+            if (parameters.MaximumWordLength != null)
+                mlt.MaxWordLen = parameters.MaximumWordLength.Value;
+            if (parameters.MinimumTermFrequency != null)
+                mlt.MinTermFreq = parameters.MinimumTermFrequency.Value;
+            if (parameters.MinimumDocumentFrequency != null)
+                mlt.MinDocFreq = parameters.MinimumDocumentFrequency.Value;
+            if (parameters.MaximumDocumentFrequency != null)
+                mlt.MaxDocFreq = parameters.MaximumDocumentFrequency.Value;
+            if (parameters.MaximumDocumentFrequencyPercentage != null)
+                mlt.SetMaxDocFreqPct(parameters.MaximumDocumentFrequencyPercentage.Value);
         }
 
         public IEnumerable<BlittableJsonReaderObject> IndexEntries(IndexQueryServerSide query, Reference<int> totalResults, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
@@ -519,5 +577,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _releaseSearcher?.Dispose();
             _releaseReadTransaction?.Dispose();
         }
+
+        private unsafe BlittableJsonReaderObject ParseJsonStringIntoBlittable(string json, JsonOperationContext context)
+        {
+            var bytes = Encoding.UTF8.GetBytes(json);
+            fixed (byte* ptr = bytes)
+            {
+                var blittableJson = context.ParseBuffer(ptr, bytes.Length, "MoreLikeThis/ExtractTermsFromJson", BlittableJsonDocumentBuilder.UsageMode.None);
+                blittableJson.BlittableValidation(); //precaution, needed because this is user input..                
+                return blittableJson;
+            }
+        }      
     }
 }

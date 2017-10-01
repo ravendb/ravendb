@@ -11,6 +11,7 @@ namespace Raven.Client.Documents.Queries.MoreLikeThis
             using (var hasher = new QueryHashCalculator(ctx))
             {
                 hasher.Write(Query);
+                hasher.Write(Document);
                 hasher.Write(DocumentId);
                 hasher.Write(Fields);
                 hasher.Write(MaximumDocumentFrequency);
@@ -54,6 +55,11 @@ namespace Raven.Client.Documents.Queries.MoreLikeThis
         public const int DefaultMinimumWordLength = 0;
         public const int DefaultMaximumWordLength = 0;
         public const int DefaultMaximumQueryTerms = 25;
+
+        /// <summary>
+        /// An artificial document to use as the basis for comparison
+        /// </summary>
+        public string Document { get; set; }
 
         /// <summary>
         /// Ignore terms with less than this frequency in the source doc. Default is 2.
