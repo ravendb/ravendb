@@ -355,7 +355,7 @@ interface rqlQueryInfo {
     collection: string;
     index: string;
     alias: string;
-    collectionMap: dictionary<string>;
+    aliases: dictionary<string>;
 }
 
 interface queryCompleterProviders {
