@@ -113,7 +113,6 @@ namespace FastTests.Client.Subscriptions
                 };
 
                 var subsId = await documentStore.Subscriptions.CreateAsync(subscriptionCreationParams).ConfigureAwait(false);
-                Console.WriteLine(subsId);
                 var amre = new AsyncManualResetEvent();
                 using (var subscription = documentStore.Subscriptions.Open<Doc>(new SubscriptionConnectionOptions(subsId)))
                 {
@@ -125,7 +124,16 @@ namespace FastTests.Client.Subscriptions
                         amre.Set();
                     });
 
-                    Assert.True(await amre.WaitAsync(TimeSpan.FromSeconds(60)));
+                    try
+                    {
+                        Assert.True(await amre.WaitAsync(TimeSpan.FromSeconds(60)));
+                    }
+                    catch
+                    {
+                        if (t.IsFaulted)
+                            t.Wait();
+                        throw;
+                    }
                 }
 
                 
