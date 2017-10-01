@@ -36,6 +36,7 @@ namespace Raven.Server.Documents.Revisions
         public static readonly string RevisionsTombstones = "Revisions.Tombstones";
 
         private static readonly TableSchema DocsSchema;
+        public static RevisionsConfiguration ConflictConfiguration;
 
         private readonly DocumentDatabase _database;
         private readonly DocumentsStorage _documentsStorage;
@@ -63,19 +64,21 @@ namespace Raven.Server.Documents.Revisions
 
         private readonly RevisionsCollectionConfiguration _emptyConfiguration = new RevisionsCollectionConfiguration();
 
-        public RevisionsStorage(DocumentDatabase database)
+        public RevisionsStorage(DocumentDatabase database, Transaction tx)
         {
             _database = database;
             _documentsStorage = _database.DocumentsStorage;
             _logger = LoggingSource.Instance.GetLogger<RevisionsStorage>(database.Name);
             Operations = new RevisionsOperations(_database);
-        }
-
-        public RevisionsStorage(DocumentDatabase database, RevisionsConfiguration configuration, Transaction tx):this(database)
-        {
-            Configuration = configuration;
-            tx.CreateTree(RevisionsCountSlice);
-            TombstonesSchema.Create(tx, RevisionsTombstonesSlice, 16);
+            ConflictConfiguration = new RevisionsConfiguration
+            {
+                Default = new RevisionsCollectionConfiguration
+                {
+                    MinimumRevisionAgeToKeep = TimeSpan.FromDays(45),
+                    Active = true
+                }
+            };
+            CreateTrees(tx);
         }
 
         private Table EnsureRevisionTableCreated(Transaction tx, CollectionName collection)
@@ -163,8 +166,7 @@ namespace Raven.Server.Documents.Revisions
                         EnsureRevisionTableCreated(tx, new CollectionName(collection.Key));
                     }
 
-                    tx.CreateTree(RevisionsCountSlice);
-                    TombstonesSchema.Create(tx, RevisionsTombstonesSlice, 16);
+                    CreateTrees(tx);
 
                     tx.Commit();
                 }
@@ -183,17 +185,26 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        public RevisionsCollectionConfiguration GetRevisionsConfiguration(string collection)
+        private static void CreateTrees(Transaction tx)
+        {
+            tx.CreateTree(RevisionsCountSlice);
+            TombstonesSchema.Create(tx, RevisionsTombstonesSlice, 16);
+        }
+
+        public RevisionsCollectionConfiguration GetRevisionsConfiguration(string collection, DocumentFlags flags = DocumentFlags.None)
         {
             if (Configuration == null)
-                return _emptyConfiguration;
+                return ConflictConfiguration.Default;
 
             if (Configuration.Collections != null &&
                 Configuration.Collections.TryGetValue(collection, out RevisionsCollectionConfiguration configuration))
             {
                 return configuration;
             }
-
+            if (flags.HasFlag(DocumentFlags.Resolved) || flags.HasFlag(DocumentFlags.Conflicted))
+            {
+                return ConflictConfiguration.Default;
+            }
             return Configuration.Default ?? _emptyConfiguration;
         }
 
@@ -203,7 +214,9 @@ namespace Raven.Server.Documents.Revisions
         {
             configuration = GetRevisionsConfiguration(collectionName.Name);
             if (configuration.Active == false)
+            {
                 return false;
+            }
 
             try
             {
@@ -503,7 +516,7 @@ namespace Raven.Server.Documents.Revisions
         }
 
         public void Delete(DocumentsOperationContext context, string id, Slice lowerId, CollectionName collectionName, string changeVector,
-            long lastModifiedTicks, NonPersistentDocumentFlags nonPersistentFlags)
+            long lastModifiedTicks, NonPersistentDocumentFlags nonPersistentFlags, DocumentFlags flags)
         {
             using (DocumentIdWorker.GetStringPreserveCase(context, id, out Slice idPtr))
             {
@@ -514,29 +527,29 @@ namespace Raven.Server.Documents.Revisions
                         [Constants.Documents.Metadata.Collection] = collectionName.Name
                     }
                 }, "RevisionsBin");
-                Delete(context, lowerId, idPtr, id, collectionName, deleteRevisionDocument, changeVector, lastModifiedTicks, nonPersistentFlags);
+                Delete(context, lowerId, idPtr, id, collectionName, deleteRevisionDocument, changeVector, lastModifiedTicks, nonPersistentFlags, flags);
             }
         }
 
         public void Delete(DocumentsOperationContext context, string id, BlittableJsonReaderObject deleteRevisionDocument, string changeVector,
-            long lastModifiedTicks, NonPersistentDocumentFlags nonPersistentFlags)
+            long lastModifiedTicks, NonPersistentDocumentFlags nonPersistentFlags, DocumentFlags flags)
         {
             BlittableJsonReaderObject.AssertNoModifications(deleteRevisionDocument, id, assertChildren: true);
 
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr))
             {
                 var collectionName = _documentsStorage.ExtractCollectionName(context, deleteRevisionDocument);
-                Delete(context, lowerId, idPtr, id, collectionName, deleteRevisionDocument, changeVector, lastModifiedTicks, nonPersistentFlags);
+                Delete(context, lowerId, idPtr, id, collectionName, deleteRevisionDocument, changeVector, lastModifiedTicks, nonPersistentFlags, flags);
             }
         }
 
         private void Delete(DocumentsOperationContext context, Slice lowerId, Slice idSlice, string id, CollectionName collectionName,
             BlittableJsonReaderObject deleteRevisionDocument, string changeVector,
-            long lastModifiedTicks, NonPersistentDocumentFlags nonPersistentFlags)
+            long lastModifiedTicks, NonPersistentDocumentFlags nonPersistentFlags, DocumentFlags flags)
         {
             Debug.Assert(changeVector != null, "Change vector must be set");
 
-            var configuration = GetRevisionsConfiguration(collectionName.Name);
+            var configuration = GetRevisionsConfiguration(collectionName.Name, flags);
             if (configuration.Active == false)
                 return;
 

@@ -86,7 +86,6 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
         public async Task ReplicateRevisionsIgnoringConflicts()
         {
             using (var storeA = GetDocumentStore())
@@ -102,19 +101,24 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
-        public async Task CreateConflictAndResolveItIncreaseTheRevisions()
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task CreateConflictAndResolveItIncreaseTheRevisions(bool configureVersioning)
         {
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
             {
-                await GenerateConflict(storeA, storeB);
+                await GenerateConflict(storeA, storeB, configureVersioning);
 
                 Assert.Equal(2, WaitUntilHasConflict(storeA, "foo/bar").Length);
                 Assert.Equal(2, WaitUntilHasConflict(storeB, "foo/bar").Length);
 
-                Assert.Equal(2, WaitForValue(() => storeA.Commands().GetRevisionsFor("foo/bar").Count, 2));
-                Assert.Equal(2, WaitForValue(() => storeB.Commands().GetRevisionsFor("foo/bar").Count, 2));
+                if (configureVersioning)
+                {
+                    Assert.Equal(2, WaitForValue(() => storeA.Commands().GetRevisionsFor("foo/bar").Count, 2));
+                    Assert.Equal(2, WaitForValue(() => storeB.Commands().GetRevisionsFor("foo/bar").Count, 2));
+                }
 
                 var config = new ConflictSolver
                 {
@@ -132,13 +136,16 @@ namespace SlowTests.Server.Replication
         }
 
 
-        private async Task GenerateConflict(DocumentStore storeA, DocumentStore storeB)
+        private async Task GenerateConflict(DocumentStore storeA, DocumentStore storeB, bool configureVersioning = true)
         {
             var user = new User { Name = "Name" };
             var user2 = new User { Name = "Name2" };
-            
-            await RevisionsHelper.SetupRevisions(Server.ServerStore, storeA.Database);
-            await RevisionsHelper.SetupRevisions(Server.ServerStore, storeB.Database);
+
+            if (configureVersioning)
+            {
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, storeA.Database);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, storeB.Database);
+            }
 
             using (var session = storeA.OpenAsyncSession())
             {

@@ -7,6 +7,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.Revisions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -318,21 +319,32 @@ namespace Raven.Server.Documents
                 var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
                 conflictsTable.DeleteForwardFrom(ConflictsSchema.Indexes[IdAndChangeVectorSlice], prefixSlice, true, long.MaxValue, conflictDocument =>
                 {
-                    var etag = TableValueToEtag((int)ConflictsTable.Etag, ref conflictDocument.Reader);
-                    _documentsStorage.EnsureLastEtagIsPersisted(context, etag);
+                    var conflicted = TableValueToConflictDocument(context, ref conflictDocument.Reader);
+                    var collection = _documentsStorage.ExtractCollectionName(context, conflicted.Collection);
 
-                    var conflictChangeVector = TableValueToChangeVector(context, (int)ConflictsTable.ChangeVector, ref conflictDocument.Reader);
-                    changeVectors.Add(conflictChangeVector);
+                    if (conflicted.Doc != null)
+                        _documentsStorage.RevisionsStorage.Put(
+                            context, conflicted.Id, conflicted.Doc, conflicted.Flags | DocumentFlags.Conflicted, nonPersistentFlags, conflicted.ChangeVector,
+                            conflicted.LastModified.Ticks,
+                            collectionName: collection, configuration: RevisionsStorage.ConflictConfiguration.Default);
+                    else if(conflicted.Flags.HasFlag(DocumentFlags.FromReplication) == false)
+                    {
+                        using (Slice.External(context.Allocator, conflicted.LowerId, out Slice key))
+                        {
+                            _documentsStorage.RevisionsStorage.DeleteRevision(context, key, conflicted.Collection, conflicted.ChangeVector);
+                        }
+                    }
+                    _documentsStorage.EnsureLastEtagIsPersisted(context, conflicted.Etag);
+                    changeVectors.Add(conflicted.ChangeVector);
 
-                    var flags = TableValueToFlags((int)ConflictsTable.Flags, ref conflictDocument.Reader);
-                    if ((flags & DocumentFlags.HasAttachments) != DocumentFlags.HasAttachments)
+                    if (conflicted.Flags.HasFlag(DocumentFlags.HasAttachments) == false)
                         return;
 
                     if (string.IsNullOrEmpty(deleteAttachmentChangeVector))
                     {
                         var newEtag = _documentsStorage.GenerateNextEtag();
                         deleteAttachmentChangeVector = _documentsStorage.GetNewChangeVector(context, newEtag);
-                        context.LastDatabaseChangeVector = conflictChangeVector;
+                        context.LastDatabaseChangeVector = conflicted.ChangeVector;
                     }
                     nonPersistentFlags |= DeleteAttachmentConflicts(context, lowerId, document, conflictDocument, deleteAttachmentChangeVector);
                 });
@@ -740,7 +752,7 @@ namespace Raven.Server.Documents
                     context.GetLazyString(mergedChangeVector),
                     latestConflict.LastModified.Ticks,
                     changeVector,
-                    DocumentFlags.None).Etag;
+                    latestConflict.Flags).Etag;
             }
 
             return collectionName;

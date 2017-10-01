@@ -172,7 +172,6 @@ namespace Raven.Server.Documents
         public StorageEnvironment Environment { get; private set; }
 
         public RevisionsStorage RevisionsStorage;
-        public RevisionsStorage ConflictsGraveyard;
         public ConflictsStorage ConflictsStorage;
         public AttachmentsStorage AttachmentsStorage;
         public IdentitiesStorage Identities;
@@ -277,11 +276,7 @@ namespace Raven.Server.Documents
 
                     CollectionsSchema.Create(tx, CollectionsSlice, 32);
 
-                    RevisionsStorage = new RevisionsStorage(_documentDatabase);
-                    ConflictsGraveyard = new RevisionsStorage(_documentDatabase, new RevisionsConfiguration
-                    {
-                        Default = new RevisionsCollectionConfiguration { Active = true}
-                    },tx);
+                    RevisionsStorage = new RevisionsStorage(_documentDatabase, tx);
                     Identities = new IdentitiesStorage(_documentDatabase, tx);
                     ConflictsStorage = new ConflictsStorage(_documentDatabase, tx);
                     AttachmentsStorage = new AttachmentsStorage(_documentDatabase, tx);
@@ -1068,13 +1063,10 @@ namespace Raven.Server.Documents
                     (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
                 {
                     var revisionsStorage = _documentDatabase.DocumentsStorage.RevisionsStorage;
-                    if (revisionsStorage.Configuration != null &&
-                        (nonPersistentFlags & NonPersistentDocumentFlags.FromReplication) != NonPersistentDocumentFlags.FromReplication)
+                    if (nonPersistentFlags.HasFlag(NonPersistentDocumentFlags.FromReplication) == false && 
+                        (revisionsStorage.Configuration != null || flags.HasFlag(DocumentFlags.Resolved)))
                     {
-                        if (revisionsStorage.GetRevisionsConfiguration(collectionName.Name).Active)
-                        {
-                            revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector, modifiedTicks, doc.NonPersistentFlags);
-                        }
+                        revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector, modifiedTicks, doc.NonPersistentFlags, flags);
                     }
                 }
 

@@ -954,7 +954,9 @@ namespace Raven.Server.Documents.Replication
 
                                     if ((item.Flags & DocumentFlags.Revision) == DocumentFlags.Revision)
                                     {
-                                        if (database.DocumentsStorage.RevisionsStorage.Configuration == null)
+                                        if (database.DocumentsStorage.RevisionsStorage.Configuration == null
+                                            && item.Flags.HasFlag(DocumentFlags.Resolved) == false
+                                            && item.Flags.HasFlag(DocumentFlags.Conflicted) == false)
                                         {
                                             if (_incoming._log.IsOperationsEnabled)
                                                 _incoming._log.Operations("Revisions are disabled but the node got a revision from replication.");
@@ -978,7 +980,7 @@ namespace Raven.Server.Documents.Replication
                                         if (_incoming._log.IsInfoEnabled)
                                             _incoming._log.Info($"RevisionDELETE '{item.Id}', with change vector = {item.ChangeVector}");
                                         database.DocumentsStorage.RevisionsStorage.Delete(context, item.Id, document, rcvdChangeVector,
-                                            item.LastModifiedTicks, NonPersistentDocumentFlags.FromReplication);
+                                            item.LastModifiedTicks, NonPersistentDocumentFlags.FromReplication, item.Flags);
                                         continue;
                                     }
 

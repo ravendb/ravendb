@@ -7,7 +7,6 @@ namespace Raven.Client.ServerWide
 {
     public class ConflictSolver
     {
-        public string DatabaseResolverId;
         public Dictionary<string, ScriptResolver> ResolveByCollection;
         public bool ResolveToLatest;
 
@@ -16,8 +15,6 @@ namespace Raven.Client.ServerWide
             if (other == null)
                 return true;
             if (ResolveToLatest != other.ResolveToLatest)
-                return true;
-            if (DatabaseResolverId != other.DatabaseResolverId)
                 return true;
             if (ResolveByCollection == null && other.ResolveByCollection == null)
                 return false;
@@ -34,8 +31,7 @@ namespace Raven.Client.ServerWide
         {
             return
                 ResolveByCollection?.Count == 0 &&
-                ResolveToLatest == false &&
-                DatabaseResolverId == null;
+                ResolveToLatest == false;
         }
 
         public DynamicJsonValue ToJson()
@@ -51,7 +47,6 @@ namespace Raven.Client.ServerWide
             }
             return new DynamicJsonValue
             {
-                [nameof(DatabaseResolverId)] = DatabaseResolverId,
                 [nameof(ResolveToLatest)] = ResolveToLatest,
                 [nameof(ResolveByCollection)] = resolveByCollection
             };

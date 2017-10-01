@@ -849,7 +849,7 @@ namespace Voron.Data.Tables
         public IEnumerable<SeekResult> SeekBackwardFrom(TableSchema.SchemaIndexDef index, Slice prefix, Slice last, int skip)
         {
             var tree = GetTree(index);
-            if (tree.State.NumberOfEntries == 0)
+            if (tree == null || tree.State.NumberOfEntries == 0)
                 yield break;
 
             using (var it = tree.Iterate(false))

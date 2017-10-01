@@ -55,14 +55,6 @@ namespace Raven.Server.Documents.Replication
                 doc))
                 return;
 
-            if (TryResolveUsingDefaultResolver(
-                documentsContext,
-                id,
-                collection,
-                changeVector,
-                doc))
-                return;
-
             if (_conflictResolver.ConflictSolver?.ResolveToLatest == true)
             {
                 if (conflictedChangeVector == null) //precaution
@@ -93,8 +85,6 @@ namespace Raven.Server.Documents.Replication
                     conflicts.Add(local);
 
                 var resolved = _conflictResolver.ResolveToLatest(documentsContext, conflicts);
-
-                _conflictResolver.AddToGraveyard(documentsContext, conflicts, resolved);
                 _conflictResolver.PutResolvedDocument(documentsContext, resolved);
 
                 return;
@@ -157,44 +147,6 @@ namespace Raven.Server.Documents.Replication
                 documentsContext.GetLazyString(collection), out var resolved))
             {
                 _conflictResolver.PutResolvedDocument(documentsContext, resolved);
-                return true;
-            }
-
-            return false;
-        }
-
-        private bool TryResolveUsingDefaultResolver(
-            DocumentsOperationContext context,
-            string id,
-            string collection,
-            string incomingChangeVector,
-            BlittableJsonReaderObject doc)
-        {
-            if (_conflictResolver.ConflictSolver?.DatabaseResolverId == null)
-                return false;
-
-            var conflicts = new List<DocumentConflict>(_database.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, id));
-            var localDocumentTuple = _database.DocumentsStorage.GetDocumentOrTombstone(context, id, false);
-            var localDoc = DocumentConflict.From(context, localDocumentTuple.Document) ??
-                           DocumentConflict.From(localDocumentTuple.Tombstone);
-            if (localDoc != null)
-                conflicts.Add(localDoc);
-            conflicts.Add(new DocumentConflict
-            {
-                ChangeVector = incomingChangeVector,
-                Collection = context.GetLazyStringForFieldWithCaching(
-                    collection ??
-                    CollectionName.GetCollectionName(doc)),
-                Doc = doc,
-                LowerId = context.GetLazyString(id)
-            });
-
-            if (_conflictResolver.TryResolveUsingDefaultResolverInternal(
-                context,
-                _conflictResolver.ConflictSolver.DatabaseResolverId,
-                conflicts, out var resolved))
-            {
-                _conflictResolver.PutResolvedDocument(context, resolved);
                 return true;
             }
 
