@@ -28,7 +28,7 @@ namespace Raven.Server.Smuggler.Migration
             if (DataDirectory == null || OutputFilePath == null || DataExporterFullPath == null)
                 throw new ArgumentNullException("The following arguments are mandatory: DataDirectory, OutputFilePath and DataExporterFullPath");
 
-            sb.Append($"{EnsurePathsWithSpacesAreQouted(DataDirectory)} {EnsurePathsWithSpacesAreQouted(OutputFilePath)}");
+            sb.Append($"{EnsureStringsAreQouted(DataDirectory)} {EnsureStringsAreQouted(OutputFilePath)}");
 
             if (BatchSize.HasValue)
             {
@@ -47,23 +47,20 @@ namespace Raven.Server.Smuggler.Migration
 
             if (string.IsNullOrEmpty(JournalsPath) == false)
             {
-                sb.Append($" -JournalsPath {EnsurePathsWithSpacesAreQouted(JournalsPath)}");
+                sb.Append($" -JournalsPath {EnsureStringsAreQouted(JournalsPath)}");
             }
 
             if (string.IsNullOrEmpty(EncryptionKey) == false && string.IsNullOrEmpty(EncryptionAlgorithm) == false && EncryptionKeyBitsSize.HasValue)
             {
-                sb.Append($" -Encryption {EnsurePathsWithSpacesAreQouted(EncryptionKey)} {EncryptionAlgorithm} {EncryptionKeyBitsSize.Value}");
+                sb.Append($" -Encryption {EnsureStringsAreQouted(EncryptionKey)} {EncryptionAlgorithm} {EncryptionKeyBitsSize.Value}");
             }
 
             return sb.ToString();
 
-            string EnsurePathsWithSpacesAreQouted(string path)
+            string EnsureStringsAreQouted(string path)
             {
                 //The path is arleady qouted
                 if (path.First() == '\"' && path.Last() == '\"')
-                    return path;
-                //no spaces in the path
-                if (path.IndexOf(' ') < 0)
                     return path;
                 return $"\"{path}\"";
 
