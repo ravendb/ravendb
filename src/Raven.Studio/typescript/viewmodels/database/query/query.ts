@@ -289,7 +289,11 @@ class query extends viewModelBase {
     deactivate(): void {
         super.deactivate();
 
-        const queryText = this.criteria().queryText();
+        let queryText = this.criteria().queryText();
+
+        if (this.recentQueries().length > 0 && this.recentQueries()[0].queryText === queryText)
+            queryText = null;
+
         query.lastQuery.set(this.activeDatabase().name, queryText);
     }
 
