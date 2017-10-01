@@ -39,25 +39,23 @@ namespace Sparrow
                 var pBufferWindowStart = pDest + _pos;
                 var pBufferStart = pSrc + offset + read - totalToRead;
 
-                if (_pos + totalToRead > BufferWindowSize) // copy in two parts
+                _pos += totalToRead;
+
+                if (_pos > BufferWindowSize) // copy in two parts
                 {
-                    var newTotal = BufferWindowSize - _pos;
+                    var newTotal = BufferWindowSize - (_pos - totalToRead);
                     Memory.Copy(pBufferWindowStart, pBufferStart, newTotal);
                     var nextLength = totalToRead - newTotal;
                     Debug.Assert(nextLength <= BufferWindowSize);
                     Memory.Copy(pDest, pBufferStart + newTotal, nextLength);
+
+                    _firstWindow = false;
+                    _pos %= BufferWindowSize;
                 }
                 else
                 {
                     Memory.Copy(pBufferWindowStart, pBufferStart, totalToRead);
                 }
-            }
-
-            _pos += totalToRead;
-            if (_pos > BufferWindowSize)
-            {
-                _firstWindow = false;
-                _pos %= BufferWindowSize;
             }
 
             return read;
@@ -80,6 +78,9 @@ namespace Sparrow
                 start = _pos;
                 size = BufferWindowSize;
             }
+            // search for the first byte which represent a single UTF charcter
+            // (because 'start' might point to a byte in a middle of set of bytes
+            // representing single character, so 0x80 represent start of char in utf8)
             while ((_bufferWindow.Buffer.Array[start] & 0x80) != 0)
             {
                 start++;
