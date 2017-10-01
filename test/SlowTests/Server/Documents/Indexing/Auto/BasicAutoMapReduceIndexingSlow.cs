@@ -74,11 +74,16 @@ namespace SlowTests.Server.Documents.Indexing.Auto
 
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
                 {
-                    var queryResult = await mri.Query(new IndexQueryServerSide($"FROM INDEX '{mri.Name}' WHERE Count BETWEEN 2 AND 10"), context, OperationCancelToken.None);
+                    var queryResult = await mri.Query(new IndexQueryServerSide($"FROM INDEX '{mri.Name}' WHERE Count BETWEEN 2 AND 10"), context,
+                        OperationCancelToken.None);
 
                     Assert.Equal(1, queryResult.Results.Count);
+                }
 
-                    queryResult = await mri.Query(new IndexQueryServerSide($"FROM INDEX '{mri.Name}' WHERE Count >= 10"), context, OperationCancelToken.None);
+                using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
+                {
+
+                    var queryResult = await mri.Query(new IndexQueryServerSide($"FROM INDEX '{mri.Name}' WHERE Count >= 10"), context, OperationCancelToken.None);
 
                     Assert.Equal(0, queryResult.Results.Count);
                 }

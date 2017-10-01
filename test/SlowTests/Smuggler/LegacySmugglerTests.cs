@@ -55,7 +55,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Theory]
+        [Theory(Skip = "RavenDB-8860")]
         [InlineData("SlowTests.Smuggler.Indexes_And_Transformers_3.5.ravendbdump")]
         public async Task CanImportIndexesAndTransformers(string file)
         {

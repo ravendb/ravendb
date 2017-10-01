@@ -809,7 +809,7 @@ namespace SlowTests.Tests.Linq
 
                 using (var s = store.OpenSession())
                 {
-                    var items = (from item in s.Query<OrderItem>()
+                    var items = (from item in s.Query<OrderItem>().Customize(x=>x.WaitForNonStaleResults())
                                  where item.Quantity.In(list)
                                  select item
                                      ).ToArray();
