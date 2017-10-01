@@ -17,21 +17,32 @@ class assignCores extends dialogViewModelBase {
     constructor(private nodeTag: string, assignedCores: number, availableCores: number, numberOfCores: number) {
         super();
 
+        const maxCoresAccordintToLicense = assignedCores + availableCores;
+
         this.assignedCores(assignedCores);
         this.availableCores(availableCores);
         this.numberOfCores(numberOfCores);
 
         this.assignedCores.extend({
             required: true,
-            min: 1
+            min: 1,
+            validation: [
+                {
+                    validator: (num: number) => num <= this.numberOfCores(),
+                    message: "Max cores on node is " + this.numberOfCores()
+                },
+                {
+                    validator: (num: number) => num <= maxCoresAccordintToLicense,
+                    message: "Max cores according to license is " + maxCoresAccordintToLicense
+                }
+            ]
         });
     }
 
     save() {
-        //TODO: http://issues.hibernatingrhinos.com/issue/RavenDB-8482
-        //if (this.isValid(this.validationGroup)) {
-        //    return;
-        //}
+
+        if (!this.isValid(this.validationGroup)) 
+            return;
 
         this.spinners.save(true);
 
