@@ -127,7 +127,7 @@ namespace Raven.Server.Documents.Handlers
                     switch (changeVectorSpecialValue)
                     {
                         case Constants.Documents.SubscriptionChangeVectorSpecialStates.BeginningOfTime:
-                        case Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange:
+                        
                             options.ChangeVector = null;
                             break;
                         case Constants.Documents.SubscriptionChangeVectorSpecialStates.LastDocument:
