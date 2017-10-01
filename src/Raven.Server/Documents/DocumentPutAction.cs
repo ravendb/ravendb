@@ -105,6 +105,10 @@ namespace Raven.Server.Documents
                 var result = BuildChangeVectorAndResolveConflicts(context, id, lowerId, newEtag, document, changeVector, expectedChangeVector, flags, oldValue);
                 changeVector = result.ChangeVector;
                 nonPersistentFlags |= result.NonPersistentFlags;
+                if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.Resolved))
+                {
+                    flags |= DocumentFlags.Resolved;
+                }
 
                 if (collectionName.IsHiLo == false &&
                     (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
@@ -127,7 +131,7 @@ namespace Raven.Server.Documents
                         AttachmentsStorage.AssertAttachments(document, flags);
 #endif
                     }
-
+                    
                     if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false && 
                         (flags.Contain(DocumentFlags.Resolved) || 
                         _documentDatabase.DocumentsStorage.RevisionsStorage.Configuration != null

@@ -367,7 +367,7 @@ namespace Raven.Server.Documents
                     Interlocked.Add(ref ConflictsCount, -listCount);
                 };
             }
-            return (changeVectors, nonPersistentFlags);
+            return (changeVectors, nonPersistentFlags | NonPersistentDocumentFlags.Resolved);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
