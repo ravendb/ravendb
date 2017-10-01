@@ -1969,8 +1969,8 @@ namespace Raven.Server.Documents.Indexes
                         var includeDocumentsCommand = new IncludeDocumentsCommand(DocumentDatabase.DocumentsStorage,
                             documentsContext, query.Includes);
                         var documents = reader.MoreLikeThis(query, stopWords,
-                            fieldsToFetch => GetQueryResultRetriever(null, documentsContext, new FieldsToFetch(fieldsToFetch, Definition), includeDocumentsCommand), documentsContext,
-                            GetOrAddSpatialField, token.Token);
+                            fieldsToFetch => GetQueryResultRetriever(null, documentsContext, new FieldsToFetch(fieldsToFetch, Definition), includeDocumentsCommand), 
+                            documentsContext, GetOrAddSpatialField, token.Token);
 
                         foreach (var document in documents)
 

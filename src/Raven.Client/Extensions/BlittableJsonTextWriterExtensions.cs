@@ -168,6 +168,13 @@ namespace Raven.Client.Extensions
                 writer.WriteComma();
             }
 
+            if (string.IsNullOrEmpty(query.Document) == false)
+            {
+                writer.WritePropertyName(nameof(query.Document));
+                writer.WriteString(query.Document);
+                writer.WriteComma();
+            }
+
             writer.WritePropertyName(nameof(query.Query));
             writer.WriteString(query.Query);
 

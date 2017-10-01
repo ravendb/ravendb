@@ -28,6 +28,17 @@ namespace Raven.Client.Documents.Session
             return MoreLikeThis<T>(new MoreLikeThisQuery { Query = CreateQuery(index.IndexName), DocumentId = documentId });
         }
 
+        public List<T> MoreLikeThis<T, TIndexCreator>(MoreLikeThisQuery query) where TIndexCreator : AbstractIndexCreationTask, new()
+        {
+            if (query == null)
+                throw new ArgumentNullException(nameof(query));
+
+            var index = new TIndexCreator();
+            query.Query = CreateQuery(index.IndexName);
+
+            return MoreLikeThis<T>(query);
+        }
+
         public List<T> MoreLikeThis<T>(string index, string documentId)
         {
             if (index == null) throw new ArgumentNullException(nameof(index));
