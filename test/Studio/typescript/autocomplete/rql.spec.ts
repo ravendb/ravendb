@@ -480,7 +480,7 @@ describe("RQL Autocomplete", () => {
             assert.equal(lastKeyword.info.collection, "Orders");
             assert.isUndefined(lastKeyword.info.index);
             assert.deepEqual(lastKeyword.info.alias, "o");
-            assert.deepEqual(lastKeyword.info.collectionMap, {o: "Orders"});
+            assert.deepEqual(lastKeyword.info.aliases, {o: "Orders"});
 
             done();
         });
@@ -582,7 +582,7 @@ select |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(lastKeyword.info.collection, "@all_docs");
             assert.isUndefined(lastKeyword.info.index);
             assert.isUndefined(lastKeyword.info.alias);
-            assert.isUndefined(lastKeyword.info.collectionMap);
+            assert.isUndefined(lastKeyword.info.aliases);
 
             done();
         });
@@ -965,7 +965,11 @@ and (Freight = "" and Freight = "") and search(OrderedAt, "*1997*", and)|`, nort
             assert.equal(lastKeyword.whereFunctionParameters, 3);
             assert.equal(lastKeyword.parentheses, 0);
             assert.isFalse(lastKeyword.asSpecified);
-            assert.equal(lastKeyword.dividersCount, 3);
+            assert.equal(lastKeyword.dividersCount, 2);
+            assert.equal(lastKeyword.info.collection, "Orders");
+            assert.isUndefined(lastKeyword.info.index);
+            assert.deepEqual(lastKeyword.info.alias, "o");
+            assert.deepEqual(lastKeyword.info.aliases, {o: "Orders"});
 
             done();
         });

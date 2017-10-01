@@ -57,7 +57,7 @@ class queryCompleter {
             collection: undefined,
             index: undefined,
             alias: undefined,
-            collectionMap: undefined
+            aliases: undefined
         };
         
         let keyword: string;
@@ -78,12 +78,12 @@ class queryCompleter {
                 
                 if (asSpecified) {
                     if (keyword === "load") {
-                        result.collectionMap[identifier] = nestedFieldName;
+                        result.aliases[identifier] = nestedFieldName;
                     }
                     else {
                         result.alias = identifier;
-                        result.collectionMap = {};
-                        result.collectionMap[identifier] = result.collection;
+                        result.aliases = {};
+                        result.aliases[identifier] = result.collection;
                     }
                 }
                 else if (keyword === "load") {
@@ -148,10 +148,10 @@ class queryCompleter {
             key += lastKeyword.fieldPrefix.join(".");
             prefixSpecified = true;
 
-            if (lastKeyword.info.collectionMap) {
+            if (lastKeyword.info.aliases) {
                 const last = lastKeyword.fieldPrefix.length - 1;
                 const alias = lastKeyword.fieldPrefix[last];
-                if (lastKeyword.info.collectionMap[alias]) {
+                if (lastKeyword.info.aliases[alias]) {
                     lastKeyword.fieldPrefix.splice(last, 1);
                 }
             }
@@ -261,7 +261,7 @@ class queryCompleter {
         const iterator: AceAjax.TokenIterator = new this.tokenIterator(this.session, pos.row, pos.column);
         do {
             const row = iterator.getCurrentTokenRow();
-            if (lastRow && lastToken && lastToken.type !== "space" && row - lastRow < 0) {
+            if (!isBeforeCommaOrBinaryOperation && lastRow && lastToken && lastToken.type !== "space" && row - lastRow < 0) {
                 result.dividersCount++;
                 lastToken.type = "space";
             }
@@ -327,6 +327,7 @@ class queryCompleter {
                     }
                     break;
                 case "identifier":
+                case "identifier.whereFunction":
                     if (!isBeforeCommaOrBinaryOperation) {
                         if (isFieldPrefixMode === 1) {
                             result.fieldPrefix.push(token.value);
@@ -366,11 +367,13 @@ class queryCompleter {
                             return result;
                         }
 
+                        result.parentheses--;
+
                         if (!lastToken || lastToken.type !== "space") {
                             result.dividersCount++;
+                            lastToken = {type: "space", start: null, index: null, value: null};
+                            continue;
                         }
-
-                        result.parentheses--;
                     }
                     break;
                 case "space":
@@ -421,10 +424,10 @@ class queryCompleter {
             return this.completeError("no collection or index were specified - cannot show fields");
         }
 
-        if (queryInfo.collectionMap && !this.lastKeyword.fieldPrefix){
+        if (queryInfo.aliases && !this.lastKeyword.fieldPrefix){
             const collections: autoCompleteWordList[] = [];
             let i = 1;
-            _.forOwn(queryInfo.collectionMap, (value, key) => {
+            _.forOwn(queryInfo.aliases, (value, key) => {
                 collections.push({
                     caption: key,
                     value: key + ".",
@@ -483,19 +486,17 @@ class queryCompleter {
             case "from index": {
                 if (lastKeyword.dividersCount === 1) {
                     if (lastKeyword.keyword === "from") {
-                        this.completeFrom();
+                        return this.completeFrom();
                     }
-                    else {
-                        this.providers.indexNames(names => {
-                            this.completeWords(names.map(name => ({
-                                caption: name,
-                                value: queryCompleter.escapeCollectionOrFieldName(name),
-                                score: 101,
-                                meta: "index"
-                            })));
-                        });
-                    }
-                    return;
+
+                    return this.providers.indexNames(names => {
+                        return this.completeWords(names.map(name => ({
+                            caption: name,
+                            value: queryCompleter.escapeCollectionOrFieldName(name),
+                            score: 101,
+                            meta: "index"
+                        })));
+                    });
                 }
                 if (lastKeyword.dividersCount === 0) {
                     return this.completeEmpty();
@@ -504,23 +505,21 @@ class queryCompleter {
                     return this.completeError("empty completion");
                 }
 
-                this.completeFromEnd();
-                break;
+                return this.completeFromEnd();
             }
             case "declare":
-                this.completeWords([
+                return this.completeWords([
                     {value: "function", score: 0, meta: "keyword"}
                 ]);
-                break;
             case "declare function":
                 if (lastKeyword.parentheses === 0 && lastKeyword.dividersCount >= 1) {
-                    this.completeEmpty();
+                    return this.completeEmpty();
                 }
-                break;
+                return this.completeError("empty completion");
             case "select": {
                 if (lastKeyword.dividersCount >= 2) {
                     if (!lastKeyword.asSpecified) {
-                        this.completeWords([{value: "as", score: 3, meta: "keyword"}]);
+                        return this.completeWords([{value: "as", score: 3, meta: "keyword"}]);
                     }
 
                     return this.completeError("empty completion");
@@ -626,7 +625,7 @@ class queryCompleter {
                             if (index) {
                                 this.providers.terms(index, lastKeyword.fieldName, 20, terms => {
                                     if (terms && terms.length) {
-                                        this.completeWords(terms.map(term => ({
+                                        return this.completeWords(terms.map(term => ({
                                                 caption: term,
                                                 value: queryCompleter.escapeCollectionOrFieldName(term),
                                                 score: 1,

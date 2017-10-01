@@ -6,6 +6,8 @@ var TextHighlightRules = require("./text_highlight_rules").TextHighlightRules;
 
 var RqlHighlightRules = function() {
 
+    var keywordRegex = "[a-zA-Z_$@][a-zA-Z0-9_$@]*\\b";
+    
     var clausesKeywords = (
         "declare|from|group|where|order|load|select|include|update"
     );
@@ -113,7 +115,7 @@ var RqlHighlightRules = function() {
         next: "whereFunction"
     }, {
         token : keywordMapper,
-        regex : "[a-zA-Z_$@][a-zA-Z0-9_$@]*\\b"
+        regex : keywordRegex
     }, {
         token : "operator.where",
         regex : /(?:==|!=|>=|<=|=|<>|>|<)(?=\s)/
@@ -124,7 +126,7 @@ var RqlHighlightRules = function() {
     
     var whereFunctionsRules = [ {
         token : "identifier",
-        regex : "[a-zA-Z_$@][a-zA-Z0-9_$@]*\\b"
+        regex : keywordRegex
     }, {
         token : "paren.rparen",
         regex : /[\])}]/,
@@ -132,15 +134,16 @@ var RqlHighlightRules = function() {
     } ];
     
     this.$rules = {
-        "start" : commonRules.concat(startRule),    
-        "whereFunction" : commonRules.map(function (rule) {
+        "start" : commonRules.concat(startRule),
+        "whereFunction" : commonRules.concat(whereFunctionsRules).map(function (rule) {
             return {
                 token: rule.token + ".whereFunction",
                 regex: rule.regex,
                 start: rule.start,
-                end: rule.end
+                end: rule.end,
+                next: rule.next
             };
-        }).concat(whereFunctionsRules)
+        })
     };
     this.normalizeRules();
 };
