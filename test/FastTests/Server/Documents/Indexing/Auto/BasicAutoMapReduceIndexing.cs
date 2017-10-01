@@ -49,11 +49,14 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
                 {
-                    var queryResult = await mri.Query(new IndexQueryServerSide($"FROM INDEX '{mri.Name}' WHERE Count BETWEEN 2 AND 10"), context, OperationCancelToken.None);
+                    var queryResult = await mri.Query(new IndexQueryServerSide($"FROM INDEX '{mri.Name}' WHERE Count BETWEEN 2 AND 10"), context,
+                        OperationCancelToken.None);
 
                     Assert.Equal(1, queryResult.Results.Count);
-
-                    queryResult = await mri.Query(new IndexQueryServerSide($"FROM INDEX '{mri.Name}' WHERE Count >= 10"), context, OperationCancelToken.None);
+                }
+                using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
+                {
+                    var queryResult = await mri.Query(new IndexQueryServerSide($"FROM INDEX '{mri.Name}' WHERE Count >= 10"), context, OperationCancelToken.None);
 
                     Assert.Equal(0, queryResult.Results.Count);
                 }
@@ -241,7 +244,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     Indexing = AutoFieldIndexing.Search | AutoFieldIndexing.Exact | AutoFieldIndexing.Default
                 };
 
-                Assert.True(await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition("Users", new[] {count}, new[] {location})) > 0);
+                Assert.True(await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition("Users", new[] { count }, new[] { location })) > 0);
 
                 var sum = new AutoIndexField
                 {
@@ -250,7 +253,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     Aggregation = AggregationOperation.Sum
                 };
 
-                var etag = await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition("Users", new[] {count, sum}, new[] {location}));
+                var etag = await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition("Users", new[] { count, sum }, new[] { location }));
                 Assert.True(etag > 0);
 
                 var index2 = database.IndexStore.GetIndex(etag);
@@ -608,13 +611,17 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 {
                     var results = (await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}'"), context, OperationCancelToken.None)).Results;
 
-                    Assert.Equal(6, results.Count);
+                    context.CloseTransaction();
 
-                    for (int i = 0; i < 6; i++)
+                    Assert.Equal(6, results.Count);
+                }
+                for (int i = 0; i < 6; i++)
+                {
+                    using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
                     {
                         var employeeNumber = i % 2 + 1;
                         var companyNumber = i % 3 + 1;
-                        results = (await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}' WHERE Employee = 'employees/{employeeNumber}' AND Company = 'companies/{companyNumber}'")
+                        var results = (await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}' WHERE Employee = 'employees/{employeeNumber}' AND Company = 'companies/{companyNumber}'")
                         {
                             Query = $"Employee:employees/{employeeNumber} AND Company:companies/{companyNumber}"
                         }, context, OperationCancelToken.None)).Results;

@@ -51,7 +51,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                 {
                     var indexStorage = new IndexStorage(index, contextPool, database);
 
-                    var reducer = new ReduceMapResultsOfAutoIndex(index, index.Definition, indexStorage, 
+                    var reducer = new ReduceMapResultsOfAutoIndex(index, index.Definition, indexStorage,
                         new MetricCounters(), mapReduceContext);
 
                     await ActualTest(numberOfUsers, locations, index, mapReduceContext, reducer, database);
@@ -85,7 +85,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                 using (var contextPool = new TransactionContextPool(database.DocumentsStorage.Environment))
                 {
                     var indexStorage = new IndexStorage(index, contextPool, database);
-                    var reducer = new ReduceMapResultsOfStaticIndex(index,index._compiled.Reduce, index.Definition, indexStorage, new MetricCounters(), mapReduceContext);
+                    var reducer = new ReduceMapResultsOfStaticIndex(index, index._compiled.Reduce, index.Definition, indexStorage, new MetricCounters(), mapReduceContext);
 
                     await ActualTest(numberOfUsers, locations, index, mapReduceContext, reducer, database);
                 }
@@ -112,7 +112,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                         using (var mappedResult = indexContext.ReadObject(new DynamicJsonValue
                         {
                             ["Count"] = 1,
-                            ["Location"] = locations[i%locations.Length]
+                            ["Location"] = locations[i % locations.Length]
                         }, $"users/{i}"))
                         {
                             store.Add(i, mappedResult);
@@ -141,22 +141,24 @@ namespace FastTests.Server.Documents.Indexing.Static
                     tx.Commit();
                 }
 
-                var queryResult =
-                    await
+                using (var termSingleUse = DocumentsOperationContext.ShortTermSingleUse(database))
+                {
+                    var queryResult = await
                         index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}'"),
-                            DocumentsOperationContext.ShortTermSingleUse(database),
+                            termSingleUse,
                             OperationCancelToken.None);
 
-                var results = queryResult.Results;
+                    var results = queryResult.Results;
 
-                Assert.Equal(locations.Length, results.Count);
+                    Assert.Equal(locations.Length, results.Count);
 
-                for (int i = 0; i < locations.Length; i++)
-                {
-                    Assert.Equal(locations[i], results[i].Data["Location"].ToString());
+                    for (int i = 0; i < locations.Length; i++)
+                    {
+                        Assert.Equal(locations[i], results[i].Data["Location"].ToString());
 
-                    long expected = numberOfUsers/locations.Length + numberOfUsers%(locations.Length - i);
-                    Assert.Equal(expected, results[i].Data["Count"]);
+                        long expected = numberOfUsers / locations.Length + numberOfUsers % (locations.Length - i);
+                        Assert.Equal(expected, results[i].Data["Count"]);
+                    }
                 }
 
                 // update
@@ -202,22 +204,26 @@ namespace FastTests.Server.Documents.Indexing.Static
                     tx.Commit();
                 }
 
-                queryResult = await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}'"),
-                            DocumentsOperationContext.ShortTermSingleUse(database),
-                            OperationCancelToken.None);
-
-                results = queryResult.Results;
-
-                Assert.Equal(locations.Length, results.Count);
-
-                for (int i = 0; i < locations.Length; i++)
+                using (var shortTermSingleUse = DocumentsOperationContext.ShortTermSingleUse(database))
                 {
-                    Assert.Equal(locations[i], results[i].Data["Location"].ToString());
+                    var queryResult = await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}'"),
+                                shortTermSingleUse,
+                                OperationCancelToken.None);
 
-                    long expected = numberOfUsers / locations.Length + numberOfUsers % (locations.Length - i);
-                    Assert.Equal(expected + 1, results[i].Data["Count"]);
+
+                    var results = queryResult.Results;
+
+                    Assert.Equal(locations.Length, results.Count);
+
+                    for (int i = 0; i < locations.Length; i++)
+                    {
+                        Assert.Equal(locations[i], results[i].Data["Location"].ToString());
+
+                        long expected = numberOfUsers / locations.Length + numberOfUsers % (locations.Length - i);
+                        Assert.Equal(expected + 1, results[i].Data["Count"]);
+                    }
+
                 }
-
                 // delete
 
                 using (var tx = indexContext.OpenWriteTransaction())
@@ -252,20 +258,24 @@ namespace FastTests.Server.Documents.Indexing.Static
                     tx.Commit();
                 }
 
-                queryResult = await index.Query(new IndexQueryServerSide("FROM Users ORDER BY Location"),
-                    DocumentsOperationContext.ShortTermSingleUse(database),
-                    OperationCancelToken.None);
-
-                results = queryResult.Results;
-
-                Assert.Equal(locations.Length, results.Count);
-
-                for (int i = 0; i < locations.Length; i++)
+                using (var documentsOperationContext = DocumentsOperationContext.ShortTermSingleUse(database))
                 {
-                    Assert.Equal(locations[i], results[i].Data["Location"].ToString());
+                    var queryResult = await index.Query(new IndexQueryServerSide("FROM Users ORDER BY Location"),
+                         documentsOperationContext,
+                         OperationCancelToken.None);
 
-                    long expected = numberOfUsers / locations.Length + numberOfUsers % (locations.Length - i);
-                    Assert.Equal(expected - 1, results[i].Data["Count"]);
+
+                    var results = queryResult.Results;
+
+                    Assert.Equal(locations.Length, results.Count);
+
+                    for (int i = 0; i < locations.Length; i++)
+                    {
+                        Assert.Equal(locations[i], results[i].Data["Location"].ToString());
+
+                        long expected = numberOfUsers / locations.Length + numberOfUsers % (locations.Length - i);
+                        Assert.Equal(expected - 1, results[i].Data["Count"]);
+                    }
                 }
             }
         }
