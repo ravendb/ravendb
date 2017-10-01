@@ -128,8 +128,8 @@ namespace Raven.Server.Documents
 #endif
                     }
 
-                    if (nonPersistentFlags.HasFlag(NonPersistentDocumentFlags.FromReplication) == false && 
-                        (flags.HasFlag(DocumentFlags.Resolved) || 
+                    if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false && 
+                        (flags.Contain(DocumentFlags.Resolved) || 
                         _documentDatabase.DocumentsStorage.RevisionsStorage.Configuration != null
                         ))
                     {

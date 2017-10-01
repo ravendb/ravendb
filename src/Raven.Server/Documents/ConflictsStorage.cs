@@ -323,11 +323,13 @@ namespace Raven.Server.Documents
                     var collection = _documentsStorage.ExtractCollectionName(context, conflicted.Collection);
 
                     if (conflicted.Doc != null)
+                    { 
                         _documentsStorage.RevisionsStorage.Put(
                             context, conflicted.Id, conflicted.Doc, conflicted.Flags | DocumentFlags.Conflicted, nonPersistentFlags, conflicted.ChangeVector,
                             conflicted.LastModified.Ticks,
                             collectionName: collection, configuration: RevisionsStorage.ConflictConfiguration.Default);
-                    else if(conflicted.Flags.HasFlag(DocumentFlags.FromReplication) == false)
+                    }
+                    else if(conflicted.Flags.Contain(DocumentFlags.FromReplication) == false)
                     {
                         using (Slice.External(context.Allocator, conflicted.LowerId, out Slice key))
                         {
@@ -337,7 +339,7 @@ namespace Raven.Server.Documents
                     _documentsStorage.EnsureLastEtagIsPersisted(context, conflicted.Etag);
                     changeVectors.Add(conflicted.ChangeVector);
 
-                    if (conflicted.Flags.HasFlag(DocumentFlags.HasAttachments) == false)
+                    if (conflicted.Flags.Contain(DocumentFlags.HasAttachments) == false)
                         return;
 
                     if (string.IsNullOrEmpty(deleteAttachmentChangeVector))

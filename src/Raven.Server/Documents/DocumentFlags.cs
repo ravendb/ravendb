@@ -35,4 +35,17 @@ namespace Raven.Server.Documents
         ResolveAttachmentsConflict = 0x20,
         FromRevision = 0x40
     }
+
+    public static class EnumExtensions
+    {
+        public static bool Contain(this DocumentFlags current, DocumentFlags flag)
+        {
+            return (current & flag) == flag;
+        }
+
+        public static bool Contain(this NonPersistentDocumentFlags current, NonPersistentDocumentFlags flag)
+        {
+            return (current & flag) == flag;
+        }
+    }
 }

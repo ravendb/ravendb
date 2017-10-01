@@ -77,9 +77,6 @@ namespace SlowTests.Server.Replication
 
                 await SetReplicationConflictResolutionAsync(store1, StraightforwardConflictResolution.ResolveToLatest);
 
-                WaitForUserToContinueTheTest(store1);
-
-
                 Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Store2"));
                 Assert.True(WaitForDocument<User>(store2, "foo/bar", u => u.Name == "Store2"));
 
