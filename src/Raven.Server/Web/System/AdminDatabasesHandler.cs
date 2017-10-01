@@ -1317,7 +1317,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/offline-migrate", "POST", AuthorizationStatus.ClusterAdmin)]
+        [RavenAction("/admin/migrate/offline", "POST", AuthorizationStatus.ClusterAdmin)]
         public async Task MigrateDatabaseOffline()
         {
             OfflineMigrationConfiguration configuration;
@@ -1341,10 +1341,10 @@ namespace Raven.Server.Web.System
             }
             var commandline = configuration.GenerateExporterCommandLine();
             var processStartInfo = new ProcessStartInfo(dataExporter, commandline);
-            Stopwatch timeout = null;
+            Task timeout = null;
             if (configuration.Timeout.HasValue)
             {
-                timeout = Stopwatch.StartNew();
+                timeout = Task.Delay((int)configuration.Timeout.Value.TotalMilliseconds);
             }
             processStartInfo.RedirectStandardOutput = true;
             var processDone = new AsyncManualResetEvent();
@@ -1362,7 +1362,7 @@ namespace Raven.Server.Web.System
             var timer = new Stopwatch();
 
             await database.Operations.AddOperation(database, $"Migration of {dataDir} to {databaseName}", Documents.Operations.Operations.OperationType.DatabaseExport,
-                Onprogress =>
+                onProgress =>
                 {
                     return Task.Run(async () =>
                     {
@@ -1371,18 +1371,20 @@ namespace Raven.Server.Web.System
                             timer.Start();
                             while (processDone.IsSet == false)
                             {
-                                progress.Progress +=$"{await process.StandardOutput.ReadLineAsync()}{Environment.NewLine}";
+                                if(await ReadLineOrTimeout(process, timeout, configuration, progress) == false)
+                                {
+                                    //renewing the timeout so not to spam timeouts once the timeout is reached
+                                    timeout = Task.Delay(configuration.Timeout.Value);
+                                }
                                 if (timer.ElapsedMilliseconds > 1000)
                                 {
-                                    Onprogress(progress);
+                                    onProgress(progress);
                                     progress.Progress = string.Empty;
                                     timer.Restart();
                                 }
-                                ThrowIfTimeout(configuration.Timeout, timeout);
-
                             }
-                            progress.Progress += $"{await process.StandardOutput.ReadToEndAsync()}{Environment.NewLine}";
-                            Onprogress(progress);
+                            await ReadLineOrTimeout(process, timeout, configuration, progress);
+                            onProgress(progress);
                             if (process.ExitCode != 0)
                             {
                                 throw new ApplicationException($"The data export tool have exited with code {process.ExitCode}.");
@@ -1392,14 +1394,15 @@ namespace Raven.Server.Web.System
                             {
                                 throw new FileNotFoundException($"Was expecting the output file to be located at {configuration.OutputFilePath}, but it is not there.");
                             }
-
+                            progress.Progress = $"Starting the import phase of the migration{Environment.NewLine}";
+                            onProgress(progress);
                             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                             using (var reader = File.OpenRead(configuration.OutputFilePath))
                             using (var stream = new GZipStream(reader, CompressionMode.Decompress))
                             {
                                 var source = new StreamSource(stream, context);
-                                var destination = new DatabaseDestination(database);                                
-                                var smuggler = new DatabaseSmuggler(database, source, destination, database.Time, result: result,onProgress: Onprogress);
+                                var destination = new DatabaseDestination(database);
+                                var smuggler = new DatabaseSmuggler(database, source, destination, database.Time, result: result, onProgress: onProgress);
 
                                 smuggler.Execute();
                                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -1412,19 +1415,33 @@ namespace Raven.Server.Web.System
                         catch (Exception e)
                         {
                             result.AddError(e.ToString());
-                            throw e;
-                        }                        
+                            throw;
+                        }
                         return (IOperationResult)result;
                     });
                 }, operationId, token);
+        }
 
-            void ThrowIfTimeout(TimeSpan? timespan, Stopwatch t)
+        private static async Task<bool> ReadLineOrTimeout(Process process, Task timeout, OfflineMigrationConfiguration configuration, IndeterminateProgress progress)
+        {
+            var readline = process.StandardOutput.ReadLineAsync();
+            string progressLine = null;
+            if (timeout != null)
             {
-                if (timespan.HasValue && t.Elapsed > timespan.Value)
+                var finishedTask = await Task.WhenAny(readline, timeout);
+                if (finishedTask == timeout)
                 {
-                    throw new TimeoutException($"Export is taking more than the configured timeout {timespan.Value}");
+                    progressLine = $"Export is taking more than the configured timeout {configuration.Timeout.Value}";
+                    progress.Progress += $"{progressLine}{Environment.NewLine}";
+                    return false;
                 }
             }
-        }        
+            else
+            {
+              progressLine = await readline;
+            } 
+            progress.Progress += $"{progressLine}{Environment.NewLine}";
+            return true;
+        }
     }
 }
