@@ -12,7 +12,7 @@ abstract class ongoingTaskModel {
     badgeText: KnockoutComputed<string>;
     badgeClass: KnockoutComputed<string>;
    
-    isInTasksListView: boolean = true;
+    isInTasksListView: boolean = true; //TODO: remove? 
 
     protected initializeObservables() {
         
@@ -80,11 +80,11 @@ abstract class ongoingTaskModel {
                 taskName = dtoBackup.BackupDestinations.length === 0 ? "No destinations" : `${dtoBackup.BackupType} to ${dtoBackup.BackupDestinations.join(", ")}`;
                 break;
             case "RavenEtl":
-                const dtoRavenEtl = dto as Raven.Client.ServerWide.Operations.OngoingTaskRavenEtl;
+                const dtoRavenEtl = dto as Raven.Client.ServerWide.Operations.OngoingTaskRavenEtlListView;
                 taskName = `ETL to ${dtoRavenEtl.DestinationDatabase}@${dtoRavenEtl.DestinationUrl}`;
                 break;
             case "SqlEtl":
-                const dtoSqlEtl = dto as Raven.Client.ServerWide.Operations.OngoingTaskSqlEtl;
+                const dtoSqlEtl = dto as Raven.Client.ServerWide.Operations.OngoingTaskSqlEtlListView;
                 taskName = ""; // Todo...
                 break;
             case "Subscription":

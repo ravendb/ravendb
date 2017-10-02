@@ -87,6 +87,7 @@ namespace Raven.Client.ServerWide.Operations
 
         public string DestinationUrl { get; set; }
         public string DestinationDatabase { get; set; }
+        public string MentorNode { get; set; }
         public ReplicationStatus Status { get; set; }
         public override DynamicJsonValue ToJson()
         {
@@ -94,13 +95,14 @@ namespace Raven.Client.ServerWide.Operations
             json[nameof(DestinationUrl)] = DestinationUrl;
             json[nameof(DestinationDatabase)] = DestinationDatabase;
             json[nameof(Status)] = Status;
+            json[nameof(MentorNode)] = MentorNode;
             return json;
         }
     }
 
-    public class OngoingTaskRavenEtl : OngoingTask
+    public class OngoingTaskRavenEtlListView : OngoingTask
     {
-        public OngoingTaskRavenEtl()
+        public OngoingTaskRavenEtlListView()
         {
             TaskType = OngoingTaskType.RavenEtl;
         }
@@ -111,23 +113,38 @@ namespace Raven.Client.ServerWide.Operations
 
         public string ConnectionStringName { get; set; }
 
-        public RavenEtlConfiguration Configuration { get; set; } 
-
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
             json[nameof(DestinationUrl)] = DestinationUrl;
             json[nameof(DestinationDatabase)] = DestinationDatabase;
             json[nameof(ConnectionStringName)] = ConnectionStringName;
-            json[nameof(Configuration)] = Configuration?.ToJson();
 
             return json;
         }
     }
 
-    public class OngoingTaskSqlEtl : OngoingTask
+    public class OngoingTaskRavenEtlDetails : OngoingTask
     {
-        public OngoingTaskSqlEtl()
+        public OngoingTaskRavenEtlDetails()
+        {
+            TaskType = OngoingTaskType.RavenEtl;
+        }
+
+        public RavenEtlConfiguration Configuration { get; set; }
+
+        public override DynamicJsonValue ToJson()
+        {
+            var json = base.ToJson();
+            json[nameof(Configuration)] = Configuration?.ToJson();
+
+            return json;
+        }
+    }
+    
+    public class OngoingTaskSqlEtlListView : OngoingTask
+    {
+        public OngoingTaskSqlEtlListView()
         {
             TaskType = OngoingTaskType.SqlEtl;
         }
@@ -136,14 +153,31 @@ namespace Raven.Client.ServerWide.Operations
 
         public string DestinationDatabase { get; set; }
 
-        public SqlEtlConfiguration Configuration { get; set; }
-
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
 
             json[nameof(DestinationServer)] = DestinationServer;
             json[nameof(DestinationDatabase)] = DestinationDatabase;
+
+            return json;
+        }
+    }
+    
+
+    public class OngoingTaskSqlEtlDetails : OngoingTask
+    {
+        public OngoingTaskSqlEtlDetails()
+        {
+            TaskType = OngoingTaskType.SqlEtl;
+        }
+
+        public SqlEtlConfiguration Configuration { get; set; }
+
+        public override DynamicJsonValue ToJson()
+        {
+            var json = base.ToJson();
+
             json[nameof(Configuration)] = Configuration?.ToJson();
 
             return json;

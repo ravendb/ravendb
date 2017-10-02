@@ -1,28 +1,28 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 import ongoingTask = require("models/database/tasks/ongoingTaskModel"); 
 
-class ongoingTaskSqlEtlModel extends ongoingTask {
+class ongoingTaskSqlEtlListModel extends ongoingTask {
     destinationServer = ko.observable<string>();
     destinationDatabase = ko.observable<string>();
     destinationDatabaseText: KnockoutComputed<string>;
 
-    constructor(dto: Raven.Client.ServerWide.Operations.OngoingTaskSqlEtl, isInListView: boolean) {
+    constructor(dto: Raven.Client.ServerWide.Operations.OngoingTaskSqlEtlListView) {
         super();
 
-        this.isInTasksListView = isInListView;
+        this.isInTasksListView = true;
         this.initializeObservables();
         this.update(dto);
     }
 
     initializeObservables() {
         super.initializeObservables();
-        // ...
+        
         this.destinationDatabaseText = ko.pureComputed(() => {
             return `(${this.destinationDatabase()})`;
         });
     }
 
-    update(dto: Raven.Client.ServerWide.Operations.OngoingTaskSqlEtl) {
+    update(dto: Raven.Client.ServerWide.Operations.OngoingTaskSqlEtlListView) {
         super.update(dto);
         this.destinationServer(dto.DestinationServer);
         this.destinationDatabaseText(dto.DestinationDatabase);
@@ -37,4 +37,4 @@ class ongoingTaskSqlEtlModel extends ongoingTask {
     }
 }
 
-export = ongoingTaskSqlEtlModel;
+export = ongoingTaskSqlEtlListModel;

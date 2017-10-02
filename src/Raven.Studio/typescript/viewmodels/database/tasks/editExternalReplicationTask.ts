@@ -7,12 +7,15 @@ import ongoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskI
 import eventsCollector = require("common/eventsCollector");
 import generalUtils = require("common/generalUtils");
 import testClusterNodeConnectionCommand = require("commands/database/cluster/testClusterNodeConnectionCommand");
+import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
 
 class editExternalReplicationTask extends viewModelBase {
 
     editedExternalReplication = ko.observable<ongoingTaskReplication>();
     isAddingNewReplicationTask = ko.observable<boolean>(true);
     private taskId: number = null;
+    
+    possibleMentors = ko.observableArray<string>([]);
 
     testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
     spinners = { 
@@ -57,7 +60,13 @@ class editExternalReplicationTask extends viewModelBase {
         }
 
         deferred.done(() => this.initObservables());
-        return deferred;
+        return $.when<any>(deferred, this.loadPossibleMentors());
+    }
+    
+    private loadPossibleMentors() {
+        return new getPossibleMentorsCommand(this.activeDatabase().name)
+            .execute()
+            .done(mentors => this.possibleMentors(mentors));
     }
 
     private initObservables() {
@@ -74,7 +83,10 @@ class editExternalReplicationTask extends viewModelBase {
     }
 
     compositionComplete() {
+        super.compositionComplete();
         document.getElementById('taskName').focus();
+        
+        $('.edit-replication-task [data-toggle="tooltip"]').tooltip();
     }
 
     saveExternalReplication() {
