@@ -23,7 +23,6 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
     constructor(dto: Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails) {
         super();
         
-        this.isInTasksListView = false;
         this.query(dto.Query);
         this.updateDetails(dto);
         this.initializeObservables(); 

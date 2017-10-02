@@ -2,7 +2,7 @@ import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import router = require("plugins/router");
 import saveExternalReplicationTaskCommand = require("commands/database/tasks/saveExternalReplicationTaskCommand");
-import ongoingTaskReplication = require("models/database/tasks/ongoingTaskReplicationModel");
+import ongoingTaskReplicationEditModel = require("models/database/tasks/ongoingTaskReplicationEditModel");
 import ongoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskInfoCommand");
 import eventsCollector = require("common/eventsCollector");
 import generalUtils = require("common/generalUtils");
@@ -11,7 +11,7 @@ import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleM
 
 class editExternalReplicationTask extends viewModelBase {
 
-    editedExternalReplication = ko.observable<ongoingTaskReplication>();
+    editedExternalReplication = ko.observable<ongoingTaskReplicationEditModel>();
     isAddingNewReplicationTask = ko.observable<boolean>(true);
     private taskId: number = null;
     
@@ -43,7 +43,7 @@ class editExternalReplicationTask extends viewModelBase {
             ongoingTaskInfoCommand.forExternalReplication(this.activeDatabase(), this.taskId)
                 .execute()
                 .done((result: Raven.Client.ServerWide.Operations.OngoingTaskReplication) => { 
-                    this.editedExternalReplication(new ongoingTaskReplication(result, false));
+                    this.editedExternalReplication(new ongoingTaskReplicationEditModel(result));
                     deferred.resolve();
                 })
                 .fail(() => {
@@ -55,7 +55,7 @@ class editExternalReplicationTask extends viewModelBase {
         else {
             // 2. Creating a new task
             this.isAddingNewReplicationTask(true);
-            this.editedExternalReplication(ongoingTaskReplication.empty());
+            this.editedExternalReplication(ongoingTaskReplicationEditModel.empty());
             deferred.resolve();
         }
 

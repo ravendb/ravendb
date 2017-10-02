@@ -28,7 +28,6 @@ class ongoingTaskSubscriptionListModel extends ongoingTask {
     constructor(dto: Raven.Client.ServerWide.Operations.OngoingTaskSubscription) {
         super();
 
-        this.isInTasksListView = true;
         this.update(dto);
         this.initializeObservables(); 
     }
