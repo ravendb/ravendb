@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
@@ -413,7 +414,12 @@ namespace Raven.Server.Documents.ETL
                                     }
 
                                     if (didWork)
+                                    {
                                         UpdateMetrics(startTime, stats);
+
+                                        if (Logger.IsOperationsEnabled)
+                                            LogSuccessfulBatchInfo(stats);
+                                    }
                                 }
                             }
                             catch (OperationCanceledException)
@@ -422,7 +428,7 @@ namespace Raven.Server.Documents.ETL
                             }
                             catch (Exception e)
                             {
-                                var message = $"Exception in ETL process named '{Name}'";
+                                var message = $"Exception in ETL process '{Name}'";
 
                                 if (Logger.IsInfoEnabled)
                                     Logger.Info($"{Tag} {message}", e);
@@ -552,6 +558,25 @@ namespace Raven.Server.Documents.ETL
                 // .Select(x => x == lastStats ? x.ToEtlPerformanceStats().ToIndexingPerformanceLiveStatsWithDetails() : x.ToIndexingPerformanceStats())
                 .Select(x => x.ToPerformanceStats())
                 .ToArray();
+        }
+
+        private void LogSuccessfulBatchInfo(EtlStatsScope stats)
+        {
+            var message = new StringBuilder();
+
+            message.Append(
+                $"{Tag} process '{Name}' extracted {stats.NumberOfExtractedItems} docs, transformed and loaded {stats.NumberOfTransformedItems} docs in {stats.Duration}. ");
+
+            message.Append($"{nameof(stats.LastTransformedEtag)}: {stats.LastTransformedEtag}. ");
+            message.Append($"{nameof(stats.LastLoadedEtag)}: {stats.LastLoadedEtag}. ");
+
+            if (stats.LastFilteredOutEtag > 0)
+                message.Append($"{nameof(stats.LastFilteredOutEtag)}: {stats.LastFilteredOutEtag}. ");
+
+            if (stats.BatchCompleteReason != null)
+                message.Append($"Batch completion reason: {stats.BatchCompleteReason}");
+
+            Logger.Info(message.ToString());
         }
 
         public override void Dispose()

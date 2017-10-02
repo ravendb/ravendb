@@ -30,6 +30,8 @@ namespace Raven.Server.Documents.ETL.Stats
 
         public string ChangeVector => _stats.ChangeVector;
 
+        public string BatchCompleteReason => _stats.BatchCompleteReason;
+
         public void RecordExtractedItem()
         {
             _stats.NumberOfExtractedItems++;
