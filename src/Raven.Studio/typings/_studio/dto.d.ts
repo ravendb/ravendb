@@ -298,13 +298,6 @@ interface feedbackSavedSettingsDto {
     Email: string;
 }
 
-interface ravenEtlDataFromUI {  //TODO: Raven.Client.ServerWide.ETL.RavenEtlConfiguration
-    TaskName: string;
-    ConnectionStringName: string;
-    AllowEtlOnNonEncryptedChannel: boolean;
-    TransformationScripts: Array<Raven.Client.ServerWide.ETL.Transformation>;
-} 
-
 interface layoutable {
     x: number;
     y: number;

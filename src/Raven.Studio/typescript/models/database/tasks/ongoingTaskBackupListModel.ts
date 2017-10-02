@@ -5,7 +5,7 @@ import ongoingTask = require("models/database/tasks/ongoingTaskModel");
 import ongoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskInfoCommand");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 
-class ongoingTaskBackupModel extends ongoingTask {
+class ongoingTaskBackupListModel extends ongoingTask {
     editUrl: KnockoutComputed<string>;
     activeDatabase = activeDatabaseTracker.default.database;
 
@@ -17,10 +17,10 @@ class ongoingTaskBackupModel extends ongoingTask {
     showBackupDetails = ko.observable(false);
     textClass = ko.observable<string>();
 
-    constructor(dto: Raven.Client.ServerWide.Operations.OngoingTaskBackup, isInListView: boolean) {
+    constructor(dto: Raven.Client.ServerWide.Operations.OngoingTaskBackup) {
         super();
 
-        this.isInTasksListView = isInListView;
+        this.isInTasksListView = true;
         this.update(dto);
         this.initializeObservables();
     }
@@ -81,4 +81,4 @@ class ongoingTaskBackupModel extends ongoingTask {
     }
 }
 
-export = ongoingTaskBackupModel;
+export = ongoingTaskBackupListModel;

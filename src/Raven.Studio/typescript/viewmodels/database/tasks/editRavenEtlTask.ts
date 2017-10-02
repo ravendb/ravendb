@@ -172,7 +172,7 @@ class editRavenEtlTask extends viewModelBase {
         }
 
         // 2. Create/add the new raven-etl task
-        const dto = this.editedRavenEtl().toDto();
+        const dto = this.editedRavenEtl().toDto(this.taskId);
         
         new saveRavenEtlTaskCommand(this.activeDatabase(), this.taskId, dto)
             .execute()
