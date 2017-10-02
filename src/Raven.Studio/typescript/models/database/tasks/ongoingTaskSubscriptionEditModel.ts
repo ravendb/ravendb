@@ -67,7 +67,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
     }
 
     private serializeChangeVector() {
-        let changeVector: Raven.Client.Constants.Documents.SubscriptionChangeVectorSpecialStates | string = "DoNotChange";
+        let changeVector: Raven.Client.Constants.Documents.SubscriptionChangeVectorSpecialStates | string = this.taskId ? "DoNotChange" : "BeginningOfTime"; 
 
         if (this.setStartingPoint()) {
             switch (this.startingPointType()) {

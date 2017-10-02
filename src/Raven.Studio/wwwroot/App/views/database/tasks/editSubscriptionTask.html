@@ -51,12 +51,14 @@
                             <input id="use-starting-point" type="checkbox" data-bind="checked: setStartingPoint">
                             <label for="use-starting-point">Use defined starting point</label>
                         </div>
-                        <div class="form-group">
+                        <div class="form-group" data-bind="visible: setStartingPoint">
                             <label class="control-label">Send Documents From :</label>
                             <div class="flex-grow">
-                                <div class="dropdown btn-block" title="Set the starting point for the subscription task"> 
-                                    <input readonly type="text" class="form-control dropdown-toggle text-left" data-toggle="dropdown" data-bind="textInput: startingPointType, attr: { 'disabled': !setStartingPoint() }">
-                                    <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                                <div title="Set the starting point for the subscription task">
+                                    <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
+                                        <span data-bind="text: startingPointType"></span>
+                                        <span class="caret"></span>
+                                    </button>
                                     <ul class="dropdown-menu max-height">
                                         <li title="Documents will be sent from the very first document in the collection">
                                             <a href="#" data-bind="click: _.partial($root.setStartingPointType, 'Beginning of Time')">Begining of Time</a>
