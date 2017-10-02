@@ -39,8 +39,8 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
         }
     }
 
-    toDto(): ravenEtlDataFromUI {
-        const Transformations = this.transformationScripts().map(x => {
+    toDto(taskId: number): Raven.Client.ServerWide.ETL.RavenEtlConfiguration {
+        const transformations = this.transformationScripts().map(x => {
             const collections = x.applyScriptForAllCollections() ? null : x.transformScriptCollections();
             return {
                 ApplyToAllDocuments: x.applyScriptForAllCollections(),
@@ -49,15 +49,19 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
                 HasLoadAttachment: false,
                 Name: x.name(),
                 Script: x.script()
-            };
+            } as Raven.Client.ServerWide.ETL.Transformation;
         });
 
         return {
-            TaskName: this.taskName(),
+            Name: this.taskName(),
             ConnectionStringName: this.connectionStringName(),
             AllowEtlOnNonEncryptedChannel: this.allowEtlOnNonEncryptedChannel(),
-            TransformationScripts: Transformations
-        };
+            Disabled: false,
+            Transforms: transformations,
+            EtlType: "Raven",
+            MentorNode: null, //TODO:
+            TaskId: taskId
+        } as Raven.Client.ServerWide.ETL.RavenEtlConfiguration;
     }
 
     deleteTransformationScript(transformationScript: ongoingTaskEtlTransformationModel) {

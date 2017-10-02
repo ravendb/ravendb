@@ -4,25 +4,17 @@ import endpoints = require("endpoints");
 
 class saveRavenEtlTaskCommand extends commandBase {
 
-    constructor(private db: database, private taskId: number, private ravenEtlSettings: ravenEtlDataFromUI) {
+    constructor(private db: database, private taskId: number, private payload: Raven.Client.ServerWide.ETL.RavenEtlConfiguration) {
         super();
     }
  
     execute(): JQueryPromise<Raven.Client.ServerWide.Operations.ModifyOngoingTaskResult> {
         return this.updateRavenEtl()
             .fail((response: JQueryXHR) => {
-                if (this.taskId) {
-                   this.reportError("Failed to save RavenDB ETL task", response.responseText, response.statusText);
-                } else {
-                    this.reportError("Failed to create RavenDB ETL task", response.responseText, response.statusText);
-                }
+                this.reportError("Failed to save RavenDB ETL task", response.responseText, response.statusText);
             })
             .done(() => {
-                if (this.taskId) {
-                    this.reportSuccess(`Updated RavenDB ETL task`);
-                } else {
-                    this.reportSuccess(`Created RavenDB ETL task`);
-                }
+                this.reportSuccess(`Saved RavenDB ETL task`);
             });
     }
     private updateRavenEtl(): JQueryPromise<Raven.Client.ServerWide.Operations.ModifyOngoingTaskResult> {
@@ -30,18 +22,7 @@ class saveRavenEtlTaskCommand extends commandBase {
 
         const url = endpoints.global.adminDatabases.adminEtl + this.urlEncodeArgs(args);
 
-        const ravenEtlToSend: Raven.Client.ServerWide.ETL.RavenEtlConfiguration = {
-            EtlType: "Raven",
-            TaskId: this.taskId,
-            Name: this.ravenEtlSettings.TaskName,
-            ConnectionStringName: this.ravenEtlSettings.ConnectionStringName,
-            AllowEtlOnNonEncryptedChannel: this.ravenEtlSettings.AllowEtlOnNonEncryptedChannel,
-            Disabled: false, 
-            Transforms: this.ravenEtlSettings.TransformationScripts,
-            MentorNode: null
-        }
-
-        return this.put(url, JSON.stringify(ravenEtlToSend));
+        return this.put(url, JSON.stringify(this.payload));
     }
 }
 
