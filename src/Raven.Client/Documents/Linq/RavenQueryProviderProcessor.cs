@@ -1430,7 +1430,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                             constantValue = $"\"{stringConst}\"";
                             break;
                         default:
-                            constantValue = constantExpression.Value.ToString();
+                            constantValue = constantExpression.Value?.ToString() ?? "null";
                             break;
                     }
 
