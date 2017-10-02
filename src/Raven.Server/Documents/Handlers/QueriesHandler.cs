@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.Handlers
                 var operation = GetStringQueryString("op", required: false);
                 if (string.Equals(operation, "morelikethis", StringComparison.OrdinalIgnoreCase))
                 {
-                    MoreLikeThis(context, token, HttpMethod.Post);
+                    MoreLikeThis(context, token);
                     return;
                 }
 
@@ -82,8 +82,7 @@ namespace Raven.Server.Documents.Handlers
                 var operation = GetStringQueryString("op", required: false);
                 if (string.Equals(operation, "morelikethis", StringComparison.OrdinalIgnoreCase))
                 {
-                    MoreLikeThis(context, token, HttpMethod.Get);
-                    return;
+                    throw new NotSupportedException("GET requests for MoreLikeThis queries are not supported");
                 }
 
                 if (string.Equals(operation, "facets", StringComparison.OrdinalIgnoreCase))
@@ -175,16 +174,9 @@ namespace Raven.Server.Documents.Handlers
             return IndexQueryServerSide.Create(json, context, Database.QueryMetadataCache);
         }
 
-        private MoreLikeThisQueryServerSide GetMoreLikeThisQuery(JsonOperationContext context, HttpMethod method)
+        private MoreLikeThisQueryServerSide GetMoreLikeThisQuery(JsonOperationContext context)
         {
-            if (method == HttpMethod.Get)
-            {
-                //MoreLikeThisQueryServerSide.Create(HttpContext, GetPageSize(), context);
-                throw new NotImplementedException();
-            }
-
             var json = context.ReadForMemory(RequestBodyStream(), "morelikethis/query");
-
             return MoreLikeThisQueryServerSide.Create(json);
         }
 
@@ -206,8 +198,7 @@ namespace Raven.Server.Documents.Handlers
         {
             if (method == HttpMethod.Get)
             {
-                //MoreLikeThisQueryServerSide.Create(HttpContext, GetPageSize(), context);
-                throw new NotImplementedException();
+                throw new NotImplementedException("RavenDB-8882");
             }
 
             var indexQueryJson = context.ReadForMemory(RequestBodyStream(), "suggestion/query");
@@ -240,11 +231,11 @@ namespace Raven.Server.Documents.Handlers
             AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(Suggest)} ({query.IndexName})", HttpContext, result.Suggestions.Length, query.PageSize, TimeSpan.FromMilliseconds(result.DurationInMs));
         }
 
-        private void MoreLikeThis(DocumentsOperationContext context, OperationCancelToken token, HttpMethod method)
+        private void MoreLikeThis(DocumentsOperationContext context, OperationCancelToken token)
         {
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
 
-            var query = GetMoreLikeThisQuery(context, method);
+            var query = GetMoreLikeThisQuery(context);
             
             var result = Database.QueryRunner.ExecuteMoreLikeThisQuery(query, context, existingResultEtag, token);
 
