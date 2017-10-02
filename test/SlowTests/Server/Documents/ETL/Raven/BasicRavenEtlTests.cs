@@ -360,6 +360,47 @@ loadToAddresses(load(this.AddressId));
         }
 
         [Fact]
+        public void Loading_to_the_same_collection_by_js_object_should_preserve_collection_metadata()
+        {
+            using (var src = GetDocumentStore())
+            using (var dest = GetDocumentStore())
+            {
+                var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses != 0);
+
+                AddEtl(src, dest, "users", @"
+loadToUsers({Name: this.Name + ' ' + this.LastName });
+");
+                using (var session = src.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Name = "James",
+                        LastName = "Smith",
+                    });
+
+                    session.Store(new Address
+                    {
+                        City = "New York"
+                    });
+
+                    session.SaveChanges();
+                }
+
+                etlDone.Wait(TimeSpan.FromSeconds(30));
+
+                using (var session = dest.OpenSession())
+                {
+                    var user = session.Load<User>("users/1-A");
+                    Assert.NotNull(user);
+                    Assert.Equal("James Smith", user.Name);
+
+                    var metadata = session.Advanced.GetMetadataFor(user);
+                    Assert.Equal("Users", metadata[Constants.Documents.Metadata.Collection]);
+                }
+            }
+        }
+
+        [Fact]
         public void Update_of_disassembled_document()
         {
             using (var src = GetDocumentStore())
