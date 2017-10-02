@@ -1,4 +1,6 @@
-﻿using System.Reflection;
+﻿using System;
+using System.Collections.Generic;
+using System.Reflection;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Basic.Entities;
@@ -55,7 +57,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Theory(Skip = "RavenDB-8860")]
+        [Theory]
         [InlineData("SlowTests.Smuggler.Indexes_And_Transformers_3.5.ravendbdump")]
         public async Task CanImportIndexesAndTransformers(string file)
         {
@@ -67,8 +69,10 @@ namespace SlowTests.Smuggler
                 {
                     await store.Admin.SendAsync(new StopIndexingOperation());
 
-                    await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), stream);
+                    var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), stream);
 
+                    var result = operation.WaitForCompletion<SmugglerResult>();
+                    
                     var stats = await store.Admin.SendAsync(new GetStatisticsOperation());
 
                     Assert.Equal(0, stats.CountOfDocuments);
@@ -76,7 +80,41 @@ namespace SlowTests.Smuggler
                     // not everything can be imported
                     // LoadDocument(key)
                     // Spatial
-                    Assert.True(stats.CountOfIndexes >= 584, $"{stats.CountOfIndexes} >= 584");
+
+                    var unexpectedErrors = new List<string>();
+
+                    foreach (var errorMessage in result.Messages)
+                    {
+                        if (errorMessage.Contains("ERROR") == false)
+                            continue;
+
+                        if (errorMessage.Contains("No overload for method 'LoadDocument' takes 1 arguments"))
+                        {
+                            // this.LoadDocument(student.Friends)
+                            continue;
+                        }
+
+                        if (errorMessage.Contains("The name 'AbstractIndexCreationTask' does not exist in the current context"))
+                        {
+                            // AbstractIndexCreationTask.SpatialGenerate(
+                            continue;
+                        }
+
+                        if (errorMessage.Contains("Cannot find analyzer type"))
+                        {
+                            continue;
+                        }
+
+                        if (errorMessage.Contains("The name 'SpatialIndex' does not exist in the current context"))
+                        {
+                            // SpatialIndex.Generate()
+                            continue;
+                        }
+
+                        unexpectedErrors.Add(errorMessage);
+                    }
+
+                    Assert.True(stats.CountOfIndexes >= 584, $"{stats.CountOfIndexes} >= 584. Errors: { string.Join($", {Environment.NewLine}", unexpectedErrors)}");
                     Assert.True(stats.CountOfIndexes <= 658, $"{stats.CountOfIndexes} <= 658");
 
                     // not everything can be imported
