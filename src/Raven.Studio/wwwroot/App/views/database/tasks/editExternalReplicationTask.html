@@ -1,4 +1,4 @@
-<div class="content-margin">
+<div class="content-margin edit-replication-task">
     <div class="row flex-row absolute-fill">
         <div class="col-xs-12 col-lg-6 flex-vertical">
             <div class="flex-header">
@@ -16,6 +16,30 @@
                                 <input type="text" class="form-control" data-bind="textInput: taskName" id="taskName" placeholder="Enter a descriptive name for the replication task">
                             </div>
                         </div>
+
+                        <div class="form-group">
+                            <label class="control-label">&nbsp;</label>
+                            <div class="toggle" data-placement="left" data-toggle="tooltip" title="Mentor node is responsible for given ongoing task">
+                                <input id="toggle3" type="checkbox" data-bind="checked: manualChooseMentor">
+                                <label for="toggle3">Choose preferred mentor node manually</label>
+                            </div>
+                        </div>
+
+                        <div class="form-group" data-bind="validationElement: preferredMentor, visible: manualChooseMentor">
+                            <div>
+                                <label class="control-label">Preferred mentor</label>
+                            </div>
+                            <div class="flex-grow">
+                                <button class="btn btn-default btn-block dropdown-toggle" data-toggle="dropdown">
+                                    <span data-bind="text: preferredMentor() ? 'Node ' + preferredMentor() : 'Select preferred mentor'"></span>
+                                    <span class="caret"></span>
+                                </button>
+                                <ul class="dropdown-menu" data-bind="foreach: $root.possibleMentors">
+                                    <li><a href="#" data-bind="text: 'Node ' + $data, click: $parent.preferredMentor.bind($parent.preferredMentor, $data)"></a></li>
+                                </ul>
+                            </div>
+                        </div>
+                        
                         <div class="form-group">
                             <label for="url" class="control-label">Destination URL</label>
                             <div class="flex-grow" data-bind="validationElement: destinationURL">

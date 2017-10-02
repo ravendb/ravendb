@@ -2,7 +2,7 @@ import app = require("durandal/app");
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import router = require("plugins/router");
-import ongoingTaskRavenEtl = require("models/database/tasks/ongoingTaskRavenEtlModel");
+import ongoingTaskRavenEtlEditModel = require("models/database/tasks/ongoingTaskRavenEtlEditModel");
 import getOngoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskInfoCommand");
 import eventsCollector = require("common/eventsCollector");
 import testClusterNodeConnectionCommand = require("commands/database/cluster/testClusterNodeConnectionCommand");
@@ -17,7 +17,7 @@ import transformationScriptSyntax = require("viewmodels/database/tasks/transform
 
 class editRavenEtlTask extends viewModelBase {
 
-    editedRavenEtl = ko.observable<ongoingTaskRavenEtl>();
+    editedRavenEtl = ko.observable<ongoingTaskRavenEtlEditModel>();
     isAddingNewRavenEtlTask = ko.observable<boolean>(true);
     ravenEtlConnectionStringsNames = ko.observableArray<string>([]);
     connectionStringIsDefined: KnockoutComputed<boolean>;
@@ -47,8 +47,8 @@ class editRavenEtlTask extends viewModelBase {
             
             getOngoingTaskInfoCommand.forRavenEtl(this.activeDatabase(), args.taskId)
                 .execute()
-                .done((result: Raven.Client.ServerWide.Operations.OngoingTaskRavenEtl) => {
-                    this.editedRavenEtl(new ongoingTaskRavenEtl(result, false));
+                .done((result: Raven.Client.ServerWide.Operations.OngoingTaskRavenEtlDetails) => {
+                    this.editedRavenEtl(new ongoingTaskRavenEtlEditModel(result));
                     deferred.resolve();
                 })
                 .fail(() => { 
@@ -59,7 +59,7 @@ class editRavenEtlTask extends viewModelBase {
         else {
             // 2. Creating a New task
             this.isAddingNewRavenEtlTask(true);
-            this.editedRavenEtl(ongoingTaskRavenEtl.empty());
+            this.editedRavenEtl(ongoingTaskRavenEtlEditModel.empty());
             deferred.resolve();
         }
 
@@ -126,11 +126,14 @@ class editRavenEtlTask extends viewModelBase {
                 eventsCollector.default.reportEvent("ravenDB-ETL-connection-string", "test-connection");
                 this.spinners.test(true);
 
-                this.getConnectionStringDetails()
-                    .done(() => new testClusterNodeConnectionCommand(this.editedRavenEtl().destinationURL())
-                                       .execute()
-                                       .done(result => this.testConnectionResult(result))
-                                       .always(() => this.spinners.test(false))
+                getConnectionStringInfoCommand.forRavenEtl(this.activeDatabase(), this.editedRavenEtl().connectionStringName())
+                    .execute()
+                    .done((result: Raven.Client.ServerWide.ETL.RavenConnectionString) => {
+                        new testClusterNodeConnectionCommand(result.Url)
+                            .execute()
+                            .done(result => this.testConnectionResult(result))
+                            .always(() => this.spinners.test(false));
+                    }
                 );
             }
             else {
@@ -138,15 +141,6 @@ class editRavenEtlTask extends viewModelBase {
                 this.testConnectionResult({ Error: "Connection string Not yet defined", Success: false });
             }
         }
-    }
-
-    getConnectionStringDetails() {
-        return getConnectionStringInfoCommand.forRavenEtl(this.activeDatabase(), this.editedRavenEtl().connectionStringName())
-            .execute()
-            .done((result: Raven.Client.ServerWide.ETL.RavenConnectionString) => {
-                this.editedRavenEtl().destinationURL(result.Url);
-                this.editedRavenEtl().destinationDB(result.Database);
-            });
     }
 
     trySaveRavenEtl() {

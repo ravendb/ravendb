@@ -242,7 +242,7 @@ namespace Raven.Server.Web.System
                         throw new InvalidOperationException(
                             $"Could not find connection string named '{ravenEtl.ConnectionStringName}' in the database record for '{ravenEtl.Name}' ETL");
 
-                    yield return new OngoingTaskRavenEtl
+                    yield return new OngoingTaskRavenEtlListView()
                     {
                         TaskId = ravenEtl.TaskId,
                         TaskName = ravenEtl.Name,
@@ -280,7 +280,7 @@ namespace Raven.Server.Web.System
                     var (database, server) =
                         SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString(sqlEtl.FactoryName, sqlConnection.ConnectionString);
 
-                    yield return new OngoingTaskSqlEtl
+                    yield return new OngoingTaskSqlEtlListView()
                     {
                         TaskId = sqlEtl.TaskId,
                         TaskName = sqlEtl.Name,
@@ -338,6 +338,7 @@ namespace Raven.Server.Web.System
                             {
                                 TaskId = watcher.TaskId,
                                 TaskName = watcher.Name,
+                                MentorNode = watcher.MentorNode,
                                 ResponsibleNode = new NodeId
                                 {
                                     NodeTag = tag,
@@ -395,7 +396,7 @@ namespace Raven.Server.Web.System
                                 break;
                             }
 
-                            WriteResult(context, new OngoingTaskSqlEtl
+                            WriteResult(context, new OngoingTaskSqlEtlDetails()
                             {
                                 TaskId = sqlEtl.TaskId,
                                 TaskName = sqlEtl.Name,
@@ -412,7 +413,7 @@ namespace Raven.Server.Web.System
                                 break;
                             }
 
-                            WriteResult(context, new OngoingTaskRavenEtl
+                            WriteResult(context, new OngoingTaskRavenEtlDetails()
                             {
                                 TaskId = ravenEtl.TaskId,
                                 TaskName = ravenEtl.Name,

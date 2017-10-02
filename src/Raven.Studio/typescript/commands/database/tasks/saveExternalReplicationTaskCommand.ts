@@ -14,6 +14,7 @@ class saveExternalReplicationTaskCommand extends commandBase {
             Name: replicationSettings.TaskName,
             Database: replicationSettings.DestinationDB,
             Url: replicationSettings.DestinationURL,
+            MentorNode: replicationSettings.MentorNode,
             // Other vals:
             TaskId: taskId
         } as Raven.Client.ServerWide.ExternalReplication;

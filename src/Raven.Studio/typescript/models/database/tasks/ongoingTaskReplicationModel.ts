@@ -1,10 +1,10 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 import appUrl = require("common/appUrl");
 import router = require("plugins/router");
-import ongoingTask = require("models/database/tasks/ongoingTaskModel"); 
+import ongoingTaskEditModel = require("models/database/tasks/ongoingTaskEditModel"); 
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 
-class ongoingTaskReplicationModel extends ongoingTask {
+class ongoingTaskReplicationModel extends ongoingTaskEditModel { //TODO: split into 2 classes
     editUrl: KnockoutComputed<string>;
 
     destinationDB = ko.observable<string>();
@@ -34,6 +34,8 @@ class ongoingTaskReplicationModel extends ongoingTask {
 
         this.destinationDB(dto.DestinationDatabase);
         this.destinationURL(dto.DestinationUrl);
+        this.manualChooseMentor(!!dto.MentorNode);
+        this.preferredMentor(dto.MentorNode);
     }
 
     editTask() {
@@ -48,12 +50,16 @@ class ongoingTaskReplicationModel extends ongoingTask {
         return {
             TaskName: this.taskName(),
             DestinationURL: this.destinationURL(),
-            DestinationDB: this.destinationDB()
+            DestinationDB: this.destinationDB(),
+            MentorNode: this.manualChooseMentor() ? this.preferredMentor() : undefined,
+            //TODO: task id
         };
     }
 
     initValidation() {
 
+        this.initializeMentorValidation();
+        
         this.destinationDB.extend({
             required: true,
             validDatabaseName: true
@@ -66,7 +72,8 @@ class ongoingTaskReplicationModel extends ongoingTask {
 
         this.validationGroup = ko.validatedObservable({
             destinationDB: this.destinationDB,
-            destinationURL: this.destinationURL
+            destinationURL: this.destinationURL,
+            preferredMentor: this.preferredMentor
         });
     }
 

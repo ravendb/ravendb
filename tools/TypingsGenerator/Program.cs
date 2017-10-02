@@ -263,13 +263,15 @@ namespace TypingsGenerator
             scripter.AddType(typeof(SubscriptionOpeningStrategy));
 
             // ongoing tasks - ravenDB ETL
-            scripter.AddType(typeof(OngoingTaskRavenEtl));
+            scripter.AddType(typeof(OngoingTaskRavenEtlDetails));
+            scripter.AddType(typeof(OngoingTaskRavenEtlListView));
             scripter.AddType(typeof(RavenEtlConfiguration));
             scripter.AddType(typeof(EtlProcessStatistics));
             scripter.AddType(typeof(EtlType));
 
             // ongoing tasks - SQL ETL
-            scripter.AddType(typeof(OngoingTaskSqlEtl));
+            scripter.AddType(typeof(OngoingTaskSqlEtlDetails));
+            scripter.AddType(typeof(OngoingTaskSqlEtlListView));
             scripter.AddType(typeof(SqlEtlConfiguration));
             scripter.AddType(typeof(SimulateSqlEtl));
             scripter.AddType(typeof(SqlEtlTable));

@@ -298,20 +298,21 @@ interface feedbackSavedSettingsDto {
     Email: string;
 }
 
-interface externalReplicationDataFromUI {
+interface externalReplicationDataFromUI {  //TODO: remove and use: Raven.Client.ServerWide.ExternalReplication
     TaskName: string;
     DestinationDB: string;
     DestinationURL: string;
+    MentorNode: string;
 } 
 
-interface ravenEtlDataFromUI {
+interface ravenEtlDataFromUI {  //TODO: Raven.Client.ServerWide.ETL.RavenEtlConfiguration
     TaskName: string;
     ConnectionStringName: string;
     AllowEtlOnNonEncryptedChannel: boolean;
     TransformationScripts: Array<Raven.Client.ServerWide.ETL.Transformation>;
 } 
 
-interface subscriptionDataFromUI {
+interface subscriptionDataFromUI { //TODO use: Raven.Client.Documents.Subscriptions.SubscriptionCreationOptions
     TaskName: string;
     Query: string;
     ChangeVector: Raven.Client.Constants.Documents.SubscriptionChangeVectorSpecialStates | string;
