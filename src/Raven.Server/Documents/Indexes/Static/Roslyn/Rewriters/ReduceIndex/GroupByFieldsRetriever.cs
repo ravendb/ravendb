@@ -146,19 +146,44 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
 
                 by = by.Replace($"{result}.", string.Empty);
 
-                GroupByFields = by.Split(',');
+                var fields = by.Split(',');
 
-                for (int i = 0; i < GroupByFields.Length; i++)
+                var groupByFields = new List<string>(fields.Length);
+
+                for (var i = 0; i < fields.Length; i++)
                 {
-                    var field = GroupByFields[i];
+                    var parts = fields[i].Split('=');
 
-                    var parts = field.Split('=');
+                    string fieldName;
 
                     if (parts.Length == 1)
-                        GroupByFields[i] = parts[0].Trim();
+                        fieldName = parts[0].Trim();
                     else
-                        GroupByFields[i] = parts[1].Trim();
+                        fieldName = parts[1].Trim();
+
+                    if (fieldName.StartsWith('"') && fieldName.EndsWith('"'))
+                    {
+                        // group by "constant"
+                        continue;
+                    }
+
+                    if (char.IsNumber(fieldName[0]))
+                    {
+                        // group by 123
+                        continue;
+                    }
+
+                    if ("true".Equals(fieldName) || "false".Equals(fieldName))
+                    {
+                        // group by true
+                        // group by false
+                        continue;
+                    }
+
+                    groupByFields.Add(fieldName);
                 }
+
+                GroupByFields = groupByFields.ToArray();
 
                 return base.VisitGroupClause(node);
             }
