@@ -46,14 +46,14 @@ class ongoingTaskReplicationModel extends ongoingTaskEditModel { //TODO: split i
         this.showReplicationDetails(!this.showReplicationDetails());
     }
 
-    toDto(): externalReplicationDataFromUI {
+    toDto(taskId: number): Raven.Client.ServerWide.ExternalReplication {
         return {
-            TaskName: this.taskName(),
-            DestinationURL: this.destinationURL(),
-            DestinationDB: this.destinationDB(),
+            Name: this.taskName(),
+            TopologyDiscoveryUrls: [this.destinationURL()], // TODO: add support for many urls 
+            Database: this.destinationDB(),
             MentorNode: this.manualChooseMentor() ? this.preferredMentor() : undefined,
-            //TODO: task id
-        };
+            TaskId: taskId
+        } as Raven.Client.ServerWide.ExternalReplication;
     }
 
     initValidation() {
