@@ -6,6 +6,10 @@ class assignCores extends dialogViewModelBase {
     availableCores = ko.observable<number>();
     numberOfCores = ko.observable<number>();
 
+    warningText = ko.pureComputed(() => {
+        return this.assignedCores() ? this.assignedCores() + " cores will be leased from license limits." : "";
+    });
+
     validationGroup: KnockoutValidationGroup = ko.validatedObservable({
         assignedCores: this.assignedCores
     });
@@ -14,13 +18,13 @@ class assignCores extends dialogViewModelBase {
         save: ko.observable<boolean>(false)
     };
 
-    constructor(private nodeTag: string, assignedCores: number, availableCores: number, numberOfCores: number) {
+    constructor(private nodeTag: string, assignedCores: number, remainingCoresToAssign: number, numberOfCores: number) {
         super();
 
-        const maxCoresAccordintToLicense = assignedCores + availableCores;
+        const maxCoresAccordingToLicense = assignedCores + remainingCoresToAssign;
 
         this.assignedCores(assignedCores);
-        this.availableCores(availableCores);
+        this.availableCores(remainingCoresToAssign);
         this.numberOfCores(numberOfCores);
 
         this.assignedCores.extend({
@@ -29,11 +33,11 @@ class assignCores extends dialogViewModelBase {
             validation: [
                 {
                     validator: (num: number) => num <= this.numberOfCores(),
-                    message: "Max cores on node is " + this.numberOfCores()
+                    message: "Number exceeds max cores on node"
                 },
                 {
-                    validator: (num: number) => num <= maxCoresAccordintToLicense,
-                    message: "Max cores according to license is " + maxCoresAccordintToLicense
+                    validator: (num: number) => num <= maxCoresAccordingToLicense,
+                    message: "Number exceeds license limit"
                 }
             ]
         });
