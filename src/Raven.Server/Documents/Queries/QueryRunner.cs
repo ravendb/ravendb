@@ -61,7 +61,7 @@ namespace Raven.Server.Documents.Queries
             return result;
         }
 
-        public override Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, BlittableJsonTextWriter writer, OperationCancelToken token)
+        public override Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamDocumentQueryResultWriter writer, OperationCancelToken token)
         {
             return GetRunner(query).ExecuteStreamQuery(query, documentsContext, response, writer, token);
         }

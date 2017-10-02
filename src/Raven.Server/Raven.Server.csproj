@@ -58,6 +58,7 @@
     <ProjectReference Include="..\Voron\Voron.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="CsvHelper.Excel" Version="1.0.5" />
     <PackageReference Include="DasMulli.Win32.ServiceUtils" Version="1.0.1" />
     <PackageReference Include="Esprima" Version="1.0.0-beta-002-ravendb" />
     <PackageReference Include="JetBrains.Annotations" Version="11.0.0">

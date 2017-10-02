@@ -1649,10 +1649,10 @@ namespace Raven.Server.Documents.Indexes
             return Definition.ConvertToIndexDefinition(this);
         }
 
-        public virtual async Task StreamQuery(HttpResponse response, BlittableJsonTextWriter writer,
+        public virtual async Task StreamQuery(HttpResponse response, IStreamDocumentQueryResultWriter writer,
             IndexQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
-            using (var result = new StreamDocumentQueryResult(response, writer, documentsContext))
+            using (var result = new StreamDocumentQueryResult(response, writer))
             {
                 await QueryInternal(result, query, documentsContext, token);
             }

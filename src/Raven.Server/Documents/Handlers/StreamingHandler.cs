@@ -1,6 +1,8 @@
 ﻿using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Json;
@@ -76,8 +78,8 @@ namespace Raven.Server.Documents.Handlers
             {
                 var queryJson = await context.ReadForMemoryAsync(RequestBodyStream(), "index/query");
                 var query = IndexQueryServerSide.Create(queryJson, context, Database.QueryMetadataCache);
-
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                var format = GetStringQueryString("format", false);
+                using (var writer = GetQueryResultWriter(format, HttpContext.Response, context, ResponseBodyStream()))
                 {
                     try
                     {
@@ -86,13 +88,22 @@ namespace Raven.Server.Documents.Handlers
                     catch (IndexDoesNotExistException)
                     {
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                        context.Write(writer, json: new DynamicJsonValue
+                        if (writer.SupportError)
                         {
-                            ["Error"] = "Index " + query.Metadata.IndexName + " does not exists"
-                        });
+                            writer.WriteError("Index " + query.Metadata.IndexName + " does not exists");
+                        }
                     }
                 }
             }
+        }
+
+        private IStreamDocumentQueryResultWriter GetQueryResultWriter(string format, HttpResponse response,DocumentsOperationContext context, Stream responseBodyStream)
+        {
+            if (string.IsNullOrEmpty(format) == false && format.Equals("csv"))
+            {
+                return new StreamCsvDocumentQueryResultWriter(response, responseBodyStream, context);                
+            }
+            return new StreamJsonDocumentQueryResultWriter(response, responseBodyStream, context);
         }
     }
 }
