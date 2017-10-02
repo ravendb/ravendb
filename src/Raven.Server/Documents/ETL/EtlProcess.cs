@@ -417,7 +417,7 @@ namespace Raven.Server.Documents.ETL
                                     {
                                         UpdateMetrics(startTime, stats);
 
-                                        if (Logger.IsOperationsEnabled)
+                                        if (Logger.IsInfoEnabled)
                                             LogSuccessfulBatchInfo(stats);
                                     }
                                 }
