@@ -8,7 +8,7 @@ import ongoingTaskReplication = require("models/database/tasks/ongoingTaskReplic
 import ongoingTaskBackup = require("models/database/tasks/ongoingTaskBackupModel");
 import ongoingTaskRavenEtlListModel = require("models/database/tasks/ongoingTaskRavenEtlListModel");
 import ongoingTaskSqlEtlListModel = require("models/database/tasks/ongoingTaskSqlEtlListModel");
-import ongoingTaskSubscription = require("models/database/tasks/ongoingTaskSubscriptionModel");
+import ongoingTaskSubscriptionListModel = require("models/database/tasks/ongoingTaskSubscriptionListModel");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import createOngoingTask = require("viewmodels/database/tasks/createOngoingTask");
 import deleteOngoingTaskConfirm = require("viewmodels/database/tasks/deleteOngoingTaskConfirm");
@@ -36,7 +36,7 @@ class ongoingTasks extends viewModelBase {
     etlTasks = ko.observableArray<ongoingTaskRavenEtlListModel>();
     sqlTasks = ko.observableArray<ongoingTaskSqlEtlListModel>();
     backupTasks = ko.observableArray<ongoingTaskBackup>();
-    subscriptionTasks = ko.observableArray<ongoingTaskSubscription>();
+    subscriptionTasks = ko.observableArray<ongoingTaskSubscriptionListModel>();
 
     existingTaskTypes = ko.observableArray<string>();
     selectedTaskType = ko.observable<string>();
@@ -140,7 +140,7 @@ class ongoingTasks extends viewModelBase {
                     taskTypesSet.add("SQL ETL");
                     break;
                 case 'Subscription': 
-                    this.subscriptionTasks.push(new ongoingTaskSubscription(task as Raven.Client.ServerWide.Operations.OngoingTaskSubscription, true)); 
+                    this.subscriptionTasks.push(new ongoingTaskSubscriptionListModel(task as Raven.Client.ServerWide.Operations.OngoingTaskSubscription)); 
                     taskTypesSet.add("Subscription");
                     break;
             };

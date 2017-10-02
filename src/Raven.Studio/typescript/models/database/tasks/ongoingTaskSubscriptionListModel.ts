@@ -7,8 +7,7 @@ import subscriptionConnectionDetailsCommand = require("commands/database/tasks/g
 import dropSubscriptionConnectionCommand = require("commands/database/tasks/dropSubscriptionConnectionCommand");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 
-// This model is used by the 'Ongoing Tasks List View'
-class ongoingTaskSubscriptionModel extends ongoingTask {
+class ongoingTaskSubscriptionListModel extends ongoingTask {
 
     editUrl: KnockoutComputed<string>;
     activeDatabase = activeDatabaseTracker.default.database;
@@ -26,47 +25,19 @@ class ongoingTaskSubscriptionModel extends ongoingTask {
     validationGroup: KnockoutValidationGroup; 
     showSubscriptionDetails = ko.observable(false);
     
-    constructor(dto: Raven.Client.ServerWide.Operations.OngoingTaskSubscription | Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails, isInListView: boolean) {
+    constructor(dto: Raven.Client.ServerWide.Operations.OngoingTaskSubscription) {
         super();
 
-        this.isInTasksListView = isInListView;
-        this.listViewUpdate(dto);
-        this.listViewInitializeObservables(); 
+        this.isInTasksListView = true;
+        this.update(dto);
+        this.initializeObservables(); 
     }
 
-    listViewInitializeObservables() {
+    initializeObservables() {
         super.initializeObservables();
 
         const urls = appUrl.forCurrentDatabase();
         this.editUrl = urls.editSubscription(this.taskId, this.taskName());
-    }
-
-    listViewUpdate(dto: Raven.Client.ServerWide.Operations.OngoingTaskSubscription | Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails) {
-
-        // 1. Must pass the right data in case we are in Edit View flow
-        if ('Criteria' in dto) {
-            const dtoEditModel = dto as Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails;
-
-            const state: Raven.Client.ServerWide.Operations.OngoingTaskState = dtoEditModel.Disabled ? 'Disabled' : 'Enabled';
-            const emptyNodeId: Raven.Client.ServerWide.Operations.NodeId = { NodeTag: "", NodeUrl: "", ResponsibleNode: "" };
-            
-            const dtoListModel: Raven.Client.ServerWide.Operations.OngoingTaskSubscription = {
-                ResponsibleNode: emptyNodeId,
-                TaskConnectionStatus: 'Active', // todo: this has to be reviewed...
-                TaskId: dtoEditModel.SubscriptionId,
-                TaskName: dtoEditModel.SubscriptionName,
-                TaskState: state,
-                Query: dtoEditModel.Query,
-                TaskType: 'Subscription',
-                Error: null
-            };
-
-            super.update(dtoListModel);
-        }
-        // 2. List View flow
-        else {
-            super.update(dto as Raven.Client.ServerWide.Operations.OngoingTaskSubscription);
-        }
     }
 
     editTask() {
@@ -124,4 +95,4 @@ class ongoingTaskSubscriptionModel extends ongoingTask {
     }
 }
 
-export = ongoingTaskSubscriptionModel;
+export = ongoingTaskSubscriptionListModel;

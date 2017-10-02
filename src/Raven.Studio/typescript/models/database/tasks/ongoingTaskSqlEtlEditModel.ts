@@ -9,7 +9,7 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
     constructor(dto: Raven.Client.ServerWide.Operations.OngoingTaskSqlEtlDetails) {
         super();
 
-        this.isInTasksListView = true;
+        this.isInTasksListView = false;
         this.initializeObservables();
         this.update(dto);
     }

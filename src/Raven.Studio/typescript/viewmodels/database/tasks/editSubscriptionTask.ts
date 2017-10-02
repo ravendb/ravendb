@@ -60,7 +60,7 @@ class editSubscriptionTask extends viewModelBase {
             ongoingTaskInfoCommand.forSubscription(this.activeDatabase(), args.taskId, args.taskName)
                 .execute()
                 .done((result: Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails) => {
-                    this.editedSubscription(new ongoingTaskSubscriptionEdit(result, false));
+                    this.editedSubscription(new ongoingTaskSubscriptionEdit(result));
 
                     deferred.resolve();
 
@@ -99,9 +99,9 @@ class editSubscriptionTask extends viewModelBase {
         }
 
         // 2. Create/add the new replication task
-        const dtoDataFromUI = this.editedSubscription().dataFromUI();
+        const dto = this.editedSubscription().toDto();
 
-        new saveSubscriptionTaskCommand(this.activeDatabase(), dtoDataFromUI, this.editedSubscription().taskId, this.editedSubscription().taskState()) 
+        new saveSubscriptionTaskCommand(this.activeDatabase(), dto, this.editedSubscription().taskId, this.editedSubscription().taskState()) 
             .execute()
             .done(() => {
                 this.goToOngoingTasksView();
@@ -189,12 +189,12 @@ class editSubscriptionTask extends viewModelBase {
     }
 
     private fetchTestDocuments(start: number, take: number): JQueryPromise<pagedResult<documentObject>> {
-        const dtoDataFromUI = this.editedSubscription().dataFromUI();
+        const dto = this.editedSubscription().toDto();
         const resultsLimit = this.testResultsLimit() || 1;
 
         this.spinners.globalToggleDisable(true);
 
-        return new testSubscriptionTaskCommand(this.activeDatabase(), dtoDataFromUI, resultsLimit)
+        return new testSubscriptionTaskCommand(this.activeDatabase(), dto, resultsLimit)
             .execute()
             .always(() => this.spinners.globalToggleDisable(false));
     }
