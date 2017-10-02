@@ -196,7 +196,9 @@ class adminLogs extends viewModelBase {
     
     private onAppendPendingMessages() {
         this.appendElementsTask = null;
-        this.listController().pushElements(this.pendingMessages);
+
+        if (!this.filter())
+            this.listController().pushElements(this.pendingMessages);
         
         this.pendingMessages.length = 0;
 
