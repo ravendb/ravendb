@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests.Server.Basic.Entities;
+using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.ServerWide.ETL;
 using Raven.Tests.Core.Utils.Entities;
@@ -306,13 +307,22 @@ loadToAddresses(load(this.AddressId));
                         Assert.Equal("James", user.Name);
                         Assert.Equal("Smith", user.LastName);
 
+                        var metadata = session.Advanced.GetMetadataFor(user);
+                        Assert.Equal("Users", metadata[Constants.Documents.Metadata.Collection]);
+
                         var person = session.Advanced.LoadStartingWith<Person>($"users/{i}-A/people/")[0];
                         Assert.NotNull(person);
                         Assert.Equal("James Smith", person.Name);
 
+                        metadata = session.Advanced.GetMetadataFor(person);
+                        Assert.Equal("People", metadata[Constants.Documents.Metadata.Collection]);
+
                         var address = session.Advanced.LoadStartingWith<Address>($"users/{i}-A/addresses/")[0];
                         Assert.NotNull(address);
                         Assert.Equal("New York", address.City);
+
+                        metadata = session.Advanced.GetMetadataFor(address);
+                        Assert.Equal("Addresses", metadata[Constants.Documents.Metadata.Collection]);
                     }
                 }
 
