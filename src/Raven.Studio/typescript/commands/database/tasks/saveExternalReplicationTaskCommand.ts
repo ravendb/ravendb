@@ -4,38 +4,17 @@ import endpoints = require("endpoints");
 
 class saveExternalReplicationTaskCommand extends commandBase {
    
-    private externalReplicationToSend: Raven.Client.ServerWide.ExternalReplication;
-
-    constructor(private db: database, private taskId: number, private replicationSettings: externalReplicationDataFromUI) {
+    constructor(private db: database, private replicationSettings: Raven.Client.ServerWide.ExternalReplication) {
         super();
-
-        this.externalReplicationToSend = {
-            // From UI:
-            Name: replicationSettings.TaskName,
-            Database: replicationSettings.DestinationDB,
-            Url: replicationSettings.DestinationURL,
-            MentorNode: replicationSettings.MentorNode,
-            // Other vals:
-            TaskId: taskId
-        } as Raven.Client.ServerWide.ExternalReplication;
     }
  
     execute(): JQueryPromise<Raven.Client.ServerWide.Operations.ModifyOngoingTaskResult> {
         return this.updateReplication()
             .fail((response: JQueryXHR) => {
-                if (this.taskId === 0) {
-                    this.reportError("Failed to create replication task for: " + this.replicationSettings.DestinationDB, response.responseText, response.statusText);
-                } else {
                     this.reportError("Failed to save replication task", response.responseText, response.statusText);
-                }
             })
             .done(() => {
-                if (this.taskId === 0) {
-                    this.reportSuccess(
-                        `Created replication task from database ${this.db.name} to ${this.replicationSettings.DestinationDB}`);
-                } else {
-                    this.reportSuccess(`Updated replication task`);
-                }
+                this.reportSuccess(`Saved replication task from database ${this.db.name} to ${this.replicationSettings.Database}`);
             });
     }
 
@@ -46,7 +25,7 @@ class saveExternalReplicationTaskCommand extends commandBase {
         const addRepTask = $.Deferred<Raven.Client.ServerWide.Operations.ModifyOngoingTaskResult>();
 
         const payload = {          
-            Watcher: this.externalReplicationToSend
+            Watcher: this.replicationSettings
         };
 
         this.post(url, JSON.stringify(payload), this.db)

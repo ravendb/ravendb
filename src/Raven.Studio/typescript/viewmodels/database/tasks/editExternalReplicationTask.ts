@@ -96,11 +96,11 @@ class editExternalReplicationTask extends viewModelBase {
         }
 
         // 2. Create/add the new replication task
-        const dto = this.editedExternalReplication().toDto();
+        const dto = this.editedExternalReplication().toDto(this.taskId);
 
         this.taskId = this.isAddingNewReplicationTask() ? 0 : this.taskId;
 
-        new saveExternalReplicationTaskCommand(this.activeDatabase(), this.taskId, dto)
+        new saveExternalReplicationTaskCommand(this.activeDatabase(), dto)
             .execute()
             .done(() => {
                 this.goToOngoingTasksView();

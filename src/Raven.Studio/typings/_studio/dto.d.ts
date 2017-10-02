@@ -298,13 +298,6 @@ interface feedbackSavedSettingsDto {
     Email: string;
 }
 
-interface externalReplicationDataFromUI {  //TODO: remove and use: Raven.Client.ServerWide.ExternalReplication
-    TaskName: string;
-    DestinationDB: string;
-    DestinationURL: string;
-    MentorNode: string;
-} 
-
 interface ravenEtlDataFromUI {  //TODO: Raven.Client.ServerWide.ETL.RavenEtlConfiguration
     TaskName: string;
     ConnectionStringName: string;
