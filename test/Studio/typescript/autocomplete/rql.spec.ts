@@ -1754,8 +1754,8 @@ group by ShippedAt, |`, northwindProvider(), (errors, wordlist, prefix, lastKeyw
             assert.equal(prefix, "");
             assert.deepEqual(wordlist, emptyList);
 
-            assert.isUndefined(lastKeyword.keyword);
-            assert.equal(lastKeyword.dividersCount, 1);
+            assert.equal(lastKeyword.keyword, "declare function");
+            assert.equal(lastKeyword.dividersCount, 3);
 
             done();
         });
@@ -1768,8 +1768,8 @@ group by ShippedAt, |`, northwindProvider(), (errors, wordlist, prefix, lastKeyw
             assert.equal(prefix, "");
             assert.deepEqual(wordlist, emptyList);
 
-            assert.isUndefined(lastKeyword.keyword);
-            assert.equal(lastKeyword.dividersCount, 1);
+            assert.equal(lastKeyword.keyword, "declare function");
+            assert.equal(lastKeyword.dividersCount, 2);
 
             done();
         });
@@ -1785,8 +1785,33 @@ group by ShippedAt, |`, northwindProvider(), (errors, wordlist, prefix, lastKeyw
             assert.equal(prefix, "");
             assert.deepEqual(wordlist, emptyList);
 
-            assert.isUndefined(lastKeyword.keyword);
-            assert.equal(lastKeyword.dividersCount, 1);
+            assert.equal(lastKeyword.keyword, "declare function");
+            assert.equal(lastKeyword.dividersCount, 5);
+
+            done();
+        });
+    });
+
+    it('decalre function with nested function. After semi colon | should not list anything', done => {
+        rqlTestUtils.autoComplete(`declare function Name() {
+    var a = "s{tri}}}ng'";
+    var b = function () {
+        var a = "";
+    }
+    var c = 's{tri}}}ng"';
+    |
+}
+
+
+from Orders as o
+where o.Company == ""
+load o.Company as c, o.ShipTo.  as e, o.ShipVia as s
+`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.isNull(wordlist);
+
+            assert.equal(lastKeyword.keyword, "declare function");
+            assert.equal(lastKeyword.dividersCount, 9);
 
             done();
         });

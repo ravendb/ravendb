@@ -338,7 +338,6 @@ interface autoCompleteWordList {
 
 interface autoCompleteLastKeyword {
     info: rqlQueryInfo, 
-    keywordsBefore: string[],
     keyword: string,
     asSpecified: boolean,
     notSpecified: boolean,
