@@ -782,6 +782,7 @@ oop.inherits(Mode, TextMode);
 exports.Mode = Mode;
 });
 
+// End of JavaScript rules
 
 ace.define("ace/mode/rql_highlight_rules",["require","exports","module","ace/lib/oop","ace/mode/text_highlight_rules","ace/mode/javascript_highlight_rules"], function(require, exports, module) {
 "use strict";
@@ -938,7 +939,7 @@ var RqlHighlightRules = function() {
 
     this.embedRules(JavaScriptHighlightRules, "js-", [{
         token : "paren.rparen",
-        regex: /^\s*}\s*$/,
+        regex: /}/,
         next  : "start"
     }]);
     
@@ -950,16 +951,23 @@ oop.inherits(RqlHighlightRules, TextHighlightRules);
 exports.RqlHighlightRules = RqlHighlightRules;
 });
 
-ace.define("ace/mode/rql",["require","exports","module","ace/lib/oop","ace/mode/text","ace/mode/rql_highlight_rules"], function(require, exports, module) {
+ace.define("ace/mode/rql",["require","exports","module","ace/lib/oop","ace/mode/text","ace/mode/javascript","ace/mode/rql_highlight_rules","ace/tokenizer"], function(require, exports, module) {
 "use strict";
 
 var oop = require("../lib/oop");
 var TextMode = require("./text").Mode;
+var JsMode = require("./javascript").Mode;
 var RqlHighlightRules = require("./rql_highlight_rules").RqlHighlightRules;
+var Tokenizer = require("./tokenizer").Tokenizer;
 
 var Mode = function() {
     this.HighlightRules = RqlHighlightRules;
     this.$behaviour = this.$defaultBehaviour;
+    this.$tokenizer = new Tokenizer(this.HighlightRules.getRules());
+    this.$embeds = this.HighlightRules.getEmbeds();
+    this.createModeDelegates({
+        "js-": JsMode
+    });
     this.prefixRegexps = [/[a-zA-Z_0-9@'"\\\/\$\-\u00A2-\uFFFF=!<>]/]
 };
 oop.inherits(Mode, TextMode);
