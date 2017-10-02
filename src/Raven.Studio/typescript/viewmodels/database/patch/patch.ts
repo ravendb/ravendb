@@ -189,7 +189,7 @@ class patch extends viewModelBase {
         this.loadLastQuery();
 
         // isDirty = user ran a query && current query is equal to the last run's query && the query is not saved
-        const isDirty = ko.computed<boolean>(() => {
+        const isDirty = ko.pureComputed<boolean>(() => {
             return this.lastRunQuery() !== undefined && this.lastRunQuery() === this.patchDocument().query() && !this.savedPatches.allPatches().find(x => x.query() === this.lastRunQuery());
         });
 
