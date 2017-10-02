@@ -27,11 +27,7 @@ namespace SlowTests.Server.Replication
             {
                 var serverCertPath = SetupServerAuthentication();
                 adminCertificate = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-                clientCertificate = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
-                {
-                    [dbName1] = DatabaseAccess.Admin,
-                    [dbName2] = DatabaseAccess.Admin
-                });
+                clientCertificate = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.Operator);
             }
 
             using (var store1 = GetDocumentStore(new Options

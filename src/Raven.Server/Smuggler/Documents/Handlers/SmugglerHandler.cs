@@ -186,8 +186,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                         using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         using (var file = await getFile())
                         using (var stream = new GZipStream(new BufferedStream(file, 128 * Voron.Global.Constants.Size.Kilobyte), CompressionMode.Decompress))
+                        using (var source = new StreamSource(stream, context))
                         {
-                            var source = new StreamSource(stream, context);
                             var destination = new DatabaseDestination(Database);
 
                             var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time);
@@ -265,8 +265,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
                 using (var stream = new GZipStream(new BufferedStream(await GetImportStream(), 128 * Voron.Global.Constants.Size.Kilobyte), CompressionMode.Decompress))
                 using (var token = CreateOperationToken())
+                using (var source = new StreamSource(stream, context))
                 {
-                    var source = new StreamSource(stream, context);
                     var destination = new DatabaseDestination(Database);
 
                     var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options, token: token.Token);
@@ -396,8 +396,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         {
             using (stream)
             using (token)
+            using (var source = new StreamSource(stream, context))
             {
-                var source = new StreamSource(stream, context);
                 var destination = new DatabaseDestination(Database);
                 var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options, result, onProgress, token.Token);
 

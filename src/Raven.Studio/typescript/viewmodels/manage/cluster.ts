@@ -196,6 +196,7 @@ class cluster extends viewModelBase {
     }
 
     private refresh() {
+        $('.cluster [data-toggle="tooltip"]').tooltip();
         this.graph.draw(this.topology().nodes(), this.topology().leader());
     }
 

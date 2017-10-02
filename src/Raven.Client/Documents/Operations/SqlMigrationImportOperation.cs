@@ -103,10 +103,17 @@ namespace Raven.Client.Documents.Operations
                 writer.WritePropertyName(name);
                 writer.WriteStartArray();
 
+                var first = true;
+
                 if (tables != null)
                 {
                     foreach (var table in tables)
                     {
+                        if (first)
+                            first = false;
+                        else 
+                            writer.WriteComma();
+                        
                         writer.WriteStartObject();
 
                         writer.WritePropertyName(nameof(table.Name));

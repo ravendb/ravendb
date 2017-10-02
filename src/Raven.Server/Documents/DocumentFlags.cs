@@ -33,7 +33,8 @@ namespace Raven.Server.Documents
         FromReplication = 0x8,
         ByAttachmentUpdate = 0x10,
         ResolveAttachmentsConflict = 0x20,
-        FromRevision = 0x40
+        FromRevision = 0x40,
+        Resolved = 0x80
     }
 
     public static class EnumExtensions
