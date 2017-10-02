@@ -7,7 +7,7 @@ using Xunit;
 
 namespace FastTests.Blittable
 {
-    public class PeepingTomTest
+    public class PeepingTomTest : NoDisposalNeeded
     {
         [Theory]
         [InlineData(123456, 65535, 0)]

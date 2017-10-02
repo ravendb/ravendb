@@ -18,7 +18,7 @@ namespace SlowTests.Server.Documents
 {
     public class SqlMigrationTests : RavenTestBase
     {
-        private const string SqlDatabaseName = "SqlMigrationTestDatabase";
+        private readonly string SqlDatabaseName = "SqlMigrationTestDatabase_" + Guid.NewGuid();
 
         private const string ConnectionStringName = "ConnectionStringTestName";
 
