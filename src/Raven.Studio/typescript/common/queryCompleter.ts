@@ -231,20 +231,6 @@ class queryCompleter {
 
         return fieldsTasks.promise();
     }
-
-    private getKeywordsBefore(iterator: AceAjax.TokenIterator): string[] {
-        const keywords = [];
-        
-        while (iterator.stepBackward()){
-            const token = iterator.getCurrentToken();
-            if (token.type ==="keyword.clause"){
-                const keyword = token.value.toLowerCase();
-                keywords.push(keyword);
-            }
-        }
-        
-        return keywords;
-    }
     
     private getLastKeyword(pos: AceAjax.Position): autoCompleteLastKeyword {
         const mode = this.session.getMode();
@@ -252,7 +238,6 @@ class queryCompleter {
         
         const result: autoCompleteLastKeyword = {
             info: this.extractQueryInfo(pos),
-            keywordsBefore: undefined,
             keyword: undefined,
             asSpecified: false,
             notSpecified: false,
@@ -311,8 +296,6 @@ class queryCompleter {
                     } else {
                         result.keyword = keyword;
                     }
-                    
-                    result.keywordsBefore = this.getKeywordsBefore(iterator);
                     return result;
                 case "keyword.clause.clauseAppend":
                     result.keyword = token.value.toLowerCase();
@@ -375,11 +358,6 @@ class queryCompleter {
                 case "paren.rparen":
                 case "paren.rparen.whereFunction":
                     if (!isBeforeCommaOrBinaryOperation) {
-                        if (token.type === "paren.rparen" && token.value === "}" && result.parentheses === 0) {
-                            result.keywordsBefore = this.getKeywordsBefore(iterator); // todo: do we need this?
-                            return result;
-                        }
-
                         result.parentheses--;
 
                         if (!lastToken || lastToken.type !== "space") {
@@ -490,8 +468,14 @@ class queryCompleter {
         this.session = session;
         this.callback = callback;
         const lastKeyword = this.lastKeyword = this.getLastKeyword(pos);
-        if (!lastKeyword || !lastKeyword.keyword) {
+        if (!lastKeyword) {
             return this.completeEmpty();
+        }
+        if (!lastKeyword.keyword) {
+            if (lastKeyword.parentheses === 0) {
+                return this.completeEmpty();
+            }
+            return this.completeError("empty completion");
         }
         
         switch (lastKeyword.keyword) {
