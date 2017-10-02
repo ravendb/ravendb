@@ -866,6 +866,8 @@ var RqlHighlightRules = function() {
         "operations.type": operations
     }, "identifier", true);
 
+    var curelyBracesCount = 0;
+
     var commonRules = [ {
         token : "comment",
         regex : "//.*$"
@@ -888,7 +890,10 @@ var RqlHighlightRules = function() {
     }, {
         token : "paren.lparen",
         regex : /{/,
-        next: "js-start"
+        next: function (currentState, stack) {
+            curelyBracesCount++;
+            return "js-start";
+        }
     }, {
         token : "paren.lparen",
         regex : /[\[({]/
@@ -937,10 +942,32 @@ var RqlHighlightRules = function() {
         })
     };
 
-    this.embedRules(JavaScriptHighlightRules, "js-", [{
-        token : "paren.rparen",
-        regex: /}/,
-        next  : "start"
+    this.embedRules(JavaScriptHighlightRules, "js-", [ {
+        token : function (value, currentState, stack) {
+            if (currentState !== "js-start" && currentState !== "js-no_regex") {
+                return "string";
+            }
+            curelyBracesCount++;
+            return "paren.lparen";
+        },
+        regex: /{/
+    }, {
+        token : function (value, currentState, stack) {
+            if (currentState !== "js-start") {
+                return "string";
+            }
+            return "paren.rparen";
+        },
+        regex : /}/,
+        next : function (currentState, stack) {
+            if (currentState !== "js-start") {
+                return currentState;
+            }
+            if (--curelyBracesCount > 0) {
+                return currentState;
+            }
+            return "start";
+        }
     }]);
     
     this.normalizeRules();
@@ -951,20 +978,17 @@ oop.inherits(RqlHighlightRules, TextHighlightRules);
 exports.RqlHighlightRules = RqlHighlightRules;
 });
 
-ace.define("ace/mode/rql",["require","exports","module","ace/lib/oop","ace/mode/text","ace/mode/javascript","ace/mode/rql_highlight_rules","ace/tokenizer"], function(require, exports, module) {
+ace.define("ace/mode/rql",["require","exports","module","ace/lib/oop","ace/mode/text","ace/mode/javascript","ace/mode/rql_highlight_rules"], function(require, exports, module) {
 "use strict";
 
 var oop = require("../lib/oop");
 var TextMode = require("./text").Mode;
 var JsMode = require("./javascript").Mode;
 var RqlHighlightRules = require("./rql_highlight_rules").RqlHighlightRules;
-var Tokenizer = require("./tokenizer").Tokenizer;
 
 var Mode = function() {
     this.HighlightRules = RqlHighlightRules;
     this.$behaviour = this.$defaultBehaviour;
-    this.$tokenizer = new Tokenizer(this.HighlightRules.getRules());
-    this.$embeds = this.HighlightRules.getEmbeds();
     this.createModeDelegates({
         "js-": JsMode
     });
