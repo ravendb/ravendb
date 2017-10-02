@@ -4,8 +4,7 @@ import router = require("plugins/router");
 import ongoingTaskEditModel = require("models/database/tasks/ongoingTaskEditModel"); 
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 
-class ongoingTaskReplicationModel extends ongoingTaskEditModel { //TODO: split into 2 classes
-    editUrl: KnockoutComputed<string>;
+class ongoingTaskReplicationEditModel extends ongoingTaskEditModel {
 
     destinationDB = ko.observable<string>();
     destinationURL = ko.observable<string>();
@@ -13,22 +12,14 @@ class ongoingTaskReplicationModel extends ongoingTaskEditModel { //TODO: split i
   
     validationGroup: KnockoutValidationGroup;
     
-    constructor(dto: Raven.Client.ServerWide.Operations.OngoingTaskReplication, isInListView: boolean) {
+    constructor(dto: Raven.Client.ServerWide.Operations.OngoingTaskReplication) {
         super();
 
-        this.isInTasksListView = isInListView;
         this.update(dto); 
         this.initializeObservables();
         this.initValidation();
     }
     
-    initializeObservables() {
-        super.initializeObservables();
-
-        const urls = appUrl.forCurrentDatabase();
-        this.editUrl = urls.editExternalReplication(this.taskId); 
-    }
-
     update(dto: Raven.Client.ServerWide.Operations.OngoingTaskReplication) {
         super.update(dto);
 
@@ -38,18 +29,10 @@ class ongoingTaskReplicationModel extends ongoingTaskEditModel { //TODO: split i
         this.preferredMentor(dto.MentorNode);
     }
 
-    editTask() {
-        router.navigate(this.editUrl());
-    }
-
-    toggleDetails() {
-        this.showReplicationDetails(!this.showReplicationDetails());
-    }
-
     toDto(taskId: number): Raven.Client.ServerWide.ExternalReplication {
         return {
             Name: this.taskName(),
-            TopologyDiscoveryUrls: [this.destinationURL()], // TODO: add support for many urls 
+            Url: this.destinationURL(), 
             Database: this.destinationDB(),
             MentorNode: this.manualChooseMentor() ? this.preferredMentor() : undefined,
             TaskId: taskId
@@ -77,14 +60,14 @@ class ongoingTaskReplicationModel extends ongoingTaskEditModel { //TODO: split i
         });
     }
 
-    static empty(): ongoingTaskReplicationModel {
-        return new ongoingTaskReplicationModel({  
+    static empty(): ongoingTaskReplicationEditModel {
+        return new ongoingTaskReplicationEditModel({  
             TaskName: "",
             TaskType: "Replication",
             DestinationDatabase: null,
             DestinationUrl: clusterTopologyManager.default.localNodeUrl()
-        } as Raven.Client.ServerWide.Operations.OngoingTaskReplication, false);
+        } as Raven.Client.ServerWide.Operations.OngoingTaskReplication);
     }
 }
 
-export = ongoingTaskReplicationModel;
+export = ongoingTaskReplicationEditModel;

@@ -9,7 +9,6 @@ class ongoingTaskSqlEtlListModel extends ongoingTask {
     constructor(dto: Raven.Client.ServerWide.Operations.OngoingTaskSqlEtlListView) {
         super();
 
-        this.isInTasksListView = true;
         this.initializeObservables();
         this.update(dto);
     }

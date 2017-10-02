@@ -69,13 +69,13 @@
                     </div>
                     <div class="padding bg-danger small" data-bind="visible: !Success && !$root.connectionStringIsDefined()">
                         <span class="icon-warning"></span><span data-bind="text: Error"></span>
-                        <a target="_blank" data-bind="attr: { href: $root.editedRavenEtl().connectionStringsUrl }"> - Click <u>here</u> to define a new connection string</a>
+                        <a target="_blank" data-bind="attr: { href: $root.connectionStringsUrl }"> - Click <u>here</u> to define a new connection string</a>
                     </div>
                 </div>
                 <div class="panel-addon" data-bind="visible: $root.ravenEtlConnectionStringsNames().length == 0">
                     <div class="padding bg-warning small">
                         <span class="icon-warning"></span>&nbsp;&nbsp;No connection strings have been defined yet
-                        <a data-bind="attr: { href: $root.editedRavenEtl().connectionStringsUrl }"> - Click <u>here</u> to define a new connection string</a>
+                        <a data-bind="attr: { href: $root.connectionStringsUrl }"> - Click <u>here</u> to define a new connection string</a>
                     </div>
                 </div>
             </div>

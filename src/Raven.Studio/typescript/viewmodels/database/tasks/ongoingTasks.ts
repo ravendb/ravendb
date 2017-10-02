@@ -4,8 +4,8 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import database = require("models/resources/database");
 import databaseInfo = require("models/resources/info/databaseInfo");
 import ongoingTasksCommand = require("commands/database/tasks/getOngoingTasksCommand");
-import ongoingTaskReplication = require("models/database/tasks/ongoingTaskReplicationModel");
-import ongoingTaskBackup = require("models/database/tasks/ongoingTaskBackupModel");
+import ongoingTaskReplicationListModel = require("models/database/tasks/ongoingTaskReplicationListModel");
+import ongoingTaskBackupListModel = require("models/database/tasks/ongoingTaskBackupListModel");
 import ongoingTaskRavenEtlListModel = require("models/database/tasks/ongoingTaskRavenEtlListModel");
 import ongoingTaskSqlEtlListModel = require("models/database/tasks/ongoingTaskSqlEtlListModel");
 import ongoingTaskSubscriptionListModel = require("models/database/tasks/ongoingTaskSubscriptionListModel");
@@ -32,10 +32,10 @@ class ongoingTasks extends viewModelBase {
     private graph = new databaseGroupGraph();
 
     // The Ongoing Tasks Lists:
-    replicationTasks = ko.observableArray<ongoingTaskReplication>(); 
+    replicationTasks = ko.observableArray<ongoingTaskReplicationListModel>(); 
     etlTasks = ko.observableArray<ongoingTaskRavenEtlListModel>();
     sqlTasks = ko.observableArray<ongoingTaskSqlEtlListModel>();
-    backupTasks = ko.observableArray<ongoingTaskBackup>();
+    backupTasks = ko.observableArray<ongoingTaskBackupListModel>();
     subscriptionTasks = ko.observableArray<ongoingTaskSubscriptionListModel>();
 
     existingTaskTypes = ko.observableArray<string>();
@@ -43,6 +43,8 @@ class ongoingTasks extends viewModelBase {
 
     existingNodes = ko.observableArray<string>();
     selectedNode = ko.observable<string>();
+
+    connectionStringsUrl = appUrl.forCurrentDatabase().connectionStrings();
     
     constructor() {
         super();
@@ -124,11 +126,11 @@ class ongoingTasks extends viewModelBase {
 
             switch (task.TaskType) {
                 case 'Replication':
-                    this.replicationTasks.push(new ongoingTaskReplication(task as Raven.Client.ServerWide.Operations.OngoingTaskReplication, true));
+                    this.replicationTasks.push(new ongoingTaskReplicationListModel(task as Raven.Client.ServerWide.Operations.OngoingTaskReplication));
                     taskTypesSet.add("External Replication");
                     break;
                 case 'Backup':
-                    this.backupTasks.push(new ongoingTaskBackup(task as Raven.Client.ServerWide.Operations.OngoingTaskBackup, true));
+                    this.backupTasks.push(new ongoingTaskBackupListModel(task as Raven.Client.ServerWide.Operations.OngoingTaskBackup));
                     taskTypesSet.add("Backup");
                     break;
                 case 'RavenEtl':

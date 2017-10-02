@@ -20,7 +20,6 @@ class ongoingTaskBackupListModel extends ongoingTask {
     constructor(dto: Raven.Client.ServerWide.Operations.OngoingTaskBackup) {
         super();
 
-        this.isInTasksListView = true;
         this.update(dto);
         this.initializeObservables();
     }

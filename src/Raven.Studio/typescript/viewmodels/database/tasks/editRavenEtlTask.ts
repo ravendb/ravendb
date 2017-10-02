@@ -27,6 +27,8 @@ class editRavenEtlTask extends viewModelBase {
     spinners = { test: ko.observable<boolean>(false) };
     fullErrorDetailsVisible = ko.observable<boolean>(false);
     shortErrorText: KnockoutObservable<string>;
+    
+    connectionStringsUrl = appUrl.forCurrentDatabase().connectionStrings();
 
     collections = collectionsTracker.default.collections;
     validationGroup: KnockoutValidationGroup;
