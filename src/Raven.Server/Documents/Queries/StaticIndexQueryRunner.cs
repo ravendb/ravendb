@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Queries
             return index.Query(query, documentsContext, token);
         }
 
-        public override Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, BlittableJsonTextWriter writer, OperationCancelToken token)
+        public override Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamDocumentQueryResultWriter writer, OperationCancelToken token)
         {
             var index = GetIndex(query.Metadata.IndexName);
 

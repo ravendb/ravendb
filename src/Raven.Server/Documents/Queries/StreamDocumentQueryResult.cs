@@ -9,28 +9,24 @@ namespace Raven.Server.Documents.Queries
 {
     public class StreamDocumentQueryResult : QueryResultServerSide, IDisposable
     {
-        private readonly BlittableJsonTextWriter _writer;
-        private readonly JsonOperationContext _context;
+        private readonly IStreamDocumentQueryResultWriter _writer;
         private bool _anyWrites;
         private bool _anyExceptions;
 
-        public StreamDocumentQueryResult(HttpResponse response, BlittableJsonTextWriter writer, JsonOperationContext context)
+        public StreamDocumentQueryResult(HttpResponse response, IStreamDocumentQueryResultWriter writer)
         {
             if (response.HasStarted)
                 throw new InvalidOperationException("You cannot start streaming because response has already started.");
 
             _writer = writer;
-            _context = context;
         }
 
         public override void AddResult(Document result)
         {
             if (_anyWrites == false)
                 StartResponseIfNeeded();
-            else
-                _writer.WriteComma();
 
-            _writer.WriteDocument(_context, result, metadataOnly: false);
+            _writer.AddResult(result);            
         }
 
         public override void HandleException(Exception e)
@@ -39,11 +35,11 @@ namespace Raven.Server.Documents.Queries
 
             _anyExceptions = true;
 
-            _writer.WriteEndArray();
-            _writer.WriteComma();
-
-            _writer.WritePropertyName("Error");
-            _writer.WriteString(e.ToString());
+            _writer.EndResults();
+            if (_writer.SupportError)
+            {
+                _writer.WriteError(e);
+            }            
 
             throw e;
         }
@@ -69,45 +65,24 @@ namespace Raven.Server.Documents.Queries
             EndResponse();
         }
 
-        private void WriteStreamQueryStatistics()
-        {
-            _writer.WritePropertyName(nameof(StreamQueryStatistics.ResultEtag));
-            _writer.WriteInteger(ResultEtag);
-            _writer.WriteComma();
-
-            _writer.WritePropertyName(nameof(StreamQueryStatistics.IsStale));
-            _writer.WriteBool(IsStale);
-            _writer.WriteComma();
-
-            _writer.WritePropertyName(nameof(StreamQueryStatistics.IndexName));
-            _writer.WriteString(IndexName);
-            _writer.WriteComma();
-
-            _writer.WritePropertyName(nameof(StreamQueryStatistics.TotalResults));
-            _writer.WriteInteger(TotalResults);
-            _writer.WriteComma();
-
-            _writer.WritePropertyName(nameof(StreamQueryStatistics.IndexTimestamp));
-            _writer.WriteString(IndexTimestamp.GetDefaultRavenFormat(isUtc: true));
-            _writer.WriteComma();
-        }
-
         private void StartResponse()
         {
-            _writer.WriteStartObject();
+            _writer.StartResponse();            
 
-            WriteStreamQueryStatistics();
-
-            _writer.WritePropertyName("Results");
-            _writer.WriteStartArray();
+            if (_writer.SupportStatistics)
+            {
+                _writer.WriteQueryStatistics(ResultEtag, IsStale, IndexName, TotalResults, IndexTimestamp);
+            }
+            _writer.StartResults();
+            
         }
 
         private void EndResponse()
         {
             if (_anyExceptions == false)
-                _writer.WriteEndArray();
+                _writer.EndResults();
 
-            _writer.WriteEndObject();
+            _writer.EndResponse();
         }
     }
 }

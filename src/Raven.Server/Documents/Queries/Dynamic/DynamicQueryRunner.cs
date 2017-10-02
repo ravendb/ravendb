@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             _indexStore = database.IndexStore;
         }
 
-        public override async Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, BlittableJsonTextWriter writer,
+        public override async Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamDocumentQueryResultWriter writer,
             OperationCancelToken token)
         {
             var index = await MatchIndex(query, true, token.Token);
