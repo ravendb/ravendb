@@ -30,7 +30,7 @@ class patchList {
 
     previewItem = ko.observable<patchDocument>();
 
-    private allPatches = ko.observableArray<patchDocument>([]);
+    allPatches = ko.observableArray<patchDocument>([]);  
 
     private readonly useHandler: (patch: patchDocument) => void;
     private readonly removeHandler: (patch: patchDocument) => void;
@@ -100,6 +100,10 @@ class patch extends viewModelBase {
 
     static readonly $body = $("body");
     static readonly ContainerSelector = "#patchContainer";
+
+    static lastQuery = new Map<string, string>();
+
+    private lastRunQuery = ko.observable<string>();
 
     inSaveMode = ko.observable<boolean>();
     patchSaveName = ko.observable<string>();
@@ -182,7 +186,30 @@ class patch extends viewModelBase {
 
         this.fullDocumentsProvider = new documentPropertyProvider(this.activeDatabase());
 
+        this.loadLastQuery();
+
+        // isDirty = user ran a query && current query is equal to the last run's query && the query is not saved
+        const isDirty = ko.computed<boolean>(() => {
+            return this.lastRunQuery() !== undefined && this.lastRunQuery() === this.patchDocument().query() && !this.savedPatches.allPatches().find(x => x.query() === this.lastRunQuery());
+        });
+
+        this.dirtyFlag = new ko.DirtyFlag([isDirty], false);
+
         return $.when<any>(this.fetchAllIndexes(this.activeDatabase()), this.savedPatches.loadAll(this.activeDatabase()));
+    }
+
+    private loadLastQuery() {
+        const myLastQuery = patch.lastQuery.get(this.activeDatabase().name);
+
+        if (myLastQuery)
+            this.patchDocument().query(myLastQuery);
+    }
+
+    deactivate(): void {
+        super.deactivate();
+
+        const queryText = this.patchDocument().query();
+        patch.lastQuery.set(this.activeDatabase().name, queryText);
     }
 
     attached() {
@@ -351,6 +378,7 @@ class patch extends viewModelBase {
                         .execute()
                         .done((operation: operationIdDto) => {
                             notificationCenter.instance.openDetailsForOperationById(this.activeDatabase(), operation.OperationId);
+                            this.lastRunQuery(this.patchDocument().query());
                         });
                 }
             });
