@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using FastTests;
 using Orders;
 using Raven.Client.Documents.Indexes;
@@ -14,7 +15,20 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                store.ExecuteIndex(new Posts_Statistics());
+                var indexes = new List<AbstractIndexCreationTask>()
+                {
+                    new Posts_Statistics_GroupByString(),
+                    new Posts_Statistics_GroupByNumber(),
+                    new Posts_Statistics_GroupByFalse(),
+                    new Posts_Statistics_QuerySyntax_GroupByString(),
+                    new Posts_Statistics_QuerySyntax_GroupByNumber(),
+                    new Posts_Statistics_QuerySyntax_GroupByTrue(),
+                };
+
+                foreach (var index in indexes)
+                {
+                    store.ExecuteIndex(index);
+                }
 
                 using (var session = store.OpenSession())
                 {
@@ -35,11 +49,17 @@ namespace SlowTests.Issues
 
                     session.SaveChanges();
 
-                    var results = session.Query<Posts_Statistics.Result, Posts_Statistics>().Customize(x => x.WaitForNonStaleResults()).ToList();
+                    WaitForIndexing(store);
 
-                    Assert.Equal(1, results.Count);
-                    Assert.Equal(3, results[0].PostsCount);
-                    Assert.Equal(12, results[0].CommentsCount);
+                    foreach (var index in indexes)
+                    {
+                        var results = session.Query<Posts_Statistics_GroupByString.Result>(index.IndexName).ToList();
+
+                        Assert.Equal(1, results.Count);
+                        Assert.Equal(3, results[0].PostsCount);
+                        Assert.Equal(12, results[0].CommentsCount);
+                        store.ExecuteIndex(index);
+                    }
                 }
             }
         }
@@ -72,11 +92,31 @@ namespace SlowTests.Issues
                     Assert.Equal(1, results.Count);
                     Assert.Equal(20, results[0].TotalPrice);
                     Assert.Equal(2, results[0].ProductsCount);
+
+                    results = session.Query<Product>().GroupBy(x => 1).Select(g => new // 1 needs to be a constant, not a product field name
+                    {
+                        TotalPrice = g.Sum(x => x.PricePerUnit),
+                        ProductsCount = g.Count()
+                    }).ToList();
+
+                    Assert.Equal(1, results.Count);
+                    Assert.Equal(20, results[0].TotalPrice);
+                    Assert.Equal(2, results[0].ProductsCount);
+
+                    results = session.Query<Product>().GroupBy(x => true).Select(g => new // 1 needs to be a constant, not a product field name
+                    {
+                        TotalPrice = g.Sum(x => x.PricePerUnit),
+                        ProductsCount = g.Count()
+                    }).ToList();
+
+                    Assert.Equal(1, results.Count);
+                    Assert.Equal(20, results[0].TotalPrice);
+                    Assert.Equal(2, results[0].ProductsCount);
                 }
             }
         }
 
-        public class Posts_Statistics : AbstractIndexCreationTask<Post, Posts_Statistics.Result>
+        public class Posts_Statistics_GroupByString : AbstractIndexCreationTask<Post, Posts_Statistics_GroupByString.Result>
         {
             public class Result
             {
@@ -84,7 +124,7 @@ namespace SlowTests.Issues
                 public int CommentsCount { get; set; }
             }
 
-            public Posts_Statistics()
+            public Posts_Statistics_GroupByString()
             {
                 Map = posts => from postComment in posts
                     select new
@@ -101,6 +141,134 @@ namespace SlowTests.Issues
                         PostsCount = g.Sum(x => x.PostsCount),
                         CommentsCount = g.Sum(x => x.CommentsCount),
                     };
+            }
+        }
+
+        public class Posts_Statistics_GroupByNumber : AbstractIndexCreationTask<Post, Posts_Statistics_GroupByString.Result>
+        {
+            public Posts_Statistics_GroupByNumber()
+            {
+                Map = posts => from postComment in posts
+                    select new
+                    {
+                        PostsCount = 1,
+                        CommentsCount = postComment.Comments.Length
+                    };
+
+                Reduce = results => from result in results
+                    group result by 1
+                    into g
+                    select new
+                    {
+                        PostsCount = g.Sum(x => x.PostsCount),
+                        CommentsCount = g.Sum(x => x.CommentsCount),
+                    };
+            }
+        }
+
+        public class Posts_Statistics_GroupByFalse : AbstractIndexCreationTask<Post, Posts_Statistics_GroupByString.Result>
+        {
+            public Posts_Statistics_GroupByFalse()
+            {
+                Map = posts => from postComment in posts
+                    select new
+                    {
+                        PostsCount = 1,
+                        CommentsCount = postComment.Comments.Length
+                    };
+
+                Reduce = results => from result in results
+                    group result by 1
+                    into g
+                    select new
+                    {
+                        PostsCount = g.Sum(x => x.PostsCount),
+                        CommentsCount = g.Sum(x => x.CommentsCount),
+                    };
+            }
+        }
+
+        public class Posts_Statistics_QuerySyntax_GroupByString : AbstractIndexCreationTask
+        {
+            public override IndexDefinition CreateIndexDefinition()
+            {
+                return new IndexDefinition
+                {
+                    Name = "Posts_Statistics_QuerySyntax",
+                    Maps =
+                    {
+                        @"from postComment in docs.Posts
+                    select new
+                    {
+                        PostsCount = 1,
+                        CommentsCount = postComment.Comments.Length
+                    }"
+                    },
+                    Reduce = @"from result in results
+                    group result by ""constant""
+                    into g
+                    select new
+                    {
+                        PostsCount = g.Sum(x => x.PostsCount),
+                        CommentsCount = g.Sum(x => x.CommentsCount),
+                    };"
+                };
+            }
+        }
+
+        public class Posts_Statistics_QuerySyntax_GroupByNumber : AbstractIndexCreationTask
+        {
+            public override IndexDefinition CreateIndexDefinition()
+            {
+                return new IndexDefinition
+                {
+                    Name = "Posts_Statistics_QuerySyntax",
+                    Maps =
+                    {
+                        @"from postComment in docs.Posts
+                    select new
+                    {
+                        PostsCount = 1,
+                        CommentsCount = postComment.Comments.Length
+                    }"
+                    },
+                    Reduce = @"from result in results
+                    group result by 1
+                    into g
+                    select new
+                    {
+                        PostsCount = g.Sum(x => x.PostsCount),
+                        CommentsCount = g.Sum(x => x.CommentsCount),
+                    };"
+                };
+            }
+        }
+
+        public class Posts_Statistics_QuerySyntax_GroupByTrue : AbstractIndexCreationTask
+        {
+            public override IndexDefinition CreateIndexDefinition()
+            {
+                return new IndexDefinition
+                {
+                    Name = "Posts_Statistics_QuerySyntax",
+                    Maps =
+                    {
+                        @"from postComment in docs.Posts
+                    select new
+                    {
+                        PostsCount = 1,
+                        CommentsCount = postComment.Comments.Length
+                    }"
+                    },
+                    Reduce = @"from result in results
+                    group result by true
+                    into g
+                    select new
+                    {
+                        PostsCount = g.Sum(x => x.PostsCount),
+                        CommentsCount = g.Sum(x => x.CommentsCount),
+                    };"
+                };
             }
         }
     }
