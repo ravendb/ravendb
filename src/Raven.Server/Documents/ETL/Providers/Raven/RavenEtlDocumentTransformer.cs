@@ -40,11 +40,15 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             else
             {
                 id = GetPrefixedId(Current.DocumentId, collectionName, OperationType.Put);
-
-                var metadata = document.GetOrCreate(Constants.Documents.Metadata.Key);
-                metadata.Put(Constants.Documents.Metadata.Collection, collectionName, false);
-                metadata.Put(Constants.Documents.Metadata.Id, id, false);
             }
+
+            var metadata = document.GetOrCreate(Constants.Documents.Metadata.Key);
+            
+            if (metadata.HasProperty(Constants.Documents.Metadata.Collection) == false)
+                metadata.Put(Constants.Documents.Metadata.Collection, collectionName, false);
+
+            if (metadata.HasProperty(Constants.Documents.Metadata.Id) == false)
+                metadata.Put(Constants.Documents.Metadata.Id, id, false);
 
             var transformed = document.TranslateToObject(Context);
 
