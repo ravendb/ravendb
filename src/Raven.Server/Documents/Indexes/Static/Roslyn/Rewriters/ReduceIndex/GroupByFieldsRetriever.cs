@@ -161,6 +161,9 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
                     else
                         fieldName = parts[1].Trim();
 
+                    if (string.IsNullOrWhiteSpace(fieldName))
+                        continue;
+
                     if (fieldName.StartsWith('"') && fieldName.EndsWith('"'))
                     {
                         // group by "constant"
@@ -177,6 +180,14 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
                     {
                         // group by true
                         // group by false
+                        continue;
+                    }
+
+                    if (fieldName[0] == '(' && fieldName.Trim(')').EndsWith("null"))
+                    {
+                        // group by (string) null, group by ((string) null), 
+                        // note: grop by null - does not compile
+
                         continue;
                     }
 
