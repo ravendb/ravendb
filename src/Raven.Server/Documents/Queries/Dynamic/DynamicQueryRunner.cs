@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
         public override async Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamDocumentQueryResultWriter writer,
             OperationCancelToken token)
         {
-            var index = await MatchIndex(query, true, token.Token);
+            var index = await MatchIndex(query, true, token.Token, customStalenessWaitTimeout: TimeSpan.FromSeconds(60));
 
             await index.StreamQuery(response, writer, query, documentsContext, token);
         }
@@ -79,7 +79,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             return await ExecutePatch(query, index, options, patch, patchArgs, context, onProgress, token);
         }
 
-        private async Task<Index> MatchIndex(IndexQueryServerSide query, bool createAutoIndexIfNoMatchIsFound, CancellationToken token)
+        private async Task<Index> MatchIndex(IndexQueryServerSide query, bool createAutoIndexIfNoMatchIsFound, CancellationToken token, TimeSpan? customStalenessWaitTimeout = null)
         {
             Index index;
             if (query.Metadata.AutoIndexName != null)
@@ -102,6 +102,16 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 var id = await _indexStore.CreateIndex(definition);
                 index = _indexStore.GetIndex(id);
 
+                if (query.WaitForNonStaleResultsTimeout.HasValue == false)
+                {
+                    if (customStalenessWaitTimeout.HasValue)
+                        query.WaitForNonStaleResultsTimeout = customStalenessWaitTimeout.Value;
+                    else
+                        query.WaitForNonStaleResultsTimeout = TimeSpan.FromSeconds(15); // allow new auto indexes to have some results
+                }
+
+                index.LimitFirstBatchDurationOfAutoIndex(query.WaitForNonStaleResultsTimeout.Value / 2);
+
                 var t = CleanupSupercededAutoIndexes(index, map, token)
                     .ContinueWith(task =>
                     {
@@ -121,9 +131,6 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     Database.Configuration.Indexing.TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan ==
                     TimeSpan.Zero)
                     await t; // this is used in testing, mainly
-
-                if (query.WaitForNonStaleResultsTimeout.HasValue == false)
-                    query.WaitForNonStaleResultsTimeout = TimeSpan.FromSeconds(15); // allow new auto indexes to have some results
             }
 
             return index;

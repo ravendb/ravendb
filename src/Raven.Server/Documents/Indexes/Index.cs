@@ -159,6 +159,7 @@ namespace Raven.Server.Documents.Indexes
         private NativeMemory.ThreadStats _threadAllocations;
         private string _errorStateReason;
         private bool _isCompactionInProgress;
+        private TimeSpan? _maxFirstBatchDuration;
 
         private readonly ReaderWriterLockSlim _currentlyRunningQueriesLock = new ReaderWriterLockSlim();
         private readonly MultipleUseFlag _priorityChanged = new MultipleUseFlag();
@@ -2338,12 +2339,31 @@ namespace Raven.Server.Documents.Indexes
             return null;
         }
 
+        public void LimitFirstBatchDurationOfAutoIndex(TimeSpan max)
+        {
+            Debug.Assert(Type.IsAuto());
+
+            _maxFirstBatchDuration = max;
+        }
+
         public bool CanContinueBatch(
             IndexingStatsScope stats,
             DocumentsOperationContext documentsOperationContext,
             TransactionOperationContext indexingContext)
         {
             stats.RecordMapAllocations(_threadAllocations.TotalAllocated);
+
+            if (_maxFirstBatchDuration != null)
+            {
+                if (stats.Duration > _maxFirstBatchDuration)
+                {
+                    stats.RecordMapCompletedReason(
+                        $"Stopping the first batch after {_maxFirstBatchDuration} to ensure just created auto index has some results");
+
+                    _maxFirstBatchDuration = null;
+                    return false;
+                }
+            }
 
             if (stats.ErrorsCount >= IndexStorage.MaxNumberOfKeptErrors)
             {
