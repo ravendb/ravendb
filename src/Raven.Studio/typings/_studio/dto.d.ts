@@ -305,12 +305,6 @@ interface ravenEtlDataFromUI {  //TODO: Raven.Client.ServerWide.ETL.RavenEtlConf
     TransformationScripts: Array<Raven.Client.ServerWide.ETL.Transformation>;
 } 
 
-interface subscriptionDataFromUI { //TODO use: Raven.Client.Documents.Subscriptions.SubscriptionCreationOptions
-    TaskName: string;
-    Query: string;
-    ChangeVector: Raven.Client.Constants.Documents.SubscriptionChangeVectorSpecialStates | string;
-} 
-
 interface layoutable {
     x: number;
     y: number;
