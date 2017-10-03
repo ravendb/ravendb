@@ -45,7 +45,21 @@ class queryCompleter {
     
     public static notAfterAndOrList: autoCompleteWordList[] = queryCompleter.notList.concat(queryCompleter.whereFunctionsList);
 
-    public static asList: autoCompleteWordList[] = [{value: "as", score: 21, meta: "keyword"}];
+    public static asList: autoCompleteWordList[] = [{caption: "as", value: "as ", score: 21, meta: "keyword"}];
+    
+    public static separatorList: autoCompleteWordList[] = [
+        {caption: ",", value: ", ", score: 23, meta: "separator"}
+    ];
+    
+    public static orderBySortList: autoCompleteWordList[] = [
+        {caption: "desc", value: "desc ", score: 22, meta: "descending sort"},
+        {caption: "asc", value: "asc ", score: 21, meta: "ascending sort"}
+    ];
+    
+    public static binaryOperationsList: autoCompleteWordList[] = [
+        {caption: "or", value: "or ", score: 22, meta: "any term"},
+        {caption: "and", value: "and ", score: 21, meta: "all terms"}
+    ];
     
     constructor(private providers: queryCompleterProviders, private queryType: rqlQueryType) {
         _.bindAll(this, "complete");
@@ -194,7 +208,7 @@ class queryCompleter {
         if (index) {
             this.providers.indexFields(index, fields => {
                 fields.map(field => {
-                    wordList.push(this.normalizeWord({caption: field, value: queryCompleter.escapeCollectionOrFieldName(field), score: 101, meta: "field"}));
+                    wordList.push({caption: field, value: queryCompleter.escapeCollectionOrFieldName(field) + " ", score: 101, meta: "field"});
                 });
 
                 return taskResult();
@@ -209,12 +223,12 @@ class queryCompleter {
                         return fieldType;
                     }).join(" | ");
 
-                    wordList.push(this.normalizeWord({
+                    wordList.push({
                         caption: key,
-                        value: queryCompleter.escapeCollectionOrFieldName(key),
+                        value: queryCompleter.escapeCollectionOrFieldName(key) + " ",
                         score: 101,
                         meta: formattedFieldType + " field"
-                    }));
+                    });
                 });
                 let i = 1;
                 _.sortBy(wordList, word => {
@@ -449,10 +463,7 @@ class queryCompleter {
                     case 2:
                         return this.completeError("todo: show terms here?"); // TODO
                     case 3:
-                        return this.completeWords([
-                            {value: "or", score: 22, meta: "any term"},
-                            {value: "and", score: 21, meta: "all terms"}
-                        ]);
+                        return this.completeWords(queryCompleter.binaryOperationsList);
                 }
         }
 
@@ -489,7 +500,7 @@ class queryCompleter {
                     return this.providers.indexNames(names => {
                         return this.completeWords(names.map(name => ({
                             caption: name,
-                            value: queryCompleter.escapeCollectionOrFieldName(name),
+                            value: queryCompleter.escapeCollectionOrFieldName(name) + " ",
                             score: 101,
                             meta: "index"
                         })));
@@ -506,7 +517,7 @@ class queryCompleter {
             }
             case "declare":
                 return this.completeWords([
-                    {value: "function", score: 0, meta: "keyword"}
+                    {caption: "function", value: "function ", score: 0, meta: "keyword"}
                 ]);
             case "declare function":
                 if (lastKeyword.parentheses === 0 && lastKeyword.dividersCount >= 1) {
@@ -514,15 +525,21 @@ class queryCompleter {
                 }
                 return this.completeError("empty completion");
             case "select": {
-                if (lastKeyword.dividersCount >= 2) {
+                if (lastKeyword.dividersCount === 1) {
+                    return this.completeFields(queryCompleter.functionsList);
+                }
+                
+                if (lastKeyword.dividersCount === 2 ||
+                    (lastKeyword.dividersCount === 4 && lastKeyword.asSpecified)) {
+                    
+                    let additions = queryCompleter.separatorList;
                     if (!lastKeyword.asSpecified) {
-                        return this.completeWords(queryCompleter.asList);
+                        additions = additions.concat(queryCompleter.asList);
                     }
-
-                    return this.completeError("empty completion");
+                    return this.completeKeywordEnd(additions);
                 }
 
-                return this.completeFields(queryCompleter.functionsList);
+                return this.completeError("empty completion");
             }
             case "group by": {
                 if (lastKeyword.dividersCount === 0) {
@@ -532,10 +549,7 @@ class queryCompleter {
                     return this.completeFields();
                 }
 
-                const keywords = [
-                    {value: ",", score: 23, meta: "separator"}
-                ];
-                return this.completeKeywordEnd(keywords);
+                return this.completeKeywordEnd(queryCompleter.separatorList);
             }
             case "order by": {
                 if (lastKeyword.dividersCount === 0) {
@@ -549,23 +563,18 @@ class queryCompleter {
                     return this.completeFields(additions);
                 }
 
-                const keywords = [
-                    {value: ",", score: 23, meta: "separator"}
-                ];
+                let additions = queryCompleter.separatorList;
                 if (lastKeyword.dividersCount === 2) {
-                    keywords.push(
-                        {value: "desc", score: 22, meta: "descending sort"},
-                        {value: "asc", score: 21, meta: "ascending sort"}
-                    );
+                    additions = additions.concat(queryCompleter.orderBySortList);
                 }
-                return this.completeKeywordEnd(keywords);
+                return this.completeKeywordEnd(additions);
             }
             case "where": {
                 if (lastKeyword.dividersCount === 4 ||
                     (lastKeyword.dividersCount === 0 && lastKeyword.binaryOperation) ||
                     (lastKeyword.dividersCount === 2 && lastKeyword.whereFunction)) {
                     const binaryOperations = this.rules.binaryOperations.map((binaryOperation, i) => {
-                        return {value: binaryOperation, score: 22 - i, meta: "binary operation"};
+                        return {caption: binaryOperation, value: binaryOperation + " ", score: 22 - i, meta: "binary operation"};
                     });
                     return this.completeKeywordEnd(binaryOperations);
                 }
@@ -624,7 +633,7 @@ class queryCompleter {
                                     if (terms && terms.length) {
                                         return this.completeWords(terms.map(term => ({
                                                 caption: term,
-                                                value: queryCompleter.escapeCollectionOrFieldName(term),
+                                                value: queryCompleter.escapeCollectionOrFieldName(term) + " ",
                                                 score: 1,
                                                 meta: "value"
                                             })));
@@ -671,7 +680,7 @@ class queryCompleter {
                 }
 
                 let alias = lastKeyword.info.alias ? lastKeyword.info.alias + "." : "";
-                const separator = {value: ",", score: 21, meta: "separator", snippet: ", " + alias + "${1:field} as ${2:alias} "};
+                const separator = {caption:",", value: ", ", score: 21, meta: "separator", snippet: ", " + alias + "${1:field} as ${2:alias} "};
                 return this.completeKeywordEnd([separator]);
             }
             case "include": {
@@ -700,21 +709,7 @@ class queryCompleter {
     }
 
     private completeWords(keywords: autoCompleteWordList[]) {
-        this.callback(null, keywords.map(keyword => {
-            return this.normalizeWord(keyword);
-        }));
-    }
-
-    private normalizeWord(keyword: autoCompleteWordList) {
-        if (!keyword.caption) {
-            keyword.caption = _.trim(keyword.value, "'");
-        }
-        if (keyword.meta === "function") {
-            keyword.value += "(";
-        } else {
-            keyword.value += " "; // insert space after each completed keyword or other value.
-        }
-        return keyword;
+        this.callback(null, keywords);
     }
 
     private static escapeCollectionOrFieldName(name: string) : string {
@@ -732,9 +727,9 @@ class queryCompleter {
 
     private completeEmpty() {
         const keywords: autoCompleteWordList[] = [
-            {value: "from", score: 3, meta: "clause", snippet: "from ${1:Collection} as ${2:alias}\r\n"},
-            {value: "from index", score: 2, meta: "clause", snippet: "from index ${1:Index} as ${2:alias}\r\n"},
-            {value: "declare", score: 1, meta: "JS function", snippet: `declare function \${1:Name}() {
+            {caption: "from", value: "from ", score: 3, meta: "clause", snippet: "from ${1:Collection} as ${2:alias}\r\n"},
+            {caption: "from index", value: "from index ", score: 2, meta: "clause", snippet: "from index ${1:Index} as ${2:alias}\r\n"},
+            {caption: "declare", value: "declare ", score: 1, meta: "JS function", snippet: `declare function \${1:Name}() {
     \${0}
 }
 
@@ -744,7 +739,7 @@ class queryCompleter {
     }
 
     private completeByKeyword() {
-        const keywords = [{value: "by", score: 21, meta: "keyword"}];
+        const keywords = [{caption: "by", value: "by ", score: 21, meta: "keyword"}];
         this.completeWords(keywords);
     }
 
@@ -753,15 +748,15 @@ class queryCompleter {
             const wordList: autoCompleteWordList[] = collections.map(name => {
                 return {
                     caption: name, 
-                    value: queryCompleter.escapeCollectionOrFieldName(name),
+                    value: queryCompleter.escapeCollectionOrFieldName(name) + " ",
                     score: 2,
                     meta: "collection"
                 };
             });
 
             wordList.push(
-                {value: "index", score: 4, meta: "keyword"},
-                {value: "@all_docs", score: 3, meta: "collection"}
+                {caption: "index", value: "index ", score: 4, meta: "keyword"},
+                {caption: "@all_docs", value: "@all_docs ", score: 3, meta: "collection"}
             );
 
             this.completeWords(wordList);
@@ -769,11 +764,10 @@ class queryCompleter {
     }
 
     private completeFromEnd() {
-        const keywords: autoCompleteWordList[] = [];
         if (this.lastKeyword.dividersCount === 2) {
-            keywords.push({value: "as", score: 21, meta: "keyword"});
+            return this.completeKeywordEnd(queryCompleter.asList);
         }
-        this.completeKeywordEnd(keywords);
+        return this.completeKeywordEnd();
     }
 
     private completeKeywordEnd(additions: autoCompleteWordList[] = null) {
@@ -807,13 +801,13 @@ class queryCompleter {
                 projectionSelectPosition = position++;
             } else if (keyword === "load") {
                 let alias = lastKeyword.info.alias ? lastKeyword.info.alias + "." : "";
-                return {value: keyword, score: 20 - currentPosition, meta: "clause", snippet: "load " + alias + "${1:field} as ${2:alias} "};
+                return {caption: keyword, value: keyword + " ", score: 20 - currentPosition, meta: "clause", snippet: "load " + alias + "${1:field} as ${2:alias} "};
             }
-            return {value: keyword, score: 20 - currentPosition, meta: "keyword"};
+            return {caption: keyword, value: keyword + " ", score: 20 - currentPosition, meta: "keyword"};
         });
 
         if (projectionSelectPosition) {
-            keywords.push({value: "select {", score: 20 - projectionSelectPosition, meta: "JS projection", snippet: `select {
+            keywords.push({caption: "select {",value: "select { ", score: 20 - projectionSelectPosition, meta: "JS projection", snippet: `select {
     \${1:Name}: \${2:Value}
 }
 `});
@@ -823,7 +817,7 @@ class queryCompleter {
             keywords.push(...additions);
         }
 
-        this.completeWords(keywords);
+        this.callback(null, keywords);
     }
     
     static remoteCompleter(activeDatabase: KnockoutObservable<database>, indexes: KnockoutObservableArray<Raven.Client.Documents.Operations.IndexInformation>, queryType: rqlQueryType) {
