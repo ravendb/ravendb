@@ -953,14 +953,14 @@ var RqlHighlightRules = function() {
         regex: /{/
     }, {
         token : function (value, currentState, stack) {
-            if (currentState !== "js-start") {
+            if (currentState !== "js-start" && currentState !== "js-no_regex") {
                 return "string";
             }
             return "paren.rparen";
         },
         regex : /}/,
         next : function (currentState, stack) {
-            if (currentState !== "js-start") {
+            if (currentState !== "js-start" && currentState !== "js-no_regex") {
                 return currentState;
             }
             if (--curelyBracesCount > 0) {

@@ -1805,13 +1805,68 @@ group by ShippedAt, |`, northwindProvider(), (errors, wordlist, prefix, lastKeyw
 
 from Orders as o
 where o.Company == ""
-load o.Company as c, o.ShipTo.  as e, o.ShipVia as s
+load o.Company as c, o.ShipTo as e, o.ShipVia as s
 `, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
             assert.isNull(wordlist);
 
             assert.equal(lastKeyword.keyword, "declare function");
             assert.equal(lastKeyword.dividersCount, 9);
+
+            done();
+        });
+    });
+
+    it('decalre function with nested function. After error | should not list anything', done => {
+        rqlTestUtils.autoComplete(`declare function Name() {
+    var a = "s{tri}}}ng'";
+    var b = function () {
+        var a = "";
+    }
+    var c = 's{tri}}}ng"';
+    #|
+}
+
+
+from Orders as o
+where o.Company == ""
+load o.Company as c, o.ShipTo as e, o.ShipVia as s
+`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.isNull(wordlist);
+
+            assert.equal(lastKeyword.keyword, "declare function");
+            assert.equal(lastKeyword.dividersCount, 9);
+
+            done();
+        });
+    });
+
+    it.only('decalre function with nested function with error. After load | should detect the load keyword', done => {
+        rqlTestUtils.autoComplete(`declare function Name() {
+    var a = "s{tri}}}ng'";
+    var b = function () {
+        var a = "";
+    }
+    var c = 's{tri}}}ng"';
+    #
+}
+
+
+from Orders as o
+where o.Company == ""
+load o.Company as c, o.ShipTo as e, o.ShipVia as s
+|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, afterLoad);
+
+            assert.equal(lastKeyword.keyword, "load");
+            assert.isTrue(lastKeyword.asSpecified);
+            assert.equal(lastKeyword.dividersCount, 4);
+            assert.equal(lastKeyword.info.collection, "Orders");
+            assert.isUndefined(lastKeyword.info.index);
+            assert.equal(lastKeyword.info.alias, "o");
+            assert.deepEqual(lastKeyword.info.aliases, {o: "Orders"});
 
             done();
         });
