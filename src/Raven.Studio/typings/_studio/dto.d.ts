@@ -142,7 +142,7 @@ interface databaseCreatedEventArgs {
 }
 
 interface availableConfigurationSection {
-    name: string;
+    name: "Backup source" | 'Encryption' | "Replication" | "Path";
     alwaysEnabled: boolean;
     enabled: KnockoutObservable<boolean>;
     validationGroup?: KnockoutValidationGroup;

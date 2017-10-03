@@ -11,6 +11,11 @@ class databaseCreationModel {
 
     readonly configurationSections: Array<availableConfigurationSection> = [
         {
+            name: "Backup source",
+            alwaysEnabled: true,
+            enabled: ko.observable<boolean>(true)
+        },
+        {
             name: "Encryption",
             alwaysEnabled: false,
             enabled: ko.observable<boolean>(false)
@@ -34,15 +39,23 @@ class databaseCreationModel {
     name = ko.observable<string>("");
 
     isFromBackup: boolean = false;
-    backupDirectory = ko.observable<string>();
-    isFocusOnBackupDirectory = ko.observable<boolean>();
-    backupDirectoryError = ko.observable<string>(null);
-    lastFailedBackupDirectory: string = null;
-    restorePoints = ko.observableArray<Raven.Server.Documents.PeriodicBackup.RestorePoint>([]);
-    selectedRestorePoint = ko.observable<string>();
-    backupLocation = ko.observable<string>();
-    lastFileNameToRestore = ko.observable<string>();
 
+    restore = {
+        backupDirectory: ko.observable<string>(),
+        backupDirectoryError: ko.observable<string>(null),
+        lastFailedBackupDirectory: null as string,
+        selectedRestorePoint: ko.observable<string>(),
+        restorePoints: ko.observableArray<Raven.Server.Documents.PeriodicBackup.RestorePoint>([]),
+        backupLocation: ko.observable<string>(),
+        lastFileNameToRestore: ko.observable<string>(),
+        isFocusOnBackupDirectory: ko.observable<boolean>()
+    };
+    
+    restoreValidationGroup = ko.validatedObservable({ 
+        selectedRestorePoint: this.restore.selectedRestorePoint,
+        backupDirectory: this.restore.backupDirectory
+    });
+    
     replication = {
         replicationFactor: ko.observable<number>(2),
         manualMode: ko.observable<boolean>(false),
@@ -75,14 +88,12 @@ class databaseCreationModel {
 
     globalValidationGroup = ko.validatedObservable({
         name: this.name,
-        selectedRestorePoint: this.selectedRestorePoint
-    });
-
-    backupDirectoryValidationGroup = ko.validatedObservable({
-        backupDirectory: this.backupDirectory
     });
 
     constructor() {
+        const restoreConfig = this.configurationSections.find(x => x.name === "Backup source");
+        restoreConfig.validationGroup = this.restoreValidationGroup;
+        
         const encryptionConfig = this.getEncryptionConfigSection();
         encryptionConfig.validationGroup = this.encryptionValidationGroup;
 
@@ -107,7 +118,7 @@ class databaseCreationModel {
         });
 
         let isFirst = true;
-        this.isFocusOnBackupDirectory.subscribe(hasFocus => {
+        this.restore.isFocusOnBackupDirectory.subscribe(hasFocus => {
             if (isFirst) {
                 isFirst = false;
                 return;
@@ -119,37 +130,39 @@ class databaseCreationModel {
             if (hasFocus)
                 return;
 
-            if (!viewHelpers.isValid(this.backupDirectoryValidationGroup) &&
-                this.backupDirectory() === this.lastFailedBackupDirectory)
+            if (!this.restore.backupDirectory.isValid() &&
+                this.restore.backupDirectory() === this.restore.lastFailedBackupDirectory)
                 return;
 
-            if (!this.backupDirectory())
+            if (!this.restore.backupDirectory())
                 return;
 
             this.spinners.fetchingRestorePoints(true);
-            new getRestorePointsCommand(this.backupDirectory())
+            new getRestorePointsCommand(this.restore.backupDirectory())
                 .execute()
                 .done((restorePoints: Raven.Server.Documents.PeriodicBackup.RestorePoints) => {
-                    this.restorePoints(restorePoints.List.map(x => {
+                    this.restore.restorePoints(restorePoints.List.map(x => {
                         const date = x.Key;
                         const dateFormat = "YYYY MMMM Do, h:mm A";
                         x.Key = moment.utc(date).local().format(dateFormat);
                         return x;
                     }));
-                    this.selectedRestorePoint(null);
-                    this.backupLocation(null);
-                    this.lastFileNameToRestore(null);
-                    this.backupDirectoryError(null);
-                    this.lastFailedBackupDirectory = null;
+                    this.restore.selectedRestorePoint(null);
+                    this.restore.backupLocation(null);
+                    this.restore.lastFileNameToRestore(null);
+                    this.restore.backupDirectoryError(null);
+                    this.restore.lastFailedBackupDirectory = null;
                 })
                 .fail((response: JQueryXHR) => {
                     const messageAndOptionalException = recentError.tryExtractMessageAndException(response.responseText);
-                    this.backupDirectoryError(generalUtils.trimMessage(messageAndOptionalException.message));
-                    this.lastFailedBackupDirectory = this.backupDirectory();
-                    this.backupDirectory.valueHasMutated();
+                    this.restore.backupDirectoryError(generalUtils.trimMessage(messageAndOptionalException.message));
+                    this.restore.lastFailedBackupDirectory = this.restore.backupDirectory();
+                    this.restore.backupDirectory.valueHasMutated();
                 })
                 .always(() => this.spinners.fetchingRestorePoints(false));
         });
+        
+        _.bindAll(this, "useRestorePoint");
     }
 
     getEncryptionConfigSection() {
@@ -218,22 +231,22 @@ class databaseCreationModel {
             ]
         });
 
-        this.backupDirectory.extend({
+        this.restore.backupDirectory.extend({
             required: {
-                onlyIf: () => this.isFromBackup && this.restorePoints().length === 0
+                onlyIf: () => this.isFromBackup && this.restore.restorePoints().length === 0
             },
             validation: [
                 {
                     validator: (_: string) => {
-                        return this.isFromBackup && !this.backupDirectoryError();
+                        return this.isFromBackup && !this.restore.backupDirectoryError();
                     },
                     message: "Couldn't fetch restore points, {0}",
-                    params: this.backupDirectoryError
+                    params: this.restore.backupDirectoryError
                 }
             ]
         });
 
-        this.selectedRestorePoint.extend({
+        this.restore.selectedRestorePoint.extend({
             required: {
                 onlyIf: () => this.isFromBackup
             }
@@ -267,9 +280,9 @@ class databaseCreationModel {
     }
 
     useRestorePoint(restorePoint: Raven.Server.Documents.PeriodicBackup.RestorePoint) {
-        this.selectedRestorePoint(restorePoint.Key);
-        this.backupLocation(restorePoint.Details.Location);
-        this.lastFileNameToRestore(restorePoint.Details.FileName);
+        this.restore.selectedRestorePoint(restorePoint.Key);
+        this.restore.backupLocation(restorePoint.Details.Location);
+        this.restore.lastFileNameToRestore(restorePoint.Details.FileName);
     }
 
     toDto(): Raven.Client.ServerWide.DatabaseRecord {
@@ -293,8 +306,8 @@ class databaseCreationModel {
 
         return {
             DatabaseName: this.name(),
-            BackupLocation: this.backupLocation(),
-            LastFileNameToRestore: this.lastFileNameToRestore(),
+            BackupLocation: this.restore.backupLocation(),
+            LastFileNameToRestore: this.restore.lastFileNameToRestore(),
             DataDirectory: dataDirectory,
             EncryptionKey: this.getEncryptionConfigSection().enabled() ? this.encryption.key() : null
         } as Raven.Client.ServerWide.PeriodicBackup.RestoreBackupConfiguration;
