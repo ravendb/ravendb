@@ -60,6 +60,9 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
         };
 
         super.update(dtoListModel);
+        
+        this.manualChooseMentor(!!dto.MentorNode);
+        this.preferredMentor(dto.MentorNode);
 
         this.query(dto.Query);
         this.changeVectorForNextBatchStartingPoint(dto.ChangeVectorForNextBatchStartingPoint);
@@ -98,7 +101,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
         return {
             Name: this.taskName(),
             Query: query,
-            MentorNode: null,
+            MentorNode: this.manualChooseMentor() ? this.preferredMentor() : undefined,
             ChangeVector: this.serializeChangeVector()
         }
     }
@@ -108,6 +111,8 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
             required: true,
             aceValidation: true
         });
+        
+        this.initializeMentorValidation();
 
         this.startingChangeVector.extend({
             validation: [
@@ -124,7 +129,9 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
 
         this.validationGroup = ko.validatedObservable({
             query: this.query,
-            startingChangeVector: this.startingChangeVector
+            startingChangeVector: this.startingChangeVector,
+            preferredMentor: this.preferredMentor
+            
         });
     }
 

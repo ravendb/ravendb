@@ -85,6 +85,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                     SubscriptionName = SubscriptionName,
                     LastTimeServerMadeProgressWithDocuments = DateTime.UtcNow,
                     Disabled = Disabled,
+                    MentorNode = MentorNode,
                     LastClientConnectionTime = DateTime.Now
                 }.ToJson(), SubscriptionName))
                 {

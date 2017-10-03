@@ -14,14 +14,16 @@ import ongoingTaskEtlTransformationModel = require("models/database/tasks/ongoin
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import deleteTransformationScriptConfirm = require("viewmodels/database/tasks/deleteTransformationScriptConfirm");
 import transformationScriptSyntax = require("viewmodels/database/tasks/transformationScriptSyntax");
+import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
 
 class editRavenEtlTask extends viewModelBase {
 
     editedRavenEtl = ko.observable<ongoingTaskRavenEtlEditModel>();
     isAddingNewRavenEtlTask = ko.observable<boolean>(true);
     ravenEtlConnectionStringsNames = ko.observableArray<string>([]);
-    connectionStringIsDefined: KnockoutComputed<boolean>;
     private taskId: number = null;
+
+    possibleMentors = ko.observableArray<string>([]);
 
     testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
     spinners = { test: ko.observable<boolean>(false) };
@@ -31,7 +33,6 @@ class editRavenEtlTask extends viewModelBase {
     connectionStringsUrl = appUrl.forCurrentDatabase().connectionStrings();
 
     collections = collectionsTracker.default.collections;
-    validationGroup: KnockoutValidationGroup;
 
     constructor() {
         super();
@@ -67,10 +68,21 @@ class editRavenEtlTask extends viewModelBase {
 
         deferred.always(() => {
             this.initObservables();
-            this.initValidation();
         });
 
-        return $.when<any>(this.getAllConnectionStrings(), deferred); 
+        return $.when<any>(this.getAllConnectionStrings(), this.loadPossibleMentors(), deferred); 
+    }
+
+    private loadPossibleMentors() {
+        return new getPossibleMentorsCommand(this.activeDatabase().name)
+            .execute()
+            .done(mentors => this.possibleMentors(mentors));
+    }
+    
+    compositionComplete() {
+        super.compositionComplete();
+
+        $('.edit-raven-etl-task [data-toggle="tooltip"]').tooltip();
     }
 
     private getAllConnectionStrings() {
@@ -94,27 +106,7 @@ class editRavenEtlTask extends viewModelBase {
             return generalUtils.trimMessage(result.Error);
         });
 
-        this.connectionStringIsDefined = ko.pureComputed(() => {
-            return !!(_.find(this.ravenEtlConnectionStringsNames(), (x) => x.toString() === this.editedRavenEtl().connectionStringName()));
-        });
-        
         this.dirtyFlag = new ko.DirtyFlag([this.editedRavenEtl().isDirtyEditedScript().isDirty, this.editedRavenEtl().transformationScripts]);
-    }
-
-    private initValidation() {
-        this.editedRavenEtl().connectionStringName.extend({
-            required: true,
-            validation: [
-                {
-                    validator: () => this.connectionStringIsDefined(),
-                    message: "Connection string is Not defined"
-                }
-            ]
-        });
-
-        this.validationGroup = ko.validatedObservable({
-            connectionStringName: this.editedRavenEtl().connectionStringName 
-        });
     }
 
     useConnectionString(connectionStringToUse: string) {
@@ -123,25 +115,19 @@ class editRavenEtlTask extends viewModelBase {
 
     testConnection() {
         if (this.editedRavenEtl().connectionStringName) {
-            if (this.connectionStringIsDefined()) {
-                // 1. Input connection string name is pre-defined
-                eventsCollector.default.reportEvent("ravenDB-ETL-connection-string", "test-connection");
-                this.spinners.test(true);
+            // 1. Input connection string name is pre-defined
+            eventsCollector.default.reportEvent("ravenDB-ETL-connection-string", "test-connection");
+            this.spinners.test(true);
 
-                getConnectionStringInfoCommand.forRavenEtl(this.activeDatabase(), this.editedRavenEtl().connectionStringName())
-                    .execute()
-                    .done((result: Raven.Client.ServerWide.ETL.RavenConnectionString) => {
-                        new testClusterNodeConnectionCommand(result.Url)
-                            .execute()
-                            .done(result => this.testConnectionResult(result))
-                            .always(() => this.spinners.test(false));
-                    }
-                );
-            }
-            else {
-                // 2. Input connection string name was Not yet defined
-                this.testConnectionResult({ Error: "Connection string Not yet defined", Success: false });
-            }
+            getConnectionStringInfoCommand.forRavenEtl(this.activeDatabase(), this.editedRavenEtl().connectionStringName())
+                .execute()
+                .done((result: Raven.Client.ServerWide.ETL.RavenConnectionString) => {
+                    new testClusterNodeConnectionCommand(result.Url)
+                        .execute()
+                        .done(result => this.testConnectionResult(result))
+                        .always(() => this.spinners.test(false));
+                }
+            );
         }
     }
 
@@ -169,7 +155,7 @@ class editRavenEtlTask extends viewModelBase {
 
     saveRavenEtl() {
         // 1. Validate model
-        if (!this.isValid(this.validationGroup)) {
+        if (!this.isValid(this.editedRavenEtl().validationGroup)) {
             return;
         }
 

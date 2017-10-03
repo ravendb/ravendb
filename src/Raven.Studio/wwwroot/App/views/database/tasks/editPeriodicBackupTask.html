@@ -32,6 +32,29 @@
                     <span class="help-block" data-bind="validationMessage: backupType"></span>
                 </div>
             </div>
+            <div class="row flex-row margin-bottom">
+                <div class="col-sm-4 col-lg-4 col-sm-offset-4 col-lg-offset-2">
+                    <div class="toggle" data-placement="top" data-toggle="tooltip" title="Mentor node is responsible for given ongoing task">
+                        <input id="toggle3" type="checkbox" data-bind="checked: manualChooseMentor">
+                        <label for="toggle3">Choose preferred mentor node manually</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row flex-row margin-bottom" data-bind="validationElement: preferredMentor, visible: manualChooseMentor">
+                <label class="control-label col-sm-4 col-lg-2">Preferred mentor</label>
+                <div class="col-sm-4 col-lg-4">
+                    <div class="dropdown btn-block">
+                        <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
+                            <span data-bind="text: preferredMentor() ? 'Node ' + preferredMentor() : 'Select preferred mentor'"></span>
+                            <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu" data-bind="foreach: $root.possibleMentors">
+                            <li><a href="#" data-bind="text: 'Node ' + $data, click: $parent.preferredMentor.bind($parent.preferredMentor, $data)"></a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
     <h3>Schedule <i id="schedule-info" class="icon-info text-info"></i></h3>

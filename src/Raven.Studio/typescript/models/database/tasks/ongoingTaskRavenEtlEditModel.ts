@@ -12,21 +12,40 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
 
     editedTransformationScript = ko.observable<ongoingTaskEtlTransformationModel>(ongoingTaskEtlTransformationModel.empty());
     isDirtyEditedScript = new ko.DirtyFlag([]);
-
+    
+    validationGroup: KnockoutValidationGroup;
+    
     constructor(dto: Raven.Client.ServerWide.Operations.OngoingTaskRavenEtlDetails) {
         super();
 
         this.update(dto);
         this.initializeObservables();
+        this.initValidation();
     }
 
     initializeObservables() {
         super.initializeObservables();
+        
+        this.initializeMentorValidation();
 
         this.isDirtyEditedScript = new ko.DirtyFlag([this.editedTransformationScript().name,
                                                         this.editedTransformationScript().script,
                                                         this.editedTransformationScript().transformScriptCollections],
                                                         false, jsonUtil.newLineNormalizingHashFunction);
+        
+    }
+    
+    private initValidation() {
+        this.initializeMentorValidation();
+
+        this.connectionStringName.extend({
+            required: true
+        });
+
+        this.validationGroup = ko.validatedObservable({
+            connectionStringName: this.connectionStringName ,
+            preferredMentor: this.preferredMentor
+        });
     }
 
     update(dto: Raven.Client.ServerWide.Operations.OngoingTaskRavenEtlDetails) {
@@ -35,6 +54,8 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
         if (dto.Configuration) {
             this.connectionStringName(dto.Configuration.ConnectionStringName);
             this.transformationScripts(dto.Configuration.Transforms.map(x => new ongoingTaskEtlTransformationModel(x, false)));
+            this.manualChooseMentor(!!dto.Configuration.MentorNode);
+            this.preferredMentor(dto.Configuration.MentorNode);
         }
     }
 
@@ -58,7 +79,7 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
             Disabled: false,
             Transforms: transformations,
             EtlType: "Raven",
-            MentorNode: null, //TODO:
+            MentorNode: this.manualChooseMentor() ? this.preferredMentor() : undefined,
             TaskId: taskId
         } as Raven.Client.ServerWide.ETL.RavenEtlConfiguration;
     }
