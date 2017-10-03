@@ -26,6 +26,9 @@ class periodicBackupConfiguration {
     incrementalBackupParsingError = ko.observable<string>();
     nextIncrementalBackupOccurrence = ko.observable<string>("N/A");
 
+    manualChooseMentor = ko.observable<boolean>(false);
+    preferredMentor = ko.observable<string>();
+
     validationGroup: KnockoutValidationGroup;
     backupOptions = ["Backup", "Snapshot"];
 
@@ -90,6 +93,9 @@ class periodicBackupConfiguration {
                 this.nextIncrementalBackupOccurrence,
                 this.incrementalBackupParsingError);
         }
+        
+        this.manualChooseMentor(!!dto.MentorNode);
+        this.preferredMentor(dto.MentorNode);
 
         this.initValidation();
     }
@@ -166,10 +172,17 @@ class periodicBackupConfiguration {
             ]
         });
 
+        this.preferredMentor.extend({
+            required: {
+                onlyIf: () => this.manualChooseMentor()
+            }
+        });
+
         this.validationGroup = ko.validatedObservable({
             backupType: this.backupType,
             fullBackupFrequency: this.fullBackupFrequency,
-            incrementalBackupFrequency: this.incrementalBackupFrequency
+            incrementalBackupFrequency: this.incrementalBackupFrequency,
+            preferredMentor: this.preferredMentor
         });
     }
 
@@ -249,7 +262,7 @@ class periodicBackupConfiguration {
             GlacierSettings: this.glacierSettings().toDto(),
             AzureSettings: this.azureSettings().toDto(),
             FtpSettings: this.ftpSettings().toDto(),
-            MentorNode: null
+            MentorNode: this.manualChooseMentor() ? this.preferredMentor() : undefined
         };
     }
 

@@ -1,4 +1,4 @@
-    <div class="edit-subscription flex-vertical absolute-fill content-margin">
+    <div class="edit-subscription flex-vertical absolute-fill content-margin edit-subscription-task">
         <div class="row flex-row flex-grow flex-stretch-items">
             <div class="col-sm-12 col-lg-6 flex-vertical">
                 <div class="flex-header">
@@ -37,6 +37,7 @@
                             <input type="text" class="form-control" id="taskName" placeholder="Enter a descriptive name for the subscription task" title="Note: if no name is supplied then server will create one for you"
                                    data-bind="textInput: taskName, attr: { disabled: !$root.isAddingNewSubscriptionTask() }">
                         </div>
+
                         <label>Subscription RQL :&nbsp;&nbsp;</label>
                         <div class="pull-right"><a href="#" data-bind="click: $root.syntaxHelp"><small>Syntax help</small></a></div>
                         <pre class="form-control margin-top" placeholder="Enter transform script" 
@@ -47,9 +48,11 @@
                         </div>
                     </div>
                     <div class="panel padding flex-form">
-                        <div class="toggle">
-                            <input id="use-starting-point" type="checkbox" data-bind="checked: setStartingPoint">
-                            <label for="use-starting-point">Use defined starting point</label>
+                        <div class="form-group">
+                            <div class="toggle">
+                                <input id="use-starting-point" type="checkbox" data-bind="checked: setStartingPoint">
+                                <label for="use-starting-point">Use defined starting point</label>
+                            </div>
                         </div>
                         <div class="form-group" data-bind="visible: setStartingPoint">
                             <label class="control-label">Send Documents From :</label>
@@ -79,6 +82,27 @@
                                 <textarea rows="3" class="form-control" placeholder="Enter change vector to start sending documents from" data-bind="textInput: startingChangeVector, attr: { 'disabled': !setStartingPoint() }"></textarea>
                                 <!--<button class="btn btn-default btn-block btn-upcoming"><i class="icon-preview"></i><span>&nbsp;Show related document</span></button>--> <!-- todo: we need end point for this.. -->
                                 <span class="help-block" data-bind="validationMessage: startingChangeVector"></span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="toggle" data-placement="top" data-toggle="tooltip" title="Mentor node is responsible for given ongoing task">
+                                <input id="toggle3" type="checkbox" data-bind="checked: manualChooseMentor">
+                                <label for="toggle3">Choose preferred mentor node manually</label>
+                            </div>
+                        </div>
+
+                        <div class="form-group" data-bind="validationElement: preferredMentor, visible: manualChooseMentor">
+                            <div>
+                                <label class="control-label">Preferred mentor</label>
+                            </div>
+                            <div class="flex-grow">
+                                <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
+                                    <span data-bind="text: preferredMentor() ? 'Node ' + preferredMentor() : 'Select preferred mentor'"></span>
+                                    <span class="caret"></span>
+                                </button>
+                                <ul class="dropdown-menu" data-bind="foreach: $root.possibleMentors">
+                                    <li><a href="#" data-bind="text: 'Node ' + $data, click: $parent.preferredMentor.bind($parent.preferredMentor, $data)"></a></li>
+                                </ul>
                             </div>
                         </div>
                     </div>

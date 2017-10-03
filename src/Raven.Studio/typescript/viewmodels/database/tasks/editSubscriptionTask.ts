@@ -17,6 +17,7 @@ import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import subscriptionConnectionDetailsCommand = require("commands/database/tasks/getSubscriptionConnectionDetailsCommand");
 import queryCompleter = require("common/queryCompleter");
 import subscriptionRqlSyntax = require("viewmodels/database/tasks/subscriptionRqlSyntax");
+import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
 
 type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<documentObject>>;
 
@@ -26,6 +27,8 @@ class editSubscriptionTask extends viewModelBase {
     editedSubscription = ko.observable<ongoingTaskSubscriptionEdit>();
     isAddingNewSubscriptionTask = ko.observable<boolean>(true);
 
+    possibleMentors = ko.observableArray<string>([]);
+    
     enableTestArea = ko.observable<boolean>(false);
     testResultsLimit = ko.observable<number>(10);
 
@@ -83,12 +86,21 @@ class editSubscriptionTask extends viewModelBase {
             this.editedSubscription(ongoingTaskSubscriptionEdit.empty());
             deferred.resolve();
         }
-        
-        return deferred;
+
+        return $.when<any>(deferred, this.loadPossibleMentors());
+    }
+
+    private loadPossibleMentors() {
+        return new getPossibleMentorsCommand(this.activeDatabase().name)
+            .execute()
+            .done(mentors => this.possibleMentors(mentors));
     }
 
     compositionComplete() {
         super.compositionComplete();
+
+        $('.edit-subscription-task [data-toggle="tooltip"]').tooltip();
+        
         document.getElementById('taskName').focus(); 
     }
 

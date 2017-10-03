@@ -417,7 +417,7 @@ namespace Raven.Server.Web.System
                             {
                                 TaskId = ravenEtl.TaskId,
                                 TaskName = ravenEtl.Name,
-                                Configuration = ravenEtl
+                                Configuration = ravenEtl,
                             });
                             break;
 
@@ -444,6 +444,7 @@ namespace Raven.Server.Web.System
                                 LastTimeServerMadeProgressWithDocuments = subscriptionState.LastTimeServerMadeProgressWithDocuments,
                                 Disabled = subscriptionState.Disabled,
                                 LastClientConnectionTime = subscriptionState.LastClientConnectionTime,
+                                MentorNode = subscriptionState.MentorNode,
                                 ResponsibleNode = new NodeId
                                 {
                                     NodeTag = tag,

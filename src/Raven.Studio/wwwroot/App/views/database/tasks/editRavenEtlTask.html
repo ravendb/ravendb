@@ -1,4 +1,4 @@
-<div class="content-margin">
+<div class="content-margin edit-raven-etl-task">
     <div class="row flex-row absolute-fill">
         <div class="col-xs-12 col-lg-6 flex-vertical">
             <div class="flex-header">
@@ -17,13 +17,37 @@
                             </div>
                         </div>
                         <div class="form-group">
+                            <label class="control-label">&nbsp;</label>
+                            <div class="toggle" data-placement="left" data-toggle="tooltip" title="Mentor node is responsible for given ongoing task">
+                                <input id="toggle3" type="checkbox" data-bind="checked: manualChooseMentor">
+                                <label for="toggle3">Choose preferred mentor node manually</label>
+                            </div>
+                        </div>
+
+                        <div class="form-group" data-bind="validationElement: preferredMentor, visible: manualChooseMentor">
+                            <div>
+                                <label class="control-label">Preferred mentor</label>
+                            </div>
+                            <div class="flex-grow">
+                                <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
+                                    <span data-bind="text: preferredMentor() ? 'Node ' + preferredMentor() : 'Select preferred mentor'"></span>
+                                    <span class="caret"></span>
+                                </button>
+                                <ul class="dropdown-menu" data-bind="foreach: $root.possibleMentors">
+                                    <li><a href="#" data-bind="text: 'Node ' + $data, click: $parent.preferredMentor.bind($parent.preferredMentor, $data)"></a></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="form-group">
                             <label class="control-label">Connection String</label>
                             <div class="flex-grow" data-bind="validationOptions: { insertMessages: false }, validationElement: connectionStringName">
-                                <div class="dropdown btn-block">
-                                    <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
-                                           data-bind="textInput: connectionStringName, attr: { id: 'connectionStringInput', disabled: $root.ravenEtlConnectionStringsNames().length == 0 }"
-                                           placeholder="Select a connection String">
-                                    <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                                <div>
+                                    <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown"
+                                           data-bind="attr: { id: 'connectionStringInput', disabled: $root.ravenEtlConnectionStringsNames().length == 0 }"
+                                           >
+                                        <span data-bind="text: connectionStringName () || 'Select a connection string'"></span>
+                                        <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                                    </button>
                                     <ul class="dropdown-menu max-height" data-bind="foreach: $root.ravenEtlConnectionStringsNames">
                                         <!--TODO: autocomplete...-->
                                         <li data-bind="click: _.partial($root.useConnectionString, $data)">
@@ -61,15 +85,11 @@
                     <div class="padding bg-success small" data-bind="visible: Success">
                         <div>Successfully connected to node</div>
                     </div>
-                    <div class="padding bg-danger small" data-bind="visible: !Success && $root.connectionStringIsDefined()">
+                    <div class="padding bg-danger small" data-bind="visible: !Success">
                         Connection test failed: <span data-bind="text: $root.fullErrorDetailsVisible() ? Error : $root.shortErrorText()"></span>
                         <div>
                             <a href="#" data-bind="click: $root.fullErrorDetailsVisible.toggle.bind($root.fullErrorDetailsVisible), text: $root.fullErrorDetailsVisible() ? 'hide details' : 'show details'"></a>
                         </div>
-                    </div>
-                    <div class="padding bg-danger small" data-bind="visible: !Success && !$root.connectionStringIsDefined()">
-                        <span class="icon-warning"></span><span data-bind="text: Error"></span>
-                        <a target="_blank" data-bind="attr: { href: $root.connectionStringsUrl }"> - Click <u>here</u> to define a new connection string</a>
                     </div>
                 </div>
                 <div class="panel-addon" data-bind="visible: $root.ravenEtlConnectionStringsNames().length == 0">

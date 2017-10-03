@@ -7,11 +7,13 @@ import getPeriodicBackupConfigurationCommand = require("commands/database/tasks/
 import testPeriodicBackupCredentialsCommand = require("commands/database/tasks/testPeriodicBackupCredentialsCommand");
 import popoverUtils = require("common/popoverUtils");
 import backupSettings = require("models/database/tasks/periodicBackup/backupSettings");
+import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
 
 class editPeriodicBackupTask extends viewModelBase {
 
     configuration = ko.observable<periodicBackupConfiguration>();
     isAddingNewBackupTask = ko.observable<boolean>(true);
+    possibleMentors = ko.observableArray<string>([]);
 
     constructor() {
         super();
@@ -48,11 +50,20 @@ class editPeriodicBackupTask extends viewModelBase {
             deferred.resolve();
         }
 
-        return deferred;
+        return $.when<any>(deferred, this.loadPossibleMentors());
+    }
+
+    private loadPossibleMentors() {
+        return new getPossibleMentorsCommand(this.activeDatabase().name)
+            .execute()
+            .done(mentors => this.possibleMentors(mentors));
     }
 
     compositionComplete() {
         super.compositionComplete();
+
+        $('.edit-backup [data-toggle="tooltip"]').tooltip();
+        
         document.getElementById("taskName").focus();
     }
 
