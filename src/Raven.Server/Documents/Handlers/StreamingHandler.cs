@@ -69,8 +69,33 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/streams/queries", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/streams/queries", "GET", AuthorizationStatus.ValidUser)]
         public async Task StreamQueryGet()
+        {
+            using (TrackRequestTime())
+            using (var token = CreateTimeLimitedOperationToken())
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                var query = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(), context);
+                var properties = GetStringValuesQueryString("field", false);
+                var propertiesArray = properties.Count == 0 ? null : properties.ToArray();
+                using (var writer = new StreamCsvDocumentQueryResultWriter(HttpContext.Response, ResponseBodyStream(), context, propertiesArray))
+                {
+                    try
+                    {
+                        await Database.QueryRunner.ExecuteStreamQuery(query, context, HttpContext.Response, writer, token).ConfigureAwait(false);
+                    }
+                    catch (IndexDoesNotExistException)
+                    {
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                        writer.WriteError("Index " + query.Metadata.IndexName + " does not exists");
+                    }
+                }
+            }
+        }
+
+        [RavenAction("/databases/*/streams/queries", "POST", AuthorizationStatus.ValidUser)]
+        public async Task StreamQueryPost()
         {
             using (TrackRequestTime())
             using (var token = CreateTimeLimitedOperationToken())
@@ -88,10 +113,7 @@ namespace Raven.Server.Documents.Handlers
                     catch (IndexDoesNotExistException)
                     {
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                        if (writer.SupportError)
-                        {
-                            writer.WriteError("Index " + query.Metadata.IndexName + " does not exists");
-                        }
+                        writer.WriteError("Index " + query.Metadata.IndexName + " does not exists");
                     }
                 }
             }

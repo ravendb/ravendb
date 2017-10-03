@@ -16,7 +16,6 @@ namespace Raven.Server.Documents.Queries
         void WriteError(Exception e);
         void WriteError(string error);
         void WriteQueryStatistics(long resultEtag, bool isStale, string indexName, long totalResults, DateTime timestamp);
-        bool SupportError { get; }
         bool SupportStatistics { get; }
     }
 }
