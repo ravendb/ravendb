@@ -2043,7 +2043,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             var executeQuery = GetQueryResult(finalQuery);
 
-            var queryResult = finalQuery.QueryResult;
+            var queryResult = finalQuery.GetQueryResult();
             _afterQueryExecuted?.Invoke(queryResult);
             return executeQuery;
         }
@@ -2078,7 +2078,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         if (finalQuery.IsDistinct)
                             throw new NotSupportedException("RavenDB does not support mixing Distinct & Count together.\r\n" +
                                                             "See: https://groups.google.com/forum/#!searchin/ravendb/CountDistinct/ravendb/yKQikUYKY5A/nCNI5oQB700J");
-                        var qr = finalQuery.QueryResult;
+                        var qr = finalQuery.GetQueryResult();
                         if (_queryType != SpecialQueryType.Count)
                             return (long)qr.TotalResults;
                         return qr.TotalResults;

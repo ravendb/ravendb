@@ -288,14 +288,11 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public QueryResult QueryResult
+        public QueryResult GetQueryResult()
         {
-            get
-            {
-                InitSync();
+            InitSync();
 
-                return QueryOperation.CurrentQueryResults.CreateSnapshot();
-            }
+            return QueryOperation.CurrentQueryResults.CreateSnapshot();
         }
 
         /// <inheritdoc />
@@ -719,7 +716,7 @@ namespace Raven.Client.Documents.Session
         public int Count()
         {
             Take(0);
-            var queryResult = QueryResult;
+            var queryResult = GetQueryResult();
             return queryResult.TotalResults;
         }
 
