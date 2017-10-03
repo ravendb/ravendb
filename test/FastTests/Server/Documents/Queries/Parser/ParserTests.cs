@@ -2,6 +2,7 @@
 using Raven.Server.Documents.Queries.Parser;
 using System;
 using System.IO;
+using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries.AST;
 using Xunit;
 
@@ -9,6 +10,49 @@ namespace FastTests.Server.Documents.Queries.Parser
 {
     public class ParserTests : NoDisposalNeeded
     {
+        [Theory]
+        [InlineData(@"declare function Name() {
+    var a = 's{tri}}}ng""';
+    var b = function () {
+        var a = ""'"";
+    }
+    var c = 's{tri}}}ng';
+}
+
+
+from Orders as o
+where o.Company == ''
+load o.Company as c, o.ShipTo.  as e, o.ShipVia as s
+select {
+    Name: Value,
+    var a = a;
+}", QueryType.Select)]
+        [InlineData(@"declare function Name() {
+   var a = ;
+}
+
+
+from Orders as o
+where o.Company == ''
+load o.Company as c, o.ShipTo.  as e, o.ShipVia as s
+select {
+    Name: Value,
+    var a = a;
+}", QueryType.Select)]
+        [InlineData(@"
+from Orders as o
+update { 
+    this.++;
+}
+", QueryType.Update)]
+        public void FailToParseInvalidJavascript(string q, QueryType type)
+        {
+            var parser = new QueryParser();
+            parser.Init(q);
+
+            Assert.Throws<InvalidQueryException>(() => parser.Parse(type));
+        }
+
         [Theory]
         [InlineData("Name")]
         [InlineData("Address.City")]

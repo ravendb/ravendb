@@ -57,7 +57,7 @@ namespace Raven.Server.Documents.TcpHandlers
         public SubscriptionState SubscriptionState;
 
         public string Collection, Script;
-        public StringSegment[] Functions;
+        public string[] Functions;
         public bool Revisions;
 
         public long SubscriptionId { get; set; }
@@ -688,7 +688,7 @@ namespace Raven.Server.Documents.TcpHandlers
             CancellationTokenSource.Dispose();
         }
 
-        public static (string Collection, (string Script, StringSegment[] Functions), bool Revisions) ParseSubscriptionQuery(string query)
+        public static (string Collection, (string Script, string[] Functions), bool Revisions) ParseSubscriptionQuery(string query)
         {
             var queryParser = new QueryParser();
             queryParser.Init(query);
@@ -809,7 +809,7 @@ namespace Raven.Server.Documents.TcpHandlers
             // verify that the JS code parses
             new Esprima.JavaScriptParser(script).ParseProgram();
 
-            return (collectionName, (script, q.DeclaredFunctions?.Values?.ToArray() ?? Array.Empty<StringSegment>()), revisions);
+            return (collectionName, (script, q.DeclaredFunctions?.Values?.ToArray() ?? Array.Empty<string>()), revisions);
         }
     }
 

@@ -968,7 +968,7 @@ namespace Raven.Server.Documents.Queries
 
         public static void ThrowParametersWereNotProvided(string queryText)
         {
-            throw new InvalidQueryException("The query is parametrized but the actual values of parameters were not provided", queryText, null);
+            throw new InvalidQueryException("The query is parametrized but the actual values of parameters were not provided", queryText, (BlittableJsonReaderObject)null);
         }
 
         public static void ThrowParameterValueWasNotProvided(string parameterName, string queryText, BlittableJsonReaderObject parameters)

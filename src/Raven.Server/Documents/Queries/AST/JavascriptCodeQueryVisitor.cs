@@ -57,7 +57,7 @@ namespace Raven.Server.Documents.Queries.AST
             throw new NotSupportedException();
         }
 
-        public override void VisitDeclaredFunctions(Dictionary<StringSegment, StringSegment> declaredFunctions)
+        public override void VisitDeclaredFunctions(Dictionary<StringSegment, string> declaredFunctions)
         {
             throw new NotSupportedException();
         }
@@ -205,7 +205,7 @@ namespace Raven.Server.Documents.Queries.AST
             throw new NotSupportedException();
         }
 
-        public override void VisitDeclaredFunction(StringSegment name, StringSegment func)
+        public override void VisitDeclaredFunction(StringSegment name, string func)
         {
             throw new NotSupportedException();
         }
