@@ -76,7 +76,7 @@ namespace Raven.Client.Documents.Smuggler
 
         public class SmugglerProgress : SmugglerProgressBase, IOperationProgress
         {
-            private readonly SmugglerResult _result;
+            protected readonly SmugglerResult _result;
 
             public SmugglerProgress(SmugglerResult result)
             {
