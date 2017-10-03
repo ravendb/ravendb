@@ -108,7 +108,25 @@ class rqlTestUtils {
                                     "City": "String",
                                     "Region": "String",
                                     "PostalCode": "String",
-                                    "Country": "String"
+                                    "Country": "String",
+                                    "Nested": "Object",
+                                });
+                                break;
+                            case "ShipTo.Nested":
+                                callback({
+                                    "L1": "String",
+                                    "L2": "Null",
+                                    "C": "String",
+                                    "R": "String",
+                                    "P": "String",
+                                    "NestedObject": "Object",
+                                });
+                                break;
+                            case "ShipTo.Nested.NestedObject":
+                                callback({
+                                    "C2": "String",
+                                    "R2": "String",
+                                    "P2": "String"
                                 });
                                 break;
                             default:
