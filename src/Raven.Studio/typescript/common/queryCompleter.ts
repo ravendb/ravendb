@@ -72,7 +72,7 @@ class queryCompleter {
         do {
             const token = iterator.getCurrentToken();
             if (!token) {
-                break;
+                continue;
             }
             if (token.type === "keyword.clause" && token.value.toLowerCase() === "from") {
                 break;
