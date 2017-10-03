@@ -245,5 +245,7 @@ namespace Raven.Client.Documents.Queries
     public interface IIndexQuery
     {
         int PageSize { set; get; }
+
+        TimeSpan? WaitForNonStaleResultsTimeout { get; }
     }
 }
