@@ -978,21 +978,44 @@ oop.inherits(RqlHighlightRules, TextHighlightRules);
 exports.RqlHighlightRules = RqlHighlightRules;
 });
 
-ace.define("ace/mode/rql",["require","exports","module","ace/lib/oop","ace/mode/text","ace/mode/javascript","ace/mode/rql_highlight_rules"], function(require, exports, module) {
+ace.define("ace/mode/rql",["require","exports","module","ace/lib/oop","ace/mode/text","ace/mode/javascript","ace/mode/rql_highlight_rules"/*,"ace/tokenizer"*/], function(require, exports, module) {
 "use strict";
 
 var oop = require("../lib/oop");
 var TextMode = require("./text").Mode;
 var JsMode = require("./javascript").Mode;
 var RqlHighlightRules = require("./rql_highlight_rules").RqlHighlightRules;
+var WorkerClient = require("../worker/worker_client").WorkerClient;
+// var Tokenizer = require("../tokenizer").Tokenizer;
 
 var Mode = function() {
     this.HighlightRules = RqlHighlightRules;
     this.$behaviour = this.$defaultBehaviour;
+
+    /*var highlighter = new this.HighlightRules();
+    this.$tokenizer = new Tokenizer(highlighter.getRules());
+    this.$embeds = highlighter.getEmbeds();*/
+
     this.createModeDelegates({
         "js-": JsMode
     });
-    this.prefixRegexps = [/[a-zA-Z_0-9@'"\\\/\$\-\u00A2-\uFFFF=!<>]/]
+    this.prefixRegexps = [/[a-zA-Z_0-9@'"\\\/\$\-\u00A2-\uFFFF=!<>]/];
+
+    this.createWorker = function(session) {
+        var worker = new WorkerClient(["ace"], "ace/mode/rql_worker", "RqlWorker");
+        // var worker = new WorkerClient(["ace"], "ace/mode/javascript_worker", "JavaScriptWorker");
+        worker.attachToDocument(session.getDocument());
+
+        worker.on("annotate", function(results) {
+            session.setAnnotations(results.data);
+        });
+
+        worker.on("terminate", function() {
+            session.clearAnnotations();
+        });
+
+        return worker;
+    };
 };
 oop.inherits(Mode, TextMode);
 
