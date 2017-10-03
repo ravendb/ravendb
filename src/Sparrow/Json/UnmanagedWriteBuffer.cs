@@ -45,30 +45,28 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Write(byte* buffer, int length)
+        public void Write(byte* buffer, int count)
         {
-            if (length == 0)
+            if (count == 0)
                 return;
 
-            if (_buffer.Length - Used > length)
+            if (_buffer.Length - Used > count)
             {
-                Unsafe.CopyBlock(_buffer.Pointer + Used, buffer, (uint)length);
-                _sizeInBytes += length;
-                Used += length;
+                Unsafe.CopyBlock(_buffer.Pointer + Used, buffer, (uint)count);
+                _sizeInBytes += count;
+                Used += count;
             }
             else
-            {
-                UnlikelyWrite(buffer, length);
-            }
+                UnlikelyWrite(buffer, count);
         }
 
-        private void UnlikelyWrite(byte* buffer, int length)
+        private void UnlikelyWrite(byte* buffer, int count)
         {
-            if (length == 0)
+            if (count == 0)
                 return;
 
             var bufferPosition = 0;
-            var lengthLeft = length;
+            var lengthLeft = count;
             do
             {
                 if (Used == _buffer.Length)
@@ -87,7 +85,7 @@ namespace Sparrow.Json
                 buffer += bytesToWrite;
                 Used += bytesToWrite;
 
-            } while (bufferPosition < length);
+            } while (bufferPosition < count);
         }
 
 
@@ -138,16 +136,50 @@ namespace Sparrow.Json
     public unsafe struct UnmanagedWriteBuffer : IUnmanagedWriteBuffer
     {
         private readonly JsonOperationContext _context;
-        private int _sizeInBytes;
 
         private class Segment
         {
+            /// <summary>
+            /// This points to the previous Segment in the stream. May be null
+            /// due either to a Clean operation, or because none have been
+            /// allocated
+            /// </summary>
             public Segment Previous;
-            public Segment PreviousAllocated;
+
+            /// <summary>
+            /// Every Segment in this linked list is freed when the 
+            /// UnmanagedWriteBuffer is disposed. Kept for resilience against
+            /// Clean operations
+            /// </summary>
+            public Segment DeallocationPendingPrevious;
+
+            /// <summary>
+            /// Memory in this Segment
+            /// </summary>
             public AllocatedMemoryData Allocation;
+
+            /// <summary>
+            /// Always set to Allocation.Adddress
+            /// </summary>
             public byte* Address;
+
+            /// <summary>
+            /// Used bytes in the current Segment
+            /// </summary>
             public int Used;
 
+            /// <summary>
+            /// Total size accumulated by all the previous Segments
+            /// </summary>
+            public int AccumulatedSizeInBytes;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public Segment ShallowCopy()
+            {
+                return (Segment)MemberwiseClone();
+            }
+
+#if DEBUG
             public int Depth
             {
                 get
@@ -162,23 +194,40 @@ namespace Sparrow.Json
                     return count;
                 }
             }
+
             public string DebugInfo => Encodings.Utf8.GetString(Address, Used);
+#endif
         }
 
-        private Segment _current;
+        private Segment _head;
 
-        public int SizeInBytes => _sizeInBytes;
-
-        internal UnmanagedWriteBuffer(JsonOperationContext context, AllocatedMemoryData allocatedMemoryData)
+        public int SizeInBytes
         {
-            _context = context;
-            _sizeInBytes = 0;
-            _current = new Segment
+            get
             {
-                Address = allocatedMemoryData.Address,
+                ThrowOnDisposed();
+                return _head.AccumulatedSizeInBytes;
+            }
+        }
+
+        // Since we never know which instance actually ran the Dispose, it is 
+        // possible that this particular copy may have _head != null.
+        public bool IsDisposed => _head == null || _head.Address == null;
+
+        public UnmanagedWriteBuffer(JsonOperationContext context, AllocatedMemoryData allocatedMemoryData)
+        {
+            Debug.Assert(context != null);
+            Debug.Assert(allocatedMemoryData != null);
+
+            _context = context;
+            _head = new Segment
+            {
+                Previous = null,
+                DeallocationPendingPrevious = null,
                 Allocation = allocatedMemoryData,
+                Address = allocatedMemoryData.Address,
                 Used = 0,
-                Previous = null
+                AccumulatedSizeInBytes = 0
             };
 
 #if MEM_GUARD
@@ -190,119 +239,125 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Write(byte[] buffer, int start, int count)
         {
-            fixed (byte* p = buffer)
+            Debug.Assert(start >= 0 && start < buffer.Length); // start is an index
+            Debug.Assert(count >= 0); // count is a size
+            Debug.Assert(start + count <= buffer.Length); // can't overrun the buffer
+
+            fixed (byte* bufferPtr = buffer)
             {
-                Write(p + start, count);
+                Debug.Assert(bufferPtr + start >= bufferPtr); // overflow check
+                Write(bufferPtr + start, count);
             }
         }
 
-        private static void ThrowOnDisposed()
-        {
-            throw new ObjectDisposedException(nameof(UnmanagedWriteBuffer));
-        }
-
-        public bool IsDisposed => _current == null;
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Write(byte* buffer, int length)
+        private void ThrowOnDisposed()
         {
 #if DEBUG
             // PERF: This check will only happen in debug mode because it will fail with a NRE anyways on release.
-            if (_current == null)
-            {
-                ThrowOnDisposed();
-                return;
-            }
+            if (IsDisposed)
+                throw new ObjectDisposedException(nameof(UnmanagedWriteBuffer));
 #endif
-            if (length == 0)
-                return;
-
-            var current = _current;
-
-            if (current.Allocation.SizeInBytes - current.Used > length)
-            {
-                Unsafe.CopyBlock(current.Address + current.Used, buffer, (uint)length);
-                _sizeInBytes += length;
-                current.Used += length;
-            }
-            else
-            {
-                WriteUnlikely(buffer, length);
-            }
         }
 
-        private void WriteUnlikely(byte* buffer, int length)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Write(byte* buffer, int count)
         {
-            var bufferPosition = 0;
-            var lengthLeft = length;
+            Debug.Assert(count >= 0); // count is a size
+            Debug.Assert(buffer + count >= buffer); // overflow check
+            ThrowOnDisposed();
+
+            if (count == 0)
+                return;
+
+            var head = _head;
+            if (head.Allocation.SizeInBytes - head.Used > count)
+            {
+                Unsafe.CopyBlock(head.Address + head.Used, buffer, (uint)count);
+                head.AccumulatedSizeInBytes += count;
+                head.Used += count;
+            }
+            else
+                WriteUnlikely(buffer, count);
+        }
+
+        private void WriteUnlikely(byte* buffer, int count)
+        {
+            Debug.Assert(count >= 0); // count is a size
+            Debug.Assert(buffer + count >= buffer); // overflow check
+
+            var amountPending = count;
+            var head = _head;
             do
             {
-                // Create next, bigger segment if needed
-                if (_current.Allocation.SizeInBytes == _current.Used)
-                {
-                    AllocateNextSegment(lengthLeft, allowGrowth: true);
-                }
+                var availableSpace = head.Allocation.SizeInBytes - head.Used;
+                // If the current Segment does not have any space left, allocate a new one
+                if (availableSpace == 0)
+                    AllocateNextSegment(amountPending, true);
 
-                var bytesToWrite = Math.Min(lengthLeft, _current.Allocation.SizeInBytes - _current.Used);
+                // Write as much as we can in the current Segment
+                var amountWrittenInRound = Math.Min(amountPending, availableSpace);
+                Unsafe.CopyBlock(head.Address + head.Used, buffer, (uint)amountWrittenInRound);
 
-                Unsafe.CopyBlock(_current.Address + _current.Used, buffer, (uint)bytesToWrite);
+                // Update Segment invariants
+                head.AccumulatedSizeInBytes += amountWrittenInRound;
+                head.Used += amountWrittenInRound;
 
-                _sizeInBytes += bytesToWrite;
-                lengthLeft -= bytesToWrite;
-                bufferPosition += bytesToWrite;
-                buffer += bytesToWrite;
-                _current.Used += bytesToWrite;
-
-            } while (bufferPosition < length);
+                // Update loop invariants
+                amountPending -= amountWrittenInRound;
+                buffer += amountWrittenInRound;
+            } while (amountPending > 0);
         }
 
         private void AllocateNextSegment(int required, bool allowGrowth)
         {
-            //TODO: protect from documents larger than 1GB
+            Debug.Assert(required > 0);
 
-            // grow by doubling segment size until we get to 1 MB, then just use 1 MB segments
+            // TODO: protect from documents larger than 1GB
+
+            // Grow by doubling segment size until we get to 1 MB, then just use 1 MB segments
             // otherwise a document with 17 MB will waste 15 MB and require very big allocations
-            var nextSegmentSize = Math.Max(Bits.NextPowerOf2(required), _current.Allocation.SizeInBytes * 2);
+            var segmentSize = Math.Max(Bits.NextPowerOf2(required), _head.Allocation.SizeInBytes * 2);
             const int oneMb = 1024 * 1024;
-            if (nextSegmentSize > oneMb && required <= oneMb)
-            {
-                nextSegmentSize = oneMb;
-            }
+            if (segmentSize > oneMb && required <= oneMb)
+                segmentSize = oneMb;
 
-            if (allowGrowth &&
-                // we successfully grew the allocation, nothing to do
-                _context.GrowAllocation(_current.Allocation, nextSegmentSize))
+            // We can sometimes ask the context to grow the allocation size; 
+            // it may do so at its own discretion; if this happens, then we
+            // are good to go.
+            if (allowGrowth && _context.GrowAllocation(_head.Allocation, segmentSize))
                 return;
 
-            var allocatedMemoryData = _context.GetMemory(nextSegmentSize);
-            _current = new Segment
-            {
-                Address = (byte*)allocatedMemoryData.Address,
-                Allocation = allocatedMemoryData,
-                Used = 0,
-                Previous = _current,
-                PreviousAllocated = _current
-            };
+            // Can't change _head because there may be copies of the current
+            // instance of UnmanagedWriteBuffer going around. Thus, we simply
+            // mutate it to ensure all copies have the same allocations.
+            var allocation = _context.GetMemory(segmentSize);
+
+            // Copy the head
+            Segment previousHead = _head.ShallowCopy();
+
+            // Reset the head (this change happens in all instances at the
+            // same time, albeit not atomically).
+            _head.Previous = previousHead;
+            _head.DeallocationPendingPrevious = previousHead;
+            _head.Allocation = allocation;
+            _head.Address = allocation.Address;
+            _head.Used = 0;
+            _head.AccumulatedSizeInBytes = previousHead.AccumulatedSizeInBytes;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteByte(byte data)
         {
-#if DEBUG
-            // PERF: This check will only happen in debug mode because it will fail anyways with a NRE anyways on release.
-            if (_current == null)
-            {
-                ThrowOnDisposed();
-                return;
-            }
-#endif
-            var current = _current;
-            if (current.Used == current.Allocation.SizeInBytes)
+            ThrowOnDisposed();
+
+            var head = _head;
+            if (head.Used == head.Allocation.SizeInBytes)
                 goto Grow; // PERF: Diminish the size of the most common path.
 
-            _sizeInBytes++;
-            *(current.Address + current.Used) = data;
-            current.Used++;
+            head.AccumulatedSizeInBytes++;
+            *(head.Address + head.Used) = data;
+            head.Used++;
             return;
 
             Grow:
@@ -311,70 +366,80 @@ namespace Sparrow.Json
 
         private void WriteByteUnlikely(byte data)
         {
-            AllocateNextSegment(1, allowGrowth: true);
-            _sizeInBytes++;
-            *(_current.Address + _current.Used) = data;
-            _current.Used++;
-        }
-
-        public int CopyTo(IntPtr pointer)
-        {
-            return CopyTo((byte*)pointer);
+            AllocateNextSegment(1, true);
+            var head = _head;
+            head.AccumulatedSizeInBytes++;
+            *(head.Address + head.Used) = data;
+            head.Used++;
         }
 
         public int CopyTo(byte* pointer)
         {
-            if (_current == null)
-                ThrowOnDisposed();
+            ThrowOnDisposed();
 
-            var whereToWrite = pointer + _sizeInBytes;
-            var cur = _current;
+            var whereToWrite = pointer + _head.AccumulatedSizeInBytes;
             var copiedBytes = 0;
-            while (cur != null)
+
+            for (var head = _head; head != null; head = head.Previous)
             {
-                whereToWrite -= cur.Used;
-                copiedBytes += cur.Used;
-                Memory.Copy(whereToWrite, cur.Address, cur.Used);
-                cur = cur.Previous;
+                whereToWrite -= head.Used;
+                copiedBytes += head.Used;
+                Memory.Copy(whereToWrite, head.Address, head.Used);
             }
-            Debug.Assert(copiedBytes == _sizeInBytes);
+            Debug.Assert(copiedBytes == _head.AccumulatedSizeInBytes);
             return copiedBytes;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Clear()
         {
-#if DEBUG
-            // PERF: This check will only happen in debug mode because it will fail anyways with a NRE anyways on release.
-            if (_current == null)
-            {
-                ThrowOnDisposed();
-                return;
-            }
-#endif
+            ThrowOnDisposed();
 
-            _current.Used = 0;
-            _sizeInBytes = 0;
-
-            _current.Previous = null;
+            _head.Used = 0;
+            _head.AccumulatedSizeInBytes = 0;
+            _head.Previous = null;
         }
 
         public void Dispose()
         {
+            if (IsDisposed)
+                return;
+
 #if MEM_GUARD
-            if (FreedBy == null) //if already disposed, keep the "FreedBy"
-                FreedBy = Environment.StackTrace;
+            FreedBy = Environment.StackTrace;
 #endif
 
-            var start = _current;
-            while (_current != null &&
-                _current.Address != null) //prevent double dispose
+            // The actual lifetime of the _head Segment is unbounded: it will
+            // be released by the GC when we no longer have any references to
+            // it (i.e. no more copies of this struct)
+            //
+            // We can, however, force the deallocation of all the previous
+            // Segments by ensuring we don't keep any references after the
+            // Dispose is run.
+
+            var head = _head;
+            _head = null; // Further references are NREs.
+            for (Segment next; head != null; head = next)
             {
-                _context.ReturnMemory(_current.Allocation);
-                _current.Address = null; //precaution, to make memory issues more visible
-                _current = _current.PreviousAllocated;
+                _context.ReturnMemory(head.Allocation);
+
+                // This is used to signal that Dispose has run to other copies
+                head.Address = null;
+
+#if DEBUG
+                // Helps to avoid program errors, albeit unnecessary
+                head.Allocation = null;
+                head.AccumulatedSizeInBytes = -1;
+                head.Used = -1;
+#endif
+
+                // `next` is used to keep a reference to the previous Segment.
+                // Since `next` lives only within this for loop and we clear up
+                // all other references, non-head Segments should be GC'd.
+                next = head.DeallocationPendingPrevious;
+                head.Previous = null;
+                head.DeallocationPendingPrevious = null;
             }
-            GC.KeepAlive(start);
         }
 
 #if MEM_GUARD
@@ -382,6 +447,7 @@ namespace Sparrow.Json
         public string FreedBy;
 #endif
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void EnsureSingleChunk(JsonParserState state)
         {
             EnsureSingleChunk(out state.StringBuffer, out state.StringSize);
@@ -390,17 +456,14 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void EnsureSingleChunk(out byte* ptr, out int size)
         {
-            if (_current == null)
+            ThrowOnDisposed();
+
+            if (_head.Previous == null)
             {
-                ThrowOnDisposed();
-                size = 0;
-                ptr = null;
-                return;
-            }
-            if (_current.Previous == null)
-            {
-                ptr = _current.Address;
-                size = _current.Used;
+                // Common case is we have a single chunk already, so no need 
+                // to do anything
+                ptr = _head.Address;
+                size = SizeInBytes;
                 return;
             }
 
@@ -409,20 +472,30 @@ namespace Sparrow.Json
 
         private void UnlikelyEnsureSingleChunk(out byte* ptr, out int size)
         {
-            // if we are here, then we have multiple chunks, we can't
+            var totalSize = SizeInBytes;
+
+            // If we are here, then we have multiple chunks, we can't
             // allow a growth of the last chunk, since we'll by copying over it
             // so we force a whole new chunk
-            AllocateNextSegment(_sizeInBytes, allowGrowth: false);
+            AllocateNextSegment(totalSize, false);
 
-            var realCurrent = _current;
-            _current = realCurrent.Previous;
-            CopyTo(realCurrent.Address);
-            realCurrent.Used = SizeInBytes;
+            // Go back in time to before we had the last chunk
+            var realHead = _head;
+            _head = realHead.Previous;
 
-            _current = realCurrent;
-            _current.Previous = null;
-            ptr = _current.Address;
-            size = _current.Used;
+            // Copy all of the data structure into the new chunk's memory
+            CopyTo(realHead.Address);
+            realHead.Used = totalSize;
+            realHead.AccumulatedSizeInBytes = totalSize;
+
+            // Back to the future!
+            _head = realHead;
+
+            // Ensure we are thought of as a single chunk
+            _head.Previous = null;
+
+            ptr = _head.Address;
+            size = _head.Used;
         }
     }
 }
