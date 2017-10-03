@@ -110,8 +110,6 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         query.WaitForNonStaleResultsTimeout = TimeSpan.FromSeconds(15); // allow new auto indexes to have some results
                 }
 
-                index.LimitFirstBatchDurationOfAutoIndex(query.WaitForNonStaleResultsTimeout.Value / 2);
-
                 var t = CleanupSupercededAutoIndexes(index, map, token)
                     .ContinueWith(task =>
                     {
