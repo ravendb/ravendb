@@ -310,7 +310,7 @@ interface indexStalenessReasonsResponse {
 
 
 interface autoCompleteWordList {
-    caption?: string; 
+    caption: string; 
     value: string; 
     snippet?: string; 
     score: number; 
