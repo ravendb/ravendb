@@ -144,6 +144,7 @@ namespace Raven.Server.Documents.Indexes
             new ConcurrentQueue<IndexingStatsAggregator>();
 
         private int _numberOfQueries;
+        private bool _didWork;
 
         protected readonly bool HandleAllDocs;
 
@@ -159,7 +160,7 @@ namespace Raven.Server.Documents.Indexes
         private NativeMemory.ThreadStats _threadAllocations;
         private string _errorStateReason;
         private bool _isCompactionInProgress;
-        private TimeSpan? _maxFirstBatchDuration;
+        internal TimeSpan? _firstBatchTimeout;
 
         private readonly ReaderWriterLockSlim _currentlyRunningQueriesLock = new ReaderWriterLockSlim();
         private readonly MultipleUseFlag _priorityChanged = new MultipleUseFlag();
@@ -409,6 +410,9 @@ namespace Raven.Server.Documents.Indexes
                     };
 
                     InitializeInternal();
+
+                    if (LastIndexingTime != null)
+                        _didWork = true;
 
                     _initialized = true;
                 }
@@ -802,6 +806,8 @@ namespace Raven.Server.Documents.Indexes
 
                         var batchCompleted = false;
 
+                        bool didWork = false;
+
                         try
                         {
                             using (var scope = stats.CreateScope())
@@ -811,7 +817,6 @@ namespace Raven.Server.Documents.Indexes
                                     _indexingProcessCancellationTokenSource.Token.ThrowIfCancellationRequested();
                                     _batchProcessCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_indexingProcessCancellationTokenSource.Token);
 
-                                    bool didWork = false;
                                     try
                                     {
                                         TimeSpentIndexing.Start();
@@ -946,6 +951,12 @@ namespace Raven.Server.Documents.Indexes
                                 Name = Name,
                                 Type = IndexChangeTypes.BatchCompleted
                             });
+
+                            if (didWork)
+                            {
+                                _didWork = true;
+                                _firstBatchTimeout = null;
+                            }
                         }
 
                         try
@@ -2151,21 +2162,26 @@ namespace Raven.Server.Documents.Indexes
         {
             var queryStartTime = DateTime.UtcNow;
             var queryId = Interlocked.Increment(ref _numberOfQueries);
+
+            if (queryId == 1 && _didWork == false)
+                _firstBatchTimeout = query.WaitForNonStaleResultsTimeout / 2 ?? DefaultWaitForNonStaleResultsTimeout / 2;
+
             var executingQueryInfo = new ExecutingQueryInfo(queryStartTime, query, queryId, token);
             CurrentlyRunningQueries.Add(executingQueryInfo);
 
             return new QueryDoneRunning(this, executingQueryInfo);
         }
 
+        private static readonly TimeSpan DefaultWaitForNonStaleResultsTimeout = TimeSpan.FromSeconds(15); // this matches default timeout from client
+
         private static bool WillResultBeAcceptable(bool isStale, IndexQueryBase<BlittableJsonReaderObject> query, AsyncWaitForIndexing wait)
         {
-
             if (isStale == false)
                 return true;
 
             if (query.WaitForNonStaleResults && query.WaitForNonStaleResultsTimeout == null)
             {
-                query.WaitForNonStaleResultsTimeout = TimeSpan.FromSeconds(15); // this matches default timeout from client
+                query.WaitForNonStaleResultsTimeout = DefaultWaitForNonStaleResultsTimeout;
                 return false;
             }
 
@@ -2339,13 +2355,6 @@ namespace Raven.Server.Documents.Indexes
             return null;
         }
 
-        public void LimitFirstBatchDurationOfAutoIndex(TimeSpan max)
-        {
-            Debug.Assert(Type.IsAuto());
-
-            _maxFirstBatchDuration = max;
-        }
-
         public bool CanContinueBatch(
             IndexingStatsScope stats,
             DocumentsOperationContext documentsOperationContext,
@@ -2353,16 +2362,14 @@ namespace Raven.Server.Documents.Indexes
         {
             stats.RecordMapAllocations(_threadAllocations.TotalAllocated);
 
-            if (_maxFirstBatchDuration != null)
+            if (_firstBatchTimeout.HasValue && stats.Duration > _firstBatchTimeout)
             {
-                if (stats.Duration > _maxFirstBatchDuration)
-                {
-                    stats.RecordMapCompletedReason(
-                        $"Stopping the first batch after {_maxFirstBatchDuration} to ensure just created auto index has some results");
+                stats.RecordMapCompletedReason(
+                    $"Stopping the first batch after {_firstBatchTimeout} to ensure just created index has some results");
 
-                    _maxFirstBatchDuration = null;
-                    return false;
-                }
+                _firstBatchTimeout = null;
+
+                return false;
             }
 
             if (stats.ErrorsCount >= IndexStorage.MaxNumberOfKeptErrors)
@@ -2676,7 +2683,7 @@ namespace Raven.Server.Documents.Indexes
         {
             private readonly Index _index;
             private bool _wasRunning;
-            private MultipleUseFlag _isRunning = new MultipleUseFlag();
+            private readonly MultipleUseFlag _isRunning = new MultipleUseFlag();
             private readonly ReaderWriterLockSlim _lock = new ReaderWriterLockSlim();
 
             public StorageOperationWrapper(Index index)

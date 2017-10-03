@@ -155,6 +155,8 @@ namespace Raven.Client.Documents.Queries.MoreLikeThis
             }
         }
 
+        public TimeSpan? WaitForNonStaleResultsTimeout => null;
+
         /// <summary>
         /// Whether the page size was explicitly set or still at its default value
         /// </summary>
