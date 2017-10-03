@@ -154,20 +154,26 @@ namespace Raven.Client.Connection.Async
             catch (Exception)
             {
                 _topologyUpdate.TryRemove(Url, out val);
-                // We explicitly ignore errors here, can because node is down, the db does not exists, etc
-                AsyncHelpers.RunSync(() => UpdateTopologyAsync(null));
+                // we explicitly ignore errors here, can be because node is down, the db does not exists, etc
+                // we refresh the topology (forced)
+                val = _topologyUpdate.GetOrAdd(Url, new Lazy<Tuple<DateTime, Task>>(
+                    () => Tuple.Create(DateTime.UtcNow, UpdateTopologyAsync(null, force: true))));
+
+                AsyncHelpers.RunSync(() => val.Value.Item2);
             }
         }
 
         private async Task UpdateTopologyAsync()
         {
-            var topology = await DirectGetReplicationDestinationsAsync(new OperationMetadata(Url, PrimaryCredentials, null), null)
+            var topology = await DirectGetReplicationDestinationsAsync(new OperationMetadata(Url, PrimaryCredentials, null), null, timeout: ClusterAwareRequestExecuter.ReplicationDestinationsTopologyTimeout)
                 .ConfigureAwait(false);
 
-            await UpdateTopologyAsync(topology).ConfigureAwait(false);
+            // since we got the topology from the primary node successfully,
+            // update the topology from other nodes only if it's needed
+            await UpdateTopologyAsync(topology, force: true).ConfigureAwait(false);
         }
 
-        private async Task UpdateTopologyAsync(ReplicationDocumentWithClusterInformation topology)
+        private async Task UpdateTopologyAsync(ReplicationDocumentWithClusterInformation topology, bool force)
         {
             IRequestExecuter executor;
             if (topology == null)
@@ -202,11 +208,11 @@ namespace Raven.Client.Connection.Async
                 var prevLeader = clusterAwareRequestExecuter.LeaderNode;
                 clusterAwareRequestExecuter.UpdateTopology(this, new OperationMetadata(Url, PrimaryCredentials, topology.ClusterInformation), topology, serverHash, prevLeader);
 
-                //When the leader is not resposive to its follower but clients may still communicate to the leader node we have
-                //a problem, we will send requests to the leader and they will fail, we must fetch the topology from all nodes 
-                //to make sure we have the latest one, since our primary may be a non-responsive leader.
+                // when the leader is not responsive to its follower but clients may still communicate to the leader node we have
+                // a problem, we will send requests to the leader and they will fail, we must fetch the topology from all nodes 
+                // to make sure we have the latest one, since our primary may be a non-responsive leader.
 
-                await clusterAwareRequestExecuter.UpdateReplicationInformationIfNeededAsync(this,force:true).ConfigureAwait(false);
+                await clusterAwareRequestExecuter.UpdateReplicationInformationIfNeededAsync(this, force: force).ConfigureAwait(false);
             }
             else
             {

@@ -35,7 +35,7 @@ namespace Raven.Client.Connection.Request
     {
         public TimeSpan WaitForLeaderTimeout { get; set; } = TimeSpan.FromSeconds(10);
 
-        public TimeSpan ReplicationDestinationsTopologyTimeout { get; set; } = TimeSpan.FromSeconds(2);
+        public static TimeSpan ReplicationDestinationsTopologyTimeout { get; set; } = TimeSpan.FromSeconds(2);
 
         private readonly ManualResetEventSlim leaderNodeSelected = new ManualResetEventSlim();
 
@@ -559,7 +559,7 @@ namespace Raven.Client.Connection.Request
                             .Select(operationMetadata => new
                             {
                                 Node = operationMetadata,
-                                Task = getReplicationDestinationsTask(operationMetadata)
+                                Task = getReplicationDestinationsTask(operationMetadata),
                             })
                             .ToArray();
 
@@ -578,15 +578,16 @@ namespace Raven.Client.Connection.Request
                                 FailureCounters.ResetFailureCount(x.Node.Url);
                         });
 
-                        var newestTopology = replicationDocuments
+                        var newestTopologies = replicationDocuments
                             .Where(x => x.Task.IsCompleted && x.Task.Result != null)
                             .OrderByDescending(x => x.Task.Result.Term)
                             .ThenByDescending(x =>
                             {
                                 var index = x.Task.Result.ClusterCommitIndex;
                                 return x.Task.Result.ClusterInformation.IsLeader ? index + 1 : index;
-                            })
-                            .FirstOrDefault();
+                            }).ToList();
+
+                        var newestTopology = newestTopologies.FirstOrDefault();
 
                         var hasLeaderCount = replicationDocuments
                             .Count(x => x.Task.IsCompleted && x.Task.Result != null && x.Task.Result.HasLeader);
@@ -599,7 +600,7 @@ namespace Raven.Client.Connection.Request
                             if (Log.IsDebugEnabled)
                                 Log.Debug($"Fetching topology resulted with no topology, tried failoever servers, setting leader node to primary node ({primaryNode}).");
                             //if the leader Node is not null this means that somebody updated it, we don't want to overwrite it with the primary.
-                            // i'm rasing the leader changed event although we don't have a real leader because some tests don't wait for leader but actually any node
+                            // i'm raising the leader changed event although we don't have a real leader because some tests don't wait for leader but actually any node
                             //Todo: change back to: if (SetLeaderNodeIfLeaderIsNull(primaryNode, false) == false)
                             if (SetLeaderNodeIfLeaderIsNull(primaryNode) == false)
                             {
@@ -626,6 +627,43 @@ namespace Raven.Client.Connection.Request
                         {
                             var replicationDocument = newestTopology.Task.Result;
                             var node = newestTopology.Node;
+
+                            if (newestTopologies.Count > 1 && node.Url.Equals(serverClient.Url) == false)
+                            {
+                                // we got the replication document not from the primary url
+                                // need to add the node url destination to the destinations
+                                // (we know it exists since we have majority of nodes that agree on the leader)
+                                // and remove the primary url destination from the destinations
+
+                                var sourceNode = node;
+                                var destination = replicationDocument.Destinations
+                                    .FirstOrDefault(x => DestinationUrl(x.Url, x.Database).Equals(serverClient.Url, StringComparison.OrdinalIgnoreCase));
+                                if (destination != null)
+                                {
+                                    replicationDocument.Destinations.Remove(destination);
+                                    // we need to update the cluster information of the primary url for this node
+                                    replicationDocument.ClusterInformation = destination.ClusterInformation;
+                                    node = ConvertReplicationDestinationToOperationMetadata(destination, destination.ClusterInformation);
+                                }
+
+                                destination = destination ?? replicationDocument.Destinations.FirstOrDefault();
+                                if (destination != null)
+                                {
+                                    var database = destination.Database;
+                                    var networkCredentials = sourceNode.Credentials?.Credentials as NetworkCredential;
+                                    replicationDocument.Destinations.Add(new ReplicationDestination.ReplicationDestinationWithClusterInformation
+                                    {
+                                        Url = sourceNode.Url,
+                                        Database = database,
+                                        ApiKey = sourceNode.Credentials?.ApiKey,
+                                        Username = networkCredentials?.UserName,
+                                        Password = networkCredentials?.Password,
+                                        Domain = networkCredentials?.Domain,
+                                        ClusterInformation = sourceNode.ClusterInformation
+                                    });
+                                }
+                            }
+                            
                             if (UpdateTopology(serverClient, node, replicationDocument, serverHash, prevLeader))
                             {
                                 return;
@@ -639,6 +677,11 @@ namespace Raven.Client.Connection.Request
                     refreshReplicationInformationTask = null;
                 });
             }
+        }
+
+        private static string DestinationUrl(string baseUrl, string defaultDatabase)
+        {
+            return $"{baseUrl}/databases/{defaultDatabase}";
         }
 
         internal bool UpdateTopology(AsyncServerClient serverClient, OperationMetadata node, ReplicationDocumentWithClusterInformation replicationDocument, string serverHash, OperationMetadata prevLeader)
@@ -657,12 +700,12 @@ namespace Raven.Client.Connection.Request
                 if (replicationDocument.ClientConfiguration.FailoverBehavior == null)
                 {
                     if (Log.IsDebugEnabled)
-                        Log.Debug($"Server side failoever configuration is set to let client decide, client decided on {serverClient.convention.FailoverBehavior}. ");
+                        Log.Debug($"Server side fail-over configuration is set to let client decide, client decided on {serverClient.convention.FailoverBehavior}. ");
                     replicationDocument.ClientConfiguration.FailoverBehavior = serverClient.convention.FailoverBehavior;
                 }
                 else if (Log.IsDebugEnabled)
                 {
-                    Log.Debug($"Server enforced failoever behavior {replicationDocument.ClientConfiguration.FailoverBehavior}. ");
+                    Log.Debug($"Server enforced fail-over behavior {replicationDocument.ClientConfiguration.FailoverBehavior}. ");
                 }
                 serverClient.convention.UpdateFrom(replicationDocument.ClientConfiguration);
             }
@@ -687,13 +730,17 @@ namespace Raven.Client.Connection.Request
         {
             if (node == null || replicationDocument == null)
                 return null;
+
             var nodes = replicationDocument.Destinations
                 .Select(x => ConvertReplicationDestinationToOperationMetadata(x, x.ClusterInformation))
                 .Where(x => x != null)
                 .ToList();
 
-            nodes.Add(new OperationMetadata(node.Url, node.Credentials, replicationDocument.ClusterInformation));
-
+            if (nodes.Exists(x => x.Url.Equals(node.Url, StringComparison.OrdinalIgnoreCase)) == false)
+            {
+                nodes.Add(new OperationMetadata(node.Url, node.Credentials, replicationDocument.ClusterInformation));
+            }
+            
             return nodes;
         }
 
