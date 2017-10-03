@@ -253,9 +253,9 @@ namespace Raven.Client.Documents.BulkInsert
                 throw new InvalidOperationException("Document id must have a non empty value");
             }
 
-            if (id.EndsWith("/"))
+            if (id.EndsWith("|"))
             {
-                throw new NotSupportedException("Document ids cannot end with '/', but was called with " + id);
+                throw new NotSupportedException("Document ids cannot end with '|', but was called with " + id);
             }
         }
 
