@@ -25,7 +25,7 @@ class createDatabase extends dialogViewModelBase {
     
     encryptionSection: setupEncryptionKey;
 
-    protected currentAdvancedSection = ko.observable<string>(createDatabase.defaultSection);
+    protected currentAdvancedSection = ko.observable<string>();
 
     showReplicationFactorWarning: KnockoutComputed<boolean>;
     enforceManualNodeSelection: KnockoutComputed<boolean>;
@@ -38,6 +38,7 @@ class createDatabase extends dialogViewModelBase {
     }
 
     advancedVisibility = {
+        restore: ko.pureComputed(() => this.currentAdvancedSection() === "Backup source"),
         encryption: ko.pureComputed(() => this.currentAdvancedSection() === "Encryption"),
         replication: ko.pureComputed(() => this.currentAdvancedSection() === "Replication"),
         path: ko.pureComputed(() => this.currentAdvancedSection() === "Path")
@@ -45,6 +46,8 @@ class createDatabase extends dialogViewModelBase {
 
     constructor(isFromBackup: boolean) {
         super();
+        
+        this.currentAdvancedSection(isFromBackup ? "Backup source" : createDatabase.defaultSection);
 
         this.databaseModel.isFromBackup = isFromBackup;
         
@@ -159,7 +162,13 @@ class createDatabase extends dialogViewModelBase {
     }
 
     getAvailableSections() {
-        return this.databaseModel.configurationSections;
+        let sections = this.databaseModel.configurationSections;
+        
+        if (!this.databaseModel.isFromBackup) {
+            const backupSection = sections.find(x => x.name === "Backup source");
+            sections = _.without(sections, backupSection);
+        }
+        return sections;
     }
 
     createDatabase() {
@@ -171,7 +180,7 @@ class createDatabase extends dialogViewModelBase {
 
         const globalValid = this.isValid(this.databaseModel.globalValidationGroup);
 
-        const sectionsValidityList = this.databaseModel.configurationSections.map(section => {
+        const sectionsValidityList = this.getAvailableSections().map(section => {
             if (section.enabled()) {
                 return this.isValid(section.validationGroup);
             } else {

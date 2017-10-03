@@ -16,32 +16,6 @@
                             <input type="text" id="resourceName" data-bind="textInput: databaseModel.name" autofocus class="form-control" placeholder="Enter database name">
                         </div>
                         
-                        <div class="form-group" data-bind="visible: databaseModel.isFromBackup, validationElement: databaseModel.backupDirectory">
-                            <h3>BACKUP DIRECTORY</h3>
-                            <div class="input-group">
-                                <input type="text" id="backupDirectory" 
-                                       data-bind="textInput: databaseModel.backupDirectory, hasFocus: databaseModel.isFocusOnBackupDirectory, disable: databaseModel.spinners.fetchingRestorePoints()" 
-                                       class="form-control" placeholder="Enter backup directory path">
-                            </div>
-                        </div>
-                        
-                        <div class="form-group" data-bind="visible: databaseModel.isFromBackup">
-                            <h3>RESTORE POINT</h3>
-                            <div data-bind="validationOptions: { insertMessages: false }, validationElement: databaseModel.selectedRestorePoint">
-                                <div class="dropdown btn-block">
-                                    <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown" 
-                                            data-bind="disable: databaseModel.restorePoints().length == 0, attr: { title: databaseModel.restorePoints().length == 0 ? 'No restore points in selected directory' : '' }, , disable: databaseModel.spinners.fetchingRestorePoints()">
-                                        <span data-bind="text: databaseModel.restorePoints().length == 0 ? 'Select backup directory' : (!databaseModel.selectedRestorePoint() ? 'Select restore point..' : databaseModel.selectedRestorePoint()), textinput: databaseModel.selectedRestorePoint"></span>
-                                        <span class="caret"></span>
-                                    </button>
-                                    <ul class="dropdown-menu max-height" data-bind="foreach: databaseModel.restorePoints">
-                                        <li><a href="#" data-bind="text: $data.Key, click: $parent.databaseModel.useRestorePoint.bind($parent.databaseModel, $data), attr: { 'title': 'File name: ' + $data.Details.FileName }"></a></li>
-                                    </ul>
-                                </div>
-                                <span class="help-block" data-bind="validationMessage: databaseModel.selectedRestorePoint"></span>
-                            </div>
-                        </div>
-
                         <div class="settings-group" data-bind="foreach: getAvailableSections()">
                             <div class="checkbox settings-item nocheck" data-bind="css: { 'active': $root.currentAdvancedSection() === name }, visible: alwaysEnabled">
                                 <label data-bind="text: name, click: _.partial($root.showAdvancedConfigurationFor, name)">
@@ -67,6 +41,10 @@
                     </div>
                     <div class="modal-settings-panel-slideout">
                         <div>
+                            <div class="restore" data-bind="template: { name: 'create-db-restore' }, visible: advancedVisibility.restore()">
+                            </div>
+                        </div>
+                        <div>
                             <div class="encryption" data-bind="template: { name: 'create-db-encryption' }, visible: advancedVisibility.encryption()">
                             </div>
                         </div>
@@ -85,6 +63,42 @@
     </form>
 </div>
 
+<script type="text/html" id="create-db-restore">
+    <div data-bind="with: databaseModel.restore">
+        <h3>Backup source configuration</h3>
+        <div class="form-group row" data-bind="validationElement: backupDirectory">
+            <div class="col-md-4">
+                <label class="control-label">Backup directory</label>
+            </div>
+            <div class="col-md-8">
+                <input type="text" id="backupDirectory"
+                       data-bind="textInput: backupDirectory, hasFocus: isFocusOnBackupDirectory, disable: $parent.databaseModel.spinners.fetchingRestorePoints()"
+                       class="form-control" placeholder="Enter backup directory path" />
+            </div>
+        </div>
+        
+        <div class="form-group row" data-bind="validationOptions: { insertMessages: false }, validationElement: selectedRestorePoint">
+            <div class="col-md-4">
+                <label class="control-label">Restore point</label>
+            </div>
+            <div class="col-md-8">
+                <div>
+                    <div class="dropdown btn-block">
+                        <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown"
+                                data-bind="disable: restorePoints().length === 0 || $parent.databaseModel.spinners.fetchingRestorePoints(), attr: { title: restorePoints().length == 0 ? 'No restore points in selected directory' : '' }">
+                            <span data-bind="text: restorePoints().length === 0 ? 'Select backup directory' : ( selectedRestorePoint() || 'Select restore point...' ), textInput: selectedRestorePoint"></span>
+                            <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu max-height" data-bind="foreach: restorePoints">
+                            <li><a href="#" data-bind="text: $data.Key, click: _.partial($root.databaseModel.useRestorePoint, $data), attr: { 'title': 'File name: ' + $data.Details.FileName }"></a></li>
+                        </ul>
+                    </div>
+                    <span class="help-block" data-bind="validationMessage: selectedRestorePoint"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</script>
 
 <script type="text/html" id="create-db-path">
     <div data-bind="with: databaseModel.path">
