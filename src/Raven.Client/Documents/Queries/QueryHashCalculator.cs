@@ -76,7 +76,7 @@ namespace Raven.Client.Documents.Queries
         {
             if (s == null) return;
             fixed (char* pQ = s)
-                _buffer.Write((byte*)pQ, length: s.Length * sizeof(char));
+                _buffer.Write((byte*)pQ, s.Length * sizeof(char));
         }
 
         public void Write(string[] s)
