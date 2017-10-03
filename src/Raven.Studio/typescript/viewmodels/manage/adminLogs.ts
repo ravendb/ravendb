@@ -199,7 +199,9 @@ class adminLogs extends viewModelBase {
 
         if (!this.filter())
             this.listController().pushElements(this.pendingMessages);
-        
+        else
+            this.filterLogEntries();
+
         this.pendingMessages.length = 0;
 
         if (this.tailEnabled()) {
