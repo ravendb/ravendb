@@ -75,6 +75,6 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
     ];
 
     return new intermediateMenuItem("Indexes", indexesChildren, 'icon-indexing', {
-        dynamicHash: appUrls.query()
+        dynamicHash: appUrls.indexes
     });
 }

@@ -55,11 +55,20 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
             }
 
             const result = [] as Array<smugglerListItem>;
+            if ("SnapshotRestore" in status) {
+                const restoreCounts = (status as Raven.Server.Documents.PeriodicBackup.RestoreProgress).SnapshotRestore;
+                
+                // skip it this case means it is not backup progress object or it is restore of non-binary data 
+                if (!restoreCounts.Skipped) {
+                    result.push(this.mapToExportListItem("Preparing restore", restoreCounts));
+                }
+            }
+            
             result.push(this.mapToExportListItem("Documents", status.Documents, true));
             result.push(this.mapToExportListItem("Revisions", status.RevisionDocuments, true));
             result.push(this.mapToExportListItem("Indexes", status.Indexes));
             result.push(this.mapToExportListItem("Identities", status.Identities));
-
+            
             let shouldUpdateToPending = false;
             result.forEach(item => {
                 if (item.stage === "processing") {

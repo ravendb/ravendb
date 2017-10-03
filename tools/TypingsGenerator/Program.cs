@@ -249,6 +249,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(PeriodicBackupTestConnectionType));
             scripter.AddType(typeof(RestoreBackupConfiguration));
             scripter.AddType(typeof(RestorePoints));
+            scripter.AddType(typeof(RestoreProgress));
             scripter.AddType(typeof(NextBackupOccurrence));
 
             // ongoing tasks - subscription
