@@ -11774,6 +11774,72 @@ oop.inherits(RqlWorker, Mirror);
             return this.sender.emit("annotate", []);
 
         var errors = [];
+        
+        var result;
+        while (result = declareFunctionRegex.exec(value)) {
+            var start = result.index + result["0"].length;
+            var end = getEndOfDeclareFunctino(value,  start);
+            if (end > 0) {
+                var script = value.substring(start, end);
+                var lastNewLineIndex = value.lastIndexOf("\n", start);
+                script = " ".repeat(start - lastNewLineIndex) + script;
+                lastNewLineIndex = value.lastIndexOf("\n", lastNewLineIndex - 1);
+                while (lastNewLineIndex > -1){
+                    script = "\n" + script;
+                    lastNewLineIndex = value.lastIndexOf("\n", lastNewLineIndex - 1);
+                }
+                validateFunction.apply(this, [script, errors]);
+            }
+        }
+        
+        this.sender.emit("annotate", errors);
+    };
+
+    var declareFunctionRegex = /declare\s+function\s+[^{]*{/g;
+    
+    var getEndOfDeclareFunctino = function (value, start) {
+        var curelyBracesCount = 0;
+        var inDoubleQoutes = false;
+        var inSingleQoutes = false;
+        for (var i = start; i < value.length; i++) {
+            var c = value[i];
+            switch (c) {
+                case "{":
+                    if (!inSingleQoutes && !inDoubleQoutes) {
+                        curelyBracesCount++;
+                    }
+                    break;
+                case "}":
+                    if (!inSingleQoutes && !inDoubleQoutes) {
+                        if (curelyBracesCount === 0) {
+                            return i;
+                        }
+                        curelyBracesCount--;
+                    }
+                    break;
+                case "'":
+                    if (!inDoubleQoutes) {
+                        inSingleQoutes = !inSingleQoutes;
+                    }
+                    break;
+                case '"':
+                    if (!inSingleQoutes) {
+                        inDoubleQoutes = !inDoubleQoutes;
+                    }
+                    break;
+                case "\\":
+                    i++;
+                    break;
+                case "\n":
+                    inDoubleQoutes = inSingleQoutes = false;
+                    break;
+            }
+        }
+        
+        return -1;
+    };
+    
+    var validateFunction = function (value, errors) {
         var maxErrorLevel = this.isValidJS(value) ? "warning" : "error";
         lint(value, this.options, this.options.globals);
         var results = lint.errors;
@@ -11824,8 +11890,6 @@ oop.inherits(RqlWorker, Mirror);
             if (errorAdded) {
             }
         }
-
-        this.sender.emit("annotate", errors);
     };
 
 }).call(RqlWorker.prototype);

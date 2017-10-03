@@ -944,7 +944,10 @@ var RqlHighlightRules = function() {
 
     this.embedRules(JavaScriptHighlightRules, "js-", [ {
         token : function (value, currentState, stack) {
-            if (currentState !== "js-start" && currentState !== "js-no_regex") {
+            if (currentState === "js-string.quasi.start") {
+                return "string.quasi.start";
+            }
+            if (currentState === "js-qqstring" || currentState === "js-qstring") {
                 return "string";
             }
             curelyBracesCount++;
