@@ -5,16 +5,17 @@ namespace Raven.Server.Documents.PeriodicBackup
 {
     public class RestoreProgress : SmugglerResult.SmugglerProgress
     {
-        public long RestoredFilesInSnapshotCount { get; set; }
+        public Counts SnapshotRestore => ((RestoreResult)_result).SnapshotRestore;
 
         public RestoreProgress(RestoreResult result) : base(result)
         {
+            
         }
 
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
-            json[nameof(RestoredFilesInSnapshotCount)] = RestoredFilesInSnapshotCount;
+            json[nameof(SnapshotRestore)] = SnapshotRestore.ToJson();
             return json;
         }
     }

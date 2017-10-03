@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
@@ -66,8 +67,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                     DataDirectory = _restoreConfiguration.DataDirectory
                 };
 
-                onProgress.Invoke(result.Progress);
-
                 Stopwatch sw = null;
                 RestoreSettings restoreSettings = null;
                 var firstFile = _filesToRestore[0];
@@ -75,6 +74,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                 var snapshotRestore = false;
                 if (extension == Constants.Documents.PeriodicBackup.SnapshotExtension)
                 {
+                    onProgress.Invoke(result.Progress);
+                    
                     snapshotRestore = true;
                     sw = Stopwatch.StartNew();
                     // restore the snapshot
@@ -85,6 +86,13 @@ namespace Raven.Server.Documents.PeriodicBackup
                     
                     // removing the snapshot from the list of files
                     _filesToRestore.RemoveAt(0);
+                } 
+                else
+                {
+                    result.SnapshotRestore.Skipped = true;
+                    result.SnapshotRestore.Processed = true;
+                    
+                    onProgress.Invoke(result.Progress);
                 }
 
                 var databaseName = _restoreConfiguration.DatabaseName;
@@ -137,13 +145,15 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                     if (snapshotRestore)
                     {
+                        result.SnapshotRestore.Processed = true;
+                        
                         var summary = database.GetDatabaseSummary();
                         result.Documents.ReadCount += summary.DocumentsCount;
                         result.Documents.Attachments.ReadCount += summary.AttachmentsCount;
                         result.RevisionDocuments.ReadCount += summary.RevisionsCount;
                         result.Indexes.ReadCount += summary.IndexesCount;
                         result.Identities.ReadCount += summary.IdentitiesCount;
-                        result.AddInfo($"Successfully restored {result.RestoredFilesInSnapshotCount} " +
+                        result.AddInfo($"Successfully restored {result.SnapshotRestore.ReadCount} " +
                                        $"files during snapshot restore, took: {sw.ElapsedMilliseconds:#,#;;0}ms");
                         onProgress.Invoke(result.Progress);
                     }
@@ -444,7 +454,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 onProgress: message =>
                 {
                     restoreResult.AddInfo(message);
-                    restoreResult.RestoredFilesInSnapshotCount++;
+                    restoreResult.SnapshotRestore.ReadCount++;
                     onProgress.Invoke(restoreResult.Progress);
                 },
                 cancellationToken: _operationCancelToken.Token);
