@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.CompilerServices;
 using Sparrow.Collections;
 using Sparrow.Json.Parsing;
@@ -37,6 +38,19 @@ namespace Sparrow.Json
 
         public byte* DataStart => _dataStart;
         public int Length => _count;
+
+        public override string ToString()
+        {
+            using (var memoryStream = new MemoryStream())
+            using(var tw = new BlittableJsonTextWriter(_context,memoryStream))
+            {
+                tw.WriteValue(BlittableJsonToken.StartArray,this);
+                tw.Flush();
+                memoryStream.Position = 0;
+
+                return new StreamReader(memoryStream).ReadToEnd();
+            }
+        }
 
         public BlittableJsonToken GetArrayType()
         {

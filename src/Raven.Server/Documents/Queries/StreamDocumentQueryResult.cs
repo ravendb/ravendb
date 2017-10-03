@@ -36,11 +36,8 @@ namespace Raven.Server.Documents.Queries
             _anyExceptions = true;
 
             _writer.EndResults();
-            if (_writer.SupportError)
-            {
-                _writer.WriteError(e);
-            }            
-
+            _writer.WriteError(e);
+    
             throw e;
         }
 
