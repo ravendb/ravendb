@@ -736,6 +736,24 @@ select ShipTo.City|`, northwindProvider(), (errors, wordlist, prefix, lastKeywor
         });
     });
 
+    it('from Collection select multi nested field | without sapce should list fields with the ShipTo.Nested.NestedObject. field prefix', done => {
+        rqlTestUtils.autoComplete(`from Orders 
+select ShipTo.Nested.NestedObject.|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, [
+                {caption: "C2", value: "C2 ", score: 103, meta: "string field"},
+                {caption: "P2", value: "P2 ", score: 102, meta: "string field"},
+                {caption: "R2", value: "R2 ", score: 101, meta: "string field"}
+            ]);
+
+            assert.equal(lastKeyword.keyword, "select");
+            assert.equal(lastKeyword.dividersCount, 1);
+            assert.deepEqual(lastKeyword.fieldPrefix, ["ShipTo", "Nested", "NestedObject"]);
+
+            done();
+        });
+    });
+
     it('from Collection select nested field | after should list as keyword and next keywords', done => {
         rqlTestUtils.autoComplete(`from Orders 
 select ShipTo.City |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
