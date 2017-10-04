@@ -259,13 +259,15 @@ class createDatabase extends dialogViewModelBase {
         }
     }
 
-    private createDatabaseInternal(): JQueryPromise<Raven.Client.ServerWide.Operations.DatabasePutResult> {
+    private createDatabaseInternal(shouldActive: boolean = true): JQueryPromise<Raven.Client.ServerWide.Operations.DatabasePutResult> {
         this.spinners.create(true);
 
         const databaseDocument = this.databaseModel.toDto();
         const replicationFactor = this.databaseModel.replication.replicationFactor();
 
-        databasesManager.default.activateAfterCreation(databaseDocument.DatabaseName);
+        if (shouldActive) {
+            databasesManager.default.activateAfterCreation(databaseDocument.DatabaseName);    
+        }
 
         const encryptionTask = $.Deferred<void>();
 
@@ -291,18 +293,16 @@ class createDatabase extends dialogViewModelBase {
     }
 
     private createDatabaseFromLegacyDatafiles(): JQueryPromise<operationIdDto> {
-        this.spinners.create(true);
-        const restoreDocument = this.databaseModel.toOfflineMigrationDto();
-        
-        return new migrateLegacyDatabaseFromDatafilesCommand(restoreDocument)
-            .execute()
-            .done((operationIdDto: operationIdDto) => {
-                const operationId = operationIdDto.OperationId;
-                notificationCenter.instance.openDetailsForOperationById(null, operationId);
-            })
-            .always(() => {
-                dialog.close(this);
-                this.spinners.create(false);
+        return this.createDatabaseInternal(false)
+            .then(() => {
+                const restoreDocument = this.databaseModel.toOfflineMigrationDto();
+
+                return new migrateLegacyDatabaseFromDatafilesCommand(restoreDocument)
+                    .execute()
+                    .done((operationIdDto: operationIdDto) => {
+                        const operationId = operationIdDto.OperationId;
+                        notificationCenter.instance.openDetailsForOperationById(null, operationId);
+                    });
             });
     }
     

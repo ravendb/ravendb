@@ -417,7 +417,7 @@ class databaseCreationModel {
             IsRavenFs: migration.sourceType() === "ravenfs",
             IsCompressed: migration.isCompressed(),
             JournalsPath: migration.journalsPath(),
-            DatabaseName: this.name(), //TODO: check this!
+            DatabaseName: this.name(),
             EncryptionKey: migration.isEncrypted() ? migration.encryptionKey() : undefined,
             EncryptionAlgorithm: migration.isEncrypted() ? migration.encryptionAlgorithm() : undefined,
             EncryptionKeyBitsSize: migration.isEncrypted() ? migration.encryptionKeyBitsSize() : undefined
