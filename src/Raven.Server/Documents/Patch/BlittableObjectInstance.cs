@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Jint;
 using Jint.Native;
 using Jint.Native.Json;
@@ -12,6 +13,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Patch
 {
+    [DebuggerDisplay("Blittable JS object")]
     public class BlittableObjectInstance : ObjectInstance
     {
         public bool Changed;
