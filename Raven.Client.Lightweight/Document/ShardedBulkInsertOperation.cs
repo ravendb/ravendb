@@ -56,7 +56,7 @@ namespace Raven.Client.Document
             BulkInsertOperation bulkInsertOperation;
             if (Bulks.TryGetValue(shardId, out bulkInsertOperation) == false)
             {
-                var actualDatabaseName = database ?? ((DocumentStore)shard).DefaultDatabase ?? MultiDatabase.GetDatabaseName(shard.Url);
+                var actualDatabaseName = database ?? ((dynamic)shard).DefaultDatabase ?? MultiDatabase.GetDatabaseName(shard.Url);
                 bulkInsertOperation = new BulkInsertOperation(actualDatabaseName, shard, shard.Listeners, options, shard.Changes());
                 Bulks.Add(shardId, bulkInsertOperation);
             }
