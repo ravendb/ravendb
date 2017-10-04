@@ -7,7 +7,7 @@
                     <i class="icon-new-database"></i>
                     <span>New database 
                         <span data-bind="visible: databaseModel.creationMode === 'restore'">from backup</span>
-                        <span data-bind="visible: databaseModel.creationMode === 'legacyMigration'"> from legacy (v3.X) data files</span>
+                        <span data-bind="visible: databaseModel.creationMode === 'legacyMigration'"> from legacy (v3.x) data files</span>
                     </span>
                 </h4>
             </div>
@@ -72,27 +72,19 @@
 
 <script type="text/html" id="create-db-legacy-migration">
     <div data-bind="with: databaseModel.legacyMigration">
-        <h3>Data files source configuration</h3>
+        <h3>Data source configuration</h3>
 
         <div class="bg-info margin-bottom">
             <div class="padding">
                 <i class="icon-info"></i>
-                This database creation option is designed for importing database from data files saved in RavenDB v3.X format (legacy).
-
-                <br />
-                <br />
-                Prerequisite:
-                <ul>
-                    <li><code>StorageExporter</code> - can be found in <code>tools</code> package (for version v3.X) on <a target="_blank" href="http://ravendb.net/downloads">raven.net</a> website</li>
-                </ul>
+                This database creation option is designed for importing database from data files from RavenDB v3.x.
             </div>
         </div>
 
         <div class="form-group row" data-bind="validationElement: sourceType">
             <div class="col-md-4">
-                <label class="control-label">
+                <label class="control-label resource-type-label">
                     Resource type
-
                     <small><i class="icon-info text-info"></i></small>
                 </label>
             </div>
@@ -104,7 +96,10 @@
 
         <div class="form-group row" data-bind="validationElement: dataDirectory">
             <div class="col-md-4">
-                <label class="control-label">Data directory</label>
+                <label class="control-label data-directory-label">
+                    Data directory
+                    <small><i class="icon-info text-info"></i></small>
+                </label>
             </div>
             <div class="col-md-8">
                 <input type="text" class="form-control" placeholder="Resource data directory (absolute path)" data-bind="textInput: dataDirectory" />
@@ -216,7 +211,10 @@
 
         <div class="form-group row" data-bind="validationElement: dataExporterFullPath">
             <div class="col-md-4">
-                <label class="control-label">Data Exporter</label>
+                <label class="control-label data-exporter-label">
+                    Data Exporter
+                    <small><i class="icon-info text-info"></i></small>
+                </label>
             </div>
             <div class="col-md-8">
                 <input type="text" class="form-control" data-bind="textInput: dataExporterFullPath" placeholder="Raven.StorageExporter.exe location (absolute path)" />

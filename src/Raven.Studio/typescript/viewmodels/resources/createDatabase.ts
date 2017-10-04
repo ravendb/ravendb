@@ -11,6 +11,7 @@ import clusterNode = require("models/database/cluster/clusterNode");
 import databaseCreationModel = require("models/resources/creation/databaseCreationModel");
 import eventsCollector = require("common/eventsCollector");
 import setupEncryptionKey = require("viewmodels/resources/setupEncryptionKey");
+import popoverUtils = require("common/popoverUtils");
 import notificationCenter = require("common/notifications/notificationCenter");
 
 class createDatabase extends dialogViewModelBase {
@@ -97,7 +98,20 @@ class createDatabase extends dialogViewModelBase {
         this.encryptionSection.syncQrCode();
         this.setupDisableReasons("#savingKeyData");
         
-        //TODO: add info about ravenfs import to tooltip 
+        popoverUtils.longWithHover($(".resource-type-label small"),
+            {
+                content: 'RavenFS files will be saved as documents with attachments in <strong>@files</strong> collection.'
+            });
+
+        popoverUtils.longWithHover($(".data-exporter-label small"),
+            {
+                content: '<strong>Raven.StorageExporter.exe</strong> can be found in <strong>tools</strong><br /> package (for version v3.X) on <a target="_blank" href="http://ravendb.net/downloads">ravendb.net</a> website'
+            });
+        
+        popoverUtils.longWithHover($(".data-directory-label small"), 
+            {
+                content: 'Absolute path to data directory. <br/> This folder should contain file <strong>Data.jfm</strong> or <strong>Raven.voron</strong>.'
+            });
 
         this.databaseModel.encryption.key.subscribe(() => {
             this.encryptionSection.syncQrCode();
