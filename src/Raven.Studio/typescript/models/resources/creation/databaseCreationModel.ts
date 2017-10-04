@@ -10,7 +10,7 @@ class databaseCreationModel {
     
     readonly configurationSections: Array<availableConfigurationSection> = [
         {
-            name: "Migration data source",
+            name: "Data source",
             id: "legacyMigration",
             alwaysEnabled: true,
             enabled: ko.observable<boolean>(true)
