@@ -181,6 +181,8 @@ namespace Raven.Server.Documents.Patch
         {
             if (Deletes == null)
                 Deletes = new HashSet<string>();
+
+            MarkChanged();
             Deletes.Add(propertyName);
             return OwnValues.Remove(propertyName);
         }
