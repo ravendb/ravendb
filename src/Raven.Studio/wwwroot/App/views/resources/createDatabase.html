@@ -5,7 +5,10 @@
                 <button type="button" data-bind="click: close" class="close" data-dismiss="modal" aria-label="Close"><i aria-hidden="true" class="icon-cancel"></i></button>
                 <h4 class="modal-title" id="newDatabaseLabel">
                     <i class="icon-new-database"></i>
-                    <span>New database <span data-bind="visible: databaseModel.isFromBackup">from backup</span></span>
+                    <span>New database 
+                        <span data-bind="visible: databaseModel.creationMode === 'restore'">from backup</span>
+                        <span data-bind="visible: databaseModel.creationMode === 'legacyMigration'"> from legacy (v3.X) data files</span>
+                    </span>
                 </h4>
             </div>
             <div class="modal-body">
@@ -17,20 +20,20 @@
                         </div>
                         
                         <div class="settings-group" data-bind="foreach: getAvailableSections()">
-                            <div class="checkbox settings-item nocheck" data-bind="css: { 'active': $root.currentAdvancedSection() === name }, visible: alwaysEnabled">
-                                <label data-bind="text: name, click: _.partial($root.showAdvancedConfigurationFor, name)">
+                            <div class="checkbox settings-item nocheck" data-bind="css: { 'active': $root.currentAdvancedSection() === id }, visible: alwaysEnabled">
+                                <label data-bind="text: name, click: _.partial($root.showAdvancedConfigurationFor, id)">
                                 </label>
                                 <button type="button" class="btn pull-right btn-toggle"
-                                        data-bind="click: _.partial($root.showAdvancedConfigurationFor, name), css: { 'btn-danger': enabled() && validationGroup && !validationGroup.isValid() }">
+                                        data-bind="click: _.partial($root.showAdvancedConfigurationFor, id), css: { 'btn-danger': enabled() && validationGroup && !validationGroup.isValid() }">
                                     <i data-bind="attr: { 'class' : validationGroup && !validationGroup.isValid() ? 'icon-danger' : 'icon-settings' }"></i>
                                 </button>
                             </div>
-                            <div class="toggle settings-item" data-bind="css: { 'active': $root.currentAdvancedSection() === name }, visible: !alwaysEnabled">
+                            <div class="toggle settings-item" data-bind="css: { 'active': $root.currentAdvancedSection() === id }, visible: !alwaysEnabled">
                                 <input class="styled" type="checkbox" data-bind="checked: enabled, attr: { id: 'section_' + $index() }">
                                 <label data-bind="text: name, attr: { 'for': 'section_' + $index() }">
                                 </label>
                                 <button type="button" class="btn pull-right btn-toggle"
-                                        data-bind="click: _.partial($root.showAdvancedConfigurationFor, name), css: { 'btn-danger': enabled() && validationGroup && !validationGroup.isValid() }">
+                                        data-bind="click: _.partial($root.showAdvancedConfigurationFor, id), css: { 'btn-danger': enabled() && validationGroup && !validationGroup.isValid() }">
                                     <i data-bind="attr: { 'class' : enabled() && validationGroup && !validationGroup.isValid() ? 'icon-danger' : 'icon-settings' }"></i>
                                 </button>
                             </div>
@@ -40,6 +43,10 @@
 
                     </div>
                     <div class="modal-settings-panel-slideout">
+                        <div>
+                            <div class="legacyMigration" data-bind="template: { name: 'create-db-legacy-migration' }, visible: advancedVisibility.legacyMigration()">
+                            </div>
+                        </div>
                         <div>
                             <div class="restore" data-bind="template: { name: 'create-db-restore' }, visible: advancedVisibility.restore()">
                             </div>
@@ -62,6 +69,171 @@
         </div>
     </form>
 </div>
+
+<script type="text/html" id="create-db-legacy-migration">
+    <div data-bind="with: databaseModel.legacyMigration">
+        <h3>Data files source configuration</h3>
+
+        <div class="bg-info margin-bottom">
+            <div class="padding">
+                <i class="icon-info"></i>
+                This database creation option is designed for importing database from data files saved in RavenDB v3.X format (legacy).
+
+                <br />
+                <br />
+                Prerequisite:
+                <ul>
+                    <li><code>StorageExporter</code> - can be found in <code>tools</code> package (for version v3.X) on <a target="_blank" href="http://ravendb.net/downloads">raven.net</a> website</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="form-group row" data-bind="validationElement: sourceType">
+            <div class="col-md-4">
+                <label class="control-label">
+                    Resource type
+
+                    <small><i class="icon-info text-info"></i></small>
+                </label>
+            </div>
+            <div class="col-md-8">
+                <button class="btn" data-bind="click: _.partial(sourceType, 'ravendb'), css: { active: sourceType() === 'ravendb' }">RavenDB</button>
+                <button class="btn" data-bind="click: _.partial(sourceType, 'ravenfs'), css: { active: sourceType() === 'ravenfs' }">RavenFS</button>
+            </div>
+        </div>
+
+        <div class="form-group row" data-bind="validationElement: dataDirectory">
+            <div class="col-md-4">
+                <label class="control-label">Data directory</label>
+            </div>
+            <div class="col-md-8">
+                <input type="text" class="form-control" placeholder="Resource data directory (absolute path)" data-bind="textInput: dataDirectory" />
+            </div>
+        </div>
+
+        <div class="form-group row">
+            <div class="col-md-12">
+                <div class="toggle">
+                    <input id="advancedMigrationConfig" type="checkbox" data-bind="checked: showAdvanced">
+                    <label for="advancedMigrationConfig">Advanced source properties</label>
+                </div>
+            </div>
+        </div>
+
+        <div data-bind="collapse: showAdvanced">
+            <div class="form-group row">
+                <div class="col-md-4">
+                    <label class="control-label">Journals directory</label>
+                </div>
+                <div class="col-md-8">
+                    <input type="text" class="form-control" placeholder="Resource journals location (optional)" data-bind="textInput: journalsPath" />
+                </div>
+            </div>
+
+            <div class="form-group row">
+                <div class="col-md-4">
+                    <label class="control-label">Batch size</label>
+                </div>
+                <div class="col-md-8">
+                    <input type="number" class="form-control" placeholder="Batch size (optional)" data-bind="numericInput: batchSize" />
+                </div>
+            </div>
+
+            <h3>Source bundles</h3>
+
+            <div class="form-group row">
+                <div class="col-md-12">
+                    <div class="toggle">
+                        <input id="isCompressed" type="checkbox" data-bind="checked: isCompressed">
+                        <label for="isCompressed">Compression</label>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="form-group row">
+                <div class="col-md-12">
+                    <div class="toggle">
+                        <input id="isEncrypted" type="checkbox" data-bind="checked: isEncrypted">
+                        <label for="isEncrypted">Encryption</label>
+                    </div>
+
+                </div>
+            </div>
+
+            <div data-bind="collapse: isEncrypted">
+                <div class="form-group row" data-bind="validationElement: encryptionKey">
+                    <div class="col-md-4">
+                        <label class="control-label">Encryption key</label>
+                    </div>
+                    <div class="col-md-8">
+                        <input type="text" class="form-control" placeholder="Encryption key" data-bind="textInput: encryptionKey" />
+                    </div>
+                </div>
+
+                <div class="form-group row" data-bind="validationElement: encryptionAlgorithm">
+                    <div class="col-md-4">
+                        <label class="control-label">Encryption algorithm</label>
+                    </div>
+                    <div class="col-md-8">
+                        <div>
+                            <div class="dropdown btn-block">
+                                <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
+                                    <span data-bind="text: encryptionAlgorithm() || 'Select encryption algorithm'"></span>
+                                    <span class="caret"></span>
+                                </button>
+                                <ul class="dropdown-menu" data-bind="foreach: $root.constructor.legacyEncryptionAlgorithms">
+                                    <li><a href="#" data-bind="text: $data, click: _.partial($parent.encryptionAlgorithm, $data)"></a></li>
+                                </ul>
+                            </div>
+                            <span class="help-block" data-bind="validationMessage: encryptionAlgorithm"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group row" data-bind="validationElement: encryptionKeyBitsSize">
+                    <div class="col-md-4">
+                        <label class="control-label">Encryption key size</label>
+                    </div>
+                    <div class="col-md-8">
+                        <div>
+                            <div class="dropdown btn-block">
+                                <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
+                                    <span data-bind="text: encryptionKeyBitsSize() || 'Select encryption key size'"></span>
+                                    <span class="caret"></span>
+                                </button>
+                                <ul class="dropdown-menu" data-bind="foreach: $root.constructor.legacyKeySizes">
+                                    <li><a href="#" data-bind="text: $data, click: _.partial($parent.encryptionKeyBitsSize, $data)"></a></li>
+                                </ul>
+                            </div>
+                            <span class="help-block" data-bind="validationMessage: encryptionKeyBitsSize"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <hr />
+        </div>
+
+        <div class="form-group row" data-bind="validationElement: dataExporterFullPath">
+            <div class="col-md-4">
+                <label class="control-label">Data Exporter</label>
+            </div>
+            <div class="col-md-8">
+                <input type="text" class="form-control" data-bind="textInput: dataExporterFullPath" placeholder="Raven.StorageExporter.exe location (absolute path)" />
+            </div>
+        </div>
+
+        <div class="form-group row" data-bind="validationElement: outputFilePath">
+            <div class="col-md-4">
+                <label class="control-label">Temporary file location</label>
+            </div>
+            <div class="col-md-8">
+                TODO: autogenerate? 
+                <input type="text" class="form-control" placeholder="Temporary smuggler file (absolute path)" data-bind="textInput: outputFilePath" />
+            </div>
+        </div>
+    </div>
+</script>
 
 <script type="text/html" id="create-db-restore">
     <div data-bind="with: databaseModel.restore">
@@ -119,13 +291,13 @@
     <h3>Replication configuration</h3>
     <div data-bind="with: databaseModel.replication">
         <div class="form-group" style="min-height: 62px">
-            <div class="input-group" data-bind="css: { 'has-warning': (!$root.databaseModel.isFromBackup && $root.showReplicationFactorWarning()) }, validationElement: replicationFactor">
+            <div class="input-group" data-bind="css: { 'has-warning': (!$root.databaseModel.isFromBackupOrFromOfflineMigration && $root.showReplicationFactorWarning()) }, validationElement: replicationFactor">
                 <span class="input-group-addon">Replication factor</span>
-                <input type="number" min="0" data-bind="numericInput: replicationFactor, disable: $root.databaseModel.isFromBackup || $root.disableReplicationFactorInput" class="form-control">
-                <div class="help-block" data-bind="visible: !$root.databaseModel.isFromBackup && $root.showReplicationFactorWarning">
+                <input type="number" min="0" data-bind="numericInput: replicationFactor, disable: $root.databaseModel.isFromBackupOrFromOfflineMigration || $root.disableReplicationFactorInput" class="form-control">
+                <div class="help-block" data-bind="visible: !$root.databaseModel.isFromBackupOrFromOfflineMigration && $root.showReplicationFactorWarning">
                     With replication factor set to 1 data won't be replicated.
                 </div>
-                <div class="help-block" data-bind="visible: $root.databaseModel.isFromBackup">
+                <div class="help-block" data-bind="visible: $root.databaseModel.isFromBackupOrFromOfflineMigration">
                     The backup will be restored only to the current node <br/>
                     After restore this database can be added to other nodes using the 'Manage group' button
                 </div>

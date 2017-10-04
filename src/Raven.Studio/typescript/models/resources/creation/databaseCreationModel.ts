@@ -3,30 +3,39 @@
 import configuration = require("configuration");
 import clusterNode = require("models/database/cluster/clusterNode");
 import getRestorePointsCommand = require("commands/resources/getRestorePointsCommand");
-import viewHelpers = require("common/helpers/view/viewHelpers");
 import generalUtils = require("common/generalUtils");
 import recentError = require("common/notifications/models/recentError");
 
 class databaseCreationModel {
-
+    
     readonly configurationSections: Array<availableConfigurationSection> = [
         {
+            name: "Migration data source",
+            id: "legacyMigration",
+            alwaysEnabled: true,
+            enabled: ko.observable<boolean>(true)
+        },
+        {
             name: "Backup source",
+            id: "restore",
             alwaysEnabled: true,
             enabled: ko.observable<boolean>(true)
         },
         {
             name: "Encryption",
+            id: "encryption",
             alwaysEnabled: false,
             enabled: ko.observable<boolean>(false)
         },
         {
             name: "Replication",
+            id: "replication",
             alwaysEnabled: true,
             enabled: ko.observable<boolean>(true)
         },
         {
             name: "Path",
+            id: "path",
             alwaysEnabled: true,
             enabled: ko.observable<boolean>(true)
         }
@@ -38,7 +47,8 @@ class databaseCreationModel {
 
     name = ko.observable<string>("");
 
-    isFromBackup: boolean = false;
+    creationMode: dbCreationMode = null;
+    isFromBackupOrFromOfflineMigration: boolean;
 
     restore = {
         backupDirectory: ko.observable<string>(),
@@ -54,6 +64,35 @@ class databaseCreationModel {
     restoreValidationGroup = ko.validatedObservable({ 
         selectedRestorePoint: this.restore.selectedRestorePoint,
         backupDirectory: this.restore.backupDirectory
+    });
+    
+    legacyMigration = {
+        showAdvanced: ko.observable<boolean>(false),
+        
+        isEncrypted: ko.observable<boolean>(false),
+        isCompressed: ko.observable<boolean>(false),
+
+        dataDirectory: ko.observable<string>(),
+        outputFilePath: ko.observable<string>(),
+        dataExporterFullPath: ko.observable<string>(),
+        
+        batchSize: ko.observable<number>(),
+        sourceType: ko.observable<legacySourceType>(),
+        journalsPath: ko.observable<string>(),
+        encryptionKey: ko.observable<string>(),
+        encryptionAlgorithm: ko.observable<string>(),
+        encryptionKeyBitsSize: ko.observable<number>()
+    };
+    
+    legacyMigrationValidationGroup = ko.validatedObservable({
+        dataDirectory: this.legacyMigration.dataDirectory,
+        outputFilePath: this.legacyMigration.outputFilePath,
+        dataExporterFullPath: this.legacyMigration.dataExporterFullPath,
+        sourceType: this.legacyMigration.sourceType,
+        journalsPath: this.legacyMigration.journalsPath,
+        encryptionKey: this.legacyMigration.encryptionKey,
+        encryptionAlgorithm: this.legacyMigration.encryptionAlgorithm,
+        encryptionKeyBitsSize: this.legacyMigration.encryptionKeyBitsSize
     });
     
     replication = {
@@ -90,17 +129,23 @@ class databaseCreationModel {
         name: this.name,
     });
 
-    constructor() {
-        const restoreConfig = this.configurationSections.find(x => x.name === "Backup source");
+    constructor(mode: dbCreationMode) {
+        this.creationMode = mode;
+        this.isFromBackupOrFromOfflineMigration = mode !== "newDatabase";
+        
+        const legacyMigrationConfig = this.configurationSections.find(x => x.id === "legacyMigration");
+        legacyMigrationConfig.validationGroup = this.legacyMigrationValidationGroup;
+        
+        const restoreConfig = this.configurationSections.find(x => x.id === "restore");
         restoreConfig.validationGroup = this.restoreValidationGroup;
         
         const encryptionConfig = this.getEncryptionConfigSection();
         encryptionConfig.validationGroup = this.encryptionValidationGroup;
 
-        const replicationConfig = this.configurationSections.find(x => x.name === "Replication");
+        const replicationConfig = this.configurationSections.find(x => x.id === "replication");
         replicationConfig.validationGroup = this.replicationValidationGroup;
 
-        const pathConfig = this.configurationSections.find(x => x.name === "Path");
+        const pathConfig = this.configurationSections.find(x => x.id === "path");
         pathConfig.validationGroup = this.pathValidationGroup;
 
         encryptionConfig.enabled.subscribe(() => {
@@ -124,7 +169,7 @@ class databaseCreationModel {
                 return;
             }
 
-            if (!this.isFromBackup)
+            if (this.creationMode !== "restore")
                 return;
 
             if (hasFocus)
@@ -166,7 +211,7 @@ class databaseCreationModel {
     }
 
     getEncryptionConfigSection() {
-        return this.configurationSections.find(x => x.name === "Encryption");
+        return this.configurationSections.find(x => x.id === "encryption");
     }
 
     protected setupPathValidation(observable: KnockoutObservable<string>, name: string) {
@@ -194,9 +239,27 @@ class databaseCreationModel {
     }
 
     setupValidation(databaseDoesntExist: (name: string) => boolean, maxReplicationFactor: number) {
-
         this.setupPathValidation(this.path.dataPath, "Data");
 
+        this.name.extend({
+            required: true,
+            validDatabaseName: true,
+
+            validation: [
+                {
+                    validator: () => databaseDoesntExist,
+                    message: "Database already exists"
+                }
+            ]
+        });
+        
+        this.setupReplicationValidation(maxReplicationFactor);
+        this.setupRestoreValidation();
+        this.setupEncryptionValidation();
+        this.setupLegacyMigrationValidation();
+    }
+    
+    private setupReplicationValidation(maxReplicationFactor: number) {
         this.replication.nodes.extend({
             validation: [{
                 validator: (val: Array<clusterNode>) => !this.replication.manualMode() || this.replication.replicationFactor() > 0,
@@ -218,27 +281,17 @@ class databaseCreationModel {
                 }
             ]
         });
-
-        this.name.extend({
-            required: true,
-            validDatabaseName: true,
-
-            validation: [
-                {
-                    validator: databaseDoesntExist,
-                    message: "Database already exists"
-                }
-            ]
-        });
-
+    }
+    
+    private setupRestoreValidation() {
         this.restore.backupDirectory.extend({
             required: {
-                onlyIf: () => this.isFromBackup && this.restore.restorePoints().length === 0
+                onlyIf: () => this.creationMode === "restore" && this.restore.restorePoints().length === 0
             },
             validation: [
                 {
                     validator: (_: string) => {
-                        return this.isFromBackup && !this.restore.backupDirectoryError();
+                        return this.creationMode === "restore" && !this.restore.backupDirectoryError();
                     },
                     message: "Couldn't fetch restore points, {0}",
                     params: this.restore.backupDirectoryError
@@ -248,10 +301,12 @@ class databaseCreationModel {
 
         this.restore.selectedRestorePoint.extend({
             required: {
-                onlyIf: () => this.isFromBackup
+                onlyIf: () => this.creationMode === "restore"
             }
         });
-
+    }
+    
+    private setupEncryptionValidation() {
         this.encryption.key.extend({
             required: true,
             base64: true //TODO: any other validaton ?
@@ -264,6 +319,44 @@ class databaseCreationModel {
                     message: "Please confirm that you have saved the encryption key"
                 }
             ]
+        });
+    }
+    
+    private setupLegacyMigrationValidation() {
+        const migration = this.legacyMigration;
+
+        migration.dataExporterFullPath.extend({
+            required: true
+        });
+
+        migration.dataDirectory.extend({
+            required: true
+        });
+
+        migration.outputFilePath.extend({
+            required: true
+        });
+
+        migration.sourceType.extend({
+            required: true
+        });
+
+        migration.encryptionKey.extend({
+            required: {
+                onlyIf: () => migration.isEncrypted()
+            }
+        });
+
+        migration.encryptionAlgorithm.extend({
+            required: {
+                onlyIf: () => migration.isEncrypted()
+            }
+        });
+
+        migration.encryptionKeyBitsSize.extend({
+            required: {
+                onlyIf: () => migration.isEncrypted()
+            }
         });
     }
 
@@ -311,6 +404,24 @@ class databaseCreationModel {
             DataDirectory: dataDirectory,
             EncryptionKey: this.getEncryptionConfigSection().enabled() ? this.encryption.key() : null
         } as Raven.Client.ServerWide.PeriodicBackup.RestoreBackupConfiguration;
+    }
+    
+    
+    toOfflineMigrationDto(): Raven.Server.Smuggler.Migration.OfflineMigrationConfiguration {
+        const migration = this.legacyMigration;
+        return {
+            DataDirectory: migration.dataDirectory(),
+            OutputFilePath: migration.outputFilePath(),
+            DataExporterFullPath: migration.dataExporterFullPath(),
+            BatchSize: migration.batchSize() || null, 
+            IsRavenFs: migration.sourceType() === "ravenfs",
+            IsCompressed: migration.isCompressed(),
+            JournalsPath: migration.journalsPath(),
+            DatabaseName: this.name(), //TODO: check this!
+            EncryptionKey: migration.isEncrypted() ? migration.encryptionKey() : undefined,
+            EncryptionAlgorithm: migration.isEncrypted() ? migration.encryptionAlgorithm() : undefined,
+            EncryptionKeyBitsSize: migration.isEncrypted() ? migration.encryptionKeyBitsSize() : undefined
+        } as Raven.Server.Smuggler.Migration.OfflineMigrationConfiguration;
     }
 }
 

@@ -464,8 +464,18 @@ class databases extends viewModelBase {
             });
     }
 
-    newDatabase(isFromBackup: boolean) {
-        const createDbView = new createDatabase(isFromBackup);
+    newDatabase() {
+        const createDbView = new createDatabase("newDatabase");
+        app.showBootstrapDialog(createDbView);
+    }
+    
+    newDatabaseFromBackup() {
+        const createDbView = new createDatabase("restore");
+        app.showBootstrapDialog(createDbView);
+    }
+    
+    newDatabaseFromLegacyDatafiles() {
+        const createDbView = new createDatabase("legacyMigration");
         app.showBootstrapDialog(createDbView);
     }
 

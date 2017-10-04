@@ -251,6 +251,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(RestorePoints));
             scripter.AddType(typeof(RestoreProgress));
             scripter.AddType(typeof(NextBackupOccurrence));
+            scripter.AddType(typeof(OfflineMigrationConfiguration));
 
             // ongoing tasks - subscription
             scripter.AddType(typeof(OngoingTaskSubscription));
