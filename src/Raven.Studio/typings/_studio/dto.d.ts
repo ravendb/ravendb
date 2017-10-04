@@ -141,8 +141,11 @@ interface databaseCreatedEventArgs {
     name: string;
 }
 
+type availableConfigurationSectionId =  "restore" | "legacyMigration" | "encryption" | "replication" | "path";
+
 interface availableConfigurationSection {
-    name: "Backup source" | 'Encryption' | "Replication" | "Path";
+    name: string;
+    id: availableConfigurationSectionId;
     alwaysEnabled: boolean;
     enabled: KnockoutObservable<boolean>;
     validationGroup?: KnockoutValidationGroup;
@@ -350,4 +353,8 @@ type rqlQueryType = "Select" | "Update";
 
 type autoCompleteCompleter = (editor: AceAjax.Editor, session: AceAjax.IEditSession, pos: AceAjax.Position, prefix: string, callback: (errors: any[], wordlist: autoCompleteWordList[]) => void) => void;
 type certificateMode = "generate" | "upload" | "editExisting";
-    
+
+type dbCreationMode = "newDatabase" | "restore" | "legacyMigration";
+
+type legacySourceType = "ravendb" | "ravenfs";
+type legacyEncryptionAlgorithms = "DES" | "RC2" | "Rijndael" | "Triple DES";

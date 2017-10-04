@@ -1340,7 +1340,6 @@ namespace Raven.Server.Web.System
             if(Directory.Exists(dataDir) == false)
                 throw new DirectoryNotFoundException($"Could not find directory {dataDir}");
 
-            //var timeout = GetTimeSpanQueryString("timeout");
             var dataExporter = configuration.DataExporterFullPath;
             var databaseName = configuration.DatabaseName;
             var database = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName, true);
@@ -1356,6 +1355,7 @@ namespace Raven.Server.Web.System
                 timeout = Task.Delay((int)configuration.Timeout.Value.TotalMilliseconds);
             }
             processStartInfo.RedirectStandardOutput = true;
+            processStartInfo.RedirectStandardInput = true;
             var processDone = new AsyncManualResetEvent();
             var process = new Process
             {
@@ -1369,8 +1369,13 @@ namespace Raven.Server.Web.System
             var result = new SmugglerResult();
             var operationId = database.Operations.GetNextOperationId();
             var timer = new Stopwatch();
+            
+            
+            // send new line to avoid issue with read key 
+            process.StandardInput.WriteLine();
 
-            await database.Operations.AddOperation(database, $"Migration of {dataDir} to {databaseName}", Documents.Operations.Operations.OperationType.DatabaseExport,
+            // don't await here - this operation is async - all we return is operation id 
+            ServerStore.Operations.AddOperation(null, $"Migration of {dataDir} to {databaseName}", Documents.Operations.Operations.OperationType.DatabaseExport,
                 onProgress =>
                 {
                     return Task.Run(async () =>
@@ -1380,7 +1385,7 @@ namespace Raven.Server.Web.System
                             timer.Start();
                             while (processDone.IsSet == false)
                             {
-                                if(await ReadLineOrTimeout(process, timeout, configuration, progress) == false)
+                                if (await ReadLineOrTimeout(process, timeout, configuration, progress) == false)
                                 {
                                     //renewing the timeout so not to spam timeouts once the timeout is reached
                                     timeout = Task.Delay(configuration.Timeout.Value);
@@ -1414,11 +1419,6 @@ namespace Raven.Server.Web.System
                                 var smuggler = new DatabaseSmuggler(database, source, destination, database.Time, result: result, onProgress: onProgress);
 
                                 smuggler.Execute();
-                                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                                {
-                                    var json = result.ToJson();
-                                    context.Write(writer, json);
-                                }
                             }
                         }
                         catch (Exception e)
@@ -1429,6 +1429,12 @@ namespace Raven.Server.Web.System
                         return (IOperationResult)result;
                     });
                 }, operationId, token);
+            
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteOperationId(context, operationId);
+            }
         }
 
         private static async Task<bool> ReadLineOrTimeout(Process process, Task timeout, OfflineMigrationConfiguration configuration, IndeterminateProgress progress)

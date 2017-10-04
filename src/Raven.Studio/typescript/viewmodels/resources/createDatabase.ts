@@ -4,6 +4,7 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import databasesManager = require("common/shell/databasesManager");
 import createDatabaseCommand = require("commands/resources/createDatabaseCommand");
 import restoreDatabaseFromBackupCommand = require("commands/resources/restoreDatabaseFromBackupCommand");
+import migrateLegacyDatabaseFromDatafilesCommand = require("commands/resources/migrateLegacyDatabaseFromDatafilesCommand");
 import getClusterTopologyCommand = require("commands/database/cluster/getClusterTopologyCommand");
 import clusterTopology = require("models/database/cluster/clusterTopology");
 import clusterNode = require("models/database/cluster/clusterNode");
@@ -13,19 +14,22 @@ import setupEncryptionKey = require("viewmodels/resources/setupEncryptionKey");
 import notificationCenter = require("common/notifications/notificationCenter");
 
 class createDatabase extends dialogViewModelBase {
+    
+    static readonly legacyKeySizes = [128, 192, 256];
+    static readonly legacyEncryptionAlgorithms = ['DES', 'RC2', 'Rijndael', 'Triple DES'] as legacyEncryptionAlgorithms[];
 
-    static readonly defaultSection = "Replication";
+    static readonly defaultSection = "replication";
 
     spinners = {
         create: ko.observable<boolean>(false)
     };
 
-    databaseModel = new databaseCreationModel();
+    databaseModel: databaseCreationModel;
     clusterNodes = [] as clusterNode[];
     
     encryptionSection: setupEncryptionKey;
 
-    protected currentAdvancedSection = ko.observable<string>();
+    protected currentAdvancedSection = ko.observable<availableConfigurationSectionId>();
 
     showReplicationFactorWarning: KnockoutComputed<boolean>;
     enforceManualNodeSelection: KnockoutComputed<boolean>;
@@ -38,18 +42,29 @@ class createDatabase extends dialogViewModelBase {
     }
 
     advancedVisibility = {
-        restore: ko.pureComputed(() => this.currentAdvancedSection() === "Backup source"),
-        encryption: ko.pureComputed(() => this.currentAdvancedSection() === "Encryption"),
-        replication: ko.pureComputed(() => this.currentAdvancedSection() === "Replication"),
-        path: ko.pureComputed(() => this.currentAdvancedSection() === "Path")
+        legacyMigration: ko.pureComputed(() => this.currentAdvancedSection() === "legacyMigration"), 
+        restore: ko.pureComputed(() => this.currentAdvancedSection() === "restore"),
+        encryption: ko.pureComputed(() => this.currentAdvancedSection() === "encryption"),
+        replication: ko.pureComputed(() => this.currentAdvancedSection() === "replication"),
+        path: ko.pureComputed(() => this.currentAdvancedSection() === "path")
     };
 
-    constructor(isFromBackup: boolean) {
+    constructor(mode: dbCreationMode) {
         super();
-        
-        this.currentAdvancedSection(isFromBackup ? "Backup source" : createDatabase.defaultSection);
 
-        this.databaseModel.isFromBackup = isFromBackup;
+        this.databaseModel = new databaseCreationModel(mode);
+        
+        switch (mode) {
+            case "newDatabase": 
+                this.currentAdvancedSection(createDatabase.defaultSection);
+                break;
+            case "restore":
+                this.currentAdvancedSection("restore");
+                break;
+            case "legacyMigration":
+                this.currentAdvancedSection("legacyMigration");
+                break;
+        }
         
         this.encryptionSection = new setupEncryptionKey(this.databaseModel.encryption.key, this.databaseModel.encryption.confirmation, this.databaseModel.name);
 
@@ -81,6 +96,8 @@ class createDatabase extends dialogViewModelBase {
         super.compositionComplete();
         this.encryptionSection.syncQrCode();
         this.setupDisableReasons("#savingKeyData");
+        
+        //TODO: add info about ravenfs import to tooltip 
 
         this.databaseModel.encryption.key.subscribe(() => {
             this.encryptionSection.syncQrCode();
@@ -88,7 +105,7 @@ class createDatabase extends dialogViewModelBase {
             this.databaseModel.encryption.confirmation(false);
         });
 
-        if (this.databaseModel.isFromBackup) {
+        if (this.databaseModel.isFromBackupOrFromOfflineMigration) {
             this.databaseModel.replication.replicationFactor(1);
         }
     }
@@ -102,7 +119,7 @@ class createDatabase extends dialogViewModelBase {
     protected initObservables() {
 
         this.canUseDynamicOption = ko.pureComputed(() => {
-            const fromBackup = this.databaseModel.isFromBackup;
+            const fromBackup = this.databaseModel.isFromBackupOrFromOfflineMigration;
             const enforceManual = this.enforceManualNodeSelection();
             const replicationFactor = this.databaseModel.replication.replicationFactor();
             return !fromBackup && !enforceManual && replicationFactor !== 1;
@@ -112,8 +129,8 @@ class createDatabase extends dialogViewModelBase {
         this.databaseModel.configurationSections.forEach(section => {
             section.enabled.subscribe(enabled => {
                 if (section.alwaysEnabled || enabled) {
-                    this.currentAdvancedSection(section.name);
-                } else if (!enabled && this.currentAdvancedSection() === section.name) {
+                    this.currentAdvancedSection(section.id);
+                } else if (!enabled && this.currentAdvancedSection() === section.id) {
                     this.currentAdvancedSection(createDatabase.defaultSection);
                 }
             });
@@ -125,7 +142,7 @@ class createDatabase extends dialogViewModelBase {
             }
         });
 
-        const encryption = this.databaseModel.configurationSections.find(x => x.name === "Encryption");
+        const encryption = this.databaseModel.configurationSections.find(x => x.id === "encryption");
         encryption.enabled.subscribe(encryptionEnabled => {
             if (encryptionEnabled) {
                 this.databaseModel.replication.dynamicMode(false);
@@ -139,7 +156,7 @@ class createDatabase extends dialogViewModelBase {
         });
 
         this.enforceManualNodeSelection = ko.pureComputed(() => {
-            const fromBackup = this.databaseModel.isFromBackup;
+            const fromBackup = this.databaseModel.creationMode !== "newDatabase";
             const encryptionEnabled = this.databaseModel.getEncryptionConfigSection().enabled();
 
             return encryptionEnabled || fromBackup;
@@ -163,20 +180,22 @@ class createDatabase extends dialogViewModelBase {
 
     getAvailableSections() {
         let sections = this.databaseModel.configurationSections;
+
+        const restoreSection = sections.find(x => x.id === "restore");
+        const legacyMigrationSection = sections.find(x => x.id === "legacyMigration");
         
-        if (!this.databaseModel.isFromBackup) {
-            const backupSection = sections.find(x => x.name === "Backup source");
-            sections = _.without(sections, backupSection);
+        switch (this.databaseModel.creationMode) {
+            case "newDatabase":
+                return _.without(sections, restoreSection, legacyMigrationSection);
+            case "restore":
+                return _.without(sections, legacyMigrationSection);
+            case "legacyMigration":
+                return _.without(sections, restoreSection);
         }
-        return sections;
     }
 
     createDatabase() {
-        if (this.databaseModel.isFromBackup) {
-            eventsCollector.default.reportEvent("database", "restore");
-        } else {
-            eventsCollector.default.reportEvent("database", "create");
-        }
+        eventsCollector.default.reportEvent("database", this.databaseModel.creationMode);
 
         const globalValid = this.isValid(this.databaseModel.globalValidationGroup);
 
@@ -195,25 +214,32 @@ class createDatabase extends dialogViewModelBase {
             // since we get async notifications during db creation
             this.databaseModel.name.extend({ validatable: false });
             
-            if (this.databaseModel.isFromBackup) {
-                this.createDatabaseFromBackup();
-            } else {
-                this.createDatabaseInternal();
+            switch (this.databaseModel.creationMode) {
+                case "restore":
+                    this.createDatabaseFromBackup();
+                    break;
+                case "newDatabase":
+                    this.createDatabaseInternal();
+                    break;
+                case "legacyMigration":
+                    this.createDatabaseFromLegacyDatafiles();
+                    break;
             }
+            
             return;
         }
 
         const firstInvalidSection = sectionsValidityList.indexOf(false);
         if (firstInvalidSection !== -1) {
-            const sectionToShow = this.databaseModel.configurationSections[firstInvalidSection].name;
+            const sectionToShow = this.databaseModel.configurationSections[firstInvalidSection].id;
             this.showAdvancedConfigurationFor(sectionToShow);
         }
     }
 
-    showAdvancedConfigurationFor(sectionName: string) {
+    showAdvancedConfigurationFor(sectionName: availableConfigurationSectionId) {
         this.currentAdvancedSection(sectionName);
 
-        const sectionConfiguration = this.databaseModel.configurationSections.find(x => x.name === sectionName);
+        const sectionConfiguration = this.databaseModel.configurationSections.find(x => x.id === sectionName);
         if (!sectionConfiguration.enabled()) {
             sectionConfiguration.enabled(true);
         }
@@ -229,7 +255,7 @@ class createDatabase extends dialogViewModelBase {
 
         const encryptionTask = $.Deferred<void>();
 
-        const encryptionSection = this.databaseModel.configurationSections.find(x => x.name === "Encryption");
+        const encryptionSection = this.databaseModel.configurationSections.find(x => x.id === "encryption");
         if (encryptionSection.enabled()) {
             const nodeTags = this.databaseModel.replication.nodes().map(x => x.tag());
             this.encryptionSection.configureEncryption(this.databaseModel.encryption.key(), nodeTags)
@@ -250,6 +276,22 @@ class createDatabase extends dialogViewModelBase {
             .fail(() => this.spinners.create(false));
     }
 
+    private createDatabaseFromLegacyDatafiles(): JQueryPromise<operationIdDto> {
+        this.spinners.create(true);
+        const restoreDocument = this.databaseModel.toOfflineMigrationDto();
+        
+        return new migrateLegacyDatabaseFromDatafilesCommand(restoreDocument)
+            .execute()
+            .done((operationIdDto: operationIdDto) => {
+                const operationId = operationIdDto.OperationId;
+                notificationCenter.instance.openDetailsForOperationById(null, operationId);
+            })
+            .always(() => {
+                dialog.close(this);
+                this.spinners.create(false);
+            });
+    }
+    
     private createDatabaseFromBackup(): JQueryPromise<operationIdDto> {
         this.spinners.create(true);
 

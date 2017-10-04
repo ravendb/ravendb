@@ -61,7 +61,7 @@
                     </div>
                 </div>
                 <div class="btn-group">
-                    <button type="button" class="btn btn-primary" data-bind="click: _.partial(newDatabase, false)">
+                    <button type="button" class="btn btn-primary" data-bind="click: newDatabase">
                         <i class="icon-new-database"></i>
                         <span>New database</span>
                     </button>
@@ -71,8 +71,13 @@
                     </button>
                     <ul class="dropdown-menu">
                         <li>
-                            <a href="#" data-bind="click: _.partial(newDatabase, true)">
+                            <a href="#" data-bind="click: newDatabaseFromBackup">
                                 <i class="icon-backup"></i> New database from backup
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" data-bind="click: newDatabaseFromLegacyDatafiles">
+                                <i class="icon-backup"></i> New database from v3.X (legacy version) data files
                             </a>
                         </li>
                     </ul>
@@ -95,8 +100,8 @@
                 <i class="icon-xl icon-empty-set text-muted"></i>
                 <h2 class="text-center">No databases have been created</h2>
                 <p class="lead text-center text-muted">
-                    Go ahead and <a href="#" data-bind="click: _.partial(newDatabase, false)">&nbsp;create one now</a><br />
-                    or <a href="#" data-bind="click: _.partial(newDatabase, true)">create one from backup</a>
+                    Go ahead and <a href="#" data-bind="click: newDatabase">&nbsp;create one now</a><br />
+                    or <a href="#" data-bind="click: newDatabaseFromBackup">create one from backup</a>
                 </p>
                 <p class="lead text-center text-muted"></p>
             </div>
