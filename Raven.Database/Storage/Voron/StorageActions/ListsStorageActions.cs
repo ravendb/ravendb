@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Diagnostics;
 using Raven.Abstractions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util.Streams;
@@ -212,7 +213,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             }
         }
 
-        public void RemoveAllBefore(string name, Etag etag)
+        public void RemoveAllBefore(string name, Etag etag, TimeSpan? timeout = null)
         {
             var listsByName = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByName);
             var listsByNameAndKey = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByNameAndKey);
@@ -226,6 +227,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 if (!iterator.Seek(Slice.BeforeAllKeys))
                     return;
                 bool skipMoveNext;
+
+                Stopwatch duration = null;
+                if (timeout != null)
+                    duration = Stopwatch.StartNew();
+
                 do
                 {
                     skipMoveNext = false;
@@ -234,6 +240,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
                     if (currentEtag.CompareTo(etag) > 0)
                         break;
 
+                    if(timeout != null && duration.Elapsed > timeout.Value)
+                        break;
+                        
                     ushort version;
                     var value = LoadJson(tableStorage.Lists, iterator.CurrentKey, writeBatch.Value, out version);
 

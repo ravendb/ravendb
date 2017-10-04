@@ -1650,13 +1650,15 @@ namespace Raven.Client.Indexes
                             castLambdas = false;
                             break;
                     }
-                    var oldAvoidDuplicateParameters = _avoidDuplicatedParameters;
-                    if (node.Method.Name == "Select")
+                    var oldAvoidDuplicateParameters = avoidDuplicatedParameters;
+                    isSelectMany = node.Method.Name == "SelectMany";
+                    if (node.Method.Name == "Select" || isSelectMany)
                     {
-                        _avoidDuplicatedParameters = true;
+                        avoidDuplicatedParameters = true;
                     }
                     Visit(node.Arguments[num2]);
-                    _avoidDuplicatedParameters = oldAvoidDuplicateParameters;
+                    avoidDuplicatedParameters = oldAvoidDuplicateParameters;
+
                     // Convert OfType<Foo>() to Where(x => x["$type"] == typeof(Foo).AssemblyQualifiedName)
                     if (node.Method.Name == "OfType")
                     {
@@ -2023,7 +2025,9 @@ namespace Raven.Client.Indexes
             "volatile",
             "while"
         });
-        private bool _avoidDuplicatedParameters;
+
+        private bool avoidDuplicatedParameters;
+        private bool isSelectMany;
 
         /// <summary>
         ///   Visits the <see cref = "T:System.Linq.Expressions.ParameterExpression" />.
@@ -2046,10 +2050,12 @@ namespace Raven.Client.Indexes
 
 
             var name = node.Name;
-            if (_avoidDuplicatedParameters)
+            if (avoidDuplicatedParameters)
             {
                 object other;
-                if (_duplicatedParams.TryGetValue(name, out other) && ReferenceEquals(other, node) == false)
+                if (isSelectMany == false && 
+                    _duplicatedParams.TryGetValue(name, out other) && 
+                    ReferenceEquals(other, node) == false)
                 {
                     name += GetParamId(node);
                     _duplicatedParams[name] = node;

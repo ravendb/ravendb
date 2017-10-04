@@ -6,6 +6,8 @@
 using System;
 using System.Threading;
 using Raven.Abstractions.Replication;
+using Raven.Abstractions.Util;
+using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 using Xunit;
 
@@ -42,7 +44,7 @@ namespace Raven.Tests.Raft.Client
 
                     }, "Raven/Replication/Destinations");
                     session.SaveChanges();
-                }
+                }               
 
                 using (var secondStore = new DocumentStore
                 {
@@ -54,6 +56,8 @@ namespace Raven.Tests.Raft.Client
                     DefaultDatabase = store.DefaultDatabase
                 }.Initialize())
                 {
+                    var client = ((AsyncServerClient)secondStore.AsyncDatabaseCommands);
+                    AsyncHelpers.RunSync(() => client.RequestExecuter.UpdateReplicationInformationIfNeededAsync(client, force: true));
                     Assert.True(SpinWait.SpinUntil(() => secondStore.Conventions.FailoverBehavior == serverBehavior, TimeSpan.FromSeconds(30)));
                 }
             }

@@ -11,14 +11,5 @@ namespace Raven.Database.Indexing
             PreviousTokenStream = res;
             return res;
         }
-        public override TokenStream ReusableTokenStream(string fieldName, TextReader reader)
-        {
-            var previousTokenStream = (LowerCaseWhitespaceTokenizer)PreviousTokenStream;
-            if (previousTokenStream == null)
-                return TokenStream(fieldName, reader);
-            previousTokenStream.Reset(reader);
-            return previousTokenStream;
-        }
-
     }
 }

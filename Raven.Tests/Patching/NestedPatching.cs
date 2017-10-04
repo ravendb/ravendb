@@ -6,7 +6,6 @@
 using Raven.Abstractions.Json.Linq;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions;
 using Raven.Json.Linq;
 using Raven.Database.Json;
 using Raven.Tests.Common;
@@ -106,7 +105,7 @@ namespace Raven.Tests.Patching
         [Fact]
         public void SetValueInNestedElement_WithConcurrency_Error()
         {
-            Assert.Throws<ConcurrencyException>(() => new JsonPatcher(doc).Apply(
+            Assert.Throws<OptimisticConcurrencyViolationException>(() => new JsonPatcher(doc).Apply(
                 new[]
                 {
                     new PatchRequest

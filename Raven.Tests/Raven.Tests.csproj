@@ -653,6 +653,7 @@
     <Compile Include="Replication\IndexReplication.cs" />
     <Compile Include="Replication\TransformerReplication.cs" />
     <Compile Include="ResultsTransformer\AsyncTransformWith.cs" />
+    <Compile Include="ResultsTransformer\NullDynamicValuesInTransformerOperation.cs" />
     <Compile Include="ResultsTransformer\TransformerParametersToResultTransformer.cs" />
     <Compile Include="ResultsTransformer\NestingTransformers.cs" />
     <Compile Include="ResultsTransformer\StonglyTypedResultsTransformer.cs" />
@@ -849,6 +850,7 @@
     <Compile Include="Suggestions\LegacySuggestionsHandling.cs" />
     <Compile Include="Subscriptions\SubscriptionsBasic.cs" />
     <Compile Include="Subscriptions\SubscriptionsPaths.cs" />
+    <Compile Include="Suggestions\SuggestionsLazyAsync.cs" />
     <Compile Include="Suggestions\SuggestionsUsingAnIndex.cs" />
     <Compile Include="Synchronization\ConcurrentJsonDocumentSortedListTests.cs" />
     <Compile Include="T1.cs" />

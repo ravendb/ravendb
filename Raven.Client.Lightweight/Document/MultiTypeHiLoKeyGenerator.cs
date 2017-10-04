@@ -15,7 +15,7 @@ namespace Raven.Client.Document
     {
         private readonly int capacity;
         private readonly object generatorLock = new object();
-        private IDictionary<string, HiLoKeyGenerator> keyGeneratorsByTag = new Dictionary<string, HiLoKeyGenerator>();
+        private volatile IDictionary<string, HiLoKeyGenerator> keyGeneratorsByTag = new Dictionary<string, HiLoKeyGenerator>();
 
 
         /// <summary>

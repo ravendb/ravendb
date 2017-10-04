@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
@@ -554,33 +555,6 @@ namespace Raven.Tests.Replication
             }
         }
 
-        [Fact]
-        public void ExecuteIndex_should_not_replicate_indexes_if_convention_flag_is_not_set()
-        {
-            using (var sourceServer = GetNewServer(8077))
-            using (var source = NewRemoteDocumentStore(ravenDbServer: sourceServer))
-            using (var destinationServer = GetNewServer(8078))
-            using (var destination = NewRemoteDocumentStore(ravenDbServer: destinationServer))
-            {
-                CreateDatabaseWithReplication(source, "testDB");
-                CreateDatabaseWithReplication(destination, "testDB");
-
-                SetupReplication(source, "testDB", destination);
-
-                var userIndex = new UserIndex();
-
-                var indexStatsBeforeReplication = destination.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes;
-                Assert.False(indexStatsBeforeReplication.Any(index => index.Name.Equals(userIndex.IndexName, StringComparison.InvariantCultureIgnoreCase)));
-
-                source.Conventions.IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.None;
-                userIndex.Execute(source.DatabaseCommands.ForDatabase("testDB"), source.Conventions);
-
-                //since IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.None, creation
-                //of index on source should not trigger replication to destination
-                var indexStatsAfterReplication = destination.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes;
-                Assert.False(indexStatsAfterReplication.Any(index => index.Name.Equals(userIndex.IndexName, StringComparison.InvariantCultureIgnoreCase)));
-            }
-        }
 
         [Fact]
         public void CanReplicateIndex()
@@ -920,6 +894,138 @@ namespace Raven.Tests.Replication
 
                 //the new index should be replicated
                 Assert.Equal(3, destination.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Length);
+            }
+        }
+
+        [Fact]
+        public void should_ignore_outdated_index_delete()
+        {
+            var requestFactory = new HttpRavenRequestFactory();
+            using (var sourceServer = GetNewServer(8077))
+            using (var source = NewRemoteDocumentStore(ravenDbServer: sourceServer, fiddler: true))
+            using (var destinationServer = GetNewServer(8078))
+            using (var destination = NewRemoteDocumentStore(ravenDbServer: destinationServer, fiddler: true))
+            {
+                CreateDatabaseWithReplication(source, "testDB");
+                CreateDatabaseWithReplication(destination, "testDB");
+
+                source.Conventions.IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.None;
+                destination.Conventions.IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.None;
+
+                SetupReplication(source, "testDB", store => false, destination);
+                SetupReplication(destination, "testDB", store => false, source);
+
+                for (var i = 0; i < 30; i++)
+                {
+                    //just for starting the initial index and transformer replication
+                    source.DatabaseCommands.ForDatabase("testDB").Put("test" + i, Etag.Empty, new RavenJObject(), new RavenJObject());
+                    destination.DatabaseCommands.ForDatabase("testDB").Put("test" + (i + 50), Etag.Empty, new RavenJObject(), new RavenJObject());
+                }
+
+                WaitForDocument(destination.DatabaseCommands.ForDatabase("testDB"), "test29");
+                WaitForDocument(source.DatabaseCommands.ForDatabase("testDB"), "test79");
+
+                var userIndex = new UserIndex();
+                source.DatabaseCommands.ForDatabase("testDB").PutIndex(userIndex.IndexName, userIndex.CreateIndexDefinition());
+                destination.DatabaseCommands.ForDatabase("testDB").PutIndex(userIndex.IndexName, userIndex.CreateIndexDefinition());
+                // index version = 1 on both servers
+
+                var extendedUserIndex = new UserIndex_Extended();
+                source.DatabaseCommands.ForDatabase("testDB").PutIndex(extendedUserIndex.IndexName, extendedUserIndex.CreateIndexDefinition(), true);
+                // index version = 2 on 'source server'
+
+                destination.DatabaseCommands.ForDatabase("testDB").DeleteIndex(userIndex.IndexName);
+                // deleted index version = 1
+
+                // replicating indexes from the destination
+                var replicationRequestUrl = string.Format("{0}/databases/testDB/replication/replicate-indexes?op=replicate-all", destination.Url);
+                var replicationRequest = requestFactory.Create(replicationRequestUrl, HttpMethod.Post, new RavenConnectionStringOptions
+                {
+                    Url = destination.Url
+                });
+                replicationRequest.ExecuteRequest();
+
+                // the index shouldn't be deleted
+                var index = source.DatabaseCommands.ForDatabase("testDB").GetIndex(userIndex.IndexName);
+                Assert.NotNull(index);
+                Assert.True(extendedUserIndex.CreateIndexDefinition().Map.Equals(index.Map));
+
+                // replicating indexes from the source
+                replicationRequestUrl = string.Format("{0}/databases/testDB/replication/replicate-indexes?op=replicate-all", source.Url);
+                replicationRequest = requestFactory.Create(replicationRequestUrl, HttpMethod.Post, new RavenConnectionStringOptions
+                {
+                    Url = source.Url
+                });
+                replicationRequest.ExecuteRequest();
+
+                index = destination.DatabaseCommands.ForDatabase("testDB").GetIndex(userIndex.IndexName);
+                Assert.NotNull(index);
+                Assert.True(extendedUserIndex.CreateIndexDefinition().Map.Equals(index.Map));
+            }
+        }
+
+        [Fact]
+        public void should_accept_updated_index_delete()
+        {
+            var requestFactory = new HttpRavenRequestFactory();
+            using (var sourceServer = GetNewServer(8077))
+            using (var source = NewRemoteDocumentStore(ravenDbServer: sourceServer, fiddler: true))
+            using (var destinationServer = GetNewServer(8078))
+            using (var destination = NewRemoteDocumentStore(ravenDbServer: destinationServer, fiddler: true))
+            {
+                CreateDatabaseWithReplication(source, "testDB");
+                CreateDatabaseWithReplication(destination, "testDB");
+
+                source.Conventions.IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.None;
+                destination.Conventions.IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.None;
+
+                SetupReplication(source, "testDB", store => false, destination);
+                SetupReplication(destination, "testDB", store => false, source);
+
+                for (var i = 0; i < 30; i++)
+                {
+                    //just for starting the initial index and transformer replication
+                    source.DatabaseCommands.ForDatabase("testDB").Put("test" + i, Etag.Empty, new RavenJObject(), new RavenJObject());
+                    destination.DatabaseCommands.ForDatabase("testDB").Put("test" + (i + 50), Etag.Empty, new RavenJObject(), new RavenJObject());
+                }
+
+                WaitForDocument(destination.DatabaseCommands.ForDatabase("testDB"), "test29");
+                WaitForDocument(source.DatabaseCommands.ForDatabase("testDB"), "test79");
+
+                var userIndex = new UserIndex();
+                source.DatabaseCommands.ForDatabase("testDB").PutIndex(userIndex.IndexName, userIndex.CreateIndexDefinition());
+                destination.DatabaseCommands.ForDatabase("testDB").PutIndex(userIndex.IndexName, userIndex.CreateIndexDefinition());
+                // index version = 1 on both servers
+
+                var extendedUserIndex = new UserIndex_Extended();
+                source.DatabaseCommands.ForDatabase("testDB").PutIndex(extendedUserIndex.IndexName, extendedUserIndex.CreateIndexDefinition(), true);
+                // index version = 2 on 'source server'
+
+                source.DatabaseCommands.ForDatabase("testDB").DeleteIndex(userIndex.IndexName);
+                // deleted index version = 2 on 'source server'
+
+                // replicating indexes from the source
+                var replicationRequestUrl = string.Format("{0}/databases/testDB/replication/replicate-indexes?op=replicate-all", source.Url);
+                var replicationRequest = requestFactory.Create(replicationRequestUrl, HttpMethod.Post, new RavenConnectionStringOptions
+                {
+                    Url = source.Url
+                });
+                replicationRequest.ExecuteRequest();
+
+                // the index should be deleted
+                var index = destination.DatabaseCommands.ForDatabase("testDB").GetIndex(userIndex.IndexName);
+                Assert.Null(index);
+
+                // replicating indexes from the destination
+                replicationRequestUrl = string.Format("{0}/databases/testDB/replication/replicate-indexes?op=replicate-all", destination.Url);
+                replicationRequest = requestFactory.Create(replicationRequestUrl, HttpMethod.Post, new RavenConnectionStringOptions
+                {
+                    Url = destination.Url
+                });
+                replicationRequest.ExecuteRequest();
+
+                index = source.DatabaseCommands.ForDatabase("testDB").GetIndex(userIndex.IndexName);
+                Assert.Null(index);
             }
         }
 

@@ -4,7 +4,10 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-namespace System.ComponentModel
+
+using System;
+
+namespace Raven.Abstractions
 {
     public class DescriptionAttribute : Attribute
     {

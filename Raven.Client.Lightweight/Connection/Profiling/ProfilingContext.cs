@@ -38,7 +38,9 @@ namespace Raven.Client.Connection.Profiling
         /// </summary>
         public ProfilingInformation TryGet(Guid id)
         {
-            return leastRecentlyUsedCache.FirstOrDefault(x => x.Id == id);
+            //TODO: verify that this doesn't break any tests
+            //TODO: Maybe add more advanced predicates for when more than one request is sent per session.
+            return leastRecentlyUsedCache.LastOrDefault(x => x.Id == id);
         }
     }
 }

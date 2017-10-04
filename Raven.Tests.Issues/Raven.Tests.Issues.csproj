@@ -138,6 +138,13 @@
     <Compile Include="1379\RavenDB_1379_Client_Lazy.cs" />
     <Compile Include="1379\RavenDB_1379_Client_Remote.cs" />
     <Compile Include="ActualValueInJsonReaderException.cs" />
+    <Compile Include="NtpServers.cs" />
+    <Compile Include="RavenDB-7972.cs" />
+    <Compile Include="RavenDB_7873.cs" />
+    <Compile Include="RavenDB-7406.cs" />
+    <Compile Include="RavenDB-7277.cs" />
+    <Compile Include="RavenDB-6755.cs" />
+    <Compile Include="RavenDB-6754.cs" />
     <Compile Include="RavenDB-6259_2.cs" />
     <Compile Include="RavenDB-6312.cs" />
     <Compile Include="RavenDB-6084.cs" />
@@ -146,6 +153,7 @@
     <Compile Include="RavenDB-6345.cs" />
     <Compile Include="RavenDB-6400.cs" />
     <Compile Include="RavenDB-6626.cs" />
+    <Compile Include="RavenDB_7674.cs" />
     <Compile Include="RavenDB_5857.cs" />
     <Compile Include="RavenDB_5669.cs" />
     <Compile Include="NewIndexOptimizationIssue.cs" />
@@ -613,6 +621,7 @@
     <Compile Include="RavenDB_784.cs" />
     <Compile Include="RavenDB_790.cs" />
     <Compile Include="RavenDB_806.cs" />
+    <Compile Include="RavenDB_8277.cs" />
     <Compile Include="RavenDB_851.cs" />
     <Compile Include="RavenDB_863.cs" />
     <Compile Include="RavenDB_863_2.cs" />
@@ -638,6 +647,7 @@
     <Compile Include="RDoc_56.cs" />
     <Compile Include="RDoc_60.cs" />
     <Compile Include="RDoc_76.cs" />
+    <Compile Include="QueriesStartingWithAtShouldWork.cs" />
     <Compile Include="ReplicationAlerts.cs" />
     <Compile Include="RavenDB_3096.cs" />
     <Compile Include="SlowIndex.cs" />

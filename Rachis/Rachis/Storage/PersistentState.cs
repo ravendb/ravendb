@@ -180,6 +180,41 @@ namespace Rachis.Storage
             }
         }
 
+        /// <summary>
+        /// this method is intended to be use for emergency fixes of the cluster state using the JS admin console
+        /// </summary>
+        public void Danger__InjectN00pAtPosition(long position, long term)
+        {
+            var noop = new NopCommand();
+            PutCommandInternal(position, term, noop);
+        }
+
+        /// <summary>
+        /// this method is intended to be use for emergency fixes of the cluster state using the JS admin console
+        /// </summary>
+        public void Danger__InjectCommandAtPosition(long position, long term,string command)
+        {
+            var cmd = CommandSerializer.Deserialize(Encoding.UTF8.GetBytes(command));
+
+            PutCommandInternal(position, term, cmd);
+        }
+
+        private void PutCommandInternal(long position, long term, Command command)
+        {
+            using (var tx = _env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                var logs = tx.ReadTree(LogsTreeName);
+                var terms = tx.ReadTree(EntryTermsTreeName);
+
+                var key = new Slice(EndianBitConverter.Big.GetBytes(position));
+                
+                var commandEntry = CommandSerializer.Serialize(command);
+                logs.Add(key, commandEntry);
+                terms.Add(key, BitConverter.GetBytes(term));
+                tx.Commit();
+            }
+        }
+
         private static long GetLastEntryNumber(Tree logs, Transaction tx)
         {
             long lastEntry;
@@ -496,6 +531,26 @@ namespace Rachis.Storage
                         it.CurrentKey.CreateReader().ReadBigEndianInt64();
                     return logs.State.EntriesCount - Math.Max(0, (lastEntryIndex - lastCommittedEntry));
                 }
+            }
+        }
+
+        //this is public so we can change this from the JS console
+        public static long NumberOfEntriesToFetch = 100;
+
+        public IEnumerable<LogEntry> LastLogsEntries()
+        {
+            using (var tx = _env.NewTransaction(TransactionFlags.Read))
+            {
+                var logs = tx.ReadTree(LogsTreeName);
+
+                var lastKey = logs.LastKeyOrDefault();
+                if (lastKey == null)
+                {
+                    return new List<LogEntry>();
+                }
+                var index = lastKey.CreateReader().ReadBigEndianInt64();
+                var fetchFromIndex = Math.Max(1, index - NumberOfEntriesToFetch);
+                return LogEntriesAfter(fetchFromIndex);
             }
         }
     }

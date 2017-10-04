@@ -11,6 +11,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
 using Raven.Database.Impl;
+using Raven.Database.Storage;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Actions
@@ -69,16 +70,44 @@ namespace Raven.Database.Actions
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public bool DeleteTransform(string name)
+        public bool DeleteTransform(string name, int? deletedTransformerVersion)
         {
-            if (!IndexDefinitionStorage.RemoveTransformer(name)) 
+            var transformer = GetTransformerDefinition(name);
+            if (transformer == null)
                 return false;
+
+            var currentTransformerVersion = transformer.TransformerVersion;
+            if (deletedTransformerVersion != null &&
+                currentTransformerVersion != null &&
+                currentTransformerVersion > deletedTransformerVersion)
+            {
+                // the transformer version is larger than the deleted one
+                // got an old delete from an outdated node
+                return false;
+            }
+
+            if (IndexDefinitionStorage.RemoveTransformer(name) == false) 
+                return false;
+
+            var version = currentTransformerVersion ?? 0;
+            if (deletedTransformerVersion != null)
+                version = Math.Max(version, deletedTransformerVersion.Value);
+
+            TransactionalStorage.Batch(actions =>
+            {
+                var metadata = new RavenJObject
+                {
+                    {IndexDefinitionStorage.TransformerVersionKey, version }
+                };
+                actions.Lists.Set(Constants.RavenDeletedTransformersVersions, name, metadata, UuidType.Transformers);
+            });
 
             //raise notification only if the transformer was actually removed
             TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() => Database.Notifications.RaiseNotifications(new TransformerChangeNotification
             {
                 Name = name,
-                Type = TransformerChangeTypes.TransformerRemoved
+                Type = TransformerChangeTypes.TransformerRemoved,
+                Version = version
             }));
 
             return true;
@@ -91,6 +120,16 @@ namespace Raven.Database.Actions
             if (definition == null) throw new ArgumentNullException("definition");
 
             name = name.Trim();
+
+            var deletedVersion = GetDeletedTransformerVersion(Constants.RavenDeletedTransformersVersions, name);
+            var tombstoneVersion = GetDeletedTransformerVersion(Constants.RavenReplicationTransformerTombstones, name);
+            var deletedTransformerVersion = Math.Max(deletedVersion, tombstoneVersion);
+            if (isReplication && definition.TransformerVersion != null &&
+                deletedTransformerVersion > definition.TransformerVersion)
+            {
+                // no op for an outdated transformer
+                return name;
+            }
 
             var existingDefinition = IndexDefinitionStorage.GetTransformerDefinition(name);
             if (existingDefinition != null)
@@ -139,8 +178,7 @@ namespace Raven.Database.Actions
             {
                 // we're creating a new transformer,
                 // we need to take the transformer version of the deleted transformer (if exists)
-                definition.TransformerVersion = GetDeletedTransformerId(definition.Name);
-                definition.TransformerVersion = (definition.TransformerVersion ?? 0) + 1;
+                definition.TransformerVersion = Math.Max(definition.TransformerVersion ?? 0, deletedTransformerVersion) + 1;
             }
 
             if (definition.TransformerVersion == null)
@@ -181,13 +219,13 @@ namespace Raven.Database.Actions
             return name;
         }
 
-        private int GetDeletedTransformerId(string transformerName)
+        private int GetDeletedTransformerVersion(string listName, string transformerName)
         {
             var version = 0;
 
             TransactionalStorage.Batch(action =>
             {
-                var li = action.Lists.Read(Constants.RavenReplicationTransformerTombstones, transformerName);
+                var li = action.Lists.Read(listName, transformerName);
                 if (li == null)
                     return;
 

@@ -37,10 +37,10 @@ namespace Raven.Database.Indexing
         private int offset = 0, bufferIndex = 0, dataLen = 0;
 
         private const int IO_BUFFER_SIZE = 4096;
-        private static ObjectPool<char[]> bufferPool = new ObjectPool<char[]>(() => new char[IO_BUFFER_SIZE], 10);
 
         private readonly ITermAttribute termAtt;
         private readonly IOffsetAttribute offsetAtt;
+        private char[] ioBuffer = new char[IO_BUFFER_SIZE];
 
         /// <summary>Returns true iff a character should be included in a token.  This
         /// tokenizer generates as tokens adjacent sequences of characters which
@@ -80,53 +80,44 @@ namespace Raven.Database.Indexing
             int length = 0;
             int start = bufferIndex;
 
-            char[] ioBuffer = bufferPool.Allocate();
-            try
+            char[] buffer = termAtt.TermBuffer();
+            while (true)
             {
-                char[] buffer = termAtt.TermBuffer();
-                while (true)
+                if (bufferIndex >= dataLen)
                 {
-                    if (bufferIndex >= dataLen)
+                    offset += dataLen;
+                    dataLen = input.Read(ioBuffer, 0, ioBuffer.Length);
+                    if (dataLen <= 0)
                     {
-                        offset += dataLen;
-                        dataLen = input.Read(ioBuffer, 0, ioBuffer.Length);
-                        if (dataLen <= 0)
-                        {
-                            dataLen = 0; // so next offset += dataLen won't decrement offset
-                            if (length > 0)
-                                break;
-                            return false;
-                        }
-                        bufferIndex = 0;
+                        dataLen = 0; // so next offset += dataLen won't decrement offset
+                        if (length > 0)
+                            break;
+                        return false;
                     }
-
-                    char c = ioBuffer[bufferIndex++];
-
-                    if (IsTokenChar(c))
-                    {
-                        // if it's a token char
-
-                        if (length == 0)
-                            // start of token
-                            start = offset + bufferIndex - 1;
-                        else if (length == buffer.Length)
-                            buffer = termAtt.ResizeTermBuffer(1 + length);
-
-                        buffer[length++] = Normalize(c); // buffer it, normalized
-                    }
-                    else if (length > 0)
-                        // at non-Letter w/ chars
-                        break; // return 'em
+                    bufferIndex = 0;
                 }
 
-                termAtt.SetTermLength(length);
-                offsetAtt.SetOffset(CorrectOffset(start), CorrectOffset(start + length));
+                char c = ioBuffer[bufferIndex++];
+
+                if (IsTokenChar(c))
+                {
+                    // if it's a token char
+
+                    if (length == 0)
+                        // start of token
+                        start = offset + bufferIndex - 1;
+                    else if (length == buffer.Length)
+                        buffer = termAtt.ResizeTermBuffer(1 + length);
+
+                    buffer[length++] = Normalize(c); // buffer it, normalized
+                }
+                else if (length > 0)
+                    // at non-Letter w/ chars
+                    break; // return 'em
             }
-            finally
-            {
-                if (ioBuffer != null)
-                    bufferPool.Free(ioBuffer);
-            }           
+
+            termAtt.SetTermLength(length);
+            offsetAtt.SetOffset(CorrectOffset(start), CorrectOffset(start + length));
 
             return true;
         }

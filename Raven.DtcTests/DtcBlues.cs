@@ -60,7 +60,7 @@ namespace Raven.Tests.Bugs
 
     public class DtcBluesRemote : RavenTest
     {
-        [Fact]
+        [Fact(Skip = "Run only when needed")]
         public void CanQueryDtcForUncommittedItem()
         {
             using (var server = GetNewServer(requestedStorage: "esent"))

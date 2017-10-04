@@ -5,12 +5,18 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using System.Threading;
 
 namespace Sparrow.Collections
 {
     [DebuggerTypeProxy(typeof(ConcurrentSet<>.DebugProxy))]
     public class ConcurrentSet<T> : IEnumerable<T>
     {
+        // accessing the ConcurrentDictionary.Count will cause it to aquire a 
+        // lock on the entire object, but we want it to be fast, because we use 
+        // it to check for existence. 
+        private int _count;
+
         public class DebugProxy
         {
             private ConcurrentSet<T> parent;
@@ -41,7 +47,7 @@ namespace Sparrow.Collections
 
         public int Count
         {
-            get { return inner.Count; }
+            get { return _count; }
         }
 
         public void Add(T item)
@@ -51,7 +57,10 @@ namespace Sparrow.Collections
 
         public bool TryAdd(T item)
         {
-            return inner.TryAdd(item, null);
+            var result = inner.TryAdd(item, null);
+            if (result)
+                Interlocked.Increment(ref _count);
+            return result;
         }
 
         public bool Contains(T item)
@@ -62,12 +71,18 @@ namespace Sparrow.Collections
         public bool TryRemove(T item)
         {
             object _;
-            return inner.TryRemove(item, out _);
+            var result = inner.TryRemove(item, out _);
+            if (result)
+                Interlocked.Decrement(ref _count);
+            return result;
         }
 
         public IEnumerator<T> GetEnumerator()
         {
-            return inner.Keys.GetEnumerator();
+            foreach (var item in inner)
+            {
+                yield return item.Key;
+            }
         }
 
         IEnumerator IEnumerable.GetEnumerator()
@@ -80,13 +95,16 @@ namespace Sparrow.Collections
             foreach (var item in inner.Where(item => predicate(item.Key)))
             {
                 object value;
-                inner.TryRemove(item.Key, out value);
+                if (inner.TryRemove(item.Key, out value))
+                    Interlocked.Decrement(ref _count);
             }
         }
 
         public void Clear()
         {
+            var currentCount = Volatile.Read(ref _count);
             inner.Clear();
+            Interlocked.Add(ref _count, -currentCount);
         }
 
         public override string ToString()

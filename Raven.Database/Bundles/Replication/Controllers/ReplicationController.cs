@@ -937,7 +937,9 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
             if (string.Equals(op, "replicate-all-to-destination", StringComparison.InvariantCultureIgnoreCase))
             {
-                replicationTask.IndexReplication.Execute(dest => dest.IsEqualTo(replicationDestination) && dest.SkipIndexReplication == false);
+                replicationTask.IndexReplication.Execute(
+                    dest => dest.IsEqualTo(replicationDestination) && dest.SkipIndexReplication == false,
+                    forceTombstoneReplication: true);
 
                 return GetEmptyMessage();
             }
@@ -950,7 +952,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
                 return GetEmptyMessage();
             }
 
-            replicationTask.IndexReplication.Execute();
+            replicationTask.IndexReplication.Execute(forceTombstoneReplication: true);
             return GetEmptyMessage();
         }
 
@@ -967,7 +969,9 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
             if (string.Equals(op, "replicate-all-to-destination", StringComparison.InvariantCultureIgnoreCase))
             {
-                replicationTask.TransformerReplication.Execute(dest => dest.IsEqualTo(replicationDestination) && dest.SkipIndexReplication == false);
+                replicationTask.TransformerReplication.Execute(
+                    dest => dest.IsEqualTo(replicationDestination) && dest.SkipIndexReplication == false,
+                    forceTombstoneReplication: true);
                 return GetEmptyMessage();
             }
 
@@ -979,7 +983,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
                 return GetEmptyMessage();
             }
 
-            replicationTask.TransformerReplication.Execute();
+            replicationTask.TransformerReplication.Execute(forceTombstoneReplication: true);
             return GetEmptyMessage();
         }
 

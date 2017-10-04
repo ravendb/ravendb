@@ -504,6 +504,7 @@ namespace Raven.Client.Document
 #endif
             asyncDatabaseCommandsGenerator = () =>
             {
+                AsyncServerClient asyncDatabaseCommand;
                 // we have a non-system database if we stated a default database that is not a system database or if we have a predefined url
                 if (string.IsNullOrEmpty(DefaultDatabase) == false && DefaultDatabase != Constants.SystemDatabase || Url != rootDatabaseUrl)
                 {
@@ -511,15 +512,19 @@ namespace Raven.Client.Document
                     if (string.IsNullOrEmpty(DefaultDatabase) == false)
                         databaseUrl = rootDatabaseUrl + "/databases/" + DefaultDatabase;
 
-                    return new AsyncServerClient(databaseUrl, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory,
+                    asyncDatabaseCommand = new AsyncServerClient(databaseUrl, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory,
                         currentSessionId, GetRequestExecuterForDatabase, GetRequestTimeMetricForUrl, DefaultDatabase,
                         Listeners.ConflictListeners, true);
                 }
-
-                return new AsyncServerClient(rootDatabaseUrl, Conventions,
-                            new OperationCredentials(ApiKey, Credentials),
-                            jsonRequestFactory, currentSessionId,
-                            GetRequestExecuterForDatabase, GetRequestTimeMetricForUrl, Constants.SystemDatabase, Listeners.ConflictListeners, true);
+                else
+                {
+                    asyncDatabaseCommand = new AsyncServerClient(rootDatabaseUrl, Conventions,
+                        new OperationCredentials(ApiKey, Credentials),
+                        jsonRequestFactory, currentSessionId,
+                        GetRequestExecuterForDatabase, GetRequestTimeMetricForUrl, Constants.SystemDatabase, Listeners.ConflictListeners, true);
+                }
+                asyncDatabaseCommand.AvoidCluster = AvoidCluster;
+                return asyncDatabaseCommand;
             };
             databaseCommandsGenerator = () => new ServerClient((AsyncServerClient)asyncDatabaseCommandsGenerator());
 
@@ -554,6 +559,8 @@ namespace Raven.Client.Document
             return result;
         }
 
+        public bool AvoidCluster { get; set; } = false;
+
         private IRequestExecuter GetRequestExecuterForDatabase(AsyncServerClient serverClient, string databaseName, 
             bool incrementStrippingBase)
         {
@@ -567,10 +574,14 @@ namespace Raven.Client.Document
             IRequestExecuter requestExecuter;
             IRequestExecuter originalRequestExecuter=null;
 
-            if (Conventions.FailoverBehavior == FailoverBehavior.ReadFromLeaderWriteToLeader
+            if (AvoidCluster == false && 
+                (
+                Conventions.FailoverBehavior == FailoverBehavior.ReadFromLeaderWriteToLeader
                 || Conventions.FailoverBehavior == FailoverBehavior.ReadFromLeaderWriteToLeaderWithFailovers
                 || Conventions.FailoverBehavior == FailoverBehavior.ReadFromAllWriteToLeader
-                || Conventions.FailoverBehavior == FailoverBehavior.ReadFromAllWriteToLeaderWithFailovers)
+                || Conventions.FailoverBehavior == FailoverBehavior.ReadFromAllWriteToLeaderWithFailovers
+                )
+               )
             {
                 requestExecuter = clusterAwareRequestExecuters.GetOrAdd(key, url => new ClusterAwareRequestExecuter());
                 if (originalKey != key)

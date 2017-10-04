@@ -752,7 +752,11 @@ namespace Raven.Tests.FileSystem.Storage
             {
                 storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject()));
 
-                storage.Batch(accessor => accessor.AssociatePage("file1", 1, 0, 10));
+                int pageId = -1;
+
+                storage.Batch(accessor => pageId = accessor.InsertPage(new byte[10], 10));
+
+                storage.Batch(accessor => accessor.AssociatePage("file1", pageId, 0, 10));
 
                 storage.Batch(accessor => accessor.CopyFile("file1", "file2"));
 

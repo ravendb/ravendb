@@ -34,6 +34,7 @@ using Raven.Json.Linq;
 
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Globalization;
@@ -44,6 +45,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Logging;
 
 namespace Raven.Client.Connection.Async
 {
@@ -75,6 +77,12 @@ namespace Raven.Client.Connection.Async
 
         private NameValueCollection operationsHeaders = new NameValueCollection();
 
+#if !DNXCORE50
+        protected readonly ILog Log = LogManager.GetCurrentClassLogger();
+#else
+        protected readonly ILog Log = LogManager.GetLogger(typeof(AsyncServerClient));
+#endif
+
         public string Url
         {
             get { return primaryUrl; }
@@ -92,6 +100,8 @@ namespace Raven.Client.Connection.Async
                 return credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication;
             }
         }
+        private static readonly ConcurrentDictionary<string, Lazy<Tuple<DateTime, Task>>> _topologyUpdate =
+            new ConcurrentDictionary<string, Lazy<Tuple<DateTime, Task>>>();
 
         public AsyncServerClient(
             string url,
@@ -119,8 +129,106 @@ namespace Raven.Client.Connection.Async
             this.requestExecuterGetter = requestExecuterGetter;
             this.requestTimeMetricGetter = requestTimeMetricGetter;
             requestExecuterSelector = new RequestExecuterSelector(() =>
-                requestExecuterGetter(this, databaseName, incrementReadStripe), convention);
-            requestExecuterSelector.Select().UpdateReplicationInformationIfNeededAsync(this);
+                requestExecuterGetter(this, databaseName, incrementReadStripe), convention, AvoidCluster);
+
+            Lazy<Tuple<DateTime, Task>> val;
+            try
+            {
+                if (_topologyUpdate.TryGetValue(Url, out val) == false)
+                {
+                    val = _topologyUpdate.GetOrAdd(Url, _ => new Lazy<Tuple<DateTime, Task>>(
+                        () => Tuple.Create(DateTime.UtcNow, UpdateTopologyAsync())
+                        ));
+                }
+                if (val.Value.Item1.Add(convention.TimeToWaitBetweenReplicationTopologyUpdates) <= DateTime.UtcNow)
+                {
+                    _topologyUpdate.TryUpdate(Url,
+                        new Lazy<Tuple<DateTime, Task>>(
+                            () => Tuple.Create(DateTime.UtcNow, UpdateTopologyAsync())
+                    ), val);
+                    _topologyUpdate.TryGetValue(Url, out val); // get the update value, ours or someone elses
+                }
+
+                AsyncHelpers.RunSync(() => val.Value.Item2);
+            }
+            catch (Exception)
+            {
+                _topologyUpdate.TryRemove(Url, out val);
+                // we explicitly ignore errors here, can be because node is down, the db does not exists, etc
+                // we refresh the topology (forced)
+                val = _topologyUpdate.GetOrAdd(Url, new Lazy<Tuple<DateTime, Task>>(
+                    () => Tuple.Create(DateTime.UtcNow, UpdateTopologyAsync(null, force: true))));
+
+                AsyncHelpers.RunSync(() => val.Value.Item2);
+            }
+        }
+
+        private async Task UpdateTopologyAsync()
+        {
+            var topology = await DirectGetReplicationDestinationsAsync(new OperationMetadata(Url, PrimaryCredentials, null), null, timeout: ClusterAwareRequestExecuter.ReplicationDestinationsTopologyTimeout)
+                .ConfigureAwait(false);
+
+            // since we got the topology from the primary node successfully,
+            // update the topology from other nodes only if it's needed
+            await UpdateTopologyAsync(topology, force: true).ConfigureAwait(false);
+        }
+
+        private async Task UpdateTopologyAsync(ReplicationDocumentWithClusterInformation topology, bool force)
+        {
+            IRequestExecuter executor;
+            if (topology == null)
+            {
+                topology = ReplicationInformerLocalCache.TryLoadReplicationInformationFromLocalCache(ServerHash.GetServerHash(Url))?.DataAsJson.JsonDeserialization<ReplicationDocumentWithClusterInformation>();
+                if (topology == null)
+                {
+                    //There is not much we can do at this point but to request an update to the topology.
+                    if (Log.IsWarnEnabled)
+                    {
+                        Log.Warn($"Was unable to fetch topology from primary node {Url} also there is no cached topology");
+                    }
+                    executor = requestExecuterSelector.Select();
+                    await executor.UpdateReplicationInformationIfNeededAsync(this).ConfigureAwait(false);
+                    return;
+                }
+            }
+            if (topology.ClientConfiguration != null)
+                convention.UpdateFrom(topology.ClientConfiguration);
+
+            executor = requestExecuterSelector.Select();
+            if (AvoidCluster == false && topology.ClusterInformation.IsInCluster)
+            {
+                var clusterAwareRequestExecuter = executor as ClusterAwareRequestExecuter;
+                //This should never happen.
+                if (clusterAwareRequestExecuter == null)
+                {
+                    Log.Error($"ClusterInformation indicates that we are in a cluster but the request executer selected the wrong executer ({executor.GetType().Name}).");
+                    return;
+                }
+                var serverHash = ServerHash.GetServerHash(Url);
+                var prevLeader = clusterAwareRequestExecuter.LeaderNode;
+                clusterAwareRequestExecuter.UpdateTopology(this, new OperationMetadata(Url, PrimaryCredentials, topology.ClusterInformation), topology, serverHash, prevLeader);
+
+                // when the leader is not responsive to its follower but clients may still communicate to the leader node we have
+                // a problem, we will send requests to the leader and they will fail, we must fetch the topology from all nodes 
+                // to make sure we have the latest one, since our primary may be a non-responsive leader.
+
+                await clusterAwareRequestExecuter.UpdateReplicationInformationIfNeededAsync(this, force: force).ConfigureAwait(false);
+            }
+            else
+            {
+                var replicationAwareRequestExecuter = executor as ReplicationAwareRequestExecuter;
+                //This should never happen.
+                if (replicationAwareRequestExecuter == null)
+                {
+                    Log.Error($"ClusterInformation indicates that we are not in a cluster but the request executer selected the wrong executer ({executor.GetType().Name}).");
+                    return;
+                }
+                var doc = new JsonDocument
+                {
+                    DataAsJson = RavenJObject.FromObject(topology)
+                };
+                replicationAwareRequestExecuter.ReplicationInformer.UpdateReplicationInformationFromDocument(doc);
+            }
         }
 
         public void Dispose()
@@ -196,7 +304,11 @@ namespace Raven.Client.Connection.Async
             var url = String.Format("/replication/replicate-indexes?indexName={0}", Uri.EscapeDataString(name));
 
             using (var request = CreateRequest(url, HttpMethods.Post))
-                return request.ExecuteRawResponseAsync();
+                 return request.ExecuteRawResponseAsync().ContinueWith(t =>
+                 {
+                     t.Result.Content.Dispose();
+                     t.Result.Dispose();
+                 }, token);
         }
 
         public Task ResetIndexAsync(string name, CancellationToken token = default(CancellationToken))
@@ -1354,11 +1466,11 @@ namespace Raven.Client.Connection.Async
         }
 
         private async Task<GetResponse[]> MultiGetAsyncInternal(OperationMetadata operationMetadata,
-            IRequestTimeMetric requestTimeMetric, GetRequest[] requests, CancellationToken token)
+            IRequestTimeMetric requestTimeMetric, GetRequest[] requests, CancellationToken token, bool avoidCachingRequest = false)
         {
             var multiGetOperation = new MultiGetOperation(this, convention, operationMetadata.Url, requests);
 
-            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, multiGetOperation.RequestUri, HttpMethod.Post, operationMetadata.Credentials, convention, requestTimeMetric).AddOperationHeaders(OperationsHeaders)))
+            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, multiGetOperation.RequestUri, HttpMethod.Post, operationMetadata.Credentials, convention, requestTimeMetric) { AvoidCachingRequest = avoidCachingRequest }.AddOperationHeaders(OperationsHeaders)))
             {
                 request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader);
 
@@ -1430,7 +1542,7 @@ namespace Raven.Client.Connection.Async
                 {
                     if (json == null) throw new InvalidOperationException("Got empty response from the server for the following request: " + request.Url);
 
-                    var queryResult = SerializationHelper.ToQueryResult(json, request.ResponseHeaders.GetEtagHeader(), request.ResponseHeaders.Get("Temp-Request-Time"), request.Size);
+                    var queryResult = SerializationHelper.ToQueryResult(json, request.ResponseHeaders.Get("Temp-Request-Time"), request.Size);
 
                     if (request.ResponseStatusCode == HttpStatusCode.NotModified)
                         queryResult.DurationMilliseconds = -1;
@@ -1489,10 +1601,10 @@ namespace Raven.Client.Connection.Async
                             Query = stringBuilder.ToString(),
                             Url = "/indexes/" + index
                         }
-                    }, token).ConfigureAwait(false);
+                    }, token, query.DisableCaching).ConfigureAwait(false);
                 res = result[0];
                 var json = (RavenJObject)result[0].Result;
-                var queryResult = SerializationHelper.ToQueryResult(json, result[0].GetEtagHeader(), result[0].Headers["Temp-Request-Time"], -1);
+                var queryResult = SerializationHelper.ToQueryResult(json, result[0].Headers["Temp-Request-Time"], -1);
 
                 var docResults = queryResult.Results.Concat(queryResult.Includes);
                 return await RetryOperationBecauseOfConflict(operationMetadata, requestTimeMetric, docResults, queryResult,
@@ -1926,7 +2038,12 @@ namespace Raven.Client.Connection.Async
                 throw;
             }
 
-            return new YieldStreamResultsAsync(request, await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false));
+            return new YieldStreamResultsAsync(request, await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false), 
+                onDispose: () =>
+                {
+                    response.Content.Dispose();
+                    response.Dispose();
+                });
         }
 
         public Task<IAsyncEnumerator<RavenJObject>> StreamQueryAsync(string index, IndexQuery query, Reference<QueryHeaderInformation> queryHeaderInfo, CancellationToken token = default(CancellationToken))
@@ -1943,14 +2060,26 @@ namespace Raven.Client.Connection.Async
         {
             var data = await DirectStreamQuery(index, query, queryHeaderInfo, operationMetadata, requestTimeMetric, cancellationToken).ConfigureAwait(false);
 
-            return new YieldStreamResultsAsync(data.Request, await data.Response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false));
+            return new YieldStreamResultsAsync(data.Request, await data.Response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false),
+                onDispose: () =>
+                {
+                    data.Request.Dispose();
+                    data.Response.Content.Dispose();
+                    data.Response.Dispose();
+                });
         }
 
         private async Task<IEnumerator<RavenJObject>> DirectStreamQuerySync(string index, IndexQuery query, Reference<QueryHeaderInformation> queryHeaderInfo, OperationMetadata operationMetadata, IRequestTimeMetric requestTimeMetric, CancellationToken cancellationToken = default(CancellationToken))
         {
             var data = await DirectStreamQuery(index, query, queryHeaderInfo, operationMetadata, requestTimeMetric, cancellationToken).ConfigureAwait(false);
 
-            return new YieldStreamResultsSync(data.Request, await data.Response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false));
+            return new YieldStreamResultsSync(data.Request, await data.Response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false),
+                onDispose: () =>
+                {
+                    data.Request.Dispose();
+                    data.Response.Content.Dispose();
+                    data.Response.Dispose();
+                });
         }
 
         private class HttpData
@@ -1976,7 +2105,7 @@ namespace Raven.Client.Connection.Async
             }
 
             var request = jsonRequestFactory
-                .CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, method, operationMetadata.Credentials, convention, requestTimeMetric)
+                .CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, method, operationMetadata.Credentials, convention, requestTimeMetric, timeout: TimeSpan.FromMinutes(15))
                     .AddOperationHeaders(OperationsHeaders))
                 .AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader);
 
@@ -2061,8 +2190,15 @@ namespace Raven.Client.Connection.Async
 
             private bool wasInitialized;
             private readonly Func<JsonTextReaderAsync, bool> customizedEndResult;
+            private readonly Action onDispose;
 
-            public YieldStreamResultsAsync(HttpJsonRequest request, Stream stream, int start = 0, int pageSize = 0, RavenPagingInformation pagingInformation = null, Func<JsonTextReaderAsync, bool> customizedEndResult = null)
+            public YieldStreamResultsAsync(HttpJsonRequest request, 
+                Stream stream, 
+                int start = 0, 
+                int pageSize = 0, 
+                RavenPagingInformation pagingInformation = null, 
+                Func<JsonTextReaderAsync, bool> customizedEndResult = null,
+                Action onDispose = null)
             {
                 this.request = request;
                 this.start = start;
@@ -2070,6 +2206,7 @@ namespace Raven.Client.Connection.Async
                 this.pagingInformation = pagingInformation;
                 this.stream = stream;
                 this.customizedEndResult = customizedEndResult;
+                this.onDispose = onDispose;
                 streamReader = new StreamReader(stream);
                 reader = new JsonTextReaderAsync(streamReader);
             }
@@ -2127,6 +2264,8 @@ namespace Raven.Client.Connection.Async
                 catch (Exception)
                 {
                 }
+
+                onDispose?.Invoke();
             }
 
             public async Task<bool> MoveNextAsync()
@@ -2223,8 +2362,15 @@ namespace Raven.Client.Connection.Async
 
             private bool wasInitialized;
             private readonly Func<JsonTextReader, bool> customizedEndResult;
+            private readonly Action onDispose;
 
-            public YieldStreamResultsSync(HttpJsonRequest request, Stream stream, int start = 0, int pageSize = 0, RavenPagingInformation pagingInformation = null, Func<JsonTextReader, bool> customizedEndResult = null)
+            public YieldStreamResultsSync(HttpJsonRequest request, 
+                Stream stream, 
+                int start = 0, 
+                int pageSize = 0, 
+                RavenPagingInformation pagingInformation = null, 
+                Func<JsonTextReader, bool> customizedEndResult = null,
+                Action onDispose = null)
             {
                 this.request = request;
                 this.start = start;
@@ -2232,6 +2378,7 @@ namespace Raven.Client.Connection.Async
                 this.pagingInformation = pagingInformation;
                 this.stream = stream;
                 this.customizedEndResult = customizedEndResult;
+                this.onDispose = onDispose;
                 streamReader = new StreamReader(stream);
                 reader = new JsonTextReader(streamReader);
             }
@@ -2289,6 +2436,8 @@ namespace Raven.Client.Connection.Async
                 catch (Exception)
                 {
                 }
+
+                onDispose?.Invoke();
             }
 
             public bool MoveNext()
@@ -2424,13 +2573,25 @@ namespace Raven.Client.Connection.Async
         private async Task<IAsyncEnumerator<RavenJObject>> DirectStreamDocsAsync(Etag fromEtag, string startsWith, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, OperationMetadata operationMetadata, IRequestTimeMetric requestTimeMetric, string skipAfter, string transformer, Dictionary<string, RavenJToken> transformerParameters, CancellationToken cancellationToken = default(CancellationToken))
         {
             var data = await DirectStreamDocs(fromEtag, startsWith, matches, start, pageSize, exclude, pagingInformation, operationMetadata, requestTimeMetric, skipAfter, transformer, transformerParameters, cancellationToken).ConfigureAwait(false);
-            return new YieldStreamResultsAsync(data.Request, await data.Response.GetResponseStreamWithHttpDecompression().WithCancellation(cancellationToken).ConfigureAwait(false), start, pageSize, pagingInformation);
+            return new YieldStreamResultsAsync(data.Request, await data.Response.GetResponseStreamWithHttpDecompression().WithCancellation(cancellationToken).ConfigureAwait(false), start, pageSize, pagingInformation,
+                onDispose: () =>
+                {
+                    data.Request.Dispose();
+                    data.Response.Content.Dispose();
+                    data.Response.Dispose();
+                });
         }
 
         private async Task<IEnumerator<RavenJObject>> DirectStreamDocsSync(Etag fromEtag, string startsWith, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, OperationMetadata operationMetadata, IRequestTimeMetric requestTimeMetric, string skipAfter, string transformer, Dictionary<string, RavenJToken> transformerParameters, CancellationToken cancellationToken = default(CancellationToken))
         {
             var data = await DirectStreamDocs(fromEtag, startsWith, matches, start, pageSize, exclude, pagingInformation, operationMetadata, requestTimeMetric, skipAfter, transformer, transformerParameters, cancellationToken).ConfigureAwait(false);
-            return new YieldStreamResultsSync(data.Request, await data.Response.GetResponseStreamWithHttpDecompression().WithCancellation(cancellationToken).ConfigureAwait(false), start, pageSize, pagingInformation);
+            return new YieldStreamResultsSync(data.Request, await data.Response.GetResponseStreamWithHttpDecompression().WithCancellation(cancellationToken).ConfigureAwait(false), start, pageSize, pagingInformation,
+                onDispose: () =>
+                {
+                    data.Request.Dispose();
+                    data.Response.Content.Dispose();
+                    data.Response.Dispose();
+                });
         }
 
         private async Task<HttpData> DirectStreamDocs(Etag fromEtag, string startsWith, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, OperationMetadata operationMetadata, IRequestTimeMetric requestTimeMetric, string skipAfter, string transformer, Dictionary<string, RavenJToken> transformerParameters, CancellationToken cancellationToken)
@@ -2494,7 +2655,7 @@ namespace Raven.Client.Connection.Async
                 sb.Append("next-page=true").Append("&");
 
             var request = jsonRequestFactory
-                .CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, sb.ToString(), HttpMethod.Get, operationMetadata.Credentials, convention, requestTimeMetric)
+                .CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, sb.ToString(), HttpMethod.Get, operationMetadata.Credentials, convention, requestTimeMetric, timeout: TimeSpan.FromMinutes(15))
                     .AddOperationHeaders(OperationsHeaders))
                 .AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader);
 
@@ -2789,6 +2950,7 @@ namespace Raven.Client.Connection.Async
         private bool resolvingConflict;
         private bool resolvingConflictRetries;
 
+        public bool AvoidCluster { get; set; } = false;
         internal async Task<T> ExecuteWithReplication<T>(HttpMethod method, Func<OperationMetadata, IRequestTimeMetric, Task<T>> operation, CancellationToken token = default(CancellationToken))
         {
             var currentRequest = Interlocked.Increment(ref requestCount);
@@ -3001,9 +3163,9 @@ namespace Raven.Client.Connection.Async
         }
 
         internal async Task<ReplicationDocumentWithClusterInformation> DirectGetReplicationDestinationsAsync(OperationMetadata operationMetadata, IRequestTimeMetric requestTimeMetric, TimeSpan? timeout = null)
-        {            
+        {
             var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/replication/topology", HttpMethod.Get, operationMetadata.Credentials, convention, requestTimeMetric, timeout);
-            using (var request = jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams.AddOperationHeaders(OperationsHeaders)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader))
+            using (var request = jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams.AddOperationHeaders(OperationsHeaders)))
             {
                 try
                 {

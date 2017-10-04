@@ -3,6 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
+
 namespace Raven.Abstractions.Cluster
 {
     public class ClusterInformation
@@ -56,6 +58,11 @@ namespace Raven.Abstractions.Cluster
             {
                 return (IsInCluster.GetHashCode() * 397) ^ IsLeader.GetHashCode() ^ WithClusterFailoverHeader.GetHashCode();
             }
+        }
+
+        public override string ToString()
+        {
+            return $"IsLeader={IsLeader} IsInCluster={IsInCluster} WithClusterFailoverHeader={WithClusterFailoverHeader}";
         }
     }
 }

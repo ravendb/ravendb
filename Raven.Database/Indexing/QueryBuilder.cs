@@ -70,8 +70,9 @@ namespace Raven.Database.Indexing
                                 DefaultOperator = indexQuery.DefaultOperator,
                                 FieldName = indexQuery.DefaultField ?? string.Empty
                             });
-                        // The parser should throw ParseException in this case.
-                        if (res == null) throw new GeoAPI.IO.ParseException("Could not parse query");
+                        // The parser already throws parse exception if there is a syntax error.
+                        // We now return null in the case of a term query that has been fully analyzed, so we need to return a valid query.
+                        if (res == null) return new BooleanQuery();
                         return res;
                     }
                     catch (ParseException pe)

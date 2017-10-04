@@ -104,7 +104,7 @@ namespace Raven.Client.Authorization
 
         private static bool OperationMatches(string op1, string op2)
         {
-            return op2.StartsWith(op1);
+			return op1 == op2 || op2.StartsWith(op1+"/");
         }
 
         public static void SecureFor(this IDocumentSession session, string userId, string operation)

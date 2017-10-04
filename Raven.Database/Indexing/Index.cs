@@ -2134,7 +2134,7 @@ namespace Raven.Database.Indexing
                 (Priority & IndexingPriority.Disabled) == IndexingPriority.Disabled)
                 return;
 
-            var title = $"Index '{PublicName}' marked as disabled due to exceeding the error limit {(ErrorsLimit)}";
+            var title = $"Index '{PublicName}' marked as disabled due to exceeding the error limit {ErrorsLimit}";
             var errorMessage = $"Index '{PublicName}' exceeded the error limit. " +
                                "The index priority was set to disabled.";
 

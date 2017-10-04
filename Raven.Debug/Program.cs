@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 
 using Microsoft.Diagnostics.Runtime;
@@ -15,6 +17,24 @@ namespace Raven.Debug
 {
     public class Program
     {
+        private const int LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR = 0x00000100;
+
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        private static extern IntPtr LoadLibraryEx(string lpFileName, IntPtr hReservedNull, int dwFlags);
+
+        private static void EnsureProperDebugDllsAreLoaded()
+        {
+            var systemDirectory = Environment.GetFolderPath(Environment.SpecialFolder.System);
+
+            var res = LoadLibraryEx(Path.Combine(systemDirectory, "dbghelp.dll"), IntPtr.Zero, LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR);
+            if (res == IntPtr.Zero)
+                throw new Win32Exception(Marshal.GetLastWin32Error());
+
+            res = LoadLibraryEx(Path.Combine(systemDirectory, "dbgeng.dll"), IntPtr.Zero, LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR);
+            if (res == IntPtr.Zero)
+                throw new Win32Exception(Marshal.GetLastWin32Error());
+        }
+
         public static int Main(string[] args)
         {
             int processId = -1;
@@ -47,10 +67,11 @@ namespace Raven.Debug
                 return -2;
             }
 
+            EnsureProperDebugDllsAreLoaded();
+
             try
             {
-                if (actionToTake != null)
-                    actionToTake();
+                actionToTake?.Invoke();
             }
             catch (Exception e)
             {
@@ -64,7 +85,7 @@ namespace Raven.Debug
         private static void ShowStackTrace(int processId, uint attachTimeout, string outputPath)
         {
             if (processId == -1)
-                throw new InvalidOperationException("Uinitialized process id parameter");
+                throw new InvalidOperationException("Uninitialized process id parameter");
 
             var threadInfoList = new List<ThreadInfo>();
 

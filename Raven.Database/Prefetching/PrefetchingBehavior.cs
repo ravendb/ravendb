@@ -168,6 +168,13 @@ namespace Raven.Database.Prefetching
             return UpdateCurrentlyUsedBatches(documents);
         }
 
+        public IDisposable DocumentBatchFrom(Etag etag, int take, out List<JsonDocument> documents)
+        {
+            LastTimeUsed = DateTime.UtcNow;
+            documents = GetDocumentsBatchFrom(etag, take);
+            return UpdateCurrentlyUsedBatches(documents);
+        }
+
         public List<JsonDocument> GetDocumentsBatchFrom(Etag etag, int? take = null)
         {
             Debug.Assert(ForEntityNames == null || ForEntityNames.Comparer.Equals(EqualityComparer<string>.Default) == false);
@@ -391,6 +398,12 @@ namespace Raven.Database.Prefetching
 
                         if (log.IsDebugEnabled)
                             log.Debug("Didn't load any documents from previous batches. Loading documents directly from disk.");
+
+                        if (firstEtagInQueue != null && nextEtagToIndex.CompareTo(firstEtagInQueue) > 0)
+                        {
+                            // next etag to index isn't in the queue and bigger than the first etag in queue
+                            firstEtagInQueue = null;
+                        }
 
                         //if there has been no results, AND no future batch that we can wait for, then we just load directly from disk
                         docsLoaded = LoadDocumentsFromDisk(etag, firstEtagInQueue, result, take); // here we _intentionally_ use the current etag, not the next one
@@ -699,6 +712,12 @@ namespace Raven.Database.Prefetching
                 Debug.Assert((ForEntityNames != null && (nextBatch.EntityNames == null || ForEntityNames.IsSubsetOf(nextBatch.EntityNames) == false)) == false);
 
                 var jsonDocuments = nextBatch.Task.Result;
+                if (jsonDocuments.Count == 0)
+                {
+                    // no documents were found in the future batch
+                    return false;
+                }
+
                 MaybeAddFutureBatch(jsonDocuments);
 
                 using (prefetchingQueue.EnterWriteLock())
@@ -1202,31 +1221,25 @@ namespace Raven.Database.Prefetching
                 RelevantDocsCount = relevantDocsCount,
                 Task = Task.Run(() =>
                 {
-                    List<JsonDocument> jsonDocuments = null;
-                    var localWork = 0;
                     var earlyExit = new Reference<bool>();
                     var relevantDocsCountInternal = new Reference<int>();
-                    while (context.RunIndexing)
-                    {
-                        linkedToken.Token.ThrowIfCancellationRequested();
-                        jsonDocuments = GetJsonDocsFromDisk(
-                            linkedToken.Token,
-                            Abstractions.Util.EtagUtil.Increment(nextEtag, -1), 
-                            untilEtag, relevantDocsCountInternal, earlyExit);
-
-                        if (jsonDocuments.Count > 0)
-                            break;
-
-                        futureBatchStat.Retries++;
-
-                        context.WaitForWork(TimeSpan.FromMinutes(10), ref localWork, "PreFetching");
-                    }
+                    linkedToken.Token.ThrowIfCancellationRequested();
+                    var jsonDocuments = GetJsonDocsFromDisk(
+                        linkedToken.Token,
+                        Abstractions.Util.EtagUtil.Increment(nextEtag, -1),
+                        untilEtag, relevantDocsCountInternal, earlyExit);
 
                     futureBatchStat.Duration = sp.Elapsed;
-                    futureBatchStat.Size = jsonDocuments == null ? 0 : jsonDocuments.Count;
+                    futureBatchStat.Size = jsonDocuments.Count;
 
-                    if (jsonDocuments == null)
-                        return null;
+                    if (jsonDocuments.Count == 0)
+                    {
+                        if (log.IsDebugEnabled)
+                            log.Debug($"No documents to fetch for a future batch starting from etag {nextEtag}");
+
+                        relevantDocsCount.Value = 0;
+                        return new List<JsonDocument>();
+                    }
 
                     LogEarlyExit(nextEtag, untilEtag, batchType == FutureBatchType.EarlyExit,
                         jsonDocuments, sp.ElapsedMilliseconds);

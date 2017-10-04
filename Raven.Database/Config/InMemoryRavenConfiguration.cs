@@ -329,7 +329,6 @@ namespace Raven.Database.Config
                 CustomTaskScheduler = (TaskScheduler)Activator.CreateInstance(type);
             }
 
-            AllowLocalAccessWithoutAuthorization = ravenSettings.AllowLocalAccessWithoutAuthorization.Value;
             RejectClientsMode = ravenSettings.RejectClientsModeEnabled.Value;
 
             // Voron settings
@@ -864,14 +863,7 @@ namespace Raven.Database.Config
         /// Default: Get
         /// </summary>
         public AnonymousUserAccessMode AnonymousUserAccessMode { get; set; }
-
-        /// <summary>
-        /// If set local request don't require authentication
-        /// Allowed values: true/false
-        /// Default: false
-        /// </summary>
-        public bool AllowLocalAccessWithoutAuthorization { get; set; }
-
+        
         /// <summary>
         /// If set all client request to the server will be rejected with 
         /// the http 503 response.

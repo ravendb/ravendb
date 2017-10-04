@@ -11,6 +11,7 @@ using Raven.Tests.Core.Utils.Indexes;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Client.Indexes;
 using Xunit;
 
 namespace Raven.Tests.Core.Querying
@@ -449,6 +450,37 @@ namespace Raven.Tests.Core.Querying
                     Assert.Equal(0, facetResults.Results["Megapixels_Range"].Values[3].Hits);
                 }
             }
+        }
+
+        [Fact]
+        public void CanSearchOnFullyAnalyzedTerm()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.ExecuteIndex(new Object_ByName());
+                using (var session = store.OpenSession())
+                {
+                        session.Query<NamedObject, Object_ByName>()
+                            .Search(x => x.Name, "AND")
+                            .ToList();
+                }
+                //This test pass if it does not throw
+            }
+        }
+        public class Object_ByName : AbstractIndexCreationTask<NamedObject>
+        {
+            public Object_ByName()
+            {
+                Map = objects => objects.Select(x => new {x.Name});
+
+                Indexes.Add(x => x.Name, FieldIndexing.Analyzed);
+                Analyzers.Add(x => x.Name, "Lucene.Net.Analysis.Standard.StandardAnalyzer");
+            }
+        }
+
+        public class NamedObject
+        {
+            public string Name { get; set; }
         }
     }
 }

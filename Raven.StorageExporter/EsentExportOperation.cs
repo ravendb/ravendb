@@ -26,7 +26,9 @@ namespace Raven.StorageExporter
                 ravenConfiguration.Storage.PreventSchemaUpdate = true;
 
                 ITransactionalStorage storage;
-                var success = StorageExporter.TryToCreateTransactionalStorage(ravenConfiguration, hasCompression, encryption, out storage);
+
+                Database.FileSystem.Storage.ITransactionalStorage fileStorage;
+                var success = StorageExporter.TryToCreateTransactionalStorage(ravenConfiguration, hasCompression, encryption,false, out storage, out fileStorage);
                 if (success == false)
                     ConsoleUtils.PrintErrorAndFail("Failed to create transactional storage");
 

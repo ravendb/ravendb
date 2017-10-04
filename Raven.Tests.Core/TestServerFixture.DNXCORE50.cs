@@ -72,25 +72,9 @@ namespace Raven.Tests.Core
 
         private void StartProcess()
         {
-            var processes = Process.GetProcessesByName("Raven.Tests.Server.Runner.exe");
-            foreach (var p in processes)
-            {
-                try
-                {
-                    p.Kill();
-                }
-                catch (Exception)
-                {
-                }
-            }
-#if DEBUG
-            var path = Path.GetFullPath("../Raven.Tests.Server.Runner/bin/Debug/Raven.Tests.Server.Runner.exe");
-#else
-            var path = Path.GetFullPath("../Raven.Tests.Server.Runner/bin/Release/Raven.Tests.Server.Runner.exe");
-#endif
-            if (File.Exists(path) == false)
-                throw new InvalidOperationException(string.Format("Could not locate 'Raven.Tests.Server.Runner' in '{0}'.", path));
+            KillServerRunner();
 
+            var path = GetServerRunnerPath();
             var startInfo = new ProcessStartInfo(path)
             {
                 CreateNoWindow = true,
@@ -105,8 +89,59 @@ namespace Raven.Tests.Core
             if (DocumentStore != null)
                 DocumentStore.Dispose();
 
-            if (process != null)
-                process.Kill();
+            try
+            {
+                process?.Kill();
+            }
+            catch (Exception)
+            {
+            }
+
+            KillServerRunner();
+        }
+
+        private static void KillServerRunner()
+        {
+            var processes = Process.GetProcessesByName("Raven.Tests.Server.Runner.exe");
+            foreach (var p in processes)
+            {
+                try
+                {
+                    p.Kill();
+                }
+                catch (Exception)
+                {
+                }
+            }
+        }
+
+        private static string GetServerRunnerPath()
+        {
+#if DEBUG
+            var path = "Raven.Tests.Server.Runner/bin/Debug/Raven.Tests.Server.Runner.exe";
+#else
+            var path = "Raven.Tests.Server.Runner/bin/Release/Raven.Tests.Server.Runner.exe";
+#endif
+
+            var tries = 10;
+            while (tries > 0)
+            {
+                path = Path.Combine("../", path);
+                var fullPath = Path.GetFullPath(path);
+
+                if (File.Exists(fullPath))
+                {
+                    path = fullPath;
+                    break;
+                }
+
+                tries--;
+            }
+
+            if (File.Exists(path) == false)
+                throw new InvalidOperationException(string.Format("Could not locate 'Raven.Tests.Server.Runner' in '{0}'.", path));
+
+            return path;
         }
 
         private class ServerConfiguration

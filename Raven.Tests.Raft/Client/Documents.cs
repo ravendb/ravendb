@@ -40,6 +40,7 @@ namespace Raven.Tests.Raft.Client
 
         private void CanReadFromMultipleServersInternal(int numberOfNodes, FailoverBehavior failoverBehavior)
         {
+           
             var clusterStores = CreateRaftCluster(numberOfNodes, activeBundles: "Replication", configureStore: store => store.Conventions.FailoverBehavior = failoverBehavior);
 
             SetupClusterConfiguration(clusterStores);
@@ -54,7 +55,7 @@ namespace Raven.Tests.Raft.Client
             clusterStores.ForEach(store =>
             {
                 var client = ((AsyncServerClient)store.AsyncDatabaseCommands);
-                AsyncHelpers.RunSync(()=>client.RequestExecuter.UpdateReplicationInformationIfNeededAsync(client));
+                AsyncHelpers.RunSync(()=>client.RequestExecuter.UpdateReplicationInformationIfNeededAsync(client,force:true));
             });
             var tasks = new List<ReplicationTask>();
             foreach (var server in servers)
@@ -79,14 +80,15 @@ namespace Raven.Tests.Raft.Client
                     Enumerable.Range(0, numberOfNodes).ForEach(j => store.DatabaseCommands.Get($"keys/{j}"));
                 }
             }
-
             servers.ForEach(server =>
             {
-                Assert.True(server.Options.RequestManager.NumberOfRequests >= numberOfNodes);
+               Assert.True(server.Options.RequestManager.NumberOfRequests >= numberOfNodes);
             });
+
+            servers.Clear();
         }
 
-        [Theory]
+        [Theory(Skip = "Flaky test")]
         [PropertyData("Nodes")]
         public void PutShouldBePropagated(int numberOfNodes)
         {

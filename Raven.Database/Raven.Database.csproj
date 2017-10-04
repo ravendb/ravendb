@@ -297,6 +297,7 @@
     <Compile Include="Indexing\LuceneAST.cs" />
     <Compile Include="JsConsole\AdminJsConsole.cs" />
     <Compile Include="JsConsole\AdminJsScript.cs" />
+    <Compile Include="Json\OptimisticConcurrencyViolationException.cs" />
     <Compile Include="Plugins\Builtins\CheckPageFileOnHDD.cs" />
     <Compile Include="Plugins\Builtins\HotSpareReplicationBehavior.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\DatabaseScalarObjectBase.cs" />
@@ -1419,7 +1420,6 @@
     <Compile Include="Util\SizeHelper.cs" />
     <Compile Include="Util\SortedKeyList.cs" />
     <Compile Include="Util\Streams\PartialStream.cs" />
-    <Compile Include="Util\WildcardMatcher.cs" />
     <Compile Include="Extensions\FeatureNotSupportedOnPosixException.cs" />
     <Compile Include="Config\MemoryStatisticsPosix.cs" />
   </ItemGroup>
@@ -1446,8 +1446,6 @@
       <SubType>Designer</SubType>
     </Content>
     <EmbeddedResource Include="Json\lodash.js" />
-    <EmbeddedResource Include="Util\Raven.Debug\x64\dbghelp.dll" />
-    <EmbeddedResource Include="Util\Raven.Debug\x86\dbghelp.dll" />
     <EmbeddedResource Include="Util\Raven.Debug\x86\Raven.Debug.exe" />
     <EmbeddedResource Include="Util\Raven.Debug\x64\Raven.Debug.exe" />
     <EmbeddedResource Include="Server\WebUI\raven-data.ico" />

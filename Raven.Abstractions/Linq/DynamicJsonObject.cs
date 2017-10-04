@@ -214,8 +214,15 @@ namespace Raven.Abstractions.Linq
                         if (s.Length == 0)
                             return s;
 
-                        if (s == "NaN")
-                            return double.NaN;
+                        switch (s)
+                        {
+                            case "NaN":
+                                return double.NaN;
+                            case "Infinity":
+                                return double.PositiveInfinity;
+                            case "-Infinity":
+                                return double.NegativeInfinity;
+                        }
 
                         //optimizations, don't try to call TryParse if first char isn't a digit or '-'
                         if (char.IsDigit(s[0]) == false && s[0] != '-')

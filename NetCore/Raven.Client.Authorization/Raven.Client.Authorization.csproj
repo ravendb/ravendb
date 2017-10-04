@@ -1,0 +1,50 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <VersionPrefix>3.5.0</VersionPrefix>
+    <TargetFramework>netstandard1.3</TargetFramework>
+    <AssemblyName>Raven.Client.Authorization</AssemblyName>
+    <PackageId>Raven.Client.Authorization</PackageId>
+    <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
+    <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
+    <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
+    <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
+    <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
+    <GenerateAssemblyInformationalVersionAttribute>false</GenerateAssemblyInformationalVersionAttribute>
+    <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
+    <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
+    <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
+    <GenerateNeutralResourcesLanguageAttribute>false</GenerateNeutralResourcesLanguageAttribute>
+    <SignAssembly>True</SignAssembly>
+    <AssemblyOriginatorKeyFile>..\..\Raven.Database\RavenDB.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\..\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
+    <Compile Include="..\..\Bundles\Raven.Bundles.Authorization\OperationAllowedResult.cs" Link="Model\OperationAllowedResult.cs" />
+    <Compile Include="..\..\Bundles\Raven.Bundles.Authorization\Model\AuthorizationRole.cs" Link="Model\AuthorizationRole.cs" />
+    <Compile Include="..\..\Bundles\Raven.Bundles.Authorization\Model\AuthorizationUser.cs" Link="Model\AuthorizationUser.cs" />
+    <Compile Include="..\..\Bundles\Raven.Bundles.Authorization\Model\DocumentAuthorization.cs" Link="Model\DocumentAuthorization.cs" />
+    <Compile Include="..\..\Bundles\Raven.Bundles.Authorization\Model\DocumentPermission.cs" Link="Model\DocumentPermission.cs" />
+    <Compile Include="..\..\Bundles\Raven.Bundles.Authorization\Model\IPermission.cs" Link="Model\IPermission.cs" />
+    <Compile Include="..\..\Bundles\Raven.Bundles.Authorization\Model\OperationPermission.cs" Link="Model\OperationPermission.cs" />
+    <Compile Include="..\..\Bundles\Raven.Client.Authorization\**\*.cs" Exclude="..\..\Bundles\Raven.Client.Authorization\obj\**\*.cs">
+      <Link>%(RecursiveDir)%(Filename)%(Extension)</Link>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj" />
+    <ProjectReference Include="..\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Model\" />
+    <Folder Include="Properties\" />
+  </ItemGroup>
+
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard1.3' ">
+    <DefineConstants>$(DefineConstants);DNXCORE50;PORTABLE;DOTNET</DefineConstants>
+  </PropertyGroup>
+
+</Project>

@@ -154,7 +154,7 @@ namespace Raven.Abstractions.Json
                 // Otherwise, we have values, so make the assignment
                 if (currentRank < multiDimensionalArray.Rank - 1)
                     SetValues(multiDimensionalArray, rankLengthList, myAssignToIndexList, currentRank + 1, newValues[i] as List<object>);
-                else
+                else if (i < newValues.Count)
                     multiDimensionalArray.SetValue(newValues[i], myAssignToIndexList);
             }
         }

@@ -255,7 +255,6 @@ namespace Raven.Tests.Core.Configuration
             configurationComparer.Assert(expected => expected.AccessControlAllowMethods.Value, actual => actual.AccessControlAllowMethods);
             configurationComparer.Assert(expected => expected.AccessControlRequestHeaders.Value, actual => actual.AccessControlRequestHeaders);
             configurationComparer.Assert(expected => expected.HttpCompression.Value, actual => actual.HttpCompression);
-            configurationComparer.Assert(expected => expected.AllowLocalAccessWithoutAuthorization.Value, actual => actual.AllowLocalAccessWithoutAuthorization);
             configurationComparer.Assert(expected => expected.RunInMemory.Value, actual => actual.RunInMemory);
             configurationComparer.Assert(expected => expected.DisableInMemoryIndexing.Value, actual => actual.DisableInMemoryIndexing);
             configurationComparer.Assert(expected => expected.WebDir.Value, actual => actual.WebDir);

@@ -143,7 +143,8 @@ namespace Raven.Tests.Issues
 
                 try
                 {
-                    await ((DocumentStore) store1).Replication.WaitAsync(timeout: TimeSpan.FromSeconds(5), replicas: 2);
+                    //This test is racy, it depends on the time it takes to fetch the topology
+                    await ((DocumentStore)store1).Replication.WaitAsync(timeout: TimeSpan.FromSeconds(10), replicas: 2);
                 }
                 catch (TimeoutException ex)
                 {
@@ -170,7 +171,7 @@ namespace Raven.Tests.Issues
                 session.SaveChanges();
             }
 
-            var exception = await AssertAsync.Throws<TimeoutException>(async () => await store1.Replication.WaitAsync(timeout:TimeSpan.FromSeconds(15),replicas: 3));
+            var exception = await AssertAsync.Throws<TimeoutException>(async () => await ((DocumentStore)store1).Replication.WaitAsync(replicas: 3));
             Assert.Contains("Could not verify that etag", exception.Message);
         }
 

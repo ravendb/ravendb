@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace Raven.Abstractions.Util
@@ -28,7 +29,22 @@ namespace Raven.Abstractions.Util
         /// <remarks>
         /// http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Escaping%20Special%20Characters
         /// </remarks>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static string Escape(string term, bool allowWildcards, bool makePhrase)
+        {
+            //Needed to add a wrapper because you can't use defult parameter from lambda expression and adding it will break code
+            return EscapeInternal(term, allowWildcards, makePhrase, false);
+        }
+
+
+        public static bool IsEscapedChar(char c)
+        {
+            return escapeChars.Contains(c);
+        }
+
+        private static HashSet<char> escapeChars = new HashSet<char> {'*', '?', '+', '-', '&', '|', '!', '(', ')', '{', '}', '[', ']', '^', '~', '/', ':','\"','\\'};
+
+        public static string EscapeInternal(string term, bool allowWildcards, bool makePhrase, bool nested)
         {
             // method doesn't allocate a StringBuilder unless the string requires escaping
             // also this copies chunks of the original string into the StringBuilder which
@@ -42,12 +58,6 @@ namespace Raven.Abstractions.Util
             int start = 0;
             int length = term.Length;
             StringBuilder buffer = null;
-            if (length >= 2 && term[0] == '/' && term[1] == '/')
-            {
-                buffer = new StringBuilder(length * 2);
-                buffer.Append("\\/\\/");
-                start = 2;
-            }
             for (int i = start; i < length; i++)
             {
                 char ch = term[i];
@@ -61,7 +71,7 @@ namespace Raven.Abstractions.Util
                             {
                                 break;
                             }
-                            goto case '\\';
+                            goto case ':';
                         }
                     case '+':
                     case '-':
@@ -75,9 +85,34 @@ namespace Raven.Abstractions.Util
                     case '[':
                     case ']':
                     case '^':
-                    case '"':
                     case '~':
+                    case '/':
                     case ':':
+                        {
+                            if (buffer == null)
+                            {
+                                // allocate builder with headroom
+                                buffer = new StringBuilder(length * 2);
+                            }
+
+                            if (i > start)
+                            {
+                                // append any leading substring
+                                buffer.Append(term, start, i - start);
+                            }
+                            if (nested == false) 
+                            {
+                                buffer.Append('\\').Append(ch);
+                                start = i + 1;
+                            }
+                            else //We don't want to escape lucene special chars when already in phrase mode
+                            {
+                                buffer.Append(ch);
+                                start = i + 1;
+                            }
+                            break;
+                        }
+                    case '"':
                     case '\\':
                         {
                             if (buffer == null)
@@ -101,7 +136,7 @@ namespace Raven.Abstractions.Util
                         {
                             if (makePhrase)
                             {
-                                return new StringBuilder(Escape(term, allowWildcards, false)).Insert(0,"\"").Append("\"").ToString();								
+                                return new StringBuilder(EscapeInternal(term, allowWildcards, false, nested:true)).Insert(0,"\"").Append("\"").ToString();								
                             }
                             break;
                         }

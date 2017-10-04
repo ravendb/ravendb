@@ -4,19 +4,10 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-
 using Rachis;
-using Rachis.Commands;
-using Rachis.Storage;
 using Rachis.Transport;
-
-using Raven.Abstractions.Logging;
-using Raven.Database.Raft.Commands;
 using Raven.Database.Raft.Storage;
-using Raven.Database.Raft.Storage.Handlers;
 using Raven.Database.Raft.Util;
 using Raven.Database.Server.Tenancy;
 using Raven.Database.Util;
@@ -42,7 +33,7 @@ namespace Raven.Database.Raft
             };
         }
 
-        public static ClusterManager Create(DocumentDatabase systemDatabase, DatabasesLandlord databasesLandlord)
+        public static ClusterManager Create(DocumentDatabase systemDatabase, DatabasesLandlord databasesLandlord, bool nullifyLastAppliedIndex = false)
         {
             if (systemDatabase == null)
                 throw new ArgumentNullException("systemDatabase");

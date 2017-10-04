@@ -13,7 +13,7 @@ properties {
     $release_dir = "$base_dir\Release"
     $uploader = "..\Uploader\S3Uploader.exe"
     $global:configuration = "Release"
-    $msbuild = "C:\Program Files (x86)\MSBuild\14.0\Bin\MSBuild.exe"
+    $msbuild = "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\MSBuild\15.0\Bin\MSBuild.exe"
     $nowarn = "1591,1573"
     
     $dotnet = "dotnet"
@@ -24,10 +24,9 @@ properties {
 
     $global:is_pull_request = $FALSE
     $global:buildlabel = Get-BuildLabel
-    $global:uploadCategory = "RavenDB-Unstable"
+    $global:uploadCategory = "RavenDB-Custom"
     
-    $global:validate = $FALSE
-    $global:validatePages = $FALSE
+    $global:constants = "RELEASE;TRACE"
     
     $global:githubUser = $env:GITHUB_USER
     $global:githubAccessToken = $env:GITHUB_ACCESS_TOKEN
@@ -36,11 +35,11 @@ properties {
 task default -depends Test, DoReleasePart1
 
 task Validate {
-    $global:validate = $TRUE
+    $global:constants += ";VALIDATE"
 }
 
 task ValidatePages {
-    $global:validatePages = $TRUE
+    $global:constants += ";VALIDATE_PAGES"
 }
 
 task Verify40 {
@@ -89,18 +88,10 @@ task Init -depends Verify40, Clean, NuGetRestore {
 task Compile -depends Init, CompileHtml5 {
 
     $commit = Get-Git-Commit-Full
-
-    $constants = "NET_4_0;TRACE"
-    if ($global:validate -eq $TRUE) {
-        $constants += ";VALIDATE"
-    }
-    if ($global:validatePages -eq $TRUE) {
-        $constants += ";VALIDATE_PAGES"
-    }
     
     Write-Host "Compiling with '$global:configuration' configuration and '$constants' constants" -ForegroundColor Yellow
     
-    &"$msbuild" "$sln_file" /p:Configuration=$global:configuration "/p:NoWarn=`"$nowarn`"" "/p:DefineConstants=`"$constants`"" /p:VisualStudioVersion=14.0 /maxcpucount /verbosity:minimal
+    &"$msbuild" "$sln_file" /p:Configuration=$global:configuration "/p:NoWarn=`"$nowarn`"" /maxcpucount /verbosity:minimal
 
     Write-Host "msbuild exit code: $LastExitCode"
 
@@ -126,28 +117,19 @@ task CompileHtml5 {
     
     Set-Location $base_dir
     
-    &"$msbuild" "Raven.Studio.Html5\Raven.Studio.Html5.csproj" /p:Configuration=$global:configuration "/p:NoWarn=`"$nowarn`"" /p:VisualStudioVersion=14.0 /maxcpucount /verbosity:minimal
+    &"$msbuild" "Raven.Studio.Html5\Raven.Studio.Html5.csproj" /p:Configuration=$global:configuration "/p:NoWarn=`"$nowarn`"" /maxcpucount /verbosity:minimal
     
     Set-Location $build_dir\Html5
     exec { & $tools_dir\zip.exe -9 -A -r $build_dir\Raven.Studio.Html5.zip *.* }
     Set-Location $base_dir
 }
 
-task CompileDotNet {
-
-    exec { & "$dotnet" restore }
-
-    exec { & "$dotnet" build Raven.Client.Lightweight --configuration "$global:configuration" --output "$build_dir\DotNet\Raven.Client.Lightweight" --framework "$dotnetLib" --no-incremental }
-    exec { & "$dotnet" build Bundles\Raven.Client.Authorization --configuration "$global:configuration" --output "$build_dir\DotNet\Bundles\Raven.Client.Authorization" --framework "$dotnetLib" --no-incremental }
-    exec { & "$dotnet" build Bundles\Raven.Client.UniqueConstraints --configuration "$global:configuration" --output "$build_dir\DotNet\Bundles\Raven.Client.UniqueConstraints" --framework "$dotnetLib" --no-incremental }
-}
-
-task TestDotNet -depends Compile,CompileDotNet {
+task TestDotNet -depends Compile {
     Clear-Host
 
-    Push-Location "$base_dir\Raven.Tests.Core"
+    Push-Location "$base_dir\NetCore\Raven.Tests.Core"
 
-    Start-Process -FilePath "$dotnet" -ArgumentList "test --configuration $global:configuration --framework $dotnetApp" -NoNewWindow -Wait
+    Start-Process -FilePath "$dotnet" -ArgumentList "test --configuration $global:configuration" -NoNewWindow -Wait
 
     Pop-Location
 }
@@ -349,7 +331,7 @@ task CopyStorageExporter {
 task CopyClient {
     @( "$base_dir\Raven.Client.Lightweight\bin\$global:configuration\Raven.Abstractions.???", "$base_dir\Raven.Client.Lightweight\bin\$global:configuration\Raven.Client.Lightweight.???") | ForEach-Object { Copy-Item "$_" $build_dir\Output\Client }
 
-    @("Raven.Client.Lightweight.???", "Raven.Client.Lightweight.deps.json", "Raven.Abstractions.???", "Sparrow.???") |% { Copy-Item "$build_dir\DotNet\Raven.Client.Lightweight\$_" $build_dir\Output\Client\$dotnetLib }
+    @("Raven.Client.Lightweight.???", "Raven.Client.Lightweight.deps.json", "Raven.Abstractions.???", "Sparrow.???") |% { Copy-Item "$base_dir\NetCore\Raven.Client.Lightweight\bin\$global:configuration\$dotnetLib\$_" $build_dir\Output\Client\$dotnetLib }
 }
 
 task CopyWeb {
@@ -372,8 +354,8 @@ task CopyBundles {
     Copy-Item $base_dir\Bundles\Raven.Client.Authorization\bin\$global:configuration\Raven.Client.Authorization.??? $build_dir\Output\Bundles
     Copy-Item $base_dir\Bundles\Raven.Client.UniqueConstraints\bin\$global:configuration\Raven.Client.UniqueConstraints.??? $build_dir\Output\Bundles
 
-    @("Raven.Client.Authorization.???", "Raven.Client.Authorization.deps.json") |% { Copy-Item "$build_dir\DotNet\Bundles\Raven.Client.Authorization\$_" $build_dir\Output\Bundles\$dotnetLib }
-    @("Raven.Client.UniqueConstraints.???", "Raven.Client.UniqueConstraints.deps.json") |% { Copy-Item "$build_dir\DotNet\Bundles\Raven.Client.UniqueConstraints\$_" $build_dir\Output\Bundles\$dotnetLib }
+    @("Raven.Client.Authorization.???", "Raven.Client.Authorization.deps.json") |% { Copy-Item "$base_dir\NetCore\Raven.Client.Authorization\bin\$global:configuration\$dotnetLib\$_" $build_dir\Output\Bundles\$dotnetLib }
+    @("Raven.Client.UniqueConstraints.???", "Raven.Client.UniqueConstraints.deps.json") |% { Copy-Item "$base_dir\NetCore\Raven.Client.UniqueConstraints\bin\$global:configuration\$dotnetLib\$_" $build_dir\Output\Bundles\$dotnetLib }
 }
 
 task CopyServer -depends CreateOutpuDirectories {
@@ -414,7 +396,7 @@ function SignFile($filePath){
     }
     }
 
-    $installerCert = "$base_dir\..\BuildsInfo\RavenDB\certs\installer.pfx"
+    $installerCert = "$base_dir\..\BuildsInfo\RavenDB\certs\code-sign.pfx"
     if (!(Test-Path $installerCert))
     {
         throw "Could not find pfx file under the path $installerCert to sign the installer"
@@ -437,7 +419,7 @@ function SignFile($filePath){
     $timeservers = @("http://tsa.starfieldtech.com", "http://timestamp.globalsign.com/scripts/timstamp.dll", "http://timestamp.comodoca.com/authenticode", "http://www.startssl.com/timestamp", "http://timestamp.verisign.com/scripts/timstamp.dll")
     foreach ($time in $timeservers) {
         try {
-            Exec { &$signTool sign /f "$installerCert" /p "$certPassword" /d "RavenDB" /du "http://ravendb.net" /t "$time" "$filePath" }
+            Exec { &$signTool sign /f "$installerCert" /p "$certPassword" /d "RavenDB" /du "http://ravendb.net" /t "$time" /v /debug "$filePath" }
             return
         }
         catch {
@@ -525,7 +507,6 @@ task ZipOutput {
 
 
 task DoReleasePart1 -depends Compile, `
-    CompileDotNet, `
     CleanOutputDirectory, `
     CreateOutpuDirectories, `
     CopySmuggler, `
@@ -616,7 +597,7 @@ task InitNuget {
     $global:nugetVersion = Get-InformationalVersion $version $global:buildlabel $global:uploadCategory
 }
 
-task CreateNugetPackages -depends Compile, CompileDotNet, CompileHtml5, InitNuget {
+task CreateNugetPackages -depends Compile, CompileHtml5, InitNuget {
 
     Remove-Item $base_dir\RavenDB*.nupkg
 
@@ -633,9 +614,9 @@ task CreateNugetPackages -depends Compile, CompileDotNet, CompileHtml5, InitNuge
     [xml] $xmlNuspec = Get-Content("$nuget_dir\RavenDB.Client\RavenDB.Client.nuspec")
 
     New-Item $nuget_dir\RavenDB.Client\lib\$dotnetLib -Type directory | Out-Null
-    @("Raven.Client.Lightweight.???", "Raven.Client.Lightweight.deps.json", "Raven.Abstractions.???", "Sparrow.???") |% { Copy-Item "$build_dir\DotNet\Raven.Client.Lightweight\$_" $nuget_dir\RavenDB.Client\lib\$dotnetLib }
+    @("Raven.Client.Lightweight.???", "Raven.Client.Lightweight.deps.json", "Raven.Abstractions.???", "Sparrow.???") |% { Copy-Item "$base_dir\NetCore\Raven.Client.Lightweight\bin\$global:configuration\$dotnetLib\$_" $nuget_dir\RavenDB.Client\lib\$dotnetLib }
 
-    $projects = "$base_dir\Raven.Sparrow\Sparrow", "$base_dir\Raven.Client.Lightweight", "$base_dir\Raven.Abstractions"
+    $projects = "$base_dir\NetCore\Sparrow\Sparrow.csproj", "$base_dir\NetCore\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj", "$base_dir\NetCore\Raven.Abstractions\Raven.Abstractions.csproj"
     AddDependenciesToNuspec $projects "$nuspecPath" "$dotnetLib"
 
     New-Item $nuget_dir\RavenDB.Client.MvcIntegration\lib\net45 -Type directory | Out-Null
@@ -674,9 +655,9 @@ task CreateNugetPackages -depends Compile, CompileDotNet, CompileHtml5, InitNuge
         Copy-Item $base_dir\NuGet\RavenDB.Client.$name.nuspec "$nuspecPath"
 
         New-Item $nuget_dir\RavenDB.Client.$name\lib\$dotnetLib -Type directory | Out-Null
-        @("$build_dir\DotNet\Bundles\Raven.Client.$name\Raven.Client.$_.???", "$build_dir\DotNet\Bundles\Raven.Client.$name\Raven.Client.$_.deps.json" ) |% { Copy-Item $_ $nuget_dir\RavenDB.Client.$name\lib\$dotnetLib }
+        @("$base_dir\NetCore\Raven.Client.$name\bin\$global:configuration\$dotnetLib\Raven.Client.$_.???", "$base_dir\NetCore\Raven.Client.$name\bin\$global:configuration\$dotnetLib\Raven.Client.$_.deps.json" ) |% { Copy-Item $_ $nuget_dir\RavenDB.Client.$name\lib\$dotnetLib }
 
-        $projects = "$base_dir\Bundles\Raven.Client.$name"
+        $projects = "$base_dir\NetCore\Raven.Client.$name\Raven.Client.$name.csproj"
         AddDependenciesToNuspec $projects "$nuspecPath" "$dotnetLib"
     }
 
@@ -770,24 +751,23 @@ function AddDependenciesToNuspec($projects, $nuspecPath, $framework)
 
     foreach ($project in $projects)
     {
-        $projectJson = Get-Content "$project\project.json" -Raw | ConvertFrom-Json
-        $frameworks = $projectJson.frameworks
-        $dependencies = $frameworks."$framework".dependencies
-
-        foreach ($dependency in $dependencies.psobject.properties)
+        [xml] $projectXml = Get-Content "$project"
+        $packageReferences = $projectXml.SelectNodes('/Project/ItemGroup[contains(@Condition, "netstandard")]/PackageReference')
+        
+        foreach ($packageReference in $packageReferences)
         {
-            $dependencyName = $dependency.name;
-            $dependencyVersion = $dependency.value;
+            $name = $packageReference.GetAttribute('Include')
+            $version = $packageReference.GetAttribute('Version')
 
-            $netcoreDependencies[$dependencyName] = $dependencyVersion
+            $netcoreDependencies[$name] = $version
         }
     }
 
     foreach ($dependency in $netcoreDependencies.Keys)
     {
         $xmlDependency = $xmlNuspec.CreateElement("dependency")
-        $xmlDependency.SetAttribute("id", $dependency)
-        $xmlDependency.SetAttribute("version", $netcoreDependencies[$dependency])
+        $xmlDependency.SetAttribute("id", [string] $dependency)
+        $xmlDependency.SetAttribute("version", [string] $netcoreDependencies[$dependency])
 
         $xmlFrameworkDependency.AppendChild($xmlDependency)
     }

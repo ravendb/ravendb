@@ -42,23 +42,25 @@ namespace Raven.Client.Connection
         /// </summary>
         public ReplicationDestination[] FailoverServers { get; set; }
 
-        public Task UpdateReplicationInformationIfNeededAsync(AsyncServerClient serverClient)
+        public Task UpdateReplicationInformationIfNeededAsync(AsyncServerClient serverClient, bool force = false)
         {
             return UpdateReplicationInformationIfNeededInternalAsync(serverClient.Url, () => 
-                AsyncHelpers.RunSync(() => serverClient.DirectGetReplicationDestinationsAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null), null)));
+                AsyncHelpers.RunSync(() => serverClient.DirectGetReplicationDestinationsAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null), null)), force);
         }
 
-        private Task UpdateReplicationInformationIfNeededInternalAsync(string url, Func<ReplicationDocumentWithClusterInformation> getReplicationDestinations)
+        private Task UpdateReplicationInformationIfNeededInternalAsync(string url, Func<ReplicationDocumentWithClusterInformation> getReplicationDestinations, bool force)
         {
-            if (Conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
-                return new CompletedTask();
+            if (force == false)
+            {
+                if (Conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
+                    return new CompletedTask();
 
-            if (lastReplicationUpdate.Add(Conventions.TimeToWaitBetweenReplicationTopologyUpdates) > SystemTime.UtcNow)
-                return new CompletedTask();
-
+                if (lastReplicationUpdate.Add(Conventions.TimeToWaitBetweenReplicationTopologyUpdates) > SystemTime.UtcNow)
+                    return new CompletedTask();
+            }
             lock (replicationLock)
             {
-                if (firstTime)
+                if (firstTime && force == false)
                 {
                     var serverHash = ServerHash.GetServerHash(url);
 
@@ -69,7 +71,7 @@ namespace Raven.Client.Connection
 
                 firstTime = false;
 
-                if (lastReplicationUpdate.Add(Conventions.TimeToWaitBetweenReplicationTopologyUpdates) > SystemTime.UtcNow)
+                if (lastReplicationUpdate.Add(Conventions.TimeToWaitBetweenReplicationTopologyUpdates) > SystemTime.UtcNow && force == false)
                     return new CompletedTask();
 
                 var taskCopy = refreshReplicationInformationTask;
@@ -93,7 +95,7 @@ namespace Raven.Client.Connection
             ReplicationInformerLocalCache.ClearReplicationInformationFromLocalCache(serverHash);
         }
 
-        protected override void UpdateReplicationInformationFromDocument(JsonDocument document)
+        public override void UpdateReplicationInformationFromDocument(JsonDocument document)
         {
             var replicationDocument = document.DataAsJson.JsonDeserialization<ReplicationDocumentWithClusterInformation>();
             ReplicationDestinations = replicationDocument.Destinations.Select(x =>
@@ -128,6 +130,7 @@ namespace Raven.Client.Connection
 
             if (replicationDocument.ClientConfiguration != null)
                 Conventions.UpdateFrom(replicationDocument.ClientConfiguration);
+            lastReplicationUpdate = DateTime.UtcNow;
         }
 
         protected override string GetServerCheckUrl(string baseUrl)

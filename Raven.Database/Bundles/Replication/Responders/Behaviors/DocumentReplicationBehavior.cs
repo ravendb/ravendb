@@ -145,10 +145,10 @@ namespace Raven.Bundles.Replication.Responders
             return false;
         }
 
-        protected override bool TryResolveConflictByCheckingIfIdentical(RavenJObject metadata, RavenJObject document, JsonDocument existing, out RavenJObject resolvedMetadataToSave)
+        protected override bool TryResolveConflictByCheckingIfIdentical(string documentId, RavenJObject metadata, RavenJObject document, JsonDocument existing, out RavenJObject resolvedMetadataToSave)
         {
             //if the metadata is not equal there is no reason the compare the data
-            if (CheckIfMetadataIsEqualEnoughForReplicationAndMergeHistorires(existing.Metadata, metadata, out resolvedMetadataToSave) == false)
+            if (CheckIfMetadataIsEqualEnoughForReplicationAndMergeHistorires(documentId, existing.Metadata, metadata, out resolvedMetadataToSave) == false)
                 return false;
             return RavenJTokenEqualityComparer.Default.Equals(document, existing.DataAsJson);
         }

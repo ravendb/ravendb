@@ -44,19 +44,21 @@ namespace Raven.Database.Commercial
 
         private void DeactivateTimer()
         {
-            if (supportTimer != null)
+            var copy = supportTimer;
+            if (copy == null)
+                return;
+
+            try
             {
-                try
-                {
-                    landlord?.SystemDatabase.TimerManager.ReleaseTimer(supportTimer);
-                }
-                catch (InvalidOperationException)
-                {
-                    //We are trying to deactivate a timer that failed to register to the timer manager
-                    // this should not happen but better safe than sorry
-                    log.Warn("Disposing of a timer within " + nameof(SupportCoverage) +" that failed to register to the timer manager");
-                    supportTimer.Dispose();
-                }
+                landlord?.SystemDatabase.TimerManager.ReleaseTimer(copy);
+                supportTimer = null;
+            }
+            catch (InvalidOperationException)
+            {
+                // We are trying to deactivate a timer that failed to register to the timer manager
+                // this should not happen but better safe than sorry
+                log.Warn("Disposing of a timer within " + nameof(SupportCoverage) + " that failed to register to the timer manager");
+                copy.Dispose();
             }
         }
 

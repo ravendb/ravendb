@@ -81,5 +81,10 @@ namespace Raven.Client.Connection
                 return hashCode;
             }
         }
+
+        public override string ToString()
+        {
+            return $"{Url} IsLeader={ClusterInformation.IsLeader}";
+        }
     }
 }

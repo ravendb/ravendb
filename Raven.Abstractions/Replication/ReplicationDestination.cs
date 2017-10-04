@@ -95,7 +95,12 @@ namespace Raven.Abstractions.Replication
         /// <summary>
         /// If not null then only docs from specified collections are replicated and transformed / filtered according to an optional script.
         /// </summary>
-        public Dictionary<string, string> SpecifiedCollections { get; set; } 
+        public Dictionary<string, string> SpecifiedCollections { get; set; }
+
+        /// <summary>
+        /// Gets or sets if attachments should be replicated when using ETL
+        /// </summary>
+        public bool ReplicateAttachmentsInEtl { get; set; } 
 
         public string Humane
         {
@@ -126,6 +131,7 @@ namespace Raven.Abstractions.Replication
                    IgnoredClient.Equals(other.IgnoredClient) && Disabled.Equals(other.Disabled) &&
                    ((string.Equals(Url, other.Url, StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(ClientVisibleUrl)) ||
                    (!string.IsNullOrWhiteSpace(ClientVisibleUrl) && string.Equals(ClientVisibleUrl, other.ClientVisibleUrl, StringComparison.OrdinalIgnoreCase))) &&
+                   ReplicateAttachmentsInEtl.Equals(other.ReplicateAttachmentsInEtl) && 
                    Extensions.DictionaryExtensions.ContentEquals(SpecifiedCollections, other.SpecifiedCollections);
         }
 
@@ -159,7 +165,7 @@ namespace Raven.Abstractions.Replication
             public bool HasGlobal { get; set; }
 
             public bool HasLocal { get; set; }
-    }
+        }
 
         public class ReplicationDestinationWithClusterInformation : ReplicationDestination
         {
@@ -181,7 +187,8 @@ namespace Raven.Abstractions.Replication
                            TransitiveReplicationBehavior = source.TransitiveReplicationBehavior,
                            Url = source.Url,
                            Username = source.Username,
-                           SpecifiedCollections = source.SpecifiedCollections
+                           SpecifiedCollections = source.SpecifiedCollections,
+                           ReplicateAttachmentsInEtl = source.ReplicateAttachmentsInEtl
                        };
             }
         }

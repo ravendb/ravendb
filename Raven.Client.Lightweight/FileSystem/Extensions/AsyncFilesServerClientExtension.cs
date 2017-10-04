@@ -71,7 +71,12 @@ namespace Raven.Client.FileSystem.Extensions
                 if (metadataRef != null)
                     metadataRef.Value = response.HeadersToObject();
 
-                return new DisposableStream(await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false), request.Dispose);
+                return new DisposableStream(await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false),() =>
+                {
+                    request.Dispose();
+                    response.Content.Dispose();
+                    response.Dispose();
+                });
             }
             catch (Exception e)
             {

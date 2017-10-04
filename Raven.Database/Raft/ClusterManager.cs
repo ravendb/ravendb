@@ -54,7 +54,22 @@ namespace Raven.Database.Raft
         private readonly DateTime clusterManagerStartTime;
         private void OnProposingCandidacy(object sender, ProposingCandidacyResult e)
         {
+            var clusterConfigurationsDoc = DatabasesLandlord.SystemDatabase.Documents.Get(Constants.Cluster.ClusterConfigurationDocumentKey,null);
+            if (clusterConfigurationsDoc == null)
+            {
+                return;
+            }
+            var clusterConfigurations = clusterConfigurationsDoc.DataAsJson.JsonDeserialization<ClusterConfiguration>();
+            if (clusterConfigurations == null)
+            {
+                return;
+            }
+            if (clusterConfigurations.DisableReplicationStateChecks == true)
+            {
+                return;
+            }
             var replicationStateDoc = DatabasesLandlord.SystemDatabase.Documents.Get(Constants.Cluster.ClusterReplicationStateDocumentKey,null);
+
             if (replicationStateDoc == null)
             {
                 //This is a case of a node loading for the first time and just never got any replication state.
@@ -92,8 +107,8 @@ namespace Raven.Database.Raft
                 var sourceInformation = doc.DataAsJson.JsonDeserialization<SourceReplicationInformation>();
                 if (sourceInformation == null)
                     return;
-                var lastUpdate = sourceInformation.LastModifiedAtSource ?? DateTime.MinValue;                
-                if (lastUpdate + maxReplicationLatency >= modification.LastModified)
+                var lastUpdate = sourceInformation.LastModifiedAtSource ?? DateTime.MaxValue;
+                if (lastUpdate == DateTime.MaxValue || lastUpdate + maxReplicationLatency >= modification.LastModified)
                     anyDatabaseUptodate = true;
             },true);
             if (anyDatabaseUptodate == false && anyDatabaseUp)
@@ -208,7 +223,7 @@ namespace Raven.Database.Raft
             Engine.PersistentState.SetCurrentTopology(tcc.Requested, 0);
             Engine.StartTopologyChange(tcc);
             Engine.CommitTopologyChange(tcc);
-
+            
             if (isPartOfExistingCluster || forceCandidateState)
                 Engine.ForceCandidateState();
             else

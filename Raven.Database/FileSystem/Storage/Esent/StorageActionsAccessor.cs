@@ -587,6 +587,31 @@ namespace Raven.Database.FileSystem.Storage.Esent
             }
         }
 
+        public FileUpdateResult TouchFile(string filename, Etag etag)
+        {
+            Api.JetSetCurrentIndex(session, Files, "by_name");
+            Api.MakeKey(session, Files, filename, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, Files, SeekGrbit.SeekEQ) == false)
+                throw new FileNotFoundException(filename);
+
+            using (var update = new Update(session, Files, JET_prep.Replace))
+            {
+                var existingEtag = EnsureFileEtagMatch(filename, etag);
+
+                var newEtag = uuidGenerator.CreateSequentialUuid();
+
+                Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["etag"], newEtag.TransformToValueForEsentSorting());
+
+                update.Save();
+
+                return new FileUpdateResult
+                {
+                    PrevEtag = existingEtag,
+                    Etag = newEtag
+                };
+            }
+        }
+
         public void CompleteFileUpload(string filename)
         {
             Api.JetSetCurrentIndex(session, Files, "by_name");
@@ -707,12 +732,19 @@ namespace Raven.Database.FileSystem.Storage.Esent
                         update.Save();
                     }
 
+                    IncrementUsageCount(pageInfo.Id);
+
                     if (commitPeriodically && count++ > 1000)
                     {
                         PulseTransaction();
                         count = 0;
                     }
                 }
+
+                if (Api.TryMoveFirst(session, Details) == false)
+                    throw new InvalidOperationException("Could not find system metadata row");
+
+                Api.EscrowUpdate(session, Details, tableColumnsCache.DetailsColumns["file_count"], 1);
             }
             catch (Exception e)
             {

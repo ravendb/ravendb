@@ -20,11 +20,6 @@ namespace Raven.Abstractions.Data
         public int? Size { get; set; }
 
         /// <summary>
-        /// Number of retries till the future batch calculation succeeded.
-        /// </summary>
-        public int Retries { get; set; }
-
-        /// <summary>
         /// Indicates what prefetching user (indexer, replicator, sql replicator) calculated the future batch.
         /// </summary>
         public PrefetchingUser PrefetchingUser { get; set; }

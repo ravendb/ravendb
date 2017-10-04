@@ -28,6 +28,13 @@ namespace Sparrow.Collections
             }
         }
 
+        public T LastOrDefault(Func<T, bool> predicate)
+        {
+            lock (syncRoot)
+            {
+                return items.LastOrDefault(predicate);
+            }
+        }
         public void Push(T item)
         {
             LinkedListNode<T> droppedNode = null;

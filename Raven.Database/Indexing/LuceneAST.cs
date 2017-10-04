@@ -30,7 +30,9 @@ namespace Raven.Database.Indexing
 
         public virtual void AddQueryToBooleanQuery(BooleanQuery b, LuceneASTQueryConfiguration configuration, Occur o)
         {
-            b.Add(ToQuery(configuration), o);
+            var query = ToQuery(configuration);
+            if(query != null)
+                b.Add(query, o);
         }
 
         public virtual Query ToGroupFieldQuery(LuceneASTQueryConfiguration configuration)
@@ -309,7 +311,7 @@ This edge-case has a very slim chance of happening, but still we should not igno
                 };
                 return booleanQuery;
             }
-            if (terms.Count == 0) return new BooleanQuery();
+            if (terms.Count == 0) return null;
 
             if (Type == TermType.Quoted)
             {
@@ -472,8 +474,8 @@ This edge-case has a very slim chance of happening, but still we should not igno
                 return new WildcardQuery(new Term(configuration.FieldName, "*"));
             }
             return new TermRangeQuery(configuration.FieldName,
-                        RangeMin.Type == TermLuceneASTNode.TermType.Null ? null : RangeMin.Term,
-                        RangeMax.Type == TermLuceneASTNode.TermType.Null ? null : RangeMax.Term,
+                        RangeMin.Type == TermLuceneASTNode.TermType.Null || RangeMin.Term.Equals("*") ? null : RangeMin.Term,
+                        RangeMax.Type == TermLuceneASTNode.TermType.Null || RangeMax.Term.Equals("*") ? null : RangeMax.Term,
                         InclusiveMin, InclusiveMax);
         }
 
@@ -687,6 +689,8 @@ This edge-case has a very slim chance of happening, but still we should not igno
         public override Query ToGroupFieldQuery(LuceneASTQueryConfiguration configuration)
         {
             var query = Node.ToQuery(configuration);
+            if (query == null)
+                return null;
             query.Boost = GetBoost();
             return query;
         }

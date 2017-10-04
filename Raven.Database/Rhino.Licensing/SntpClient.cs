@@ -12,7 +12,7 @@ namespace Rhino.Licensing
     {
         private ILog log = LogManager.GetCurrentClassLogger();
 
-        private const byte SntpDataLength = 48;
+        public static readonly byte SntpDataLength = 48;
         private readonly string[] hosts;
         private int index = 0;
 
@@ -26,7 +26,7 @@ namespace Rhino.Licensing
             return (sntpData[0] & 0x7) == 4 /* server mode */;
         }
 
-        private static DateTime GetTransmitTimestamp(byte[] sntpData)
+        public static DateTime GetTransmitTimestamp(byte[] sntpData)
         {
             var milliseconds = GetMilliseconds(sntpData, 40);
             return ComputeDate(milliseconds);
@@ -162,7 +162,7 @@ namespace Rhino.Licensing
             }
         }
 
-        private bool IsResponseValid(byte[] sntpData)
+        public static bool IsResponseValid(byte[] sntpData)
         {
             return sntpData.Length >= SntpDataLength && GetIsServerMode(sntpData);
         }

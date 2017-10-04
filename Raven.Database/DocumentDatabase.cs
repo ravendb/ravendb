@@ -46,8 +46,10 @@ using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Database.Plugins.Catalogs;
 using Raven.Database.Common;
+using Raven.Database.Json;
 using Raven.Database.Raft;
 using Raven.Database.Server.WebApi;
+using Voron;
 using ThreadState = System.Threading.ThreadState;
 
 namespace Raven.Database
@@ -62,7 +64,7 @@ namespace Raven.Database
 
         private readonly TaskScheduler backgroundTaskScheduler;
 
-        private readonly ThreadLocal<bool> disableAllTriggers = new ThreadLocal<bool>(() => false);
+        private readonly ThreadLocal<DisableTriggerState> disableAllTriggers = new ThreadLocal<DisableTriggerState>(() => new DisableTriggerState{Disabled = false});
 
         private readonly object idleLocker = new object();
 
@@ -101,7 +103,7 @@ namespace Raven.Database
 
         public RavenThreadPool ThreadPool { get; set; }
 
-        public DocumentDatabase(InMemoryRavenConfiguration configuration, DocumentDatabase systemDatabase, TransportState recievedTransportState = null)
+        public DocumentDatabase(InMemoryRavenConfiguration configuration, DocumentDatabase systemDatabase, TransportState recievedTransportState = null, Action<object, Exception> onError = null)
         {
             TimerManager = new ResourceTimerManager();
             DocumentLock = new PutSerialLock();
@@ -109,7 +111,7 @@ namespace Raven.Database
             Name = configuration.DatabaseName;
             ResourceName = Name;
             Configuration = configuration;
-
+            
             // initialize thread pool
             if (systemDatabase == null)
             {
@@ -160,7 +162,7 @@ namespace Raven.Database
                 try
                 {
                     uuidGenerator = new SequentialUuidGenerator();
-                    initializer.InitializeTransactionalStorage(uuidGenerator);
+                    initializer.InitializeTransactionalStorage(uuidGenerator, onError);
                     lastCollectionEtags = new LastCollectionEtags(WorkContext);
                 }
                 catch (Exception ex)
@@ -883,13 +885,13 @@ namespace Raven.Database
         ///     need to be able to run without interference from any other bundle.
         /// </summary>
         /// <returns></returns>
-        public IDisposable DisableAllTriggersForCurrentThread()
+        public IDisposable DisableAllTriggersForCurrentThread(HashSet<Type> except = null)
         {
             if (disposed)
                 return new DisposableAction(() => { });
 
-            bool old = disableAllTriggers.Value;
-            disableAllTriggers.Value = true;
+            var old = disableAllTriggers.Value;
+            disableAllTriggers.Value = new DisableTriggerState{Disabled = true, Except = except };
             return new DisposableAction(() =>
             {
                 if (disposed)
@@ -1216,6 +1218,10 @@ namespace Raven.Database
 
                     throw;
                 }
+                catch (OptimisticConcurrencyViolationException e)
+                {
+                    throw new ConcurrencyException(e.Message);
+                }
             }
         }
 
@@ -1475,7 +1481,7 @@ namespace Raven.Database
                 configuration.Container.SatisfyImportsOnce(database);
             }
 
-            public void InitializeTransactionalStorage(IUuidGenerator uuidGenerator)
+            public void InitializeTransactionalStorage(IUuidGenerator uuidGenerator, Action<object, Exception> onErrorAction = null)
             {
                 string storageEngineTypeName = configuration.SelectDatabaseStorageEngineAndFetchTypeName();
                 database.TransactionalStorage = configuration.CreateTransactionalStorage(storageEngineTypeName, database.WorkContext.HandleWorkNotifications, () =>
@@ -1494,7 +1500,7 @@ namespace Raven.Database
 
                     if (File.Exists(resourceTypeFile) == false)
                         using (File.Create(resourceTypeFile)) { }
-                });
+                },onErrorAction);
             }
 
             public Dictionary<int, IndexFailDetails> InitializeIndexDefinitionStorage()

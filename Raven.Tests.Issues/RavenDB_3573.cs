@@ -321,7 +321,7 @@ namespace Raven.Tests.Issues
                 
                 source.SideBySideExecuteIndex(testIndex2); //replaces the testIndex side-by-side index on source
 
-                sourceReplicationTask.IndexReplication.Execute(); //should replicate the replaced side-by-sude index to destination
+                sourceReplicationTask.IndexReplication.Execute(); //should replicate the replaced side-by-side index to destination
 
                 var sideBySideIndex = destinationDatabase.Indexes.GetIndexDefinition(Constants.SideBySideIndexNamePrefix + testIndex.IndexName);
                 Assert.NotNull(sideBySideIndex);

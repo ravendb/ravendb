@@ -849,7 +849,8 @@ namespace Raven.Client.Document
         }
 
     }
-
+    [Obsolete("RavenDB v3.5 has server side index and transformer replication, if you wish to skip index replication " +
+              "go to the replication page in the studio and check SkipIndexReplication checkbox")]
     [Flags]
     public enum IndexAndTransformerReplicationMode
     {

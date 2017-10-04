@@ -27,6 +27,20 @@ namespace Raven.Abstractions.Linq
         {
             this.parent = parent;
         }
+
+        public dynamic Get(params int[] indexes)
+        {
+            if (indexes == null)
+                return new DynamicNullObject();
+
+            dynamic val = this;
+            for (int i = 0; i < indexes.Length; i++)
+            {
+                val = val[indexes[i]];
+            }
+            return val;
+        }
+
         public override bool TryConvert(ConvertBinder binder, out object result)
         {
             if (binder.ReturnType.IsArray)

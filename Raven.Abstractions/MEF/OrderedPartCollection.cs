@@ -12,9 +12,9 @@ namespace Raven.Abstractions.MEF
     public class OrderedPartCollection<T> : ICollection<Lazy<T, IPartMetadata>>, INotifyCollectionChanged
     {
         private readonly ObservableCollection<Lazy<T, IPartMetadata>> inner = new ObservableCollection<Lazy<T, IPartMetadata>>();
-        private ThreadLocal<bool> disableApplication;
+        private ThreadLocal<DisableTriggerState> disableApplication;
 
-        public OrderedPartCollection<T> Init(ThreadLocal<bool> disableApplicationValue)
+        public OrderedPartCollection<T> Init(ThreadLocal<DisableTriggerState> disableApplicationValue)
         {
             disableApplication = disableApplicationValue;
             return this;
@@ -29,8 +29,22 @@ namespace Raven.Abstractions.MEF
         {
             try
             {
-                if (disableApplication != null && disableApplication.Value)
+                if (disableApplication != null && disableApplication.Value.Disabled)
+                {
+                    if (disableApplication.Value.Except != null)
+                    {
+                        var exceptList = new List<Lazy<T, IPartMetadata>>();
+                        foreach (var part in inner)
+                        {
+                            if (disableApplication.Value.Except.Contains(part.Value?.GetType()))
+                            {
+                                exceptList.Add(part);
+                            }
+                        }
+                        return exceptList.GetEnumerator();
+                    }
                     return Enumerable.Empty<Lazy<T, IPartMetadata>>().GetEnumerator();
+                }
             }
             catch (ObjectDisposedException) // The database was disposed while we got here
             {

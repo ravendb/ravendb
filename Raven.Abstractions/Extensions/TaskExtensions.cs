@@ -1,10 +1,11 @@
 using System;
-using System.Diagnostics;
 using System.Net;
 using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
+#if DNXCORE50
 using Raven.Abstractions.Exceptions;
+#endif
 
 namespace Raven.Abstractions.Extensions
 {
@@ -16,6 +17,16 @@ namespace Raven.Abstractions.Extensions
                 task.Wait(); // would throw
 
             return task;
+        }
+
+        //credit for idea : https://blogs.msdn.microsoft.com/pfxteam/2009/06/01/tasks-and-unhandled-exceptions/
+        public static Task IgnoreUnobservedExceptions(this Task task)
+        {
+            return task.ContinueWith(t =>
+                {
+                    GC.KeepAlive(t.Exception);
+                },
+                TaskContinuationOptions.ExecuteSynchronously);
         }
 
         public static Task<T> ConvertSecurityExceptionToServerNotFound<T>(this Task<T> parent)

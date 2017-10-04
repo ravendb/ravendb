@@ -26,7 +26,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Stati
                 .Indexes
                 .Select(indexId => database.IndexStorage.GetIndexInstance(indexId))
                 .Where(instance => instance != null)
-                .Count(instance => instance.Priority == IndexingPriority.Error);
+                .Count(instance => instance.Priority.HasFlag(IndexingPriority.Error));
 
             return new Integer32(count);
         }

@@ -578,9 +578,9 @@ namespace Raven.Client.Connection.Implementation
                 {
                     factory.CacheResponse(Url, data, ResponseHeaders);
                 }
+
                 if (factory.CanLogRequest)
                 {
-
                     factory.OnLogRequest(owner, new RequestResultArgs
                     {
                         DurationMilliseconds = CalculateDuration(),
@@ -838,9 +838,9 @@ namespace Raven.Client.Connection.Implementation
             return ExecuteRawResponseInternalAsync(new JsonContent(token));
         }
 
-        public Task<HttpResponseMessage> ExecuteRawResponseAsync(string data)
+        public Task<HttpResponseMessage> ExecuteRawResponseAsync(string data, string contentType = null)
         {
-            return ExecuteRawResponseInternalAsync(new CompressedStringContent(data, factory.DisableRequestCompression));
+            return ExecuteRawResponseInternalAsync(new CompressedStringContent(data, factory.DisableRequestCompression, contentType));
         }
 
         public Task<HttpResponseMessage> ExecuteRawResponseAsync()
@@ -862,6 +862,7 @@ namespace Raven.Client.Connection.Implementation
                 CopyHeadersToHttpRequestMessage(rawRequestMessage);
 
                 Response = await httpClient.SendAsync(rawRequestMessage, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
+                
                 ResponseStatusCode = Response.StatusCode;
                 if (Response.IsSuccessStatusCode == false &&
                     (ResponseStatusCode == HttpStatusCode.PreconditionFailed ||

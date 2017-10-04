@@ -29,6 +29,12 @@ namespace Raven.Database.Bundles.Replication.Tasks
             Replication = replication;
         }
 
+        protected string GetTombstoneVersion(JsonDocument tombstone, string tombstoneKey, string key)
+        {
+            var version = tombstone.Metadata.Value<int?>(tombstoneKey) ?? 0;
+            return key + "=" + version;
+        }
+
         protected string GetDebugInformation()
         {
             return Constants.IsReplicatedUrlParamName + "=true&from=" + Uri.EscapeDataString(Database.ServerUrl);

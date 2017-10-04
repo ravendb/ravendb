@@ -36,7 +36,7 @@
         <div data-bind="if: clusterMode()">
             <div class="panel panel-default">
                 <div class="panel-heading">
-                    <button data-bind="click: addAnotherServerToCluster.bind($root, false), disable: settingsAccess.isReadOnly()" class="btn btn-default"><i class="fa fa-plus"></i> Add another server to cluster</button>
+                    <button data-bind="click: addAnotherServerToCluster.bind($root), disable: settingsAccess.isReadOnly()" class="btn btn-default"><i class="fa fa-plus"></i> Add another server to cluster</button>
                     <button class="btn btn-default" data-bind="autoRefresh: { duration: 5000, onRefresh: $root.refresh.bind($root), active:false }"></button>
                     <div class="btn-group">
                         <button id="operationType" type="button" class="btn btn-danger dropdown-toggle" data-bind="visible: !settingsAccess.isReadOnly()" data-toggle="dropdown">
@@ -45,10 +45,9 @@
                         </button>
                         <ul class="dropdown-menu" role="menu">
                             <li><a href="#" data-bind="click: initializeNewCluster">Secede from cluster - rude step down into a single node cluster</a></li>
-                            <li><a href="#" data-bind="click: addAnotherServerToCluster.bind($root, true)">Kidnap node into cluster - force a node to the current cluster</a></li>
                             <li><a href="#" data-bind="click: removeClustering.bind($root)">Remove cluster entirely and perform cleanup.</a></li>
                             <li>
-                                <a href="#" data-bind="click: toggleReplicationChecks.bind($root), text: isReplicationChecksEnabled() ? 'Require leaders to have up to date replication state' : 'Allow leaders without up to date replication state' ">
+                                <a href="#" data-bind="click: toggleReplicationChecks.bind($root), text: isReplicationChecksEnabled() ? 'Allow leaders without up to date replication state' : 'Require leaders to have up to date replication state' ">
                                 </a>
                             </li>
                         </ul>
@@ -71,10 +70,10 @@
                                     <label data-bind="text: state"></label>
                                 </td>
                                 <td>
-                                    <div data-bind="visible: status() === 'Online'" class=" text-success"><span class="fa fa-check"></span> Online</div>
-                                    <div data-bind="visible: status() === 'Offline'" class=" text-danger"><span class="fa fa-times"></span> Offline</div>
-                                    <div data-bind="visible: status() === 'WrongCredentials'" class="text-danger"><span class="fa fa-exclamation-circle"></span> Wrong Credentials</div>
-                                    <div data-bind="visible: status() === 'Loading'"><span class="fa fa-spin fa-spinner"></span> Loading...</div>
+                                    <div data-bind="visible: status().Item1 === 'Online', attr:{title: status().Item2}" class=" text-success" data-toggle="tooltip"><span class="fa fa-check"></span> Online</div>
+                                    <div data-bind="visible: status().Item1 === 'Offline', attr:{title: status().Item2}" class=" text-danger"><span class="fa fa-times"></span> Offline</div>
+                                    <div data-bind="visible: status().Item1 === 'WrongCredentials',  attr:{title: status().Item2}" class="text-danger"><span class="fa fa-exclamation-circle"></span> Wrong Credentials</div>
+                                    <div data-bind="visible: status().Item1 === 'Loading', attr:{title: status().Item2}"><span class="fa fa-spin fa-spinner"></span> Loading...</div>
                                 </td>
                                 <td data-bind="text: uri"></td>
                                 <td data-bind="visible: !$root.settingsAccess.isReadOnly()">

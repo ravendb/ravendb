@@ -157,38 +157,46 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
         public long GetNextRevisionNumber(string name, IStorageActionsAccessor accessor)
         {
             long revision = 1;
+            int latestRevision;
 
             var existingFile = accessor.ReadFile(name);
-            if (existingFile != null)
+            if (existingFile != null && existingFile.Metadata.ContainsKey(SynchronizationConstants.RavenDeleteMarker) == false)
             {
                 RavenJToken existingRevisionToken;
                 if (existingFile.Metadata.TryGetValue(VersioningUtil.RavenFileRevision, out existingRevisionToken))
                     revision = existingRevisionToken.Value<int>() + 1;
             }
-            else
+            else if (TryGetLatestRevisionNumber(name, accessor, out latestRevision))
             {
-                var latestRevisionsFile = GetLatestRevisionsFile(name, accessor);
-                if (latestRevisionsFile != null)
-                {
-                    var id = latestRevisionsFile.FullPath;
-                    if (id.StartsWith(name, StringComparison.CurrentCultureIgnoreCase))
-                    {
-                        var revisionNum = id.Substring((name + "/revisions/").Length);
-                        int result;
-                        if (int.TryParse(revisionNum, out result))
-                            revision = result + 1;
-                    }
-                }
+                revision = latestRevision + 1;
             }
 
             return revision;
         }
 
-        private FileHeader GetLatestRevisionsFile(string name, IStorageActionsAccessor accessor)
+        private bool TryGetLatestRevisionNumber(string name, IStorageActionsAccessor accessor, out int latestRevision)
         {
-            return accessor
-                .GetFilesStartingWith(name + "/revisions/", 0, int.MaxValue)
-                .LastOrDefault();
+            int? latest = null;
+
+            foreach (var file in accessor.GetFilesStartingWith(name + "/revisions/", 0, int.MaxValue))
+            {
+                var revisionNum = file.Name;
+                int revision;
+                if (int.TryParse(revisionNum, out revision))
+                {
+                    if (latest == null || revision > latest)
+                        latest = revision;
+                }
+            }
+
+            if (latest != null)
+            {
+                latestRevision = latest.Value;
+                return true;
+            }
+
+            latestRevision = -1;
+            return false;
         }
     }
 }

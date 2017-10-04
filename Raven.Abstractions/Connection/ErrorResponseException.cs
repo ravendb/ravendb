@@ -45,8 +45,8 @@ namespace Raven.Abstractions.Connection
             this.response = response;
         }
 
-        public ErrorResponseException(HttpResponseMessage response, string msg, string responseString = null)
-            : base(msg)
+        public ErrorResponseException(HttpResponseMessage response, string msg, string responseString = null, Exception inner = null)
+            : base(msg,inner)
         {
             this.response = response;
             ResponseString = responseString;
@@ -69,7 +69,7 @@ namespace Raven.Abstractions.Connection
                     }
                 }
             }
-            return new ErrorResponseException(response, sb.ToString())
+            return new ErrorResponseException(response, sb.ToString(),null, null)
             {
                 ResponseString = responseString
             };
@@ -103,7 +103,7 @@ namespace Raven.Abstractions.Connection
 
         public static ErrorResponseException FromException(TaskCanceledException e)
         {
-            return new ErrorResponseException(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable), e.Message, "Unable to connect to the remote server\r\nStatus Code: ConnectFailure");
+            return new ErrorResponseException(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable), e.Message, "Unable to connect to the remote server\r\nStatus Code: ConnectFailure", e);
         }
 
         public static ErrorResponseException FromException(HttpRequestException e)
@@ -150,7 +150,7 @@ namespace Raven.Abstractions.Connection
             }
 #endif
 
-            return new ErrorResponseException(new HttpResponseMessage(statusCode), e.Message, responseString: builder.ToString());
+            return new ErrorResponseException(new HttpResponseMessage(statusCode), e.Message, builder.ToString(), e);
         }
     }
 }

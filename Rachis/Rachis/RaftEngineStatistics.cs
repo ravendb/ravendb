@@ -30,8 +30,11 @@ namespace Rachis
             Messages = new ConcurrentQueue<MessageWithTimingInformation>();
             Elections = new ConcurrentQueue<ElectionInformation>();
             CommitTimes = new ConcurrentQueue<CommitInformation>();
-            CurrenTopology = engine.CurrentTopology;
         }
+
+        public LogEntry LastLogEntry { get; set; }
+        public List<LogEntry> LastLogsEntries { get; set; }
+        public long CommitIndex { get; set; }
         private ConcurrentDictionary<long, DateTime> IndexesToAppendTimes = new ConcurrentDictionary<long, DateTime>(); 
         public ConcurrentQueue<TimeoutInformation> TimeOuts { get; }
         public ConcurrentQueue<ElectionInformation> Elections { get; } 
@@ -40,7 +43,7 @@ namespace Rachis
         public ElectionInformation LastElectionInformation => Elections.LastOrDefault();
         public ConcurrentQueue<CommitInformation> CommitTimes { get; } 
 
-        public Topology CurrenTopology { get; private set; }
+        public Topology CurrenTopology { get; set; }
 
         public string Name { get; set; }
 
@@ -51,7 +54,9 @@ namespace Rachis
         public int HeartbeatTimeout { get; set; }
 
         public int ElectionTimeout { get; set; }
-
+        public string CurrentLeader { get; set; }
+        public long CurrentTerm { get; set; }
+        public FollowerLastSentEntries FollowersStatistics = null;
         public void ReportIndexAppend(long index)
         {
             IndexesToAppendTimes[index] = DateTime.UtcNow;
@@ -66,6 +71,16 @@ namespace Rachis
                 ,NumberOfCommitsToTrack);
             }            
         }
+    }
+
+    public class FollowerLastSentEntries
+    {
+        public FollowerLastSentEntries(ConcurrentDictionary<string, long> f2e)
+        {
+            FollowersToLastSent = f2e;
+        }
+        public readonly ConcurrentDictionary<string,long> FollowersToLastSent;
+        public long MaxQuorumIndex { get; set; }
     }
 
     public class TimeoutInformation

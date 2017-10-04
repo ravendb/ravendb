@@ -137,7 +137,8 @@ namespace Raven.Database.FileSystem.Controllers
                     var metadata = file.Metadata;
                     if (metadata == null || metadata.Keys.Contains(SynchronizationConstants.RavenDeleteMarker))
                         continue;
-
+                    
+                    Historian.Update(fileName, metadata);
                     Files.IndicateFileToDelete(fileName, null);
 
                     // don't create a tombstone for .downloading file

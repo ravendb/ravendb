@@ -20,6 +20,7 @@ class replicationDestination {
     globalConfiguration = ko.observable<replicationDestination>();
 
     specifiedCollections = ko.observableArray<replicationPatchScript>().extend({ required: false });
+    replicateAttachmentsInEtl = ko.observable<boolean>().extend({ required: false });
     withScripts = ko.observableArray<string>([]);
     enableReplicateOnlyFromCollections = ko.observable<boolean>();
 
@@ -98,6 +99,7 @@ class replicationDestination {
         this.clientVisibleUrl(dto.ClientVisibleUrl);
         this.skipIndexReplication(dto.SkipIndexReplication);
         this.specifiedCollections(this.mapSpecifiedCollections(dto.SpecifiedCollections));
+        this.replicateAttachmentsInEtl(dto.ReplicateAttachmentsInEtl);
         this.withScripts(this.specifiedCollections().filter(x => typeof (x.script()) !== "undefined").map(x => x.collection()));
 
         this.enableReplicateOnlyFromCollections = ko.observable<boolean>(this.specifiedCollections().length > 0);
@@ -167,6 +169,7 @@ class replicationDestination {
             ClientVisibleUrl: null,
             SkipIndexReplication: false,
             SpecifiedCollections: {},
+            ReplicateAttachmentsInEtl: false,
             HasGlobal: false,
             HasLocal: true
         });
@@ -201,7 +204,8 @@ class replicationDestination {
             Disabled: this.disabled(),
             ClientVisibleUrl: this.clientVisibleUrl(),
             SkipIndexReplication: this.skipIndexReplication(),
-            SpecifiedCollections: this.enableReplicateOnlyFromCollections() ? this.specifiedCollectionsToMap() : {}
+            SpecifiedCollections: this.enableReplicateOnlyFromCollections() ? this.specifiedCollectionsToMap() : {},
+            ReplicateAttachmentsInEtl: this.replicateAttachmentsInEtl()
         };
     }
 
@@ -247,6 +251,7 @@ class replicationDestination {
             this.isApiKeyCredentials(gConfig.isApiKeyCredentials());
 
             this.specifiedCollections([]);
+            this.replicateAttachmentsInEtl(false);
             this.withScripts([]);
             this.enableReplicateOnlyFromCollections(false);
         }

@@ -286,6 +286,11 @@
 
                 <!-- ko with: statistics -->
                 <li><a class="navbar-link" data-bind="text: countOfDocumentsText, attr: { href: $parents[1].appUrls.documents }"></a></li>
+                
+                <li data-bind="visible: hasAttachments">
+                    <a href="#" class="navbar-link" data-bind="text: countOfAttachmentsText" style="cursor: default" onclick="return false;"></a>
+                </li>
+
                 <li><a class="navbar-link" data-bind="text: countOfFilteredIndexesText, attr: { href: $parents[1].appUrls.indexes, title: 'Total indexes including disabled and abandoned: ' + countOfIndexesText() }"></a></li>
                 <li><a class="navbar-link" data-bind="text: staleFilteredIndexesCountText, attr: { href: $parents[1].appUrls.status, title: 'Total stale indexes including disabled and abandoned: ' + staleIndexesCountText() }"></a></li>
                 <li><a class="navbar-link" data-bind="text: errorsCountText, attr: { href: $parents[1].appUrls.indexErrors }"></a></li>

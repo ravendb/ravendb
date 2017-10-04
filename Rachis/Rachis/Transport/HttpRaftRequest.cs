@@ -4,11 +4,15 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Connection;
+using Raven.Abstractions.Logging;
 
 namespace Rachis.Transport
 {
@@ -25,6 +29,7 @@ namespace Rachis.Transport
         private IDisposable _returnToQueue;
         private readonly NodeConnectionInfo _nodeConnection;
         private bool _isRequestSentToServer;
+        private ILog _log;
 
         public Func<HttpResponseMessage, NodeConnectionInfo, Task<Action<HttpClient>>> UnauthorizedResponseAsyncHandler { get; set; }
 
@@ -32,8 +37,9 @@ namespace Rachis.Transport
 
         public HttpClient HttpClient { get; private set; }
 
-        public HttpRaftRequest(NodeConnectionInfo nodeConnection, string url, HttpMethod httpMethod, Func<NodeConnectionInfo, Tuple<IDisposable, HttpClient>> getConnection, CancellationToken cancellationToken)
+        public HttpRaftRequest(NodeConnectionInfo nodeConnection, string url, HttpMethod httpMethod, Func<NodeConnectionInfo, Tuple<IDisposable, HttpClient>> getConnection, CancellationToken cancellationToken,ILog logger)
         {
+            _log = logger;
             Url = url;
             HttpMethod = httpMethod;
             _getConnection = getConnection;
@@ -54,10 +60,43 @@ namespace Rachis.Transport
             return RunWithAuthRetry(async () =>
             {
                 var requestMessage = getRequestMessage();
-                Response = await HttpClient.SendAsync(requestMessage, _cancellationToken).ConfigureAwait(false);
-
+                try
+                {
+                    Response = await HttpClient.SendAsync(requestMessage, _cancellationToken).ConfigureAwait(false);
+                }
+                catch (Exception e)
+                {
+                    var msg = $"Error while sending a request {requestMessage.Method} {requestMessage.RequestUri}\r\n content:{await GetContentAsString(requestMessage.Content).ConfigureAwait(false)}\r\n{requestMessage.Headers}";
+                    _log.ErrorException(msg, e);
+                    throw;
+                }
                 return CheckForAuthErrors();
             });
+        }
+
+        /// <summary>
+        /// This method gets the string representation of the content of the raft request it is mostly intended for debug and doesn't really show the actual stream content but a logical equivalent.       
+        /// </summary>
+        /// <param name="requestMessageContent">The content to stringify</param>
+        /// <returns></returns>
+        private async Task<string> GetContentAsString(HttpContent requestMessageContent)
+        {
+            var ec = requestMessageContent as HttpTransportSender.EntriesContent;
+            if (ec != null)
+                return ec.ToString();
+            var sc = requestMessageContent as HttpTransportSender.SnapshotContent;
+            if (sc != null)
+                return sc.ToString();
+
+            var jsonContent = requestMessageContent as JsonContent;
+            if (jsonContent != null)
+                return jsonContent.Data.ToString();
+
+            var readAsStringAsync = requestMessageContent?.ReadAsStringAsync();
+            if (readAsStringAsync != null)
+                return await readAsStringAsync.ConfigureAwait(false);
+
+            return string.Empty;
         }
 
         private async Task RunWithAuthRetry(Func<Task<Boolean>> requestOperation)
@@ -96,12 +135,38 @@ namespace Rachis.Transport
             return Response;
         }
 
-        public async Task<HttpResponseMessage> WriteAsync(Func<HttpContent> content)
+        public async Task<HttpResponseMessage> WriteAsync(Func<HttpContent> content, Dictionary<string,string> headers = null)
         {
-            await SendRequestInternal(() => new HttpRequestMessage(HttpMethod, Url)
+            await SendRequestInternal(() =>
+            {
+                var message = new HttpRequestMessage(HttpMethod, Url)
+                {
+                    Content = content()
+                };
+
+                if (headers != null)
+                {
+                    foreach (var kvp in headers)
+                    {
+                        message.Headers.Add(kvp.Key, kvp.Value);
+                    }
+                }
+                return message;
+            }).ConfigureAwait(false);
+
+            return Response;
+        }
+
+        public async Task<HttpResponseMessage> WriteAsync(Func<HttpContent> content, string headerKey, string headerValue)
+        {
+            var message = new HttpRequestMessage(HttpMethod, Url)
             {
                 Content = content()
-            }).ConfigureAwait(false);
+            };
+
+            message.Headers.Add(headerKey, headerValue);
+
+            await SendRequestInternal(() => message).ConfigureAwait(false);
 
             return Response;
         }

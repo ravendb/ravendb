@@ -32,9 +32,29 @@ namespace Raven.Tryouts
     {
         public static void Main(string[] args)
         {
-            using (var test = new RavenDB_6626())
+            var iterations = 50;
+            var sw = new Stopwatch();
+            TimeSpan testTime = new TimeSpan();
+            for (var i = 0; i < iterations; i++)
             {
-                test.LoadOperation_should_not_throw().Wait();
+                using (var testClass = new Basic())
+                {
+                    Console.WriteLine($"Starting test iteration {i}");
+                    sw.Restart();
+                    Environment.SetEnvironmentVariable("run", i.ToString());
+                    try
+                    {
+                        testClass.ClientShouldHandleLeaderShutdown(5);
+                        testTime = sw.Elapsed;
+                        Console.WriteLine($"Finished test iteration {i} within {testTime.TotalSeconds}s");
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine($"Failed test iteration {i} {Environment.NewLine}{e}");
+                    }
+
+                }
+                Console.WriteLine($"Disposed of test  iteration {i} within {(sw.Elapsed - testTime).TotalMilliseconds}ms");
             }
         }
 

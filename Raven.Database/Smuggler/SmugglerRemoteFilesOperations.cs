@@ -202,7 +202,11 @@ namespace Raven.Smuggler
                     
                 var response = await request.ExecuteRawResponseAsync(fileNamesJson).ConfigureAwait(false);
 
-                return new DisposableStream(await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false), request.Dispose);
+                return new DisposableStream(await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false), () =>
+                {
+                    request.Dispose();
+                    response.Dispose();
+                });
                 
             }
             catch (Exception e)

@@ -32,14 +32,14 @@ namespace Rachis.Behaviors
         private DateTime lastHeartbeatTime;
         private readonly Dictionary<Type, Action<MessageContext>> _actionDispatch;
 
-        protected bool FromOurTopology(BaseMessage msg)
+        protected bool FromOurTopology(BaseMessage msg, bool acceptWhenTopologyIsEmpty = true)
         {
             if (msg.ClusterTopologyId == Engine.CurrentTopology.TopologyId)
                 return true;
 
             // if we don't have the same topology id, maybe we have _no_ topology, if that is the case,
             // we are accepting the new topology id immediately
-            if (Engine.CurrentTopology.TopologyId == Guid.Empty && 
+            if (acceptWhenTopologyIsEmpty && Engine.CurrentTopology.TopologyId == Guid.Empty && 
                 Engine.CurrentTopology.HasVoters == false)
             {
                 var tcc = new TopologyChangeCommand
@@ -203,7 +203,8 @@ namespace Rachis.Behaviors
 
         public RequestVoteResponse Handle(RequestVoteRequest req)
         {
-            if (FromOurTopology(req) == false)
+            //We don't vote for nodes when we have no topology!
+            if (FromOurTopology(req, acceptWhenTopologyIsEmpty:false) == false)
             {
                 _log.Info("Got a request vote message outside my cluster topology (id: {0}), ignoring", req.ClusterTopologyId);
                 return new RequestVoteResponse
@@ -288,7 +289,9 @@ namespace Rachis.Behaviors
             }
 
             if (Engine.PersistentState.VotedFor != null && Engine.PersistentState.VotedFor != req.From &&
-                Engine.PersistentState.VotedForTerm >= req.Term)
+                Engine.PersistentState.VotedForTerm >= req.Term  &&
+                //This is the case where we voted for a node and right after were not able to communicate to is
+                DateTime.UtcNow - LastHeartbeatTime < TimeSpan.FromMilliseconds(10 * Engine.Options.ElectionTimeout))
             {
                 var msg = string.Format("Rejecting request vote because already voted for {0} in term {1}",
                     Engine.PersistentState.VotedFor, req.Term);

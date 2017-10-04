@@ -509,7 +509,7 @@ namespace Raven.Storage.Esent
             SystemParameters.CacheSizeMax = cacheSizeMax;
         }
 
-        public void Initialize(IUuidGenerator uuidGenerator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs, Action<string> putResourceMarker = null)
+        public void Initialize(IUuidGenerator uuidGenerator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs, Action<string> putResourceMarker = null, Action<object, Exception> onErrorAction = null)
         {
             try
             {
@@ -540,6 +540,7 @@ namespace Raven.Storage.Esent
             }
             catch (Exception e)
             {
+                onErrorAction?.Invoke(this, e);
                 Dispose();
                 var fileAccessException = e as EsentFileAccessDeniedException;
                 if (fileAccessException == null)

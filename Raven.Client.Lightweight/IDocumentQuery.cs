@@ -42,14 +42,14 @@ namespace Raven.Client
         Lazy<int> CountLazily();
 
         /// <summary>
-        ///     Get the facets as per the specified doc with the given start and pageSize
+        ///     Set the input parameters for this query
         /// </summary>
         /// <param name="queryInputs"></param>
         [Obsolete("Use SetTransformerParameters instead.")]
         IDocumentQuery<T> SetQueryInputs(Dictionary<string, RavenJToken> queryInputs);
 
         /// <summary>
-        ///     Get the facets as per the specified facets with the given start and pageSize
+        ///     Set the transformer parameters for this query
         /// </summary>
         /// <param name="transformerParameters"></param>
         IDocumentQuery<T> SetTransformerParameters(Dictionary<string, RavenJToken> transformerParameters);

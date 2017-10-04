@@ -131,7 +131,7 @@ namespace Raven.Client.Connection
         /// <summary>
         /// Translate a result for a query
         /// </summary>
-        public static QueryResult ToQueryResult(RavenJObject json, Etag etag, string tempRequestTime, long numberOfCharactersRead)
+        public static QueryResult ToQueryResult(RavenJObject json, string tempRequestTime, long numberOfCharactersRead)
         {
             var result = new QueryResult
             {

@@ -25,6 +25,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Smuggler;
+using Raven.Abstractions.Smuggler.Data;
 using Raven.Abstractions.Util;
 using Raven.Bundles.Versioning.Triggers;
 using Raven.Client.Util;
@@ -299,7 +300,7 @@ for(var customFunction in customFunctions) {{
 
                     var dataDumper = new DatabaseDataDumper(Database, smugglerOptions);
                     dataDumper.Progress += s => status.MarkProgress(s);
-                    await dataDumper.ExportData(
+                    var operationState = await dataDumper.ExportData(
                         new SmugglerExportOptions<RavenConnectionStringOptions>
                         {
                             ToStream = outputStream
@@ -307,6 +308,7 @@ for(var customFunction in customFunctions) {{
 
                     const string message = "Completed export";
                     status.MarkCompleted(message, sp.Elapsed);
+                    status.OperationState = operationState;
                 }
                 catch (OperationCanceledException e)
                 {
@@ -936,6 +938,8 @@ for(var customFunction in customFunctions) {{
         private class DataDumperOperationStatus : OperationStateBase
         {
             public string ExceptionDetails { get; set; }
+
+            public OperationState OperationState { get; set; }
         }
 
         private class CollectionNameAndCount

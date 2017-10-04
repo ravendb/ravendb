@@ -26,6 +26,7 @@ using Lucene.Net.Search;
 using Lucene.Net.Index;
 using Lucene.Net.QueryParsers;
 using Lucene.Net.Store;
+using Raven.Abstractions.Util;
 using Raven.Client.Linq;
 using Raven.Database.Util;
 

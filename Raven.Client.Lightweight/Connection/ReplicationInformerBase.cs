@@ -103,7 +103,7 @@ namespace Raven.Client.Connection
 
         public abstract void ClearReplicationInformationLocalCache(TClient client);
 
-        protected abstract void UpdateReplicationInformationFromDocument(JsonDocument document);
+        public abstract void UpdateReplicationInformationFromDocument(JsonDocument document);
 
         /// <summary>
         /// Should execute the operation using the specified operation URL

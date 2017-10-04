@@ -118,7 +118,10 @@ namespace Raven.Database.Actions
             return indexEtag;
         }
 
-        internal void CheckReferenceBecauseOfDocumentUpdate(string key, IStorageActionsAccessor actions, IEnumerable<string> participatingIds = null)
+        internal int CheckReferenceBecauseOfDocumentUpdate(
+            string key, 
+            IStorageActionsAccessor actions, 
+            IEnumerable<string> participatingIds = null)
         {
             Stopwatch sp = null;
             var count = 0;
@@ -176,6 +179,8 @@ namespace Raven.Database.Actions
                     }
                 });
             }
+
+            return count;
         }
 
         private static void IsIndexNameValid(string name)
@@ -232,6 +237,16 @@ namespace Raven.Database.Actions
             name = name.Trim();
             IsIndexNameValid(name);
 
+            var deletedIndexVersion = IndexDefinitionStorage.GetDeletedIndexVersion(name, definition.IndexId);
+            if (isReplication && definition.IndexVersion != null &&
+                deletedIndexVersion > definition.IndexVersion)
+            {
+                // we got a new index definition from replication
+                // where its version is smaller then the deleted one
+                // probably from an outdated node
+                return null;
+            }
+
             var existingIndex = IndexDefinitionStorage.GetIndexDefinition(name);
             if (existingIndex != null)
             {
@@ -265,35 +280,41 @@ namespace Raven.Database.Actions
 
             AssertAnalyzersValid(definition);
 
+            var existingIndexVersion = existingIndex?.IndexVersion;
             switch (creationOptions ?? FindIndexCreationOptions(definition, ref name))
             {
                 case IndexCreationOptions.Noop:
+                    definition.IndexVersion = Math.Max(definition.IndexVersion ?? 0, existingIndexVersion ?? 0);                    
                     return null;
                 case IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex:
                     // ensure that the code can compile
                     new DynamicViewCompiler(definition.Name, definition, Database.Extensions, IndexDefinitionStorage.IndexDefinitionsPath, Database.Configuration).GenerateInstance();
                     IndexDefinitionStorage.UpdateIndexDefinitionWithoutUpdatingCompiledIndex(definition);
+
+                    definition.IndexVersion = Math.Max(definition.IndexVersion ?? 0, existingIndexVersion ?? 0);
                     if (isReplication == false)
-                        definition.IndexVersion = (definition.IndexVersion ?? 0) + 1;
+                        definition.IndexVersion++;
                     return null;
                 case IndexCreationOptions.Update:
                     // ensure that the code can compile
                     new DynamicViewCompiler(definition.Name, definition, Database.Extensions, IndexDefinitionStorage.IndexDefinitionsPath, Database.Configuration).GenerateInstance();
                     DeleteIndex(name);
+
+                    definition.IndexVersion = Math.Max(definition.IndexVersion ?? 0, existingIndexVersion ?? 0);
                     if (isReplication == false)
-                        definition.IndexVersion = (definition.IndexVersion ?? 0) + 1;
+                        definition.IndexVersion++;
                     break;
                 case IndexCreationOptions.Create:
                     if (isReplication == false)
                     {
                         // we create a new index,
                         // we need to restore its previous IndexVersion (if it was deleted before)
-                        var deletedIndexVersion = IndexDefinitionStorage.GetDeletedIndexVersion(definition);
+
                         var replacingIndexVersion = GetOriginalIndexVersion(definition.Name);
                         definition.IndexVersion = Math.Max(deletedIndexVersion, replacingIndexVersion);
                         definition.IndexVersion++;
                     }
-                        
+
                     break;
             }
 
@@ -475,12 +496,17 @@ namespace Raven.Database.Actions
             catch (Exception e)
             {
                 Log.WarnException("Could not create index batch", e);
-                foreach (var index in createdIndexes)
+
+                if (isReplication == false)
                 {
-                    DeleteIndex(index.Name);
-                    if (index.IsSideBySide)
-                        Database.Documents.Delete(index.Name, null, null);
+                    foreach (var index in createdIndexes)
+                    {
+                        DeleteIndex(index.Name);
+                        if (index.IsSideBySide)
+                            Database.Documents.Delete(index.Name, null, null);
+                    }
                 }
+
                 throw;
             }
         }
@@ -924,32 +950,48 @@ namespace Raven.Database.Actions
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public bool DeleteIndex(string name)
+        public bool DeleteIndex(string name, int? deletedIndexVersion = null)
         {
             var instance = IndexDefinitionStorage.GetIndexDefinition(name);
             if (instance == null)
                 return false;
 
-            DeleteIndex(instance);
+            DeleteIndex(instance, deletedIndexVersion: deletedIndexVersion);
             return true;
         }
 
         internal void DeleteIndex(IndexDefinition instance, bool removeByNameMapping = true, 
-            bool clearErrors = true, bool removeIndexReplaceDocument = true, bool isSideBySideReplacement = false)
+            bool clearErrors = true, bool removeIndexReplaceDocument = true, 
+            bool isSideBySideReplacement = false, int? deletedIndexVersion = null)
         {
             using (IndexDefinitionStorage.TryRemoveIndexContext())
             {
                 if (instance == null)
                     return;
 
-                // Set up a flag to signal that this is something we're doing
-                TransactionalStorage.Batch(actions => actions.Lists.Set("Raven/Indexes/PendingDeletion", instance.IndexId.ToString(CultureInfo.InvariantCulture), (RavenJObject.FromObject(new
+                var currentIndexVersion = instance.IndexVersion;
+                if (deletedIndexVersion != null &&
+                    currentIndexVersion != null &&
+                    currentIndexVersion > deletedIndexVersion)
                 {
-                    TimeOfOriginalDeletion = SystemTime.UtcNow,
-                    instance.IndexId,
-                    IndexName = instance.Name,
-                    instance.IndexVersion
-                })), UuidType.Tasks));
+                    // the index version is larger than the deleted one
+                    // got an old delete from an outdated node
+                    return;
+                }
+
+                // Set up a flag to signal that this is something we're doing
+                TransactionalStorage.Batch(actions =>
+                {
+                    actions.Lists.Set("Raven/Indexes/PendingDeletion", 
+                        instance.IndexId.ToString(CultureInfo.InvariantCulture),
+                        RavenJObject.FromObject(new
+                        {
+                            TimeOfOriginalDeletion = SystemTime.UtcNow,
+                            instance.IndexId,
+                            IndexName = instance.Name,
+                            instance.IndexVersion
+                        }), UuidType.Tasks);
+                });
 
                 // Delete the main record synchronously
                 IndexDefinitionStorage.RemoveIndex(instance.IndexId, removeByNameMapping);
@@ -973,6 +1015,22 @@ namespace Raven.Database.Actions
                 Database.Maintenance.StartDeletingIndexDataAsync(instance.IndexId, instance.Name);
 
                 var indexChangeType = isSideBySideReplacement ? IndexChangeTypes.SideBySideReplace : IndexChangeTypes.IndexRemoved;
+
+                var version = currentIndexVersion ?? 0;
+                if (deletedIndexVersion != null)
+                    version = Math.Max(version, deletedIndexVersion.Value);
+
+                TransactionalStorage.Batch(actions =>
+                {
+                    if (instance.Name.StartsWith(Constants.SideBySideIndexNamePrefix))
+                        return;
+
+                    var metadata = new RavenJObject
+                    {
+                        {IndexDefinitionStorage.IndexVersionKey, version }
+                    };
+                    actions.Lists.Set(Constants.RavenDeletedIndexesVersions, instance.Name, metadata, UuidType.Indexing);
+                });
 
                 // We raise the notification now because as far as we're concerned it is done *now*
                 TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() =>

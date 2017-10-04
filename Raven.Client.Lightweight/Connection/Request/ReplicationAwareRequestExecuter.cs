@@ -58,11 +58,8 @@ namespace Raven.Client.Connection.Request
         }
 
         public Task UpdateReplicationInformationIfNeededAsync(AsyncServerClient serverClient, bool force = false)
-        {
-            if (force)
-                throw new NotSupportedException("Force is not supported in ReplicationAwareRequestExecuter");
-
-            return replicationInformer.UpdateReplicationInformationIfNeededAsync(serverClient);
+        {    
+            return replicationInformer.UpdateReplicationInformationIfNeededAsync(serverClient, force);
         }
 
         public void AddHeaders(HttpJsonRequest httpJsonRequest, AsyncServerClient serverClient, string currentUrl, bool withClusterFailoverHeader = false)

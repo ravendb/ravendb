@@ -23,11 +23,15 @@ using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Storage
 {
     public class IndexDefinitionStorage
     {
+        public const string IndexVersionKey = "IndexVersion";
+        public const string TransformerVersionKey = "TransformerVersion";
+
         private const string IndexDefDir = "IndexDefinitions";
 
         private readonly ReaderWriterLockSlim currentlyIndexingLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
@@ -532,20 +536,25 @@ namespace Raven.Database.Storage
             return res;
         }
 
-        public int GetDeletedIndexVersion(IndexDefinition definition)
+        public int GetDeletedIndexVersion(string indexName, int indexId)
         {
             // we only need the deleted index version if exists
             // no need to log an error
             int indexVersionFromTombstones;
-            CheckIfIndexVersionIsEqualOrSmaller(Constants.RavenReplicationIndexesTombstones, 
-                definition.Name, int.MaxValue, definition.Name, out indexVersionFromTombstones);
+            CheckIfIndexVersionIsEqualOrSmaller(Constants.RavenReplicationIndexesTombstones,
+                indexName, int.MaxValue, indexName, out indexVersionFromTombstones);
 
             int indexVersionFromPendingDeletions;
-            CheckIfIndexVersionIsEqualOrSmaller("Raven/Indexes/PendingDeletion", 
-                definition.IndexId.ToString(CultureInfo.InvariantCulture), 
-                int.MaxValue, definition.Name, out indexVersionFromPendingDeletions);
+            CheckIfIndexVersionIsEqualOrSmaller("Raven/Indexes/PendingDeletion",
+                indexId.ToString(CultureInfo.InvariantCulture), 
+                int.MaxValue, indexName, out indexVersionFromPendingDeletions);
 
-            return Math.Max(indexVersionFromTombstones, indexVersionFromPendingDeletions);
+            var result = Math.Max(indexVersionFromTombstones, indexVersionFromPendingDeletions);
+
+            int deletedIndexVersion;
+            CheckIfIndexVersionIsEqualOrSmaller(Constants.RavenDeletedIndexesVersions,
+                indexName, int.MaxValue, indexName, out deletedIndexVersion);
+            return Math.Max(result, deletedIndexVersion);
         }
 
         public bool Contains(string indexName)
@@ -601,6 +610,7 @@ namespace Raven.Database.Storage
             var transformer = GetTransformerDefinition(name);
             if (transformer == null)
                 return false;
+
             RemoveTransformer(transformer.TransfomerId);
 
             return true;
@@ -688,12 +698,8 @@ namespace Raven.Database.Storage
             else
             {
                 index.Name = indexToSwapName;
-
-                int indexVersionFromTombstones;
-                CheckIfIndexVersionIsEqualOrSmaller(Constants.RavenReplicationIndexesTombstones,
-                    indexToSwapName, 0, indexToSwapName, out indexVersionFromTombstones);
-
-                index.IndexVersion = indexVersionFromTombstones + 1;
+                var deletedIndexVersion = GetDeletedIndexVersion(indexToSwapName, indexId: 0);
+                index.IndexVersion = deletedIndexVersion + 1;
             }
 
             index.Name = indexToReplace != null ? indexToReplace.Name : indexToSwapName;

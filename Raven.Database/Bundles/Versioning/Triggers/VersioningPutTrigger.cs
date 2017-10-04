@@ -9,6 +9,7 @@ using System.ComponentModel.Composition;
 using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Data;
+using Raven.Bundles.Replication.Triggers;
 using Raven.Bundles.Versioning.Data;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
@@ -63,7 +64,7 @@ namespace Raven.Bundles.Versioning.Triggers
 
             var revision = GetNextRevisionNumber(key);
 
-            using (Database.DisableAllTriggersForCurrentThread())
+            using (Database.DisableAllTriggersForCurrentThread(new HashSet<Type>{ typeof(VirtualDeleteAndRemoveConflictsTrigger) }))
             {
                 RemoveOldRevisions(key, revision, versioningConfiguration, transactionInformation);
             }

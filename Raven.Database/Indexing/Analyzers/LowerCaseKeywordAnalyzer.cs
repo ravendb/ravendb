@@ -15,7 +15,11 @@ namespace Raven.Database.Indexing
         {
             var previousTokenStream = (LowerCaseKeywordTokenizer)PreviousTokenStream;
             if (previousTokenStream == null)
-                return TokenStream(fieldName, reader);
+            {
+                var newStream = TokenStream(fieldName, reader);
+                PreviousTokenStream = newStream;
+                return newStream;
+            }
             previousTokenStream.Reset(reader);
             return previousTokenStream;
         }

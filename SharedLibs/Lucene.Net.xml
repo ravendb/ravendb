@@ -19492,6 +19492,11 @@
             run method to be called in that separately executing thread.
             </summary>
         </member>
+        <member name="T:Lucene.Net.Support.Lucene4x.AtomicInt32">
+            <summary>
+            NOTE: This was AtomicInteger in the JDK
+            </summary>
+        </member>
         <member name="T:Lucene.Net.Support.Number">
             <summary>
             A simple class for number conversions.
@@ -20521,6 +20526,68 @@
             </returns>
             <throws>  IllegalArgumentException If the input buffer is not backed by an </throws>
             <summary>  array
+            </summary>
+        </member>
+        <member name="T:Lucene.Net.Util.Lucene4x.DisposableThreadLocal`1">
+            <summary>
+            Java's builtin ThreadLocal has a serious flaw:
+            it can take an arbitrarily long amount of time to
+            dereference the things you had stored in it, even once the
+            ThreadLocal instance itself is no longer referenced.
+            This is because there is single, master map stored for
+            each thread, which all ThreadLocals share, and that
+            master map only periodically purges "stale" entries.
+            <para/>
+            While not technically a memory leak, because eventually
+            the memory will be reclaimed, it can take a long time
+            and you can easily hit <see cref="T:System.OutOfMemoryException"/> because from the
+            GC's standpoint the stale entries are not reclaimable.
+            <para/>
+            This class works around that, by only enrolling
+            WeakReference values into the ThreadLocal, and
+            separately holding a hard reference to each stored
+            value.  When you call <see cref="M:Lucene.Net.Util.Lucene4x.DisposableThreadLocal`1.Dispose"/>, these hard
+            references are cleared and then GC is freely able to
+            reclaim space by objects stored in it.
+            <para/>
+            You should not call <see cref="M:Lucene.Net.Util.Lucene4x.DisposableThreadLocal`1.Dispose"/> until all
+            threads are done using the instance.
+            <para/>
+            @lucene.internal
+            </summary>
+        </member>
+        <member name="T:Lucene.Net.Util.Lucene4x.DoubleBarrelLRUCache`2">
+             <summary>
+             Simple concurrent LRU cache, using a "double barrel"
+             approach where two ConcurrentHashMaps record entries.
+            
+             <para>At any given time, one hash is primary and the other
+             is secondary.  <see cref="M:Lucene.Net.Util.Lucene4x.DoubleBarrelLRUCache`2.Get(`0)"/> first checks primary, and if
+             that's a miss, checks secondary.  If secondary has the
+             entry, it's promoted to primary (<b>NOTE</b>: the key is
+             cloned at this point).  Once primary is full, the
+             secondary is cleared and the two are swapped.</para>
+            
+             <para>This is not as space efficient as other possible
+             concurrent approaches (see LUCENE-2075): to achieve
+             perfect LRU(N) it requires 2*N storage.  But, this
+             approach is relatively simple and seems in practice to
+             not grow unbounded in size when under hideously high
+             load.</para>
+            
+             @lucene.internal
+             </summary>
+        </member>
+        <member name="T:Lucene.Net.Util.Lucene4x.DoubleBarrelLRUCache">
+            <summary>
+            LUCENENET specific class to nest the <see cref="T:Lucene.Net.Util.Lucene4x.DoubleBarrelLRUCache.CloneableKey"/>
+            so it can be accessed without referencing the generic closing types
+            of <see cref="T:Lucene.Net.Util.Lucene4x.DoubleBarrelLRUCache`2"/>.
+            </summary>
+        </member>
+        <member name="T:Lucene.Net.Util.Lucene4x.DoubleBarrelLRUCache.CloneableKey">
+            <summary>
+            Object providing clone(); the key class must subclass this.
             </summary>
         </member>
         <member name="T:Lucene.Net.Util.MapOfSets`2">
