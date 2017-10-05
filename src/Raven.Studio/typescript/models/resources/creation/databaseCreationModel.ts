@@ -73,7 +73,6 @@ class databaseCreationModel {
         isCompressed: ko.observable<boolean>(false),
 
         dataDirectory: ko.observable<string>(),
-        outputFilePath: ko.observable<string>(),
         dataExporterFullPath: ko.observable<string>(),
         
         batchSize: ko.observable<number>(),
@@ -86,7 +85,6 @@ class databaseCreationModel {
     
     legacyMigrationValidationGroup = ko.validatedObservable({
         dataDirectory: this.legacyMigration.dataDirectory,
-        outputFilePath: this.legacyMigration.outputFilePath,
         dataExporterFullPath: this.legacyMigration.dataExporterFullPath,
         sourceType: this.legacyMigration.sourceType,
         journalsPath: this.legacyMigration.journalsPath,
@@ -333,10 +331,6 @@ class databaseCreationModel {
             required: true
         });
 
-        migration.outputFilePath.extend({
-            required: true
-        });
-
         migration.sourceType.extend({
             required: true
         });
@@ -411,7 +405,6 @@ class databaseCreationModel {
         const migration = this.legacyMigration;
         return {
             DataDirectory: migration.dataDirectory(),
-            OutputFilePath: migration.outputFilePath(),
             DataExporterFullPath: migration.dataExporterFullPath(),
             BatchSize: migration.batchSize() || null, 
             IsRavenFs: migration.sourceType() === "ravenfs",
