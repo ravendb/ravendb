@@ -276,12 +276,12 @@ namespace Raven.Server.Documents.Operations
 
             public void NotifyCenter(OperationChanged notification, Action<OperationChanged> addToNotificationCenter)
             {
-                if (notification.State.Status != OperationStatus.InProgress)
+                if (!ShouldThrottleMessage(notification))
                 {
                     addToNotificationCenter(notification);
                     return;
                 }
-
+                
                 // let us throttle changes about the operation progress
 
                 var now = SystemTime.UtcNow;
@@ -309,6 +309,24 @@ namespace Raven.Server.Documents.Operations
                         _throttle.Scheduled = null;
                     });
                 }
+            }
+            
+            private bool ShouldThrottleMessage(OperationChanged notification)
+            {
+                if (notification.State.Status != OperationStatus.InProgress)
+                {
+                    return false;
+                }
+                
+                switch (notification.TaskType)
+                {
+                    case OperationType.MigrationFromLegacyData:
+                    case OperationType.DatabaseExport:
+                    case OperationType.DatabaseImport:
+                        return false;
+                }
+                
+                return true;
             }
 
             private class ThrottledNotification
@@ -373,7 +391,10 @@ namespace Raven.Server.Documents.Operations
             BulkInsert,
             
             [Description("Certificate generation")]
-            CertificateGeneration
+            CertificateGeneration,
+            
+            [Description("Migration from v3.x")]
+            MigrationFromLegacyData
         }
     }
 }

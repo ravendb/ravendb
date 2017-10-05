@@ -183,7 +183,9 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
         (notification.taskType() === "DatabaseExport" ||
             notification.taskType() === "DatabaseImport" ||
             notification.taskType() === "DatabaseMigration" ||
-            notification.taskType() === "DatabaseRestore");
+            notification.taskType() === "DatabaseRestore" ||
+            notification.taskType() === "MigrationFromLegacyData"
+        );
     }
 
     static showDetailsFor(op: operation, center: notificationCenter) {
