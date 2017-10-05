@@ -19,6 +19,8 @@ class rqlTestUtils {
             throw "RQL test must include the position"
         }
 
+        rqlTestUtils.trySpeedupValidation();
+        
         const langTools = ace.require("ace/ext/language_tools");
         const util = ace.require("ace/autocomplete/util");
         aceEditorBindingHandler.customizeCompletionPrefix(util);
@@ -49,7 +51,25 @@ class rqlTestUtils {
 
         setTimeout(() => {
             aceEditor.getSession().setMode("ace/mode/rql");
-        }, 200);
+        }, 100);
+    }
+    
+    static trySpeedupValidation() {
+        const tokenizer = ace.require("ace/background_tokenizer").BackgroundTokenizer;
+        tokenizer.prototype.start = function(startRow : any) {
+            this.currentLine = Math.min(startRow || 0, this.currentLine, this.doc.getLength());
+            this.lines.splice(this.currentLine, this.lines.length);
+            this.states.splice(this.currentLine, this.states.length);
+
+            this.stop();
+            this.running = setTimeout(this.$worker, 120);
+        };
+
+
+        tokenizer.scheduleStart = function() {
+            if (!this.running)
+                this.running = setTimeout(this.$worker, 120);
+        }
     }
     
     static emptyProvider() {
