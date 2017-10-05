@@ -105,11 +105,11 @@ namespace Raven.Server.Utils
             if (indexOfPrefixStart == -1)
                 return false;
 
-            if (includePath.Length >= indexOfPrefixStart + BlittableJsonTraverser.CollectionSeparator.Length)
+            if (includePath.Length >= indexOfPrefixStart + BlittableJsonTraverser.CollectionAndPropertySeparators.Length)
             {
-                if (includePath[indexOfPrefixStart] == BlittableJsonTraverser.CollectionSeparator[0] &&
-                    includePath[indexOfPrefixStart + 1] == BlittableJsonTraverser.CollectionSeparator[1] &&
-                    includePath[indexOfPrefixStart + 2] == BlittableJsonTraverser.CollectionSeparator[2])
+                if (includePath[indexOfPrefixStart] == BlittableJsonTraverser.CollectionAndPropertySeparators[0] &&
+                    includePath[indexOfPrefixStart + 1] == BlittableJsonTraverser.CollectionAndPropertySeparators[1] &&
+                    includePath[indexOfPrefixStart + 2] == BlittableJsonTraverser.CollectionAndPropertySeparators[2])
                 {
                      // []. means collection
 

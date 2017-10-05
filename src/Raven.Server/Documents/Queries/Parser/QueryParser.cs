@@ -806,7 +806,9 @@ namespace Raven.Server.Documents.Queries.Parser
                     }
                 }
 
-                if (Scanner.TryScan('['))
+                bool? hasNextPart = null;
+
+                while (Scanner.TryScan('['))
                 {
                     switch (Scanner.TryNumber())
                     {
@@ -826,16 +828,23 @@ namespace Raven.Server.Documents.Queries.Parser
                             ThrowParseException("Array indexer must be integer, but got double");
                             break;
                     }
+
+                    hasNextPart = Scanner.TryScan('.');
                 }
+
+                if (hasNextPart == true)
+                    continue;
 
                 if (Scanner.TryScan('.') == false)
                     break;
             }
+            
 
             token = new FieldExpression(parts)
             {
                 IsQuoted = quoted
             };
+
             return true;
         }
 

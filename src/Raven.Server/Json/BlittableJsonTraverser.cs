@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using Sparrow;
 using Sparrow.Json;
 
@@ -13,8 +12,9 @@ namespace Raven.Server.Json
         public static BlittableJsonTraverser FlatMapReduceResults = new BlittableJsonTraverser(new char[] { }); // map-reduce results have always a flat structure, let's ignore separators
 
         private const char PropertySeparator = '.';
-        private const char CollectionSeparatorStart = '[';
-        public static readonly char[] CollectionSeparator = { CollectionSeparatorStart, ']', PropertySeparator };
+        private const char CollectionSeparatorStartBracket = '[';
+        private const char CollectionSeparatorEndBracket = ']';
+        public static readonly char[] CollectionAndPropertySeparators = { CollectionSeparatorStartBracket, CollectionSeparatorEndBracket, PropertySeparator };
 
         public static readonly char[] PropertySeparators =
         {
@@ -24,7 +24,7 @@ namespace Raven.Server.Json
         private readonly char[] _separators =
         {
             PropertySeparator,
-            CollectionSeparatorStart
+            CollectionSeparatorStartBracket
         };
 
         private BlittableJsonTraverser(char[] nonDefaultSeparators = null)
@@ -78,44 +78,94 @@ namespace Raven.Server.Json
                     leftPath = pathSegment;
                     result = reader;
                     return false;
-                case CollectionSeparatorStart:
-                    if (path.Length <= propertySegmentLength + 2 ||
-                        path[propertySegmentLength + 1] != ']' ||
-                        path[propertySegmentLength + 2] != '.')
+                case CollectionSeparatorStartBracket:
+
+                    var type = GetCollectionSeparatorType(path, propertySegmentLength);
+
+                    switch (type)
                     {
-                        if (propertySegmentLength + 1 < path.Length &&
-                            path[propertySegmentLength + 1] == ']')
-                        {
+                        case CollectionSeparatorType.BracketsOnly:
+                            leftPath = string.Empty; // we are done with this path
+
                             if (reader is BlittableJsonReaderArray innerArray)
                             {
-                                leftPath = string.Empty; // we are done with this path
                                 result = ReadArray(innerArray, leftPath);
                                 return true;
                             }
-                        }
-                        result = null;
-                        leftPath = path;
-                        return false;
-                    }
-                    leftPath = path.Subsegment(propertySegmentLength + CollectionSeparator.Length);
 
-                    if (reader is BlittableJsonReaderArray collectionInnerArray)
-                    {
-                        result = ReadArray(collectionInnerArray, leftPath);
-                        leftPath = string.Empty; // we consume and handle internally the rest of it
-                        return true;
-                    }
+                            result = null;
+                            leftPath = path;
+                            return false;
+                        case CollectionSeparatorType.MultiBrackets:
+                            leftPath = path.Subsegment(propertySegmentLength + 2);
 
-                    if (reader is BlittableJsonReaderObject nested)
-                    {
-                        return ReadNestedObjects(nested, leftPath, out result, out leftPath);
+                            if (reader is BlittableJsonReaderArray multiDimensionalArray)
+                            {
+                                result = ReadArray(multiDimensionalArray, leftPath);
+                                leftPath = string.Empty; // we consume and handle internally the rest of it
+                                return true;
+                            }
 
+                            result = reader;
+                            return false;
+                        case CollectionSeparatorType.BracketsAndProperty:
+                            leftPath = path.Subsegment(propertySegmentLength + CollectionAndPropertySeparators.Length);
+
+                            if (reader is BlittableJsonReaderArray collectionInnerArray)
+                            {
+                                result = ReadArray(collectionInnerArray, leftPath);
+                                leftPath = string.Empty; // we consume and handle internally the rest of it
+                                return true;
+                            }
+
+                            if (reader is BlittableJsonReaderObject nested)
+                            {
+                                return ReadNestedObjects(nested, leftPath, out result, out leftPath);
+                            }
+                            result = reader;
+                            return false;
+                        default:
+                            throw new NotSupportedException($"Invalid collection separator in a given path: {path}");
                     }
-                    result = reader;
-                    return false;
+                    
                 default:
                     throw new NotSupportedException($"Unhandled separator character: {path[propertySegmentLength]}");
             }
+        }
+
+        private enum CollectionSeparatorType
+        {
+            BracketsAndProperty,
+            BracketsOnly,
+            MultiBrackets,
+            Invalid
+        }
+
+        private CollectionSeparatorType GetCollectionSeparatorType(StringSegment path, int propertySegmentLength)
+        {
+            if (path.Length < propertySegmentLength + CollectionAndPropertySeparators.Length)
+            {
+                if (path.Length <= propertySegmentLength + 1)
+                    return CollectionSeparatorType.Invalid;
+
+                if (path[propertySegmentLength + 1] != CollectionSeparatorEndBracket)
+                    return CollectionSeparatorType.Invalid;
+
+                return CollectionSeparatorType.BracketsOnly;
+            }
+
+            if (path[propertySegmentLength + 1] != CollectionSeparatorEndBracket)
+                return CollectionSeparatorType.Invalid;
+
+            if (path[propertySegmentLength + 2] != '.')
+            {
+                if (path[propertySegmentLength + 2] == CollectionSeparatorStartBracket)
+                    return CollectionSeparatorType.MultiBrackets;
+
+                return CollectionSeparatorType.Invalid;
+            }
+
+            return CollectionSeparatorType.BracketsAndProperty;
         }
 
         private StringSegment GetNextToken(StringSegment path, out int consumed)
@@ -193,15 +243,11 @@ namespace Raven.Server.Json
             for (int i = 0; i < array.Length; i++)
             {
                 var item = array[i];
-                var arrayObject = item as BlittableJsonReaderObject;
-                if (arrayObject != null)
+                if (item is BlittableJsonReaderObject arrayObject)
                 {
-                    object result;
-                    if (BlittableJsonTraverserHelper.TryRead(this, arrayObject, pathSegment, out result))
+                    if (BlittableJsonTraverserHelper.TryRead(this, arrayObject, pathSegment, out var result))
                     {
-                        var enumerable = result as IEnumerable;
-
-                        if (enumerable != null && result is string == false)
+                        if (result is IEnumerable enumerable && result is string == false)
                         {
                             foreach (var nestedItem in enumerable)
                             {
@@ -216,23 +262,24 @@ namespace Raven.Server.Json
                 }
                 else
                 {
-                    var arrayReader = item as BlittableJsonReaderArray;
-                    if (arrayReader != null)
+                    if (item is BlittableJsonReaderArray arrayReader)
                     {
-                        var indexOfFirstSeparatorInSubIndex = pathSegment.IndexOfAny(_separators, 0);
+                        var type = GetCollectionSeparatorType(pathSegment, 0);
 
-                        string subSegment;
-
-                        switch (pathSegment[indexOfFirstSeparatorInSubIndex])
+                        StringSegment subSegment;
+                        switch (type)
                         {
-                            case PropertySeparator:
-                                subSegment = pathSegment.Subsegment(indexOfFirstSeparatorInSubIndex + 1);
+                            case CollectionSeparatorType.BracketsAndProperty:
+                                subSegment = pathSegment.Subsegment(CollectionAndPropertySeparators.Length);
                                 break;
-                            case CollectionSeparatorStart:
-                                subSegment = pathSegment.Subsegment(indexOfFirstSeparatorInSubIndex + 3);
+                            case CollectionSeparatorType.MultiBrackets:
+                                subSegment = pathSegment.Subsegment(2);
+                                break;
+                            case CollectionSeparatorType.BracketsOnly:
+                                subSegment = string.Empty;
                                 break;
                             default:
-                                throw new NotSupportedException($"Unhandled separator character: {pathSegment[indexOfFirstSeparatorInSubIndex]}");
+                                throw new NotSupportedException($"Invalid collection separator in a given path: {pathSegment}");
                         }
 
                         foreach (var nestedItem in ReadArray(arrayReader, subSegment))
