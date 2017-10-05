@@ -186,6 +186,7 @@ namespace Raven.Server.ServerWide
                     case nameof(ToggleSubscriptionStateCommand):
                     case nameof(UpdateSubscriptionClientConnectionTime):
                     case nameof(UpdateSnmpDatabaseIndexesMappingCommand):
+                    case nameof(RemoveEtlProcessStateCommand):
                         SetValueForTypedDatabaseCommand(context, type, cmd, index, leader, out _);
                         break;
                     case nameof(CompareExchangeCommand):

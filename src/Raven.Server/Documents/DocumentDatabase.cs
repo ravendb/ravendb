@@ -758,6 +758,7 @@ namespace Raven.Server.Documents
         private void NotifyFeaturesAboutValueChange(DatabaseRecord record)
         {
             SubscriptionStorage?.HandleDatabaseValueChange(record);
+            EtlLoader?.HandleDatabaseValueChanged(record);
         }
 
         public void RefreshFeatures()

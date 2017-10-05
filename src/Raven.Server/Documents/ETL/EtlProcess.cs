@@ -37,13 +37,19 @@ namespace Raven.Server.Documents.ETL
 
         public string Name { get; protected set; }
 
+        public string ConfigurationName { get; protected set; }
+
+        public string TransformationName { get; protected set; }
+
         public abstract void Start();
 
         public abstract void Stop();
 
         public abstract void Dispose();
 
-        public abstract void NotifyAboutWork(DocumentChange change);
+        public abstract void Reset();
+
+        public abstract void Reset(DocumentChange change);
 
         public abstract EtlPerformanceStats[] GetPerformanceStats();
 
@@ -79,6 +85,8 @@ namespace Raven.Server.Documents.ETL
             Configuration = configuration;
             _cts = CancellationTokenSource.CreateLinkedTokenSource(database.DatabaseShutdown);
             Tag = tag;
+            ConfigurationName = Configuration.Name;
+            TransformationName = Transformation.Name;
             Name = $"{Configuration.Name}/{Transformation.Name}";
             Logger = LoggingSource.Instance.GetLogger(database.Name, GetType().FullName);
             Database = database;
@@ -303,7 +311,17 @@ namespace Raven.Server.Documents.ETL
             Metrics.BatchSizeMeter.Mark(stats.NumberOfExtractedItems);
         }
 
-        public override void NotifyAboutWork(DocumentChange change)
+        public override void Reset()
+        {
+            Statistics.Reset();
+
+            if (_thread == null)
+                return;
+            
+            _waitForChanges.Set();
+        }
+
+        public override void Reset(DocumentChange change)
         {
             if (Transformation.ApplyToAllDocuments || _collections.Contains(change.CollectionName))
                 _waitForChanges.Set();
