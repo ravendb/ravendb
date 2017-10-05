@@ -52,12 +52,32 @@ if [ ! -z "$CERTIFICATE_PATH" ]; then
 
     if [ ! -d "/usr/share/ca-certificates/ravendb" ]; then
         mkdir -p /usr/share/ca-certificates/ravendb
-        openssl pkcs12 -in "$CERTIFICATE_PATH" -out /tmp/server-temp.pem -password "pass:$CERT_PASSWORD" -passout "pass:" -cacerts
-        openssl x509 -in /tmp/server-temp.pem -out /usr/share/ca-certificates/ravendb/server.pem
         chmod 755 /usr/share/ca-certificates/ravendb
-        chmod 644 /usr/share/ca-certificates/ravendb/server.pem
-        mv /usr/share/ca-certificates/ravendb/server.pem /usr/share/ca-certificates/ravendb/server.crt
-        echo "ravendb/server.crt" >> /etc/ca-certificates.conf
+
+        pushd .
+
+        cd /tmp
+        # convert to PEM
+        openssl pkcs12 -in "$CERTIFICATE_PATH" -out certs-raw.pem -password "pass:$CERT_PASSWORD" -passout "pass:"
+
+        # remove bag attributes if needed
+        awk '/-----BEGIN CERTIFICATE-----/{print;flag=1;next}/-----END CERTIFICATE-----/{print;flag=0}flag' certs-raw.pem > certs.pem
+
+        # split into separate PEM files
+        csplit -f raven-cert- -b '%02d.pem' -z certs.pem  '/-----BEGIN CERTIFICATE-----/' '{*}'
+
+        # add them to ca certs
+        for certFile in raven-cert-*; do
+            BASENAME="${certFile%.*}"
+
+            openssl x509 -in "$certFile" -out "/usr/share/ca-certificates/ravendb/$certFile"
+            chmod 644 "/usr/share/ca-certificates/ravendb/$certFile"
+            mv "/usr/share/ca-certificates/ravendb/$certFile" "/usr/share/ca-certificates/ravendb/$BASENAME.crt"
+            echo "ravendb/$BASENAME.crt" >> /etc/ca-certificates.conf
+        done
+
+        popd
+        
         update-ca-certificates
     fi
 
