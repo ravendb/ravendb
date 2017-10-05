@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using FastTests;
 
 using Xunit;
@@ -10,6 +11,7 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Collections;
+using Sparrow.Json.Parsing;
 
 namespace SlowTests.Issues
 {
@@ -85,7 +87,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var notificationsQueue = new AsyncQueue<Notification>();
+                var notificationsQueue = new AsyncQueue<DynamicJsonValue>();
                 using (db.NotificationCenter.TrackActions(notificationsQueue, null))
                 {
                     definition.Name = index.IndexName;
@@ -93,22 +95,28 @@ namespace SlowTests.Issues
 
                     WaitForIndexing(store);
 
-                    Assert.Equal(1, notificationsQueue.Count);
+                    // we might have other notifications like StatsChanged
+                    Assert.True(notificationsQueue.Count > 0);
+                    
+                    Tuple<bool, DynamicJsonValue> performanceHint;
+                    
+                    do
+                    {
+                        performanceHint = await notificationsQueue.TryDequeueAsync(TimeSpan.Zero);
+                    } while (performanceHint.Item2["Type"].ToString() != NotificationType.PerformanceHint.ToString());
+                    
+                    Assert.NotNull(performanceHint.Item2);
+                    Assert.Equal("Index 'UsersAndFriends' has produced more than 2 map results from a single document", performanceHint.Item2[nameof(PerformanceHint.Message)]);
+                    Assert.Equal("UsersAndFriends", performanceHint.Item2[nameof(PerformanceHint.Source)]);
+                    Assert.Equal(PerformanceHintType.Indexing, performanceHint.Item2[nameof(PerformanceHint.HintType)]);
 
-                    var performanceHint = await notificationsQueue.DequeueAsync() as PerformanceHint;
-
-                    Assert.NotNull(performanceHint);
-                    Assert.Equal("Index 'UsersAndFriends' has produced more than 2 map results from a single document", performanceHint.Message);
-                    Assert.Equal("UsersAndFriends", performanceHint.Source);
-                    Assert.Equal(PerformanceHintType.Indexing, performanceHint.HintType);
-
-                    var details = performanceHint.Details as WarnIndexOutputsPerDocument;
+                    var details = performanceHint.Item2[nameof(PerformanceHint.Details)] as DynamicJsonValue;
 
                     Assert.NotNull(details);
-                    Assert.Equal(1, details.NumberOfExceedingDocuments);
-                    Assert.Equal(3, details.MaxNumberOutputsPerDocument);
+                    Assert.Equal(1L, details[nameof(WarnIndexOutputsPerDocument.NumberOfExceedingDocuments)]);
+                    Assert.Equal(3, details[nameof(WarnIndexOutputsPerDocument.MaxNumberOutputsPerDocument)]);
                     //TODO:Need to invastigate why id is returning as lowered
-                    Assert.Equal("users/2-a", details.SampleDocumentId);
+                    Assert.Equal("users/2-a", details[nameof(WarnIndexOutputsPerDocument.SampleDocumentId)]);
                 }
 
                 var indexStats = store.Admin.Send(new GetIndexStatisticsOperation(index.IndexName));

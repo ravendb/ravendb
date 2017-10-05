@@ -26,7 +26,7 @@ namespace FastTests.Server.NotificationCenter
         {
             using (var database = CreateDocumentDatabase())
             {
-                var actions = new AsyncQueue<Notification>();
+                var actions = new AsyncQueue<DynamicJsonValue>();
                 var writer = new TestWebSocketWriter();
 
                 using (database.NotificationCenter.TrackActions(actions, writer))
@@ -152,7 +152,7 @@ namespace FastTests.Server.NotificationCenter
 
                 var postponeUntil = SystemTime.UtcNow.AddDays(1);
 
-                var actions = new AsyncQueue<Notification>();
+                var actions = new AsyncQueue<DynamicJsonValue>();
                 var writer = new TestWebSocketWriter();
 
                 using (database.NotificationCenter.TrackActions(actions, writer))
@@ -161,10 +161,10 @@ namespace FastTests.Server.NotificationCenter
                 }
 
                 Assert.Equal(1, actions.Count);
-                var notification = actions.DequeueAsync().Result as NotificationUpdated;
+                var notification = actions.DequeueAsync().Result;
                 Assert.NotNull(notification);
-                Assert.Equal(alert.Id, notification.NotificationId);
-                Assert.Equal(NotificationUpdateType.Postponed, notification.UpdateType);
+                Assert.Equal(alert.Id, notification[nameof(NotificationUpdated.NotificationId)]);
+                Assert.Equal(NotificationUpdateType.Postponed, notification[nameof(NotificationUpdated.UpdateType)]);
 
                 IEnumerable<NotificationTableValue> alerts;
                 using (database.NotificationCenter.GetStored(out alerts))
@@ -195,7 +195,7 @@ namespace FastTests.Server.NotificationCenter
 
                 database.NotificationCenter.Add(alert);
 
-                var actions = new AsyncQueue<Notification>();
+                var actions = new AsyncQueue<DynamicJsonValue>();
                 var writer = new TestWebSocketWriter();
 
                 using (database.NotificationCenter.TrackActions(actions, writer))
@@ -212,10 +212,10 @@ namespace FastTests.Server.NotificationCenter
                 }
 
                 Assert.Equal(1, actions.Count);
-                var notification = actions.DequeueAsync().Result as NotificationUpdated;
+                var notification = actions.DequeueAsync().Result;
                 Assert.NotNull(notification);
-                Assert.Equal(alert.Id, notification.NotificationId);
-                Assert.Equal(NotificationUpdateType.Dismissed, notification.UpdateType);
+                Assert.Equal(alert.Id, notification[nameof(NotificationUpdated.NotificationId)]);
+                Assert.Equal(NotificationUpdateType.Dismissed, notification[nameof(NotificationUpdated.UpdateType)]);
             }
         }
 
@@ -249,7 +249,7 @@ namespace FastTests.Server.NotificationCenter
 
                 database.NotificationCenter.Add(alert);
 
-                var actions = new AsyncQueue<Notification>();
+                var actions = new AsyncQueue<DynamicJsonValue>();
                 var writer = new TestWebSocketWriter();
 
                 using (database.NotificationCenter.TrackActions(actions, writer))
@@ -309,7 +309,7 @@ namespace FastTests.Server.NotificationCenter
                 var alert3 = GetSampleAlert(customKey: "alert-3");
                 database.NotificationCenter.Add(alert3);
 
-                var actions = new AsyncQueue<Notification>();
+                var actions = new AsyncQueue<DynamicJsonValue>();
                 var writer = new TestWebSocketWriter();
 
                 using (database.NotificationCenter.TrackActions(actions, writer))
@@ -320,10 +320,10 @@ namespace FastTests.Server.NotificationCenter
 
                     for (int i = 0; i < 2; i++)
                     {
-                        var posponed = actions.DequeueAsync().Result as NotificationUpdated;
+                        var posponed = actions.DequeueAsync().Result;
 
                         Assert.NotNull(posponed);
-                        Assert.Equal(NotificationUpdateType.Postponed, posponed.UpdateType);
+                        Assert.Equal(NotificationUpdateType.Postponed, posponed[(nameof(NotificationUpdated.UpdateType))]);
                     }
 
                     Assert.True(SpinWait.SpinUntil(() => writer.SentNotifications.Count == 1, TimeSpan.FromSeconds(30)), $"Got: {writer.SentNotifications.Count}");
@@ -345,7 +345,7 @@ namespace FastTests.Server.NotificationCenter
 
                 database.NotificationCenter.Postpone(alert.Id, SystemTime.UtcNow.AddDays(1));
 
-                var actions = new AsyncQueue<Notification>();
+                var actions = new AsyncQueue<DynamicJsonValue>();
                 var writer = new TestWebSocketWriter();
                 
                 using (database.NotificationCenter.TrackActions(actions, writer))
@@ -388,7 +388,7 @@ namespace FastTests.Server.NotificationCenter
 
                 database.NotificationCenter.Add(alert);
 
-                var notifications = new AsyncQueue<Notification>();
+                var notifications = new AsyncQueue<DynamicJsonValue>();
                 var writer = new TestWebSocketWriter();
 
                 database.NotificationCenter.Postpone(alert.Id, DateTime.MaxValue);
@@ -409,7 +409,7 @@ namespace FastTests.Server.NotificationCenter
             {
                 database.NotificationCenter.Options.DatabaseStatsThrottle = TimeSpan.FromMilliseconds(100);
 
-                var actions = new AsyncQueue<Notification>();
+                var actions = new AsyncQueue<DynamicJsonValue>();
                 var writer = new TestWebSocketWriter();
 
                 using (database.NotificationCenter.TrackActions(actions, writer))
@@ -437,15 +437,16 @@ namespace FastTests.Server.NotificationCenter
                     notification = await actions.TryDequeueAsync(TimeSpan.FromMilliseconds(500));
                     Assert.True(notification.Item1);
 
-                    var databaseStatsChanged = notification.Item2 as DatabaseStatsChanged;
+                    var databaseStatsChanged = notification.Item2;
 
                     Assert.NotNull(databaseStatsChanged);
 
-                    Assert.Equal(1, databaseStatsChanged.CountOfDocuments);
-                    Assert.Equal(0, databaseStatsChanged.CountOfIndexes);
-                    Assert.Equal(0, databaseStatsChanged.CountOfStaleIndexes);
-                    Assert.Equal(1, databaseStatsChanged.ModifiedCollections.Count);
-                    Assert.Equal("Foos", databaseStatsChanged.ModifiedCollections[0].Name);
+                    Assert.Equal(1L, databaseStatsChanged[nameof(DatabaseStatsChanged.CountOfDocuments)]);
+                    Assert.Equal(0L, databaseStatsChanged[nameof(DatabaseStatsChanged.CountOfIndexes)]);
+                    Assert.Equal(0L, databaseStatsChanged[nameof(DatabaseStatsChanged.CountOfStaleIndexes)]);
+                    var collections = (databaseStatsChanged[nameof(DatabaseStatsChanged.ModifiedCollections)] as DynamicJsonArray);
+                    Assert.Equal(1L, collections.Count);
+                    Assert.Equal("Foos", (collections.First() as DynamicJsonValue)["Name"]);
                 }
             }
         }

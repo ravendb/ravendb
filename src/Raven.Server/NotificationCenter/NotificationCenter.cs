@@ -9,6 +9,7 @@ using Raven.Server.NotificationCenter.BackgroundWork;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Sparrow.Collections;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
 namespace Raven.Server.NotificationCenter
@@ -66,7 +67,7 @@ namespace Raven.Server.NotificationCenter
             }
         }
 
-        public IDisposable TrackActions(AsyncQueue<Notification> notificationsQueue, IWebsocketWriter webSockerWriter)
+        public IDisposable TrackActions(AsyncQueue<DynamicJsonValue> notificationsQueue, IWebsocketWriter webSockerWriter)
         {
             var watcher = new ConnectedWatcher
             {
@@ -112,11 +113,16 @@ namespace Raven.Server.NotificationCenter
                     if (existing?.PostponedUntil > SystemTime.UtcNow)
                         return;
                 }
-
-                // ReSharper disable once InconsistentlySynchronizedField
-                foreach (var watcher in _watchers)
+                
+                if (_watchers.Any())
                 {
-                    watcher.NotificationsQueue.Enqueue(notification);
+                    var serializedNotification = notification.ToJson();
+                    // ReSharper disable once InconsistentlySynchronizedField
+                    foreach (var watcher in _watchers)
+                    {
+                        // serialize to avoid race conditions
+                        watcher.NotificationsQueue.Enqueue(serializedNotification);
+                    }
                 }
             }
             catch (ObjectDisposedException)
@@ -192,7 +198,7 @@ namespace Raven.Server.NotificationCenter
 
         public class ConnectedWatcher
         {
-            public AsyncQueue<Notification> NotificationsQueue;
+            public AsyncQueue<DynamicJsonValue> NotificationsQueue;
 
             public IWebsocketWriter Writer;
         }

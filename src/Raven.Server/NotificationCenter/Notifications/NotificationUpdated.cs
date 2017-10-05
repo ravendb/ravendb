@@ -20,6 +20,7 @@ namespace Raven.Server.NotificationCenter.Notifications
 
             result[nameof(NotificationId)] = NotificationId;
             result[nameof(Type)] = Type;
+            result[nameof(UpdateType)] = UpdateType;
 
             return result;
         }
