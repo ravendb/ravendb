@@ -1,5 +1,6 @@
-*.pfx
-*.pem
-*.key
-*.crt
-*.cer
+**/*.pfx
+**/*.pem
+**/*.key
+**/*.crt
+**/*.cer
+bash/ca/**
