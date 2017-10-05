@@ -26,6 +26,8 @@ type attachmentsListItem = {
 
 class smugglerDatabaseDetails extends abstractOperationDetails {
 
+    static extractingDataStageName = "Extracting data";
+    
     detailsVisible = ko.observable<boolean>(false);
     tail = ko.observable<boolean>(false);
 
@@ -64,6 +66,11 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
                 }
             }
             
+            if (this.op.taskType() === "MigrationFromLegacyData") {
+                const migrationCounts = (status as Raven.Client.Documents.Smuggler.OfflineMigrationProgress).DataExporter;
+                result.push(this.mapToExportListItem(smugglerDatabaseDetails.extractingDataStageName, migrationCounts));
+            }
+            
             result.push(this.mapToExportListItem("Documents", status.Documents, true));
             result.push(this.mapToExportListItem("Revisions", status.RevisionDocuments, true));
             result.push(this.mapToExportListItem("Indexes", status.Indexes));
@@ -79,7 +86,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
                     shouldUpdateToPending = true;
                 }
 
-                if (item.stage === "pending" || item.stage === "skipped") {
+                if (item.stage === "pending" || item.stage === "skipped" || item.name === smugglerDatabaseDetails.extractingDataStageName) {
                     item.hasReadCount = false;
                     item.hasErroredCount = false;
                     item.hasSkippedCount = false;
