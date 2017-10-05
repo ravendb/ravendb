@@ -88,6 +88,30 @@ namespace FastTests.Server.Json
         }
 
         [Fact]
+        public void Reads_array_values()
+        {
+            var doc = create_doc(new DynamicJsonValue
+            {
+                ["Friends"] = new DynamicJsonArray
+                {
+                    "Joe", "John"
+                }
+            });
+
+            var read = _sut.Read(doc, "Friends[]");
+
+            var enumerable = read as IEnumerable<object>;
+
+            Assert.NotNull(enumerable);
+
+            var items = enumerable.ToList();
+
+            Assert.Equal(2, items.Count);
+            Assert.Equal("Joe", items[0].ToString());
+            Assert.Equal("John", items[1].ToString());
+        }
+
+        [Fact]
         public void Reads_values_nested_in_array_as_objects()
         {
             var doc = create_doc(new DynamicJsonValue
@@ -171,7 +195,97 @@ namespace FastTests.Server.Json
             Assert.Equal("foo/1", items[0].ToString());
             Assert.Equal("foo/2", items[1].ToString());
             Assert.Equal("foo/3", items[2].ToString());
+
+            read = _sut.Read(doc, "Items[][].Bar.Foo");
+
+            enumerable = read as IEnumerable<object>;
+
+            Assert.NotNull(enumerable);
+
+            items = enumerable.ToList();
+
+            Assert.Equal(3, items.Count);
+            Assert.Equal("foo/1", items[0].ToString());
+            Assert.Equal("foo/2", items[1].ToString());
+            Assert.Equal("foo/3", items[2].ToString());
         }
+        [Fact]
+        public void Reads_values_of_multidimensional_array()
+        {
+            var doc = create_doc(new DynamicJsonValue
+            {
+                ["Name"] = "John Doe",
+                ["Items"] = new DynamicJsonArray
+                {
+                    new DynamicJsonArray
+                    {
+                        new DynamicJsonArray()
+                        {
+                            "foo/1", "foo/2", "foo/3"
+                        }
+                    }
+                },
+                ["Items2"] = new DynamicJsonArray
+                {
+                    new DynamicJsonArray
+                    {
+                        new DynamicJsonValue
+                        {
+                            ["Bar"] = new DynamicJsonValue
+                            {
+                                ["Foo"] = new DynamicJsonArray
+                                {
+                                    new DynamicJsonArray()
+                                    {
+                                        "foo/1", "foo/2", "foo/3"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            var read = _sut.Read(doc, "Items[][][]");
+
+            var enumerable = read as IEnumerable<object>;
+
+            Assert.NotNull(enumerable);
+
+            var items = enumerable.ToList();
+
+            Assert.Equal(3, items.Count);
+            Assert.Equal("foo/1", items[0].ToString());
+            Assert.Equal("foo/2", items[1].ToString());
+            Assert.Equal("foo/3", items[2].ToString());
+
+            read = _sut.Read(doc, "Items[].[].[].");
+
+            enumerable = read as IEnumerable<object>;
+
+            Assert.NotNull(enumerable);
+
+            items = enumerable.ToList();
+
+            Assert.Equal(3, items.Count);
+            Assert.Equal("foo/1", items[0].ToString());
+            Assert.Equal("foo/2", items[1].ToString());
+            Assert.Equal("foo/3", items[2].ToString());
+
+            read = _sut.Read(doc, "Items2[][].Bar.Foo[][]");
+
+            enumerable = read as IEnumerable<object>;
+
+            Assert.NotNull(enumerable);
+
+            items = enumerable.ToList();
+
+            Assert.Equal(3, items.Count);
+            Assert.Equal("foo/1", items[0].ToString());
+            Assert.Equal("foo/2", items[1].ToString());
+            Assert.Equal("foo/3", items[2].ToString());
+        }
+
 
         [Fact]
         public void Reads_value_nested_in_nested_object_of_array_of_arrays()
