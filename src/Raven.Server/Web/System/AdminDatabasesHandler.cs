@@ -1363,7 +1363,7 @@ namespace Raven.Server.Web.System
             };
             var token = new OperationCancelToken(database.DatabaseShutdown);
             process.Start();
-            var result = new SmugglerResult();
+            var result = new OfflineMigrationResult();
             var overallProgress = result.Progress as SmugglerResult.SmugglerProgress;
             var operationId = ServerStore.Operations.GetNextOperationId();
 
@@ -1403,6 +1403,8 @@ namespace Raven.Server.Web.System
                             {
                                 throw new ApplicationException($"The data export tool have exited with code {process.ExitCode}.");
                             }
+                            
+                            result.DataExporter.Processed = true;
 
                             if (File.Exists(configuration.OutputFilePath) == false)
                             {

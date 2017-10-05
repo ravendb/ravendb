@@ -188,6 +188,8 @@ namespace TypingsGenerator
             scripter.AddType(typeof(DatabaseSmugglerExportOptions));
             scripter.AddType(typeof(SmugglerResult));
             scripter.AddType(typeof(SingleDatabaseMigrationConfiguration));
+            scripter.AddType(typeof(OfflineMigrationResult));
+            scripter.AddType(typeof(OfflineMigrationProgress));
 
             // revisions
             scripter.AddType(typeof(RevisionsConfiguration));
