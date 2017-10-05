@@ -987,6 +987,15 @@ namespace Raven.Server.Web.System
                 fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
         }
 
+        [RavenAction("/admin/etl", "RESET", AuthorizationStatus.Operator)]
+        public async Task ResetEtl()
+        {
+            var configurationName = GetStringQueryString("configuration-name");
+            var transformationName = GetStringQueryString("transformation-name");
+
+            await DatabaseConfigurations((_, databaseName, etlConfiguration) => ServerStore.ResetEtl(_, databaseName, configurationName, transformationName), "etl-reset");
+        }
+
         private bool CanAddOrUpdateEtl(string databaseName, BlittableJsonReaderObject etlConfiguration)
         {
             LicenseLimit licenseLimit;

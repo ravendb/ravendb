@@ -885,6 +885,13 @@ namespace Raven.Server.ServerWide
             return await SendToLeaderAsync(command);
         }
 
+        public Task<(long, object)> ResetEtl(TransactionOperationContext context, string databaseName, string configurationName, string transformationName)
+        {
+            var command = new RemoveEtlProcessStateCommand(databaseName, configurationName, transformationName);
+
+            return SendToLeaderAsync(command);
+        }
+
         public Task<(long, object)> ModifyDatabaseRevisions(JsonOperationContext context, string name, BlittableJsonReaderObject configurationJson)
         {
             var editRevisions = new EditRevisionsConfigurationCommand(JsonDeserializationCluster.RevisionsConfiguration(configurationJson), name);
