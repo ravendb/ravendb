@@ -48,7 +48,7 @@ class appUrl {
         reporting: ko.pureComputed(() => appUrl.forReporting(appUrl.currentDatabase())),
         exploration: ko.pureComputed(() => appUrl.forExploration(appUrl.currentDatabase())),
         tasks: ko.pureComputed(() => appUrl.forTasks(appUrl.currentDatabase())),
-        importDatabaseUrl: ko.pureComputed(() => appUrl.forImportDatabase(appUrl.currentDatabase())),
+        importDatabaseFromFileUrl: ko.pureComputed(() => appUrl.forImportDatabaseFromFile(appUrl.currentDatabase())),
         exportDatabaseUrl: ko.pureComputed(() => appUrl.forExportDatabase(appUrl.currentDatabase())),
         migrateDatabaseUrl: ko.pureComputed(() => appUrl.forMigrateDatabase(appUrl.currentDatabase())),
         sampleDataUrl: ko.pureComputed(() => appUrl.forSampleData(appUrl.currentDatabase())),
@@ -479,9 +479,9 @@ class appUrl {
         return "#databases/indexes/mergeSuggestions?" + databasePart;
     }
 
-    static forImportDatabase(db: database | databaseInfo): string {
+    static forImportDatabaseFromFile(db: database | databaseInfo): string {
         const databasePart = appUrl.getEncodedDbPart(db);
-        return "#databases/tasks/importDatabase?" + databasePart;
+        return "#databases/tasks/import/file?" + databasePart;
     }
 
     static forExportDatabase(db: database | databaseInfo): string {
@@ -491,7 +491,7 @@ class appUrl {
 
     static forMigrateDatabase(db: database | databaseInfo): string {
         const databasePart = appUrl.getEncodedDbPart(db);
-        return "#databases/tasks/migrateDatabase?" + databasePart;
+        return "#databases/tasks/import/migrate?" + databasePart;//TODO: update? 
     }
 
     static forExportCollectionCsv(collection: collection, db: database | databaseInfo, customColumns?: string[]): string {
