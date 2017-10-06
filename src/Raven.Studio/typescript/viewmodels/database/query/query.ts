@@ -30,6 +30,7 @@ import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnsSelector = require("viewmodels/partial/columnsSelector");
 import popoverUtils = require("common/popoverUtils");
+import endpoints = require("endpoints");
 
 type queryResultTab = "results" | "includes";
 
@@ -101,6 +102,8 @@ class query extends viewModelBase {
     queriedIndexDescription: KnockoutComputed<string>;
     
     isEmptyFieldsResult = ko.observable<boolean>(false);
+
+    $downloadForm: JQuery;
 
     /*TODO
     isTestIndex = ko.observable<boolean>(false);
@@ -307,6 +310,8 @@ class query extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
 
+        this.$downloadForm = $("#exportCsvForm");
+        
         this.setupDisableReasons();
 
         const grid = this.gridController();
@@ -602,44 +607,23 @@ class query extends viewModelBase {
         this.columnsSelector.reset();
         this.refresh();
     }
-   
 
-    /* TODO future:
-
-     getIndexSuggestions(indexName: string, info: queryFieldInfo) {
-        if (_.includes(this.indexFields(), info.FieldName)) {
-            var task = new getIndexSuggestionsCommand(this.activeDatabase(), indexName, info.FieldName, info.FieldValue).execute();
-            task.done((result: suggestionsDto) => {
-                for (var index = 0; index < result.Suggestions.length; index++) {
-                    this.indexSuggestions.push({
-                        Index: info.Index,
-                        FieldName: info.FieldName,
-                        FieldValue: info.FieldValue,
-                        Suggestion: result.Suggestions[index]
-                    });
-                }
-            });
-        }
-    }
-
-    applySuggestion(suggestion: indexSuggestion) {
-        eventsCollector.default.reportEvent("query", "apply-suggestion");
-        var value = this.queryText();
-        var startIndex = value.indexOf(suggestion.FieldValue, suggestion.Index);
-        this.queryText(value.substring(0, startIndex) + suggestion.Suggestion + value.substring(startIndex + suggestion.FieldValue.length));
-        this.indexSuggestions([]);
-        this.runQuery();
-    }
-
-      exportCsv() {
+    exportCsv() {
         eventsCollector.default.reportEvent("query", "export-csv");
 
-        var db = this.activeDatabase();
-        var url = appUrl.forDatabaseQuery(db) + this.csvUrl();
-        this.downloader.download(db, url);
-    }
-     
-    */
+        const args = {
+            format: "csv",
+        };
 
+        const payload = {
+            Query: this.criteria().queryText()
+        };
+
+        $("input[name=ExportOptions]").val(JSON.stringify(payload));
+
+        const url = appUrl.forDatabaseQuery(this.activeDatabase()) + endpoints.databases.streaming.streamsQueries + appUrl.urlEncodeArgs(args);
+        this.$downloadForm.attr("action", url);
+        this.$downloadForm.submit();
+    }
 }
 export = query;
