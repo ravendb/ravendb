@@ -2105,7 +2105,7 @@ namespace Raven.Server.Documents.Indexes
 
                     var f = sortedField.Name;
 
-                    if (f.StartsWith(Constants.Documents.Indexing.Fields.CustomSortFieldName))
+                    if (f.Value.StartsWith(Constants.Documents.Indexing.Fields.CustomSortFieldName))
                         continue;
 
                     AssertKnownField(f);

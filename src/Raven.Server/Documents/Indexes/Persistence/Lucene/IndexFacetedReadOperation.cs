@@ -196,9 +196,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             foreach (var field in query.Metadata.SelectFields)
             {
-                fixed (char* p = field.Name)
+                fixed (char* p = field.Name.Value)
                 {
-                    hash = Hashing.XXHash32.Calculate((byte*)p, sizeof(char) * field.Name.Length, hash);
+                    hash = Hashing.XXHash32.Calculate((byte*)p, sizeof(char) * field.Name.Value.Length, hash);
                 }
             }
 

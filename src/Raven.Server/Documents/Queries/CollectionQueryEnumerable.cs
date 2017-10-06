@@ -129,7 +129,7 @@ namespace Raven.Server.Documents.Queries
                 if (query.Metadata.Query.Where == null)
                     return null;
 
-                if (query.Metadata.IndexFieldNames.Contains(Constants.Documents.Indexing.Fields.DocumentIdFieldName) == false)
+                if (query.Metadata.IndexFieldNames.Contains(QueryFieldName.DocumentId) == false)
                     return null;
 
                 var idsRetriever = new RetrieveDocumentIdsVisitor(query.Metadata, _context.Allocator);

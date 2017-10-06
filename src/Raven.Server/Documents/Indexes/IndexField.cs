@@ -133,6 +133,8 @@ namespace Raven.Server.Documents.Indexes
             Storage = FieldStorage.No;
         }
 
+        public bool HasQuotedName { get; set; }
+
         public AutoFieldIndexing Indexing { get; set; }
 
         public AutoSpatialOptions Spatial { get; set; }
@@ -141,7 +143,8 @@ namespace Raven.Server.Documents.Indexes
         {
             var field = new AutoIndexField
             {
-                Name = name
+                Name = name,
+                HasQuotedName = options.IsNameQuoted
             };
 
             if (options.Indexing.HasValue)
@@ -173,10 +176,16 @@ namespace Raven.Server.Documents.Indexes
                 return fields;
             }
 
+            var originalName = Name;
+
+            if (HasQuotedName)
+                originalName = $"'{originalName}'";
+
             fields.Add(new IndexField
             {
                 Indexing = FieldIndexing.Default,
                 Name = Name,
+                OriginalName = HasQuotedName ? originalName : null,
                 Storage = Storage
             });
 
@@ -189,7 +198,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     Indexing = FieldIndexing.Search,
                     Name = GetSearchAutoIndexFieldName(Name),
-                    OriginalName = Name,
+                    OriginalName = originalName,
                     Storage = Storage,
                 });
             }
@@ -200,7 +209,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     Indexing = FieldIndexing.Exact,
                     Name = GetExactAutoIndexFieldName(Name),
-                    OriginalName = Name,
+                    OriginalName = originalName,
                     Storage = Storage
                 });
             }
