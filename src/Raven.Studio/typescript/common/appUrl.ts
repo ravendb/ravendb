@@ -499,21 +499,6 @@ class appUrl {
         return "#databases/tasks/migrateDatabase?" + databasePart;
     }
 
-    static forExportCollectionCsv(collection: collection, db: database | databaseInfo, customColumns?: string[]): string {
-        if (collection.isAllDocuments) {
-            return null;
-        }
-        var args = {
-            format: "excel",
-            download: true,
-            query: "Tag:" + collection.name,
-            column: customColumns
-        }
-
-        //TODO: we don't have Raven/DocumentsByEntityName anymore
-        return appUrl.forDatabaseQuery(db) + "/streams/query/Raven/DocumentsByEntityName" + appUrl.urlEncodeArgs(args);
-    }
-
     static forOngoingTasks(db: database | databaseInfo): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/tasks/ongoingTasks?" + databasePart;

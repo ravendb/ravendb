@@ -25,6 +25,7 @@ import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import columnsSelector = require("viewmodels/partial/columnsSelector");
 import showDataDialog = require("viewmodels/common/showDataDialog");
 import continueTest = require("common/shell/continueTest");
+import endpoints = require("endpoints");
 
 class documents extends viewModelBase {
 
@@ -42,6 +43,9 @@ class documents extends viewModelBase {
     dirtyCurrentCollection = ko.observable<boolean>(false);
 
     copyDisabledReason: KnockoutComputed<disabledReason>;
+    canExportAsCsv: KnockoutComputed<boolean>;
+    
+    $downloadForm: JQuery;
 
     private collectionToSelectName: string;
     private gridController = ko.observable<virtualGridController<document>>();
@@ -51,7 +55,7 @@ class documents extends viewModelBase {
     spinners = {
         delete: ko.observable<boolean>(false),
         copy: ko.observable<boolean>(false)
-    }
+    };
 
     constructor() {
         super();
@@ -62,7 +66,7 @@ class documents extends viewModelBase {
     private initObservables() {
         this.inSpecificCollection = ko.pureComputed(() => {
             const currentCollection = this.currentCollection();
-            return currentCollection && !currentCollection.isAllDocuments;
+            return currentCollection && !currentCollection.isAllDocuments && !currentCollection.isRevisionsBin;
         });
         this.selectedItemsCount = ko.pureComputed(() => {
             let selectedDocsCount = 0;
@@ -96,6 +100,10 @@ class documents extends viewModelBase {
             const resultDirty = this.dirtyResult();
             const collectionChanged = this.dirtyCurrentCollection();
             return resultDirty || collectionChanged;
+        });
+        
+        this.canExportAsCsv = ko.pureComputed(() => {
+            return this.inSpecificCollection();
         });
     }
 
@@ -168,6 +176,8 @@ class documents extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
 
+        this.$downloadForm = $("#exportCsvForm");
+        
         this.setupDisableReasons();
 
         const grid = this.gridController();
@@ -327,87 +337,33 @@ class documents extends viewModelBase {
         app.showBootstrapDialog(new showDataDialog("Document IDs", text, "javascript"));
     }
 
-    /* TODO:
-
-    createPostboxSubscriptions(): Array<KnockoutSubscription> {
-        return [
-            ko.postbox.subscribe(EVENTS.ChangesApi.Reconnected, (db: database) => this.reloadDocumentsData(db)),
-        ];
-    }
-
-    //TODO: this binding has notification leak!
-    selectedCollectionChanged(selected: collection) {
-        if (!!selected) {
-            var customColumnsCommand = selected.isAllDocuments ?
-                getCustomColumnsCommand.forAllDocuments(this.activeDatabase()) : getCustomColumnsCommand.forCollection(selected.name, this.activeDatabase());
-
-            this.contextName(customColumnsCommand.docName);
-
-            customColumnsCommand.execute().done((dto: customColumnsDto) => {
-                if (dto) {
-                    this.currentColumnsParams().columns($.map(dto.Columns, c => new customColumnParams(c)));
-                    this.currentColumnsParams().customMode(true);
-                    selected.bindings(this.currentColumnsParams().getBindings());
-                } else {
-                    // use default values!
-                    selected.bindings(undefined);
-                    this.currentColumnsParams().columns.removeAll();
-                    this.currentColumnsParams().customMode(false);
-                }
-
-                var pagedList = selected.getDocuments();
-                this.currentCollectionPagedItems(pagedList);
-                this.currentCollection(selected);
-            });
-        }
-    }
-
-    currentColumnsParams = ko.observable<customColumns>(customColumns.empty());
-    contextName = ko.observable<string>('');
-
-    constructor() {
-        super();
-    }
-
-    attached() {
-        super.attached();
-        super.createKeyboardShortcut("F2", () => this.editSelectedDoc(), "#documentsGrid");
-
-        // Q. Why do we have to setup the grid shortcuts here, when the grid already catches these shortcuts?
-        // A. Because if the focus isn't on the grid, but on the docs page itself, we still need to catch the shortcuts.
-        var docsPageSelector = ".documents-page";
-        this.createKeyboardShortcut("DELETE", () => this.getDocumentsGrid().deleteSelectedItems(), docsPageSelector);
-        this.createKeyboardShortcut("Ctrl+C, D", () => this.copySelectedDocs(), docsPageSelector);
-        this.createKeyboardShortcut("Ctrl+C, I",() => this.copySelectedDocIds(), docsPageSelector);
-    }
-
     exportCsv() {
-        eventsCollector.default.reportEvent("documents", "export-csv");
+        const columns = this.columnsSelector.getSimpleColumnsFields();
+        this.exportCsvInternal(columns);
+    }
+    
+    exportCsvFull() {
         this.exportCsvInternal();
     }
+    
+    private exportCsvInternal(columns: string[] = undefined) {
+        eventsCollector.default.reportEvent("documents", "export-csv");
 
-    exportCsvInternal(customColumns?: string[]) {
-        if (this.isRegularCollection()) {
-            var collection: collection = this.selectedCollection();
-            var db = this.activeDatabase();
-            var url = appUrl.forExportCollectionCsv(collection, collection.ownerDatabase, customColumns);
-            this.downloader.download(db, url);
-        }
+        const args = {
+            format: "csv",
+            field: columns
+        };
+
+        const payload = {
+            Query: "from '" + this.currentCollection().name + "'"
+        };
+
+        $("input[name=ExportOptions]").val(JSON.stringify(payload));
+
+        const url = appUrl.forDatabaseQuery(this.activeDatabase()) + endpoints.databases.streaming.streamsQueries + appUrl.urlEncodeArgs(args);
+        this.$downloadForm.attr("action", url);
+        this.$downloadForm.submit();
     }
-
-    selectCsvColumns() {
-        eventsCollector.default.reportEvent("documents", "export-csv-custom-columns");
-        var dialog = new selectCsvColumnsDialog(this.getDocumentsGrid().getColumnsNames());
-        app.showBootstrapDialog(dialog);
-
-        dialog.onExit().done((cols: string[]) => {
-            this.exportCsvInternal(cols);
-        });
-    }
-
-   
-
-    */
 }
 
 export = documents;
