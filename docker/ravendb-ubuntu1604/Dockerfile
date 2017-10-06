@@ -4,7 +4,7 @@ COPY RavenDB-4.0.*-*-*-ubuntu.16.04-x64.tar.bz2 /opt/RavenDB.tar.bz2
 
 RUN apt-get update \
     && apt-get install -y \
-    && apt-get install --no-install-recommends bzip2 libunwind8 libicu55 libcurl3 ca-certificates -y \
+    && apt-get install --no-install-recommends curl bzip2 libunwind8 libicu55 libcurl3 ca-certificates -y \
     && cd /opt \
     && tar xjvf RavenDB.tar.bz2 \
     && rm RavenDB.tar.bz2 \

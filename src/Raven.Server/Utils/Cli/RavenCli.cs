@@ -870,7 +870,7 @@ namespace Raven.Server.Utils.Cli
                             break;
                         WriteText("End of standard input detected, switching to server mode...", WarningColor, this);
 
-                        Program.RunAsService();
+                        Program.RunAsNonInteractive();
                         return false;
                     }
                 }
@@ -950,7 +950,7 @@ namespace Raven.Server.Utils.Cli
                     {
                         if (parsedCommand.Command == Command.ResetServer)
                         {
-                            if (Program.IsRunningAsService || _writer == Console.Out)
+                            if (Program.IsRunningNonInteractive || _writer == Console.Out)
                             {
                                 if (_consoleColoring == false)
                                 {
@@ -965,7 +965,7 @@ namespace Raven.Server.Utils.Cli
                         }
                         if (parsedCommand.Command == Command.Shutdown)
                         {
-                            if (Program.IsRunningAsService || _writer == Console.Out)
+                            if (Program.IsRunningNonInteractive || _writer == Console.Out)
                             {
                                 if (_consoleColoring == false)
                                 {
