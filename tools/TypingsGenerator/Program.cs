@@ -16,6 +16,7 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.ETL;
+using Raven.Client.ServerWide.Expiration;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Operations.ConnectionStrings;
@@ -190,6 +191,9 @@ namespace TypingsGenerator
 
             // revisions
             scripter.AddType(typeof(RevisionsConfiguration));
+            
+            // expiration 
+            scripter.AddType(typeof(ExpirationConfiguration));
 
             // storage report
             scripter.AddType(typeof(StorageReport));
