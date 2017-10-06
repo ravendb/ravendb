@@ -88,14 +88,12 @@ if [ ! -z "$CERT_PASSWORD" ]; then
 fi
 
 COMMAND="$COMMAND --print-id"
-COMMAND="$COMMAND --daemon"
+COMMAND="$COMMAND --non-interactive"
+COMMAND="$COMMAND --log-to-console"
 
 if [ -f "$CUSTOM_CONFIG_FILE" ]; then
     COMMAND="$COMMAND --config-path=\"$CUSTOM_CONFIG_FILE\""
 fi
 
 echo "Starting RavenDB server: ${COMMAND/"$CERT_PASSWORD"/"*******"}"
-
-eval $COMMAND &
-sleep 5
-./rvn logstream
+eval $COMMAND 

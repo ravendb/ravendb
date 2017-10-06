@@ -15,7 +15,7 @@ namespace Raven.Server.Utils.Cli
 
         public static bool PrintVersionAndExit => ParseSwitchOption(_versionOption);
 
-        public static bool Daemon => ParseSwitchOption(_daemonOption);
+        public static bool NonInteractive => ParseSwitchOption(_nonInteractiveOption);
 
         public const string DefaultServiceName = "RavenDB";
 
@@ -27,7 +27,11 @@ namespace Raven.Server.Utils.Cli
 
         public static bool ShouldShowHelp => ParseSwitchOption(_helpOption);
 
+        public static bool LogToConsole => ParseSwitchOption(_logToConsole);
+
         private static CommandLineApplication _app;
+
+        private static CommandOption _logToConsole;
 
         private static CommandOption _printIdOption;
 
@@ -35,7 +39,7 @@ namespace Raven.Server.Utils.Cli
 
         private static CommandOption _versionOption;
 
-        private static CommandOption _daemonOption;
+        private static CommandOption _nonInteractiveOption;
 
         private static CommandOption _serviceNameOption;
 
@@ -77,9 +81,9 @@ namespace Raven.Server.Utils.Cli
                 "--print-id",
                 "Prints server ID upon server start",
                 CommandOptionType.NoValue);
-            _daemonOption = _app.Option(
-                "-d | --daemon",
-                "Runs as daemon (available only for Linux). Windows users should use --register-service and services.msc for service management",
+            _nonInteractiveOption = _app.Option(
+                "-n | --non-interactive",
+                "Run in non-interactive mode",
                 CommandOptionType.NoValue);
             _serviceNameOption = _app.Option(
                 "--service-name",
@@ -93,6 +97,10 @@ namespace Raven.Server.Utils.Cli
                 "--browser",
                 "Attempts to open RavenDB Studio in the browser",
                 CommandOptionType.NoValue);
+            _logToConsole = _app.Option(
+                "-l | --log-to-console",
+                "Print logs to console (when run in non-interactive mode)",
+                CommandOptionType.NoValue);
 
             _app.Execute(nonConfigurationSwitches.ToArray());
 
@@ -105,10 +113,6 @@ namespace Raven.Server.Utils.Cli
         {
             if (ServiceName.Length > 256)
                 throw new CommandParsingException(_app, "Service name must have maximum length of 256 characters.");
-
-            if (PlatformDetails.RunningOnPosix == false && Daemon)
-                throw new CommandParsingException(_app,
-                    "Switch \"--daemon\" is not supported on Windows. Use --register-service switch to register the service and services.msc for service management.");
         }
 
         private static bool ParseSwitchOption(CommandOption opt)
