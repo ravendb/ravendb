@@ -355,7 +355,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     continue;
                 }
 
-                var fieldName = field.Name;
+                var fieldName = field.Name.Value;
                 var sortOptions = SortField.STRING;
 
                 switch (field.OrderingType)
@@ -496,12 +496,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var fieldsToFetch = baseDocId.HasValue ?
                 _searcher.Doc(baseDocId.Value, _state).GetFields().Cast<AbstractField>().Select(x => x.Name).Distinct()
                                                                                         .Union(mlt.GetFieldNames())
-                                                                                        .Select(x => SelectField.Create(x)).ToArray()
+                                                                                        .Select(x => SelectField.Create(new QueryFieldName(x, false))).ToArray()
                 : 
                 hits.Length > 0 ?
                     _searcher.Doc(hits[0].Doc, _state).GetFields().Cast<AbstractField>().Select(x => x.Name).Distinct()
                                                                                         .Union(mlt.GetFieldNames())
-                                                                                        .Select(x => SelectField.Create(x)).ToArray()
+                                                                                        .Select(x => SelectField.Create(new QueryFieldName(x, false))).ToArray()
                         : null;
 
             var retriever = createRetriever(fieldsToFetch);

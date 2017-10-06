@@ -66,9 +66,12 @@ namespace Raven.Client.Documents.Indexes
 
             public AutoSpatialOptions Spatial { get; set; }
 
+            public bool IsNameQuoted { get; set; }
+
             protected bool Equals(AutoIndexFieldOptions other)
             {
-                return Storage == other.Storage && Indexing == other.Indexing && Aggregation == other.Aggregation && Equals(Spatial, other.Spatial);
+                return Storage == other.Storage && Indexing == other.Indexing && Aggregation == other.Aggregation && Equals(Spatial, other.Spatial) &&
+                       IsNameQuoted == other.IsNameQuoted;
             }
 
             public override bool Equals(object obj)
@@ -90,6 +93,7 @@ namespace Raven.Client.Documents.Indexes
                     hashCode = (hashCode * 397) ^ Indexing.GetHashCode();
                     hashCode = (hashCode * 397) ^ (int)Aggregation;
                     hashCode = (hashCode * 397) ^ (Spatial != null ? Spatial.GetHashCode() : 0);
+                    hashCode = (hashCode * 397) ^ IsNameQuoted.GetHashCode();
                     return hashCode;
                 }
             }

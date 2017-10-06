@@ -1,7 +1,7 @@
 ﻿using System.Globalization;
+using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Queries.AST;
-using Raven.Server.Documents.Queries.Parser;
 
 namespace Raven.Server.Documents.Queries
 {
@@ -9,7 +9,7 @@ namespace Raven.Server.Documents.Queries
     {
         public ValueTokenType? ValueTokenType;
 
-        public string Name;
+        public QueryFieldName Name;
 
         public string Alias;
 
@@ -21,7 +21,9 @@ namespace Raven.Server.Documents.Queries
 
         public bool IsGroupByKey;
 
-        public string[] GroupByKeys;
+        public QueryFieldName[] GroupByKeys;
+
+        public string[] GroupByKeyName;
 
         public string Function;
 
@@ -36,7 +38,7 @@ namespace Raven.Server.Documents.Queries
 
         }
 
-        public static SelectField Create(string name, string alias = null)
+        public static SelectField Create(QueryFieldName name, string alias = null)
         {
             return new SelectField
             {
@@ -45,7 +47,7 @@ namespace Raven.Server.Documents.Queries
             };
         }
 
-        public static SelectField Create(string name, string alias, string sourceAlias, bool array, bool hasSourceAlias)
+        public static SelectField Create(QueryFieldName name, string alias, string sourceAlias, bool array, bool hasSourceAlias)
         {
             return new SelectField
             {
@@ -57,7 +59,7 @@ namespace Raven.Server.Documents.Queries
             };
         }
 
-        public static SelectField CreateGroupByAggregation(string name, string alias, AggregationOperation aggregation)
+        public static SelectField CreateGroupByAggregation(QueryFieldName name, string alias, AggregationOperation aggregation)
         {
             return new SelectField
             {
@@ -67,12 +69,13 @@ namespace Raven.Server.Documents.Queries
             };
         }
 
-        public static SelectField CreateGroupByKeyField(string alias, params string[] groupByKeys)
+        public static SelectField CreateGroupByKeyField(string alias, params QueryFieldName[] groupByKeys)
         {
             return new SelectField
             {
                 Alias = alias,
                 GroupByKeys = groupByKeys,
+                GroupByKeyName = groupByKeys.Select(x => x.Value).ToArray(),
                 IsGroupByKey = true
             };
         }
@@ -82,7 +85,7 @@ namespace Raven.Server.Documents.Queries
             return new SelectField
             {
                 Alias = alias,
-                Name = methodName,
+                Name = new QueryFieldName(methodName, false),
                 Function = methodName,
                 FunctionArgs = args
             };
