@@ -43,8 +43,23 @@
 
             <div class="clearfix">
                 <div class="pull-right">
+                    
+                    <div class="btn-group" data-bind="visible: canExportAsCsv">
+                        <button type="button" class="btn btn-default btn-sm" data-bind="click: exportCsv" title="Exports collection to CSV file (visible columns only)">
+                            <i class="icon-csv-export"></i>
+                            <span>Export CSV</span>
+                        </button>
+                        <button type="button" class="btn btn-default btn-sm dropdown-toggle" data-toggle="dropdown">
+                            <span class="caret"></span>
+                            <span class="sr-only">Toggle Dropdown</span>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a href="#" data-bind="click: exportCsvFull"><i class="icon-csv-export"></i> <span>Export full documents as CSV</span></a></li>
+                        </ul>
+                    </div>
                     <div class="btn-group dropdown-right">
-                        <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                        <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true"
+                            title="Choose visible columns">
                             <i class="icon-table"></i><span>Display</span>
                             <span class="caret"></span>
                         </button>
@@ -68,6 +83,11 @@
             </div>
         </div>
     </div>
+    <div class="hidden">
+        <form method="post" download target="hidden-form" id="exportCsvForm">
+            <input type="hidden" name="ExportOptions"/>
+        </form>
+    </div>
 </div>
 
 <script type="text/html" id="empty-collection-template">
@@ -77,57 +97,3 @@
 <div class="tooltip json-preview" style="opacity: 0">
     <pre><code></code></pre>
 </div>
-<!-- TODO
-    <div id="documents-pane" class="documents-page no-outline row" tabindex="0">
-
-    <div id="documents-page-container" class="col-md-2 col-resizable-target">
-        <ul class="nav nav-pills nav-stacked document-collections" data-bind="with: allDocumentsCollection">
-            <li class="all-docs-collection" data-bind="event: { click: $parent.selectCollection.bind($parent) }, css: { active: $data === $parent.selectedCollection() }">
-                <a href="javascript:void(0)">
-                    <div class="collection-name">
-                        <div class="collection-text pull-left collection-color-strip" data-bind="css: colorClass"></div>
-                        <span class="collection-text pull-left collection-name-part" data-bind="text: name, attr: {title: name}"></span>
-                    </div>
-                </a>
-            </li>
-        </ul>
-        <ul class="nav nav-pills nav-stacked document-collections" data-bind="foreach: collectionsExceptAllDocs, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }" style="padding-left: 0;">
-            <li data-bind="event: { click: $parent.selectCollection.bind($parent) }, css: { active: $data === $parent.selectedCollection() }, visible: documentCount() > 0 || isAllDocuments">
-                <a href="javascript:void(0)">
-                    <div class="collection-name">
-                        <div class="collection-text pull-left collection-color-strip" data-bind="css: colorClass"></div>
-                        <span class="collection-text pull-left collection-name-part" data-bind="text: name, attr: {title: name}"></span>
-                        <span class="collection-text pull-left text-muted" data-bind="visible: !isAllDocuments, css: { 'text-muted': $data !== $parent.selectedCollection() }, text:  '&nbsp;(' + documentsCountWithThousandsSeparator() + ')'"></span>
-                    </div>
-                </a>
-            </li>
-        </ul>
-    </div>
-    <div class="col-md-10 id="documents-page-right-container">
-        <div class="btn-toolbar" role="toolbar">
-            <div class="btn-group" style="display: none">
-                <button data-bind="visible: isRegularCollection, click: exportCsv" class="btn btn-default" title="Export CSV">
-                    <i class="fa fa-file-excel-o"></i>
-                </button>
-                <button type="button" data-bind="visible: isRegularCollection" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                    <span class="caret"></span>
-                    <span class="sr-only">Toggle Dropdown</span>
-                </button>
-                <ul class="dropdown-menu">
-                    <li><a href="#" data-bind="click: selectCsvColumns">Choose columns and export CSV...</a></li>
-                </ul>
-            </div>
-            <!--TODO
-            <div class="btn-group" data-bind="visible: hasAnyDocumentsSelected">
-                <button type="button" class="btn btn-default" data-bind="click: editSelectedDoc, enable: selectedDocumentIndices().length == 1" title="Edit selected document (F2)">
-                    <i class="fa fa-pencil"></i>
-                </button>
-                <button type="button" class="btn btn-default" data-bind="click: generateDocCode, enable: selectedDocumentIndices().length == 1" title="Generate Class" style="display: none"> 
-                    <i class="fa">C#</i>
-                </button>
-            </div>
-            </div>
-        </div>
-    </div>
-</div>
--->

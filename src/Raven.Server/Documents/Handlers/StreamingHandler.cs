@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Threading.Tasks;
@@ -101,10 +102,13 @@ namespace Raven.Server.Documents.Handlers
             using (var token = CreateTimeLimitedOperationToken())
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                var queryJson = await context.ReadForMemoryAsync(RequestBodyStream(), "index/query");
+                var stream = TryGetRequestFormStream("ExportOptions") ?? RequestBodyStream(); 
+                var queryJson = await context.ReadForMemoryAsync(stream, "index/query");
                 var query = IndexQueryServerSide.Create(queryJson, context, Database.QueryMetadataCache);
                 var format = GetStringQueryString("format", false);
-                using (var writer = GetQueryResultWriter(format, HttpContext.Response, context, ResponseBodyStream()))
+                var properties = GetStringValuesQueryString("field", false);
+                var propertiesArray = properties.Count == 0 ? null : properties.ToArray();
+                using (var writer = GetQueryResultWriter(format, HttpContext.Response, context, ResponseBodyStream(), propertiesArray))
                 {
                     try
                     {
@@ -119,11 +123,16 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private IStreamDocumentQueryResultWriter GetQueryResultWriter(string format, HttpResponse response,DocumentsOperationContext context, Stream responseBodyStream)
+        private IStreamDocumentQueryResultWriter GetQueryResultWriter(string format, HttpResponse response, DocumentsOperationContext context, Stream responseBodyStream, string[] propertiesArray)
         {
             if (string.IsNullOrEmpty(format) == false && format.Equals("csv"))
             {
-                return new StreamCsvDocumentQueryResultWriter(response, responseBodyStream, context);                
+                return new StreamCsvDocumentQueryResultWriter(response, responseBodyStream, context, propertiesArray);                
+            }
+            
+            if (propertiesArray != null)
+            {
+                throw new NotSupportedException("Using json output format with custom fields is not supported");
             }
             return new StreamJsonDocumentQueryResultWriter(response, responseBodyStream, context);
         }
