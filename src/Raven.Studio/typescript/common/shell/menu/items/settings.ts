@@ -108,12 +108,12 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             itemRouteToHighlight: 'databases/tasks/ongoingTasks'
         }),
         new leafMenuItem({
-            route: 'databases/tasks/importDatabase',
-            moduleId: 'viewmodels/database/tasks/importDatabase',
+            route: 'databases/tasks/import*details',
+            moduleId: 'viewmodels/database/tasks/importParent',
             title: 'Import Database',
             nav: true,
             css: 'icon-import-database',
-            dynamicHash: appUrls.importDatabaseUrl
+            dynamicHash: appUrls.importDatabaseFromFileUrl
         }),
         new leafMenuItem({
             route: 'databases/tasks/exportDatabase',
@@ -122,14 +122,6 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-export-database',
             dynamicHash: appUrls.exportDatabaseUrl
-        }),
-        new leafMenuItem({
-            route: 'databases/tasks/migrateDatabase',
-            moduleId: 'viewmodels/database/tasks/migrateDatabase',
-            title: 'Migrate Database',
-            nav: true,
-            css: 'icon-import-database', //TODO-new icon
-            dynamicHash: appUrls.migrateDatabaseUrl
         }),
         new leafMenuItem({
             route: 'databases/tasks/sampleData',

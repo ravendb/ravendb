@@ -24,7 +24,7 @@ interface computedAppUrls {
     reporting: KnockoutComputed<string>;
     exploration: KnockoutComputed<string>;
     tasks: KnockoutComputed<string>;
-    importDatabaseUrl: KnockoutComputed<string>;
+    importDatabaseFromFileUrl: KnockoutComputed<string>;
     exportDatabaseUrl: KnockoutComputed<string>;
     migrateDatabaseUrl: KnockoutComputed<string>;
     sampleDataUrl: KnockoutComputed<string>;
