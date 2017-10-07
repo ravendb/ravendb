@@ -78,6 +78,7 @@ class appUrl {
         databaseRecord: ko.pureComputed(() => appUrl.forDatabaseRecord(appUrl.currentDatabase())),
         quotas: ko.pureComputed(() => appUrl.forQuotas(appUrl.currentDatabase())),
         revisions: ko.pureComputed(() => appUrl.forRevisions(appUrl.currentDatabase())),
+        expiration: ko.pureComputed(() => appUrl.forExpiration(appUrl.currentDatabase())),
         connectionStrings: ko.pureComputed(() => appUrl.forConnectionStrings(appUrl.currentDatabase())),
         databaseStudioConfig: ko.pureComputed(() => appUrl.forDatabaseStudioConfig(appUrl.currentDatabase())),
 
@@ -365,6 +366,10 @@ class appUrl {
 
     static forRevisions(db: database | databaseInfo): string {
         return "#databases/settings/revisions?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forExpiration(db: database | databaseInfo): string {
+        return "#databases/settings/expiration?" + appUrl.getEncodedDbPart(db);
     }
 
     static forConnectionStrings(db: database | databaseInfo): string {

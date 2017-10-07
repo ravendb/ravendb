@@ -41,6 +41,14 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             dynamicHash: appUrls.revisions
         }),
         new leafMenuItem({
+            route: 'databases/settings/expiration',
+            moduleId: 'viewmodels/database/settings/expiration',
+            title: 'Document Expiration',
+            nav: true,
+            css: 'icon-plus',
+            dynamicHash: appUrls.expiration
+        }),
+        new leafMenuItem({
             route: 'databases/settings/clientConfiguration',
             moduleId: 'viewmodels/database/settings/clientConfiguration',
             title: 'Client Configuration',
