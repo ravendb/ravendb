@@ -1,6 +1,8 @@
+using Sparrow.Json.Parsing;
+
 namespace Raven.Client.ServerWide.Expiration
 {
-    public class ExpirationConfiguration
+    public class ExpirationConfiguration : IDynamicJson
     {
         public bool Active { get; set; }
 
@@ -25,6 +27,15 @@ namespace Raven.Client.ServerWide.Expiration
         protected bool Equals(ExpirationConfiguration other)
         {
             return Active == other.Active && DeleteFrequencyInSec == other.DeleteFrequencyInSec;
+        }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Active)] = Active,
+                [nameof(DeleteFrequencyInSec)] = DeleteFrequencyInSec
+            };
         }
     }
 }

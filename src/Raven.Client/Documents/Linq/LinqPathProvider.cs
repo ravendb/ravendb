@@ -12,6 +12,7 @@ using System.Reflection;
 using System.Runtime.Serialization;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Queries;
 using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Linq
@@ -66,11 +67,15 @@ namespace Raven.Client.Documents.Linq
                 {
                     var parent = GetPath(callExpression.Object);
 
+                    var itemKey = GetValueFromExpression(callExpression.Arguments[0], callExpression.Method.GetParameters()[0].ParameterType).ToString();
+
+                    itemKey = QueryFieldUtil.EscapeIfNecessary(itemKey);
+
                     return new Result
                     {
                         MemberType = callExpression.Method.ReturnType,
                         IsNestedPath = false,
-                        Path = parent.Path + "." + GetValueFromExpression(callExpression.Arguments[0], callExpression.Method.GetParameters()[0].ParameterType)
+                        Path = parent.Path + "." + itemKey
                     };
                 }
 

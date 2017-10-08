@@ -37,7 +37,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         {
                             Name = field.Name,
                             Storage = FieldStorage.No,
-                            Indexing = AutoFieldIndexing.Default
+                            Indexing = AutoFieldIndexing.Default,
+                            HasQuotedName = field.Name.IsQuoted
                         };
 
                         if (field.IsFullTextSearch)
@@ -64,7 +65,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         Name = field.Name,
                         Storage = FieldStorage.No,
                         Aggregation = field.AggregationOperation,
-                        Indexing = AutoFieldIndexing.Default
+                        Indexing = AutoFieldIndexing.Default,
+                        HasQuotedName = field.Name.IsQuoted
                     };
 
                     if (field.IsFullTextSearch)
@@ -84,7 +86,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     {
                         Name = field.Name,
                         Storage = FieldStorage.No,
-                        Indexing = AutoFieldIndexing.Default
+                        Indexing = AutoFieldIndexing.Default,
+                        HasQuotedName = field.Name.IsQuoted
                     };
 
                     if (field.IsFullTextSearch)
@@ -130,7 +133,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     }
                     else
                     {
-                        mappingFields.Add(indexField.Name, DynamicQueryMappingItem.Create(indexField.Name, indexField.Aggregation,
+                        mappingFields.Add(indexField.Name, DynamicQueryMappingItem.Create(new QueryFieldName(indexField.Name, indexField.HasQuotedName), indexField.Aggregation,
                             isFullTextSearch: indexField.Indexing.HasFlag(AutoFieldIndexing.Search),
                             isExactSearch: indexField.Indexing.HasFlag(AutoFieldIndexing.Exact),
                             spatial: indexField.Spatial));
@@ -168,7 +171,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                     var fieldName = field.Name;
 
-                    if (fieldName.StartsWith(Constants.Documents.Indexing.Fields.CustomSortFieldName))
+                    if (fieldName.Value.StartsWith(Constants.Documents.Indexing.Fields.CustomSortFieldName))
                         continue;
 
                     if (mapFields.ContainsKey(field.Name))

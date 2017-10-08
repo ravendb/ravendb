@@ -89,10 +89,9 @@ namespace Raven.Client.Documents.Session
         bool IsDistinct { get; }
 
         /// <summary>
-        ///     Gets the query result. Accessing this property for the first time will execute the query.
+        ///     Returns the query result. Accessing this property for the first time will execute the query.
         /// </summary>
-        QueryResult QueryResult { get; }
-
+        QueryResult GetQueryResult();
 
         /// <summary>
         ///     Selects the specified fields directly from the index if the are stored. If the field is not stored in index, value

@@ -1,14 +1,13 @@
 ﻿using System.Globalization;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Queries.AST;
-using Raven.Server.Documents.Queries.Parser;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries
 {
     public struct OrderByField
     {
-        public OrderByField(string name, OrderByFieldType orderingType, bool ascending, MethodType? method = null, Argument[] arguments = null)
+        public OrderByField(QueryFieldName name, OrderByFieldType orderingType, bool ascending, MethodType? method = null, Argument[] arguments = null)
         {
             Method = method;
             Name = name;
@@ -18,7 +17,7 @@ namespace Raven.Server.Documents.Queries
             AggregationOperation = AggregationOperation.None;
         }
 
-        public readonly string Name;
+        public readonly QueryFieldName Name;
 
         public readonly OrderByFieldType OrderingType;
 

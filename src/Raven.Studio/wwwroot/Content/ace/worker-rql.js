@@ -11782,7 +11782,7 @@ oop.inherits(RqlWorker, Mirror);
             if (end > 0) {
                 var script = value.substring(start, end);
                 var lastNewLineIndex = value.lastIndexOf("\n", start);
-                script = " ".repeat(start - lastNewLineIndex) + script;
+                script =  new Array( start - lastNewLineIndex ).join( " " ) + script;
                 lastNewLineIndex = value.lastIndexOf("\n", lastNewLineIndex - 1);
                 while (lastNewLineIndex > -1){
                     script = "\n" + script;

@@ -14,7 +14,7 @@ import generalUtils = require("common/generalUtils");
 import popoverUtils = require("common/popoverUtils");
 import defaultAceCompleter = require("common/defaultAceCompleter");
 
-class importDatabase extends viewModelBase {
+class importDatabaseFromFile extends viewModelBase {
 
     private static readonly filePickerTag = "#importDatabaseFilePicker";
 
@@ -22,7 +22,7 @@ class importDatabase extends viewModelBase {
     completer = defaultAceCompleter.completer();
 
     static isImporting = ko.observable(false);
-    isImporting = importDatabase.isImporting;
+    isImporting = importDatabaseFromFile.isImporting;
 
     showAdvancedOptions = ko.observable(false);
     showTransformScript = ko.observable(false);
@@ -210,7 +210,7 @@ class importDatabase extends viewModelBase {
         eventsCollector.default.reportEvent("database", "import");
         this.isUploading(true);
 
-        const fileInput = document.querySelector(importDatabase.filePickerTag) as HTMLInputElement;
+        const fileInput = document.querySelector(importDatabaseFromFile.filePickerTag) as HTMLInputElement;
         const db = this.activeDatabase();
 
         this.getNextOperationId(db)
@@ -237,4 +237,4 @@ class importDatabase extends viewModelBase {
 
 }
 
-export = importDatabase; 
+export = importDatabaseFromFile; 

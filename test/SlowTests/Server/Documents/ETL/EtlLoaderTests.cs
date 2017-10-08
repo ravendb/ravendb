@@ -4,6 +4,7 @@ using Raven.Client.ServerWide.ETL;
 using Raven.Client.ServerWide.Operations.ETL;
 using Raven.Server.NotificationCenter.Notifications;
 using Sparrow.Collections;
+using Sparrow.Json.Parsing;
 using Xunit;
 
 namespace SlowTests.Server.Documents.ETL
@@ -17,7 +18,7 @@ namespace SlowTests.Server.Documents.ETL
             {
                 var database = await GetDatabase(store.Database);
 
-                var notifications = new AsyncQueue<Notification>();
+                var notifications = new AsyncQueue<DynamicJsonValue>();
                 using (database.NotificationCenter.TrackActions(notifications, null))
                 {
                     AddEtl(store, new RavenEtlConfiguration()
@@ -38,11 +39,11 @@ namespace SlowTests.Server.Documents.ETL
                         Database = "Northwind",
                     });
 
-                    var alert = await notifications.TryDequeueOfTypeAsync<AlertRaised>(TimeSpan.FromSeconds(30));
+                    var alert = await notifications.TryDequeueOfTypeAsync<DynamicJsonValue>(TimeSpan.FromSeconds(30));
 
                     Assert.True(alert.Item1);
 
-                    Assert.Equal("Invalid ETL configuration for 'myEtl' (Northwind@http://127.0.0.1:8080). Reason: Script name cannot be empty.", alert.Item2.Message);
+                    Assert.Equal("Invalid ETL configuration for 'myEtl' (Northwind@http://127.0.0.1:8080). Reason: Script name cannot be empty.", alert.Item2[nameof(AlertRaised.Message)]);
                 }
             }
         }
@@ -54,7 +55,7 @@ namespace SlowTests.Server.Documents.ETL
             {
                 var database = await GetDatabase(store.Database);
 
-                var notifications = new AsyncQueue<Notification>();
+                var notifications = new AsyncQueue<DynamicJsonValue>();
                 using (database.NotificationCenter.TrackActions(notifications, null))
                 {
                     AddEtl(store, new RavenEtlConfiguration()
@@ -81,11 +82,11 @@ namespace SlowTests.Server.Documents.ETL
                         Database = "Northwind",
                     });
 
-                    var alert = await notifications.TryDequeueOfTypeAsync<AlertRaised>(TimeSpan.FromSeconds(30));
+                    var alert = await notifications.TryDequeueOfTypeAsync<DynamicJsonValue>(TimeSpan.FromSeconds(30));
 
                     Assert.True(alert.Item1);
 
-                    Assert.Equal("Invalid ETL configuration for 'myEtl' (Northwind@http://127.0.0.1:8080). Reason: Script name 'MyEtl' name is already defined. The script names need to be unique.", alert.Item2.Message);
+                    Assert.Equal("Invalid ETL configuration for 'myEtl' (Northwind@http://127.0.0.1:8080). Reason: Script name 'MyEtl' name is already defined. The script names need to be unique.", alert.Item2[nameof(AlertRaised.Message)]);
                 }
             }
         }
@@ -97,7 +98,7 @@ namespace SlowTests.Server.Documents.ETL
             {
                 var database = await GetDatabase(store.Database);
 
-                var notifications = new AsyncQueue<Notification>();
+                var notifications = new AsyncQueue<DynamicJsonValue>();
                 using (database.NotificationCenter.TrackActions(notifications, null))
                 {
 
@@ -140,11 +141,11 @@ namespace SlowTests.Server.Documents.ETL
                         Database = "Northwind",
                     });
 
-                    var alert = await notifications.TryDequeueOfTypeAsync<AlertRaised>(TimeSpan.FromSeconds(30));
+                    var alert = await notifications.TryDequeueOfTypeAsync<DynamicJsonValue>(TimeSpan.FromSeconds(30));
 
                     Assert.True(alert.Item1);
 
-                    Assert.Equal("Invalid ETL configuration for 'myEtl' (Northwind@http://127.0.0.1:8080). Reason: ETL with name 'myEtl' is already defined.", alert.Item2.Message);
+                    Assert.Equal("Invalid ETL configuration for 'myEtl' (Northwind@http://127.0.0.1:8080). Reason: ETL with name 'myEtl' is already defined.", alert.Item2[nameof(AlertRaised.Message)]);
                 }
             }
         }
@@ -156,7 +157,7 @@ namespace SlowTests.Server.Documents.ETL
             {
                 var database = await GetDatabase(store.Database);
 
-                var notifications = new AsyncQueue<Notification>();
+                var notifications = new AsyncQueue<DynamicJsonValue>();
                 using (database.NotificationCenter.TrackActions(notifications, null))
                 {
                     store.Admin.Server.Send(new AddEtlOperation<RavenConnectionString>(new RavenEtlConfiguration()
@@ -172,11 +173,11 @@ namespace SlowTests.Server.Documents.ETL
                         }
                     }, store.Database));
                     
-                    var alert = await notifications.TryDequeueOfTypeAsync<AlertRaised>(TimeSpan.FromSeconds(30));
+                    var alert = await notifications.TryDequeueOfTypeAsync<DynamicJsonValue>(TimeSpan.FromSeconds(30));
 
                     Assert.True(alert.Item1);
 
-                    Assert.Equal("Invalid ETL configuration for 'myEtl'. Reason: Connection string named 'test' was not found for Raven ETL.", alert.Item2.Message);
+                    Assert.Equal("Invalid ETL configuration for 'myEtl'. Reason: Connection string named 'test' was not found for Raven ETL.", alert.Item2[nameof(AlertRaised.Message)]);
                 }
             }
         }

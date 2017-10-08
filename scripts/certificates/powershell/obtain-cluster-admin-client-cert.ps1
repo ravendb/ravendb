@@ -8,8 +8,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-if($ServerUrl -eq $null) {
-   $ServerUrl = "https://" +  [System.Environment]::MachineName  + ":8080"
+if ($ServerUrl -eq $null) {
+    $ServerUrl = "https://" + [System.Environment]::MachineName + ":8080"
 }
 
 $ErrorActionPreference = "Stop"
@@ -25,9 +25,9 @@ if (($ValidSecClearance | Where-Object { $_ -eq $SecurityClearance } | Select-Ob
 }
 
 $payload = @{
-    Name = $ClientCertName;
+    Name              = $ClientCertName;
     SecurityClearance = $SecurityClearance; # ClusterAdmin, Operator
-    Password = $ClientCertPassword;
+    Password          = $ClientCertPassword;
 } | ConvertTo-Json
 
 $serverCert = Get-PfxCertificate -FilePath $CertPath;
@@ -39,8 +39,7 @@ write-host "POST $url"
 write-host 
 write-host $payload
 
-Try
-{
+try {
     Invoke-WebRequest `
         -Method POST `
         -Certificate $serverCert `
@@ -50,19 +49,18 @@ Try
         -ErrorVariable RestError `
         -ErrorAction SilentlyContinue `
         $url
+
+    write-host "Generate client certificate $ClientCertName.pfx with $SecurityClearance security clearance"
 }
-Catch
-{ 
-    if($_.Exception.Response -ne $null) 
-    {
+catch {
+    if ($_.Exception.Response -ne $null) {
         Write-Host $_.Exception.Message
 
         $stream = $_.Exception.Response.GetResponseStream()
         $reader = New-Object System.IO.StreamReader($stream)
         Write-Host $reader.ReadToEnd()
     }
- 
+
     Write-Error $_.Exception
 }
 
-write-host "Generate client certificate $ClientCertName.pfx with $SecurityClearance security clearance"

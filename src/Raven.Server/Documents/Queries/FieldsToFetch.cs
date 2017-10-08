@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
@@ -95,14 +96,14 @@ namespace Raven.Server.Documents.Queries
                 else
                 {
                     selectFieldKey = selectFieldKey ?? "Key";
-                    return new FieldToFetch(selectFieldKey, selectField.GroupByKeys);
+                    return new FieldToFetch(selectFieldKey, selectField.GroupByKeyName);
                 }
             }
             if (indexDefinition == null)
             {
                 return new FieldToFetch(selectFieldName, selectField, selectField.Alias, canExtractFromIndex: false, isDocumentId: false);
             }
-            if (selectFieldName.Length > 0)
+            if (selectFieldName.Value.Length > 0)
             {
                 if (selectFieldName == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
                 {
@@ -110,7 +111,7 @@ namespace Raven.Server.Documents.Queries
                     return new FieldToFetch(selectFieldName, selectField, selectField.Alias, canExtractFromIndex: false, isDocumentId: true);
                 }
 
-                if (selectFieldName[0] == '_')
+                if (selectFieldName.Value[0] == '_')
                 {
                     if (selectFieldName == Constants.Documents.Indexing.Fields.AllStoredFields)
                     {

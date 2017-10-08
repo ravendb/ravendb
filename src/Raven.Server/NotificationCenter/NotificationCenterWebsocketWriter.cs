@@ -38,7 +38,7 @@ namespace Raven.Server.NotificationCenter
             var receiveBuffer = new ArraySegment<byte>(new byte[1024]);
             var receive = _webSocket.ReceiveAsync(receiveBuffer, _resourceShutdown);
 
-            var asyncQueue = new AsyncQueue<Notification>();
+            var asyncQueue = new AsyncQueue<DynamicJsonValue>();
 
             try
             {
@@ -59,7 +59,7 @@ namespace Raven.Server.NotificationCenter
                             continue;
                         }
 
-                        await WriteToWebSocket(tuple.Item2.ToJson());
+                        await WriteToWebSocket(tuple.Item2);
                     }
                 }
             }

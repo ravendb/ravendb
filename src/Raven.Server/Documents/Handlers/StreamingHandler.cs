@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Threading.Tasks;
@@ -69,17 +70,17 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/streams/queries", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/streams/queries", "GET", AuthorizationStatus.ValidUser)]
         public async Task StreamQueryGet()
         {
             using (TrackRequestTime())
             using (var token = CreateTimeLimitedOperationToken())
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                var queryJson = await context.ReadForMemoryAsync(RequestBodyStream(), "index/query");
-                var query = IndexQueryServerSide.Create(queryJson, context, Database.QueryMetadataCache);
-                var format = GetStringQueryString("format", false);
-                using (var writer = GetQueryResultWriter(format, HttpContext.Response, context, ResponseBodyStream()))
+                var query = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(), context);
+                var properties = GetStringValuesQueryString("field", false);
+                var propertiesArray = properties.Count == 0 ? null : properties.ToArray();
+                using (var writer = new StreamCsvDocumentQueryResultWriter(HttpContext.Response, ResponseBodyStream(), context, propertiesArray))
                 {
                     try
                     {
@@ -88,20 +89,50 @@ namespace Raven.Server.Documents.Handlers
                     catch (IndexDoesNotExistException)
                     {
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                        if (writer.SupportError)
-                        {
-                            writer.WriteError("Index " + query.Metadata.IndexName + " does not exists");
-                        }
+                        writer.WriteError("Index " + query.Metadata.IndexName + " does not exists");
                     }
                 }
             }
         }
 
-        private IStreamDocumentQueryResultWriter GetQueryResultWriter(string format, HttpResponse response,DocumentsOperationContext context, Stream responseBodyStream)
+        [RavenAction("/databases/*/streams/queries", "POST", AuthorizationStatus.ValidUser)]
+        public async Task StreamQueryPost()
+        {
+            using (TrackRequestTime())
+            using (var token = CreateTimeLimitedOperationToken())
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                var stream = TryGetRequestFormStream("ExportOptions") ?? RequestBodyStream(); 
+                var queryJson = await context.ReadForMemoryAsync(stream, "index/query");
+                var query = IndexQueryServerSide.Create(queryJson, context, Database.QueryMetadataCache);
+                var format = GetStringQueryString("format", false);
+                var properties = GetStringValuesQueryString("field", false);
+                var propertiesArray = properties.Count == 0 ? null : properties.ToArray();
+                using (var writer = GetQueryResultWriter(format, HttpContext.Response, context, ResponseBodyStream(), propertiesArray))
+                {
+                    try
+                    {
+                        await Database.QueryRunner.ExecuteStreamQuery(query, context, HttpContext.Response, writer, token).ConfigureAwait(false);
+                    }
+                    catch (IndexDoesNotExistException)
+                    {
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                        writer.WriteError("Index " + query.Metadata.IndexName + " does not exists");
+                    }
+                }
+            }
+        }
+
+        private IStreamDocumentQueryResultWriter GetQueryResultWriter(string format, HttpResponse response, DocumentsOperationContext context, Stream responseBodyStream, string[] propertiesArray)
         {
             if (string.IsNullOrEmpty(format) == false && format.Equals("csv"))
             {
-                return new StreamCsvDocumentQueryResultWriter(response, responseBodyStream, context);                
+                return new StreamCsvDocumentQueryResultWriter(response, responseBodyStream, context, propertiesArray);                
+            }
+            
+            if (propertiesArray != null)
+            {
+                throw new NotSupportedException("Using json output format with custom fields is not supported");
             }
             return new StreamJsonDocumentQueryResultWriter(response, responseBodyStream, context);
         }

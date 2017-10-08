@@ -987,6 +987,15 @@ namespace Raven.Server.Web.System
                 fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
         }
 
+        [RavenAction("/admin/etl", "RESET", AuthorizationStatus.Operator)]
+        public async Task ResetEtl()
+        {
+            var configurationName = GetStringQueryString("configuration-name");
+            var transformationName = GetStringQueryString("transformation-name");
+
+            await DatabaseConfigurations((_, databaseName, etlConfiguration) => ServerStore.ResetEtl(_, databaseName, configurationName, transformationName), "etl-reset");
+        }
+
         private bool CanAddOrUpdateEtl(string databaseName, BlittableJsonReaderObject etlConfiguration)
         {
             LicenseLimit licenseLimit;
@@ -1331,7 +1340,6 @@ namespace Raven.Server.Web.System
             if(Directory.Exists(dataDir) == false)
                 throw new DirectoryNotFoundException($"Could not find directory {dataDir}");
 
-            //var timeout = GetTimeSpanQueryString("timeout");
             var dataExporter = configuration.DataExporterFullPath;
             var databaseName = configuration.DatabaseName;
             var database = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName, true);
@@ -1347,55 +1355,63 @@ namespace Raven.Server.Web.System
                 timeout = Task.Delay((int)configuration.Timeout.Value.TotalMilliseconds);
             }
             processStartInfo.RedirectStandardOutput = true;
-            var processDone = new AsyncManualResetEvent();
+            processStartInfo.RedirectStandardInput = true;
             var process = new Process
             {
                 StartInfo = processStartInfo,
                 EnableRaisingEvents = true,
             };
             var token = new OperationCancelToken(database.DatabaseShutdown);
-            process.Exited += (sender, e) => { processDone.Set(); };
             process.Start();
-            var progress = new IndeterminateProgress();
-            var result = new SmugglerResult();
-            var operationId = database.Operations.GetNextOperationId();
-            var timer = new Stopwatch();
+            var result = new OfflineMigrationResult();
+            var overallProgress = result.Progress as SmugglerResult.SmugglerProgress;
+            var operationId = ServerStore.Operations.GetNextOperationId();
 
-            await database.Operations.AddOperation(database, $"Migration of {dataDir} to {databaseName}", Documents.Operations.Operations.OperationType.DatabaseExport,
+            // send new line to avoid issue with read key 
+            process.StandardInput.WriteLine();
+
+            // don't await here - this operation is async - all we return is operation id 
+            ServerStore.Operations.AddOperation(null, $"Migration of {dataDir} to {databaseName}", Documents.Operations.Operations.OperationType.MigrationFromLegacyData,
                 onProgress =>
                 {
                     return Task.Run(async () =>
                     {
                         try
                         {
-                            timer.Start();
-                            while (processDone.IsSet == false)
+                            while (true)
                             {
-                                if(await ReadLineOrTimeout(process, timeout, configuration, progress) == false)
+                                var (hasTimeout, readMessage) = await ReadLineOrTimeout(process, timeout, configuration);
+                                if (readMessage == null)
+                                {
+                                    // reached end of stream
+                                    break;
+                                }
+                                
+                                if (hasTimeout)
                                 {
                                     //renewing the timeout so not to spam timeouts once the timeout is reached
                                     timeout = Task.Delay(configuration.Timeout.Value);
                                 }
-                                if (timer.ElapsedMilliseconds > 1000)
-                                {
-                                    onProgress(progress);
-                                    progress.Progress = string.Empty;
-                                    timer.Restart();
-                                }
+                                
+                                result.AddInfo(readMessage);
+                                onProgress(overallProgress);
                             }
-                            await ReadLineOrTimeout(process, timeout, configuration, progress);
-                            onProgress(progress);
+                            
+                            process.WaitForExit();
+                            
                             if (process.ExitCode != 0)
                             {
                                 throw new ApplicationException($"The data export tool have exited with code {process.ExitCode}.");
                             }
+                            
+                            result.DataExporter.Processed = true;
 
                             if (File.Exists(configuration.OutputFilePath) == false)
                             {
                                 throw new FileNotFoundException($"Was expecting the output file to be located at {configuration.OutputFilePath}, but it is not there.");
                             }
-                            progress.Progress = $"Starting the import phase of the migration{Environment.NewLine}";
-                            onProgress(progress);
+                            result.AddInfo("Starting the import phase of the migration");
+                            onProgress(overallProgress);
                             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                             using (var reader = File.OpenRead(configuration.OutputFilePath))
                             using (var stream = new GZipStream(reader, CompressionMode.Decompress))
@@ -1405,11 +1421,6 @@ namespace Raven.Server.Web.System
                                 var smuggler = new DatabaseSmuggler(database, source, destination, database.Time, result: result, onProgress: onProgress);
 
                                 smuggler.Execute();
-                                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                                {
-                                    var json = result.ToJson();
-                                    context.Write(writer, json);
-                                }
                             }
                         }
                         catch (Exception e)
@@ -1420,9 +1431,15 @@ namespace Raven.Server.Web.System
                         return (IOperationResult)result;
                     });
                 }, operationId, token);
+            
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteOperationId(context, operationId);
+            }
         }
 
-        private static async Task<bool> ReadLineOrTimeout(Process process, Task timeout, OfflineMigrationConfiguration configuration, IndeterminateProgress progress)
+        private static async Task<(bool HasTimeout, string Line)> ReadLineOrTimeout(Process process, Task timeout, OfflineMigrationConfiguration configuration)
         {
             var readline = process.StandardOutput.ReadLineAsync();
             string progressLine = null;
@@ -1431,17 +1448,14 @@ namespace Raven.Server.Web.System
                 var finishedTask = await Task.WhenAny(readline, timeout);
                 if (finishedTask == timeout)
                 {
-                    progressLine = $"Export is taking more than the configured timeout {configuration.Timeout.Value}";
-                    progress.Progress += $"{progressLine}{Environment.NewLine}";
-                    return false;
+                    return (true, $"Export is taking more than the configured timeout {configuration.Timeout.Value}");
                 }
             }
             else
             {
               progressLine = await readline;
             } 
-            progress.Progress += $"{progressLine}{Environment.NewLine}";
-            return true;
+            return (false, progressLine);
         }
     }
 }

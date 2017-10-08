@@ -57,24 +57,29 @@ namespace Raven.Server.Documents.Indexes
 
         private static string GetName(AutoIndexField x)
         {
+            var name = x.Name;
+
+            if (x.HasQuotedName)
+                name = $"'{name}'";
+
             if (x.Indexing == AutoFieldIndexing.Default || x.Indexing == AutoFieldIndexing.No)
             {
                 if (x.Spatial != null)
-                    return x.Name
+                    return name
                         .Replace(",", "|")
                         .Replace(" ", string.Empty)
                         .ToUpperFirstLetter();
 
-                return x.Name;
+                return name;
             }
 
             var functions = new List<string>();
 
             if (x.Indexing.HasFlag(AutoFieldIndexing.Search))
-                functions.Add(AutoIndexField.GetSearchAutoIndexFieldName(x.Name).ToUpperFirstLetter());
+                functions.Add(AutoIndexField.GetSearchAutoIndexFieldName(name).ToUpperFirstLetter());
 
             if (x.Indexing.HasFlag(AutoFieldIndexing.Exact))
-                functions.Add(AutoIndexField.GetExactAutoIndexFieldName(x.Name).ToUpperFirstLetter());
+                functions.Add(AutoIndexField.GetExactAutoIndexFieldName(name).ToUpperFirstLetter());
 
             return string.Join("And", functions);
         }

@@ -46,6 +46,10 @@ class collection {
     get isAllDocuments() {
         return this.name === collection.allDocumentsCollectionName;
     }
+    
+    get isRevisionsBin() {
+        return this.name === collection.revisionsBinCollectionName;
+    }
 
     get database() {
         return this.db;

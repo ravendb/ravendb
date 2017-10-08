@@ -48,7 +48,7 @@ class appUrl {
         reporting: ko.pureComputed(() => appUrl.forReporting(appUrl.currentDatabase())),
         exploration: ko.pureComputed(() => appUrl.forExploration(appUrl.currentDatabase())),
         tasks: ko.pureComputed(() => appUrl.forTasks(appUrl.currentDatabase())),
-        importDatabaseUrl: ko.pureComputed(() => appUrl.forImportDatabase(appUrl.currentDatabase())),
+        importDatabaseFromFileUrl: ko.pureComputed(() => appUrl.forImportDatabaseFromFile(appUrl.currentDatabase())),
         exportDatabaseUrl: ko.pureComputed(() => appUrl.forExportDatabase(appUrl.currentDatabase())),
         migrateDatabaseUrl: ko.pureComputed(() => appUrl.forMigrateDatabase(appUrl.currentDatabase())),
         sampleDataUrl: ko.pureComputed(() => appUrl.forSampleData(appUrl.currentDatabase())),
@@ -78,6 +78,7 @@ class appUrl {
         databaseRecord: ko.pureComputed(() => appUrl.forDatabaseRecord(appUrl.currentDatabase())),
         quotas: ko.pureComputed(() => appUrl.forQuotas(appUrl.currentDatabase())),
         revisions: ko.pureComputed(() => appUrl.forRevisions(appUrl.currentDatabase())),
+        expiration: ko.pureComputed(() => appUrl.forExpiration(appUrl.currentDatabase())),
         connectionStrings: ko.pureComputed(() => appUrl.forConnectionStrings(appUrl.currentDatabase())),
         databaseStudioConfig: ko.pureComputed(() => appUrl.forDatabaseStudioConfig(appUrl.currentDatabase())),
 
@@ -367,6 +368,10 @@ class appUrl {
         return "#databases/settings/revisions?" + appUrl.getEncodedDbPart(db);
     }
 
+    static forExpiration(db: database | databaseInfo): string {
+        return "#databases/settings/expiration?" + appUrl.getEncodedDbPart(db);
+    }
+
     static forConnectionStrings(db: database | databaseInfo): string {
         return "#databases/settings/connectionStrings?" + appUrl.getEncodedDbPart(db);
     }
@@ -479,9 +484,9 @@ class appUrl {
         return "#databases/indexes/mergeSuggestions?" + databasePart;
     }
 
-    static forImportDatabase(db: database | databaseInfo): string {
+    static forImportDatabaseFromFile(db: database | databaseInfo): string {
         const databasePart = appUrl.getEncodedDbPart(db);
-        return "#databases/tasks/importDatabase?" + databasePart;
+        return "#databases/tasks/import/file?" + databasePart;
     }
 
     static forExportDatabase(db: database | databaseInfo): string {
@@ -491,22 +496,7 @@ class appUrl {
 
     static forMigrateDatabase(db: database | databaseInfo): string {
         const databasePart = appUrl.getEncodedDbPart(db);
-        return "#databases/tasks/migrateDatabase?" + databasePart;
-    }
-
-    static forExportCollectionCsv(collection: collection, db: database | databaseInfo, customColumns?: string[]): string {
-        if (collection.isAllDocuments) {
-            return null;
-        }
-        var args = {
-            format: "excel",
-            download: true,
-            query: "Tag:" + collection.name,
-            column: customColumns
-        }
-
-        //TODO: we don't have Raven/DocumentsByEntityName anymore
-        return appUrl.forDatabaseQuery(db) + "/streams/query/Raven/DocumentsByEntityName" + appUrl.urlEncodeArgs(args);
+        return "#databases/tasks/import/migrate?" + databasePart;//TODO: update? 
     }
 
     static forOngoingTasks(db: database | databaseInfo): string {

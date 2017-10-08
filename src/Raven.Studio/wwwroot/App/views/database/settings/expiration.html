@@ -1,0 +1,48 @@
+<div class="content-container">
+    <form data-bind="submit: saveChanges">
+
+        <div class="content-margin">
+            <div class="toolbar">
+                <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled, css: { 'btn-spinner': spinners.save }">
+                    <i class="icon-save"></i> <span>Save</span>
+                </button>
+            </div>
+
+            
+            <div>
+                <div class="panel padding padding-sm margin-bottom">
+                    <div class="toggle">
+                        <input id="toggleOverride" class="styled" type="checkbox" data-bind="checked: enabled">
+                        <label for="toggleOverride">
+                            Enable document expiration
+                        </label>
+                    </div>
+                    
+                    <div class="row flex-row row-sm">
+                        <div class="col-sm-3">
+                            <div class="checkbox">
+                                <input id="specifyDeleteFrequency" class="styled" type="checkbox"
+                                       data-bind="checked: specifyDeleteFrequency, enable: enabled">
+                                <label for="specifyDeleteFrequency">
+                                    Manually specify delete frequency (in seconds)
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-sm-2" data-bind="validationElement: deleteFrequencyInSec">
+                           <input class="form-control" type="text" placeholder="Default (60 seconds)" data-bind="numericInput: deleteFrequencyInSec, enable: specifyDeleteFrequency"  />
+                        </div>
+                    </div>
+                </div>
+                
+                
+                <div class="panel panel-info padding padding-sm">
+                    <p class=""><i class="icon-info"></i> Expiration serves a very simple purpose: it deletes the documents whose time passed. </p>
+                    <p class="margin-left">All you need to do is to set the <code>@expires</code> property in metadata 
+                        for the appropriate date, and, at the specified time, the document will be automatically deleted.</p>
+                </div>
+                
+            </div>
+        </div>
+    </form>
+
+</div>

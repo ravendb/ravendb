@@ -61,7 +61,7 @@ namespace SlowTests.Bugs.Queries
 
                     var result = query.ToArray();
                     Assert.NotEqual(0, stats.TotalResults);
-                    Assert.Equal(stats.TotalResults, query.QueryResult.TotalResults);
+                    Assert.Equal(stats.TotalResults, query.GetQueryResult().TotalResults);
                     Assert.Equal("Auto/Users/BySearch(Email)", stats.IndexName);
                 }
             }

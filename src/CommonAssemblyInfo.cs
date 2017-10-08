@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 
 [assembly: AssemblyCopyright("© Hibernating Rhinos 2004 - 2016 All rights reserved.")]
 
-[assembly: CLSCompliant(false)]
+[assembly: CLSCompliant(true)]
 
 [assembly: AssemblyVersion("4.0.0")]
 [assembly: AssemblyFileVersion("4.0.0.40")]

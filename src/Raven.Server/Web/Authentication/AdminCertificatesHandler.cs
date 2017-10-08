@@ -32,40 +32,40 @@ namespace Raven.Server.Web.Authentication
             ServerStore.EnsureNotPassive();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {
-                
+
                 var operationId = GetLongQueryString("operationId", false);
                 if (operationId.HasValue == false)
                     operationId = ServerStore.Operations.GetNextOperationId();
-                
+
                 var stream = TryGetRequestFormStream("Options") ?? RequestBodyStream();
 
                 var certificateJson = ctx.ReadForDisk(stream, "certificate-generation");
-    
+
                 var certificate = JsonDeserializationServer.CertificateDefinition(certificateJson);
-                
+
                 byte[] pfx = null;
                 await
                     ServerStore.Operations.AddOperation(
                         null,
                         "Generate certificate: " + certificate.Name,
                         Documents.Operations.Operations.OperationType.CertificateGeneration,
-                        async onProgress => 
+                        async onProgress =>
                         {
                             pfx = await GenerateCertificateInternal(ctx, certificate);
-                            
+
                             return ClientCertificateGenerationResult.Instance;
                         },
                         operationId.Value);
-                
+
                 var contentDisposition = "attachment; filename=" + Uri.EscapeDataString(certificate.Name) + ".pfx";
                 HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
                 HttpContext.Response.ContentType = "binary/octet-stream";
-                
+
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
                 HttpContext.Response.Body.Write(pfx, 0, pfx.Length);
             }
         }
-        
+
         private async Task<byte[]> GenerateCertificateInternal(TransactionOperationContext ctx, CertificateDefinition certificate)
         {
             ValidateCertificate(certificate, ServerStore);
@@ -83,15 +83,21 @@ namespace Raven.Server.Web.Authentication
                                                     $"'{RavenConfiguration.GetKey(x => x.Security.ClusterCertificatePath)}'/'{RavenConfiguration.GetKey(x => x.Security.ClusterCertificateExec)}'. " +
                                                     $"For a more detailed explanation please read about authentication and certificates in the RavenDB documentation.");
 
-            
+
             if (PlatformDetails.RunningOnPosix)
             {
                 // For the client certificate to work properly, we need that the issuer (our server certificate) will be registered in the trusted root store.
                 // In Linux, when using SslStream AuthenticateAsServer, the server sends the list of allowed CAs to the client. So the client's CA must be in the list. See RavenDB-8524
-                using (var currentUserStore = new X509Store(StoreName.Root, StoreLocation.CurrentUser))
+                using (var machineRootStore = new X509Store(StoreName.Root, StoreLocation.LocalMachine, OpenFlags.ReadOnly))
+                using (var machineCaStore = new X509Store(StoreName.CertificateAuthority, StoreLocation.LocalMachine, OpenFlags.ReadOnly))
+                using (var userRootStore = new X509Store(StoreName.Root, StoreLocation.CurrentUser, OpenFlags.ReadOnly))
+                using (var userCaStore = new X509Store(StoreName.CertificateAuthority, StoreLocation.CurrentUser, OpenFlags.ReadOnly))
                 {
-                    currentUserStore.Open(OpenFlags.ReadOnly);
-                    if (currentUserStore.Certificates.Contains(Server.ClusterCertificateHolder.Certificate) == false)
+                    // workaround for lack of cert store inheritance RavenDB-8904
+                    if (machineCaStore.Certificates.Contains(Server.ClusterCertificateHolder.Certificate) == false 
+                        && machineRootStore.Certificates.Contains(Server.ClusterCertificateHolder.Certificate) == false 
+                        && userCaStore.Certificates.Contains(Server.ClusterCertificateHolder.Certificate) == false 
+                        && userRootStore.Certificates.Contains(Server.ClusterCertificateHolder.Certificate) == false)
                         throw new InvalidOperationException($"Cannot generate the client certificate '{certificate.Name}'. " +
                                                             $"First, you must register the server certificate '{Server.ClusterCertificateHolder.Certificate.FriendlyName}' in the trusted root store, on the server machine." +
                                                             $"The server certificate is located in one of the following locations: {ServerStore.Configuration.Security.CertificatePath ?? " "} / {ServerStore.Configuration.Security.ClusterCertificatePath ?? " "} / {ServerStore.Configuration.Security.CertificateExec ?? " "} / {ServerStore.Configuration.Security.ClusterCertificateExec ?? " "}." +

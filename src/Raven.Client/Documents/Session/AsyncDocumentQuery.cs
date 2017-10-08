@@ -741,7 +741,7 @@ namespace Raven.Client.Documents.Session
         public async Task<int> CountAsync(CancellationToken token = default(CancellationToken))
         {
             Take(0);
-            var result = await QueryResultAsync(token).ConfigureAwait(false);
+            var result = await GetQueryResultAsync(token).ConfigureAwait(false);
             return result.TotalResults;
         }
 
@@ -752,7 +752,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public async Task<QueryResult> QueryResultAsync(CancellationToken token = default(CancellationToken))
+        public async Task<QueryResult> GetQueryResultAsync(CancellationToken token = default(CancellationToken))
         {
             await InitAsync(token).ConfigureAwait(false);
 

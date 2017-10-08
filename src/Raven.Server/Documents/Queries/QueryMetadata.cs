@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
-using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Exceptions;
@@ -19,7 +18,7 @@ namespace Raven.Server.Documents.Queries
 {
     public class QueryMetadata
     {
-        private readonly Dictionary<string, string> _aliasToName = new Dictionary<string, string>();
+        private readonly Dictionary<string, QueryFieldName> _aliasToName = new Dictionary<string, QueryFieldName>();
 
         public readonly Dictionary<StringSegment, (string PropertyPath, bool Array)> RootAliasPaths = new Dictionary<StringSegment, (string PropertyPath, bool Array)>();
 
@@ -72,11 +71,11 @@ namespace Raven.Server.Documents.Queries
 
         public readonly string QueryText;
 
-        public readonly HashSet<string> IndexFieldNames = new HashSet<string>(StringComparer.Ordinal);
+        public readonly HashSet<QueryFieldName> IndexFieldNames = new HashSet<QueryFieldName>();
 
-        public readonly Dictionary<string, WhereField> WhereFields = new Dictionary<string, WhereField>(StringComparer.Ordinal);
+        public readonly Dictionary<QueryFieldName, WhereField> WhereFields = new Dictionary<QueryFieldName, WhereField>();
 
-        public string[] GroupBy;
+        public QueryFieldName[] GroupBy;
 
         public OrderByField[] OrderBy;
 
@@ -88,17 +87,17 @@ namespace Raven.Server.Documents.Queries
 
         public string[] Includes;
 
-        private void AddExistField(string fieldName, BlittableJsonReaderObject parameters)
+        private void AddExistField(QueryFieldName fieldName, BlittableJsonReaderObject parameters)
         {
             IndexFieldNames.Add(GetIndexFieldName(fieldName, parameters));
             IsCollectionQuery = false;
         }
 
-        private void AddWhereField(string fieldName, BlittableJsonReaderObject parameters, bool search = false, bool exact = false, AutoSpatialOptions spatial = null)
+        private void AddWhereField(QueryFieldName fieldName, BlittableJsonReaderObject parameters, bool search = false, bool exact = false, AutoSpatialOptions spatial = null)
         {
             var indexFieldName = GetIndexFieldName(fieldName, parameters);
 
-            if (IsCollectionQuery && indexFieldName != Constants.Documents.Indexing.Fields.DocumentIdFieldName)
+            if (IsCollectionQuery && indexFieldName.Equals(QueryFieldName.DocumentId) == false)
                 IsCollectionQuery = false;
 
             IndexFieldNames.Add(indexFieldName);
@@ -116,7 +115,7 @@ namespace Raven.Server.Documents.Queries
 
             if (Query.GroupBy != null)
             {
-                GroupBy = new string[Query.GroupBy.Count];
+                GroupBy = new QueryFieldName[Query.GroupBy.Count];
 
                 for (var i = 0; i < Query.GroupBy.Count; i++)
                 {
@@ -236,7 +235,7 @@ namespace Raven.Server.Documents.Queries
                 if (index != 0)
                     sb.Append(", ");
                 sb.Append(alias.Key);
-                args[index++] = SelectField.Create(string.Empty, null, alias.Value.PropertyPath,
+                args[index++] = SelectField.Create(QueryFieldName.Empty, null, alias.Value.PropertyPath,
                     alias.Value.Array, true);
             }
             if (index != 0)
@@ -428,7 +427,7 @@ namespace Raven.Server.Documents.Queries
                 }
 
                 return new OrderByField(
-                    fieldToken.FieldValue,
+                    new QueryFieldName(fieldToken.FieldValue, false),
                     OrderByFieldType.Distance,
                     asc,
                     methodType,
@@ -440,7 +439,7 @@ namespace Raven.Server.Documents.Queries
                 if (me.Name.Equals("count", StringComparison.OrdinalIgnoreCase))
                 {
                     if (me.Arguments == null || me.Arguments.Count == 0)
-                        return new OrderByField(Constants.Documents.Indexing.Fields.CountFieldName, OrderByFieldType.Long, asc)
+                        return new OrderByField(QueryFieldName.Count, OrderByFieldType.Long, asc)
                         {
                             AggregationOperation = AggregationOperation.Count
                         };
@@ -467,7 +466,7 @@ namespace Raven.Server.Documents.Queries
                         orderingType = OrderByFieldType.Double;
                     }
 
-                    return new OrderByField(sumFieldToken.FieldValue, orderingType, asc)
+                    return new OrderByField(new QueryFieldName(sumFieldToken.FieldValue, sumFieldToken.IsQuoted), orderingType, asc)
                     {
                         AggregationOperation = AggregationOperation.Sum
                     };
@@ -501,7 +500,7 @@ namespace Raven.Server.Documents.Queries
 
                     SelectFields[index] = selectField;
 
-                    var finalAlias = selectField.Alias ?? selectField.Name;
+                    var finalAlias = selectField.Alias ?? selectField.Name?.Value;
                     if (finalAlias != null && _duplicateAliasHelper.Add(finalAlias) == false)
                         ThrowInvalidDuplicateAliasInSelectClause(parameters, finalAlias);
 
@@ -509,7 +508,9 @@ namespace Raven.Server.Documents.Queries
                     {
 
                         if (selectField.IsGroupByKey == false)
+                        {
                             _aliasToName[selectField.Alias] = selectField.Name;
+                        }
                         else
                         {
                             if (selectField.GroupByKeys.Length == 1)
@@ -566,7 +567,7 @@ namespace Raven.Server.Documents.Queries
                     {
                         if (IsGroupBy)
                             ThrowInvalidIdInGroupByQuery(parameters);
-                        return SelectField.Create(Constants.Documents.Indexing.Fields.DocumentIdFieldName, alias);
+                        return SelectField.Create(QueryFieldName.DocumentId, alias);
                     }
 
                     if (IsGroupBy == false)
@@ -581,14 +582,14 @@ namespace Raven.Server.Documents.Queries
                             return null; // never hit
                     }
                 }
-                string fieldName = null;
+                QueryFieldName fieldName = null;
 
                 switch (aggregation)
                 {
                     case AggregationOperation.Count:
                         if (IsGroupBy == false)
                             ThrowInvalidAggregationMethod(parameters, methodName);
-                        fieldName = Constants.Documents.Indexing.Fields.CountFieldName;
+                        fieldName = QueryFieldName.Count;
                         break;
                     case AggregationOperation.Sum:
                         if (IsGroupBy == false)
@@ -626,7 +627,7 @@ namespace Raven.Server.Documents.Queries
         private SelectField GetSelectValue(string alias, FieldExpression expressionField, BlittableJsonReaderObject parameters)
         {
             (string Path, bool Array) sourceAlias;
-            string name = expressionField.FieldValue;
+            var name = new QueryFieldName(expressionField.FieldValue, expressionField.IsQuoted);
             bool hasSourceAlias = false;
             bool array = false;
             if (expressionField.Compound.Count > 1)
@@ -638,7 +639,7 @@ namespace Raven.Server.Documents.Queries
 
                 if (RootAliasPaths.TryGetValue(expressionField.Compound[0], out sourceAlias))
                 {
-                    name = expressionField.FieldValueWithoutAlias;
+                    name = new QueryFieldName(expressionField.FieldValueWithoutAlias, expressionField.IsQuoted);
                     hasSourceAlias = true;
                     array = sourceAlias.Array;
                 }
@@ -653,12 +654,12 @@ namespace Raven.Server.Documents.Queries
                 if (string.IsNullOrEmpty(alias))
                     alias = expressionField.Compound[0];
                 array = sourceAlias.Array;
-                name = string.Empty;
+                name = QueryFieldName.Empty;
             }
             return SelectField.Create(name, alias, sourceAlias.Path, array, hasSourceAlias);
         }
 
-        public string GetIndexFieldName(FieldExpression fe, BlittableJsonReaderObject parameters)
+        public QueryFieldName GetIndexFieldName(FieldExpression fe, BlittableJsonReaderObject parameters)
         {
             if (_aliasToName.TryGetValue(fe.Compound[0], out var indexFieldName))
             {
@@ -668,15 +669,15 @@ namespace Raven.Server.Documents.Queries
                 return indexFieldName;
             }
             if (fe.Compound.Count == 1)
-                return fe.Compound[0];
+                return new QueryFieldName(fe.Compound[0], fe.IsQuoted);
 
             if (RootAliasPaths.TryGetValue(fe.Compound[0], out _))
             {
                 if (fe.Compound.Count == 2)
                 {
-                    return fe.Compound[1];
+                    return new QueryFieldName(fe.Compound[1], fe.IsQuoted);
                 }
-                return fe.FieldValueWithoutAlias;
+                return new QueryFieldName(fe.FieldValueWithoutAlias, fe.IsQuoted);
             }
 
             if (RootAliasPaths.Count != 0)
@@ -684,23 +685,23 @@ namespace Raven.Server.Documents.Queries
                 ThrowUnknownAlias(fe.Compound[0], parameters);
             }
 
-            return fe.FieldValue;
+            return new QueryFieldName(fe.FieldValue, fe.IsQuoted);
         }
 
-        public string GetIndexFieldName(string fieldNameOrAlias, BlittableJsonReaderObject parameters)
+        public QueryFieldName GetIndexFieldName(QueryFieldName fieldNameOrAlias, BlittableJsonReaderObject parameters)
         {
-            if (_aliasToName.TryGetValue(fieldNameOrAlias, out var indexFieldName))
+            if (_aliasToName.TryGetValue(fieldNameOrAlias.Value, out var indexFieldName))
                 return indexFieldName;
 
-            var indexOf = fieldNameOrAlias.IndexOf('.');
+            var indexOf = fieldNameOrAlias.Value.IndexOf('.');
             if (indexOf == -1)
                 return fieldNameOrAlias;
 
-            var key = new StringSegment(fieldNameOrAlias, 0, indexOf);
+            var key = new StringSegment(fieldNameOrAlias.Value, 0, indexOf);
 
             if (RootAliasPaths.TryGetValue(key, out _))
             {
-                return fieldNameOrAlias.Substring(indexOf + 1);
+                return new QueryFieldName(fieldNameOrAlias.Value.Substring(indexOf + 1), fieldNameOrAlias.IsQuoted);
             }
 
             if (RootAliasPaths.Count != 0)
@@ -789,17 +790,17 @@ namespace Raven.Server.Documents.Queries
             public override void VisitFieldToken(QueryExpression fieldName, QueryExpression value, BlittableJsonReaderObject parameters)
             {
                 if (fieldName is FieldExpression fe)
-                    _metadata.AddWhereField(fe.FieldValue, parameters, exact: _insideExact > 0);
+                    _metadata.AddWhereField(new QueryFieldName(fe.FieldValue, fe.IsQuoted), parameters, exact: _insideExact > 0);
                 if (fieldName is MethodExpression me)
                 {
                     var methodType = QueryMethod.GetMethodType(me.Name);
                     switch (methodType)
                     {
                         case MethodType.Id:
-                            _metadata.AddWhereField(Constants.Documents.Indexing.Fields.DocumentIdFieldName, parameters, exact: _insideExact > 0);
+                            _metadata.AddWhereField(QueryFieldName.DocumentId, parameters, exact: _insideExact > 0);
                             break;
                         case MethodType.Count:
-                            _metadata.AddWhereField(Constants.Documents.Indexing.Fields.CountFieldName, parameters, exact: _insideExact > 0);
+                            _metadata.AddWhereField(QueryFieldName.Count, parameters, exact: _insideExact > 0);
                             break;
                         case MethodType.Sum:
                             if (me.Arguments != null && me.Arguments[0] is FieldExpression f)
@@ -813,7 +814,7 @@ namespace Raven.Server.Documents.Queries
             {
                 if (fieldName is FieldExpression fe)
                 {
-                    _metadata.AddWhereField(fe.FieldValue, parameters, exact: _insideExact > 0);
+                    _metadata.AddWhereField(new QueryFieldName(fe.FieldValue, fe.IsQuoted), parameters, exact: _insideExact > 0);
                 }
                 else if (fieldName is MethodExpression me)
                 {
@@ -869,7 +870,7 @@ namespace Raven.Server.Documents.Queries
                         previousType = valueType;
                 }
                 if (fieldName is FieldExpression fieldExpression)
-                    _metadata.AddWhereField(fieldExpression.FieldValue, parameters, exact: _insideExact > 0);
+                    _metadata.AddWhereField(new QueryFieldName(fieldExpression.FieldValue, fieldExpression.IsQuoted), parameters, exact: _insideExact > 0);
             }
 
             private void ThrowInvalidInValue(BlittableJsonReaderObject parameters)
@@ -879,7 +880,7 @@ namespace Raven.Server.Documents.Queries
 
             public override void VisitMethodTokens(StringSegment methodName, List<QueryExpression> arguments, BlittableJsonReaderObject parameters)
             {
-                string fieldName;
+                QueryFieldName fieldName;
 
                 var methodType = QueryMethod.GetMethodType(methodName);
 
@@ -907,7 +908,7 @@ namespace Raven.Server.Documents.Queries
                                     parameters);
                         }
 
-                        _metadata.AddWhereField(Constants.Documents.Indexing.Fields.DocumentIdFieldName, parameters);
+                        _metadata.AddWhereField(QueryFieldName.DocumentId, parameters);
                         break;
                     case MethodType.StartsWith:
                     case MethodType.EndsWith:
@@ -980,7 +981,7 @@ namespace Raven.Server.Documents.Queries
             private void HandleSpatial(string methodName, List<QueryExpression> arguments, BlittableJsonReaderObject parameters)
             {
                 AutoSpatialOptions fieldOptions = null;
-                string fieldName;
+                QueryFieldName fieldName;
                 if (_metadata.IsDynamic == false)
                     fieldName = _metadata.ExtractFieldNameFromFirstArgument(arguments, methodName, parameters);
                 else
@@ -995,7 +996,7 @@ namespace Raven.Server.Documents.Queries
                             if (spatialExpression.Arguments.Count != 1)
                                 throw new InvalidQueryException($"Method {methodName}() expects first argument to be a wkt() method with 1 argument", QueryText, parameters);
 
-                            var wkt = ExtractFieldNameFromArgument(spatialExpression.Arguments[0], "wkt", parameters, QueryText);
+                            var wkt = ExtractFieldNameFromArgument(spatialExpression.Arguments[0], "wkt", parameters, QueryText).Value;
 
                             fieldOptions = new AutoSpatialOptions(AutoSpatialOptions.AutoSpatialMethodType.Wkt, new List<string>
                             {
@@ -1006,8 +1007,8 @@ namespace Raven.Server.Documents.Queries
                             if (spatialExpression.Arguments.Count != 2)
                                 throw new InvalidQueryException($"Method {methodName}() expects first argument to be a point() method with 2 arguments", QueryText, parameters);
 
-                            var latitude = ExtractFieldNameFromArgument(spatialExpression.Arguments[0], "point", parameters, QueryText);
-                            var longitude = ExtractFieldNameFromArgument(spatialExpression.Arguments[1], "point", parameters, QueryText);
+                            var latitude = ExtractFieldNameFromArgument(spatialExpression.Arguments[0], "point", parameters, QueryText).Value;
+                            var longitude = ExtractFieldNameFromArgument(spatialExpression.Arguments[1], "point", parameters, QueryText).Value;
 
                             fieldOptions = new AutoSpatialOptions(AutoSpatialOptions.AutoSpatialMethodType.Point, new List<string>
                             {
@@ -1019,7 +1020,7 @@ namespace Raven.Server.Documents.Queries
                             throw new InvalidQueryException($"Method {methodName}() expects first argument to be a point() or wkt() method", QueryText, parameters);
                     }
 
-                    fieldName = spatialExpression.GetText();
+                    fieldName = new QueryFieldName(spatialExpression.GetText(), false);
                 }
 
                 if (arguments.Count < 2 || arguments.Count > 3)
@@ -1066,11 +1067,11 @@ namespace Raven.Server.Documents.Queries
                 if (!(arguments[0] is FieldExpression f))
                     throw new InvalidQueryException($"Method sum() expects first argument to be field token, got {arguments[0]}", QueryText, parameters);
 
-                _metadata.AddWhereField(f.FieldValue, parameters);
+                _metadata.AddWhereField(new QueryFieldName(f.FieldValue, f.IsQuoted), parameters);
             }
         }
 
-        private string ExtractFieldNameFromFirstArgument(List<QueryExpression> arguments, string methodName, BlittableJsonReaderObject parameters)
+        private QueryFieldName ExtractFieldNameFromFirstArgument(List<QueryExpression> arguments, string methodName, BlittableJsonReaderObject parameters)
         {
             if (arguments == null || arguments.Count == 0)
                 throw new InvalidQueryException($"Method {methodName}() expects a field name as its first argument but no arguments were passed", QueryText, parameters);
@@ -1081,13 +1082,13 @@ namespace Raven.Server.Documents.Queries
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static string ExtractFieldNameFromArgument(QueryExpression argument, string methodName, BlittableJsonReaderObject parameters, string queryText)
+        private static QueryFieldName ExtractFieldNameFromArgument(QueryExpression argument, string methodName, BlittableJsonReaderObject parameters, string queryText)
         {
             if (argument is FieldExpression field)
-                return field.FieldValue;
+                return new QueryFieldName(field.FieldValue, field.IsQuoted);
 
             if (argument is ValueExpression value) // escaped string might go there
-                return value.Token;
+                return new QueryFieldName(value.Token, value.Value == ValueTokenType.String);
 
             throw new InvalidQueryException($"Method {methodName}() expects a field name as its argument", queryText, parameters);
         }

@@ -135,5 +135,17 @@ namespace Raven.Server.Documents.ETL
                    $"{nameof(LoadSuccesses)}: {LoadSuccesses} " +
                    $"{nameof(LoadErrors)}: {LoadErrors}";
         }
+
+        public void Reset()
+        {
+            LastProcessedEtag = 0;
+            LastErrorTime = null;
+            TransformationSuccesses = 0;
+            TransformationErrors = 0;
+            LoadSuccesses = 0;
+            LoadErrors = 0;
+            LastChangeVector = null;
+            LastAlert = null;
+        }
     }
 }

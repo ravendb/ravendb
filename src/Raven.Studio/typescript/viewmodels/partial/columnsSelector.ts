@@ -5,6 +5,7 @@ import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import checkedColumn = require("widgets/virtualGrid/columns/checkedColumn");
 import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
 import customColumn = require("widgets/virtualGrid/columns/customColumn");
+import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 
 class columnItem {
 
@@ -161,7 +162,7 @@ class columnsSelector<T> {
 
         this.grid.init((s, t) => this.onFetch(s, t), (w, r) => this.provideColumns(w, r));
     }
-
+    
     compositionComplete() {
         this.registerSortable();
         $("#custom_column_binding").tooltip({
@@ -353,6 +354,33 @@ class columnsSelector<T> {
                 preview: undefined
             };
         }
+    }
+
+    // gets all columns except custom columns
+    getSimpleColumnsFields() {
+        const columns = [] as string[];
+
+        this.columnLayout().forEach(item => {
+            if (item.visible()) {
+                
+                if (item.virtualColumn() instanceof hyperlinkColumn) {
+                    const href = item.virtualColumn() as hyperlinkColumn<T>;
+                    if (href.header === "Id" && href.valueAccessor.toString().includes("getId()")){
+                        columns.push("@id");
+                        return;
+                    }
+                }
+                
+                if (item.virtualColumn() instanceof textColumn) {
+                    const text = item.virtualColumn() as textColumn<T>;
+                    if (_.isString(text.valueAccessor)) {
+                        columns.push(text.valueAccessor);
+                    }
+                }
+            }
+        });
+
+        return _.uniq(columns);
     }
 
     saveAsDefault(contextName: string) {

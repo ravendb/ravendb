@@ -101,7 +101,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///     Gets the query result. Executing this method for the first time will execute the query.
         /// </summary>
-        Task<QueryResult> QueryResultAsync(CancellationToken token = default(CancellationToken));
+        Task<QueryResult> GetQueryResultAsync(CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Selects the specified fields directly from the index if the are stored. If the field is not stored in index, value
