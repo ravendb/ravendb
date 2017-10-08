@@ -604,6 +604,15 @@ namespace Raven.Server.Web.System
 
                 var restorePoints = new RestorePoints();
 
+                try
+                {
+                    Directory.GetLastAccessTime(restorePathJson.Path);
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    throw new InvalidOperationException($"Unauthorized access to path: {restorePathJson.Path}");
+                }
+
                 if (Directory.Exists(restorePathJson.Path) == false)
                     throw new InvalidOperationException($"Path '{restorePathJson.Path}' doesn't exist");
 
