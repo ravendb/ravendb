@@ -17,7 +17,6 @@ using Raven.Abstractions;
 using Raven.Abstractions.Cluster;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
@@ -35,7 +34,7 @@ namespace Raven.Client.Connection.Request
     {
         public TimeSpan WaitForLeaderTimeout { get; set; } = TimeSpan.FromSeconds(10);
 
-        public static TimeSpan ReplicationDestinationsTopologyTimeout { get; set; } = TimeSpan.FromSeconds(2);
+        public TimeSpan ReplicationDestinationsTopologyTimeout { get; set; } = TimeSpan.FromSeconds(2);
 
         private readonly ManualResetEventSlim leaderNodeSelected = new ManualResetEventSlim();
 
@@ -636,6 +635,7 @@ namespace Raven.Client.Connection.Request
                                 // and remove the primary url destination from the destinations
 
                                 var sourceNode = node;
+                                var sourceNodeClusterInformation = replicationDocument.ClusterInformation;
                                 var destination = replicationDocument.Destinations
                                     .FirstOrDefault(x => DestinationUrl(x.Url, x.Database).Equals(serverClient.Url, StringComparison.OrdinalIgnoreCase));
                                 if (destination != null)
@@ -659,7 +659,7 @@ namespace Raven.Client.Connection.Request
                                         Username = networkCredentials?.UserName,
                                         Password = networkCredentials?.Password,
                                         Domain = networkCredentials?.Domain,
-                                        ClusterInformation = sourceNode.ClusterInformation
+                                        ClusterInformation = sourceNodeClusterInformation
                                     });
                                 }
                             }
