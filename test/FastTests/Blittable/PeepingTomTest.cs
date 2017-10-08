@@ -27,18 +27,19 @@ namespace FastTests.Blittable
 
         [Theory]
         [InlineDataWithRandomSeed]
+        [InlineData(1291481720)]
         public void PeepingTomStreamShouldPeepCorrectlyWithRandomValues(int seed)
         {
             var random = new Random(seed);
 
-            using (var context = JsonOperationContext.ShortTermSingleUse())
+           using (var context = JsonOperationContext.ShortTermSingleUse())
             {
                 for (int i = 0; i < 10; i++)
                 {
                     var originalSize = random.Next(0, 128 * 1024);
                     var chunkSizeToRead = random.Next(0, originalSize);
                     var offset = chunkSizeToRead / 4;
-
+                    Console.WriteLine(i);
                     PeepingTomStreamTest(originalSize, chunkSizeToRead, offset, context);
                 }
             }

@@ -1,7 +1,9 @@
 using Raven.Client.Documents;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using FastTests.Blittable;
 
 namespace RavenDB4RCTests
 {
@@ -9,34 +11,22 @@ namespace RavenDB4RCTests
     {
         static void Main(string[] args)
         {
-            var documentStore = new DocumentStore
+            var originalSize = 90999;
+            var bytes = new byte[originalSize];
+            for (var i = 0; i < bytes.Length; i++)
             {
-                Urls = new[] { "http://4.live-test.ravendb.net" },
-                Database = "TestStreamingTimeout"
-            };
-
-            documentStore.Initialize();
-
-            if (ShouldInitData(documentStore))
-            {
-                InitializeData(documentStore);
+                bytes[i] = (byte)((i % 26) + 'a');
             }
 
-            using (var session = documentStore.OpenAsyncSession())
+            using (var stream = new MemoryStream())
             {
-                var query = session.Query<Doc>(collectionName: "Docs");
-                var stream = session.Advanced.StreamAsync(query).Result;
-
-                var position = 0;
-                while (stream.MoveNextAsync().Result)
-                {
-                    ++position;
-                    if (position % 1000 == 0)
-                    {
-                        Console.WriteLine(DateTime.Now.ToLongTimeString() + ": Processing item " + position);
-                    }
-                }
+                stream.Write(bytes, 0, originalSize);
+                stream.Flush();
+                stream.Position = 0;
             }
+            var t = new PeepingTomTest();
+            t.PeepingTomStreamShouldPeepCorrectlyWithRandomValues(1291481720);
+
         }
 
         private static bool ShouldInitData(DocumentStore documentStore)

@@ -94,7 +94,7 @@ namespace Sparrow
             byte* pSrc = _bufferWindow.Pointer;
             fixed (byte* pDest = buf)
             {
-                var firstSize = BufferWindowSize - start;
+                var firstSize = size - start;
                 Memory.Copy(pDest, pSrc+ start, firstSize);
                 Memory.Copy(pDest + firstSize, pSrc, start);
                 return buf;
