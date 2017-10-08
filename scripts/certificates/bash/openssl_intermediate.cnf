@@ -47,18 +47,11 @@ emailAddress            = optional
 default_bits        = 4096
 distinguished_name  = req_distinguished_name
 string_mask         = utf8only
-req_extensions = req_ext
 # SHA-1 is deprecated, so use SHA-2 instead.
 default_md          = sha256
 
 # Extension to add when the -x509 option is used.
 x509_extensions     = v3_ca
-
-[ req_ext ]
-subjectAltName = @alt_names
- 
-[ alt_names ]
-DNS.1 = *.hrhinos.local
 
 [ req_distinguished_name ]
 countryName                     = Country Name (2 letter code)
