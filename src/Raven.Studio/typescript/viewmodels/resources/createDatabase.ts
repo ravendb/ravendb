@@ -213,7 +213,9 @@ class createDatabase extends dialogViewModelBase {
 
         const globalValid = this.isValid(this.databaseModel.globalValidationGroup);
 
-        const sectionsValidityList = this.getAvailableSections().map(section => {
+        const availableSections = this.getAvailableSections();
+        
+        const sectionsValidityList = availableSections.map(section => {
             if (section.enabled()) {
                 return this.isValid(section.validationGroup);
             } else {
@@ -245,7 +247,7 @@ class createDatabase extends dialogViewModelBase {
 
         const firstInvalidSection = sectionsValidityList.indexOf(false);
         if (firstInvalidSection !== -1) {
-            const sectionToShow = this.databaseModel.configurationSections[firstInvalidSection].id;
+            const sectionToShow = availableSections[firstInvalidSection].id;
             this.showAdvancedConfigurationFor(sectionToShow);
         }
     }
