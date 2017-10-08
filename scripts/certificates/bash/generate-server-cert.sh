@@ -8,6 +8,13 @@ check_errs()
   fi
 }
 
+if [ "$#" -eq "1" ]; then
+	export SAN=$1
+else
+	echo please supply a DNS name in the first argument
+	exit
+fi
+
 BASIC_PATH=$HOME/ravendb/certs
 CA_PATH=${BASIC_PATH}/ca
 INTERMEDIATE_PATH=${CA_PATH}/intermediate
