@@ -5,7 +5,7 @@ using Xunit;
 
 namespace FastTests.Sparrow
 {
-    public unsafe class UnmanagedWriteBufferTests
+    public unsafe class UnmanagedWriteBufferTests : NoDisposalNeeded
     {
         private const int DefaultBufferSize = 16;
 

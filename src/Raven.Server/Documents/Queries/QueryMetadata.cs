@@ -350,6 +350,10 @@ namespace Raven.Server.Documents.Queries
 
         private OrderByField ExtractOrderByFromMethod(MethodExpression me, OrderByFieldType orderingType, bool asc, BlittableJsonReaderObject parameters)
         {
+            if (me.Name.Equals("id", StringComparison.OrdinalIgnoreCase))
+            {
+                return new OrderByField(new QueryFieldName("id()",false), OrderByFieldType.String, asc, MethodType.Id);    
+            }
             if (me.Name.Equals("random", StringComparison.OrdinalIgnoreCase))
             {
                 if (me.Arguments == null || me.Arguments.Count == 0)

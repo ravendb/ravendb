@@ -4,7 +4,11 @@
     {
         public static string EscapeIfNecessary(string name)
         {
-            if (string.IsNullOrEmpty(name))
+            if (string.IsNullOrEmpty(name) || 
+                name == Constants.Documents.Indexing.Fields.DocumentIdFieldName || 
+                name == Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName || 
+                name == Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName || 
+                name == Constants.Documents.Indexing.Fields.SpatialShapeFieldName )
                 return name;
 
             var escape = false;
@@ -31,7 +35,7 @@
                 }
                 else
                 {
-                    if (char.IsLetterOrDigit(c) == false && c != '_' && c != '@' && c != '.' && c != '[' && c != ']' && insideEscaped == false)
+                    if (char.IsLetterOrDigit(c) == false && c != '_' && c != '-' && c != '@' && c != '.' && c != '[' && c != ']' && insideEscaped == false)
                     {
                         escape = true;
                         break;

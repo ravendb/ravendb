@@ -21,7 +21,6 @@ using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Utils;
 using Sparrow.Utils;
 using Voron;
-using ThreadState = System.Threading.ThreadState;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -97,13 +96,17 @@ namespace Raven.Server.Documents.Replication
             if (result != null)
                 return; // already set by someone else, they can start it
 
-            if (_incomingThread.ThreadState != ThreadState.Running)
+            try
             {
                 _incomingThread.Start();
-
-                if (_log.IsInfoEnabled)
-                    _log.Info($"Incoming replication thread started ({FromToString})");
             }
+            catch (ThreadStateException)
+            {
+                // already started, can ignore this
+            }
+
+            if (_log.IsInfoEnabled)
+                _log.Info($"Incoming replication thread started ({FromToString})");
         }
 
         [ThreadStatic]
@@ -805,10 +808,16 @@ namespace Raven.Server.Documents.Replication
 
             _replicationFromAnotherSource.Set();
 
-            if (_incomingThread != Thread.CurrentThread &&
-                _incomingThread?.ThreadState != ThreadState.Unstarted)
+            if (_incomingThread != Thread.CurrentThread)
             {
-                _incomingThread?.Join();
+                try
+                {
+                    _incomingThread?.Join();
+                }
+                catch (ThreadStateException)
+                {
+                    // expected if the thread hsan't been started yet
+                }
             }
 
             _incomingThread = null;

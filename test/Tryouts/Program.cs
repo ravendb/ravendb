@@ -11,22 +11,15 @@ namespace RavenDB4RCTests
     {
         static void Main(string[] args)
         {
-            var originalSize = 90999;
-            var bytes = new byte[originalSize];
-            for (var i = 0; i < bytes.Length; i++)
+            for (int i = 0; i < 100; i++)
             {
-                bytes[i] = (byte)((i % 26) + 'a');
+                Console.WriteLine(i);
+                using (var a = new SlowTests.Tests.Spatial.TwoLocations())
+                {
+                    a.CanQueryByMultipleLocationsOverHttp();
+                }
+                
             }
-
-            using (var stream = new MemoryStream())
-            {
-                stream.Write(bytes, 0, originalSize);
-                stream.Flush();
-                stream.Position = 0;
-            }
-            var t = new PeepingTomTest();
-            t.PeepingTomStreamShouldPeepCorrectlyWithRandomValues(1291481720);
-
         }
 
         private static bool ShouldInitData(DocumentStore documentStore)

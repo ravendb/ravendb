@@ -493,18 +493,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            var fieldsToFetch = baseDocId.HasValue ?
-                _searcher.Doc(baseDocId.Value, _state).GetFields().Cast<AbstractField>().Select(x => x.Name).Distinct()
-                                                                                        .Union(mlt.GetFieldNames())
-                                                                                        .Select(x => SelectField.Create(new QueryFieldName(x, false))).ToArray()
-                : 
-                hits.Length > 0 ?
-                    _searcher.Doc(hits[0].Doc, _state).GetFields().Cast<AbstractField>().Select(x => x.Name).Distinct()
-                                                                                        .Union(mlt.GetFieldNames())
-                                                                                        .Select(x => SelectField.Create(new QueryFieldName(x, false))).ToArray()
-                        : null;
-
-            var retriever = createRetriever(fieldsToFetch);
+            var retriever = createRetriever(null);
 
             foreach (var hit in hits)
             {
