@@ -89,29 +89,39 @@ namespace Raven.Database.Raft
                 return;
             }
 
-            var anyDatabaseUptodate = false;
-            //preventing the case where all databases are inactive (long overnight inactivity).
-            var anyDatabaseUp = false;
+            var anyDatabaseUpToDate = false;
+            // preventing the case where all databases are inactive (long overnight inactivity).
+            var databasesCount = 0;
+            var missingModification = 0;
             DatabasesLandlord.ForAllDatabases(database =>
             {
-                anyDatabaseUp = true;
+                databasesCount++;
                 LastModificationTimeAndTransactionalId modification;
-                //if the source document doesn't contain this databse it means it was not active in the source
-                //nothing we can do but ignore this.
+                // if the source document doesn't contain this database it means it was not active in the source
+                // nothing we can do but ignore this.
+                // or we didn't get the state of the last modification in the database
                 if (replicationState.DatabasesToLastModification.TryGetValue(database.Name, out modification) == false)
+                {
+                    missingModification++;
                     return;
+                }
+
                 var docKey = $"{Constants.RavenReplicationSourcesBasePath}/{modification.DatabaseId}";
                 var doc = database.Documents.Get(docKey, null);
-                if (doc == null)
-                    return;
-                var sourceInformation = doc.DataAsJson.JsonDeserialization<SourceReplicationInformation>();
+                var sourceInformation = doc?.DataAsJson.JsonDeserialization<SourceReplicationInformation>();
                 if (sourceInformation == null)
                     return;
+
                 var lastUpdate = sourceInformation.LastModifiedAtSource ?? DateTime.MaxValue;
-                if (lastUpdate == DateTime.MaxValue || lastUpdate + maxReplicationLatency >= modification.LastModified)
-                    anyDatabaseUptodate = true;
-            },true);
-            if (anyDatabaseUptodate == false && anyDatabaseUp)
+                if (lastUpdate == DateTime.MaxValue ||
+                    // relaxing the veto condition
+                    lastUpdate + maxReplicationLatency + maxReplicationLatency >= modification.LastModified)
+                {
+                    anyDatabaseUpToDate = true;
+                }
+            }, true);
+
+            if (anyDatabaseUpToDate == false && databasesCount > 0 && databasesCount != missingModification)
             {
                 e.VetoCandidacy = true;
                 e.Reason = "None of the active databases are up to date with the leader last replication state";
