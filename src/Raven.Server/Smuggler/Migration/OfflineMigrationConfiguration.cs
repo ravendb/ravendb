@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using Org.BouncyCastle.Security;
@@ -21,13 +22,18 @@ namespace Raven.Server.Smuggler.Migration
         public int? EncryptionKeyBitsSize { get; set; }
         public TimeSpan? Timeout { get; set; }
 
-        public string GenerateExporterCommandLine()
+        public (string Commandline, string TmpFile) GenerateExporterCommandLine()
         {
+            string tmpFile = null;
             var sb = new StringBuilder();
 
-            if (DataDirectory == null || OutputFilePath == null || DataExporterFullPath == null)
-                throw new ArgumentNullException("The following arguments are mandatory: DataDirectory, OutputFilePath and DataExporterFullPath");
-
+            if (DataDirectory == null || DataExporterFullPath == null)
+                throw new ArgumentNullException("The following arguments are mandatory: DataDirectory and DataExporterFullPath");
+            if (OutputFilePath == null)
+            {
+                var rempDir = Path.GetTempPath();
+                OutputFilePath = tmpFile = Path.Combine(rempDir, "export.ravendump");
+            }
             sb.Append($"{EnsureStringsAreQouted(DataDirectory)} {EnsureStringsAreQouted(OutputFilePath)}");
 
             if (BatchSize.HasValue)
@@ -55,7 +61,7 @@ namespace Raven.Server.Smuggler.Migration
                 sb.Append($" -Encryption {EnsureStringsAreQouted(EncryptionKey)} {EncryptionAlgorithm} {EncryptionKeyBitsSize.Value}");
             }
 
-            return sb.ToString();
+            return (sb.ToString(), tmpFile);
 
             string EnsureStringsAreQouted(string path)
             {
