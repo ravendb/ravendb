@@ -165,12 +165,17 @@ namespace Raven.Client.Connection.Async
 
         private async Task UpdateTopologyAsync()
         {
-            var topology = await DirectGetReplicationDestinationsAsync(new OperationMetadata(Url, PrimaryCredentials, null), null, timeout: ClusterAwareRequestExecuter.ReplicationDestinationsTopologyTimeout)
+            var clusterAwareRequestExecuter = requestExecuterSelector.Select() as ClusterAwareRequestExecuter;
+            TimeSpan? timeout = null;
+            if (clusterAwareRequestExecuter != null)
+                timeout = clusterAwareRequestExecuter.ReplicationDestinationsTopologyTimeout;
+            
+            var topology = await DirectGetReplicationDestinationsAsync(new OperationMetadata(Url, PrimaryCredentials, null), null, timeout: timeout)
                 .ConfigureAwait(false);
 
             // since we got the topology from the primary node successfully,
             // update the topology from other nodes only if it's needed
-            await UpdateTopologyAsync(topology, force: true).ConfigureAwait(false);
+            await UpdateTopologyAsync(topology, force: false).ConfigureAwait(false);
         }
 
         private async Task UpdateTopologyAsync(ReplicationDocumentWithClusterInformation topology, bool force)
