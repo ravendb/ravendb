@@ -63,7 +63,7 @@ class adminLogs extends viewModelBase {
     
     private allData = [] as string[];
     
-    filter = ko.observable<string>();
+    filter = ko.observable<string>("");
     
     private appendElementsTask: number;
     private pendingMessages = [] as string[];
@@ -84,7 +84,7 @@ class adminLogs extends viewModelBase {
         
         this.bindToCurrentInstance("toggleTail", "itemHeightProvider", "applyConfiguration", "includeSource", "excludeSource", "removeConfigurationEntry");
         
-        this.filter.throttle(500).subscribe(() => this.filterLogEntries());
+        this.filter.throttle(500).subscribe(() => this.filterLogEntries(true));
     }
     
     activate(args: any) {
@@ -99,17 +99,20 @@ class adminLogs extends viewModelBase {
             this.liveClient().dispose();
         }
     }
-    
-    filterLogEntries() {
+
+    filterLogEntries(fromFilterChange: boolean) {
         const searchText = this.filter().toLocaleLowerCase();
 
-        this.listController().reset();
-        
+        if (fromFilterChange) {
+            this.listController().reset();
+        }
+
         if (searchText) {
-            const filteredItems = this.allData.filter(x => x.toLocaleLowerCase().includes(searchText));
+            const filteredItems = fromFilterChange ? this.allData.filter(x => x.toLocaleLowerCase().includes(searchText)) : this.pendingMessages.filter(x => x.toLocaleLowerCase().includes(searchText));
             this.listController().pushElements(filteredItems);
+
         } else {
-            this.listController().pushElements(this.allData);
+            this.listController().pushElements(fromFilterChange ? this.allData : this.pendingMessages);
         }
     }
 
@@ -197,10 +200,7 @@ class adminLogs extends viewModelBase {
     private onAppendPendingMessages() {
         this.appendElementsTask = null;
 
-        if (!this.filter())
-            this.listController().pushElements(this.pendingMessages);
-        else
-            this.filterLogEntries();
+        this.filterLogEntries(false);
 
         this.pendingMessages.length = 0;
 
