@@ -2,20 +2,18 @@
 using System.Net.Http;
 using System.Text;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Http;
 using Raven.Client.Json;
-using Raven.Client.Json.Converters;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
 
 namespace FastTests.Issues
 {
-    public class RavenDB8450 : RavenTestBase
+    public class RavenDB_8450 : RavenTestBase
     {
         [Fact]
         public void CanGetSubscriptionsResultsWithEscapeHandling()
