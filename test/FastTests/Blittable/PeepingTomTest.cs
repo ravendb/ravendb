@@ -39,7 +39,6 @@ namespace FastTests.Blittable
                     var originalSize = random.Next(0, 128 * 1024);
                     var chunkSizeToRead = random.Next(0, originalSize);
                     var offset = chunkSizeToRead / 4;
-                    Console.WriteLine(i);
                     PeepingTomStreamTest(originalSize, chunkSizeToRead, offset, context);
                 }
             }

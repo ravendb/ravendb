@@ -80,7 +80,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     try
                     {
                         // validate the js code
-                        ValidateScript(q.UpdateBody);
+                        ValidateScript("function test()" + q.UpdateBody);
                     }
                     catch (Exception e)
                     {
@@ -100,8 +100,8 @@ namespace Raven.Server.Documents.Queries.Parser
 
         private static void ValidateScript(string script)
         {
-            //var javaScriptParser = new JavaScriptParser(script.Trim('{', '}'));
-            //javaScriptParser.ParseProgram();
+            var javaScriptParser = new JavaScriptParser(script);
+            javaScriptParser.ParseProgram();
         }
 
         private static void ThrowUnknownQueryType(QueryType queryType)
@@ -263,7 +263,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 // validate that this is valid JS code
                 try
                 {
-                    ValidateScript(query.SelectFunctionBody);
+                    ValidateScript("return " + query.SelectFunctionBody);
                 }
                 catch (Exception e)
                 {
