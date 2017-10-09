@@ -191,6 +191,10 @@ class appUrl {
     static forAbout(): string {
         return "#about";
     }
+    
+    static forServerDashboard(): string {
+        return "#dashboard";
+    }
 
     static forEditDoc(id: string, db: database | databaseInfo, collection?: string): string {
         const databaseUrlPart = appUrl.getEncodedDbPart(db);
