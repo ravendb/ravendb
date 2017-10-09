@@ -39,8 +39,10 @@ class createOngoingTask extends dialogViewModelBase {
     }
 
     newSqlEtlTask() {
-        alert("NewSqlEtlTask");
-        // ...
+        eventsCollector.default.reportEvent("SqlETL", "new");
+        const url = appUrl.forEditSqlEtl(this.activeDatabase());
+        router.navigate(url);
+        this.close();
     }
 }
 

@@ -19,8 +19,7 @@ class ongoingTaskEtlTransformationModel {
     }
 
     getCollectionEntry(collectionName: string) {
-        return (_.findIndex(collectionsTracker.default.collections(), x => x.name === collectionName) - 1) % 6;
-        // 6 is the number of classes that I have defined in etl.less for colors...
+        return collectionsTracker.default.getCollectionColorIndex(collectionName);        
     }
 
     static empty(): ongoingTaskEtlTransformationModel {

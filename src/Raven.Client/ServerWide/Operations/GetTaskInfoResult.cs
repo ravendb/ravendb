@@ -152,6 +152,8 @@ namespace Raven.Client.ServerWide.Operations
         public string DestinationServer { get; set; }
 
         public string DestinationDatabase { get; set; }
+        
+        public string ConnectionStringName { get; set; }
 
         public override DynamicJsonValue ToJson()
         {
@@ -159,11 +161,11 @@ namespace Raven.Client.ServerWide.Operations
 
             json[nameof(DestinationServer)] = DestinationServer;
             json[nameof(DestinationDatabase)] = DestinationDatabase;
+            json[nameof(ConnectionStringName)] = ConnectionStringName;
 
             return json;
         }
     }
-    
 
     public class OngoingTaskSqlEtlDetails : OngoingTask
     {

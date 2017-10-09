@@ -5,7 +5,8 @@ import endpoints = require("endpoints");
 class getOngoingTaskInfoCommand<T extends Raven.Client.ServerWide.Operations.OngoingTaskReplication |
                                           Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails |
                                           Raven.Client.ServerWide.Operations.OngoingTaskBackup |
-                                          Raven.Client.ServerWide.Operations.OngoingTaskRavenEtlDetails> extends commandBase {
+                                          Raven.Client.ServerWide.Operations.OngoingTaskRavenEtlDetails |
+                                          Raven.Client.ServerWide.Operations.OngoingTaskSqlEtlDetails> extends commandBase {
 
       private constructor(private db: database, private taskType: Raven.Client.ServerWide.Operations.OngoingTaskType, private taskId: number, private taskName?: string) {
           super();
@@ -40,6 +41,10 @@ class getOngoingTaskInfoCommand<T extends Raven.Client.ServerWide.Operations.Ong
 
     static forRavenEtl(db: database, taskId: number) {
         return new getOngoingTaskInfoCommand<Raven.Client.ServerWide.Operations.OngoingTaskRavenEtlDetails>(db, "RavenEtl", taskId);
+    }
+    
+    static forSqlEtl(db: database, taskId: number) {
+        return new getOngoingTaskInfoCommand<Raven.Client.ServerWide.Operations.OngoingTaskSqlEtlDetails>(db, "SqlEtl", taskId);
     }
 }
 

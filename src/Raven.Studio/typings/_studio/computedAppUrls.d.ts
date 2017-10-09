@@ -19,6 +19,7 @@ interface computedAppUrls {
     editPeriodicBackupTask: (taskId?: number) => KnockoutComputed<string>;
     editSubscription: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     editRavenEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
+    editSqlEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     query: (indexName?: string) => KnockoutComputed<string>;
     terms: (indexName?: string) => KnockoutComputed<string>;
     reporting: KnockoutComputed<string>;
@@ -32,6 +33,7 @@ interface computedAppUrls {
     editExternalReplicationTaskUrl: KnockoutComputed<string>;
     editSubscriptionTaskUrl: KnockoutComputed<string>;
     editRavenEtlTaskUrl: KnockoutComputed<string>;
+    editSqlEtlTaskUrl: KnockoutComputed<string>;
     csvImportUrl: KnockoutComputed<string>;
     status: KnockoutComputed<string>;
     indexPerformance: KnockoutComputed<string>;

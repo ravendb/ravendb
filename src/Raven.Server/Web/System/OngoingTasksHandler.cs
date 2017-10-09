@@ -283,7 +283,8 @@ namespace Raven.Server.Web.System
                             NodeUrl = clusterTopology.GetUrlFromTag(tag)
                         },
                         DestinationServer = server,
-                        DestinationDatabase = database
+                        DestinationDatabase = database,
+                        ConnectionStringName = sqlEtl.ConnectionStringName
                     };
                 }
             }
