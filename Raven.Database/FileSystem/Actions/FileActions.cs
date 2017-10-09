@@ -266,13 +266,20 @@ namespace Raven.Database.FileSystem.Actions
 
                 Publisher.Publish(new FileChangeNotification { File = operation.Name, Action = FileChangeAction.Renaming });
 
-                var previousRenameTombstone = accessor.ReadFile(operation.Rename);
+                var renameFile = accessor.ReadFile(operation.Rename);
 
-                if (previousRenameTombstone != null &&
-                    previousRenameTombstone.Metadata[SynchronizationConstants.RavenDeleteMarker] != null)
+                if (renameFile != null)
                 {
-                    // if there is a tombstone delete it
-                    accessor.Delete(previousRenameTombstone.FullPath);
+                    if (renameFile.Metadata[SynchronizationConstants.RavenDeleteMarker] != null)
+                    {
+                        // if there is a tombstone delete it
+                        accessor.Delete(renameFile.FullPath);
+                    }
+                    else if (operation.ForceExistingFileRemoval)
+                    {
+                        // used by synchronization
+                        accessor.Delete(renameFile.FullPath);
+                    }
                 }
 
                 FileSystem.RenameTriggers.Apply(trigger => trigger.OnRename(operation.Name, operation.MetadataAfterOperation));
