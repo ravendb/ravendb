@@ -1,3 +1,4 @@
+/*
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import patchDocument = require("models/database/patch/patchDocument");
@@ -17,3 +18,5 @@ class savePatchCommand extends commandBase {
         
 }
 export = savePatchCommand;
+*/
+//TODO: Should delete file?

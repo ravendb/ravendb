@@ -289,11 +289,12 @@ class query extends viewModelBase {
     deactivate(): void {
         super.deactivate();
 
-        let queryText = this.criteria().queryText();
+        const queryText = this.criteria().queryText();
 
-        if (this.recentQueries().length > 0 && this.recentQueries()[0].queryText === queryText)
-            queryText = null;
+        this.saveLastQuery(queryText);
+    }
 
+    private saveLastQuery(queryText: string) {
         query.lastQuery.set(this.activeDatabase().name, queryText);
     }
 
@@ -481,7 +482,8 @@ class query extends viewModelBase {
                             this.queryStats(queryResults.additionalResultInfo);
                             this.onIncludesLoaded(queryResults.includes);
                         }
-                        
+
+                        this.saveLastQuery("");
                     })
                     .fail((request: JQueryXHR) => {
                         const queryText = this.criteria().queryText();
