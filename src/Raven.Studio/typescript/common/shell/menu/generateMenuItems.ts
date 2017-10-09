@@ -2,7 +2,6 @@
 
 import appUrl = require("common/appUrl");
 import separatorMenuItem = require("common/shell/menu/separatorMenuItem");
-import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import database = require("models/resources/database");
 
 import getManageServerMenuItem = require("common/shell/menu/items/manageServer");
@@ -11,6 +10,7 @@ import getSettingsMenuItem = require("common/shell/menu/items/settings");
 import getStatsMenuItem = require("common/shell/menu/items/stats");
 import getIndexesMenuItem = require("common/shell/menu/items/indexes");
 import getDocumentsMenuItem = require("common/shell/menu/items/documents");
+import rootItems = require("common/shell/menu/items/rootItems");
 
 export = generateMenuItems;
 
@@ -22,25 +22,15 @@ function generateMenuItems(db: database) {
     return generateActiveDatabaseMenuItems();
 }
 
-function aboutItem() {
-    return new leafMenuItem({
-        route: 'about',
-        moduleId: 'viewmodels/shell/about',
-        title: 'About',
-        tooltip: "About",
-        nav: true,
-        css: 'icon-info',
-        dynamicHash: appUrl.forAbout
-    });
-}
 
 function generateNoActiveDatabaseMenuItems() {
     const appUrls = appUrl.forCurrentDatabase();
     return [
         new separatorMenuItem('Server'),
+        rootItems.dashboard(),
         getDatabasesMenuItem(appUrls),
         getManageServerMenuItem(),
-        aboutItem()
+        rootItems.about()
     ];
     
 }
@@ -54,9 +44,10 @@ function generateActiveDatabaseMenuItems() {
         getStatsMenuItem(appUrls),
         
         new separatorMenuItem('Server'),
+        rootItems.dashboard(),
         getDatabasesMenuItem(appUrls),
         getManageServerMenuItem(),
-        aboutItem()
+        rootItems.about()
     ];
 }
 
