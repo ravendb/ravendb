@@ -292,7 +292,7 @@ namespace Raven.Server.Documents.Replication
                 stats.RecordChangeVectorSkip();
 
                 if (_log.IsInfoEnabled)
-                    _log.Info($"Skipping replication of {item.Type} '{item.Id}' because destination has a higher change vector. Current: {item.ChangeVector} < Destination: {_parent._destinationLastKnownChangeVectorAsString} ");
+                    _log.Info($"Skipping replication of {item.Type} '{item.Id}' because destination has a higher change vector. Current: {item.ChangeVector} < Destination: {_parent.LastAcceptedChangeVector} ");
                 return false;
             }
 
