@@ -12,6 +12,7 @@ import mergedIndexesStorage = require("common/storage/mergedIndexesStorage");
 import recentQueriesStorage = require("common/storage/recentQueriesStorage");
 import starredDocumentsStorage = require("common/storage/starredDocumentsStorage");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
+import savedPatchesStorage = require("common/storage/savedPatchesStorage");
 
 class databasesManager {
 
@@ -29,7 +30,8 @@ class databasesManager {
     onDatabaseDeletedCallbacks = [
         (q, n) => mergedIndexesStorage.onDatabaseDeleted(q, n),
         (q, n) => recentQueriesStorage.onDatabaseDeleted(q, n),
-        (q, n) => starredDocumentsStorage.onDatabaseDeleted(q, n)
+        (q, n) => starredDocumentsStorage.onDatabaseDeleted(q, n),
+        (q, n) => savedPatchesStorage.onDatabaseDeleted(q, n)
     ] as Array<(qualifier: string, name: string) => void>;
 
     constructor() { 

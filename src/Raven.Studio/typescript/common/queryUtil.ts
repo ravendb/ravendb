@@ -116,6 +116,23 @@ class queryUtil {
         
         return tokenIndexes;
     }
+
+    static getCollectionOrIndexName(query: string): string {
+
+        const words = query.split(" ");
+
+        for (let i = 0; i < words.length; i++) {
+            if (words[i] === "from") {
+                if (words[i + 1] === "index") {
+                    return words[i + 2].replace(/'/g, '');
+                } else {
+                    return words[i + 1];
+                }
+            }
+        }
+
+        throw new Error("Bad query");
+    }
 }
 
 export = queryUtil;

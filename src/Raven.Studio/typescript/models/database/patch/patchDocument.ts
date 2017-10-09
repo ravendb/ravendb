@@ -1,54 +1,46 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 
-import document = require("models/database/documents/document");
+import genUtils = require("common/generalUtils");
 
-class patchDocument extends document {
+class patchDocument {
 
+    name = ko.observable<string>();
     selectedItem = ko.observable<string>();
     query = ko.observable<string>();
-
     patchAll = ko.observable<boolean>(true);
 
     constructor(dto: patchDto) {
-        super(dto);
+        this.name(dto.Name);
         this.query(dto.Query);
         this.selectedItem(dto.SelectedItem);
+        this.patchAll(dto.PatchAll);
     }
 
     static empty() {
-        const meta: any = {};
-        meta['@collection'] = '@studio';
         return new patchDocument({
-            '@metadata': meta,
+            Name: "",
             Query: "",
             SelectedItem: "",
-            Values: []
-        });
+            ModificationDate: new Date(),
+            PatchAll: true
+    });
     }
 
     toDto(): patchDto {
-        const meta = this.__metadata.toDto();
         return {
-            '@metadata': meta,
+            Name: this.name(),
             Query: this.query(),
-            SelectedItem: this.selectedItem()
-        };
-    }
-
-    name(): string {
-        return this.__metadata.id.replace('Raven/Studio/Patch/', '');
-    }
-
-    modificationDate(): string {
-        return this.__metadata.lastModifiedFullDate();
+            SelectedItem: this.selectedItem(),
+            ModificationDate: new Date(),
+            PatchAll: this.patchAll()
+        } as patchDto;
     }
 
     copyFrom(incoming: patchDocument) {
+        this.name(incoming.name());
         this.selectedItem(incoming.selectedItem());
-        this.__metadata = incoming.__metadata;
         this.query(incoming.query());
-        this.patchAll(true);
-        this.__metadata.changeVector(undefined);
+        this.patchAll(incoming.patchAll());
     }
 }
 

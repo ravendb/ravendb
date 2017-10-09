@@ -3,10 +3,10 @@
         <div id="patch-target" >
             <div class="clearfix toolbar">
                 <div class="pull-right-sm flex-horizontal">
-                    <div class="input-group patch-save" data-bind="css: { active: inSaveMode }, validationOptions: { insertMessages: false }, validationElement: patchSaveName">
-                        <input class="form-control" style="display: none" placeholder="Patch name" data-bind="textInput: patchSaveName">
+                    <div class="input-group patch-save" data-bind="css: { active: inSaveMode }, validationOptions: { insertMessages: false }, validationElement: patchDocument().name">
+                        <input class="form-control" style="display: none" placeholder="Patch name" data-bind="textInput: patchDocument().name">
                         <span class="input-group-btn">
-                            <button class="btn btn-success" data-class="active" type="button" data-bind="click: savePatch, css: { 'btn-spinner': spinners.save }" title="Save patch under given name">
+                            <button class="btn btn-success" data-class="active" type="button" data-bind="click: savePatch(false), css: { 'btn-spinner': spinners.save }" title="Save patch under given name">
                                 <i class="icon-save"></i> <span data-bind="text: inSaveMode() ? 'Save' : 'Save...'"></span>
                             </button>
                         </span>
@@ -324,7 +324,7 @@
                         <div class="bg-info padding padding-sm">
                             <div class="row">
                                 <div class="col-xs-6">
-                                   Name: &nbsp;<strong data-bind="text: previewItem() ? previewItem().name() : ''"></strong>
+                                   Name: &nbsp;<strong data-bind="text: previewItem() ? previewItem().Name : ''"></strong>
                                 </div>
                             </div>
                         </div>
@@ -350,8 +350,8 @@
                         <ul class="patch-list" data-bind="foreach: filteredPatches">
                             <li data-bind="css: { selected: $data === $parent.previewItem() }">
                                 <a href="#" class="patch-link" data-bind="click: $parent.previewPatch">
-                                    <span class="name" data-bind="text: name()"></span>
-                                    <span class="modified" data-bind="text: modificationDate()"></span>
+                                    <span class="name" data-bind="text: Name"></span>
+                                    <span class="modified" data-bind="text: ModificationDate"></span>
                                 </a>
                                 <a href="#" data-bind="click: $parent.removePatch" class="patch-remove"><i class="icon-trash"></i></a>
                             </li>

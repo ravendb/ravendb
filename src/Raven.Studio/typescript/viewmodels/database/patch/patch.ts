@@ -7,7 +7,6 @@ import document = require("models/database/documents/document");
 import database = require("models/resources/database");
 import messagePublisher = require("common/messagePublisher");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
-import savePatchCommand = require('commands/database/patch/savePatchCommand');
 import patchCommand = require("commands/database/patch/patchCommand");
 import getPatchesCommand = require('commands/database/patch/getPatchesCommand');
 import eventsCollector = require("common/eventsCollector");
@@ -21,17 +20,19 @@ import defaultAceCompleter = require("common/defaultAceCompleter");
 import queryCompleter = require("common/queryCompleter");
 import patchSyntax = require("viewmodels/database/patch/patchSyntax");
 import patchTester = require("viewmodels/database/patch/patchTester");
+import savedPatchesStorage = require("common/storage/savedPatchesStorage");
+import queryUtil = require("common/queryUtil");
 
 type fetcherType = (skip: number, take: number, previewCols: string[], fullCols: string[]) => JQueryPromise<pagedResult<document>>;
 
 class patchList {
 
-    previewItem = ko.observable<patchDocument>();
+    previewItem = ko.observable<patchDto>();
 
-    allPatches = ko.observableArray<patchDocument>([]);  
+    allPatches = ko.observableArray<patchDto>([]);  
 
-    private readonly useHandler: (patch: patchDocument) => void;
-    private readonly removeHandler: (patch: patchDocument) => void;
+    private readonly useHandler: (patch: patchDto) => void;
+    private readonly removeHandler: (patch: patchDto) => void;
 
     hasAnySavedPatch = ko.pureComputed(() => this.allPatches().length > 0);
 
@@ -41,10 +42,10 @@ class patchList {
             return "";
         }
 
-        return item.query();
+        return item.Query;
     });
 
-    constructor(useHandler: (patch: patchDocument) => void, removeHandler: (patch: patchDocument) => void) {
+    constructor(useHandler: (patch: patchDto) => void, removeHandler: (patch: patchDto) => void) {
         _.bindAll(this, ...["previewPatch", "removePatch", "usePatch"] as Array<keyof this>);
         this.useHandler = useHandler;
         this.removeHandler = removeHandler;
@@ -59,14 +60,14 @@ class patchList {
 
         text = text.toLowerCase();
 
-        return this.allPatches().filter(x => x.name().toLowerCase().includes(text));
+        return this.allPatches().filter(x => x.Name.toLowerCase().includes(text));
     });
 
     filters = {
         searchText: ko.observable<string>()
     };
 
-    previewPatch(item: patchDocument) {
+    previewPatch(item: patchDto) {
         this.previewItem(item);
     }
 
@@ -74,7 +75,7 @@ class patchList {
         this.useHandler(this.previewItem());
     }
 
-    removePatch(item: patchDocument) {
+    removePatch(item: patchDto) {
         if (this.previewItem() === item) {
             this.previewItem(null);
         }
@@ -82,15 +83,18 @@ class patchList {
     }
 
     loadAll(db: database) {
-        return new getPatchesCommand(db)
-            .execute()
-            .done((patches: patchDocument[]) => {
-                this.allPatches(patches);
 
-                if (this.filteredPatches().length) {
-                    this.previewItem(this.filteredPatches()[0]);
-                }
-            });
+        savedPatchesStorage.getSavedPatchesWithIndexNameCheck(db)
+            .done(queries => this.allPatches(queries));
+    }     
+
+    push(doc: patchDto) {
+        if (this.allPatches().find(x => x.Name === doc.Name)) {
+            messagePublisher.reportError("Name already exists");
+            return;
+        }
+
+        this.allPatches.push(doc);
     }
 }
 
@@ -101,10 +105,7 @@ class patch extends viewModelBase {
 
     static lastQuery = new Map<string, string>();
 
-    private lastRunQuery = ko.observable<string>();
-
     inSaveMode = ko.observable<boolean>();
-    patchSaveName = ko.observable<string>();
 
     spinners = {
         save: ko.observable<boolean>(false),
@@ -151,7 +152,7 @@ class patch extends viewModelBase {
             aceValidation: true
         });
         
-        this.patchSaveName.extend({
+        this.patchDocument().name.extend({
             required: true
         });
 
@@ -160,7 +161,7 @@ class patch extends viewModelBase {
         });
 
         this.savePatchValidationGroup = ko.validatedObservable({
-            patchSaveName: this.patchSaveName
+            patchSaveName: this.patchDocument().name
         });
     }
 
@@ -186,27 +187,26 @@ class patch extends viewModelBase {
 
         this.loadLastQuery();
 
-        // isDirty = user ran a query && current query is equal to the last run's query && the query is not saved
-        const isDirty = ko.pureComputed<boolean>(() => {
-            return this.lastRunQuery() !== undefined && this.lastRunQuery() === this.patchDocument().query() && !this.savedPatches.allPatches().find(x => x.query() === this.lastRunQuery());
-        });
-
-        this.dirtyFlag = new ko.DirtyFlag([isDirty], false);
-
         return $.when<any>(this.fetchAllIndexes(this.activeDatabase()), this.savedPatches.loadAll(this.activeDatabase()));
     }
 
     private loadLastQuery() {
+
         const myLastQuery = patch.lastQuery.get(this.activeDatabase().name);
 
         if (myLastQuery)
             this.patchDocument().query(myLastQuery);
     }
 
+
     deactivate(): void {
         super.deactivate();
 
         const queryText = this.patchDocument().query();
+        this.saveLastQuery(queryText);
+    }
+
+    private saveLastQuery(queryText: string) {
         patch.lastQuery.set(this.activeDatabase().name, queryText);
     }
 
@@ -258,48 +258,56 @@ class patch extends viewModelBase {
         }
     }
 
-    usePatch(item: patchDocument) {
+    usePatch(item: patchDto) {
         const patchDoc = this.patchDocument();
-        patchDoc.copyFrom(item);
+        patchDoc.copyFrom(new patchDocument(item));
     }
 
-    removePatch(item: patchDocument) {
-        this.confirmationMessage("Patch", `Are you sure you want to delete patch '${item.name()}'?`, ["Cancel", "Delete"])
+    removePatch(item: patchDto) {
+
+        this.confirmationMessage("Patch", `Are you sure you want to delete patch '${item.Name}'?`, ["Cancel", "Delete"])
             .done(result => {
                 if (result.can) {
-                    new deleteDocumentsCommand([item.getId()], this.activeDatabase())
-                        .execute()
-                        .done(() => {
-                            messagePublisher.reportSuccess("Deleted patch " + item.name());
-                            this.savedPatches.loadAll(this.activeDatabase());
-                        })
-                        .fail(response => messagePublisher.reportError("Failed to delete " + item.name(), response.responseText, response.statusText));
+                    savedPatchesStorage.removeSavedPatchByName(this.activeDatabase(), item.Name);
+                    this.savedPatches.loadAll(this.activeDatabase());
                 }
             });
     }
 
     runPatch() {
         if (this.isValid(this.runPatchValidationGroup)) {
-            const patchDoc = this.patchDocument();
             this.patchOnQuery();
         }
     }
 
-    savePatch() {
-        if (this.inSaveMode()) {
+    savePatch(forRecentPatches: boolean) {
+
+        if (this.inSaveMode() || forRecentPatches) {
             eventsCollector.default.reportEvent("patch", "save");
 
-            if (this.isValid(this.savePatchValidationGroup)) {
+            if (this.isValid(this.savePatchValidationGroup) || forRecentPatches) {
                 this.spinners.save(true);
-                new savePatchCommand(this.patchSaveName(), this.patchDocument(), this.activeDatabase())
-                    .execute()
+
+                const recentKeyWord = "$recent";
+
+                //const count = this.savedPatches.allPatches().filter(x => x.Name.startsWith(recentKeyWord)).length;
+
+                // temporary
+                const id = Math.floor((Math.random() * 1000000) + 1);
+
+                if (forRecentPatches)
+                    this.patchDocument().name(recentKeyWord + id + " (" + queryUtil.getCollectionOrIndexName(this.patchDocument().query()) + ")");
+
+                this.savedPatches.push(this.patchDocument().toDto());
+
+                savedPatchesStorage.storeSavedPatches(this.activeDatabase(), this.savedPatches.allPatches())
                     .always(() => this.spinners.save(false))
                     .done(() => {
                         this.inSaveMode(false);
-                        this.patchSaveName("");
+                        this.patchDocument().name("");
                         this.savePatchValidationGroup.errors.showAllMessages(false);
                         this.savedPatches.loadAll(this.activeDatabase());
-                    });
+                    });;
             }
         } else {
             if (this.isValid(this.runPatchValidationGroup)) {
@@ -319,7 +327,8 @@ class patch extends viewModelBase {
                         .execute()
                         .done((operation: operationIdDto) => {
                             notificationCenter.instance.openDetailsForOperationById(this.activeDatabase(), operation.OperationId);
-                            this.lastRunQuery(this.patchDocument().query());
+                            this.saveLastQuery("");
+                            this.savePatch(true);
                         });
                 }
             });

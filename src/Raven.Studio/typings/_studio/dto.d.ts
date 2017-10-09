@@ -291,9 +291,12 @@ type clusterNodeType = "Member" | "Promotable" | "Watcher";
 type databaseGroupNodeType = "Member" | "Promotable" | "Rehab";
 type subscriptionStartType = 'Beginning of Time' | 'Latest Document' | 'Change Vector';
 
-interface patchDto extends documentDto {
+interface patchDto {
+    Name: string;
     Query: string;
     SelectedItem: string;
+    ModificationDate: Date;
+    PatchAll: boolean;
 }
 
 interface feedbackSavedSettingsDto {
