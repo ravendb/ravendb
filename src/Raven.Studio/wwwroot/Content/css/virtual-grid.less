@@ -182,6 +182,24 @@
         overflow-x: auto;
         background-color: @gray-base;
     }
+    
+    &.condensed {
+        .column {
+            line-height: 25px;
+        }
+        
+        .cell {
+            font-size: 11px;
+            line-height: 25px;
+        }
+        
+        .column-container {
+            .column {
+                line-height: 25px;
+                font-size: 11px;
+            }
+        }
+    }
 }
 
 .resizable {
