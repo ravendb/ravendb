@@ -130,8 +130,6 @@ class queryUtil {
                 }
             }
         }
-
-        throw new Error("Bad query");
     }
 }
 
