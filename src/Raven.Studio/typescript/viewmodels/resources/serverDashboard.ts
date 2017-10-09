@@ -7,6 +7,20 @@ import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import generalUtils = require("common/generalUtils");
 import databaseItem = require("models/resources/serverDashboard/databaseItem");
 import indexingSpeed = require("models/resources/serverDashboard/indexingSpeed");
+import machineResources = require("models/resources/serverDashboard/machineResources");
+
+class machineResourcesSection {
+
+    resources = ko.observable<machineResources>();
+ 
+    onData(data: Raven.Server.Dashboard.MachineResources) {
+        if (this.resources()) {
+            this.resources().update(data);
+        } else {
+            this.resources(new machineResources(data));
+        }
+    }
+}
 
 class indexingSpeedSection {
     private table = [] as indexingSpeed[];
@@ -222,6 +236,7 @@ class serverDashboard extends viewModelBase {
     trafficSection = new trafficSection();
     databasesSection = new databasesSection();
     indexingSpeedSection = new indexingSpeedSection();
+    machineResourcesSection = new machineResourcesSection();
     
     constructor() {
         super();
@@ -292,6 +307,16 @@ class serverDashboard extends viewModelBase {
         };
     }
     
+    private createFakeMachineResources(): Raven.Server.Dashboard.MachineResources {
+        return {
+            TotalMemory: 64 * 1024 * 1024 * 1024,
+            MemoryUsage: 32 * 1024 * 1024 * 1024,
+            CpuUsage: 80,
+            Type: "MachineResources",
+            Date: moment.utc().toISOString()
+        };
+    }
+    
     compositionComplete() {
         super.compositionComplete();
         
@@ -307,6 +332,9 @@ class serverDashboard extends viewModelBase {
         
         const fakeIndexingSpeed = this.createFakeIndexingSpeed();
         this.indexingSpeedSection.onData(fakeIndexingSpeed);
+        
+        const fakeMachineResources = this.createFakeMachineResources();
+        this.machineResourcesSection.onData(fakeMachineResources);
 
         const interval = setInterval(() => {
 
@@ -355,6 +383,15 @@ class serverDashboard extends viewModelBase {
                 fakeIndexingSpeed.Date = moment.utc().toISOString();
                 
                 this.indexingSpeedSection.onData(fakeIndexingSpeed);
+            }
+            
+            // machine resources
+            {
+                fakeMachineResources.CpuUsage = _.random(0, 100);
+                fakeMachineResources.MemoryUsage = _.random(10000000, 32 * 1024 * 1024 * 1024);
+                
+                fakeMachineResources.Date = moment.utc().toISOString();
+                this.machineResourcesSection.onData(fakeMachineResources);
             }
 
         }, 1000);

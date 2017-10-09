@@ -4,6 +4,7 @@
     {
         TrafficWatch,
         DatabasesInfo,
-        IndexingSpeed
+        IndexingSpeed,
+        MachineResources
     }
 }

@@ -29,7 +29,7 @@
             </div>
 
 
-            <div class="dashboard-item dashboard-cpu-memory">
+            <div class="dashboard-item dashboard-cpu-memory" data-bind="with: machineResourcesSection">
                 <div class="panel panel-default">
                     <div class="panel-heading">
                         <h3 class="panel-title"><i class="icon-processor"></i> <span>CPU & MEMORY</span> </h3>
@@ -37,16 +37,19 @@
 
                     <div class="panel-body">
                         <div class="infogrid">
-                            <div class="infogrid-label">
+                            <div class="infogrid-label" data-bind="with: resources">
                                 <div><i class="icon-processor"></i><span>CPU</span></div>
-                                <div><strong class="text-danger">100%</strong></div>
+                                <div><strong class="text-danger" data-bind="text: cpuUsage"></strong></div>
                             </div>
                             <div class="infogrid-graph">
                                 <div class="temp-graph temp-graph-1"></div>
                             </div>
-                            <div class="infogrid-label">
+                            <div class="infogrid-label" data-bind="with: resources">
                                 <div><i class="icon-memory"></i><span>MEM</span></div>
-                                <div><strong class="text-success">2.1</strong> / 4GB</div>
+                                <div>
+                                    <strong class="text-success" data-bind="text: $root.sizeFormatter(memoryUsage())"></strong> / 
+                                    <span data-bind="text: $root.sizeFormatter(totalMemory())"></span>
+                                </div>
                                 <div><small><a href="#">see details</a></small></div>
                             </div>
                             <div class="infogrid-graph">

@@ -201,6 +201,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(TrafficWatch));
             scripter.AddType(typeof(Raven.Server.Dashboard.DatabasesInfo));
             scripter.AddType(typeof(IndexingSpeed));
+            scripter.AddType(typeof(MachineResources));
             
             // expiration 
             scripter.AddType(typeof(ExpirationConfiguration));
