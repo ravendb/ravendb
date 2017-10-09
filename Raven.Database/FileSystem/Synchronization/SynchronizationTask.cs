@@ -500,7 +500,8 @@ namespace Raven.Database.FileSystem.Synchronization
                     });
                 }
 
-                enqueued = true;
+                if (needSyncingAgain.Contains(fileHeader) == false)
+                    enqueued = true;
             }
 
             if (enqueued == false && EtagUtil.IsGreaterThan(maxEtagOfFilteredDoc, synchronizationInfo.LastSourceFileEtag))
