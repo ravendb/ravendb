@@ -195,6 +195,7 @@
     <Compile Include="Issues\RavenDB_3692.cs" />
     <Compile Include="Issues\RavenDB_3742.cs" />
     <Compile Include="Issues\RavenDB_3919.cs" />
+    <Compile Include="Issues\RavenDB_8926.cs" />
     <Compile Include="Migration\MigrationTests.cs" />
     <Compile Include="Synchronization\FailoverReadFromAllServers.cs" />
     <Compile Include="Synchronization\RavenSynchronizationTestBase.cs" />
