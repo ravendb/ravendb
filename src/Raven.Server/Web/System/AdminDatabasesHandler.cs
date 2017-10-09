@@ -237,12 +237,12 @@ namespace Raven.Server.Web.System
                     throw new BadRequestException("Database document validation failed.", e);
                 }
                 var clusterTopology = ServerStore.GetClusterTopology(context);
+                ValidateClusterMembers(clusterTopology, databaseRecord);
 
                 DatabaseTopology topology;
                 if (databaseRecord.Topology?.Members?.Count > 0)
                 {
                     topology = databaseRecord.Topology;
-                    ValidateClusterMembers(context, topology, databaseRecord);
                     foreach (var member in topology.Members)
                     {
                         var nodeUrl = clusterTopology.GetUrlFromTag(member);
@@ -403,9 +403,18 @@ namespace Raven.Server.Web.System
             return topology;
         }
 
-        private void ValidateClusterMembers(TransactionOperationContext context, DatabaseTopology topology, DatabaseRecord databaseRecord)
+        private void ValidateClusterMembers(ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
         {
-            var clusterTopology = ServerStore.GetClusterTopology(context);
+            var topology = databaseRecord.Topology;
+
+            if(topology == null)
+                return;
+
+            if (topology.Members?.Count == 1 && topology.Members[0] == "?")
+            {
+                // this is a special case where we pass '?' as member.
+                topology.Members.Clear();
+            }
 
             foreach (var node in topology.AllNodes)
             {
