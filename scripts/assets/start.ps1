@@ -14,4 +14,8 @@ if ($version -ne $assemblyVersion) {
     Start-Process "http://ravendb.net/first-run?type=start&ver=$assemblyVersion";
 }
 
-Start-Process "$executablePath" -ArgumentList ('--browser');
+$args = @( "--browser" );
+Invoke-Expression -Command "$executablePath $args";
+if ($LASTEXITCODE -ne 0) { 
+    Read-Host -Prompt "Press enter to continue..."
+}
