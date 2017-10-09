@@ -8,7 +8,6 @@ import database = require("models/resources/database");
 import messagePublisher = require("common/messagePublisher");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import patchCommand = require("commands/database/patch/patchCommand");
-import getPatchesCommand = require('commands/database/patch/getPatchesCommand');
 import eventsCollector = require("common/eventsCollector");
 import notificationCenter = require("common/notifications/notificationCenter");
 import documentBasedColumnsProvider = require("widgets/virtualGrid/columns/providers/documentBasedColumnsProvider");
@@ -118,7 +117,7 @@ class patch extends viewModelBase {
     private documentsProvider: documentBasedColumnsProvider;
     private fullDocumentsProvider: documentPropertyProvider;
 
-    patchDocument = ko.observable<patchDocument>(patchDocument.empty());
+    patchDocument = ko.observable<patchDocument>(new patchDocument());
 
     runPatchValidationGroup: KnockoutValidationGroup;
     savePatchValidationGroup: KnockoutValidationGroup;
@@ -260,7 +259,7 @@ class patch extends viewModelBase {
 
     usePatch(item: patchDto) {
         const patchDoc = this.patchDocument();
-        patchDoc.copyFrom(new patchDocument(item));
+        patchDoc.copyFrom(item);
     }
 
     removePatch(item: patchDto) {
@@ -280,40 +279,49 @@ class patch extends viewModelBase {
         }
     }
 
-    savePatch(forRecentPatches: boolean) {
+    savePatch() {
 
-        if (this.inSaveMode() || forRecentPatches) {
+        if (this.inSaveMode()) {
             eventsCollector.default.reportEvent("patch", "save");
 
-            if (this.isValid(this.savePatchValidationGroup) || forRecentPatches) {
-                this.spinners.save(true);
+            if (this.isValid(this.savePatchValidationGroup)) {
+                this.spinners.save(true);           
 
-                const recentKeyWord = "$recent";
-
-                //const count = this.savedPatches.allPatches().filter(x => x.Name.startsWith(recentKeyWord)).length;
-
-                // temporary
-                const id = Math.floor((Math.random() * 1000000) + 1);
-
-                if (forRecentPatches)
-                    this.patchDocument().name(recentKeyWord + id + " (" + queryUtil.getCollectionOrIndexName(this.patchDocument().query()) + ")");
-
-                this.savedPatches.push(this.patchDocument().toDto());
-
-                savedPatchesStorage.storeSavedPatches(this.activeDatabase(), this.savedPatches.allPatches())
+                this.savePatchInStorage()
                     .always(() => this.spinners.save(false))
                     .done(() => {
                         this.inSaveMode(false);
                         this.patchDocument().name("");
                         this.savePatchValidationGroup.errors.showAllMessages(false);
                         this.savedPatches.loadAll(this.activeDatabase());
-                    });;
+
+                        messagePublisher.reportSuccess("Patch saved succesfully");
+                    });;;
             }
         } else {
             if (this.isValid(this.runPatchValidationGroup)) {
                 this.inSaveMode(true);    
             }
         }
+    }
+
+    private saveRecentPatch() {
+        const name = this.getRecentPatchName();
+        this.patchDocument().name(name);
+        this.savePatchInStorage();
+        this.patchDocument().name("");
+    }
+
+    private savePatchInStorage() {
+        this.savedPatches.push(this.patchDocument().toDto());
+        return $.when(savedPatchesStorage.storeSavedPatches(this.activeDatabase(), this.savedPatches.allPatches()));
+    }
+
+    private getRecentPatchName(): string {
+
+        const collectionIndexName = queryUtil.getCollectionOrIndexName(this.patchDocument().query());
+
+        return "Recent Patch (" + collectionIndexName + ")";
     }
 
     private patchOnQuery() {
@@ -328,7 +336,7 @@ class patch extends viewModelBase {
                         .done((operation: operationIdDto) => {
                             notificationCenter.instance.openDetailsForOperationById(this.activeDatabase(), operation.OperationId);
                             this.saveLastQuery("");
-                            this.savePatch(true);
+                            this.saveRecentPatch();
                         });
                 }
             });

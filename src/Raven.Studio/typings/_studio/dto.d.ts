@@ -295,7 +295,7 @@ interface patchDto {
     Name: string;
     Query: string;
     SelectedItem: string;
-    ModificationDate: Date;
+    ModificationDate: string;
     PatchAll: boolean;
 }
 
