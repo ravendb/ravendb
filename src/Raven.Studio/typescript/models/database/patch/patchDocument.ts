@@ -18,7 +18,7 @@ class patchDocument {
     }
 
     private getCurrentTime(): string {
-        return new Date(new Date().getTime()).toLocaleString().replace(/\//g, "-").replace(',', '');
+        return new Date().toLocaleString().replace(/\//g, "-").replace(',', '');
     }
 
     copyFrom(incoming: patchDto) {
