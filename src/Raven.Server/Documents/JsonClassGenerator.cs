@@ -328,7 +328,7 @@ namespace Raven.Server.Documents
                     case BlittableJsonToken.EmbeddedBlittable:
                     case BlittableJsonToken.StartObject:
                     case BlittableJsonToken.StartObject | BlittableJsonToken.OffsetSizeByte | BlittableJsonToken.PropertyIdSizeByte:
-                        var type = GenerateClassTypesFromObject(prop.Name + "Class", (BlittableJsonReaderObject)prop.Value);
+                        var type = GenerateClassTypesFromObject(prop.Name, (BlittableJsonReaderObject)prop.Value);
                         fields[prop.Name] = new FieldType(type.Name, type.IsArray);
                         break;
                     case BlittableJsonToken.StartArray:
