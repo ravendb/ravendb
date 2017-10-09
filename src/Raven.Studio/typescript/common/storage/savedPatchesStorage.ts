@@ -2,7 +2,6 @@
 
 import database = require("models/resources/database");
 import storageKeyProvider = require("common/storage/storageKeyProvider");
-import patch = require("viewmodels/database/patch/patch");
 
 class savedPatchesStorage {
 
@@ -55,7 +54,6 @@ class savedPatchesStorage {
     static onDatabaseDeleted(qualifer: string, name: string) {
         const localStorageName = savedPatchesStorage.getLocalStorageKey(name);
         localStorage.removeItem(localStorageName);
-        //patch.lastQuery.clear();
     }
 }
 

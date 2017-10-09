@@ -119,12 +119,12 @@ class queryUtil {
 
     static getCollectionOrIndexName(query: string): string {
 
-        const words = query.split(" ");
+        const words = query.replace(/(\r\n|\n|\r|')/gm, ' ').replace(/\s+/g, ' ').trim().split(" ");
 
         for (let i = 0; i < words.length; i++) {
             if (words[i] === "from") {
                 if (words[i + 1] === "index") {
-                    return words[i + 2].replace(/'/g, '');
+                    return words[i + 2];
                 } else {
                     return words[i + 1];
                 }
