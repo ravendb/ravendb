@@ -67,6 +67,11 @@ class collectionsTracker {
         return matchedCollection ? matchedCollection.documentCount() : 0;
     }
     
+    getCollectionColorIndex(collectionName: string) {
+        return (_.findIndex(collectionsTracker.default.collections(), x => x.name === collectionName) - 1) % 6;
+        // 6 is the number of classes that I have defined in etl.less for colors...
+    }    
+    
     onDatabaseStatsChanged(notification: Raven.Server.NotificationCenter.Notifications.DatabaseStatsChanged, db: database) {
         const removedCollections = notification.ModifiedCollections.filter(x => x.Count === -1);
         const changedCollections = notification.ModifiedCollections.filter(x => x.Count !== -1);

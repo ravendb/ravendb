@@ -8,8 +8,6 @@ abstract class ongoingTaskEditModel extends ongoingTaskModel {
     
     protected update(dto: Raven.Client.ServerWide.Operations.OngoingTask) {
         super.update(dto);
-        
-        this.taskName(dto.TaskName);
     }
     
     protected initializeMentorValidation() {

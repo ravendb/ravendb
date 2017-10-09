@@ -108,6 +108,14 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             itemRouteToHighlight: 'databases/tasks/ongoingTasks'
         }),
         new leafMenuItem({
+            route: 'databases/tasks/editSqlEtlTask',
+            moduleId: 'viewmodels/database/tasks/editSqlEtlTask',
+            title: 'SQL ETL Task',
+            nav: false,
+            dynamicHash: appUrls.editSqlEtlTaskUrl,
+            itemRouteToHighlight: 'databases/tasks/ongoingTasks'
+        }),
+        new leafMenuItem({
             route: 'databases/tasks/import*details',
             moduleId: 'viewmodels/database/tasks/importParent',
             title: 'Import Database',

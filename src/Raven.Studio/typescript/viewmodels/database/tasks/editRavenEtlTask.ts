@@ -8,9 +8,9 @@ import eventsCollector = require("common/eventsCollector");
 import testClusterNodeConnectionCommand = require("commands/database/cluster/testClusterNodeConnectionCommand");
 import getConnectionStringInfoCommand = require("commands/database/settings/getConnectionStringInfoCommand");
 import getConnectionStringsCommand = require("commands/database/settings/getConnectionStringsCommand");
-import saveRavenEtlTaskCommand = require("commands/database/tasks/saveRavenEtlTaskCommand");
+import saveEtlTaskCommand = require("commands/database/tasks/saveEtlTaskCommand");
 import generalUtils = require("common/generalUtils");
-import ongoingTaskEtlTransformationModel = require("models/database/tasks/ongoingTaskEtlTransformationModel");
+import ongoingTaskRavenEtlTransformationModel = require("models/database/tasks/ongoingTaskRavenEtlTransformationModel");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import deleteTransformationScriptConfirm = require("viewmodels/database/tasks/deleteTransformationScriptConfirm");
 import transformationScriptSyntax = require("viewmodels/database/tasks/transformationScriptSyntax");
@@ -21,7 +21,6 @@ class editRavenEtlTask extends viewModelBase {
     editedRavenEtl = ko.observable<ongoingTaskRavenEtlEditModel>();
     isAddingNewRavenEtlTask = ko.observable<boolean>(true);
     ravenEtlConnectionStringsNames = ko.observableArray<string>([]);
-    private taskId: number = null;
 
     possibleMentors = ko.observableArray<string>([]);
 
@@ -45,8 +44,7 @@ class editRavenEtlTask extends viewModelBase {
 
         if (args.taskId) {
             // 1. Editing an Existing task
-            this.isAddingNewRavenEtlTask(false);
-            this.taskId = args.taskId;
+            this.isAddingNewRavenEtlTask(false);            
             
             getOngoingTaskInfoCommand.forRavenEtl(this.activeDatabase(), args.taskId)
                 .execute()
@@ -160,9 +158,8 @@ class editRavenEtlTask extends viewModelBase {
         }
 
         // 2. Create/add the new raven-etl task
-        const dto = this.editedRavenEtl().toDto(this.taskId);
-        
-        new saveRavenEtlTaskCommand(this.activeDatabase(), this.taskId, dto)
+        const dto = this.editedRavenEtl().toDto();
+        saveEtlTaskCommand.forRavenEtl(this.activeDatabase(), dto)
             .execute()
             .done(() => {
                 this.editedRavenEtl().isDirtyEditedScript().reset();
@@ -195,7 +192,7 @@ class editRavenEtlTask extends viewModelBase {
 
     private addNewTransformation() {
         this.editedRavenEtl().showEditTransformationArea(false);
-        this.editedRavenEtl().editedTransformationScript().update(ongoingTaskEtlTransformationModel.empty().toDto(), true);
+        this.editedRavenEtl().editedTransformationScript().update(ongoingTaskRavenEtlTransformationModel.empty().toDto(), true);
 
         this.editedRavenEtl().showEditTransformationArea(true);
         this.editedRavenEtl().isDirtyEditedScript().reset();    
@@ -206,7 +203,7 @@ class editRavenEtlTask extends viewModelBase {
         this.editedRavenEtl().isDirtyEditedScript().reset();
     }
 
-    saveEditedTransformation(transformation: ongoingTaskEtlTransformationModel) {
+    saveEditedTransformation(transformation: ongoingTaskRavenEtlTransformationModel) {
         // 1. Validate
         if (!this.isValid(this.editedRavenEtl().editedTransformationScript().validationGroup)) {
             return;
@@ -214,7 +211,7 @@ class editRavenEtlTask extends viewModelBase {
 
         // 2. Save
         if (transformation.isNew()) {
-            let newTransformationItem = new ongoingTaskEtlTransformationModel({
+            let newTransformationItem = new ongoingTaskRavenEtlTransformationModel({
                 ApplyToAllDocuments: transformation.applyScriptForAllCollections(),
                 Collections: transformation.transformScriptCollections(),
                 Disabled: false,
@@ -266,7 +263,7 @@ class editRavenEtlTask extends viewModelBase {
         });
     }
 
-    confirmRemoveTransformationScript(model: ongoingTaskEtlTransformationModel) {
+    confirmRemoveTransformationScript(model: ongoingTaskRavenEtlTransformationModel) {
         const db = this.activeDatabase();
 
         const confirmDeleteViewModel = new deleteTransformationScriptConfirm(db, model.name()); 
@@ -279,7 +276,7 @@ class editRavenEtlTask extends viewModelBase {
     }
 
     syntaxHelp() {
-        const viewmodel = new transformationScriptSyntax();
+        const viewmodel = new transformationScriptSyntax("Raven");
         app.showBootstrapDialog(viewmodel);
     }
 }

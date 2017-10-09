@@ -1,10 +1,38 @@
 <div class="modal-dialog modal-lg" role="document" id="transformationScriptSyntaxDialog">
-    <div>Simple transformation script:</div>
-    <pre class="margin-bottom"><span class="token keyword">loadTo<span class="token string">NewEmployeeCollection</span></span><span class="token punctuation"> ({</span>
+<div data-bind="visible: etlType() === 'Raven'">    
+<div>Simple Raven Etl transformation script:</div>    
+<pre class="margin-bottom"><span class="token keyword">loadTo<span class="token string">NewEmployeeCollection</span></span><span class="token punctuation"> ({</span>
             Name: this.LastName + " some new data..",
             Title: this.Title + " some new data.."
 <span class="token punctuation">})</span>;
 
 <span class="text-warning">Note: The destination collection name must be concatenated to the 'LoadTo' keyword</span>
 </pre>
+</div>
+<div data-bind="visible: etlType() === 'Sql'">
+<div>Simple Sql Etl transformation script:</div>
+                <span class="text-warning"> TODO : Format the below script nicely.....</span>
+    
+<!-- todo: format the below script nicely... -->    
+<pre>
+    var orderData = {
+    Id: id(this),
+    OrderLinesCount: this.OrderLines.length,
+    TotalCost: 0
+};
+
+for (var i = 0; i < this.OrderLines.length; i++) {
+    var line = this.OrderLines[i];
+    orderData.TotalCost += line.Cost;
+    loadToOrderLines({
+        OrderId: id(this),
+        Qty: line.Quantity,
+        Product: line.Product,
+        Cost: line.Cost
+    });
+}
+
+loadToOrders(orderData);
+</pre>    
+</div>    
 </div>

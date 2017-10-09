@@ -1,38 +1,45 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
-import ongoingTask = require("models/database/tasks/ongoingTaskModel"); 
+import ongoingTask = require("models/database/tasks/ongoingTaskModel");
+import appUrl = require("common/appUrl");
+import router = require("plugins/router");
 
 class ongoingTaskSqlEtlListModel extends ongoingTask {
+    editUrl: KnockoutComputed<string>;  
+       
     destinationServer = ko.observable<string>();
     destinationDatabase = ko.observable<string>();
-    destinationDatabaseText: KnockoutComputed<string>;
+    connectionStringName = ko.observable<string>();
+    
+    showSqlEtlDetails = ko.observable(false);
 
     constructor(dto: Raven.Client.ServerWide.Operations.OngoingTaskSqlEtlListView) {
         super();
 
-        this.initializeObservables();
         this.update(dto);
+        this.initializeObservables();        
     }
 
     initializeObservables() {
         super.initializeObservables();
-        
-        this.destinationDatabaseText = ko.pureComputed(() => {
-            return `(${this.destinationDatabase()})`;
-        });
+
+        const urls = appUrl.forCurrentDatabase();
+        this.editUrl = urls.editSqlEtl(this.taskId);
     }
 
     update(dto: Raven.Client.ServerWide.Operations.OngoingTaskSqlEtlListView) {
         super.update(dto);
+
         this.destinationServer(dto.DestinationServer);
-        this.destinationDatabaseText(dto.DestinationDatabase);
+        this.destinationDatabase(dto.DestinationDatabase);
+        this.connectionStringName(dto.ConnectionStringName);
     }
 
     editTask() {
-        // TODO...
+        router.navigate(this.editUrl());
     }
 
     toggleDetails() {
-        // TODO...
+        this.showSqlEtlDetails(!this.showSqlEtlDetails());
     }
 }
 

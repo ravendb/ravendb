@@ -100,10 +100,9 @@ class revisions extends viewModelBase {
 
     createCollectionNameAutocompleter(item: revisionsConfigurationEntry) {
         return ko.pureComputed(() => {
-            const key = item.collection();
-            const options = this.collections()
-                .filter(x => !x.isAllDocuments)
-                .map(x => x.name);
+            const key = item.collection(); 
+            const options = collectionsTracker.default.getCollectionNames();
+            
             const usedOptions = this.perCollectionConfigurations().filter(f => f !== item).map(x => x.collection());
 
             const filteredOptions = _.difference(options, usedOptions);
