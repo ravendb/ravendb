@@ -9,6 +9,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Json.Converters;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.ETL;
 using Raven.Client.ServerWide.ETL.SQL;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.PeriodicBackup;
@@ -231,12 +232,7 @@ namespace Raven.Server.Web.System
                 {
                     var tag = dbTopology.WhoseTaskIsIt(ravenEtl, store.IsPassive());
 
-                    var taskState = OngoingTaskState.Enabled;
-
-                    if (ravenEtl.Disabled || ravenEtl.Transforms.All(x => x.Disabled))
-                        taskState = OngoingTaskState.Disabled;
-                    else if (ravenEtl.Transforms.Any(x => x.Disabled))
-                        taskState = OngoingTaskState.PartiallyEnabled;
+                    var taskState = GetEtlTaskState(ravenEtl);
 
                     if (databaseRecord.RavenConnectionStrings.TryGetValue(ravenEtl.ConnectionStringName, out var connection) == false)
                         throw new InvalidOperationException(
@@ -266,12 +262,7 @@ namespace Raven.Server.Web.System
                 {
                     var tag = dbTopology.WhoseTaskIsIt(sqlEtl, store.IsPassive());
 
-                    var taskState = OngoingTaskState.Enabled;
-
-                    if (sqlEtl.Disabled || sqlEtl.Transforms.All(x => x.Disabled))
-                        taskState = OngoingTaskState.Disabled;
-                    else if (sqlEtl.Transforms.Any(x => x.Disabled))
-                        taskState = OngoingTaskState.PartiallyEnabled;
+                    var taskState = GetEtlTaskState(sqlEtl);
 
                     if (databaseRecord.SqlConnectionStrings.TryGetValue(sqlEtl.ConnectionStringName, out var sqlConnection) == false)
                         throw new InvalidOperationException(
@@ -400,7 +391,8 @@ namespace Raven.Server.Web.System
                             {
                                 TaskId = sqlEtl.TaskId,
                                 TaskName = sqlEtl.Name,
-                                Configuration = sqlEtl
+                                Configuration = sqlEtl,
+                                TaskState = GetEtlTaskState(sqlEtl)
                             });
                             break;
 
@@ -418,6 +410,7 @@ namespace Raven.Server.Web.System
                                 TaskId = ravenEtl.TaskId,
                                 TaskName = ravenEtl.Name,
                                 Configuration = ravenEtl,
+                                TaskState = GetEtlTaskState(ravenEtl)
                             });
                             break;
 
@@ -611,6 +604,18 @@ namespace Raven.Server.Web.System
                     writer.Flush();
                 }
             }
+        }
+
+        private static OngoingTaskState GetEtlTaskState<T>(EtlConfiguration<T> config) where T : ConnectionString
+        {
+            var taskState = OngoingTaskState.Enabled;
+
+            if (config.Disabled || config.Transforms.All(x => x.Disabled))
+                taskState = OngoingTaskState.Disabled;
+            else if (config.Transforms.Any(x => x.Disabled))
+                taskState = OngoingTaskState.PartiallyEnabled;
+
+            return taskState;
         }
     }
 

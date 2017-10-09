@@ -36,6 +36,10 @@ namespace SlowTests.Server.Documents.ETL
                 });
 
                 store.Admin.Server.Send(new DeleteOngoingTaskOperation(database.Name, result.TaskId, OngoingTaskType.RavenEtl));
+
+                var ongoingTask = store.Admin.Server.Send(new GetOngoingTaskInfoOperation(store.Database, result.TaskId, OngoingTaskType.RavenEtl));
+
+                Assert.Null(ongoingTask);
             }
         }
 
@@ -55,6 +59,10 @@ namespace SlowTests.Server.Documents.ETL
                         new Transformation()
                         {
                             Collections = {"Users"}
+                        },
+                        new Transformation()
+                        {
+                            Collections = {"Users"}
                         }
                     }
                 };
@@ -68,7 +76,11 @@ namespace SlowTests.Server.Documents.ETL
 
                 configuration.Transforms[0].Disabled = true;
 
-                store.Admin.Server.Send(new UpdateEtlOperation<RavenConnectionString>(result.TaskId, configuration, database.Name));
+                var update = store.Admin.Server.Send(new UpdateEtlOperation<RavenConnectionString>(result.TaskId, configuration, database.Name));
+
+                var ongoingTask = store.Admin.Server.Send(new GetOngoingTaskInfoOperation(store.Database, update.TaskId, OngoingTaskType.RavenEtl));
+
+                Assert.Equal(OngoingTaskState.PartiallyEnabled, ongoingTask.TaskState);
             }
         }
 
@@ -101,6 +113,10 @@ namespace SlowTests.Server.Documents.ETL
 
 
                 store.Admin.Server.Send(new ToggleTaskStateOperation(database.Name , result.TaskId, OngoingTaskType.RavenEtl, true));
+
+                var ongoingTask = store.Admin.Server.Send(new GetOngoingTaskInfoOperation(store.Database, result.TaskId, OngoingTaskType.RavenEtl));
+
+                Assert.Equal(OngoingTaskState.Disabled, ongoingTask.TaskState);
             }
         }
     }
