@@ -348,24 +348,14 @@ namespace Raven.StorageExporter
                             var file = StorageStream.Reading(fileStorage, header.FullPath);
                             jsonWriter.WriteStartObject();
                             jsonWriter.WritePropertyName("Data");
-                            int read = file.Read(filesBuffer, 0, filesBuffer.Length);
-                            jsonWriter.WriteRaw("\"");
-                            while (read > 0)
-                            {
-                                var base64 = Convert.ToBase64String(filesBuffer, 0, read);
-                                jsonWriter.WriteRaw(base64);
-                                jsonWriter.Flush();
-                                read = file.Read(filesBuffer, 0, filesBuffer.Length);
-                            }
-                            jsonWriter.WriteRaw("\"");
-                            jsonWriter.SealValue();
+                            WriteFileAsBase64(jsonWriter, file);
                             jsonWriter.WritePropertyName("Metadata");
                             var metadata = FilterMetadataProperties(header.Metadata);
                             metadata.WriteTo(jsonWriter);
                             jsonWriter.WritePropertyName("Key");
-                            jsonWriter.WriteValue(RemoveEndingSlashIfNeeded(header.FullPath));
+                            jsonWriter.WriteValue(RemoveSlashIfNeeded(header.FullPath));
                             jsonWriter.WritePropertyName("Etag");
-                            jsonWriter.WriteValue(header.Etag.ToString());
+                            jsonWriter.WriteNull();
                             jsonWriter.WriteEndObject();
                             lastEtag = header.Etag;
                             currentFilesCount++;
@@ -388,10 +378,42 @@ namespace Raven.StorageExporter
             } while (currentFilesCount < totalFilesCount);
         }
 
-        private string RemoveEndingSlashIfNeeded(string headerFullPath)
+        private void WriteFileAsBase64(JsonTextWriter jsonWriter, StorageStream file)
         {
-            if (headerFullPath.EndsWith("/"))
-                return headerFullPath.Substring(0, headerFullPath.Length - 1);
+            int read = file.Read(filesBuffer, 0, filesBuffer.Length);
+            jsonWriter.WriteRaw("\"");
+            var totalRead = read;
+            var leftovers = read % 3;
+            while (totalRead < file.Length)
+            {
+                var base64 = Convert.ToBase64String(filesBuffer, 0, read / 3 * 3);
+                jsonWriter.WriteRaw(base64);
+                jsonWriter.Flush();
+                leftovers = read % 3;
+                if (leftovers != 0)
+                {
+                    for (int i = 0; i < leftovers; i++)
+                    {
+                        filesBuffer[i] = filesBuffer[read - leftovers];
+                    }
+                }
+                read = file.Read(filesBuffer, leftovers, filesBuffer.Length - leftovers);
+                totalRead += read;
+            }
+            if (leftovers != 0)
+            {
+                var base64 = Convert.ToBase64String(filesBuffer, 0, leftovers);
+                jsonWriter.WriteRaw(base64);
+                jsonWriter.Flush();
+            }
+            jsonWriter.WriteRaw("\"");
+            jsonWriter.SealValue();
+        }
+
+        private string RemoveSlashIfNeeded(string headerFullPath)
+        {
+            if (headerFullPath.StartsWith("/"))
+                return headerFullPath.Substring(1);
             return headerFullPath;
         }
 
