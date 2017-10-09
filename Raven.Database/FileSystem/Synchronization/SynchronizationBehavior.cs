@@ -262,7 +262,10 @@ namespace Raven.Database.FileSystem.Synchronization
                 currentEtag = accessor.ReadFile(fileName).Etag;
             });
 
-            fs.Files.ExecuteRenameOperation(new RenameFileOperation(fileName, rename, currentEtag, sourceMetadata.DropRenameMarkers()));
+            fs.Files.ExecuteRenameOperation(new RenameFileOperation(fileName, rename, currentEtag, sourceMetadata.DropRenameMarkers())
+            {
+                ForceExistingFileRemoval = true
+            });
         }
 
         private async Task ExecuteContentUpdate(RavenJObject localMetadata, SynchronizationReport report)
