@@ -19,6 +19,8 @@ namespace Raven.Server.Smuggler.Migration
 
     public abstract class MigrationConfigurationBase
     {
+        public MajorVersion MajorVersion { get; set; }
+
         public string ServerUrl { get; set; }
 
         public string UserName { get; set; }

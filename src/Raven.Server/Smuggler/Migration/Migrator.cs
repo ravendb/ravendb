@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -13,34 +13,28 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Operations;
-using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Smuggler.Documents;
-using Raven.Server.Smuggler.Documents.Data;
-using Raven.Server.Web.System;
 using Sparrow.Json;
-using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 
 namespace Raven.Server.Smuggler.Migration
 {
     public class Migrator
     {
         private const string MigrationStateKeyBase = "Raven/Migration/Status";
-
+        
         private readonly HttpClient _client;
         private readonly string _serverUrl;
-        private readonly string _migrationStateKey;
         private readonly ServerStore _serverStore;
-        private readonly Operations _operations;
         private readonly CancellationToken _cancellationToken;
+        private MajorVersion _version;
+        private int _buildVersion;
+        private string _fullVersion;
 
         public Migrator(
             MigrationConfigurationBase configuration, 
             ServerStore serverStore,
-            Operations operations,
             CancellationToken cancellationToken)
         {
             var hasCredentials =
@@ -51,6 +45,7 @@ namespace Raven.Server.Smuggler.Migration
             {
                 UseDefaultCredentials = hasCredentials == false,
             };
+
             if (hasCredentials)
                 httpClientHandler.Credentials = new NetworkCredential(
                     configuration.UserName,
@@ -60,10 +55,77 @@ namespace Raven.Server.Smuggler.Migration
             _client = new HttpClient(httpClientHandler);
 
             _serverUrl = configuration.ServerUrl.TrimEnd('/');
-            _migrationStateKey = $"{MigrationStateKeyBase}/{_serverUrl}";
+            
             _serverStore = serverStore;
-            _operations = operations;
+            _version = configuration.MajorVersion;
             _cancellationToken = cancellationToken;
+        }
+
+        public async Task UpdateSourceServerVersion()
+        {
+            var buildInfo = await GetBuildInfo();
+            _buildVersion = buildInfo.BuildVersion;
+            _version = buildInfo.MajorVersion;
+            _fullVersion = buildInfo.FullVersion;
+
+            if (_version == MajorVersion.Unknown)
+            {
+                throw new InvalidOperationException($"Unknown build version: {buildInfo.BuildVersion}, " +
+                                                    $"product version: {buildInfo.ProductVersion}");
+            }
+        }
+
+        public async Task<BuildInfo> GetBuildInfo()
+        {
+            var url = $"{_serverUrl}/build/version";
+            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            var response = await _client.SendAsync(request, _cancellationToken);
+            if (response.IsSuccessStatusCode == false)
+            {
+                var responseString = await response.Content.ReadAsStringAsync();
+                throw new InvalidOperationException($"Failed to get build version from server: {_serverUrl}, " +
+                                                    $"status code: {response.StatusCode}, " +
+                                                    $"error: {responseString}");
+            }
+
+            using (var responseStream = await response.Content.ReadAsStreamAsync())
+            using (_serverStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                var buildInfo = await context.ReadForMemoryAsync(responseStream, "build-version-info");
+                buildInfo.TryGet(nameof(BuildInfo.BuildVersion), out int buildVersion);
+                buildInfo.TryGet(nameof(BuildInfo.ProductVersion), out string productVersion);
+                buildInfo.TryGet(nameof(BuildInfo.FullVersion), out string fullVersion);
+
+                MajorVersion version;
+                if (buildVersion == 40 || buildVersion > 40000)
+                {
+                    version = MajorVersion.V4;
+                }
+                else if (buildVersion >= 35000)
+                {
+                    version = MajorVersion.V35;
+                }
+                else if (buildVersion >= 3000)
+                {
+                    version = MajorVersion.V30;
+                }
+                else if (productVersion.StartsWith("2.") || buildVersion >= 2000)
+                {
+                    version = MajorVersion.V2;
+                }
+                else
+                {
+                    version = MajorVersion.Unknown;
+                }
+
+                return new BuildInfo
+                {
+                    ProductVersion = productVersion,
+                    BuildVersion = buildVersion,
+                    MajorVersion = version,
+                    FullVersion = fullVersion
+                };
+            }
         }
 
         public async Task MigrateDatabases(List<string> databasesToMigrate)
@@ -78,6 +140,8 @@ namespace Raven.Server.Smuggler.Migration
                 throw new InvalidOperationException("Found no databases to migrate");
 
             _serverStore.EnsureNotPassive();
+
+            await UpdateSourceServerVersion();
 
             foreach (var databaseNameToMigrate in databasesToMigrate)
             {
@@ -95,22 +159,56 @@ namespace Raven.Server.Smuggler.Migration
 
         public long StartMigrateSingleDatabase(string sourceDatabaseName, DocumentDatabase database)
         {
-            var operationId = _operations.GetNextOperationId();
+            var operationId = database.Operations.GetNextOperationId();
             var cancelToken = new OperationCancelToken(_cancellationToken);
             var result = new SmugglerResult();
 
-            _operations.AddOperation(null,
+            database.Operations.AddOperation(null,
                 $"Database name: '{sourceDatabaseName}' from url: {_serverUrl}",
                 Operations.OperationType.DatabaseMigration,
                 taskFactory: onProgress => Task.Run(async () =>
                 {
                     onProgress?.Invoke(result.Progress);
 
+                    var message = $"Importing from RavenDB {GetDescription(_version)}, " +
+                                  $"build version: {_buildVersion}";
+
+                    if (string.IsNullOrWhiteSpace(_fullVersion) == false)
+                        message += $", full version: {_fullVersion}";
+
+                    result.AddMessage(message);
+
                     using (cancelToken)
                     {
                         try
                         {
-                            await DoMigration(sourceDatabaseName, result, onProgress, database, cancelToken);
+                            var migrationStateKey = $"{MigrationStateKeyBase}/" +
+                                                 $"{GetDescription(_version)}/" +
+                                                 $"{sourceDatabaseName}/" +
+                                                 $"{_serverUrl}";
+
+                            AbstractMigrator migrator;
+                            switch (_version)
+                            {
+                                case MajorVersion.V2:
+                                    migrator = new Migrator_V2(_serverUrl, sourceDatabaseName, result, onProgress, database, _client, cancelToken);
+                                    break;
+                                case MajorVersion.V30:
+                                case MajorVersion.V35:
+                                    migrator = new Migrator_V3(_serverUrl, sourceDatabaseName, result, onProgress, 
+                                        database, _client, migrationStateKey, _version, cancelToken);
+                                    break;
+                                case MajorVersion.V4:
+                                    migrator = new Importer(_serverUrl, sourceDatabaseName, result, onProgress, database, migrationStateKey, cancelToken);
+                                    break;
+                                default:
+                                    throw new ArgumentOutOfRangeException(nameof(_version), _version, null);
+                            }
+
+                            using (migrator)
+                            {
+                                await migrator.Execute();
+                            }
                         }
                         catch (Exception e)
                         {
@@ -127,151 +225,17 @@ namespace Raven.Server.Smuggler.Migration
             return operationId;
         }
 
-        private async Task DoMigration(
-            string databaseName, 
-            SmugglerResult result, 
-            Action<IOperationProgress> onProgress,
-            DocumentDatabase database,
-            OperationCancelToken cancelToken)
+        public static string GetDescription(Enum value)
         {
-            var state = GetLastMigrationState(database);
-            const ItemType types = ItemType.Documents | ItemType.Indexes | ItemType.Transformers;
-            //TODO: ItemType.Attachments;
-            var databaseMigrationOptions = new DatabaseMigrationOptions
+            var fi = value.GetType().GetField(value.ToString());
+
+            if (fi != null)
             {
-                BatchSize = 1024,
-                OperateOnTypes = types,
-                //TODO: ExportDeletions = state != null,
-                StartDocsEtag = state?.LastDocsEtag ?? LastEtagsInfo.EtagEmpty,
-                StartDocsDeletionEtag = state?.LastDocDeleteEtag ?? LastEtagsInfo.EtagEmpty,
-                StartAttachmentsEtag = state?.LastAttachmentsEtag ?? LastEtagsInfo.EtagEmpty,
-                StartAttachmentsDeletionEtag = state?.LastAttachmentsDeleteEtag ?? LastEtagsInfo.EtagEmpty
-            };
-
-            var operationId = await GetOperationId(databaseName);
-            var exportData = new ExportData
-            {
-                DownloadOptions = JsonConvert.SerializeObject(databaseMigrationOptions),
-                ProgressTaskId = operationId
-            };
-
-            await MigrateDatabase(databaseName, exportData, database, result, onProgress, cancelToken);
-
-            await SaveLastState(databaseName, operationId, database);
-        }
-
-        private async Task SaveLastState(string databaseName, long operationId, DocumentDatabase database)
-        {
-            var retries = 0;
-            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                while (retries++ < 15)
-                {
-                    var operationStatus = await GetOperationStatus(databaseName, operationId, context);
-                    if (operationStatus == null)
-                        return;
-
-                    if (operationStatus.TryGet("Completed", out bool completed) == false)
-                        return;
-
-                    if (completed == false)
-                    {
-                        await Task.Delay(1000, _cancellationToken);
-                        continue;
-                    }
-
-                    if (operationStatus.TryGet("OperationState", out BlittableJsonReaderObject operationStateBlittable) == false)
-                    {
-                        // OperationState was added in the latest release of v3.5
-                        return;
-                    }
-
-                    var blittableCopy = context.ReadObject(operationStateBlittable, _migrationStateKey);
-                    var cmd = new MergedPutCommand(blittableCopy, _migrationStateKey, null, database);
-                    await database.TxMerger.Enqueue(cmd);
-                    return;
-                }
-            }
-        }
-
-        private async Task<BlittableJsonReaderObject> GetOperationStatus(
-            string databaseName, long operationId, TransactionOperationContext context)
-        {
-            var url = $"{_serverUrl}/databases/{databaseName}/operation/status?id={operationId}";
-            var request = new HttpRequestMessage(HttpMethod.Get, url);
-            var response = await _client.SendAsync(request, _cancellationToken);
-            if (response.StatusCode == HttpStatusCode.NotFound)
-            {
-                // the operation status was deleted before we could get it
-                return null;
+                var attributes = (DescriptionAttribute[])fi.GetCustomAttributes(typeof(DescriptionAttribute), false);
+                return (attributes.Length > 0) ? attributes[0].Description : value.ToString();
             }
 
-            if (response.IsSuccessStatusCode == false)
-            {
-                var responseString = await response.Content.ReadAsStringAsync();
-                throw new InvalidOperationException($"Failed to get operation status from server: {_serverUrl}, " +
-                                                    $"status code: {response.StatusCode}, " +
-                                                    $"error: {responseString}");
-            }
-
-            var responseStream = await response.Content.ReadAsStreamAsync();
-            return await context.ReadForMemoryAsync(responseStream, "migration-operation-state");
-        }
-
-        private async Task MigrateDatabase(
-            string databaseName, 
-            ExportData exportData,
-            DocumentDatabase database,
-            SmugglerResult result,
-            Action<IOperationProgress> onProgress,
-            OperationCancelToken cancelToken)
-        {
-            var url = $"{_serverUrl}/databases/{databaseName}/studio-tasks/exportDatabase";
-            var json = JsonConvert.SerializeObject(exportData);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
-            var request = new HttpRequestMessage(HttpMethod.Post, url)
-            {
-                Content = content
-            };
-
-            var response = await _client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, _cancellationToken);
-            if (response.IsSuccessStatusCode == false)
-            {
-                var responseString = await response.Content.ReadAsStringAsync();
-                throw new InvalidOperationException($"Failed to export database from server: {_serverUrl}, " +
-                                                    $"status code: {response.StatusCode}, " +
-                                                    $"error: {responseString}");
-            }
-
-            using (var responseStream = await response.Content.ReadAsStreamAsync())
-            using (var stream = new GZipStream(responseStream, CompressionMode.Decompress))
-            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var source = new StreamSource(stream, context))
-            {
-                var destination = new DatabaseDestination(database);
-                var options = new DatabaseSmugglerOptionsServerSide();
-                var smuggler = new DatabaseSmuggler(database, source, destination, database.Time, options, result, onProgress, cancelToken.Token);
-
-                smuggler.Execute();
-            }
-        }
-
-        private async Task<long> GetOperationId(string databaseName)
-        {
-            var url = $"{_serverUrl}/databases/{databaseName}/studio-tasks/next-operation-id";
-            var request = new HttpRequestMessage(HttpMethod.Get, url);
-            var response = await _client.SendAsync(request, _cancellationToken);
-            if (response.IsSuccessStatusCode == false)
-            {
-                var responseString = await response.Content.ReadAsStringAsync();
-                throw new InvalidOperationException($"Failed to get operation id from server: {_serverUrl}, " +
-                                                    $"status code: {response.StatusCode}, " +
-                                                    $"error: {responseString}");
-            }
-
-            var bytes = await response.Content.ReadAsByteArrayAsync();
-            var str = Encoding.UTF8.GetString(bytes, 0, bytes.Length);
-            return long.Parse(str);
+            return value.ToString();
         }
 
         private async Task CreateDatabaseIfNeeded(string databaseName)
@@ -304,19 +268,6 @@ namespace Raven.Server.Smuggler.Migration
 
                 var (index, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null);
                 await _serverStore.Cluster.WaitForIndexNotification(index);
-            }
-        }
-
-        private LastEtagsInfo GetLastMigrationState(DocumentDatabase database)
-        {
-            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var document = database.DocumentsStorage.Get(context, _migrationStateKey);
-                if (document == null)
-                    return null;
-
-                return JsonDeserializationServer.OperationState(document.Data);
             }
         }
 
