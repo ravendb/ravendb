@@ -23,6 +23,7 @@ using Raven.Client.ServerWide.Operations.ConnectionStrings;
 using Raven.Client.ServerWide.PeriodicBackup;
 using Raven.Client.ServerWide.Revisions;
 using Raven.Server.Commercial;
+using Raven.Server.Dashboard;
 using Raven.Server.Documents;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
@@ -181,7 +182,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(PatchResult));
             scripter.AddType(typeof(PatchDebugActions));
 
-            scripter.AddType(typeof(DatabasesInfo));
+            scripter.AddType(typeof(Raven.Client.ServerWide.Operations.DatabasesInfo));
 
             // smuggler
             scripter.AddType(typeof(DatabaseSmugglerImportOptions));
@@ -194,6 +195,11 @@ namespace TypingsGenerator
 
             // revisions
             scripter.AddType(typeof(RevisionsConfiguration));
+            
+            // server dashboard
+            scripter.AddType(typeof(DashboardNotificationType));
+            scripter.AddType(typeof(TrafficWatch));
+            scripter.AddType(typeof(Raven.Server.Dashboard.DatabasesInfo));
             
             // expiration 
             scripter.AddType(typeof(ExpirationConfiguration));
