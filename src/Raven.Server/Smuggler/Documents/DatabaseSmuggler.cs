@@ -44,7 +44,7 @@ namespace Raven.Server.Smuggler.Documents
             _onProgress = onProgress ?? (progress => { });
         }
 
-        public SmugglerResult Execute()
+        public SmugglerResult Execute(bool ensureProcessed = true)
         {
             var result = _result ?? new SmugglerResult();
             using (_patcher?.Initialize())
@@ -60,13 +60,16 @@ namespace Raven.Server.Smuggler.Documents
                     currentType = _source.GetNextType();
                 }
 
-                EnsureStepProcessed(result.Documents);
-                EnsureStepProcessed(result.Documents.Attachments);
-                EnsureStepProcessed(result.RevisionDocuments);
-                EnsureStepProcessed(result.RevisionDocuments.Attachments);
-                EnsureStepProcessed(result.Tombstones);
-                EnsureStepProcessed(result.Indexes);
-                EnsureStepProcessed(result.Identities);
+                if (ensureProcessed == false)
+                {
+                    EnsureStepProcessed(result.Documents);
+                    EnsureStepProcessed(result.Documents.Attachments);
+                    EnsureStepProcessed(result.RevisionDocuments);
+                    EnsureStepProcessed(result.RevisionDocuments.Attachments);
+                    EnsureStepProcessed(result.Tombstones);
+                    EnsureStepProcessed(result.Indexes);
+                    EnsureStepProcessed(result.Identities);
+                }
 
                 return result;
             }

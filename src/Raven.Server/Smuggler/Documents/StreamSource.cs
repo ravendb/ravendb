@@ -608,6 +608,10 @@ namespace Raven.Server.Smuggler.Documents
             if (type.Equals("Docs", StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.Documents;
 
+            // reading from stream/docs endpoint
+            if (type.Equals("Results", StringComparison.OrdinalIgnoreCase))
+                return DatabaseItemType.Documents;
+
             if (type.Equals(nameof(DatabaseItemType.RevisionDocuments), StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.RevisionDocuments;
 
@@ -619,9 +623,10 @@ namespace Raven.Server.Smuggler.Documents
 
             if (type.Equals(nameof(DatabaseItemType.Identities), StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.Identities;
+
             if (type.Equals("Attachments", StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.LegacyAttachments;
-            //Attachments
+            
             throw new InvalidOperationException("Got unexpected property name '" + type + "' on " + _parser.GenerateErrorState());
         }
 

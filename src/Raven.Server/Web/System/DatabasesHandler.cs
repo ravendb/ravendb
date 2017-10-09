@@ -20,6 +20,7 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Smuggler.Migration;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron.Exceptions;
@@ -264,6 +265,32 @@ namespace Raven.Server.Web.System
             }
 
             return Task.CompletedTask;
+        }
+
+        [RavenAction("/remote-server/build/version", "GET", AuthorizationStatus.Operator)]
+        public async Task GetRemoteServerBuildInfo()
+        {
+            var serverUrl = GetQueryStringValueAndAssertIfSingleAndNotEmpty("serverUrl");
+            var migrator = new Migrator(new SingleDatabaseMigrationConfiguration
+            {
+                ServerUrl = serverUrl
+            }, ServerStore, ServerStore.ServerShutdown);
+
+            var buildInfo = await migrator.GetBuildInfo();
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                var json = new DynamicJsonValue
+                {
+                    [nameof(BuildInfo.BuildVersion)] = buildInfo.BuildVersion,
+                    [nameof(BuildInfo.ProductVersion)] = buildInfo.ProductVersion,
+                    [nameof(BuildInfo.MajorVersion)] = buildInfo.MajorVersion,
+                    [nameof(BuildInfo.FullVersion)] = buildInfo.FullVersion
+                };
+
+                context.Write(writer, json);
+                writer.Flush();
+            }
         }
 
         private string GetUrl(string tag, ClusterTopology clusterTopology)

@@ -79,6 +79,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var operationId = GetLongQueryString("operationId", true);
+                var startDocumentEtag = GetLongQueryString("startEtag", false) ?? 0;
 
                 var stream = TryGetRequestFormStream("DownloadOptions") ?? RequestBodyStream();
 
@@ -103,7 +104,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                             Database,
                             "Export database: " + Database.Name,
                             Operations.OperationType.DatabaseExport,
-                            onProgress => Task.Run(() => ExportDatabaseInternal(options, onProgress, context, token), token.Token), operationId.Value, token);
+                            onProgress => Task.Run(() => ExportDatabaseInternal(options, startDocumentEtag, onProgress, context, token), token.Token), operationId.Value, token);
                 }
                 catch (Exception)
                 {
@@ -112,11 +113,16 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
-        private IOperationResult ExportDatabaseInternal(DatabaseSmugglerOptionsServerSide options, Action<IOperationProgress> onProgress, DocumentsOperationContext context, OperationCancelToken token)
+        private IOperationResult ExportDatabaseInternal(
+            DatabaseSmugglerOptionsServerSide options,
+            long startDocumentEtag,
+            Action<IOperationProgress> onProgress, 
+            DocumentsOperationContext context, 
+            OperationCancelToken token)
         {
             using (token)
             {
-                var source = new DatabaseSource(Database, 0);
+                var source = new DatabaseSource(Database, startDocumentEtag);
                 var destination = new StreamDestination(ResponseBodyStream(), context, source);
                 var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options, onProgress: onProgress, token: token.Token);
                 return smuggler.Execute();
@@ -292,7 +298,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 if (string.IsNullOrWhiteSpace(migrationConfigurationJson.DatabaseName))
                     throw new ArgumentException("Database name cannot be null or empty");
 
-                var migrator = new Migrator(migrationConfigurationJson, ServerStore, Database.Operations, ServerStore.ServerShutdown);
+                var migrator = new Migrator(migrationConfigurationJson, ServerStore, Database.DatabaseShutdown);
+                await migrator.UpdateSourceServerVersion();
                 var operationId = migrator.StartMigrateSingleDatabase(migrationConfigurationJson.DatabaseName, Database);
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
