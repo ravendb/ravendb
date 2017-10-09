@@ -20,5 +20,7 @@ namespace Raven.Database.FileSystem.Storage
         public Etag Etag { get; private set; }
 
         public RavenJObject MetadataAfterOperation { get; private set; }
+
+        public bool ForceExistingFileRemoval { get; set; }
     }
 }
