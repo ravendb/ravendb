@@ -1,3 +1,204 @@
-<div>
-    DASHBOARD
+<div id="dashboard" class="content-margin">
+    <div class="dashboard-items">
+        <div class="flex-vertical dashboard-nodecpu">
+
+            <div class="dashboard-item dashboard-node">
+                <div class="panel panel-default">
+                    <div class="panel-body">
+                        <h2>
+                            <i class="icon-server"></i><span>Node A</span>
+                        </h2>
+                        <div>
+                            <i class="icon-link"></i><span>https://ravendb.server.com:8080</span>
+                        </div>
+                        <div>
+                            <i class="icon-clock"></i><span>Up for <strong class="text-success">15</strong> days</span>
+                        </div>
+                        <div>
+                            <i class="icon-lock"></i><span>Secured <small><a href="#">Manage certificates</a></small></span>
+                        </div>
+                        <div class="flex-horizontal">
+                            <div><i class="icon-cluster"></i><span>Cluster</span></div>
+                            <div><i class="icon-cluster-member"></i> 3</div>
+                            <div><i class="icon-cluster-promotable"></i> 1</div>
+                            <div><i class="icon-cluster-rehab"></i> 1</div>
+                            <div><i class="icon-cluster-watcher"></i> 2</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="dashboard-item dashboard-cpu-memory">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <h3 class="panel-title"><i class="icon-processor"></i> <span>CPU & MEMORY</span> </h3>
+                    </div>
+
+                    <div class="panel-body">
+                        <div class="infogrid">
+                            <div class="infogrid-label">
+                                <div><i class="icon-processor"></i><span>CPU</span></div>
+                                <div><strong class="text-danger">100%</strong></div>
+                            </div>
+                            <div class="infogrid-graph">
+                                <div class="temp-graph temp-graph-1"></div>
+                            </div>
+                            <div class="infogrid-label">
+                                <div><i class="icon-memory"></i><span>MEM</span></div>
+                                <div><strong class="text-success">2.1</strong> / 4GB</div>
+                                <div><small><a href="#">see details</a></small></div>
+                            </div>
+                            <div class="infogrid-graph">
+                                <div class="temp-graph temp-graph-2"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+
+        <div class="dashboard-item dashboard-traffic" data-bind="with: trafficSection">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <h3 class="panel-title"><i class="icon-traffic"></i> <span>TRAFFIC</span></h3>
+                </div>
+                <div class="panel-body flex-vertical">
+                    <div class="infogrid margin-bottom">
+                        <div class="infogrid-label">
+                            <div class="margin-bottom"># Total Requests/s<br/>
+                                <strong data-bind="text: totalRequestsPerSecond"></strong></div>
+                            <div># Total docs data recieved/s<br/> <strong data-bind="text: $root.sizeFormatter(totalTransferPerSecond())"></strong></div>
+                        </div>
+                        <div class="infogrid-graph">
+                            <div class="temp-graph temp-graph-5"></div>
+                        </div>
+                    </div>
+                    <div class="list-container">
+                        <div class="list absolute-fill">
+                            <virtual-grid params="controller: gridController"></virtual-grid>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-item dashboard-databases" data-bind="with: databasesSection">
+            <div class="panel panel-default ">
+                <div class="panel-heading">
+                    <h3 class="panel-title"><i class="icon-database"></i> <span>DATABASES</span></h3>
+                </div>
+                <div class="panel-body flex-vertical">
+                    <div class="flex-horizontal margin-bottom">
+                        <div>Total: <strong data-bind="text: totalDatabases"></strong></div>
+                        <div>Online: <strong data-bind="text: totalOnlineDatabases"></strong></div>
+                        <div>Offline: <strong data-bind="text: totalOfflineDatabases"></strong></div>
+                    </div>
+                    <div class="list-container">
+                        <div class="list absolute-fill">
+                            <virtual-grid params="controller: gridController"></virtual-grid>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="dashboard-item dashboard-indexing">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <h3 class="panel-title"><i class="icon-indexing"></i> <span>INDEXING</span></h3>
+                </div>
+                <div class="panel-body flex-vertical">
+                    <div class="flex-horizontal flex-stretch-items flex-grow">
+
+                        <div class="infogrid margin-right margin-right-sm">
+                            <div class="infogrid-label">
+                                <div># Docs indexed/s<br/>
+                                    <strong>1234</strong>
+                                </div>
+                            </div>
+                            <div class="infogrid-graph">
+                                <div class="temp-graph temp-graph-3"></div>
+                            </div>
+                            <div class="infogrid-label">
+                                <div class="margin-bottom">
+                                    # Docs mapped/s<br />
+                                    <strong>1001</strong>
+                                </div>
+                                <div>
+                                    # Docs reduced/s<br />
+                                    <strong>3K</strong>
+                                </div>
+                            </div>
+                            <div class="infogrid-graph">
+                                <div class="temp-graph temp-graph-4"></div>
+                            </div>
+                        </div>
+                        <div class="list-container">
+                            <div class="list absolute-fill">
+
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-item dashboard-storage">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <h3 class="panel-title"><i class="icon-storage"></i><span>STORAGE</span></h3>
+
+                </div>
+                <div class="panel-body flex-vertical">
+                    <div class="flex-horizontal flex-stretch-items flex-grow">
+                        <div class="margin-right ">
+                            <div class="text-center margin-bottom">
+                                Total Docs size: <strong>5 GB</strong>
+                            </div>
+                            <div class="temp-graph temp-graph-6">
+
+                            </div>
+                        </div>
+                        <div class="flex-grow flex-vertical">
+                            <div class="flex-horizontal">
+                                <div>Drive C:</div> <div><strong>45 GB</strong></div>
+                                <div class="flex-separator"></div>
+                                <div><small> <span class="text-success">15 GB used</span> / <span>30 GB free</span> </small></div>
+                                <div class="progress">
+                                    <div class="progress-bar progress-bar-success" role="progressbar" aria-valuenow="33" aria-valuemin="0" aria-valuemax="100" style="width:33%">
+                                        <span class="sr-only">40% Complete (success)</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="list-container">
+                                <div class="list absolute-fill">
+
+                                </div>
+                            </div>
+                            <div class="flex-horizontal">
+                                <div>Drive C:</div> <div><strong>45 GB</strong></div>
+                                <div class="flex-separator"></div>
+                                <div><small> <span class="text-warning">40 GB used</span> / <span>5 GB free</span> </small></div>
+                                <div class="progress">
+                                    <div class="progress-bar progress-bar-warning" role="progressbar" aria-valuenow="88" aria-valuemin="0" aria-valuemax="100" style="width:88%">
+                                        <span class="sr-only">40% Complete (success)</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="list-container">
+                                <div class="list absolute-fill">
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>

@@ -283,6 +283,46 @@ class genUtils {
         const textLines = htmlText.split(lineSeparator);
         return textLines.length;
     }
+    
+    static findChanges<T, K>(oldArray: T[], newArray: T[], idProvider: (item: T) => K): { 
+        enter: T[],
+        change: { from: T, to: T }[],
+        exit: T[]
+    } {
+        const enter = [] as T[];
+        const change = [] as { from: T, to: T }[];
+        
+        const oldTableLookup = new Map<K, T>();
+        for (let i = 0; i < oldArray.length; i++) {
+            const id = idProvider(oldArray[i]);
+            oldTableLookup.set(id, oldArray[i]);
+        }
+        
+        for (let i = 0; i < newArray.length; i++) {
+            const item = newArray[i];
+            const id = idProvider(item);
+            if (oldTableLookup.has(id)) {
+                // change
+                change.push({
+                    from: oldTableLookup.get(id),
+                    to: item
+                });
+                oldTableLookup.delete(id)
+            } else {
+                // new
+                enter.push(item);
+            }
+        }
+        
+        // remaing items are deleted items
+        const exit = Array.from(oldTableLookup.values());
+        
+        return {
+            enter: enter, 
+            change: change, 
+            exit: exit
+        }
+    } 
 } 
 
 export = genUtils;
