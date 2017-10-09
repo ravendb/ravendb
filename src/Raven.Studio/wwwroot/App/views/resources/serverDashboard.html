@@ -106,7 +106,7 @@
             </div>
         </div>
 
-        <div class="dashboard-item dashboard-indexing">
+        <div class="dashboard-item dashboard-indexing" data-bind="with: indexingSpeedSection">
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <h3 class="panel-title"><i class="icon-indexing"></i> <span>INDEXING</span></h3>
@@ -117,7 +117,7 @@
                         <div class="infogrid margin-right margin-right-sm">
                             <div class="infogrid-label">
                                 <div># Docs indexed/s<br/>
-                                    <strong>1234</strong>
+                                    <strong data-bind="text: totalIndexedPerSecond"></strong>
                                 </div>
                             </div>
                             <div class="infogrid-graph">
@@ -126,11 +126,11 @@
                             <div class="infogrid-label">
                                 <div class="margin-bottom">
                                     # Docs mapped/s<br />
-                                    <strong>1001</strong>
+                                    <strong data-bind="text: totalMappedPerSecond"></strong>
                                 </div>
                                 <div>
                                     # Docs reduced/s<br />
-                                    <strong>3K</strong>
+                                    <strong data-bind="text: totalReducedPerSecond"></strong>
                                 </div>
                             </div>
                             <div class="infogrid-graph">
@@ -139,7 +139,7 @@
                         </div>
                         <div class="list-container">
                             <div class="list absolute-fill">
-
+                                <virtual-grid class="resizable" params="controller: gridController, condensed: true"></virtual-grid>
                             </div>
                         </div>
 
@@ -161,7 +161,7 @@
                                 Total Docs size: <strong>5 GB</strong>
                             </div>
                             <div class="temp-graph temp-graph-6">
-
+                                
                             </div>
                         </div>
                         <div class="flex-grow flex-vertical">

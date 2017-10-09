@@ -200,6 +200,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(DashboardNotificationType));
             scripter.AddType(typeof(TrafficWatch));
             scripter.AddType(typeof(Raven.Server.Dashboard.DatabasesInfo));
+            scripter.AddType(typeof(IndexingSpeed));
             
             // expiration 
             scripter.AddType(typeof(ExpirationConfiguration));
