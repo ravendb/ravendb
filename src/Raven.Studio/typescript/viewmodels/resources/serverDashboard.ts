@@ -6,6 +6,76 @@ import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import generalUtils = require("common/generalUtils");
 import databaseItem = require("models/resources/serverDashboard/databaseItem");
+import indexingSpeed = require("models/resources/serverDashboard/indexingSpeed");
+
+class indexingSpeedSection {
+    private table = [] as indexingSpeed[];
+    private gridController = ko.observable<virtualGridController<indexingSpeed>>();
+
+    totalIndexedPerSecond = ko.observable<number>(0);
+    totalMappedPerSecond = ko.observable<number>(0);
+    totalReducedPerSecond = ko.observable<number>(0);
+
+    init() {
+        const grid = this.gridController();
+
+        grid.headerVisible(true);
+
+        grid.init((s, t) => $.when({
+            totalResultCount: this.table.length,
+            items: this.table
+        }), () => {
+            return [
+                new hyperlinkColumn<indexingSpeed>(grid, x => x.database(), x => x.database(), "Database", "30%"), //TODO: hyperlink
+                new textColumn<indexingSpeed>(grid, x => x.indexedPerSecond(), "Indexed / sec", "20%"), //TODO: format
+                new textColumn<indexingSpeed>(grid, x => x.mappedPerSecond(), "Mapped / sec", "20%"), //TODO: format
+                new textColumn<indexingSpeed>(grid, x => x.reducedPerSecond(), "Reduced / sec", "20%"), //TODO: format
+            ];
+        });
+    }
+
+    onData(data: Raven.Server.Dashboard.IndexingSpeed) {
+        const items = data.Items;
+
+        const newDbs = items.map(x => x.Database);
+        const oldDbs = this.table.map(x => x.database());
+
+        const removed = _.without(oldDbs, ...newDbs);
+        removed.forEach(dbName => {
+            const matched = this.table.find(x => x.database() === dbName);
+            _.pull(this.table, matched);
+        });
+
+        items.forEach(incomingItem => {
+            const matched = this.table.find(x => x.database() === incomingItem.Database);
+            if (matched) {
+                matched.update(incomingItem);
+            } else {
+                this.table.push(new indexingSpeed(incomingItem));
+            }
+        });
+
+        this.updateTotals();
+
+        this.gridController().reset(false);
+    }
+
+    private updateTotals() {
+        let totalIndexed = 0;
+        let totalMapped = 0;
+        let totalReduced = 0;
+
+        this.table.forEach(item => {
+            totalIndexed += item.indexedPerSecond() || 0;
+            totalMapped += item.mappedPerSecond() || 0;
+            totalReduced += item.reducedPerSecond() || 0;
+        });
+
+        this.totalIndexedPerSecond(totalIndexed);
+        this.totalMappedPerSecond(totalMapped);
+        this.totalReducedPerSecond(totalReduced);
+    }
+}
 
 class databasesSection {
     private table = [] as databaseItem[];
@@ -78,8 +148,6 @@ class databasesSection {
         this.totalOnlineDatabases(totalOnline);
         this.totalOfflineDatabases(totalOffline);
     }
-    
-    
 }
 
 class trafficSection {
@@ -153,10 +221,10 @@ class serverDashboard extends viewModelBase {
     
     trafficSection = new trafficSection();
     databasesSection = new databasesSection();
+    indexingSpeedSection = new indexingSpeedSection();
     
     constructor() {
         super();
-        
     }
     
     private createFakeDatabases(): Raven.Server.Dashboard.DatabasesInfo {
@@ -201,19 +269,44 @@ class serverDashboard extends viewModelBase {
             Date: moment.utc().toISOString()
         };
     }
-    
+
+    private createFakeIndexingSpeed(): Raven.Server.Dashboard.IndexingSpeed {
+        const fakeIndexingSpeed = [] as Raven.Server.Dashboard.IndexingSpeedItem[];
+
+        for (let i = 0; i < 25; i++) {
+            const isMap = _.random(0, 1);
+            const item = {
+                Database: "Northwind #" + (i + 1),
+                IndexedPerSecond: isMap ? _.random(100, 200) : null,
+                MappedPerSecond: isMap ? null : _.random(1000, 2000),
+                ReducedPerSecond: isMap ? null : _.random(2000, 3000)
+            } as Raven.Server.Dashboard.IndexingSpeedItem;
+
+            fakeIndexingSpeed.push(item);
+        }
+
+        return {
+            Type: "IndexingSpeed",
+            Items: fakeIndexingSpeed,
+            Date: moment.utc().toISOString()
+        };
+    }
     
     compositionComplete() {
         super.compositionComplete();
         
         this.trafficSection.init();
         this.databasesSection.init();
+        this.indexingSpeedSection.init();
 
         const fakeTraffic = this.createFakeTraffic();
         this.trafficSection.onData(fakeTraffic);
         
         const fakeDatabases = this.createFakeDatabases();
         this.databasesSection.onData(fakeDatabases);
+        
+        const fakeIndexingSpeed = this.createFakeIndexingSpeed();
+        this.indexingSpeedSection.onData(fakeIndexingSpeed);
 
         const interval = setInterval(() => {
 
@@ -243,6 +336,25 @@ class serverDashboard extends viewModelBase {
                 fakeDatabases.Date = moment.utc().toISOString();
                 
                 this.databasesSection.onData(fakeDatabases);
+            }
+            
+            // indexing speed
+            {
+                fakeIndexingSpeed.Items.forEach(x => {
+                    const isMap = x.IndexedPerSecond != null;
+                    
+                    const dx = _.random(-100, 100);
+                    
+                    if (isMap) {
+                        x.IndexedPerSecond += dx;
+                    } else {
+                        x.ReducedPerSecond += dx;
+                    }
+                });
+                
+                fakeIndexingSpeed.Date = moment.utc().toISOString();
+                
+                this.indexingSpeedSection.onData(fakeIndexingSpeed);
             }
 
         }, 1000);

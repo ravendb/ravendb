@@ -3,6 +3,7 @@
     public enum DashboardNotificationType
     {
         TrafficWatch,
-        DatabasesInfo
+        DatabasesInfo,
+        IndexingSpeed
     }
 }
