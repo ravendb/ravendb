@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -316,6 +317,11 @@ namespace Raven.StorageExporter
             } while (totalIdentities > currentIdentitiesCount);
         }
 
+        private List<string> _filteredFilesystemProperties = new List<string>
+            {
+                "Raven-Synchronization-History" , "Raven-Synchronization-Version", "Raven-Synchronization-Source", "ETag", "Raven-Creation-Date" , "Raven-Last-Modified" , "Origin" , "Content-MD5" 
+            };
+
         private void WriteFilesAsAttachments(JsonTextWriter jsonWriter)
         {
             int totalFilesCount = 0;
@@ -338,7 +344,7 @@ namespace Raven.StorageExporter
                     {
                         var fileHeaders = accsesor.GetFilesAfter(lastEtag, batchSize);
                         foreach (var header in fileHeaders)
-                        {                            
+                        {                                      
                             var file = StorageStream.Reading(fileStorage, header.FullPath);
                             jsonWriter.WriteStartObject();
                             jsonWriter.WritePropertyName("Data");
@@ -354,9 +360,10 @@ namespace Raven.StorageExporter
                             jsonWriter.WriteRaw("\"");
                             jsonWriter.SealValue();
                             jsonWriter.WritePropertyName("Metadata");
-                            fileMetadata.WriteTo(jsonWriter);
+                            var metadata = FilterMetadataProperties(header.Metadata);
+                            metadata.WriteTo(jsonWriter);
                             jsonWriter.WritePropertyName("Key");
-                            jsonWriter.WriteValue(header.FullPath);
+                            jsonWriter.WriteValue(RemoveEndingSlashIfNeeded(header.FullPath));
                             jsonWriter.WritePropertyName("Etag");
                             jsonWriter.WriteValue(header.Etag.ToString());
                             jsonWriter.WriteEndObject();
@@ -381,8 +388,33 @@ namespace Raven.StorageExporter
             } while (currentFilesCount < totalFilesCount);
         }
 
+        private string RemoveEndingSlashIfNeeded(string headerFullPath)
+        {
+            if (headerFullPath.EndsWith("/"))
+                return headerFullPath.Substring(0, headerFullPath.Length - 1);
+            return headerFullPath;
+        }
+
+        private RavenJObject FilterMetadataProperties(RavenJObject headerMetadata, bool rec = false)
+        {
+            try
+            {
+                foreach (var p in _filteredFilesystemProperties)
+                {
+                    headerMetadata.Remove(p);
+                }
+            }
+            //If we are working on a snapshot we can't modify it, not sure it can happen but better safe than sorry
+            catch (InvalidOperationException)
+            {
+                if (rec)
+                    throw;
+                return FilterMetadataProperties(headerMetadata.CloneToken() as RavenJObject, true);
+            }
+            return headerMetadata;
+        }
+
         private byte[] filesBuffer = new byte[1024*3];
-        private RavenJObject fileMetadata = new RavenJObject() { { "Content-Type", "application/json; charset=utf-8" } };
 
         private void WriteAttachments(JsonTextWriter jsonWriter)
         {
