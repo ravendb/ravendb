@@ -357,7 +357,7 @@ namespace Raven.Server.Smuggler.Documents
                 ["Name"] = details.Key,
                 ["Hash"] = details.Hash,
                 ["ContentType"] = string.Empty,
-                ["size"] = details.Size,
+                ["Size"] = details.Size,
             };
             var attachmets = new DynamicJsonArray();
             attachmets.Add(attachment);
