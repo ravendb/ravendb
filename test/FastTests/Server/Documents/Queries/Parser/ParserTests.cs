@@ -54,6 +54,35 @@ update {
         }
 
         [Theory]
+        [InlineData(@"
+declare function Name() {
+    var a = ""{{\"""";
+        var b = '\'{{'
+    }
+from Orders as o
+    where o.Company == """"
+load o.Company as c, o.ShipTo as e, o.ShipVia as s
+select {
+    Name:
+    Value
+}", QueryType.Select)]
+        [InlineData(@"FROM INDEX 'Orders/Totals' 
+WHERE Employee = $emp 
+UPDATE {
+    for(var i = 0; i < this.Lines.length; i++)
+    {
+        this.Lines[i].Discount = Math.max(this.Lines[i].Discount || 0, discount);
+    }
+}", QueryType.Update)]
+        public void ParseQueries(string q, QueryType type)
+        {
+            var parser = new QueryParser();
+            parser.Init(q);
+
+            parser.Parse(type);
+        }
+
+        [Theory]
         [InlineData("Name")]
         [InlineData("Address.City")]
         [InlineData("Address.City.Zone")]
