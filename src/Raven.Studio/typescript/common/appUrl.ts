@@ -396,12 +396,12 @@ class appUrl {
         return "#databases/settings/clientConfiguration?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forDocuments(collectionName: string, db: database | databaseInfo): string {
+    static forDocuments(collectionName: string, db: database | databaseInfo | string): string {
         if (collectionName === "All Documents")
             collectionName = null;
 
         const collectionPart = collectionName ? "collection=" + encodeURIComponent(collectionName) : "";
-        const  databasePart = appUrl.getEncodedDbPart(db);
+        const databasePart = _.isString(db) ? "&database=" + encodeURIComponent(db) : appUrl.getEncodedDbPart(db);
         return "#databases/documents?" + collectionPart + databasePart;
     }
 

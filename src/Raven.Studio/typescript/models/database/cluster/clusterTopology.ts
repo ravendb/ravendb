@@ -7,6 +7,10 @@ class clusterTopology {
     currentTerm = ko.observable<number>();
     
     nodes = ko.observableArray<clusterNode>([]);
+    
+    membersCount: KnockoutComputed<number>;
+    promotablesCount: KnockoutComputed<number>;
+    watchersCount: KnockoutComputed<number>;
 
     constructor(dto: Raven.Server.NotificationCenter.Notifications.Server.ClusterTopologyChanged) {
         this.leader(dto.Leader);
@@ -23,6 +27,21 @@ class clusterTopology {
         this.nodes(_.sortBy(this.nodes(), x => x.tag().toUpperCase()));
 
         this.updateAssignedCores(dto.NodeLicenseDetails);
+        
+        this.membersCount = ko.pureComputed(() => {
+            const nodes = this.nodes();
+            return nodes.filter(x => x.type() === "Member").length;
+        });
+
+        this.promotablesCount = ko.pureComputed(() => {
+            const nodes = this.nodes();
+            return nodes.filter(x => x.type() === "Promotable").length;
+        });
+
+        this.watchersCount = ko.pureComputed(() => {
+            const nodes = this.nodes();
+            return nodes.filter(x => x.type() === "Watcher").length;
+        });
     }
 
     private mapNodes(type: clusterNodeType, dict: System.Collections.Generic.Dictionary<string, string>,

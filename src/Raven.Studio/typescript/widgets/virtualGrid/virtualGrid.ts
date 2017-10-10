@@ -842,7 +842,7 @@ class virtualGrid<T> {
                 template: `
 <div class="virtual-grid flex-window stretch" data-bind="attr: { id: gridId }, css: { condensed : condensed }">
     <div class="absolute-center loading" data-bind="visible: isLoading"><div class="global-spinner"></div></div>
-    <div class="column-container flex-window-head" data-bind="foreach: columns, visible: settings.showHeader"><div class="column" data-bind="style: { width: $data.width }"><strong data-bind="html: $data.header"></strong></div></div>    
+    <div class="column-container flex-window-head" data-bind="foreach: columns, visible: settings.showHeader"><div class="column" data-bind="style: { width: $data.width }, attr: { title: $data.header }"><strong data-bind="html: $data.header"></strong></div></div>    
     <div class="viewport flex-window-scroll" data-bind="css: { 'header-visible': settings.showHeader }">
         <div class="viewport-scroller" data-bind="style: { height: virtualHeight() + 'px', width: virtualWidth() + 'px' }, template: { afterRender: afterRender.bind($data) }">
         </div>
