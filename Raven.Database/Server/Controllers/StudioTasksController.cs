@@ -251,7 +251,7 @@ for(var customFunction in customFunctions) {{
             Database.Tasks.AddTask(task, status, new TaskActions.PendingTaskDescription
             {
                 StartTime = SystemTime.UtcNow,
-                TaskType = TaskActions.PendingTaskType.ExportDatabase,
+                TaskType = TaskActions.PendingTaskType.ImportDatabase,
                 Description = fileName
             }, out id, cts);
 
