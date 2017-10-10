@@ -203,10 +203,9 @@ namespace Raven.Database.Server.Controllers
         [HttpGet]
         [RavenRoute("streams/exploration")]
         [RavenRoute("databases/{databaseName}/streams/exploration")]
-        public Task<HttpResponseMessage> Exploration()
+        public Task<HttpResponseMessage> Exploration(string collection)
         {
             var linq = GetQueryStringValue("linq");
-            var collection = GetQueryStringValue("collection");
             int timeoutSeconds;
             if (int.TryParse(GetQueryStringValue("timeoutSeconds"), out timeoutSeconds) == false)
                 timeoutSeconds = 60;
