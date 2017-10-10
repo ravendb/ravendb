@@ -54,13 +54,21 @@ namespace Raven.Server.Documents.Handlers
         {
         }
 
+        private const string _id = "@id";
         public void AddResult(Document res)
         {            
             WriteCsvHeaderIfNeeded(res);
             foreach (var property in _properties)
             {
-                var o = new BlittablePath(property).Evaluate(res.Data, false);
-                _csvWriter.WriteField(o?.ToString());
+                if (property.Length == 3 && property.Equals(_id))
+                {
+                    _csvWriter.WriteField(res.Id);
+                }
+                else
+                {
+                    var o = new BlittablePath(property).Evaluate(res.Data, false);
+                    _csvWriter.WriteField(o?.ToString());
+                }                
             }
             _csvWriter.NextRecord();
         }
