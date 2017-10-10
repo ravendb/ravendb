@@ -49,7 +49,7 @@
                         <div class="form-group">
                             <label class="col-sm-3 control-label">Secret</label>
                             <div class="col-sm-8">
-                                <input type="text" class="form-control" readonly data-bind="value: secret" onmouseup="this.select(); return false;"/>
+                                <input type="text" class="form-control" data-bind="value: secret, valueUpdate: 'afterkeydown'"/>
                                 <a href="javascript:void(0)" data-bind="click: generateSecret, visible: !$root.settingsAccess.isReadOnly()">Generate</a>
                             </div>
                         </div>
