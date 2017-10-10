@@ -27,6 +27,7 @@ class appUrl {
         adminSettings: ko.pureComputed(() => appUrl.forAdminSettings()),
         adminSettingsCluster: ko.pureComputed(() => appUrl.forCluster()),
 
+        serverDashboard: ko.pureComputed(() => appUrl.forServerDashboard()),
         databases: ko.pureComputed(() => appUrl.forDatabases()),
         manageDatabaseGroup: ko.pureComputed(() => appUrl.forManageDatabaseGroup(appUrl.currentDatabase())),
         clientConfiguration: ko.pureComputed(() => appUrl.forClientConfiguration(appUrl.currentDatabase())),

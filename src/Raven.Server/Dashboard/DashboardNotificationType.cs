@@ -5,6 +5,7 @@
         TrafficWatch,
         DatabasesInfo,
         IndexingSpeed,
-        MachineResources
+        MachineResources,
+        DriveUsage
     }
 }
