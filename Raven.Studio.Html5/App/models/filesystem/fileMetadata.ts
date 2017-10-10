@@ -13,6 +13,8 @@ class fileMetadata {
         "Server", "Set-Cookie2", "Set-Cookie", "Vary", "Www-Authenticate", "Cache-Control", "Connection", "Date", "Pragma", "Trailer", "Upgrade",
         "Transfer-Encoding", "Via", "Warning", "X-ARR-LOG-ID", "X-ARR-SSL", "X-Forwarded-For", "X-Original-URL", "Temp-Request-Time", "DNT"]; 
 
+    headerPropsToRemoveLowerCase = [];
+
     ravenFSSize: string;
     ravenSynchronizationHistory: any;
     ravenSynchronizationVersion: string;
@@ -52,10 +54,18 @@ class fileMetadata {
             if (this.etag.startsWith('"'))
                 this.etag = this.etag.slice(1, this.etag.length - 1);
 
+            this.generateHeadersToRemoveLowerCase();
+
             // Effectively remove all the headers that are not useful as metadata.
             for (var property in dto) {
-                if (this.headerPropsToRemove.contains(property))
+                if (this.headerPropsToRemoveLowerCase.contains(property)) {
                     delete dto[property];
+                    continue;
+                }
+
+                if (this.headerPropsToRemove.contains(property)) {
+                    delete dto[property];
+                }  
             }
                        
             for (var property in dto) {                                                
@@ -66,6 +76,13 @@ class fileMetadata {
                     this.nonStandardProps.push(property);
                 }
             }
+        }
+    }
+
+    private generateHeadersToRemoveLowerCase() {
+        for (let i = 0; i < this.headerPropsToRemove.length; i++) {
+            const property = this.headerPropsToRemove[i];
+            this.headerPropsToRemoveLowerCase.push(property.toLowerCase());
         }
     }
 
