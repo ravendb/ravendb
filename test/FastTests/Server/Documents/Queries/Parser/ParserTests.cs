@@ -3,6 +3,7 @@ using Raven.Server.Documents.Queries.Parser;
 using System;
 using System.IO;
 using Raven.Client.Exceptions;
+using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Xunit;
 
@@ -11,6 +12,8 @@ namespace FastTests.Server.Documents.Queries.Parser
     public class ParserTests : NoDisposalNeeded
     {
         [Theory]
+        [InlineData(@"from Orders
+select ID('not valid argument')", QueryType.Select)]
         [InlineData(@"declare function Name() {
     var a = 's{tri}}}ng""';
     var b = function () {
@@ -47,10 +50,7 @@ update {
 ", QueryType.Update)]
         public void FailToParseInvalidJavascript(string q, QueryType type)
         {
-            var parser = new QueryParser();
-            parser.Init(q);
-
-            Assert.Throws<InvalidQueryException>(() => parser.Parse(type));
+            Assert.Throws<InvalidQueryException>(() => new QueryMetadata(q, null, 1, type));
         }
 
         [Theory]

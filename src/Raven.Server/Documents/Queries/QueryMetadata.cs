@@ -571,6 +571,10 @@ namespace Raven.Server.Documents.Queries
                     {
                         if (IsGroupBy)
                             ThrowInvalidIdInGroupByQuery(parameters);
+
+                        if (me.Arguments.Count != 1)
+                            ThrowInvalidArgumentToId(parameters);
+
                         return SelectField.Create(QueryFieldName.DocumentId, alias);
                     }
 
@@ -616,6 +620,11 @@ namespace Raven.Server.Documents.Queries
             }
             ThrowUnhandledExpressionTypeInSelect(expression.Type.ToString(), QueryText, parameters);
             return null; // never hit
+        }
+
+        private void ThrowInvalidArgumentToId(BlittableJsonReaderObject parameters)
+        {
+            throw new InvalidQueryException("id() in simple select clause must only be used without arguments", QueryText, parameters);
         }
 
         private void ThrowInvalidAggregationMethod(BlittableJsonReaderObject parameters, string methodName)
