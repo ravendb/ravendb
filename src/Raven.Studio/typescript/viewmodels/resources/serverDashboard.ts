@@ -10,7 +10,8 @@ import databaseItem = require("models/resources/serverDashboard/databaseItem");
 import indexingSpeed = require("models/resources/serverDashboard/indexingSpeed");
 import machineResources = require("models/resources/serverDashboard/machineResources");
 import driveUsage = require("models/resources/serverDashboard/driveUsage");
-import driveUsageDetails = require("models/resources/serverDashboard/driveUsageDetails");
+import clusterTopologyManager = require("common/shell/clusterTopologyManager");
+import appUrl = require("../../common/appUrl");
 
 class machineResourcesSection {
 
@@ -44,10 +45,16 @@ class indexingSpeedSection {
         }), () => {
             return [
                 new checkedColumn(true),
-                new hyperlinkColumn<indexingSpeed>(grid, x => x.database(), x => x.database(), "Database", "30%"), //TODO: hyperlink
-                new textColumn<indexingSpeed>(grid, x => x.indexedPerSecond(), "Indexed / sec", "15%"), //TODO: format
-                new textColumn<indexingSpeed>(grid, x => x.mappedPerSecond(), "Mapped / sec", "15%"), //TODO: format
-                new textColumn<indexingSpeed>(grid, x => x.reducedPerSecond(), "Reduced / sec", "15%"), //TODO: format
+                new hyperlinkColumn<indexingSpeed>(grid, x => x.database(), x => appUrl.forDocuments(null, x.database()), "Database", "30%"),
+                new textColumn<indexingSpeed>(grid, x => x.indexedPerSecond() != null ? x.indexedPerSecond() : "n/a", "Indexed / sec", "15%", {
+                    extraClass: item => item.indexedPerSecond() != null ? "" : "na"
+                }),
+                new textColumn<indexingSpeed>(grid, x => x.mappedPerSecond() != null ? x.mappedPerSecond() : "n/a", "Mapped / sec", "15%", {
+                    extraClass: item => item.mappedPerSecond() != null ? "" : "na"
+                }),
+                new textColumn<indexingSpeed>(grid, x => x.reducedPerSecond() != null ? x.reducedPerSecond() : "n/a", "Reduced / sec", "15%", {
+                    extraClass: item => item.reducedPerSecond() != null ? "" : "na"
+                })
             ];
         });
     }
@@ -117,10 +124,19 @@ class databasesSection {
             items: this.table
         }), () => {
             return [
-                new hyperlinkColumn<databaseItem>(grid, x => x.database(), x => x.database(), "Database", "30%"), //TODO: hyperlink
-                new textColumn<databaseItem>(grid, x => x.documentsCount(), "Docs #", "25%"), //TODO: format
-                new textColumn<databaseItem>(grid, x => x.indexesCount(), "Index # (Error #)", "25%"), //TODO: format
-                //TODO: other props
+                new hyperlinkColumn<databaseItem>(grid, x => x.database(), x => appUrl.forDocuments(null, x.database()), "Database", "30%"), 
+                new textColumn<databaseItem>(grid, x => x.documentsCount(), "Docs #", "25%"),
+                new textColumn<databaseItem>(grid, 
+                        x => x.indexesCount() + ( x.erroredIndexesCount() ? ' (<span class=\'text-danger\'>' + x.erroredIndexesCount() + '</span>)' : '' ), 
+                        "Index # (Error #)", 
+                        "20%",
+                        {
+                            useRawValue: () => true
+                        }),
+                new textColumn<databaseItem>(grid, x => x.alertsCount(), "Alerts #", "12%", {
+                    extraClass: item => item.alertsCount() ? 'has-alerts' : ''
+                }), 
+                new textColumn<databaseItem>(grid, x => x.replicaFactor(), "Replica factor", "12%")
             ];
         });
     }
@@ -169,12 +185,14 @@ class databasesSection {
 }
 
 class trafficSection {
+    private sizeFormatter = generalUtils.formatBytesToSize;
+    
     private table = [] as trafficItem[];
 
     private gridController = ko.observable<virtualGridController<trafficItem>>();
     
-    totalRequestsPerSecond = ko.observable<number>();
-    totalTransferPerSecond = ko.observable<number>();
+    totalRequestsPerSecond = ko.observable<number>(0);
+    totalTransferPerSecond = ko.observable<number>(0);
     
     init() {
         const grid = this.gridController();
@@ -187,9 +205,9 @@ class trafficSection {
         }), () => {
             return [
                 new checkedColumn(true),
-                new hyperlinkColumn<trafficItem>(grid, x => x.database(), x => x.database(), "Database", "30%"), //TODO: hyperlink
-                new textColumn<trafficItem>(grid, x => x.requestsPerSecond(), "Req / s", "25%"), //TODO: format
-                new textColumn<trafficItem>(grid, x => x.transferPerSecond(), "MB / s", "25%"), //TODO: format
+                new hyperlinkColumn<trafficItem>(grid, x => x.database(), x => appUrl.forDocuments(null, x.database()), "Database", "30%"),
+                new textColumn<trafficItem>(grid, x => x.requestsPerSecond(), "Requests / s", "25%"),
+                new textColumn<trafficItem>(grid, x => this.sizeFormatter(x.transferPerSecond()), "Docs data received / s", "25%")
             ];
         });
     }
@@ -236,7 +254,7 @@ class trafficSection {
 class driveUsageSection {
     private table = ko.observableArray<driveUsage>();
     
-    //TODO: total size 
+    totalDocumentsSize = ko.observable<number>(0);
     
     onData(data: Raven.Server.Dashboard.DrivesUsage) {
         const items = data.Items;
@@ -260,18 +278,21 @@ class driveUsageSection {
         });
 
         this.updateTotals();
-        
-        // TODO: update grids
     }
     
     private updateTotals() {
-        //TODO:
+        this.totalDocumentsSize(_.sum(this.table().map(x => x.totalDocumentsSpaceUsed())));
     }
 }
 
 class serverDashboard extends viewModelBase {
-    
+
+    clusterManager = clusterTopologyManager.default;
     sizeFormatter = generalUtils.formatBytesToSize;
+
+    usingHttps = location.protocol === "https:";
+
+    certificatesUrl = appUrl.forCertificates();
     
     trafficSection = new trafficSection();
     databasesSection = new databasesSection();
@@ -363,7 +384,7 @@ class serverDashboard extends viewModelBase {
         const m1 = { 
             FreeSpaceLevel: "Medium",
             FreeSpace: 10* 1024 * 1024,
-            SpaceUsed: 600 * 1024 * 1024,
+            TotalCapacity: 600 * 1024 * 1024,
             MountPoint: "c:\\",
             Items: [{
                 Database: "db1",
@@ -377,7 +398,7 @@ class serverDashboard extends viewModelBase {
         const m2 = {
             FreeSpaceLevel: "High",
             FreeSpace: 20* 1024 * 1024,
-            SpaceUsed: 123 * 1024 * 1024,
+            TotalCapacity: 123 * 1024 * 1024,
             MountPoint: "d:\\",
             Items: [{
                 Database: "db3",
@@ -440,6 +461,9 @@ class serverDashboard extends viewModelBase {
                 fakeDatabases.Items.forEach(x => {
                    const dx = _.random(-20, 20);
                    x.DocumentsCount += dx;
+                   x.AlertsCount = _.random(0, 2);
+                   x.ErroredIndexesCount = _.random(0, 2);
+                   x.Online = !!_.random(0, 1); 
                 });
                 
                 fakeDatabases.Date = moment.utc().toISOString();
@@ -478,12 +502,11 @@ class serverDashboard extends viewModelBase {
             // drive usage
             {
                 fakeDriveUsage.Items.forEach(item => {
-                    const d1 = _.random(-1000, 1000);
+                    const d1 = _.random(-10000000, 10000000);
                     item.FreeSpace += d1;
-                    item.SpaceUsed -= d1;
                     
                     item.Items.forEach(x => {
-                        const dx = _.random(-100, 100);
+                        const dx = _.random(-10000, 10000);
                         x.Size += dx;
                     });    
                 });

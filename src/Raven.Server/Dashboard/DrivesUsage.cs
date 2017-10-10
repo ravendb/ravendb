@@ -23,7 +23,7 @@ namespace Raven.Server.Dashboard
     {
         public string MountPoint { get; set; }
         
-        public long SpaceUsed { get; set; }
+        public long TotalCapacity { get; set; }
         
         public long FreeSpace { get; set; }
         
@@ -36,7 +36,7 @@ namespace Raven.Server.Dashboard
             return new DynamicJsonValue
             {
                 [nameof(MountPoint)] = MountPoint,
-                [nameof(SpaceUsed)] = SpaceUsed,
+                [nameof(TotalCapacity)] = TotalCapacity,
                 [nameof(FreeSpace)] = FreeSpace,
                 [nameof(FreeSpaceLevel)] = FreeSpaceLevel,
                 [nameof(Items)] = new DynamicJsonArray(Items.Select(x => x.ToJson()))

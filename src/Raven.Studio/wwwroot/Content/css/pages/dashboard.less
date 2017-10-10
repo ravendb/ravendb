@@ -66,6 +66,19 @@
             top: 1px;
         }
     }
+    
+    .token {
+        color: @gray-light;
+        
+        &.has-alerts {
+            color: @brand-warning-dark;
+        }
+        
+        &.null, &.na { //na = not applicable
+            color: darken(@gray-light, 30%);
+        }
+        
+    }
         
     .dashboard-items {
         flex-grow: 1;
@@ -130,6 +143,7 @@
             justify-content: center;
             line-height: 20px;
             text-align: center;
+            min-width: 160px;
         }
 
         .infogrid-graph {
