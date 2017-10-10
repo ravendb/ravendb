@@ -179,10 +179,11 @@ class filesystemEditFile extends viewModelBase {
 
             // We don't want to show certain reserved properties in the metadata text area.
             // Remove them from the DTO, restore them on save.
-            var metaPropsToRemove = ["Raven-Last-Modified", "Raven-Creation-Date", "Last-Modified", "Creation-Date", "ETag", "RavenFS-Size" ];
+            const metaPropsToRemove = ["Raven-Last-Modified", "Raven-Creation-Date", "Last-Modified", "Creation-Date", "ETag", "RavenFS-Size" ];
+            const metaPropsToRemoveLowerCase = metaPropsToRemove.map(x => x.toLowerCase());
 
             for (var property in metaDto) {
-                if (metaDto.hasOwnProperty(property) && metaPropsToRemove.contains(property)) {
+                if (metaDto.hasOwnProperty(property) && metaPropsToRemoveLowerCase.contains(property.toLowerCase())) {
                     var value = metaDto[property];
                     if (typeof (value) != "string" && typeof (value) != "number") {
                         this.metaPropsToRestoreOnSave.push({ name: property, value: JSON.stringify(value) });
