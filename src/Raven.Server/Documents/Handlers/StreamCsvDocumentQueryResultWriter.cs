@@ -8,6 +8,7 @@ using CsvHelper;
 using Lucene.Net.Index;
 using Microsoft.AspNetCore.Http;
 using Org.BouncyCastle.Utilities.Collections;
+using Raven.Client;
 using Raven.Client.Json;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields;
 using Raven.Server.Documents.Queries;
@@ -54,13 +55,12 @@ namespace Raven.Server.Documents.Handlers
         {
         }
 
-        private const string _id = "@id";
         public void AddResult(Document res)
         {            
             WriteCsvHeaderIfNeeded(res);
             foreach (var property in _properties)
             {
-                if (property.Length == 3 && property.Equals(_id))
+                if (property.Length == 3 && property.Equals(Constants.Documents.Metadata.Id))
                 {
                     _csvWriter.WriteField(res.Id);
                 }
