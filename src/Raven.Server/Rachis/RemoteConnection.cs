@@ -13,11 +13,12 @@ namespace Raven.Server.Rachis
     {
         private string _destTag;
         private string _src;
-        private readonly Stream _stream;
+        private Stream _stream;
         private readonly JsonOperationContext.ManagedPinnedBuffer _buffer;
         private Logger _log;
 
         public string Source => _src;
+        public Stream Stream => _stream;
 
         public RemoteConnection(string dest, Stream stream)
         {
@@ -133,7 +134,8 @@ namespace Raven.Server.Rachis
                 [nameof(RequestVote.LastLogTerm)] = rv.LastLogTerm,
                 [nameof(RequestVote.LastLogIndex)] = rv.LastLogIndex,
                 [nameof(RequestVote.IsTrialElection)] = rv.IsTrialElection,
-                [nameof(RequestVote.IsForcedElection)] = rv.IsForcedElection
+                [nameof(RequestVote.IsForcedElection)] = rv.IsForcedElection,
+                [nameof(RequestVote.ElectionResult)] = rv.ElectionResult
             });
         }
 

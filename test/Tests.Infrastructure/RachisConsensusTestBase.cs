@@ -49,6 +49,7 @@ namespace Tests.Infrastructure
         {
             var initialCount = RachisConsensuses.Count;
             var leaderIndex = _random.Next(0, nodeCount);
+            var timeout = TimeSpan.FromSeconds(10);
             for (var i = 0; i < nodeCount; i++)
             {
                 // ReSharper disable once ExplicitCallerInfoArgument
@@ -63,7 +64,8 @@ namespace Tests.Infrastructure
                 }
                 var follower = RachisConsensuses[i + initialCount];
                 await leader.AddToClusterAsync(follower.Url); 
-                await follower.WaitForTopology(Leader.TopologyModification.Voter);
+                var done = await follower.WaitForTopology(Leader.TopologyModification.Voter).WaitAsync(timeout);
+                Assert.True(done, "Waited for node to become a follower for too long");
             }
             var currentState = RachisConsensuses[leaderIndex + initialCount].CurrentState;
             Assert.True(currentState == RachisConsensus.State.Leader ||

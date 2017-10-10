@@ -85,7 +85,7 @@ namespace Raven.Server.Rachis
             _wakeLeader.Set();
         }
 
-        public FollowerAmbassador(RachisConsensus engine, Leader leader, ManualResetEvent wakeLeader, string tag, string url, X509Certificate2 certificate)
+        public FollowerAmbassador(RachisConsensus engine, Leader leader, ManualResetEvent wakeLeader, string tag, string url, X509Certificate2 certificate, RemoteConnection connection = null)
         {
             _engine = engine;
             _leader = leader;
@@ -93,6 +93,7 @@ namespace Raven.Server.Rachis
             _tag = tag;
             _url = url;
             _certificate = certificate;
+            _connection = connection;
             Status = AmbassadorStatus.Started;
             StatusMessage = $"Started Follower Ambassador for {_engine.Tag} > {_tag} in term {_engine.CurrentTerm}";
         }
@@ -111,16 +112,27 @@ namespace Raven.Server.Rachis
         {
             try
             {
+                var needNewConnection = _connection == null;
                 while (_leader.Running && _dispose == false)
                 {
-                    Stream stream = null;
                     try
                     {
                         try
                         {
-                            using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                            if (needNewConnection)
                             {
-                                stream = _engine.ConnectToPeer(_url, _certificate, context).Result;
+                                using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                                {
+                                    var stream = _engine.ConnectToPeer(_url, _certificate, context).Result;
+                                    _connection?.Dispose();
+                                    _connection = new RemoteConnection(_tag, _engine.Tag, stream);
+                                    ClusterTopology topology;
+                                    using (context.OpenReadTransaction())
+                                    {
+                                        topology = _engine.GetTopology(context);
+                                    }
+                                    SendHello(context, topology);
+                                }
                             }
                         }
                         catch (Exception e)
@@ -135,112 +147,113 @@ namespace Raven.Server.Rachis
                             _leader.WaitForNewEntries().Wait(TimeSpan.FromMilliseconds(_engine.ElectionTimeout.TotalMilliseconds / 2));
                             continue; // we'll retry connecting
                         }
+                        finally
+                        {
+                            needNewConnection = true;
+                        }
+
                         Status = AmbassadorStatus.Connected;
                         StatusMessage = $"Connected with {_tag}";
-                        _connection = new RemoteConnection(_tag, _engine.Tag, stream);
-                        using (_connection)
+
+                        try
                         {
-                            try
+                            _engine.AppendStateDisposable(_leader, _connection);
+                        }
+                        catch (ConcurrencyException)
+                        {
+                            // we are no longer the leader, but we'll not abort the thread here, we'll 
+                            // go to the top of the while loop and exit from there if needed
+                            continue;
+                        }
+
+                        var matchIndex = InitialNegotiationWithFollower();
+                        UpdateLastMatchFromFollower(matchIndex);
+                        SendSnapshot(_connection.Stream);
+                        var entries = new List<BlittableJsonReaderObject>();
+                        var disposeRequested = false;
+                        while (_leader.Running && disposeRequested == false)
+                        {
+                            disposeRequested = _dispose; // we give last loop before closing
+
+                            // TODO: how to close
+                            entries.Clear();
+                            using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                             {
-                                _engine.AppendStateDisposable(_leader, _connection);
-                            }
-                            catch (ConcurrencyException)
-                            {
-                                // we are no longer the leader, but we'll not abort the thread here, we'll 
-                                // go to the top of the while loop and exit from there if needed
-                                continue;
-                            }
-
-                            var matchIndex = InitialNegotiationWithFollower();
-                            UpdateLastMatchFromFollower(matchIndex);
-                            SendSnapshot(stream);
-
-                            var entries = new List<BlittableJsonReaderObject>();
-                            var disposeRequested = false;
-                            while (_leader.Running && disposeRequested == false)
-                            {
-                                disposeRequested = _dispose; // we give last loop before closing
-
-                                // TODO: how to close
-                                entries.Clear();
-                                using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                                {
-                                    AppendEntries appendEntries;
-                                    using (context.OpenReadTransaction())
-                                    {
-                                        var table = context.Transaction.InnerTransaction.OpenTable(RachisConsensus.LogsTable, RachisConsensus.EntriesSlice);
-
-                                        var reveredNextIndex = Bits.SwapBytes(_followerMatchIndex + 1);
-                                        using (Slice.External(context.Allocator, (byte*)&reveredNextIndex, sizeof(long), out Slice key))
-                                        {
-                                            long totalSize = 0;
-                                            foreach (var value in table.SeekByPrimaryKey(key, 0))
-                                            {
-                                                var entry = BuildRachisEntryToSend(context, value);
-                                                entries.Add(entry);
-                                                totalSize += entry.Size;
-                                                if (totalSize > Constants.Size.Megabyte)
-                                                    break; // TODO: Configurable?
-                                            }
-
-                                            appendEntries = new AppendEntries
-                                            {
-                                                ForceElections = ForceElectionsNow,
-                                                EntriesCount = entries.Count,
-                                                LeaderCommit = _engine.GetLastCommitIndex(context),
-                                                Term = _engine.CurrentTerm,
-                                                TruncateLogBefore = _leader.LowestIndexInEntireCluster,
-                                                PrevLogTerm = _engine.GetTermFor(context, _followerMatchIndex) ?? 0,
-                                                PrevLogIndex = _followerMatchIndex,
-                                                TimeAsLeader = _leader.LeaderShipDuration
-                                            };
-                                        }
-                                    }
-
-                                    // out of the tx, we can do network calls
-                                    UpdateLastSend(
-                                        entries.Count > 0
-                                            ? "Append Entries"
-                                            : "Heartbeat"
-                                    );
-                                    if (_engine.Log.IsInfoEnabled && entries.Count > 0)
-                                    {
-                                        _engine.Log.Info($"FollowerAmbassador {_engine.Tag}:sending {entries.Count} entries to {_tag}"
-#if DEBUG
-                                                         + $" [{string.Join(" ,", entries.Select(x => x.ToString()))}]"
-#endif
-                                        );
-                                    }
-                                    _connection.Send(context, appendEntries, entries);
-                                    var aer = _connection.Read<AppendEntriesResponse>(context);
-                                    if (aer.Success == false)
-                                    {
-                                        // shouldn't happen, the connection should be aborted if this is the case, but still
-                                        var msg =
-                                            "A negative Append Entries Response after the connection has been established shouldn't happen. Message: " +
-                                            aer.Message;
-                                        if (_engine.Log.IsInfoEnabled)
-                                        {
-                                            _engine.Log.Info($"FollowerAmbassador {_engine.Tag}: failure to append entries to {_tag} because: " + msg);
-                                        }
-                                        throw new InvalidOperationException(msg);
-                                    }
-                                    if(aer.CurrentTerm != _engine.CurrentTerm)
-                                        ThrowInvalidTermChanged(aer);
-                                    UpdateLastMatchFromFollower(aer.LastLogIndex);
-                                }
-
-                                var task = _leader.WaitForNewEntries();
-                                using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                                AppendEntries appendEntries;
                                 using (context.OpenReadTransaction())
                                 {
-                                    if (_engine.GetLastEntryIndex(context) != _followerMatchIndex)
-                                        continue; // instead of waiting, we have new entries, start immediately
+                                    var table = context.Transaction.InnerTransaction.OpenTable(RachisConsensus.LogsTable, RachisConsensus.EntriesSlice);
+
+                                    var reveredNextIndex = Bits.SwapBytes(_followerMatchIndex + 1);
+                                    using (Slice.External(context.Allocator, (byte*)&reveredNextIndex, sizeof(long), out Slice key))
+                                    {
+                                        long totalSize = 0;
+                                        foreach (var value in table.SeekByPrimaryKey(key, 0))
+                                        {
+                                            var entry = BuildRachisEntryToSend(context, value);
+                                            entries.Add(entry);
+                                            totalSize += entry.Size;
+                                            if (totalSize > Constants.Size.Megabyte)
+                                                break; // TODO: Configurable?
+                                        }
+
+                                        appendEntries = new AppendEntries
+                                        {
+                                            ForceElections = ForceElectionsNow,
+                                            EntriesCount = entries.Count,
+                                            LeaderCommit = _engine.GetLastCommitIndex(context),
+                                            Term = _engine.CurrentTerm,
+                                            TruncateLogBefore = _leader.LowestIndexInEntireCluster,
+                                            PrevLogTerm = _engine.GetTermFor(context, _followerMatchIndex) ?? 0,
+                                            PrevLogIndex = _followerMatchIndex,
+                                            TimeAsLeader = _leader.LeaderShipDuration
+                                        };
+                                    }
                                 }
-                                // either we have new entries to send, or we waited for long enough 
-                                // to send another heartbeat
-                                task.Wait(TimeSpan.FromMilliseconds(_engine.ElectionTimeout.TotalMilliseconds / 3));
+
+                                // out of the tx, we can do network calls
+                                UpdateLastSend(
+                                    entries.Count > 0
+                                        ? "Append Entries"
+                                        : "Heartbeat"
+                                );
+                                if (_engine.Log.IsInfoEnabled && entries.Count > 0)
+                                {
+                                    _engine.Log.Info($"FollowerAmbassador {_engine.Tag}:sending {entries.Count} entries to {_tag}"
+#if DEBUG
+                                                     + $" [{string.Join(" ,", entries.Select(x => x.ToString()))}]"
+#endif
+                                    );
+                                }
+                                _connection.Send(context, appendEntries, entries);
+                                var aer = _connection.Read<AppendEntriesResponse>(context);
+                                if (aer.Success == false)
+                                {
+                                    // shouldn't happen, the connection should be aborted if this is the case, but still
+                                    var msg =
+                                        "A negative Append Entries Response after the connection has been established shouldn't happen. Message: " +
+                                        aer.Message;
+                                    if (_engine.Log.IsInfoEnabled)
+                                    {
+                                        _engine.Log.Info($"FollowerAmbassador {_engine.Tag}: failure to append entries to {_tag} because: " + msg);
+                                    }
+                                    throw new InvalidOperationException(msg);
+                                }
+                                if (aer.CurrentTerm != _engine.CurrentTerm)
+                                    ThrowInvalidTermChanged(aer);
+                                UpdateLastMatchFromFollower(aer.LastLogIndex);
                             }
+
+                            var task = _leader.WaitForNewEntries();
+                            using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                            using (context.OpenReadTransaction())
+                            {
+                                if (_engine.GetLastEntryIndex(context) != _followerMatchIndex)
+                                    continue; // instead of waiting, we have new entries, start immediately
+                            }
+                            // either we have new entries to send, or we waited for long enough 
+                            // to send another heartbeat
+                            task.Wait(TimeSpan.FromMilliseconds(_engine.ElectionTimeout.TotalMilliseconds / 3));
                         }
                     }
                     catch (OperationCanceledException)
@@ -260,12 +273,14 @@ namespace Raven.Server.Rachis
                             _engine.Log.Info("Failed to talk to remote follower: " + _tag, e);
                         }
                         // notify leader about an error
+
+                        _connection?.Dispose();
+
                         _leader?.NotifyAboutException(this, e);
                         _leader.WaitForNewEntries().Wait(TimeSpan.FromMilliseconds(_engine.ElectionTimeout.TotalMilliseconds / 2));
                     }
                     finally
                     {
-                        stream?.Dispose();
                         if (Status == AmbassadorStatus.Connected)
                         {
                             StatusMessage = "Disconnected";
@@ -553,12 +568,10 @@ namespace Raven.Server.Rachis
             UpdateLastMatchFromFollower(0);
             using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                ClusterTopology clusterTopology;
                 LogLengthNegotiation lln;
                 var engineCurrentTerm = _engine.CurrentTerm;
                 using (context.OpenReadTransaction())
                 {
-                    clusterTopology = _engine.GetTopology(context);
                     var lastIndexEntry = _engine.GetLastEntryIndex(context);
                     lln = new LogLengthNegotiation
                     {
@@ -567,18 +580,6 @@ namespace Raven.Server.Rachis
                         PrevLogTerm = _engine.GetTermForKnownExisting(context, lastIndexEntry)
                     };
                 }
-                UpdateLastSend("Hello");
-                if (_engine.Log.IsInfoEnabled)
-                {
-                    _engine.Log.Info($"FollowerAmbassador {_engine.Tag}:sending Rachis hello to {_tag}");
-                }
-                _connection.Send(context, new RachisHello
-                {
-                    TopologyId = clusterTopology.TopologyId,
-                    InitialMessageType = InitialMessageType.AppendEntries,
-                    DebugDestinationIdentifier = _tag,
-                    DebugSourceIdentifier = _engine.Tag
-                });
 
                 UpdateLastSend("Negotiation");
                 _connection.Send(context, lln);
@@ -662,6 +663,22 @@ namespace Raven.Server.Rachis
                     }
                 } while (true);
             }
+        }
+
+        private void SendHello(TransactionOperationContext context, ClusterTopology clusterTopology)
+        {
+            UpdateLastSend("Hello");
+            if (_engine.Log.IsInfoEnabled)
+            {
+                _engine.Log.Info($"FollowerAmbassador {_engine.Tag}:sending Rachis hello to {_tag}");
+            }
+            _connection.Send(context, new RachisHello
+            {
+                TopologyId = clusterTopology.TopologyId,
+                InitialMessageType = InitialMessageType.AppendEntries,
+                DebugDestinationIdentifier = _tag,
+                DebugSourceIdentifier = _engine.Tag
+            });
         }
 
         public void Start()

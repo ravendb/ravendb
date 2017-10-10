@@ -1101,7 +1101,7 @@ namespace Raven.Server.ServerWide
             Stream stream = null;
             try
             {
-                tcpClient = await TcpUtils.ConnectAsync(info.Url).ConfigureAwait(false);
+                tcpClient = await TcpUtils.ConnectAsync(info.Url, _parent.TcpConnectionTimeout).ConfigureAwait(false);
                 stream = await TcpUtils.WrapStreamWithSslAsync(tcpClient, info, _parent.ClusterCertificate);
 
                 using (ContextPoolForReadOnlyOperations.AllocateOperationContext(out JsonOperationContext context))

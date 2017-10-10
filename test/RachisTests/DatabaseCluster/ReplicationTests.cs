@@ -351,7 +351,7 @@ namespace RachisTests.DatabaseCluster
             Assert.Equal(1, tasks.OngoingTasksList.Count);
             var repTask = tasks.OngoingTasksList[0] as OngoingTaskReplication;
             Assert.Equal(repTask?.DestinationDatabase, watcher.Database);
-            Assert.Equal(repTask?.DestinationUrl, watcher.Url);
+            Assert.NotNull(repTask?.DestinationUrl);
             Assert.Equal(repTask?.TaskName, watcher.Name);
 
             watcher.TaskId = Convert.ToInt64(repTask?.TaskId);
