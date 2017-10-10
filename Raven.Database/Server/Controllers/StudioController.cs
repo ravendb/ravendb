@@ -63,7 +63,7 @@ namespace Raven.Database.Server.Controllers
         [HttpGet]
         [RavenRoute("doc-preview")]
         [RavenRoute("databases/{databaseName}/doc-preview")]
-        public HttpResponseMessage GetDocumentsPreview()
+        public HttpResponseMessage GetDocumentsPreview(string collection = null)
         {
             using (var cts = new CancellationTokenSource())
             using (cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
@@ -76,9 +76,7 @@ namespace Raven.Database.Server.Controllers
                     var start = GetStart();
                     var pageSize = GetPageSize(Database.Configuration.MaxPageSize);
 
-                    var requestedCollection = GetQueryStringValue("collection");
-
-                    if (string.IsNullOrEmpty(requestedCollection))
+                    if (string.IsNullOrEmpty(collection))
                     {
                         var totalCountQuery = Database.Queries.Query(Constants.DocumentsByEntityNameIndex, new IndexQuery
                         {
@@ -98,7 +96,7 @@ namespace Raven.Database.Server.Controllers
                     {
                         var indexQuery = new IndexQuery
                         {
-                            Query = "Tag:" + RavenQuery.Escape(requestedCollection),
+                            Query = "Tag:" + RavenQuery.Escape(collection),
                             Start = start,
                             PageSize = pageSize,
                             SortedFields = new[] { new SortedField("-LastModifiedTicks") }
