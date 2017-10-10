@@ -19,7 +19,8 @@ class migrateDatabaseModel {
             DatabaseName: this.databaseName(),
             UserName: this.userName(),
             Password: this.password(),
-            Domain: this.domain()
+            Domain: this.domain(),
+            BuildInfo: null //TODO: http://issues.hibernatingrhinos.com/issue/RavenDB-8833
         };
     }
 
