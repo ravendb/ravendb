@@ -299,8 +299,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     throw new ArgumentException("Database name cannot be null or empty");
 
                 var migrator = new Migrator(migrationConfigurationJson, ServerStore, Database.DatabaseShutdown);
-                await migrator.UpdateSourceServerVersion();
-                var operationId = migrator.StartMigrateSingleDatabase(migrationConfigurationJson.DatabaseName, Database);
+                await migrator.UpdateBuildInfoIfNeeded();
+                var operationId = migrator.StartMigratingSingleDatabase(migrationConfigurationJson.DatabaseName, Database);
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {

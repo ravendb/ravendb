@@ -28,9 +28,7 @@ namespace Raven.Server.Smuggler.Migration
         private readonly string _serverUrl;
         private readonly ServerStore _serverStore;
         private readonly CancellationToken _cancellationToken;
-        private MajorVersion _version;
-        private int _buildVersion;
-        private string _fullVersion;
+        private BuildInfo _buildInfo;
 
         public Migrator(
             MigrationConfigurationBase configuration, 
@@ -57,21 +55,21 @@ namespace Raven.Server.Smuggler.Migration
             _serverUrl = configuration.ServerUrl.TrimEnd('/');
             
             _serverStore = serverStore;
-            _version = configuration.MajorVersion;
+            _buildInfo = configuration.BuildInfo;
             _cancellationToken = cancellationToken;
         }
 
-        public async Task UpdateSourceServerVersion()
+        public async Task UpdateBuildInfoIfNeeded()
         {
-            var buildInfo = await GetBuildInfo();
-            _buildVersion = buildInfo.BuildVersion;
-            _version = buildInfo.MajorVersion;
-            _fullVersion = buildInfo.FullVersion;
+            if (_buildInfo != null && _buildInfo.MajorVersion != MajorVersion.Unknown)
+                return;
 
-            if (_version == MajorVersion.Unknown)
+            _buildInfo = await GetBuildInfo();
+
+            if (_buildInfo.MajorVersion == MajorVersion.Unknown)
             {
-                throw new InvalidOperationException($"Unknown build version: {buildInfo.BuildVersion}, " +
-                                                    $"product version: {buildInfo.ProductVersion}");
+                throw new InvalidOperationException($"Unknown build version: {_buildInfo.BuildVersion}, " +
+                                                    $"product version: {_buildInfo.ProductVersion}");
             }
         }
 
@@ -130,6 +128,8 @@ namespace Raven.Server.Smuggler.Migration
 
         public async Task MigrateDatabases(List<string> databasesToMigrate)
         {
+            await UpdateBuildInfoIfNeeded();
+
             if (databasesToMigrate == null || databasesToMigrate.Count == 0)
             {
                 // migrate all databases
@@ -141,8 +141,6 @@ namespace Raven.Server.Smuggler.Migration
 
             _serverStore.EnsureNotPassive();
 
-            await UpdateSourceServerVersion();
-
             foreach (var databaseNameToMigrate in databasesToMigrate)
             {
                 await CreateDatabaseIfNeeded(databaseNameToMigrate);
@@ -153,11 +151,11 @@ namespace Raven.Server.Smuggler.Migration
                     continue;
                 }
 
-                StartMigrateSingleDatabase(databaseNameToMigrate, database);
+                StartMigratingSingleDatabase(databaseNameToMigrate, database);
             }
         }
 
-        public long StartMigrateSingleDatabase(string sourceDatabaseName, DocumentDatabase database)
+        public long StartMigratingSingleDatabase(string sourceDatabaseName, DocumentDatabase database)
         {
             var operationId = database.Operations.GetNextOperationId();
             var cancelToken = new OperationCancelToken(_cancellationToken);
@@ -170,11 +168,12 @@ namespace Raven.Server.Smuggler.Migration
                 {
                     onProgress?.Invoke(result.Progress);
 
-                    var message = $"Importing from RavenDB {GetDescription(_version)}, " +
-                                  $"build version: {_buildVersion}";
+                    var majorVersion = _buildInfo.MajorVersion;
+                    var message = $"Importing from RavenDB {GetDescription(majorVersion)}, " +
+                                  $"build version: {_buildInfo.BuildVersion}";
 
-                    if (string.IsNullOrWhiteSpace(_fullVersion) == false)
-                        message += $", full version: {_fullVersion}";
+                    if (string.IsNullOrWhiteSpace(_buildInfo.FullVersion) == false)
+                        message += $", full version: {_buildInfo.FullVersion}";
 
                     result.AddMessage(message);
 
@@ -183,12 +182,12 @@ namespace Raven.Server.Smuggler.Migration
                         try
                         {
                             var migrationStateKey = $"{MigrationStateKeyBase}/" +
-                                                 $"{GetDescription(_version)}/" +
+                                                 $"{GetDescription(majorVersion)}/" +
                                                  $"{sourceDatabaseName}/" +
                                                  $"{_serverUrl}";
 
                             AbstractMigrator migrator;
-                            switch (_version)
+                            switch (majorVersion)
                             {
                                 case MajorVersion.V2:
                                     migrator = new Migrator_V2(_serverUrl, sourceDatabaseName, result, onProgress, database, _client, cancelToken);
@@ -196,13 +195,13 @@ namespace Raven.Server.Smuggler.Migration
                                 case MajorVersion.V30:
                                 case MajorVersion.V35:
                                     migrator = new Migrator_V3(_serverUrl, sourceDatabaseName, result, onProgress, 
-                                        database, _client, migrationStateKey, _version, cancelToken);
+                                        database, _client, migrationStateKey, majorVersion, cancelToken);
                                     break;
                                 case MajorVersion.V4:
                                     migrator = new Importer(_serverUrl, sourceDatabaseName, result, onProgress, database, migrationStateKey, cancelToken);
                                     break;
                                 default:
-                                    throw new ArgumentOutOfRangeException(nameof(_version), _version, null);
+                                    throw new ArgumentOutOfRangeException(nameof(majorVersion), majorVersion, null);
                             }
 
                             using (migrator)
