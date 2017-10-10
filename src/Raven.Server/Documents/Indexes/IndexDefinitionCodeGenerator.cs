@@ -237,7 +237,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 countMap++;
                 syntaxNodeOrToken.Add(LiteralExpression(SyntaxKind.StringLiteralExpression,
-                    Literal(TriviaList(Tab, Tab, Tab), $"@\"{map}\"", map, TriviaList())));
+                    Literal(TriviaList(Tab, Tab, Tab), $"@\"{map.Replace("\"", "\"\"")}\"", map, TriviaList())));
                 if (countMap < maps.Count)
                     syntaxNodeOrToken.Add(Token(TriviaList(), SyntaxKind.CommaToken, TriviaList(LineFeed)));
             }
