@@ -5,7 +5,7 @@ using Sparrow.Utils;
 
 namespace Raven.Client.Extensions
 {
-    internal static class TaskExtensions
+    public static class TaskExtensions
     {
         public static Task IgnoreUnobservedExceptions(this Task task)
         {

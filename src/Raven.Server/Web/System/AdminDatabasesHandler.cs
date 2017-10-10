@@ -46,6 +46,7 @@ using Raven.Server.Rachis;
 using Raven.Server.Smuggler.Migration;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.Smuggler.Documents;
+using Raven.Client.Extensions;
 using Sparrow;
 using Sparrow.Utils;
 using Constants = Raven.Client.Constants;
@@ -1353,9 +1354,9 @@ namespace Raven.Server.Web.System
                 var migrationConfiguration = await context.ReadForMemoryAsync(RequestBodyStream(), "migration-configuration");
                 configuration = JsonDeserializationServer.OfflineMigrationConfiguration(migrationConfiguration);
             }
-                
+
             var dataDir = configuration.DataDirectory;
-            if(Directory.Exists(dataDir) == false)
+            if (Directory.Exists(dataDir) == false)
                 throw new DirectoryNotFoundException($"Could not find directory {dataDir}");
 
             var dataExporter = configuration.DataExporterFullPath;
@@ -1366,108 +1367,118 @@ namespace Raven.Server.Web.System
                 throw new DatabaseDoesNotExistException($"Can't import into database {databaseName} because it doesn't exist.");
             }
             var (commandline, tmpFile) = configuration.GenerateExporterCommandLine();
-            try
+            var processStartInfo = new ProcessStartInfo(dataExporter, commandline);
+            var token = new OperationCancelToken(database.DatabaseShutdown);
+            Task timeout = null;
+            if (configuration.Timeout.HasValue)
             {
-                var processStartInfo = new ProcessStartInfo(dataExporter, commandline);
-                Task timeout = null;
-                if (configuration.Timeout.HasValue)
-                {
-                    timeout = Task.Delay((int)configuration.Timeout.Value.TotalMilliseconds);
-                }
-                processStartInfo.RedirectStandardOutput = true;
-                processStartInfo.RedirectStandardInput = true;
-                var process = new Process
-                {
-                    StartInfo = processStartInfo,
-                    EnableRaisingEvents = true,
-                };
-                var token = new OperationCancelToken(database.DatabaseShutdown);
-                process.Start();
-                var result = new OfflineMigrationResult();
-                var overallProgress = result.Progress as SmugglerResult.SmugglerProgress;
-                var operationId = ServerStore.Operations.GetNextOperationId();
-
-                // send new line to avoid issue with read key 
-                process.StandardInput.WriteLine();
-
-                // don't await here - this operation is async - all we return is operation id 
-                ServerStore.Operations.AddOperation(null, $"Migration of {dataDir} to {databaseName}", Documents.Operations.Operations.OperationType.MigrationFromLegacyData,
-                    onProgress =>
-                    {
-                        return Task.Run(async () =>
-                        {
-                            try
-                            {
-                                while (true)
-                                {
-                                    var (hasTimeout, readMessage) = await ReadLineOrTimeout(process, timeout, configuration);
-                                    if (readMessage == null)
-                                    {
-                                        // reached end of stream
-                                        break;
-                                    }
-                                
-                                    if (hasTimeout)
-                                    {
-                                        //renewing the timeout so not to spam timeouts once the timeout is reached
-                                        timeout = Task.Delay(configuration.Timeout.Value);
-                                    }
-                                
-                                    result.AddInfo(readMessage);
-                                    onProgress(overallProgress);
-                                }
-                            
-                                process.WaitForExit();
-                            
-                                if (process.ExitCode != 0)
-                                {
-                                    throw new ApplicationException($"The data export tool have exited with code {process.ExitCode}.");
-                                }
-                            
-                                result.DataExporter.Processed = true;
-
-                                if (File.Exists(configuration.OutputFilePath) == false)
-                                {
-                                    throw new FileNotFoundException($"Was expecting the output file to be located at {configuration.OutputFilePath}, but it is not there.");
-                                }
-                                result.AddInfo("Starting the import phase of the migration");
-                                onProgress(overallProgress);
-                                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                                using (var reader = File.OpenRead(configuration.OutputFilePath))
-                                using (var stream = new GZipStream(reader, CompressionMode.Decompress))
-                                using (var source = new StreamSource(stream, context))
-                                {
-                                    var destination = new DatabaseDestination(database);
-                                    var smuggler = new DatabaseSmuggler(database, source, destination, database.Time, result: result, onProgress: onProgress);
-
-                                    smuggler.Execute();
-                                }
-                            }
-                            catch (Exception e)
-                            {
-                                result.AddError(e.ToString());
-                                throw;
-                            }
-                            return (IOperationResult)result;
-                        });
-                    }, operationId, token);
-            
-                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteOperationId(context, operationId);
-                }
+                timeout = Task.Delay((int)configuration.Timeout.Value.TotalMilliseconds, token.Token);
             }
-            finally
+            processStartInfo.RedirectStandardOutput = true;
+            processStartInfo.RedirectStandardInput = true;
+            var process = new Process
             {
-                if (string.IsNullOrEmpty(tmpFile) == false)
+                StartInfo = processStartInfo,
+                EnableRaisingEvents = true,
+            };            
+            process.Start();
+            var result = new OfflineMigrationResult();
+            var overallProgress = result.Progress as SmugglerResult.SmugglerProgress;
+            var operationId = ServerStore.Operations.GetNextOperationId();
+            var processDone = new AsyncManualResetEvent(token.Token);
+
+            // send new line to avoid issue with read key 
+            process.StandardInput.WriteLine();
+            process.EnableRaisingEvents = true;
+            process.Exited += (sender, e) => { processDone.Set(); };
+           
+           // don't await here - this operation is async - all we return is operation id 
+            var t = ServerStore.Operations.AddOperation(null, $"Migration of {dataDir} to {databaseName}",
+                Documents.Operations.Operations.OperationType.MigrationFromLegacyData,
+                onProgress =>
                 {
-                    new DirectoryInfo(Path.GetDirectoryName(tmpFile)).Delete(true);
-                }
+                    return Task.Run(async () =>
+                    {
+                        try
+                        {
+                            while (true)
+                            {
+                                var (hasTimeout, readMessage) = await ReadLineOrTimeout(process, timeout, configuration,token.Token);
+                                if (readMessage == null)
+                                {
+                                    // reached end of stream
+                                    break;
+                                }
+                                if(token.Token.IsCancellationRequested)
+                                    throw new TaskCanceledException("Was requested to cancel the offline migration task");
+                                if (hasTimeout)
+                                {
+                                    //renewing the timeout so not to spam timeouts once the timeout is reached
+                                    timeout = Task.Delay(configuration.Timeout.Value,token.Token);
+                                }
+
+                                result.AddInfo(readMessage);
+                                onProgress(overallProgress);
+                            }
+
+                            var ended = await processDone.WaitAsync(configuration.Timeout.HasValue ? configuration.Timeout.Value : TimeSpan.MaxValue);
+                            if (ended == false)
+                            {
+                                if (token.Token.IsCancellationRequested)
+                                    throw new TaskCanceledException("Was requested to cancel the offline migration process midway");
+                                token.Cancel(); //To release the MRE
+                                throw new TimeoutException($"After waiting for {configuration.Timeout.HasValue} the export tool didn't exit, aborting.");
+                            }
+
+                            if (process.ExitCode != 0)
+                            {
+                                throw new ApplicationException($"The data export tool have exited with code {process.ExitCode}.");
+                            }
+
+                            result.DataExporter.Processed = true;
+
+                            if (File.Exists(configuration.OutputFilePath) == false)
+                            {
+                                throw new FileNotFoundException($"Was expecting the output file to be located at {configuration.OutputFilePath}, but it is not there.");
+                            }
+                            result.AddInfo("Starting the import phase of the migration");
+                            onProgress(overallProgress);
+                            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                            using (var reader = File.OpenRead(configuration.OutputFilePath))
+                            using (var stream = new GZipStream(reader, CompressionMode.Decompress))
+                            using (var source = new StreamSource(stream, context))
+                            {
+                                var destination = new DatabaseDestination(database);
+                                var smuggler = new DatabaseSmuggler(database, source, destination, database.Time, result: result, onProgress: onProgress,
+                                    token: token.Token);
+
+                                smuggler.Execute();
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            result.AddError(e.ToString());
+                            throw;
+                        }
+                        finally
+                        {
+                            if (string.IsNullOrEmpty(tmpFile) == false)
+                            {
+                                new FileInfo(Path.GetDirectoryName(tmpFile)).Delete();
+                            }
+                        }
+                        return (IOperationResult)result;
+                    });
+                }, operationId, token);
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteOperationId(context, operationId);
             }
         }
 
-        private static async Task<(bool HasTimeout, string Line)> ReadLineOrTimeout(Process process, Task timeout, OfflineMigrationConfiguration configuration)
+        private static async Task<(bool HasTimeout, string Line)> ReadLineOrTimeout(Process process, Task timeout, OfflineMigrationConfiguration configuration, CancellationToken token)
         {
             var readline = process.StandardOutput.ReadLineAsync();
             string progressLine = null;
@@ -1481,7 +1492,7 @@ namespace Raven.Server.Web.System
             }
             else
             {
-              progressLine = await readline;
+              progressLine = await readline.WithCancellation(token);
             } 
             return (false, progressLine);
         }
