@@ -304,9 +304,6 @@ namespace Raven.Server.ServerWide.Maintenance
                         continue;
                     }
 
-                    if (_server.LicenseManager.CanDynamicallyDistributeNodes() == false)
-                        continue;
-
                     if (TryFindFitNode(promotable, dbName, topology, clusterTopology, current, out var node) == false)
                     {
                         if (topology.PromotablesStatus.TryGetValue(promotable, out var currentStatus) == false
@@ -319,7 +316,10 @@ namespace Raven.Server.ServerWide.Maintenance
                         continue;
                     }
 
-                    //replace the bad promotable otherwise we will continute to add more and more nodes.
+                    if (_server.LicenseManager.CanDynamicallyDistributeNodes() == false)
+                        continue;
+
+                    // replace the bad promotable otherwise we will continue to add more and more nodes.
                     topology.Promotables.Add(node);
                     topology.DemotionReasons[node] = $"Just replaced the promotable node {promotable}";
                     topology.PromotablesStatus[node] = DatabasePromotionStatus.WaitingForFirstPromotion;
@@ -368,12 +368,12 @@ namespace Raven.Server.ServerWide.Maintenance
                         if (topology.DynamicNodesDistribution == false)
                             continue;
 
-                        if (_server.LicenseManager.CanDynamicallyDistributeNodes() == false)
-                            continue;
-
                         if (goodMembers < topology.ReplicationFactor &&
                             TryFindFitNode(rehab, dbName, topology, clusterTopology, current, out var node))
                         {
+                            if (_server.LicenseManager.CanDynamicallyDistributeNodes() == false)
+                                continue;
+
                             topology.Promotables.Add(node);
                             topology.DemotionReasons[node] = $"Maintain the replication factor and create new replica instead of node {rehab}";
                             topology.PromotablesStatus[node] = DatabasePromotionStatus.WaitingForFirstPromotion;
