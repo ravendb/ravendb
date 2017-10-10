@@ -23,6 +23,14 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             dynamicHash: appUrls.connectionStrings,
             enabled: accessHelper.isGlobalAdmin
         }),
+        new leafMenuItem({
+            route: 'databases/settings/clientConfiguration',
+            moduleId: 'viewmodels/database/settings/clientConfiguration',
+            title: 'Client Configuration',
+            nav: true,
+            css: 'icon-client-configuration',
+            dynamicHash: appUrls.clientConfiguration
+        }),
         /* TODO
         new leafMenuItem({
             route: 'databases/settings/quotas',
@@ -47,14 +55,6 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-plus',
             dynamicHash: appUrls.expiration
-        }),
-        new leafMenuItem({
-            route: 'databases/settings/clientConfiguration',
-            moduleId: 'viewmodels/database/settings/clientConfiguration',
-            title: 'Client Configuration',
-            nav: true,
-            css: 'icon-client-configuration',
-            dynamicHash: appUrls.clientConfiguration
         }),
         new leafMenuItem({
             route: 'databases/manageDatabaseGroup',

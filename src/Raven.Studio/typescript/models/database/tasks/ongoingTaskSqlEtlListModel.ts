@@ -39,7 +39,7 @@ class ongoingTaskSqlEtlListModel extends ongoingTask {
     }
 
     toggleDetails() {
-        this.showSqlEtlDetails(!this.showSqlEtlDetails());
+        this.showSqlEtlDetails.toggle(); 
     }
 }
 

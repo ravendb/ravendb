@@ -64,7 +64,7 @@ class ongoingTaskBackupListModel extends ongoingTask {
     }
 
     toggleDetails() {
-        this.showBackupDetails(!this.showBackupDetails());
+        this.showBackupDetails.toggle();
 
         if (this.showBackupDetails()) {
             this.refreshBackupInfo();

@@ -8,10 +8,9 @@
                 </button>
             </div>
             <div class="panel">
-                <form class="flex-form">
-                    <div class="panel-body" data-bind="with: editedSqlEtl">
-                        <h3 data-bind="visible: $parent.isAddingNewSqlEtlTask">New SQL ETL</h3>
-                        <h3 data-bind="visible: !$parent.isAddingNewSqlEtlTask()">Edit SQL ETL</h3>
+                <form class="flex-form" data-bind="with: editedSqlEtl">
+                    <div class="panel-body">                       
+                        <h3 data-bind="text: $parent.isAddingNewSqlEtlTask() ? `New SQL ETL` : `Edit SQL ETL`"></h3>
                         <div class="form-group">
                             <label for="taskName" class="control-label">Task Name</label>
                             <div class="flex-grow">
@@ -20,22 +19,20 @@
                                        data-bind="textInput: taskName">
                             </div>
                         </div>
-                        <div class="form-group">
+                        <div class="form-group" data-bind="validationOptions: { insertMessages: false }, validationElement: connectionStringName">
                             <label class="control-label">Connection String</label>
-                            <div class="flex-grow" data-bind="validationOptions: { insertMessages: false }, validationElement: connectionStringName">
-                                <div class="dropdown btn-block">
-                                    <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
-                                           data-bind="textInput: connectionStringName, attr: { id: 'connectionStringInput', disabled: $root.sqlEtlConnectionStringsNames().length == 0 }"
-                                           placeholder="Select a connection String">
+                            <div class="flex-grow">
+                                <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown"
+                                        data-bind="textInput: connectionStringName, attr: { disabled: $root.sqlEtlConnectionStringsNames().length === 0 }">
+                                    <span data-bind="text: connectionStringName() || 'Select a connection string'"></span>
                                     <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
-                                    <ul class="dropdown-menu max-height"
-                                        data-bind="foreach: $root.sqlEtlConnectionStringsNames">
-                                        <!-- todo: autocomplete...-->
-                                        <li data-bind="click: _.partial($root.useConnectionString, $data)">
-                                            <a href="#" data-bind="text: $data"></a>
-                                        </li>
-                                    </ul>
-                                </div>
+                                </button>
+                                <ul class="dropdown-menu max-height"
+                                    data-bind="foreach: $root.sqlEtlConnectionStringsNames">
+                                    <li data-bind="click: _.partial($root.useConnectionString, $data)">
+                                        <a href="#" data-bind="text: $data"></a>
+                                    </li>
+                                </ul>
                                 <span class="help-block" data-bind="validationMessage: connectionStringName"></span>
                             </div>
                         </div>
@@ -60,18 +57,15 @@
                     <div data-bind="collapse: $root.showAdvancedOptions">
                         <div class="panel-body"> 
                             <div class="toggle">
-                                <input id="parameterizedDeletes" class="styled" type="checkbox"
-                                       data-bind="checked: parameterizedDeletes">
+                                <input id="parameterizedDeletes" class="styled" type="checkbox" data-bind="checked: parameterizedDeletes">
                                 <label for="parameterizedDeletes">Parameterized deletes</label>
                             </div>
                             <div class="toggle">
-                                <input id="forceRecompileQuery" class="styled" type="checkbox"
-                                       data-bind="checked: forceRecompileQuery">
+                                <input id="forceRecompileQuery" class="styled" type="checkbox" data-bind="checked: forceRecompileQuery">
                                 <label for="forceRecompileQuery">Force recompile query</label>
                             </div>
                             <div class="toggle">
-                                <input id="tableQuotation" class="styled" type="checkbox"
-                                       data-bind="checked: tableQuotation">
+                                <input id="tableQuotation" class="styled" type="checkbox" data-bind="checked: tableQuotation">
                                 <label for="tableQuotation">Table quotation</label>
                             </div>
                         </div>
@@ -93,52 +87,47 @@
                     </div>
                     <div class="padding bg-danger small"
                          data-bind="visible: !Success && !$root.connectionStringIsDefined()">
-                        <span class="icon-warning"></span><span data-bind="text: Error"></span>
+                        <i class="icon-warning"></i><span data-bind="text: Error"></span>
                         <a target="_blank" data-bind="attr: { href: $root.connectionStringsUrl }"> - Click here to define a new connection string</a>
                     </div>
                 </div>
-                <div class="panel-addon" data-bind="visible: $root.sqlEtlConnectionStringsNames().length == 0">
+                <div class="panel-addon" data-bind="visible: $root.sqlEtlConnectionStringsNames().length === 0">
                     <div class="padding bg-warning small">
-                        <span class="icon-warning"></span>&nbsp;&nbsp;No connection strings have been defined yet
+                        <i class="icon-warning"></i>&nbsp;&nbsp;No connection strings have been defined yet
                         <a data-bind="attr: { href: $root.connectionStringsUrl }"> - Click here to define a new connection string</a>                        
                     </div>
                 </div>
             </div>
             <div class="flex-horizontal flex-header">
-                <div class="flex-grow"><h3>SQL Tables</h3></div> <!-- todo: add arrow to open / close... -->
-                <div><button class="btn btn-info" data-bind="click: $root.addNewSqlTable, disable: $root.showEditSqlTableArea()"><i class="icon-plus"></i><span>Add Table</span></button></div> 
+                <div class="flex-grow"><h3>SQL Tables</h3></div>  <!-- todo: add arrow to open / close... --> 
+                <div><button class="btn btn-info" data-bind="click: addNewSqlTable, disable: showEditSqlTableArea()"><i class="icon-plus"></i><span>Add Table</span></button></div>                
             </div>
             <div class="sql-tables-list">
                 <!-- Sql table edit area -->
-                <div class="panel" data-bind="visible: $root.showEditSqlTableArea()">
-                    <div class="padding padding-sm flex-horizontal item">
-                        <div class="flex-grow" data-bind="validationElement: $root.editedSqlTable().tableName"> 
+                <div class="panel" data-bind="visible: showEditSqlTableArea()">
+                    <div class="padding padding-sm flex-horizontal item" data-bind="with: editedSqlTable">
+                        <div class="flex-grow" data-bind="validationElement: tableName"> 
                             <!-- todo 1: why not red on the FIRST Time ? only after saving at least once.. -->
                             <!-- todo 2: where to place the message - if placed it has an offset, so for now msg is removed... -->
                             <input type="text" class="form-control input-sm" placeholder="Table name"
-                                   data-bind="textInput: $root.editedSqlTable().tableName">
+                                   data-bind="textInput: tableName">
                         </div>
-                        <div class="flex-grow" data-bind="validationElement: $root.editedSqlTable().primaryKey">
-                            <input type="text" class="form-control input-sm" placeholder="Primary key"
-                                   data-bind="textInput: $root.editedSqlTable().primaryKey">
+                        <div class="flex-grow" data-bind="validationElement: documentIdColumn">
+                            <input type="text" class="form-control input-sm" placeholder="Document Id Column Name"  data-bind="textInput: documentIdColumn">
                         </div>
                         <div class="flex-noshrink toggle input-sm">
-                            <input id="toggle1" class="styled" type="checkbox"
-                                   data-bind="checked: $root.editedSqlTable().insertOnlyMode">
+                            <input id="toggle1" class="styled" type="checkbox" data-bind="checked: insertOnlyMode">
                             <label for="toggle1">Insert only</label>
                         </div>
                         <div class="flex-noshrink">
-                            <button class="btn btn-success btn-sm" title="Add this sql table"
-                                    data-bind="click: $root.saveEditedSqlTable"><i class="icon-tick"></i></button>
-                            <button class="btn btn-default btn-sm" title="Cancel"
-                                    data-bind="click: $root.cancelEditedSqlTable"><i class="icon-cancel"></i></button>
+                            <button class="btn btn-success btn-sm" title="Add this sql table" data-bind="click: $root.saveEditedSqlTable"><i class="icon-tick"></i></button>
+                            <button class="btn btn-default btn-sm" title="Cancel" data-bind="click: $root.cancelEditedSqlTable"><i class="icon-cancel"></i></button>
                         </div>
                     </div>
                 </div>
                 <!-- The sql tables list -->                
-                <div data-bind="if: editedSqlEtl().sqlTables().length === 0 && !$root.showEditSqlTableArea()">
-                    <div>
-                        <i class="icon-xl icon-empty-set text-muted"></i>
+                <div data-bind="if: editedSqlEtl().sqlTables().length === 0 && !showEditSqlTableArea()">
+                    <div>                     
                         <h3 class="text-center text-muted">No Sql Tables have been defined.</h3>
                     </div>
                 </div>                
@@ -147,18 +136,16 @@
                         <div class="padding padding-sm flex-horizontal item">
                             <div class="row flex-grow">
                                 <div class="col-sm-4">
-                                    <div class="widthlabel"><label class="superscript">Table Name</label><strong
-                                        data-bind="text: tableName"></strong></div>
+                                    <div class="widthlabel"><label class="superscript">Table</label><strong data-bind="text: tableName"></strong></div>
                                 </div>
                                 <div class="col-sm-4">
-                                    <div class="widthlabel"><label class="superscript">Primary Key</label><strong
-                                        data-bind="text: primaryKey"></strong></div>
+                                    <div class="widthlabel"><label class="superscript">Document Id Column</label><strong data-bind="text: documentIdColumn"></strong></div>
                                 </div>
                                 <div class="col-sm-4" data-bind="if: insertOnlyMode">Insert only</div>
                             </div>
                             <div class="flex-noshrink">
-                                <button class="btn btn-default btn-sm" title="Edit this sql table" data-bind="click: $root.editSqlTable.bind($data)"><i class="icon-edit"></i></button>
-                                <button class="btn btn-danger btn-sm" title="Remove this sql table" data-bind="click: $root.deleteSqlTable.bind($data)"><i class="icon-trash"></i></button>
+                                <button class="btn btn-default btn-sm" title="Edit this SQL table" data-bind="click: $root.editSqlTable.bind($data)"><i class="icon-edit"></i></button>
+                                <button class="btn btn-danger btn-sm" title="Remove this SQL table" data-bind="click: $root.deleteSqlTable.bind($data)"><i class="icon-trash"></i></button>
                             </div>
                         </div>
                     </div>
@@ -167,14 +154,13 @@
             <div class="flex-horizontal flex-header">
                 <div class="flex-grow"><h3>Transform Scripts</h3></div> <!-- todo: add arrow to open / close... -->
                 <div>
-                    <button class="btn btn-info" data-bind="click: $root.tryAddNewTransformation"><i class="icon-plus"></i><span>Add Transformation Script</span></button>
+                    <button class="btn btn-info" data-bind="click: tryAddNewTransformation"><i class="icon-plus"></i><span>Add Transformation Script</span></button>
                 </div> 
             </div>
             <!-- The transformation scripts -->
             <div class="etl-list" data-bind="with: editedSqlEtl">
-                <div data-bind="if: transformationScripts().length === 0">
-                    <div>
-                        <i class="icon-xl icon-empty-set text-muted"></i>
+                <div data-bind="if: transformationScripts().length === 0 && !$root.showEditTransformationArea()">
+                    <div>                       
                         <h3 class="text-center text-muted">No transformation scripts have been defined.</h3>
                     </div>
                 </div>
@@ -223,7 +209,7 @@
                         <label><strong>Script:</strong></label>
                         <span class="pull-right"><a href="#" data-bind="click: $root.syntaxHelp"><small>Syntax help</small></a></span>
                         <div data-bind="validationElement: script">
-                            <textarea class="form-control" rows="7" data-bind="textinput: script" placeholder="Enter script">                        
+                            <textarea class="form-control" rows="15" data-bind="textinput: script" placeholder="Enter script">                        
                             </textarea>
                             <!-- todo: change to ace editor -->
                             <!--<pre class="form-control margin-top" placeholder="Enter transform script"-->
@@ -238,7 +224,7 @@
                             <div class="flex-grow" data-bind="validationOptions: { insertMessages: false }, validationElement: collection">
                                 <div class="dropdown btn-block">
                                     <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
-                                           data-bind="textInput: collection, attr: { disabled: $root.collectionNames().length == 0 }"
+                                           data-bind="textInput: collection, attr: { disabled: $root.collectionNames().length === 0 }"
                                            placeholder="Select a collection">
                                     <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
                                     <ul class="dropdown-menu max-height"

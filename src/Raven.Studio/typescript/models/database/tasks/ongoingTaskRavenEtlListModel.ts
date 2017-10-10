@@ -39,7 +39,7 @@ class ongoingTaskRavenEtlListModel extends ongoingTask {
     }
 
     toggleDetails() {
-        this.showRavenEtlDetails(!this.showRavenEtlDetails());
+        this.showRavenEtlDetails.toggle();
     }
 
 }

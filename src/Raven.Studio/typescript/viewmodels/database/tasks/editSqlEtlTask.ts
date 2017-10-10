@@ -22,14 +22,14 @@ class editSqlEtlTask extends viewModelBase {
     editedSqlEtl = ko.observable<ongoingTaskSqlEtlEditModel>();
     isAddingNewSqlEtlTask = ko.observable<boolean>(true);
 
-    // The currently edited trans script 
+    // The currently edited transformation script 
     editedTransformationScript = ko.observable<ongoingTaskSqlEtlTransformationModel>(ongoingTaskSqlEtlTransformationModel.empty());
 
     // The currently edited sql table 
     editedSqlTable = ko.observable<ongoingTaskSqlEtlTableModel>(ongoingTaskSqlEtlTableModel.empty());
 
-    sqlEtlConnectionStringsNames = ko.observableArray<string>([]);
-    connectionStringIsDefined: KnockoutComputed<boolean>;
+    sqlEtlConnectionStringsNames = ko.observableArray<string>([]); 
+    connectionStringIsDefined: KnockoutComputed<boolean>; // TODO: this computed and all the places using it should be refactored in RavenDB-8934 !    
     connectionStringsUrl = appUrl.forCurrentDatabase().connectionStrings();
 
     testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
@@ -260,11 +260,13 @@ class editSqlEtlTask extends viewModelBase {
 
     cancelEditedTransformation() {
         this.showEditTransformationArea(false);
-    }
-
-    saveEditedTransformation(transformation: ongoingTaskSqlEtlTransformationModel) {
+    }    
+    
+    saveEditedTransformation() {
+        const transformation = this.editedTransformationScript();
+        
         // 1. Validate
-        if (!this.isValid(this.editedTransformationScript().validationGroup)) {
+        if (!this.isValid(transformation.validationGroup)) {
             return;
         }
 
@@ -352,13 +354,13 @@ class editSqlEtlTask extends viewModelBase {
         let item = this.editedSqlEtl().sqlTables().find(x => x.tableName() === this.editedSqlTable().tableName());
         if (item) {
             item.tableName(this.editedSqlTable().tableName());
-            item.primaryKey(this.editedSqlTable().primaryKey());
+            item.documentIdColumn(this.editedSqlTable().documentIdColumn());
             item.insertOnlyMode(this.editedSqlTable().insertOnlyMode());
         }
         else {
             let newSqlTableItem = new ongoingTaskSqlEtlTableModel({
                 TableName: this.editedSqlTable().tableName(),
-                DocumentIdColumn: this.editedSqlTable().primaryKey(),
+                DocumentIdColumn: this.editedSqlTable().documentIdColumn(),
                 InsertOnlyMode: this.editedSqlTable().insertOnlyMode()
             }, true);
 

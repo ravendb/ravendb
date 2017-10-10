@@ -48,7 +48,7 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
 
         const sqlTables = this.sqlTables().map(x => {
             return {
-               DocumentIdColumn: x.primaryKey(),
+               DocumentIdColumn: x.documentIdColumn(),
                TableName: x.tableName(),
                InsertOnlyMode: x.insertOnlyMode()               
             } as Raven.Client.ServerWide.ETL.SqlEtlTable;
@@ -71,34 +71,21 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
         
         } as Raven.Client.ServerWide.ETL.SqlEtlConfiguration;
     }
-
-
+    
     static empty(): ongoingTaskSqlEtlEditModel {
         return new ongoingTaskSqlEtlEditModel(
-            {
-                TaskId: null,
-                TaskName: "",
+            {                
                 TaskType: "SqlEtl",
-                TaskState: "Enabled",
-                ResponsibleNode: null,
+                TaskState: "Enabled",               
                 TaskConnectionStatus: "Active",                
-                Configuration: {
-                    EtlType: "Sql",                    
-                    AllowEtlOnNonEncryptedChannel: false,
-                    ConnectionStringName: "",
-                    Disabled: false,                    
-                    Name: "",
-                    TaskId: null,
-                    MentorNode: null,
-                    FactoryName: "System.Data.SqlClient",
-                    ForceQueryRecompile: false,
-                    ParameterizeDeletes: false,
-                    QuoteTables: false,
-                    Transforms: [],
-                    SqlTables: []
-                },
-                Error: null,
-            });
+                Configuration: {                
+                     ForceQueryRecompile: false,
+                     ParameterizeDeletes: false,
+                     QuoteTables: false,
+                     Transforms: [],
+                     SqlTables: []
+                }
+            } as Raven.Client.ServerWide.Operations.OngoingTaskSqlEtlDetails);
     }
 }
 

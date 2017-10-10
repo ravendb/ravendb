@@ -7,9 +7,8 @@
             </div>
             <div class="panel">
                 <form class="flex-form">
-                    <div class="panel-body" data-bind="with: editedExternalReplication">
-                        <h3 data-bind="visible: $parent.isAddingNewReplicationTask">New External Replication</h3>
-                        <h3 data-bind="visible: !$parent.isAddingNewReplicationTask()">Edit External Replication</h3>
+                    <div class="panel-body" data-bind="with: editedExternalReplication">                      
+                        <h3 data-bind="text: $parent.isAddingNewReplicationTask() ? `New External Replication` : `Edit External Replication`"></h3>
                         <div class="form-group">
                             <label for="taskName" class="control-label">Task Name</label>
                             <div class="flex-grow">

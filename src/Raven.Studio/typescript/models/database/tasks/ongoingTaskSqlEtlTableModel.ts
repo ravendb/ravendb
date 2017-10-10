@@ -1,8 +1,8 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 
-class OngoingTaskSqlEtlTableModel {
+class ongoingTaskSqlEtlTableModel {
     tableName = ko.observable<string>();
-    primaryKey = ko.observable<string>();
+    documentIdColumn = ko.observable<string>();
     insertOnlyMode = ko.observable<boolean>();
     
     isNew = ko.observable<boolean>(true); 
@@ -10,10 +10,12 @@ class OngoingTaskSqlEtlTableModel {
   
     constructor(dto: Raven.Client.ServerWide.ETL.SqlEtlTable, isNew: boolean) {
         this.update(dto, isNew);
+        
+        this.initValidation();
     }
 
-    static empty(): OngoingTaskSqlEtlTableModel {
-        return new OngoingTaskSqlEtlTableModel(
+    static empty(): ongoingTaskSqlEtlTableModel {
+        return new ongoingTaskSqlEtlTableModel(
             {
                 TableName: "",
                 DocumentIdColumn: "",
@@ -24,37 +26,32 @@ class OngoingTaskSqlEtlTableModel {
     toDto(): Raven.Client.ServerWide.ETL.SqlEtlTable {
         return {
             TableName: this.tableName(),
-            DocumentIdColumn: this.primaryKey(),
+            DocumentIdColumn: this.documentIdColumn(),
             InsertOnlyMode: this.insertOnlyMode()
         }
     }
-
+    
     private initValidation() {
         this.tableName.extend({
             required: true
         });
         
-        this.primaryKey.extend({
+        this.documentIdColumn.extend({
             required: true
         });               
 
         this.validationGroup = ko.validatedObservable({
             tableName: this.tableName,
-            primaryKey: this.primaryKey
+            documentIdColumn: this.documentIdColumn
         });
     }
 
     update(dto: Raven.Client.ServerWide.ETL.SqlEtlTable, isNew: boolean) {
         this.tableName(dto.TableName);
-        this.primaryKey(dto.DocumentIdColumn); 
+        this.documentIdColumn(dto.DocumentIdColumn); 
         this.insertOnlyMode(dto.InsertOnlyMode);
-        this.isNew(isNew);
-
-        // Reset validation for this table model 
-        this.tableName.extend({ validatable: false });
-        this.primaryKey.extend({ validatable: false });        
-        this.initValidation();
+        this.isNew(isNew);       
     }
 }
 
-export = OngoingTaskSqlEtlTableModel;
+export = ongoingTaskSqlEtlTableModel;
