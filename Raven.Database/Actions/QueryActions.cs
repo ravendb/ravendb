@@ -176,103 +176,111 @@ namespace Raven.Database.Actions
 
             public void Init()
             {
-                highlightings = new Dictionary<string, Dictionary<string, string[]>>();
-                scoreExplanations = new Dictionary<string, string>();
-                Func<IndexQueryResult, object> tryRecordHighlightingAndScoreExplanation = queryResult =>
+                try
                 {
+                    highlightings = new Dictionary<string, Dictionary<string, string[]>>();
+                    scoreExplanations = new Dictionary<string, string>();
+                    Func<IndexQueryResult, object> tryRecordHighlightingAndScoreExplanation = queryResult =>
+                    {
                   
-                    if (queryResult.Highligtings != null && (queryResult.Key != null || queryResult.HighlighterKey != null))
-                        highlightings.Add(queryResult.Key ?? queryResult.HighlighterKey, queryResult.Highligtings);
-                    if ((queryResult.Key != null || queryResult.ReduceVal != null) && queryResult.ScoreExplanation != null)
-                        scoreExplanations.Add(queryResult.Key ?? queryResult.ReduceVal, queryResult.ScoreExplanation);
-                    return null;
-                };
-                stale = false;
-                indexTimestamp = Tuple.Create(DateTime.MinValue, Etag.Empty);
-                resultEtag = Etag.Empty;
-                nonAuthoritativeInformation = false;
+                        if (queryResult.Highligtings != null && (queryResult.Key != null || queryResult.HighlighterKey != null))
+                            highlightings.Add(queryResult.Key ?? queryResult.HighlighterKey, queryResult.Highligtings);
+                        if ((queryResult.Key != null || queryResult.ReduceVal != null) && queryResult.ScoreExplanation != null)
+                            scoreExplanations.Add(queryResult.Key ?? queryResult.ReduceVal, queryResult.ScoreExplanation);
+                        return null;
+                    };
+                    stale = false;
+                    indexTimestamp = Tuple.Create(DateTime.MinValue, Etag.Empty);
+                    resultEtag = Etag.Empty;
+                    nonAuthoritativeInformation = false;
 
-                if (string.IsNullOrEmpty(query.ResultsTransformer) == false &&
-                    (query.FieldsToFetch == null || query.FieldsToFetch.Length == 0))
-                {
-                    query.FieldsToFetch = new[] { Constants.AllFields };
+                    if (string.IsNullOrEmpty(query.ResultsTransformer) == false &&
+                        (query.FieldsToFetch == null || query.FieldsToFetch.Length == 0))
+                    {
+                        query.FieldsToFetch = new[] { Constants.AllFields };
+                    }
+
+                    duration = Stopwatch.StartNew();
+                    idsToLoad = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                    var viewGenerator = database.IndexDefinitionStorage.GetViewGenerator(indexName);
+                    var index = database.IndexDefinitionStorage.GetIndexDefinition(indexName);
+                    if (viewGenerator == null)
+                        throw new IndexDoesNotExistsException("Could not find index named: " + indexName);
+
+                    resultEtag = database.Indexes.GetIndexEtag(index.Name, null, query.ResultsTransformer);
+
+                    stale = actions.Staleness.IsIndexStale(index.IndexId, query.Cutoff, query.CutoffEtag);
+
+                    if (stale == false && query.Cutoff == null && query.CutoffEtag == null)
+                    {
+                        var indexInstance = database.IndexStorage.GetIndexInstance(indexName);
+                        stale = stale || (indexInstance != null && indexInstance.IsMapIndexingInProgress);
+                    }
+
+                    if (stale &&
+                        actions.Staleness.IsIndexStaleByTask(index.IndexId, query.Cutoff) == false &&
+                        actions.Staleness.IsReduceStale(index.IndexId) == false)
+                    {
+                        var forEntityNames = viewGenerator.ForEntityNames.ToList();
+                        var lastIndexedEtag = actions.Indexing.GetIndexStats(index.IndexId).LastIndexedEtag;
+
+                        if (database.LastCollectionEtags.HasEtagGreaterThan(forEntityNames, lastIndexedEtag) == false)
+                            stale = false;
+                    }
+
+                    indexTimestamp = actions.Staleness.IndexLastUpdatedAt(index.IndexId);
+                    var indexFailureInformation = actions.Indexing.GetFailureRate(index.IndexId);
+                    if (indexFailureInformation.IsInvalidIndex)
+                    {
+                        throw new IndexDisabledException(indexFailureInformation);
+                    }
+                    docRetriever = new DocumentRetriever(database.Configuration, actions, database.ReadTriggers, query.TransformerParameters, idsToLoad);
+                    var fieldsToFetch = new FieldsToFetch(query,
+                        viewGenerator.ReduceDefinition == null
+                            ? Constants.DocumentIdFieldName
+                            : Constants.ReduceKeyFieldName);
+                    Func<IndexQueryResult, bool> shouldIncludeInResults =
+                        result => docRetriever.ShouldIncludeResultInQuery(result, index, fieldsToFetch, ShouldSkipDuplicateChecking);
+                    var indexQueryResults = database.IndexStorage.Query(indexName, query, shouldIncludeInResults,
+                        fieldsToFetch, database.IndexQueryTriggers, cancellationToken, (query.ShowTimings ? (Action<double>)(time => executionTimes[QueryTimings.Parse] = time) : null));
+                    indexQueryResults = new ActiveEnumerable<IndexQueryResult>(indexQueryResults);
+                    if (query.ShowTimings)
+                    {
+
+                        indexQueryResults = new TimedEnumerable<IndexQueryResult>(indexQueryResults, timeInMilliseconds => executionTimes[QueryTimings.Lucene] += timeInMilliseconds);
+                    }
+
+                    var docs = from queryResult in indexQueryResults
+                        let doc = docRetriever.RetrieveDocumentForQuery(queryResult, index, fieldsToFetch, ShouldSkipDuplicateChecking)
+                        where doc != null
+                        let _ = nonAuthoritativeInformation |= (doc.NonAuthoritativeInformation ?? false)
+                        let __ = tryRecordHighlightingAndScoreExplanation(queryResult)
+                        select doc;
+
+                    transformerErrors = new List<string>();
+                    results = database
+                        .Queries
+                        .GetQueryResults(query, viewGenerator, docRetriever, docs, transformerErrors,
+                            timeInMilliseconds => executionTimes[QueryTimings.LoadDocuments] = timeInMilliseconds,
+                            timeInMilliseconds => executionTimes[QueryTimings.TransformResults] = timeInMilliseconds,
+                            query.ShowTimings, cancellationToken);
+
+                    Header = new QueryHeaderInformation
+                    {
+                        Index = indexName,
+                        IsStale = stale,
+                        ResultEtag = resultEtag,
+                        IndexTimestamp = indexTimestamp.Item1,
+                        IndexEtag = indexTimestamp.Item2,
+                        TotalResults = query.TotalSize.Value
+                    };
                 }
-
-                duration = Stopwatch.StartNew();
-                idsToLoad = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-                var viewGenerator = database.IndexDefinitionStorage.GetViewGenerator(indexName);
-                var index = database.IndexDefinitionStorage.GetIndexDefinition(indexName);
-                if (viewGenerator == null)
-                    throw new IndexDoesNotExistsException("Could not find index named: " + indexName);
-
-                resultEtag = database.Indexes.GetIndexEtag(index.Name, null, query.ResultsTransformer);
-
-                stale = actions.Staleness.IsIndexStale(index.IndexId, query.Cutoff, query.CutoffEtag);
-
-                if (stale == false && query.Cutoff == null && query.CutoffEtag == null)
+                catch (Exception)
                 {
-                    var indexInstance = database.IndexStorage.GetIndexInstance(indexName);
-                    stale = stale || (indexInstance != null && indexInstance.IsMapIndexingInProgress);
+                    Dispose();
+                    throw;
                 }
-
-                if (stale &&
-                    actions.Staleness.IsIndexStaleByTask(index.IndexId, query.Cutoff) == false &&
-                    actions.Staleness.IsReduceStale(index.IndexId) == false)
-                {
-                    var forEntityNames = viewGenerator.ForEntityNames.ToList();
-                    var lastIndexedEtag = actions.Indexing.GetIndexStats(index.IndexId).LastIndexedEtag;
-
-                    if (database.LastCollectionEtags.HasEtagGreaterThan(forEntityNames, lastIndexedEtag) == false)
-                        stale = false;
-                }
-
-                indexTimestamp = actions.Staleness.IndexLastUpdatedAt(index.IndexId);
-                var indexFailureInformation = actions.Indexing.GetFailureRate(index.IndexId);
-                if (indexFailureInformation.IsInvalidIndex)
-                {
-                    throw new IndexDisabledException(indexFailureInformation);
-                }
-                docRetriever = new DocumentRetriever(database.Configuration, actions, database.ReadTriggers, query.TransformerParameters, idsToLoad);
-                var fieldsToFetch = new FieldsToFetch(query,
-                    viewGenerator.ReduceDefinition == null
-                        ? Constants.DocumentIdFieldName
-                        : Constants.ReduceKeyFieldName);
-                Func<IndexQueryResult, bool> shouldIncludeInResults =
-                    result => docRetriever.ShouldIncludeResultInQuery(result, index, fieldsToFetch, ShouldSkipDuplicateChecking);
-                var indexQueryResults = database.IndexStorage.Query(indexName, query, shouldIncludeInResults,
-                    fieldsToFetch, database.IndexQueryTriggers, cancellationToken, (query.ShowTimings ? (Action<double>)(time => executionTimes[QueryTimings.Parse] = time) : null));
-                indexQueryResults = new ActiveEnumerable<IndexQueryResult>(indexQueryResults);
-                if (query.ShowTimings)
-                {
-
-                    indexQueryResults = new TimedEnumerable<IndexQueryResult>(indexQueryResults, timeInMilliseconds => executionTimes[QueryTimings.Lucene] += timeInMilliseconds);
-                }
-
-                var docs = from queryResult in indexQueryResults
-                           let doc = docRetriever.RetrieveDocumentForQuery(queryResult, index, fieldsToFetch, ShouldSkipDuplicateChecking)
-                           where doc != null
-                           let _ = nonAuthoritativeInformation |= (doc.NonAuthoritativeInformation ?? false)
-                           let __ = tryRecordHighlightingAndScoreExplanation(queryResult)
-                           select doc;
-
-                transformerErrors = new List<string>();
-                results = database
-                    .Queries
-                    .GetQueryResults(query, viewGenerator, docRetriever, docs, transformerErrors,
-                        timeInMilliseconds => executionTimes[QueryTimings.LoadDocuments] = timeInMilliseconds,
-                        timeInMilliseconds => executionTimes[QueryTimings.TransformResults] = timeInMilliseconds,
-                        query.ShowTimings, cancellationToken);
-
-                Header = new QueryHeaderInformation
-                {
-                    Index = indexName,
-                    IsStale = stale,
-                    ResultEtag = resultEtag,
-                    IndexTimestamp = indexTimestamp.Item1,
-                    IndexEtag = indexTimestamp.Item2,
-                    TotalResults = query.TotalSize.Value
-                };
             }
 
             public void Execute(Action<RavenJObject> onResult)
