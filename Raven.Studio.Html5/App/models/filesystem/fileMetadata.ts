@@ -24,12 +24,30 @@ class fileMetadata {
 
     constructor(dto?: any) {
         if (dto) {
-            this.ravenFSSize = dto['RavenFS-Size'];
-            this.creationDate = dto['Raven-Creation-Date'];
-            this.lastModified = dto['Raven-Last-Modified'];            
-            this.etag = dto['ETag'];
-            if (this.etag == null) // HACK: Handle different capitalization of Etag by Firefox.
-                this.etag = dto['Etag'];
+            const ravenfsSize = "RavenFS-Size";
+            this.ravenFSSize = dto[ravenfsSize];
+            if (!this.ravenFSSize) {
+                // HACK: Handle different capitalization of by chrome.
+                this.ravenFSSize = dto[ravenfsSize.toLowerCase()];
+            }
+            const ravenCreationDate = "Raven-Creation-Date";
+            this.creationDate = dto[ravenCreationDate];
+            if (!this.creationDate) {
+                // HACK: Handle different capitalization of by chrome.
+                this.creationDate = dto[ravenCreationDate.toLowerCase()];
+            }
+            const ravenLastModified = "Raven-Last-Modified";
+            this.lastModified = dto[ravenLastModified];
+            if (!this.lastModified) {
+                // HACK: Handle different capitalization of by chrome.
+                this.lastModified = dto[ravenLastModified.toLowerCase()];
+            }
+            const etag = "ETag";
+            this.etag = dto[etag];
+            if (!this.etag) {
+                // HACK: Handle different capitalization of by chrome.
+                this.etag = dto[etag.toLowerCase()];
+            } 
 
             if (this.etag.startsWith('"'))
                 this.etag = this.etag.slice(1, this.etag.length - 1);
