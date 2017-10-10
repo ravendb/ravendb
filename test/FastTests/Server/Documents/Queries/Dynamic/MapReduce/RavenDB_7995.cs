@@ -45,7 +45,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                     session.SaveChanges();
 
                     QueryStatistics stats1;
-                    var results = session.Query<User>().Statistics(out stats1).GroupBy(x => new {x.Age, x.Name}).Select(x => new
+                    var results = session.Query<User>().Customize(x => x.WaitForNonStaleResults()).Statistics(out stats1).GroupBy(x => new
+                    {
+                        x.Age,
+                        x.Name
+                    }).Select(x => new
                     {
                         x.Key,
                         Count = x.Count(),
@@ -54,7 +58,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                     Assert.Equal(2, results[0].Count);
 
                     QueryStatistics stats2;
-                    var results2 = session.Query<User>().Statistics(out stats2).GroupBy(x => new { x.Name, x.Age }).Select(x => new
+                    var results2 = session.Query<User>().Customize(x => x.WaitForNonStaleResults()).Statistics(out stats2).GroupBy(x => new
+                    {
+                        x.Name,
+                        x.Age
+                    }).Select(x => new
                     {
                         x.Key,
                         Count = x.Count(),
