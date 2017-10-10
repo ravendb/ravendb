@@ -353,7 +353,8 @@ namespace Raven.StorageExporter
                             var metadata = FilterMetadataProperties(header.Metadata);
                             metadata.WriteTo(jsonWriter);
                             jsonWriter.WritePropertyName("Key");
-                            jsonWriter.WriteValue(RemoveSlashIfNeeded(header.FullPath));
+                            var key = RemoveSlashIfNeeded(header.FullPath);
+                            jsonWriter.WriteValue(key);
                             jsonWriter.WritePropertyName("Etag");
                             jsonWriter.WriteNull();
                             jsonWriter.WriteEndObject();
@@ -378,36 +379,14 @@ namespace Raven.StorageExporter
             } while (currentFilesCount < totalFilesCount);
         }
 
+        private MemoryStream _buffer = new MemoryStream();
         private void WriteFileAsBase64(JsonTextWriter jsonWriter, StorageStream file)
         {
-            int read = file.Read(filesBuffer, 0, filesBuffer.Length);
-            jsonWriter.WriteRaw("\"");
-            var totalRead = read;
-            var leftovers = read % 3;
-            while (totalRead < file.Length)
-            {
-                var base64 = Convert.ToBase64String(filesBuffer, 0, read / 3 * 3);
-                jsonWriter.WriteRaw(base64);
-                jsonWriter.Flush();
-                leftovers = read % 3;
-                if (leftovers != 0)
-                {
-                    for (int i = 0; i < leftovers; i++)
-                    {
-                        filesBuffer[i] = filesBuffer[read - leftovers];
-                    }
-                }
-                read = file.Read(filesBuffer, leftovers, filesBuffer.Length - leftovers);
-                totalRead += read;
-            }
-            if (leftovers != 0)
-            {
-                var base64 = Convert.ToBase64String(filesBuffer, 0, leftovers);
-                jsonWriter.WriteRaw(base64);
-                jsonWriter.Flush();
-            }
-            jsonWriter.WriteRaw("\"");
-            jsonWriter.SealValue();
+            _buffer.SetLength(0);
+            file.CopyTo(_buffer);
+
+            var base64String = Convert.ToBase64String(_buffer.GetBuffer(), 0, (int)_buffer.Length, Base64FormattingOptions.None);
+            jsonWriter.WriteValue(base64String);
         }
 
         private string RemoveSlashIfNeeded(string headerFullPath)
@@ -435,8 +414,6 @@ namespace Raven.StorageExporter
             }
             return headerMetadata;
         }
-
-        private byte[] filesBuffer = new byte[1024*3];
 
         private void WriteAttachments(JsonTextWriter jsonWriter)
         {
