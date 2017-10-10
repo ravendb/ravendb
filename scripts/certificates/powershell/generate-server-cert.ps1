@@ -73,7 +73,7 @@ $cert = New-SelfSignedCertificate `
         -KeySpec Signature `
         -KeyUsageProperty All `
         -KeyUsage CertSign, CRLSign, DigitalSignature, KeyEncipherment `
-        -TextExtension '2.5.29.37={text}1.3.6.1.5.5.7.3.2,1.3.6.1.5.5.7.3.1','2.5.29.19={critical}{text}ca=1&pathlength=0' `
+        -TextExtension '2.5.29.37={text}1.3.6.1.5.5.7.3.2,1.3.6.1.5.5.7.3.1','2.5.29.19={critical}{text}ca=0&pathlength=0' `
         -Signer $existingCert
 
 $certThumbprint = $cert.Thumbprint
