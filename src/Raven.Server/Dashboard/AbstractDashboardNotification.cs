@@ -10,7 +10,6 @@ namespace Raven.Server.Dashboard
         
         public DateTime Date => SystemTime.UtcNow;
         
-        
         public virtual DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue()

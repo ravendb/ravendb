@@ -1,13 +1,16 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import trafficItem = require("models/resources/serverDashboard/trafficItem");
 import checkedColumn = require("widgets/virtualGrid/columns/checkedColumn");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import generalUtils = require("common/generalUtils");
+
+import trafficItem = require("models/resources/serverDashboard/trafficItem");
 import databaseItem = require("models/resources/serverDashboard/databaseItem");
 import indexingSpeed = require("models/resources/serverDashboard/indexingSpeed");
 import machineResources = require("models/resources/serverDashboard/machineResources");
+import driveUsage = require("models/resources/serverDashboard/driveUsage");
+import driveUsageDetails = require("models/resources/serverDashboard/driveUsageDetails");
 
 class machineResourcesSection {
 
@@ -40,10 +43,11 @@ class indexingSpeedSection {
             items: this.table
         }), () => {
             return [
+                new checkedColumn(true),
                 new hyperlinkColumn<indexingSpeed>(grid, x => x.database(), x => x.database(), "Database", "30%"), //TODO: hyperlink
-                new textColumn<indexingSpeed>(grid, x => x.indexedPerSecond(), "Indexed / sec", "20%"), //TODO: format
-                new textColumn<indexingSpeed>(grid, x => x.mappedPerSecond(), "Mapped / sec", "20%"), //TODO: format
-                new textColumn<indexingSpeed>(grid, x => x.reducedPerSecond(), "Reduced / sec", "20%"), //TODO: format
+                new textColumn<indexingSpeed>(grid, x => x.indexedPerSecond(), "Indexed / sec", "15%"), //TODO: format
+                new textColumn<indexingSpeed>(grid, x => x.mappedPerSecond(), "Mapped / sec", "15%"), //TODO: format
+                new textColumn<indexingSpeed>(grid, x => x.reducedPerSecond(), "Reduced / sec", "15%"), //TODO: format
             ];
         });
     }
@@ -229,6 +233,42 @@ class trafficSection {
     }
 }
 
+class driveUsageSection {
+    private table = ko.observableArray<driveUsage>();
+    
+    //TODO: total size 
+    
+    onData(data: Raven.Server.Dashboard.DrivesUsage) {
+        const items = data.Items;
+        const newMountPoints = items.map(x => x.MountPoint);
+        const oldMountPoints = this.table().map(x => x.mountPoint());
+
+        const removed = _.without(oldMountPoints, ...newMountPoints);
+        removed.forEach(name => {
+            const matched = this.table().find(x => x.mountPoint() === name);
+            this.table.remove(matched);
+        });
+
+        items.forEach(incomingItem => {
+            const matched = this.table().find(x => x.mountPoint() === incomingItem.MountPoint);
+            if (matched) {
+                matched.update(incomingItem);
+            } else {
+                const usage = new driveUsage(incomingItem);
+                this.table.push(usage);
+            }
+        });
+
+        this.updateTotals();
+        
+        // TODO: update grids
+    }
+    
+    private updateTotals() {
+        //TODO:
+    }
+}
+
 class serverDashboard extends viewModelBase {
     
     sizeFormatter = generalUtils.formatBytesToSize;
@@ -237,6 +277,7 @@ class serverDashboard extends viewModelBase {
     databasesSection = new databasesSection();
     indexingSpeedSection = new indexingSpeedSection();
     machineResourcesSection = new machineResourcesSection();
+    driveUsageSection = new driveUsageSection();
     
     constructor() {
         super();
@@ -317,6 +358,43 @@ class serverDashboard extends viewModelBase {
         };
     }
     
+    private createFakeDiskUsages() : Raven.Server.Dashboard.DrivesUsage {
+        
+        const m1 = { 
+            FreeSpaceLevel: "Medium",
+            FreeSpace: 10* 1024 * 1024,
+            SpaceUsed: 600 * 1024 * 1024,
+            MountPoint: "c:\\",
+            Items: [{
+                Database: "db1",
+                Size: 10 * 1024 * 1024
+            }, {
+                Database: "db2",
+                Size: 16 * 1024 * 1024
+            }]
+        } as Raven.Server.Dashboard.MountPointUsage;
+        
+        const m2 = {
+            FreeSpaceLevel: "High",
+            FreeSpace: 20* 1024 * 1024,
+            SpaceUsed: 123 * 1024 * 1024,
+            MountPoint: "d:\\",
+            Items: [{
+                Database: "db3",
+                Size: 10 * 14 * 1024
+            }, {
+                Database: "db2",
+                Size: 16 * 24 * 1024
+            }]
+        } as Raven.Server.Dashboard.MountPointUsage;
+        
+        return {
+            Type: "DriveUsage",
+            Date: moment.utc().toISOString(),
+            Items: [m1, m2]
+        }
+    }
+    
     compositionComplete() {
         super.compositionComplete();
         
@@ -335,6 +413,9 @@ class serverDashboard extends viewModelBase {
         
         const fakeMachineResources = this.createFakeMachineResources();
         this.machineResourcesSection.onData(fakeMachineResources);
+        
+        const fakeDriveUsage = this.createFakeDiskUsages();
+        this.driveUsageSection.onData(fakeDriveUsage);
 
         const interval = setInterval(() => {
 
@@ -392,6 +473,22 @@ class serverDashboard extends viewModelBase {
                 
                 fakeMachineResources.Date = moment.utc().toISOString();
                 this.machineResourcesSection.onData(fakeMachineResources);
+            }
+            
+            // drive usage
+            {
+                fakeDriveUsage.Items.forEach(item => {
+                    const d1 = _.random(-1000, 1000);
+                    item.FreeSpace += d1;
+                    item.SpaceUsed -= d1;
+                    
+                    item.Items.forEach(x => {
+                        const dx = _.random(-100, 100);
+                        x.Size += dx;
+                    });    
+                });
+                
+                this.driveUsageSection.onData(fakeDriveUsage);
             }
 
         }, 1000);

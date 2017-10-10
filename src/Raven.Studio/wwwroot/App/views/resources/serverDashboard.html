@@ -39,7 +39,7 @@
                         <div class="infogrid">
                             <div class="infogrid-label" data-bind="with: resources">
                                 <div><i class="icon-processor"></i><span>CPU</span></div>
-                                <div><strong class="text-danger" data-bind="text: cpuUsage"></strong></div>
+                                <div><strong class="text-danger" data-bind="text: cpuUsage() + '%'"></strong></div>
                             </div>
                             <div class="infogrid-graph">
                                 <div class="temp-graph temp-graph-1"></div>
@@ -151,11 +151,10 @@
             </div>
         </div>
 
-        <div class="dashboard-item dashboard-storage">
+        <div class="dashboard-item dashboard-storage" data-bind="with: driveUsageSection">
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <h3 class="panel-title"><i class="icon-storage"></i><span>STORAGE</span></h3>
-
                 </div>
                 <div class="panel-body flex-vertical">
                     <div class="flex-horizontal flex-stretch-items flex-grow">
@@ -167,11 +166,11 @@
                                 
                             </div>
                         </div>
-                        <div class="flex-grow flex-vertical">
+                        <div class="flex-grow flex-vertical" data-bind="foreach: table">
                             <div class="flex-horizontal">
-                                <div>Drive C:</div> <div><strong>45 GB</strong></div>
+                                <div data-bind="text: mountPoint"></div> <div><strong data-bind="text: $root.sizeFormatter(spaceUsed() + freeSpace())"></strong></div>
                                 <div class="flex-separator"></div>
-                                <div><small> <span class="text-success">15 GB used</span> / <span>30 GB free</span> </small></div>
+                                <div><small> <span class="text-success" data-bind="text: $root.sizeFormatter(spaceUsed()) + ' used'"></span> / <span data-bind="text: $root.sizeFormatter(freeSpace()) + ' free'"></span> </small></div>
                                 <div class="progress">
                                     <div class="progress-bar progress-bar-success" role="progressbar" aria-valuenow="33" aria-valuemin="0" aria-valuemax="100" style="width:33%">
                                         <span class="sr-only">40% Complete (success)</span>
@@ -180,22 +179,7 @@
                             </div>
                             <div class="list-container">
                                 <div class="list absolute-fill">
-
-                                </div>
-                            </div>
-                            <div class="flex-horizontal">
-                                <div>Drive C:</div> <div><strong>45 GB</strong></div>
-                                <div class="flex-separator"></div>
-                                <div><small> <span class="text-warning">40 GB used</span> / <span>5 GB free</span> </small></div>
-                                <div class="progress">
-                                    <div class="progress-bar progress-bar-warning" role="progressbar" aria-valuenow="88" aria-valuemin="0" aria-valuemax="100" style="width:88%">
-                                        <span class="sr-only">40% Complete (success)</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="list-container">
-                                <div class="list absolute-fill">
-
+                                    <virtual-grid class="resizable" params="controller: gridController, condensed: true"></virtual-grid>
                                 </div>
                             </div>
                         </div>
