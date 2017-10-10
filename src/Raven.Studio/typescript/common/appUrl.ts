@@ -42,8 +42,8 @@ class appUrl {
         editExternalReplication: (taskId?: number) => ko.pureComputed(() => appUrl.forEditExternalReplication(appUrl.currentDatabase(), taskId)),
         editPeriodicBackupTask: (taskId?: number) => ko.pureComputed(() => appUrl.forEditPeriodicBackupTask(appUrl.currentDatabase(), taskId)),
         editSubscription: (taskId?: number, taskName?: string) => ko.pureComputed(() => appUrl.forEditSubscription(appUrl.currentDatabase(), taskId, taskName)),
-        editRavenEtl: (taskId?: number, taskName?: string) => ko.pureComputed(() => appUrl.forEditRavenEtl(appUrl.currentDatabase(), taskId, taskName)),
-        editSqlEtl: (taskId?: number, taskName?: string) => ko.pureComputed(() => appUrl.forEditSqlEtl(appUrl.currentDatabase(), taskId, taskName)),
+        editRavenEtl: (taskId?: number, taskName?: string) => ko.pureComputed(() => appUrl.forEditRavenEtl(appUrl.currentDatabase(), taskId)),
+        editSqlEtl: (taskId?: number, taskName?: string) => ko.pureComputed(() => appUrl.forEditSqlEtl(appUrl.currentDatabase(), taskId)),
         query: (indexName?: string) => ko.pureComputed(() => appUrl.forQuery(appUrl.currentDatabase(), indexName)),
         terms: (indexName?: string) => ko.pureComputed(() => appUrl.forTerms(indexName, appUrl.currentDatabase())),
         reporting: ko.pureComputed(() => appUrl.forReporting(appUrl.currentDatabase())),
@@ -525,18 +525,16 @@ class appUrl {
         return "#databases/tasks/editSubscriptionTask?" + databasePart + taskPart + taskNamePart;
     }
 
-    static forEditRavenEtl(db: database | databaseInfo, taskId?: number, taskName?: string): string {
+    static forEditRavenEtl(db: database | databaseInfo, taskId?: number): string {
         const databasePart = appUrl.getEncodedDbPart(db);
-        const taskPart = taskId ? "&taskId=" + taskId : "";
-        const taskNamePart = taskName ? "&taskName=" + taskName : "";
-        return "#databases/tasks/editRavenEtlTask?" + databasePart + taskPart + taskNamePart;
+        const taskPart = taskId ? "&taskId=" + taskId : "";       
+        return "#databases/tasks/editRavenEtlTask?" + databasePart + taskPart;
     }
 
-    static forEditSqlEtl(db: database | databaseInfo, taskId?: number, taskName?: string): string {
+    static forEditSqlEtl(db: database | databaseInfo, taskId?: number): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const taskPart = taskId ? "&taskId=" + taskId : "";
-        const taskNamePart = taskName ? "&taskName=" + taskName : "";
-        return "#databases/tasks/editSqlEtlTask?" + databasePart + taskPart + taskNamePart;
+        return "#databases/tasks/editSqlEtlTask?" + databasePart + taskPart;
     }
 
     static forSampleData(db: database | databaseInfo): string {

@@ -14,23 +14,25 @@
                 <span class="text-warning"> TODO : Format the below script nicely.....</span>
     
 <!-- todo: format the below script nicely... -->    
+    
 <pre>
-    var orderData = {
+var orderData = {
     Id: id(this),
-    OrderLinesCount: this.OrderLines.length,
+    OrderLinesCount: this.Lines.length,
     TotalCost: 0
 };
 
-for (var i = 0; i < this.OrderLines.length; i++) {
-    var line = this.OrderLines[i];
-    orderData.TotalCost += line.Cost;
+for (var i = 0; i < this.Lines.length; i++) {
+    var line = this.Lines[i];
+    orderData.TotalCost += line.PricePerUnit;
     loadToOrderLines({
         OrderId: id(this),
         Qty: line.Quantity,
         Product: line.Product,
-        Cost: line.Cost
+        Cost: line.PricePerUnit
     });
 }
+orderData.TotalCost = Math.round(orderData.TotalCost  * 100) / 100;
 
 loadToOrders(orderData);
 </pre>    

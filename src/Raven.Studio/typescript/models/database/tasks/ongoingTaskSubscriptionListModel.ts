@@ -44,7 +44,7 @@ class ongoingTaskSubscriptionListModel extends ongoingTask {
     }
 
     toggleDetails() {
-        this.showSubscriptionDetails(!this.showSubscriptionDetails());
+        this.showSubscriptionDetails.toggle();
 
         if (this.showSubscriptionDetails()) {
             this.refreshSubscriptionInfo();

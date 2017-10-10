@@ -37,7 +37,7 @@ class ongoingTaskReplicationListModel extends ongoingTaskModel {
     }
 
     toggleDetails() {
-        this.showReplicationDetails(!this.showReplicationDetails());
+        this.showReplicationDetails.toggle();
     }
 
 }

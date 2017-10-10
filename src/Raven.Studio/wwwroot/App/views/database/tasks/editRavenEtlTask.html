@@ -7,9 +7,8 @@
             </div>
             <div class="panel">
                 <form class="flex-form">
-                    <div class="panel-body" data-bind="with: editedRavenEtl">
-                        <h3 data-bind="visible: $parent.isAddingNewRavenEtlTask">New RavenDB ETL</h3>
-                        <h3 data-bind="visible: !$parent.isAddingNewRavenEtlTask()">Edit RavenDB ETL</h3>
+                    <div class="panel-body" data-bind="with: editedRavenEtl">                       
+                        <h3 data-bind="text: $parent.isAddingNewRavenEtlTask() ? `New RavenDB ETL` : `Edit RavenDB ETL`"></h3>
                         <div class="form-group">
                             <label for="taskName" class="control-label">Task Name</label>
                             <div class="flex-grow">
@@ -38,23 +37,21 @@
                                 </ul>
                             </div>
                         </div>
-                        <div class="form-group">
+                        <div class="form-group"
+                             data-bind="validationOptions: { insertMessages: false }, validationElement: connectionStringName">
                             <label class="control-label">Connection String</label>
-                            <div class="flex-grow" data-bind="validationOptions: { insertMessages: false }, validationElement: connectionStringName">
-                                <div>
-                                    <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown"
-                                           data-bind="attr: { id: 'connectionStringInput', disabled: $root.ravenEtlConnectionStringsNames().length == 0 }"
-                                           >
-                                        <span data-bind="text: connectionStringName () || 'Select a connection string'"></span>
-                                        <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
-                                    </button>
-                                    <ul class="dropdown-menu max-height" data-bind="foreach: $root.ravenEtlConnectionStringsNames">
-                                        <!--TODO: autocomplete...-->
-                                        <li data-bind="click: _.partial($root.useConnectionString, $data)">
-                                            <a href="#" data-bind="text: $data"></a>
-                                        </li>
-                                    </ul>
-                                </div>
+                            <div class="flex-grow">
+                                <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown"
+                                        data-bind="attr: { disabled: $root.ravenEtlConnectionStringsNames().length == 0 }">
+                                    <span data-bind="text: connectionStringName() || 'Select a connection string'"></span>
+                                    <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                                </button>
+                                <ul class="dropdown-menu max-height"
+                                    data-bind="foreach: $root.ravenEtlConnectionStringsNames">
+                                    <li data-bind="click: _.partial($root.useConnectionString, $data)">
+                                        <a href="#" data-bind="text: $data"></a>
+                                    </li>
+                                </ul>
                                 <span class="help-block" data-bind="validationMessage: connectionStringName"></span>
                             </div>
                         </div>
@@ -81,7 +78,7 @@
                         </div>
                     </div>
                 </form>
-                <div class="panel-addon" data-bind="with: $root.testConnectionResult">
+                <div class="panel-addon" data-bind="with: testConnectionResult">
                     <div class="padding bg-success small" data-bind="visible: Success">
                         <div>Successfully connected to node</div>
                     </div>
@@ -96,10 +93,10 @@
                         <a target="_blank" data-bind="attr: { href: $root.connectionStringsUrl }"> - Click here to define a new connection string</a>
                     </div>
                 </div>
-                <div class="panel-addon" data-bind="visible: $root.ravenEtlConnectionStringsNames().length == 0">
+                <div class="panel-addon" data-bind="visible: ravenEtlConnectionStringsNames().length == 0">
                     <div class="padding bg-warning small">
                         <span class="icon-warning"></span>&nbsp;&nbsp;No connection strings have been defined yet
-                        <a data-bind="attr: { href: $root.connectionStringsUrl }"> - Click here to define a new connection string</a>
+                        <a data-bind="attr: { href: connectionStringsUrl }"> - Click here to define a new connection string</a>
                     </div>
                 </div>
             </div>

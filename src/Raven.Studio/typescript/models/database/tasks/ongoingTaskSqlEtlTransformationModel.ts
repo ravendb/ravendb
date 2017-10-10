@@ -13,7 +13,9 @@ class ongoingTaskSqlEtlTransformationModel {
   
     constructor(dto: Raven.Client.ServerWide.ETL.Transformation, isNew: boolean) {
         this.update(dto, isNew);
+        
         this.initObservables();
+        this.initValidation();
     }
 
     initObservables() {
@@ -68,12 +70,6 @@ class ongoingTaskSqlEtlTransformationModel {
         this.script(dto.Script); 
         this.collection(dto.Collections[0]); // todo: check this..
         this.isNew(isNew);
-
-        // Reset validation for this transformation script model 
-        this.name.extend({ validatable: false });
-        this.script.extend({ validatable: false });
-        this.collection.extend({ validatable: false });
-        this.initValidation();
     }
 
     getCollectionEntry(collectionName: string) {

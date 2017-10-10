@@ -29,9 +29,8 @@
                             <div class="bg-warning inline-block padding padding-xs small" title="Note: Client connection will be disconnected upon Save !">
                                 <i class="icon-warning"></i>&nbsp;&nbsp;Warning: You are editing a live subscription connection . . .
                             </div>
-                        </div>
-                        <h3 data-bind="visible: $root.isAddingNewSubscriptionTask()">New Subscription</h3>
-                        <h3 data-bind="visible: !$root.isAddingNewSubscriptionTask()">Edit Subscription</h3>
+                        </div>                       
+                        <h3 data-bind="text: $parent.isAddingNewSubscriptionTask() ? `New Subscription` : `Edit Subscription`"></h3>
                         <div class="form-group margin-top">
                             <label class="control-label">Task Name</label>
                             <input type="text" class="form-control" id="taskName" placeholder="Enter a descriptive name for the subscription task" title="Note: if no name is supplied then server will create one for you"
