@@ -5,6 +5,13 @@
     display: flex;
     flex-direction: column;
 
+    .virtual-grid {
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+
+
     .graph-container {
         height: 100%;
         min-height: 90px;
@@ -15,11 +22,18 @@
         border-right: 1px solid @gray-dark;
         background-position: bottom right;
         background-size: auto 100%;
+        position: relative;
+
+        svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
 
 
         &.temp-graph-6 { // TODO: delete me!
             background-image: url(../img/graph6.png);
-            background-size:cover;
+            background-size: cover;
             padding-top: 100%;
             height: 0;
             background-position: center;
@@ -40,12 +54,13 @@
             background-color: @gray-base;
         }
     }
-    
-    
+
+
     svg {
         .bg {
-            fill: @gray-base; 
+            fill: @gray-base;
         }
+
         .grid-line {
             stroke: #2c343c;
         }
@@ -57,6 +72,7 @@
             stroke: @brand-primary;
             stroke-width: 2;
         }
+
         .fill {
             fill-opacity: 0.3;
             fill: @brand-primary;
@@ -70,13 +86,14 @@
             stroke: #0873a3;
             stroke-width: 2;
         }
+
         .fill {
             fill-opacity: 0.3;
             fill: #0873a3;
             stroke: none;
         }
     }
-    
+
     #reduceChart {
         .map {
             .line {
@@ -84,19 +101,21 @@
                 stroke: #d08f27;
                 stroke-width: 2;
             }
+
             .fill {
                 fill-opacity: 0.3;
                 fill: #d08f27;
                 stroke: none;
             }
         }
-        
+
         .reduce {
             .line {
                 fill: none;
                 stroke: #d83731;
                 stroke-width: 2;
             }
+
             .fill {
                 fill-opacity: 0.3;
                 fill: #d83731;
@@ -104,7 +123,7 @@
             }
         }
     }
-    
+
     #trafficChart {
         .requests {
             .line {
@@ -112,6 +131,7 @@
                 stroke: #27c5da;
                 stroke-width: 2;
             }
+
             .fill {
                 fill-opacity: 0.3;
                 fill: #27c5da;
@@ -125,6 +145,7 @@
                 stroke: #7051ad;
                 stroke-width: 2;
             }
+
             .fill {
                 fill-opacity: 0.3;
                 fill: #7051ad;
@@ -132,27 +153,26 @@
             }
         }
     }
-    
+
     .panel-title {
         i {
             line-height: 10px;
             top: 1px;
         }
     }
-    
+
     .token {
         color: @gray-light;
-        
+
         &.has-alerts {
             color: @brand-warning-dark;
         }
-        
+
         &.null, &.na { //na = not applicable
             color: darken(@gray-light, 30%);
         }
-        
     }
-        
+
     .dashboard-items {
         flex-grow: 1;
         display: flex;
