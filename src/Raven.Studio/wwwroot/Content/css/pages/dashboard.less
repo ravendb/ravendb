@@ -1,64 +1,45 @@
-﻿//TEMPLORARY MOCKUPS STYLES
-
-.temp-graph {
-    height: 100%;
-    min-height: 90px;
-    width: auto;
-    min-width: 200px;
-    background-color: @gray-base;
-    border-bottom: 1px solid @gray-dark;
-    border-right: 1px solid @gray-dark;
-    background-position: bottom right;
-    background-size: auto 100%;
-
-    &.temp-graph-1 {
-        background-image: url(../img/graph1.png);
-    }
-
-    &.temp-graph-2 {
-        background-image: url(../img/graph2.png);
-    }
-
-    &.temp-graph-3 {
-        background-image: url(../img/graph3.png);
-    }
-
-    &.temp-graph-4 {
-        background-image: url(../img/graph4.png);
-    }
-
-    &.temp-graph-5 {
-        background-image: url(../img/graph5.png);
-    }
-
-    &.temp-graph-6 {
-        background-image: url(../img/graph6.png);
-        background-size:cover;
-        padding-top: 100%;
-        height: 0;
-        background-position: center;
-        background-repeat: no-repeat;
-        border-radius: 50%;
-        border: 1px solid @gray-dark;
-    }
-}
-
-.list-container {
-    position: relative;
-    flex-grow: 1;
-    align-self: stretch;
-    min-width: 250px;
-    min-height: 100px;
-
-    .list {
-        background-color: @gray-base;
-    }
-}
+﻿
 
 
 #dashboard {
     display: flex;
     flex-direction: column;
+
+    .graph-container {
+        height: 100%;
+        min-height: 90px;
+        width: auto;
+        min-width: 200px;
+        background-color: @gray-base;
+        border-bottom: 1px solid @gray-dark;
+        border-right: 1px solid @gray-dark;
+        background-position: bottom right;
+        background-size: auto 100%;
+
+
+        &.temp-graph-6 { // TODO: delete me!
+            background-image: url(../img/graph6.png);
+            background-size:cover;
+            padding-top: 100%;
+            height: 0;
+            background-position: center;
+            background-repeat: no-repeat;
+            border-radius: 50%;
+            border: 1px solid @gray-dark;
+        }
+    }
+
+    .list-container {
+        position: relative;
+        flex-grow: 1;
+        align-self: stretch;
+        min-width: 250px;
+        min-height: 100px;
+
+        .list {
+            background-color: @gray-base;
+        }
+    }
     
     
     svg {

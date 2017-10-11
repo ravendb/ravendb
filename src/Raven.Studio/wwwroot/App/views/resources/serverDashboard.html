@@ -48,7 +48,7 @@
                                 <div><strong data-bind="text: cpuUsage() + '%', attr: { class: cpuUsageClass() }"></strong></div>
                             </div>
                             <div class="infogrid-graph" >
-                                <div class="temp-graph" id="cpuChart">
+                                <div class="graph-container" id="cpuChart">
                                     
                                 </div>
                             </div>
@@ -61,7 +61,7 @@
                                 <div><small><a href="#">see details</a></small></div>
                             </div>
                             <div class="infogrid-graph">
-                                <div class="temp-graph" id="memoryChart">
+                                <div class="graph-container" id="memoryChart">
 
                                 </div>
                             </div>
@@ -84,7 +84,7 @@
                             <div># Total docs data received/s<br/> <strong data-bind="text: $root.sizeFormatter(totalTransferPerSecond())"></strong></div>
                         </div>
                         <div class="infogrid-graph">
-                            <div class="temp-graph" id="trafficChart"></div>
+                            <div class="graph-container" id="trafficChart"></div>
                         </div>
                     </div>
                     <div class="list-container">
@@ -132,7 +132,7 @@
                                 </div>
                             </div>
                             <div class="infogrid-graph">
-                                <div class="temp-graph" id="indexingChart"></div>
+                                <div class="graph-container" id="indexingChart"></div>
                             </div>
                             <div class="infogrid-label">
                                 <div class="margin-bottom">
@@ -145,7 +145,7 @@
                                 </div>
                             </div>
                             <div class="infogrid-graph">
-                                <div class="temp-graph" id="reduceChart"></div>
+                                <div class="graph-container" id="reduceChart"></div>
                             </div>
                         </div>
                         <div class="list-container">
@@ -170,7 +170,7 @@
                             <div class="text-center margin-bottom">
                                 Total Docs size: <strong data-bind="text: $root.sizeFormatter(totalDocumentsSize())"></strong>
                             </div>
-                            <div class="temp-graph temp-graph-6">
+                            <div class="graph-container temp-graph-6">
                                 
                             </div>
                         </div>
