@@ -13,6 +13,8 @@ import driveUsage = require("models/resources/serverDashboard/driveUsage");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import appUrl = require("common/appUrl");
 import dashboardChart = require("models/resources/serverDashboard/dashboardChart");
+import storagePieChart = require("models/resources/serverDashboard/storagePieChart");
+import serverDashboardWebSocketClient = require("common/serverDashboardWebSocketClient");
 
 class machineResourcesSection {
 
@@ -305,8 +307,13 @@ class trafficSection {
 
 class driveUsageSection {
     private table = ko.observableArray<driveUsage>();
+    private storageChart: storagePieChart;
     
     totalDocumentsSize = ko.observable<number>(0);
+    
+    init() {
+        this.storageChart = new storagePieChart("#storageChart");
+    }
     
     onData(data: Raven.Server.Dashboard.DrivesUsage) {
         const items = data.Items;
@@ -330,6 +337,33 @@ class driveUsageSection {
         });
 
         this.updateTotals();
+        this.updateChart(data);
+    }
+    
+    private updateChart(data: Raven.Server.Dashboard.DrivesUsage) {
+        const cache = new Map<string, number>();
+        
+        // group by database size
+        data.Items.forEach(mountPointUsage => {
+            mountPointUsage.Items.forEach(item => {
+                if (cache.has(item.Database)) {
+                    cache.set(item.Database, item.Size + cache.get(item.Database));
+                } else {
+                    cache.set(item.Database, item.Size);
+                }
+            });
+        });
+        
+        const result = [] as Raven.Server.Dashboard.DatabaseDiskUsage[];
+        
+        cache.forEach((value, key) => {
+            result.push({
+                Database: key,
+                Size: value
+            });
+        });
+        
+        this.storageChart.onData(result);
     }
     
     private updateTotals() {
@@ -339,6 +373,8 @@ class driveUsageSection {
 
 class serverDashboard extends viewModelBase {
 
+    liveClient = ko.observable<serverDashboardWebSocketClient>();
+    
     clusterManager = clusterTopologyManager.default;
     sizeFormatter = generalUtils.formatBytesToSize;
 
@@ -351,12 +387,6 @@ class serverDashboard extends viewModelBase {
     indexingSpeedSection = new indexingSpeedSection();
     machineResourcesSection = new machineResourcesSection();
     driveUsageSection = new driveUsageSection();
-    
-    constructor() {
-        super();
-        
-        this.bindToCurrentInstance("draw", "fixContainersSizes");
-    }
     
     private createFakeDatabases(): Raven.Server.Dashboard.DatabasesInfo {
         const fakeDatabases = [] as Raven.Server.Dashboard.DatabaseInfoItem[];
@@ -473,42 +503,46 @@ class serverDashboard extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
         
-        //TODO: this.fixContainersSizes();
+        this.initSections();
         
-        //TODO: this is manual for now this.draw();
-        
-        /* TODO:
-        const interval = setInterval(handler, 1000);
-
-        this.registerDisposable({
-            dispose: () => clearInterval(interval)
-        });*/
+        this.enableLiveView();
     }
     
-    fixContainersSizes() {
-        const sizes = new Map<Element, { width: number, height: number}>();
-        
-        // first save containers sizes
-        $(".fix-size").each((idx, el) => {
-            sizes.set(el, {
-                width: $(el).innerWidth(),
-                height: $(el).innerHeight()
-            });
-        });
-        
-        // now hardcode its sizes
-        sizes.forEach((sizes, element) => {
-            $(element).innerWidth(sizes.width);
-            $(element).innerHeight(sizes.height);
-        });
-    }
-
-    draw() {
+    private initSections() {
         this.trafficSection.init();
         this.databasesSection.init();
         this.indexingSpeedSection.init();
         this.machineResourcesSection.init();
-
+        this.driveUsageSection.init();
+    }
+    
+    private enableLiveView() {
+        this.liveClient(new serverDashboardWebSocketClient(d => this.onData(d)));
+    }
+    
+    private onData(data: Raven.Server.Dashboard.AbstractDashboardNotification) {
+        switch (data.Type) {
+            case "DriveUsage":
+                this.driveUsageSection.onData(data as Raven.Server.Dashboard.DrivesUsage);
+                break;
+            case "MachineResources":
+                this.machineResourcesSection.onData(data as Raven.Server.Dashboard.MachineResources);
+                break;
+            case "TrafficWatch":
+                this.trafficSection.onData(data as Raven.Server.Dashboard.TrafficWatch);
+                break;
+            case "DatabasesInfo":
+                this.databasesSection.onData(data as Raven.Server.Dashboard.DatabasesInfo);
+                break;
+            case "IndexingSpeed":
+                this.indexingSpeedSection.onData(data as Raven.Server.Dashboard.IndexingSpeed);
+                break;
+            default:
+                throw new Error("Unhandled notification type: " + data.Type);
+        }
+    }
+    
+    fakeDraw() { //TODO: delete this method
         const fakeTraffic = this.createFakeTraffic();
         this.trafficSection.onData(fakeTraffic);
 
