@@ -471,14 +471,14 @@ class visualizerGraphGlobal {
         betweenPagesWidth: 30,
         betweenPagesAndDocuments: 80,
         globalMargin: 30
-    }
+    };
 
     private hitTest = new hitTest();
 
     private savedZoomStatus = {
         scale: 1,
         translate: [0, 0] as [number, number]
-    }
+    };
 
     private totalWidth: number;
     private totalHeight: number; 
