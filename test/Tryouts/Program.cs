@@ -4,21 +4,38 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using FastTests.Blittable;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Identity;
 
 namespace RavenDB4RCTests
 {
     class Program
     {
+       
+
         static void Main(string[] args)
         {
-            for (int i = 0; i < 100; i++)
+            var documentStore = new DocumentStore
             {
-                Console.WriteLine(i);
-                using (var a = new SlowTests.Tests.Spatial.TwoLocations())
+                Urls = new[] {"http://4.live-test.ravendb.net"},
+                Database = "Test"
+            };
+         
+            documentStore.Initialize();
+
+            while (true)
+            {
+                using (var s = documentStore.OpenSession())
                 {
-                    a.CanQueryByMultipleLocationsOverHttp();
+                    dynamic load;
+                    using (documentStore.AggressivelyCache())
+                    {
+                        load = s.Load<dynamic>("users/1");
+                    }
+                    Console.WriteLine(load.Name);
+                    Console.WriteLine(documentStore.GetRequestExecutor().NumberOfServerRequests);
                 }
-                
+                Console.ReadLine();
             }
         }
 
