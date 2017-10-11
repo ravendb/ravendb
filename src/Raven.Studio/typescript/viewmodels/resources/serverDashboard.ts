@@ -233,7 +233,7 @@ class trafficSection {
     totalRequestsPerSecond = ko.observable<number>(0);
     totalTransferPerSecond = ko.observable<number>(0);
     
-    init() {
+    init()  {
         const grid = this.gridController();
 
         grid.headerVisible(true);
@@ -354,6 +354,8 @@ class serverDashboard extends viewModelBase {
     
     constructor() {
         super();
+        
+        this.bindToCurrentInstance("draw", "fixContainersSizes");
     }
     
     private createFakeDatabases(): Raven.Server.Dashboard.DatabasesInfo {
@@ -471,24 +473,54 @@ class serverDashboard extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
         
+        //TODO: this.fixContainersSizes();
+        
+        //TODO: this is manual for now this.draw();
+        
+        /* TODO:
+        const interval = setInterval(handler, 1000);
+
+        this.registerDisposable({
+            dispose: () => clearInterval(interval)
+        });*/
+    }
+    
+    fixContainersSizes() {
+        const sizes = new Map<Element, { width: number, height: number}>();
+        
+        // first save containers sizes
+        $(".fix-size").each((idx, el) => {
+            sizes.set(el, {
+                width: $(el).innerWidth(),
+                height: $(el).innerHeight()
+            });
+        });
+        
+        // now hardcode its sizes
+        sizes.forEach((sizes, element) => {
+            $(element).innerWidth(sizes.width);
+            $(element).innerHeight(sizes.height);
+        });
+    }
+
+    draw() {
         this.trafficSection.init();
         this.databasesSection.init();
         this.indexingSpeedSection.init();
-        
         this.machineResourcesSection.init();
 
         const fakeTraffic = this.createFakeTraffic();
         this.trafficSection.onData(fakeTraffic);
-        
+
         const fakeDatabases = this.createFakeDatabases();
         this.databasesSection.onData(fakeDatabases);
-        
+
         const fakeIndexingSpeed = this.createFakeIndexingSpeed();
         this.indexingSpeedSection.onData(fakeIndexingSpeed);
-        
+
         const fakeMachineResources = this.createFakeMachineResources();
         this.machineResourcesSection.onData(fakeMachineResources);
-        
+
         const fakeDriveUsage = this.createFakeDiskUsages();
         this.driveUsageSection.onData(fakeDriveUsage);
 
@@ -570,16 +602,8 @@ class serverDashboard extends viewModelBase {
             }
 
         };
-        
-        (this as any).handler = handler; //TODO: remove me!
-        
-        /*
-        const interval = setInterval(handler, 1000);
 
-        this.registerDisposable({
-            dispose: () => clearInterval(interval)
-        });*/
-        
+        (this as any).handler = handler; //TODO: remove me!
     }
     
 }
