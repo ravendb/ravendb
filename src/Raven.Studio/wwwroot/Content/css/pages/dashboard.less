@@ -60,6 +60,98 @@
     display: flex;
     flex-direction: column;
     
+    
+    svg {
+        .bg {
+            fill: @gray-base; 
+        }
+        .grid-line {
+            stroke: #2c343c;
+        }
+    }
+
+    #cpuChart, #memoryChart {
+        .line {
+            fill: none;
+            stroke: @brand-primary;
+            stroke-width: 2;
+        }
+        .fill {
+            fill-opacity: 0.3;
+            fill: @brand-primary;
+            stroke: none;
+        }
+    }
+
+    #indexingChart {
+        .line {
+            fill: none;
+            stroke: #0873a3;
+            stroke-width: 2;
+        }
+        .fill {
+            fill-opacity: 0.3;
+            fill: #0873a3;
+            stroke: none;
+        }
+    }
+    
+    #reduceChart {
+        .map {
+            .line {
+                fill: none;
+                stroke: #d08f27;
+                stroke-width: 2;
+            }
+            .fill {
+                fill-opacity: 0.3;
+                fill: #d08f27;
+                stroke: none;
+            }
+        }
+        
+        .reduce {
+            .line {
+                fill: none;
+                stroke: #d83731;
+                stroke-width: 2;
+            }
+            .fill {
+                fill-opacity: 0.3;
+                fill: #d83731;
+                stroke: none;
+            }
+        }
+    }
+    
+    #trafficChart {
+        .requests {
+            .line {
+                fill: none;
+                stroke: #27c5da;
+                stroke-width: 2;
+            }
+            .fill {
+                fill-opacity: 0.3;
+                fill: #27c5da;
+                stroke: none;
+            }
+        }
+
+        .transfer {
+            .line {
+                fill: none;
+                stroke: #7051ad;
+                stroke-width: 2;
+            }
+            .fill {
+                fill-opacity: 0.3;
+                fill: #7051ad;
+                stroke: none;
+            }
+        }
+    }
+    
     .panel-title {
         i {
             line-height: 10px;

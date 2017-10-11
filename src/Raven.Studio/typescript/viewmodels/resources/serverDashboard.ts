@@ -11,13 +11,36 @@ import indexingSpeed = require("models/resources/serverDashboard/indexingSpeed")
 import machineResources = require("models/resources/serverDashboard/machineResources");
 import driveUsage = require("models/resources/serverDashboard/driveUsage");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
-import appUrl = require("../../common/appUrl");
+import appUrl = require("common/appUrl");
+import dashboardChart = require("models/resources/serverDashboard/dashboardChart");
 
 class machineResourcesSection {
 
+    cpuChart: dashboardChart;
+    memoryChart: dashboardChart;
+    
+    totalMemory: number;
+    
     resources = ko.observable<machineResources>();
- 
+    
+    init() {
+        this.cpuChart = new dashboardChart("#cpuChart", {
+            yMaxProvider: () => 100,
+            topPaddingProvider: () => 2
+        });
+
+        this.memoryChart = new dashboardChart("#memoryChart", {
+            yMaxProvider: () => this.totalMemory,
+            topPaddingProvider: () => 2
+        });
+    }
+    
     onData(data: Raven.Server.Dashboard.MachineResources) {
+        this.totalMemory = data.TotalMemory;
+        
+        this.cpuChart.onData(moment.utc(data.Date).toDate(), [{ key: "cpu", value: data.CpuUsage }]);
+        this.memoryChart.onData(moment.utc(data.Date).toDate(), [{ key: "memory", value: data.MemoryUsage }]);
+        
         if (this.resources()) {
             this.resources().update(data);
         } else {
@@ -27,6 +50,9 @@ class machineResourcesSection {
 }
 
 class indexingSpeedSection {
+    indexingChart: dashboardChart;
+    reduceChart: dashboardChart;
+    
     private table = [] as indexingSpeed[];
     private gridController = ko.observable<virtualGridController<indexingSpeed>>();
 
@@ -35,6 +61,9 @@ class indexingSpeedSection {
     totalReducedPerSecond = ko.observable<number>(0);
 
     init() {
+        this.indexingChart = new dashboardChart("#indexingChart");
+        this.reduceChart = new dashboardChart("#reduceChart");
+        
         const grid = this.gridController();
 
         grid.headerVisible(true);
@@ -44,7 +73,7 @@ class indexingSpeedSection {
             items: this.table
         }), () => {
             return [
-                new checkedColumn(true),
+                //TODO:  new checkedColumn(true),
                 new hyperlinkColumn<indexingSpeed>(grid, x => x.database(), x => appUrl.forDocuments(null, x.database()), "Database", "30%"),
                 new textColumn<indexingSpeed>(grid, x => x.indexedPerSecond() != null ? x.indexedPerSecond() : "n/a", "Indexed / sec", "15%", {
                     extraClass: item => item.indexedPerSecond() != null ? "" : "na"
@@ -81,6 +110,15 @@ class indexingSpeedSection {
         });
 
         this.updateTotals();
+        
+        this.indexingChart.onData(moment.utc(data.Date).toDate(), [{
+            key: "indexing", value: this.totalIndexedPerSecond() 
+        }]);
+        
+        this.reduceChart.onData(moment.utc(data.Date).toDate(), [
+            { key: "map", value: this.totalMappedPerSecond() },
+            { key: "reduce", value: this.totalReducedPerSecond() }
+        ]);
 
         this.gridController().reset(false);
     }
@@ -188,6 +226,7 @@ class trafficSection {
     private sizeFormatter = generalUtils.formatBytesToSize;
     
     private table = [] as trafficItem[];
+    private trafficChart: dashboardChart;
 
     private gridController = ko.observable<virtualGridController<trafficItem>>();
     
@@ -204,11 +243,16 @@ class trafficSection {
             items: this.table
         }), () => {
             return [
-                new checkedColumn(true),
+                //TODO: new checkedColumn(true),
                 new hyperlinkColumn<trafficItem>(grid, x => x.database(), x => appUrl.forDocuments(null, x.database()), "Database", "30%"),
                 new textColumn<trafficItem>(grid, x => x.requestsPerSecond(), "Requests / s", "25%"),
                 new textColumn<trafficItem>(grid, x => this.sizeFormatter(x.transferPerSecond()), "Docs data received / s", "25%")
             ];
+        });
+        
+        this.trafficChart = new dashboardChart("#trafficChart", {
+            useSeparateYScales: true,
+            topPaddingProvider: key => key === "requests" ? 20 : 5
         });
     }
     
@@ -233,6 +277,14 @@ class trafficSection {
         });
         
         this.updateTotals();
+        
+        this.trafficChart.onData(moment.utc(data.Date).toDate(), [{
+            key: "requests",
+            value: this.totalRequestsPerSecond()
+        }, {
+            key: "transfer",
+            value: this.totalTransferPerSecond()
+        }]);
         
         this.gridController().reset(false);
     }
@@ -422,6 +474,8 @@ class serverDashboard extends viewModelBase {
         this.trafficSection.init();
         this.databasesSection.init();
         this.indexingSpeedSection.init();
+        
+        this.machineResourcesSection.init();
 
         const fakeTraffic = this.createFakeTraffic();
         this.trafficSection.onData(fakeTraffic);
@@ -438,15 +492,15 @@ class serverDashboard extends viewModelBase {
         const fakeDriveUsage = this.createFakeDiskUsages();
         this.driveUsageSection.onData(fakeDriveUsage);
 
-        const interval = setInterval(() => {
+        const handler = () => {
 
             // traffic 
             {
                 fakeTraffic.Items.forEach(x => {
-                    const dx = _.random(-20, 20);
+                    const dx = _.random(-2000, 2000);
                     x.TransferPerSecond += dx;
 
-                    const dy = _.random(-20, 20);
+                    const dy = _.random(-2000, 2000);
                     x.RequestsPerSecond += dy;
                 });
 
@@ -455,70 +509,76 @@ class serverDashboard extends viewModelBase {
                 this.trafficSection.onData(fakeTraffic);
 
             }
-            
+
             // databases
             {
                 fakeDatabases.Items.forEach(x => {
-                   const dx = _.random(-20, 20);
-                   x.DocumentsCount += dx;
-                   x.AlertsCount = _.random(0, 2);
-                   x.ErroredIndexesCount = _.random(0, 2);
-                   x.Online = !!_.random(0, 1); 
+                    const dx = _.random(-20, 20);
+                    x.DocumentsCount += dx;
+                    x.AlertsCount = _.random(0, 2);
+                    x.ErroredIndexesCount = _.random(0, 2);
+                    x.Online = !!_.random(0, 1);
                 });
-                
+
                 fakeDatabases.Date = moment.utc().toISOString();
-                
+
                 this.databasesSection.onData(fakeDatabases);
             }
-            
+
             // indexing speed
             {
                 fakeIndexingSpeed.Items.forEach(x => {
                     const isMap = x.IndexedPerSecond != null;
-                    
-                    const dx = _.random(-100, 100);
-                    
+
+                    const dx = _.random(-200, 1000);
+
                     if (isMap) {
                         x.IndexedPerSecond += dx;
                     } else {
                         x.ReducedPerSecond += dx;
+                        x.MappedPerSecond -= dx;
                     }
                 });
-                
+
                 fakeIndexingSpeed.Date = moment.utc().toISOString();
-                
+
                 this.indexingSpeedSection.onData(fakeIndexingSpeed);
             }
-            
+
             // machine resources
             {
                 fakeMachineResources.CpuUsage = _.random(0, 100);
                 fakeMachineResources.MemoryUsage = _.random(10000000, 32 * 1024 * 1024 * 1024);
-                
+
                 fakeMachineResources.Date = moment.utc().toISOString();
                 this.machineResourcesSection.onData(fakeMachineResources);
             }
-            
+
             // drive usage
             {
                 fakeDriveUsage.Items.forEach(item => {
                     const d1 = _.random(-10000000, 10000000);
                     item.FreeSpace += d1;
-                    
+
                     item.Items.forEach(x => {
                         const dx = _.random(-10000, 10000);
                         x.Size += dx;
-                    });    
+                    });
                 });
-                
+
                 this.driveUsageSection.onData(fakeDriveUsage);
             }
 
-        }, 1000);
+        };
+        
+        (this as any).handler = handler; //TODO: remove me!
+        
+        /*
+        const interval = setInterval(handler, 1000);
 
         this.registerDisposable({
             dispose: () => clearInterval(interval)
-        });
+        });*/
         
     }
     
