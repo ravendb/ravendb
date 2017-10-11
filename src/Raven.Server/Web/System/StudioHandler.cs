@@ -18,6 +18,7 @@ using Raven.Server.Routing;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Extensions.Streams;
 using Sparrow.Collections;
@@ -147,6 +148,15 @@ namespace Raven.Server.Web.System
                 contentType :
                 "text/plain; charset=utf-8";
         }
+
+        [RavenAction("/auth-error.html", "GET", AuthorizationStatus.UnauthenticatedClients)]
+        public Task StudioAuthError()
+        {
+            var error = GetStringQueryString("err");
+            HttpContext.Response.Headers["Content-Type"] = "text/html; charset=utf-8";
+            return HttpContext.Response.WriteAsync(HtmlUtil.RenderStudioAuthErrorPage(error));
+        }
+
 
         [RavenAction("/studio/$", "GET", AuthorizationStatus.UnauthenticatedClients)]
         public async Task GetStudioFile()
