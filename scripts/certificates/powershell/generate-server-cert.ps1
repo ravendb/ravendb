@@ -69,7 +69,7 @@ $cert = New-SelfSignedCertificate `
         -Subject $subject `
         -Dnsname $DNS `
         -HashAlgorithm SHA256 `
-        -CertStoreLocation Cert:\LocalMachine\My\ `
+        -CertStoreLocation Cert:\CurrentUser\My `
         -KeySpec Signature `
         -KeyUsageProperty All `
         -KeyUsage CertSign, CRLSign, DigitalSignature, KeyEncipherment `
@@ -78,7 +78,7 @@ $cert = New-SelfSignedCertificate `
 
 $certThumbprint = $cert.Thumbprint
 $pfxPath = [io.path]::combine(".", $CertFile)
-$certStorePath = "cert:\LocalMachine\My\$certThumbprint";
+$certStorePath = "cert:\CurrentUser\My\$certThumbprint";
 
 Export-PfxCertificate -cert $certStorePath -FilePath $pfxPath -Password $CertificatePassword -Force -Verbose
 
