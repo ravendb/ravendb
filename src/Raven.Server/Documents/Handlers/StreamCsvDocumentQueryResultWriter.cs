@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.Handlers
             WriteCsvHeaderIfNeeded(res);
             foreach (var property in _properties)
             {
-                if (property.Length == 3 && property.Equals(Constants.Documents.Metadata.Id))
+                if (Constants.Documents.Metadata.Id == property)
                 {
                     _csvWriter.WriteField(res.Id);
                 }
