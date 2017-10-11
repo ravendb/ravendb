@@ -11,6 +11,8 @@
                         <div title="Node url">
                             <i class="icon-link"></i><span data-bind="text: clusterManager.localNodeUrl"></span>
                         </div>
+                        <button data-bind="click: $root.fixContainersSizes">FIX sizes</button>
+                        <button data-bind="click: $root.draw">DRAW</button>
                         <button data-bind="click: $root.handler">Refresh</button>
                         <div>
                             <i class="icon-clock"></i><span>Up for <strong class="text-success">TODO</strong> days</span>
@@ -48,7 +50,7 @@
                                 <div><strong data-bind="text: cpuUsage() + '%', attr: { class: cpuUsageClass() }"></strong></div>
                             </div>
                             <div class="infogrid-graph" >
-                                <div class="graph-container" id="cpuChart">
+                                <div class="graph-container fix-size" id="cpuChart">
                                     
                                 </div>
                             </div>
@@ -61,7 +63,7 @@
                                 <div><small><a href="#">see details</a></small></div>
                             </div>
                             <div class="infogrid-graph">
-                                <div class="graph-container" id="memoryChart">
+                                <div class="graph-container fix-size" id="memoryChart">
 
                                 </div>
                             </div>
@@ -84,11 +86,11 @@
                             <div># Total docs data received/s<br/> <strong data-bind="text: $root.sizeFormatter(totalTransferPerSecond())"></strong></div>
                         </div>
                         <div class="infogrid-graph">
-                            <div class="graph-container" id="trafficChart"></div>
+                            <div class="graph-container fix-size" id="trafficChart"></div>
                         </div>
                     </div>
                     <div class="list-container">
-                        <div class="list absolute-fill">
+                        <div class="list absolute-fill fix-size">
                             <virtual-grid class="resizable" params="controller: gridController, condensed: true"></virtual-grid>
                         </div>
                     </div>
@@ -108,8 +110,8 @@
                         <div>Offline: <strong data-bind="text: totalOfflineDatabases"></strong></div>
                     </div>
                     <div class="list-container">
-                        <div class="list absolute-fill">
-                            <virtual-grid class="resizable" params="controller: gridController, condensed: true"></virtual-grid>
+                        <div class="list absolute-fill fix-size">
+                            <virtual-grid class="resizable " params="controller: gridController, condensed: true"></virtual-grid>
                         </div>
                     </div>
                 </div>
@@ -170,11 +172,11 @@
                             <div class="text-center margin-bottom">
                                 Total Docs size: <strong data-bind="text: $root.sizeFormatter(totalDocumentsSize())"></strong>
                             </div>
-                            <div class="graph-container temp-graph-6">
+                            <div class="graph-container fix-size temp-graph-6">
                                 
                             </div>
                         </div>
-                        <div class="flex-grow flex-vertical" data-bind="foreach: table">
+                        <div class="flex-grow flex-vertical fix-size" data-bind="foreach: table">
                             <div class="flex-horizontal">
                                 <div data-bind="text: mountPoint"></div>
                                 <div class="flex-separator"></div>
