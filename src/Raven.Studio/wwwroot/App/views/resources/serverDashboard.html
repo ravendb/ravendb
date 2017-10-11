@@ -11,8 +11,7 @@
                         <div title="Node url">
                             <i class="icon-link"></i><span data-bind="text: clusterManager.localNodeUrl"></span>
                         </div>
-                        <button data-bind="click: $root.fixContainersSizes">FIX sizes</button>
-                        <button data-bind="click: $root.draw">DRAW</button>
+                        <button data-bind="click: $root.fakeDraw">Draw FAKE data</button>
                         <button data-bind="click: $root.handler">Refresh</button>
                         <div>
                             <i class="icon-clock"></i><span>Up for <strong class="text-success">TODO</strong> days</span>
@@ -172,7 +171,7 @@
                             <div class="text-center margin-bottom">
                                 Total Docs size: <strong data-bind="text: $root.sizeFormatter(totalDocumentsSize())"></strong>
                             </div>
-                            <div class="graph-container fix-size temp-graph-6">
+                            <div class="graph-container fix-size" id="storageChart">
                                 
                             </div>
                         </div>
