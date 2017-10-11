@@ -572,7 +572,7 @@ namespace Raven.Server.Documents.Queries
                         if (IsGroupBy)
                             ThrowInvalidIdInGroupByQuery(parameters);
 
-                        if (me.Arguments.Count != 1)
+                        if (me.Arguments.Count != 0)
                             ThrowInvalidArgumentToId(parameters);
 
                         return SelectField.Create(QueryFieldName.DocumentId, alias);
