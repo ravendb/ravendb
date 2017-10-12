@@ -3,36 +3,52 @@ import migrateDatabaseCommand = require("commands/database/studio/migrateDatabas
 import migrateDatabaseModel = require("models/database/tasks/migrateDatabaseModel");
 import notificationCenter = require("common/notifications/notificationCenter");
 import eventsCollector = require("common/eventsCollector");
+import getRemoteServerVersion = require("commands/database/studio/getRemoteServerVersion");
 
 class migrateDatabase extends viewModelBase {
 
     model = new migrateDatabaseModel();
-    startingMigration = ko.observable<boolean>(false);
+    
+    spinners = {
+        versionDetect: ko.observable<boolean>(false),
+        migration: ko.observable<boolean>(false)
+    };
 
+    constructor() {
+        super();
+        
+        this.bindToCurrentInstance("detectServerVersion");
+    }
+    
     attached() {
         super.attached();
 
-        this.updateHelpLink("YD9M1R");
+        this.updateHelpLink("YD9M1R"); //TODO: this is probably stale!
     }
 
-    canDeactivate(isClose: boolean) {
-        super.canDeactivate(isClose);
-
-        if (this.startingMigration()) {
-            this.confirmationMessage("Initiating migration", "Please wait until its completion.", ["OK"]);
-            return false;
+    detectServerVersion() {
+        if (!this.isValid(this.model.versionCheckValidationGroup)) {
+            return;
         }
-
-        return true;
+        this.spinners.versionDetect(true);
+        
+        new getRemoteServerVersion(this.model.serverUrl())
+            .execute()
+            .done(buildInfo => {
+                if (buildInfo.MajorVersion !== "Unknown") {
+                    this.model.serverMajorVersion(buildInfo.MajorVersion);
+                }
+            })
+            .always(() => this.spinners.versionDetect(false));
     }
-
+    
     migrateDb() {
         if (!this.isValid(this.model.validationGroup)) {
             return;
         }
 
         eventsCollector.default.reportEvent("database", "migrate");
-        this.startingMigration(true);
+        this.spinners.migration(true);
 
         const db = this.activeDatabase();
 
@@ -42,7 +58,7 @@ class migrateDatabase extends viewModelBase {
                 const operationId = operationIdDto.OperationId;
                 notificationCenter.instance.openDetailsForOperationById(db, operationId);
             })
-            .always(() => this.startingMigration(false));
+            .always(() => this.spinners.migration(false));
     }
 }
 

@@ -1,15 +1,27 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 
+type authenticationMethod = "windows" | "none";
+
 class migrateDatabaseModel {
     serverUrl = ko.observable<string>();
     databaseName = ko.observable<string>();
+
+    authenticationMethod = ko.observable<authenticationMethod>("none");
+    
+    serverMajorVersion = ko.observable<Raven.Server.Smuggler.Migration.MajorVersion>();
+    
     userName = ko.observable<string>();
     password = ko.observable<string>();
     domain = ko.observable<string>();
+    
+    showAuthenticationMethods: KnockoutComputed<boolean>;
+    showWindowsCredentialInputs: KnockoutComputed<boolean>;
 
     validationGroup: KnockoutValidationGroup;
+    versionCheckValidationGroup: KnockoutValidationGroup;
 
     constructor() {
+        this.initObservables();
         this.initValidation();
     }
 
@@ -17,13 +29,25 @@ class migrateDatabaseModel {
         return {
             ServerUrl: this.serverUrl(),
             DatabaseName: this.databaseName(),
-            UserName: this.userName(),
-            Password: this.password(),
-            Domain: this.domain(),
-            BuildInfo: null //TODO: http://issues.hibernatingrhinos.com/issue/RavenDB-8833
+            UserName: this.showWindowsCredentialInputs() ? this.userName() : null,
+            Password: this.showWindowsCredentialInputs() ? this.password() : null, 
+            Domain: this.showWindowsCredentialInputs() ? this.domain() : null, 
+            BuildMajorVersion: this.serverMajorVersion()
         };
     }
 
+    private initObservables() {
+        this.showAuthenticationMethods = ko.pureComputed(() => {
+           const version = this.serverMajorVersion();
+           return version === "V2" || version === "V30" || version === "V35";
+        });
+        
+        this.showWindowsCredentialInputs = ko.pureComputed(() => {
+            const authMethod = this.authenticationMethod();
+            return authMethod === "windows";
+        })
+    }
+    
     private initValidation() {
         this.serverUrl.extend({
             required: true,
@@ -33,10 +57,34 @@ class migrateDatabaseModel {
         this.databaseName.extend({
             required: true
         });
+        
+        this.serverMajorVersion.extend({
+            required: true
+        });
+        
+        this.userName.extend({
+            required: {
+                onlyIf: () => this.showWindowsCredentialInputs()
+            }
+        });
+        
+        this.password.extend({
+            required: {
+                onlyIf: () => this.showWindowsCredentialInputs()
+            }
+        });
 
         this.validationGroup = ko.validatedObservable({
             serverUrl: this.serverUrl,
-            databaseName: this.databaseName
+            databaseName: this.databaseName,
+            serverMajorVersion: this.serverMajorVersion, 
+            userName: this.userName,
+            password: this.password, 
+            domain: this.domain
+        });
+        
+        this.versionCheckValidationGroup = ko.validatedObservable({
+            serverUrl: this.serverUrl
         });
     }
 }
