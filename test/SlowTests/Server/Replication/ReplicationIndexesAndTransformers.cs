@@ -86,6 +86,8 @@ namespace SlowTests.Server.Replication
                 Urls = new[] {follower.WebUrl},
                 Database = caller
             };
+            source.Initialize();
+            destination.Initialize();
 
             var res  = CreateClusterDatabase(caller, source, 2);
             //var doc = MultiDatabase.CreateDatabaseDocument(dbName);
