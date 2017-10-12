@@ -11,8 +11,6 @@ import saveEtlTaskCommand = require("commands/database/tasks/saveEtlTaskCommand"
 import generalUtils = require("common/generalUtils");
 import ongoingTaskSqlEtlTransformationModel = require("models/database/tasks/ongoingTaskSqlEtlTransformationModel");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
-import deleteTransformationScriptConfirm = require("viewmodels/database/tasks/deleteTransformationScriptConfirm");
-import deleteSqlTableConfirm = require("viewmodels/database/tasks/deleteSqlTableConfirm");
 import transformationScriptSyntax = require("viewmodels/database/tasks/transformationScriptSyntax");
 import ongoingTaskSqlEtlTableModel = require("models/database/tasks/ongoingTaskSqlEtlTableModel");
 import testSqlConnectionStringCommand = require("commands/database/cluster/testSqlConnectionStringCommand");
@@ -51,8 +49,7 @@ class editSqlEtlTask extends viewModelBase {
         this.bindToCurrentInstance("useConnectionString",
                                    "useCollection",
                                    "testConnection",
-                                   "confirmRemoveTransformationScript",
-                                   "confirmRemoveSqlTable",
+                                   "removeTransformationScript",
                                    "cancelEditedTransformation",
                                    "cancelEditedSqlTable",
                                    "saveEditedTransformation",
@@ -287,17 +284,9 @@ class editSqlEtlTask extends viewModelBase {
         // todo: handle dirty flag (reset)     
     }
 
-    confirmRemoveTransformationScript(model: ongoingTaskSqlEtlTransformationModel) {
-        const db = this.activeDatabase();
-
-        const confirmDeleteViewModel = new deleteTransformationScriptConfirm(db, model.name());
-        app.showBootstrapDialog(confirmDeleteViewModel);
-        confirmDeleteViewModel.result.done(result => {
-            if (result.can) {
-                this.editedSqlEtl().transformationScripts.remove(x => model.name() === x.name());
-                this.showEditTransformationArea(false);
-            }
-        });
+    removeTransformationScript(model: ongoingTaskSqlEtlTransformationModel) {
+        this.editedSqlEtl().transformationScripts.remove(x => model.name() === x.name());
+        this.showEditTransformationArea(false);
     }
 
     editTransformationScript(model: ongoingTaskSqlEtlTransformationModel) {
@@ -315,18 +304,6 @@ class editSqlEtlTask extends viewModelBase {
 
         this.showEditSqlTableArea(true);
         // todo: handle dirty flag (reset)          
-    }
-
-    confirmRemoveSqlTable(model: ongoingTaskSqlEtlTableModel) {
-        const db = this.activeDatabase();
-
-        const confirmDeleteViewModel = new deleteSqlTableConfirm(db, model.tableName()); 
-        app.showBootstrapDialog(confirmDeleteViewModel)
-        confirmDeleteViewModel.result.done(result => {
-            if (result.can) {                
-                this.editedSqlEtl().sqlTables.remove(x => model.tableName() === x.tableName());
-            }
-        });
     }
 
     cancelEditedSqlTable() {

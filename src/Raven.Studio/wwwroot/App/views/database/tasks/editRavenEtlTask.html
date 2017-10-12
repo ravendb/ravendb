@@ -127,7 +127,7 @@
                                         </div>
                                         <div class="actions">
                                             <button data-bind="click: $parent.editTransformationScript.bind($parent, $data)" class="btn btn-default"><i class="icon-edit" title="Edit script"></i></button>
-                                            <button data-bind="click: $root.confirmRemoveTransformationScript" class="btn btn-danger"><i class="icon-trash" title="Delete script"></i></button>
+                                            <button data-bind="click: $root.removeTransformationScript" class="btn btn-danger"><i class="icon-trash" title="Delete script"></i></button>
                                         </div>
                                     </div>
                                 </div>
@@ -147,7 +147,10 @@
                                 <input autofocus class="form-control" type="text" data-bind="textInput: name, attr: { 'disabled': !isNew() }" placeholder="Enter a name for the transform script">
                             </div>
                             <div class="flex-noshrink">
-                                <button title="Save this transformation script" class="btn btn-success" data-bind="click: $root.saveEditedTransformation"><i class="icon-tick"></i><span>Save</span></button>
+                                <button class="btn btn-success" data-bind="click: $root.saveEditedTransformation, attr: { title : (isNew() ? 'Add' : 'Update') +  ' this transformation script' }">
+                                    <i class="icon-tick"></i>
+                                    <span data-bind="text: isNew() ? 'Add' : 'Update'"></span>
+                                </button>
                                 <button title="Cancel" class="btn btn-default" data-bind="click: $root.cancelEditedTransformation"><i class="icon-cancel"></i><Span>Cancel</Span></button>
                             </div>
                         </div>

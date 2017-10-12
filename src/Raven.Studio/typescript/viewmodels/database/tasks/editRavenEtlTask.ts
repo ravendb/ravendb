@@ -12,7 +12,6 @@ import saveEtlTaskCommand = require("commands/database/tasks/saveEtlTaskCommand"
 import generalUtils = require("common/generalUtils");
 import ongoingTaskRavenEtlTransformationModel = require("models/database/tasks/ongoingTaskRavenEtlTransformationModel");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
-import deleteTransformationScriptConfirm = require("viewmodels/database/tasks/deleteTransformationScriptConfirm");
 import transformationScriptSyntax = require("viewmodels/database/tasks/transformationScriptSyntax");
 import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
 
@@ -38,7 +37,7 @@ class editRavenEtlTask extends viewModelBase {
 
     constructor() {
         super();
-        this.bindToCurrentInstance("useConnectionString", "testConnection", "confirmRemoveTransformationScript", "cancelEditedTransformation", "saveEditedTransformation", "syntaxHelp");
+        this.bindToCurrentInstance("useConnectionString", "testConnection", "removeTransformationScript", "cancelEditedTransformation", "saveEditedTransformation", "syntaxHelp");
     }
 
     activate(args: any) {
@@ -263,16 +262,8 @@ class editRavenEtlTask extends viewModelBase {
         });
     }
 
-    confirmRemoveTransformationScript(model: ongoingTaskRavenEtlTransformationModel) {
-        const db = this.activeDatabase();
-
-        const confirmDeleteViewModel = new deleteTransformationScriptConfirm(db, model.name()); 
-        app.showBootstrapDialog(confirmDeleteViewModel);
-        confirmDeleteViewModel.result.done(result => {
-            if (result.can) {
-                this.editedRavenEtl().deleteTransformationScript(model);
-            }
-        });
+    removeTransformationScript(model: ongoingTaskRavenEtlTransformationModel) {
+        this.editedRavenEtl().deleteTransformationScript(model);
     }
 
     syntaxHelp() {
