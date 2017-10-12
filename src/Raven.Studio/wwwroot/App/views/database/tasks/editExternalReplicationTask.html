@@ -1,12 +1,12 @@
 <div class="content-margin edit-replication-task">
-    <div class="row flex-row absolute-fill">
-        <div class="col-xs-12 col-lg-6 flex-vertical">
-            <div class="flex-header">
-                <button data-bind="click: saveExternalReplication" class="btn btn-primary"><i class="icon-save"></i><span>Save</span></button>
-                <button data-bind="click: cancelOperation" class="btn btn-default" title="Return to Ongoing Tasks View"><i class="icon-cancel"></i><span>Cancel</span></button>
-            </div>
-            <div class="panel">
-                <form class="flex-form">
+    <form class="flex-form" data-bind="submit: saveExternalReplication">
+        <div class="row flex-row absolute-fill">
+            <div class="col-xs-12 col-lg-6 flex-vertical">
+                <div class="flex-header">
+                    <button type="submit" class="btn btn-primary"><i class="icon-save"></i><span>Save</span></button>
+                    <button data-bind="click: cancelOperation" class="btn btn-default" title="Return to Ongoing Tasks View"><i class="icon-cancel"></i><span>Cancel</span></button>
+                </div>
+                <div class="panel">
                     <div class="panel-body" data-bind="with: editedExternalReplication">                      
                         <h3 data-bind="text: $parent.isAddingNewReplicationTask() ? `New External Replication` : `Edit External Replication`"></h3>
                         <div class="form-group">
@@ -63,19 +63,19 @@
                             </div>
                         </div>
                     </div>
-                </form>
-                <div class="panel-addon" data-bind="with: $root.testConnectionResult">
-                    <div class="padding bg-success small" data-bind="visible: Success">
-                        <div>Successfully connected to node</div>
-                    </div>
-                    <div class="padding bg-danger small" data-bind="visible: !Success">
-                        Connection test failed: <span data-bind="text: $root.fullErrorDetailsVisible() ? Error : $root.shortErrorText()"></span>
-                        <div>
-                            <a href="#" data-bind="click: $root.fullErrorDetailsVisible.toggle.bind($root.fullErrorDetailsVisible), text: $root.fullErrorDetailsVisible() ? 'hide details' : 'show details'"></a>
+                    <div class="panel-addon" data-bind="with: $root.testConnectionResult">
+                        <div class="padding bg-success small" data-bind="visible: Success">
+                            <div>Successfully connected to node</div>
+                        </div>
+                        <div class="padding bg-danger small" data-bind="visible: !Success">
+                            Connection test failed: <span data-bind="text: $root.fullErrorDetailsVisible() ? Error : $root.shortErrorText()"></span>
+                            <div>
+                                <a href="#" data-bind="click: $root.fullErrorDetailsVisible.toggle.bind($root.fullErrorDetailsVisible), text: $root.fullErrorDetailsVisible() ? 'hide details' : 'show details'"></a>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
+    </form>
 </div>
