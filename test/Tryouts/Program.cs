@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using FastTests.Blittable;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Identity;
@@ -11,9 +12,12 @@ namespace RavenDB4RCTests
 {
     class Program
     {
-       
-
         static void Main(string[] args)
+        {
+            MainAsync().Wait();
+        }
+
+        static async Task MainAsync()
         {
             var documentStore = new DocumentStore
             {
@@ -25,12 +29,12 @@ namespace RavenDB4RCTests
 
             while (true)
             {
-                using (var s = documentStore.OpenSession())
+                using (var s = documentStore.OpenAsyncSession())
                 {
                     dynamic load;
                     using (documentStore.AggressivelyCache())
                     {
-                        load = s.Load<dynamic>("users/1");
+                        load = await s.LoadAsync<dynamic>("users/1");
                     }
                     Console.WriteLine(load.Name);
                     Console.WriteLine(documentStore.GetRequestExecutor().NumberOfServerRequests);
