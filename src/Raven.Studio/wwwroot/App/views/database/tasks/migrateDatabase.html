@@ -26,7 +26,8 @@
                                             data-bind="click: _.partial(serverMajorVersion, 'V4'), css: { active: serverMajorVersion() === 'V4' }">4.0</button>
                                 </span>
                                 
-                                <button type="button" class="btn btn-default" title="Perform automatic detection" data-bind="click: $root.detectServerVersion">
+                                <button type="button" class="btn btn-default" title="Perform automatic detection" 
+                                        data-bind="click: $root.detectServerVersion, css: { 'btn-spinner': $root.spinners.versionDetect() }, disable: $root.spinners.versionDetect">
                                     <i class="icon-refresh"></i>
                                     <span>Detect</span>
                                 </button>
