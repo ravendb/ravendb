@@ -181,18 +181,17 @@ class ongoingTasks extends viewModelBase {
     confirmDisableOngoingTask(model: ongoingTaskModel) {
         const db = this.activeDatabase();
 
-        const confirmDisableViewModel = new disableOngoingTaskConfirm(db, model.taskType(), model.taskId);
-        app.showBootstrapDialog(confirmDisableViewModel);
-        confirmDisableViewModel.result.done(result => {
-            if (result.can) {
-                new toggleOngoingTaskCommand(db, model.taskType(), model.taskId, model.taskName(), true)
-                    .execute()
-                    .done(() => {
-                        return model.taskState('Disabled');
-                    })
-                    .always(() => this.fetchOngoingTasks());
-            }
-        });
+        this.confirmationMessage("Disable Task", "You're disabling task of type: " + model.taskType(), ["Cancel", "Disable"])
+            .done(result => {
+                if (result.can) {
+                    new toggleOngoingTaskCommand(db, model.taskType(), model.taskId, model.taskName(), true)
+                        .execute()
+                        .done(() => {
+                            return model.taskState('Disabled');
+                        })
+                        .always(() => this.fetchOngoingTasks());
+                }
+            });
     }
 
     confirmRemoveOngoingTask(model: ongoingTaskModel) {
