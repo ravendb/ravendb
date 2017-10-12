@@ -347,7 +347,6 @@ namespace Raven.Server.Rachis
         {
             if (_engine.Timeout.Disable)
                 return;
-            Console.WriteLine($"Lost the leadership {_engine.Tag}");
             var sb = new StringBuilder();
             var now = DateTime.UtcNow;
             sb.AppendLine("Triggered because of:");
