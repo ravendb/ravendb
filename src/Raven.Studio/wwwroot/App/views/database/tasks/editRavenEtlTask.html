@@ -1,18 +1,18 @@
 <div class="content-margin edit-raven-etl-task">
     <div class="row flex-row absolute-fill">
         <div class="col-xs-12 col-lg-6 flex-vertical">
-            <div class="flex-header">
-                <button data-bind="click: trySaveRavenEtl" class="btn btn-primary"><i class="icon-save"></i><span>Save</span></button>
-                <button data-bind="click: cancelOperation" class="btn btn-default"><i class="icon-cancel"></i><span>Cancel</span></button>
-            </div>
-            <div class="panel">
-                <form class="flex-form">
+            <form class="flex-form" data-bind="submit: trySaveRavenEtl">
+                <div class="flex-header">
+                    <button type="submit" class="btn btn-primary"><i class="icon-save"></i><span>Save</span></button>
+                    <button data-bind="click: cancelOperation" class="btn btn-default"><i class="icon-cancel"></i><span>Cancel</span></button>
+                </div>
+                <div class="panel">
                     <div class="panel-body" data-bind="with: editedRavenEtl">                       
                         <h3 data-bind="text: $parent.isAddingNewRavenEtlTask() ? `New RavenDB ETL` : `Edit RavenDB ETL`"></h3>
                         <div class="form-group">
                             <label for="taskName" class="control-label">Task Name</label>
                             <div class="flex-grow">
-                                <input type="text" class="form-control" id="taskName" placeholder="Enter a descriptive name for the RavenDB ETL task" data-bind="textInput: taskName">
+                                <input type="text" autocomplete="off" class="form-control" id="taskName" placeholder="Enter a descriptive name for the RavenDB ETL task" data-bind="textInput: taskName">
                             </div>
                         </div>
                         <div class="form-group">
@@ -22,7 +22,7 @@
                                 <label for="toggle3">Choose preferred mentor node manually</label>
                             </div>
                         </div>
-
+    
                         <div class="form-group" data-bind="validationElement: preferredMentor, visible: manualChooseMentor">
                             <div>
                                 <label class="control-label">Preferred mentor</label>
@@ -77,69 +77,69 @@
                             </div>
                         </div>
                     </div>
-                </form>
-                <div class="panel-addon" data-bind="with: testConnectionResult">
-                    <div class="padding bg-success small" data-bind="visible: Success">
-                        <div>Successfully connected to node</div>
-                    </div>
-                    <div class="padding bg-danger small" data-bind="visible: !Success">
-                        Connection test failed: <span data-bind="text: $root.fullErrorDetailsVisible() ? Error : $root.shortErrorText()"></span>
-                        <div>
-                            <a href="#" data-bind="click: $root.fullErrorDetailsVisible.toggle.bind($root.fullErrorDetailsVisible), text: $root.fullErrorDetailsVisible() ? 'hide details' : 'show details'"></a>
+                    <div class="panel-addon" data-bind="with: testConnectionResult">
+                        <div class="padding bg-success small" data-bind="visible: Success">
+                            <div>Successfully connected to node</div>
+                        </div>
+                        <div class="padding bg-danger small" data-bind="visible: !Success">
+                            Connection test failed: <span data-bind="text: $root.fullErrorDetailsVisible() ? Error : $root.shortErrorText()"></span>
+                            <div>
+                                <a href="#" data-bind="click: $root.fullErrorDetailsVisible.toggle.bind($root.fullErrorDetailsVisible), text: $root.fullErrorDetailsVisible() ? 'hide details' : 'show details'"></a>
+                            </div>
+                        </div>
+                        <div class="padding bg-danger small" data-bind="visible: !Success && !$root.connectionStringIsDefined()">
+                            <span class="icon-warning"></span><span data-bind="text: Error"></span>
+                            <a target="_blank" data-bind="attr: { href: $root.connectionStringsUrl }"> - Click here to define a new connection string</a>
                         </div>
                     </div>
-                    <div class="padding bg-danger small" data-bind="visible: !Success && !$root.connectionStringIsDefined()">
-                        <span class="icon-warning"></span><span data-bind="text: Error"></span>
-                        <a target="_blank" data-bind="attr: { href: $root.connectionStringsUrl }"> - Click here to define a new connection string</a>
-                    </div>
-                </div>
-                <div class="panel-addon" data-bind="visible: ravenEtlConnectionStringsNames().length == 0">
-                    <div class="padding bg-warning small">
-                        <span class="icon-warning"></span>&nbsp;&nbsp;No connection strings have been defined yet
-                        <a data-bind="attr: { href: connectionStringsUrl }"> - Click here to define a new connection string</a>
-                    </div>
-                </div>
-            </div>
-            <div class="flex-header">
-                <div class="flex-row">
-                    <h3>Transform Scripts:</h3>
-                    <button id="addNewScript" data-bind="click: tryAddNewTransformation" title="Add a new transformation script for this ETL task" class="btn btn-info pull-right"><i class="icon-plus"></i><span>Add New Script</span></button>
-                </div>
-            </div>
-            <div class="scroll">
-                <div class="etl-list" id="transformsList" data-bind="with: editedRavenEtl">
-                    <div data-bind="if: transformationScripts().length === 0">
-                        <div>
-                            <i class="icon-xl icon-empty-set text-muted"></i>
-                            <h3 class="text-center text-muted">No transformation scripts have been defined.</h3>
+                    <div class="panel-addon" data-bind="visible: ravenEtlConnectionStringsNames().length == 0">
+                        <div class="padding bg-warning small">
+                            <span class="icon-warning"></span>&nbsp;&nbsp;No connection strings have been defined yet
+                            <a data-bind="attr: { href: connectionStringsUrl }"> - Click here to define a new connection string</a>
                         </div>
                     </div>
-                    <div data-bind="foreach: transformationScripts">
-                        <div class="panel item">
-                            <div class="padding padding-sm">
-                                <div class="flex-horizontal">
-                                    <div class="flex-grow info">
-                                        <div class="transformer-name" data-bind="text: name" title="Transformation script name"></div>
-                                        <div class="collections">
-                                            Collections:
-                                            <span class="etl-collections" data-bind="foreach: transformScriptCollections" title="The Collections transformed">
-                                                <span data-bind="text: $data, attr: { class: 'collection-color-' + $parent.getCollectionEntry($data) }"></span>
-                                            </span>
-                                            <span data-bind="visible: transformScriptCollections().length === 0">
-                                                No collections selected..
-                                            </span>
+                </div>
+                <div class="flex-header">
+                    <div class="flex-row">
+                        <h3>Transform Scripts:</h3>
+                        <button id="addNewScript" data-bind="click: tryAddNewTransformation" title="Add a new transformation script for this ETL task" class="btn btn-info pull-right"><i class="icon-plus"></i><span>Add New Script</span></button>
+                    </div>
+                </div>
+                <div class="scroll">
+                    <div class="etl-list" id="transformsList" data-bind="with: editedRavenEtl">
+                        <div data-bind="if: transformationScripts().length === 0">
+                            <div>
+                                <i class="icon-xl icon-empty-set text-muted"></i>
+                                <h3 class="text-center text-muted">No transformation scripts have been defined.</h3>
+                            </div>
+                        </div>
+                        <div data-bind="foreach: transformationScripts">
+                            <div class="panel item">
+                                <div class="padding padding-sm">
+                                    <div class="flex-horizontal">
+                                        <div class="flex-grow info">
+                                            <div class="transformer-name" data-bind="text: name" title="Transformation script name"></div>
+                                            <div class="collections">
+                                                Collections:
+                                                <span class="etl-collections" data-bind="foreach: transformScriptCollections" title="The Collections transformed">
+                                                    <span data-bind="text: $data, attr: { class: 'collection-color-' + $parent.getCollectionEntry($data) }"></span>
+                                                </span>
+                                                <span data-bind="visible: transformScriptCollections().length === 0">
+                                                    No collections selected..
+                                                </span>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div class="actions">
-                                        <button data-bind="click: $parent.editTransformationScript.bind($parent, $data)" class="btn btn-default"><i class="icon-edit" title="Edit script"></i></button>
-                                        <button data-bind="click: $root.confirmRemoveTransformationScript" class="btn btn-danger"><i class="icon-trash" title="Delete script"></i></button>
+                                        <div class="actions">
+                                            <button data-bind="click: $parent.editTransformationScript.bind($parent, $data)" class="btn btn-default"><i class="icon-edit" title="Edit script"></i></button>
+                                            <button data-bind="click: $root.confirmRemoveTransformationScript" class="btn btn-danger"><i class="icon-trash" title="Delete script"></i></button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            </form>
         </div>
         <div class="col-xs-12 col-lg-6 flex-vertical" data-bind="with: editedRavenEtl()">
             <div class="flex-grow">
