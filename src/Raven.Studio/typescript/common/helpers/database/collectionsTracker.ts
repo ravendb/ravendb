@@ -68,7 +68,7 @@ class collectionsTracker {
     }
     
     getCollectionColorIndex(collectionName: string) {
-        return (_.findIndex(collectionsTracker.default.collections(), x => x.name === collectionName) - 1) % 6;
+        return (_.findIndex(collectionsTracker.default.collections(), x => x.name === collectionName) + 5) % 6;
         // 6 is the number of classes that I have defined in etl.less for colors...
     }    
     

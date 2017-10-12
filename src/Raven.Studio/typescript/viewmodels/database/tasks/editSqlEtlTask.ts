@@ -14,6 +14,7 @@ import collectionsTracker = require("common/helpers/database/collectionsTracker"
 import transformationScriptSyntax = require("viewmodels/database/tasks/transformationScriptSyntax");
 import ongoingTaskSqlEtlTableModel = require("models/database/tasks/ongoingTaskSqlEtlTableModel");
 import testSqlConnectionStringCommand = require("commands/database/cluster/testSqlConnectionStringCommand");
+import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 
 class editSqlEtlTask extends viewModelBase {
 
@@ -32,7 +33,11 @@ class editSqlEtlTask extends viewModelBase {
     connectionStringsUrl = appUrl.forCurrentDatabase().connectionStrings();
 
     testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
-    spinners = {test: ko.observable<boolean>(false)};
+    
+    spinners = {
+        test: ko.observable<boolean>(false)
+    };
+    
     fullErrorDetailsVisible = ko.observable<boolean>(false);
     shortErrorText: KnockoutObservable<string>;
       
@@ -57,7 +62,9 @@ class editSqlEtlTask extends viewModelBase {
                                    "syntaxHelp",
                                    "toggleAdvancedArea",
                                    "deleteSqlTable",
-                                   "editSqlTable");           
+                                   "editSqlTable");
+
+        aceEditorBindingHandler.install();
     }
 
     activate(args: any) {
@@ -78,8 +85,7 @@ class editSqlEtlTask extends viewModelBase {
                     deferred.reject();
                     router.navigate(appUrl.forOngoingTasks(this.activeDatabase()));
                 });
-        }
-        else {
+        } else {
             // 2. Creating a New task
             this.isAddingNewSqlEtlTask(true);
             this.editedSqlEtl(ongoingTaskSqlEtlEditModel.empty());
@@ -93,7 +99,7 @@ class editSqlEtlTask extends viewModelBase {
 
         return $.when<any>(this.getAllConnectionStrings(), deferred);
     }
-   
+    
     /***************************************************/
     /*** General Sql ETl Model / Page Actions Region ***/
     /***************************************************/
@@ -240,7 +246,7 @@ class editSqlEtlTask extends viewModelBase {
 
     private addNewTransformation() {
         this.showEditTransformationArea(false);
-        this.editedTransformationScript().update(ongoingTaskSqlEtlTransformationModel.empty().toDto(), true);
+        this.editedTransformationScript(ongoingTaskSqlEtlTransformationModel.empty());
 
         this.showEditTransformationArea(true);                 
     }
@@ -271,7 +277,7 @@ class editSqlEtlTask extends viewModelBase {
             this.editedSqlEtl().transformationScripts.push(newTransformationItem);
         }
         else {
-            let item = this.editedSqlEtl().transformationScripts().find(x => x.name() === transformation.name());
+            const item = this.editedSqlEtl().transformationScripts().find(x => x.name() === transformation.name());
             item.collection(transformation.collection());
             item.script(transformation.script());
         }
@@ -281,7 +287,7 @@ class editSqlEtlTask extends viewModelBase {
 
         // 4. Clear
         this.showEditTransformationArea(false);
-        // todo: handle dirty flag (reset)     
+        // todo: handle dirty flag (reset) 
     }
 
     removeTransformationScript(model: ongoingTaskSqlEtlTransformationModel) {
@@ -299,9 +305,10 @@ class editSqlEtlTask extends viewModelBase {
     /********************************/
 
     addNewSqlTable() {
-        this.showEditSqlTableArea(false);
-        this.editedSqlTable().update(ongoingTaskSqlEtlTableModel.empty().toDto(), true);
+        this.editedSqlTable(ongoingTaskSqlEtlTableModel.empty());
 
+        this.editedSqlTable().validationGroup.errors.showAllMessages(false);
+        
         this.showEditSqlTableArea(true);
         // todo: handle dirty flag (reset)          
     }
@@ -323,8 +330,7 @@ class editSqlEtlTask extends viewModelBase {
             item.tableName(this.editedSqlTable().tableName());
             item.documentIdColumn(this.editedSqlTable().documentIdColumn());
             item.insertOnlyMode(this.editedSqlTable().insertOnlyMode());
-        }
-        else {
+        } else {
             let newSqlTableItem = new ongoingTaskSqlEtlTableModel({
                 TableName: this.editedSqlTable().tableName(),
                 DocumentIdColumn: this.editedSqlTable().documentIdColumn(),
