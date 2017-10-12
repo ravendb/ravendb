@@ -96,10 +96,10 @@
                 </div>
             </form>
             <div class="flex-horizontal flex-header">
-                <div class="flex-grow"><h3>SQL Tables</h3></div>  <!-- todo: add arrow to open / close... --> 
+                <div class="flex-grow"><h3>SQL Tables</h3></div>
                 <div><button class="btn btn-info" data-bind="click: addNewSqlTable, disable: showEditSqlTableArea()"><i class="icon-plus"></i><span>Add Table</span></button></div>                
             </div>
-            <div class="sql-tables-list">
+            <div class="sql-tables-list margin-bottom">
                 <!-- Sql table edit area -->
                 <div class="panel" data-bind="visible: showEditSqlTableArea()">
                     <div class="padding padding-sm flex-horizontal item" data-bind="with: editedSqlTable">
@@ -128,7 +128,7 @@
                         <h3 class="text-center text-muted">No Sql Tables have been defined.</h3>
                     </div>
                 </div>                
-                <div data-bind="foreach: editedSqlEtl().sqlTables"> <!-- todo: implement scroll only on this list -->
+                <div data-bind="foreach: editedSqlEtl().sqlTables">
                     <div class="panel">
                         <div class="padding padding-sm flex-horizontal item">
                             <div class="row flex-grow">
@@ -149,7 +149,7 @@
                 </div>
             </div>
             <div class="flex-horizontal flex-header">
-                <div class="flex-grow"><h3>Transform Scripts</h3></div> <!-- todo: add arrow to open / close... -->
+                <div class="flex-grow"><h3>Transform Scripts</h3></div>
                 <div>
                     <button class="btn btn-info" data-bind="click: tryAddNewTransformation"><i class="icon-plus"></i><span>Add Transformation Script</span></button>
                 </div> 
@@ -161,7 +161,7 @@
                         <h3 class="text-center text-muted">No transformation scripts have been defined.</h3>
                     </div>
                 </div>
-                <div data-bind="foreach: transformationScripts">
+                <div class="transformation-scripts-list" data-bind="foreach: transformationScripts">
                     <div class="panel item">
                         <div class="padding padding-sm">
                             <div class="flex-horizontal">
@@ -175,7 +175,7 @@
                                 <div class="actions">
                                     <button data-bind="click: $root.editTransformationScript.bind($root, $data)"
                                             class="btn btn-default"><i class="icon-edit" title="Edit script"></i>
-                                    </button> <!-- todo edit ! -->
+                                    </button>
                                     <button data-bind="click: $root.removeTransformationScript"
                                             class="btn btn-danger"><i class="icon-trash" title="Delete script"></i>
                                     </button>
