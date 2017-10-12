@@ -70,7 +70,7 @@
                             </div>
                             <div>
                                 <button type="submit" class="btn btn-default btn-info" title="Test the connection string connection"
-                                        data-bind="click: $root.testConnection, disable: !connectionStringName() || $root.spinners.test, css: { 'btn-spinner': $root.spinners.test }">
+                                        data-bind="click: $root.testConnection, disable: !connectionStringName() || $root.spinners.test(), css: { 'btn-spinner': $root.spinners.test }">
                                     <i class="icon-rocket"></i>
                                     <span>Test Connection</span>
                                 </button>
@@ -86,10 +86,6 @@
                             <div>
                                 <a href="#" data-bind="click: $root.fullErrorDetailsVisible.toggle.bind($root.fullErrorDetailsVisible), text: $root.fullErrorDetailsVisible() ? 'hide details' : 'show details'"></a>
                             </div>
-                        </div>
-                        <div class="padding bg-danger small" data-bind="visible: !Success && !$root.connectionStringIsDefined()">
-                            <span class="icon-warning"></span><span data-bind="text: Error"></span>
-                            <a target="_blank" data-bind="attr: { href: $root.connectionStringsUrl }"> - Click here to define a new connection string</a>
                         </div>
                     </div>
                     <div class="panel-addon" data-bind="visible: ravenEtlConnectionStringsNames().length == 0">

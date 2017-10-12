@@ -13,6 +13,7 @@ using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Raven.Server.Web.System;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -28,12 +29,21 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Handlers
                 var factoryName = GetStringQueryString("factoryName");
                 var connectionString = new StreamReader(HttpContext.Request.Body).ReadToEnd();
                 RelationalDatabaseWriter.TestConnection(factoryName, connectionString);
-                NoContentStatus();
+                
+                DynamicJsonValue result = new DynamicJsonValue
+                    {
+                        [nameof(NodeConnectionTestResult.Success)] = true,
+                    };
+                
+                using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, result);
+                }
+                
             }
             catch (Exception ex)
             {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest; // Bad Request
-
                 if (Logger.IsInfoEnabled)
                     Logger.Info("Error occurred during sql replication connection test", ex);
 
@@ -43,8 +53,8 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Handlers
                     {
                         context.Write(writer, new DynamicJsonValue
                         {
-                            ["Error"] = "Connection failed",
-                            ["Exception"] = ex.ToString()
+                            [nameof(NodeConnectionTestResult.Success)] = false,
+                            [nameof(NodeConnectionTestResult.Error)] = ex.ToString()
                         });
                     }
                 }

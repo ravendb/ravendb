@@ -15,6 +15,7 @@ import deleteTransformationScriptConfirm = require("viewmodels/database/tasks/de
 import deleteSqlTableConfirm = require("viewmodels/database/tasks/deleteSqlTableConfirm");
 import transformationScriptSyntax = require("viewmodels/database/tasks/transformationScriptSyntax");
 import ongoingTaskSqlEtlTableModel = require("models/database/tasks/ongoingTaskSqlEtlTableModel");
+import testSqlConnectionStringCommand = require("commands/database/cluster/testSqlConnectionStringCommand");
 
 class editSqlEtlTask extends viewModelBase {
 
@@ -173,28 +174,17 @@ class editSqlEtlTask extends viewModelBase {
     }
 
     testConnection() {
-        if (this.editedSqlEtl().connectionStringName) {
-            if (this.connectionStringIsDefined()) {
-                // 1. Input connection string name is pre-defined
-                eventsCollector.default.reportEvent("SQL-ETL-connection-string", "test-connection");
-                this.spinners.test(true);
+        eventsCollector.default.reportEvent("SQL-ETL-connection-string", "test-connection");
+        this.spinners.test(true);
 
-                getConnectionStringInfoCommand.forSqlEtl(this.activeDatabase(), this.editedSqlEtl().connectionStringName())
+        getConnectionStringInfoCommand.forSqlEtl(this.activeDatabase(), this.editedSqlEtl().connectionStringName())
+            .execute()
+            .done((result: Raven.Client.ServerWide.ETL.SqlConnectionString) => {
+                new testSqlConnectionStringCommand(this.activeDatabase(), result.ConnectionString)
                     .execute()
-                    .done((result: Raven.Client.ServerWide.ETL.SqlConnectionString) => {
-                        alert("Need to execute test sql connection command...");
-                        // todo:...
-                        // new testSqlServerConnectionCommand(result.ConnectionString)
-                        //     .execute()
-                        //     .done(result => this.testConnectionResult(result))
-                        //     .always(() => this.spinners.test(false));
-                    });
-            }
-            else {
-                // 2. Input connection string name was Not yet defined
-                this.testConnectionResult({Error: "Connection string Not yet defined", Success: false});
-            }
-        }
+                    .done(result => this.testConnectionResult(result))
+                    .always(() => this.spinners.test(false));
+            });
     }
 
     trySaveSqlEtl() {
