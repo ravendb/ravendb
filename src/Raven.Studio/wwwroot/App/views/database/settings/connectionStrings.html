@@ -100,9 +100,8 @@
                     </div>
                     <div class="flex-horizontal">
                         <div class="flex-grow">
-                            <!-- TODO: it is currenly hidden for SQL - since it isn't implemented server side -->
                             <button type="submit" class="btn btn-info" title="Test url connection"
-                                    data-bind="click: onTestConnection, visible: editedRavenEtlConnectionString, disable: $root.spinners.test, css: { 'btn-spinner': $root.spinners.test }" >
+                                    data-bind="click: onTestConnection, disable: $root.spinners.test, css: { 'btn-spinner': $root.spinners.test }" >
                                 <i class="icon-rocket"></i>
                                 <span>Test Connection</span>
                             </button>

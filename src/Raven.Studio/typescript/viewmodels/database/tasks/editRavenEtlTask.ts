@@ -25,7 +25,10 @@ class editRavenEtlTask extends viewModelBase {
     possibleMentors = ko.observableArray<string>([]);
 
     testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
-    spinners = { test: ko.observable<boolean>(false) };
+    spinners = { 
+        test: ko.observable<boolean>(false) 
+    };
+    
     fullErrorDetailsVisible = ko.observable<boolean>(false);
     shortErrorText: KnockoutObservable<string>;
     
@@ -112,21 +115,18 @@ class editRavenEtlTask extends viewModelBase {
     }
 
     testConnection() {
-        if (this.editedRavenEtl().connectionStringName) {
-            // 1. Input connection string name is pre-defined
-            eventsCollector.default.reportEvent("ravenDB-ETL-connection-string", "test-connection");
-            this.spinners.test(true);
+        eventsCollector.default.reportEvent("ravenDB-ETL-connection-string", "test-connection");
+        this.spinners.test(true);
 
-            getConnectionStringInfoCommand.forRavenEtl(this.activeDatabase(), this.editedRavenEtl().connectionStringName())
-                .execute()
-                .done((result: Raven.Client.ServerWide.ETL.RavenConnectionString) => {
-                    new testClusterNodeConnectionCommand(result.Url)
-                        .execute()
-                        .done(result => this.testConnectionResult(result))
-                        .always(() => this.spinners.test(false));
-                }
-            );
-        }
+        getConnectionStringInfoCommand.forRavenEtl(this.activeDatabase(), this.editedRavenEtl().connectionStringName())
+            .execute()
+            .done((result: Raven.Client.ServerWide.ETL.RavenConnectionString) => {
+                new testClusterNodeConnectionCommand(result.Url)
+                    .execute()
+                    .done(result => this.testConnectionResult(result))
+                    .always(() => this.spinners.test(false));
+            }
+        );
     }
 
     trySaveRavenEtl() {

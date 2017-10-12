@@ -19,7 +19,7 @@
                             <div class="form-group" data-bind="validationElement: taskName">
                                 <label for="taskName" class="control-label">Task Name</label>
                                 <div class="flex-grow">
-                                    <input type="text" class="form-control" id="taskName" autocomplete="off"
+                                    <input type="text" class="form-control" id="taskName" autocomplete=""
                                            placeholder="Enter a descriptive name for the SQL ETL task"
                                            data-bind="textInput: taskName">
                                 </div>
@@ -48,13 +48,10 @@
                                     </button>
                                 </div>
                                 <div>
-                                    <!-- todo: test connection... --> 
-                                    <!--<button type="submit" class="btn btn-default" title="Test the connection string connection" -->
-                                            <!--data-bind="click: $root.testConnection, disable: !connectionStringName() || $root.spinners.test, css: { 'btn-spinner': $root.spinners.test }">-->
-                                            <!--<i class="icon-rocket"></i><span>Test Connection</span>-->
-                                    <!--</button>-->
-                                    <button type="submit" class="btn btn-default btn-upcoming" title="Test the connection string connection" disabled>
-                                        <i class="icon-rocket"></i><span>Test Connection</span>
+                                    <button type="submit" class="btn btn-default btn-info" title="Test the connection string connection"
+                                            data-bind="click: $root.testConnection, disable: !connectionStringName() || $root.spinners.test(), css: { 'btn-spinner': $root.spinners.test }">
+                                        <i class="icon-rocket"></i>
+                                        <span>Test Connection</span>
                                     </button>
                                 </div>
                             </div>
@@ -82,18 +79,12 @@
                         </div>
                         <div class="padding bg-danger small"
                              data-bind="visible: !Success && $root.connectionStringIsDefined()">
-                            Connection test failed: <span
-                            data-bind="text: $root.fullErrorDetailsVisible() ? Error : $root.shortErrorText()"></span>
+                            Connection test failed: <span data-bind="text: $root.fullErrorDetailsVisible() ? Error : $root.shortErrorText()"></span>
                             <div>
                                 <a href="#" 
                                    data-bind="click: $root.fullErrorDetailsVisible.toggle.bind($root.fullErrorDetailsVisible), text: $root.fullErrorDetailsVisible() ? 'hide details' : 'show details'">                                
                                 </a>
                             </div>
-                        </div>
-                        <div class="padding bg-danger small"
-                             data-bind="visible: !Success && !$root.connectionStringIsDefined()">
-                            <i class="icon-warning"></i><span data-bind="text: Error"></span>
-                            <a target="_blank" data-bind="attr: { href: $root.connectionStringsUrl }"> - Click here to define a new connection string</a>
                         </div>
                     </div>
                     <div class="panel-addon" data-bind="visible: $root.sqlEtlConnectionStringsNames().length === 0">
