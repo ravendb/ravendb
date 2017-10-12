@@ -199,13 +199,12 @@ class ongoingTasks extends viewModelBase {
     confirmRemoveOngoingTask(model: ongoingTaskModel) {
         const db = this.activeDatabase();
 
-        const confirmDeleteViewModel = new deleteOngoingTaskConfirm(db, model.taskType(), model.taskId);
-        app.showBootstrapDialog(confirmDeleteViewModel);
-        confirmDeleteViewModel.result.done(result => {
-            if (result.can) {
-                this.deleteOngoingTask(db, model);
-            }
-        });
+        this.confirmationMessage("Delete Task", "You're deleting task of type: " + model.taskType(), ["Cancel", "Delete"])
+            .done(result => {
+                if (result.can) {
+                    this.deleteOngoingTask(db, model);
+                }
+            });
     }
 
     private deleteOngoingTask(db: database, model: ongoingTaskModel) {
