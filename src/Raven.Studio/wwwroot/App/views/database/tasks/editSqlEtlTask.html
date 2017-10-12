@@ -122,10 +122,10 @@
                         </div>
                     </div>
                 </div>
-                <!-- The sql tables list -->                
+                <!-- The sql tables list -->
                 <div data-bind="if: editedSqlEtl().sqlTables().length === 0 && !showEditSqlTableArea()">
-                    <div>                     
-                        <h3 class="text-center text-muted">No Sql Tables have been defined.</h3>
+                    <div data-bind="with: editedSqlEtl()"> 
+                        <h3 class="text-center text-muted" data-bind="css: { 'text-danger': !sqlTables.isValid() && sqlTables.isModified() }">No Sql Tables have been defined.</h3>
                     </div>
                 </div>                
                 <div data-bind="foreach: editedSqlEtl().sqlTables">
@@ -158,7 +158,7 @@
             <div class="etl-list" data-bind="with: editedSqlEtl">
                 <div data-bind="if: transformationScripts().length === 0 && !$root.showEditTransformationArea()">
                     <div>                       
-                        <h3 class="text-center text-muted">No transformation scripts have been defined.</h3>
+                        <h3 class="text-center text-muted" data-bind="css: { 'text-danger': !transformationScripts.isValid() && transformationScripts.isModified() }">No transformation scripts have been defined.</h3>
                     </div>
                 </div>
                 <div class="transformation-scripts-list" data-bind="foreach: transformationScripts">
@@ -208,15 +208,12 @@
                         <label><strong>Script:</strong></label>
                         <span class="pull-right"><a href="#" data-bind="click: $root.syntaxHelp"><small>Syntax help</small></a></span>
                         <div data-bind="validationElement: script">
-                            <textarea class="form-control" rows="15" data-bind="textinput: script" placeholder="Enter script">                        
-                            </textarea>
-                            <!-- todo: change to ace editor -->
-                            <!--<pre class="form-control margin-top" placeholder="Enter transform script"-->
-                                 <!--data-bind="aceEditor: { code: query, lang:'ace/mode/rql', completer: $root.queryCompleter.complete }, validationOptions: { errorsAsTitle: false }, validationElement: query" style="height: 160px;">-->
-                            <!--</pre>-->
-                            <!--<div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: query">-->
-                                <!--<div class="help-block" data-bind="validationMessage: query"></div>-->
-                            <!--</div>-->
+                            <pre class="form-control editor"
+                                 data-bind="aceEditor: { code: script, fontSize: '14px', lang: 'ace/mode/javascript' }, validationOptions: { errorsAsTitle: false }, validationElement: script" style="height: 300px;"></pre>
+                            
+                            <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: script">
+                                <div class="help-block" data-bind="validationMessage: script"></div>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label><strong>Collection:</strong></label>
