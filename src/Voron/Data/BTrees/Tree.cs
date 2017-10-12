@@ -733,7 +733,7 @@ namespace Voron.Data.BTrees
 
         private static void ThrowOnCompressedPage(TreePage p)
         {
-            throw new InvalidOperationException($"Page {p.PageNumber} is compressed. You need to decompress it to be able to access its content.");
+            throw new PageCompressedException($"Page {p} is compressed. You need to decompress it to be able to access its content.");
         }
 
         private void AddToRecentlyFoundPages(FastList<long> c, TreePage p, bool leftmostPage, bool rightmostPage)

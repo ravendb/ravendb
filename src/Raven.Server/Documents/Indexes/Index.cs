@@ -1175,10 +1175,9 @@ namespace Raven.Server.Documents.Indexes
             SetState(IndexState.Error);
         }
 
-        public void HandleError(Exception e)
+        public void ThrowIfCorruptionException(Exception e)
         {
-            var ide = e as VoronUnrecoverableErrorException;
-            if (ide == null)
+            if (e is VoronUnrecoverableErrorException == false && e is PageCompressedException == false)
                 return;
 
             throw new IndexCorruptionException(e);

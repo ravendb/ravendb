@@ -181,7 +181,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             }
             catch (Exception e)
             {
-                _index.HandleError(e);
+                _index.ThrowIfCorruptionException(e);
 
                 var message = $"Failed to execute reduce function for reduce key '{reduceKeyHash}' on nested values of '{_indexDefinition.Name}' index.";
 
@@ -279,7 +279,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     }
                     catch (Exception e)
                     {
-                        _index.HandleError(e);
+                        _index.ThrowIfCorruptionException(e);
 
                         var message =
                             $"Failed to execute reduce function for reduce key '{tree.Name}' on a leaf page #{leafPage} of '{_indexDefinition.Name}' index.";
@@ -354,7 +354,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     }
                     catch (Exception e)
                     {
-                        _index.HandleError(e);
+                        _index.ThrowIfCorruptionException(e);
 
                         var message =
                             $"Failed to execute reduce function for reduce key '{tree.Name}' on a branch page #{page} of '{_indexDefinition.Name}' index.";
