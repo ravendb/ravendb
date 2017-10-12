@@ -12,7 +12,7 @@ class getRemoteServerVersion extends commandBase {
             serverUrl: this.serverUrl
         };
         
-        const url = endpoints.global.databases.remoteServerBuildVersion + this.urlEncodeArgs(args);
+        const url = endpoints.global.databases.adminRemoteServerBuildVersion + this.urlEncodeArgs(args);
         
         return this.query(url, null)
             .fail((response: JQueryXHR) => this.reportError("Failed to detect server version", response.responseText, response.statusText));
