@@ -414,7 +414,7 @@ namespace RachisTests
             {
                 Urls = new[] { Servers[0].WebUrl },
                 Database = defaultDatabase
-            })
+            }.Initialize())
             {
                 AsyncHelpers.RunSync(() => store.GetRequestExecutor()
                     .UpdateTopologyAsync(new ServerNode
