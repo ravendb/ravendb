@@ -11,7 +11,6 @@ import ongoingTaskSqlEtlListModel = require("models/database/tasks/ongoingTaskSq
 import ongoingTaskSubscriptionListModel = require("models/database/tasks/ongoingTaskSubscriptionListModel");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import createOngoingTask = require("viewmodels/database/tasks/createOngoingTask");
-import deleteOngoingTaskConfirm = require("viewmodels/database/tasks/deleteOngoingTaskConfirm");
 import enableOngoingTaskConfirm = require("viewmodels/database/tasks/enableOngoingTaskConfirm");
 import disableOngoingTaskConfirm = require("viewmodels/database/tasks/disableOngoingTaskConfirm");
 import ongoingTaskModel = require("models/database/tasks/ongoingTaskModel");

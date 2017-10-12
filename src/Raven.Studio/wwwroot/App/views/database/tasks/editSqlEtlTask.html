@@ -176,7 +176,7 @@
                                     <button data-bind="click: $root.editTransformationScript.bind($root, $data)"
                                             class="btn btn-default"><i class="icon-edit" title="Edit script"></i>
                                     </button> <!-- todo edit ! -->
-                                    <button data-bind="click: $root.confirmRemoveTransformationScript"
+                                    <button data-bind="click: $root.removeTransformationScript"
                                             class="btn btn-danger"><i class="icon-trash" title="Delete script"></i>
                                     </button>
                                 </div>
@@ -197,9 +197,11 @@
                                        data-bind="textInput: name, attr: { 'disabled': !isNew() }"
                                        placeholder="Enter a name for the transform script">
                             </div>
-                            <div class="flex-noshrink">                                
-                                <button title="Add this transformation script" class="btn btn-success" data-bind="click: $root.saveEditedTransformation, visible: isNew"><i class="icon-tick"></i><span>Add</span></button>                                
-                                <button title="Update this transformation script" class="btn btn-success" data-bind="click: $root.saveEditedTransformation, visible: !isNew()"><i class="icon-tick"></i><span>Update</span></button>                                
+                            <div class="flex-noshrink">
+                                <button class="btn btn-success" data-bind="click: $root.saveEditedTransformation, attr: { title : (isNew() ? 'Add' : 'Update') +  ' this transformation script' }">
+                                    <i class="icon-tick"></i>
+                                    <span data-bind="text: isNew() ? 'Add' : 'Update'"></span>
+                                </button>                                
                                 <button title="Cancel" class="btn btn-default" data-bind="click: $root.cancelEditedTransformation"><i class="icon-cancel"></i><Span>Cancel</Span></button>
                             </div>
                         </div>
