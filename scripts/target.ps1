@@ -29,6 +29,13 @@ $TARGET_SPECS = (
         "TargetId" = "ubuntu16";
     },
     @{
+        "Name"      = "osx-x64";
+        "Runtime"   = "osx-x64";
+        "PkgType"   = "tar.bz2";
+        "IsUnix"    = $True;
+        "TargetId" = "osx";
+    },
+    @{
         "Name"      = "raspberry-pi";
         "Runtime"   = "linux-arm";
         "PkgType"   = "tar.bz2";
