@@ -7,10 +7,10 @@ namespace Raven.Server.Smuggler.Migration
         Unknown,
         [Description("v2.x")]
         V2,
-        [Description("v3.5")]
-        V35,
         [Description("v3.0")]
         V30,
+        [Description("v3.5")]
+        V35,
         [Description("v4.x")]
         V4
     }

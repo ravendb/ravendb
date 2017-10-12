@@ -34,13 +34,13 @@ namespace Raven.Server.Smuggler.Migration
             DocumentDatabase database,
             HttpClient client,
             string migrationStateKey,
-            MajorVersion marjorVersion,
+            MajorVersion majorVersion,
             OperationCancelToken cancelToken)
             : base(serverUrl, databaseName, result, onProgress, database, cancelToken)
         {
             _client = client;
             _migrationStateKey = migrationStateKey;
-            _majorVersion = marjorVersion;
+            _majorVersion = majorVersion;
         }
 
         public override async Task Execute()
