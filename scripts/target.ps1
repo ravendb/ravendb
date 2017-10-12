@@ -15,18 +15,18 @@ $TARGET_SPECS = (
         "TargetId" = "win-x86";
     },
     @{
-        "Name"      = "ubuntu.14.04-x64";
-        "Runtime"   = "ubuntu-x64";
+        "Name"      = "linux-x64";
+        "Runtime"   = "linux-x64";
         "PkgType"   = "tar.bz2";
         "IsUnix"    = $True;
-        "TargetId" = "ubuntu14";
+        "TargetId" = "linux-x64";
     },
     @{
-        "Name"      = "ubuntu.16.04-x64";
-        "Runtime"   = "ubuntu-x64";
+        "Name"      = "osx-x64";
+        "Runtime"   = "osx-x64";
         "PkgType"   = "tar.bz2";
         "IsUnix"    = $True;
-        "TargetId" = "ubuntu16";
+        "TargetId" = "osx";
     },
     @{
         "Name"      = "raspberry-pi";
