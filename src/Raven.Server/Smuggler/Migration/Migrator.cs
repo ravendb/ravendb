@@ -105,6 +105,10 @@ namespace Raven.Server.Smuggler.Migration
                 {
                     version = MajorVersion.V35;
                 }
+                else if (buildVersion >= 20000)
+                {
+                    version = MajorVersion.V2;
+                }
                 else if (buildVersion >= 3000)
                 {
                     version = MajorVersion.V30;
@@ -173,7 +177,7 @@ namespace Raven.Server.Smuggler.Migration
                     var majorVersion = _buildMajorVersion;
                     var message = $"Importing from RavenDB {GetDescription(majorVersion)}";
 
-                    result.AddMessage(message);
+                    result.AddInfo(message);
 
                     using (cancelToken)
                     {
