@@ -196,11 +196,14 @@ namespace Raven.Server.Web.System
             HttpContext.Response.Headers["Raven-Static-Served-From"] = "Unserved";
             var message =
                 $"The following file was not available: " +
-                $"{serverRelativeFileName}.Please make sure that the Raven" +
+                $"{serverRelativeFileName}. Please make sure that the Raven" +
                 $".Studio.zip file exist in the main directory (near the " +
                 $"Raven.Server.exe).";
+            
             HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-            HttpContext.Response.Body.Write(message);
+            HttpContext.Response.Headers["Content-Type"] = "text/plain; charset=utf-8";
+            
+            await HttpContext.Response.WriteAsync(message);
         }
 
         private void CacheCompress()
@@ -251,8 +254,6 @@ namespace Raven.Server.Web.System
 
             HttpContext.Response.ContentType = GetContentType(Path.GetExtension(serverRelativeFileName));
             HttpContext.Response.Headers[Constants.Headers.Etag] = metadata.ETag;
-            // Disable chunked responses
-            HttpContext.Response.Headers[Constants.Headers.TransferEncoding] = "identity";
 
             byte[] contentsToServe;
             if (ClientAcceptsGzipResponse() && metadata.CompressedContents != null)
@@ -351,13 +352,24 @@ namespace Raven.Server.Web.System
 
             FileInfo staticFileInfo = null;
             string wwwRootBasePath = null;
+            bool fileWasFound = false;
+            
             foreach (string lookupPath in FileSystemLookupPaths)
             {
                 wwwRootBasePath = Path.Combine(reportedBasePath, lookupPath);
                 staticFileInfo = new FileInfo(Path.Combine(wwwRootBasePath, serverRelativeFileName));
 
                 if (staticFileInfo.Exists)
+                {
+                    fileWasFound = true;
                     break;
+                }
+            }
+            
+            // prevent from using last path when resource wasn't found
+            if (fileWasFound == false)
+            {
+                return null;
             }
 
             // Many threads may find the path at once, only one stands
