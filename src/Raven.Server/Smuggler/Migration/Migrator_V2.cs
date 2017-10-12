@@ -38,6 +38,32 @@ namespace Raven.Server.Smuggler.Migration
             await MigrateIndexes();
         }
 
+        private async Task MigrateDocuments()
+        {
+            var url = $"{ServerUrl}/databases/{DatabaseName}/streams/docs";
+            var request = new HttpRequestMessage(HttpMethod.Get, url);
+
+            var response = await _client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancelToken.Token);
+            if (response.IsSuccessStatusCode == false)
+            {
+                var responseString = await response.Content.ReadAsStringAsync();
+                throw new InvalidOperationException($"Failed to export documents from server: {ServerUrl}, " +
+                                                    $"status code: {response.StatusCode}, " +
+                                                    $"error: {responseString}");
+            }
+
+            using (var responseStream = await response.Content.ReadAsStreamAsync())
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var source = new StreamSource(responseStream, context))
+            {
+                var destination = new DatabaseDestination(Database);
+                var options = new DatabaseSmugglerOptionsServerSide();
+                var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options, Result, OnProgress, CancelToken.Token);
+
+                smuggler.Execute(ensureStepsProcessed: false); // since we will be migrating indexes as separate task don't ensureStepsProcessed at this point
+            }
+        }
+        
         private async Task MigrateIndexes()
         {
             var url = $"{ServerUrl}/databases/{DatabaseName}/indexes";
@@ -57,32 +83,6 @@ namespace Raven.Server.Smuggler.Migration
             using (var indexesStream = new IndexesStream(responseStream))
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var source = new StreamSource(indexesStream, context))
-            {
-                var destination = new DatabaseDestination(Database);
-                var options = new DatabaseSmugglerOptionsServerSide();
-                var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options, Result, OnProgress, CancelToken.Token);
-
-                smuggler.Execute(ensureProcessed: false);
-            }
-        }
-
-        private async Task MigrateDocuments()
-        {
-            var url = $"{ServerUrl}/databases/{DatabaseName}/streams/docs";
-            var request = new HttpRequestMessage(HttpMethod.Get, url);
-
-            var response = await _client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancelToken.Token);
-            if (response.IsSuccessStatusCode == false)
-            {
-                var responseString = await response.Content.ReadAsStringAsync();
-                throw new InvalidOperationException($"Failed to export documents from server: {ServerUrl}, " +
-                                                    $"status code: {response.StatusCode}, " +
-                                                    $"error: {responseString}");
-            }
-
-            using (var responseStream = await response.Content.ReadAsStreamAsync())
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var source = new StreamSource(responseStream, context))
             {
                 var destination = new DatabaseDestination(Database);
                 var options = new DatabaseSmugglerOptionsServerSide();

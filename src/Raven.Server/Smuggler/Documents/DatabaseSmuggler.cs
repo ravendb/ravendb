@@ -44,7 +44,7 @@ namespace Raven.Server.Smuggler.Documents
             _onProgress = onProgress ?? (progress => { });
         }
 
-        public SmugglerResult Execute(bool ensureProcessed = true)
+        public SmugglerResult Execute(bool ensureStepsProcessed = true)
         {
             var result = _result ?? new SmugglerResult();
             using (_patcher?.Initialize())
@@ -59,8 +59,8 @@ namespace Raven.Server.Smuggler.Documents
 
                     currentType = _source.GetNextType();
                 }
-
-                if (ensureProcessed == false)
+                
+                if (ensureStepsProcessed)
                 {
                     EnsureStepProcessed(result.Documents);
                     EnsureStepProcessed(result.Documents.Attachments);
