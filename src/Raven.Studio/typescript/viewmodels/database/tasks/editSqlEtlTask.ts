@@ -94,7 +94,7 @@ class editSqlEtlTask extends viewModelBase {
             this.editedSqlEtl(ongoingTaskSqlEtlEditModel.empty());
             deferred.resolve();
         }
-
+        
         deferred.done(() => {
             this.initObservables();
             this.initValidation();

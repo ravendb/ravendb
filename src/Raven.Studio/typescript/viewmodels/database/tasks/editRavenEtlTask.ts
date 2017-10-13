@@ -174,7 +174,7 @@ class editRavenEtlTask extends viewModelBase {
         }
         
         // we don't care here about actuall modifications, when user hit create/update force dirty flag
-        this.dirtyFlag().forceDirty();
+        this.dirtyFlag().forceDirty(); // TODO: impl full dirty flag!
 
         if (transformation.isNew()) {
             let newTransformationItem = new ongoingTaskRavenEtlTransformationModel(transformation.toDto(), false);
