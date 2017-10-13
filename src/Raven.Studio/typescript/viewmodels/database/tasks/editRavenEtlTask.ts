@@ -133,25 +133,20 @@ class editRavenEtlTask extends viewModelBase {
     }
 
     trySaveRavenEtl() {
-        if (!this.editedRavenEtl().isDirtyEditedScript().isDirty()) {
-            this.saveRavenEtl();
-            return true;
-        }
+        const editedEtl = this.editedRavenEtl();
 
-        const deferredResult = $.Deferred<boolean>();
-        this.discardStayResult().done((result: confirmDialogResult) => {
-            if (!result.can) {
-                // Keep changes & stay
-                return;
-            } else {
-                // Discard changes & add save the Raven Etl model
-                this.saveRavenEtl();
+        // show validations errors if any - ignore returned value
+        this.isValid(this.editedRavenEtl().validationGroup);
+        
+        if (editedEtl.showEditTransformationArea()) {
+            if (!this.isValid(editedEtl.editedTransformationScript().validationGroup)) {
+                return true;
             }
 
-            deferredResult.resolve(result.can);
-        });
-
-        return deferredResult;
+            this.saveEditedTransformation(editedEtl.editedTransformationScript());
+        }
+        
+        this.saveRavenEtl();
     }
 
     saveRavenEtl() {
@@ -186,7 +181,7 @@ class editRavenEtlTask extends viewModelBase {
 
     saveEditedTransformation(transformation: ongoingTaskRavenEtlTransformationModel) {
         // 1. Validate
-        if (!this.isValid(this.editedRavenEtl().editedTransformationScript().validationGroup)) {
+        if (!this.isValid(transformation.validationGroup)) {
             return;
         }
 

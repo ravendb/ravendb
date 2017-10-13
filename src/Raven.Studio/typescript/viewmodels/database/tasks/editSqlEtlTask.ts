@@ -148,7 +148,7 @@ class editSqlEtlTask extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
 
-        //TODO: $('.edit-backup [data-toggle="tooltip"]').tooltip();
+        $('.edit-raven-sql-task [data-toggle="tooltip"]').tooltip();
     }
 
     private initValidation() {
