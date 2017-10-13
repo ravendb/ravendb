@@ -14,6 +14,7 @@ import ongoingTaskRavenEtlTransformationModel = require("models/database/tasks/o
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import transformationScriptSyntax = require("viewmodels/database/tasks/transformationScriptSyntax");
 import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
+import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 
 class editRavenEtlTask extends viewModelBase {
 
@@ -37,6 +38,8 @@ class editRavenEtlTask extends viewModelBase {
 
     constructor() {
         super();
+        
+        aceEditorBindingHandler.install();
         this.bindToCurrentInstance("useConnectionString", "testConnection", "removeTransformationScript", "cancelEditedTransformation", "saveEditedTransformation", "syntaxHelp");
     }
 
@@ -63,6 +66,7 @@ class editRavenEtlTask extends viewModelBase {
             // 2. Creating a New task
             this.isAddingNewRavenEtlTask(true);
             this.editedRavenEtl(ongoingTaskRavenEtlEditModel.empty());
+            this.editedRavenEtl().showEditTransformationArea(true);
             deferred.resolve();
         }
 
@@ -167,29 +171,7 @@ class editRavenEtlTask extends viewModelBase {
             });
     }
 
-    tryAddNewTransformation() {
-        if (!this.editedRavenEtl().isDirtyEditedScript().isDirty()) {
-            this.addNewTransformation();
-            return true;
-        }
-
-        const deferredResult = $.Deferred<boolean>();
-        this.discardStayResult().done((result: confirmDialogResult) => {
-            if (!result.can) {
-                // Keep changes & stay
-                return; 
-            } else {
-                // Discard changes & add new transformation
-                this.addNewTransformation();
-            }
-
-            deferredResult.resolve(result.can);
-        });
-
-        return deferredResult;
-    }
-
-    private addNewTransformation() {
+    addNewTransformation() {
         this.editedRavenEtl().showEditTransformationArea(false);
         this.editedRavenEtl().editedTransformationScript().update(ongoingTaskRavenEtlTransformationModel.empty().toDto(), true);
 

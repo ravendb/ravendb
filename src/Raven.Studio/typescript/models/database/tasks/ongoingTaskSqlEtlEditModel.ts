@@ -17,7 +17,8 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
         super();
 
         this.update(dto);
-        super.initializeObservables();       
+        this.initializeObservables();
+        this.initializeMentorValidation();
     }
 
     update(dto: Raven.Client.ServerWide.Operations.OngoingTaskSqlEtlDetails) {
@@ -28,6 +29,9 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
             this.parameterizedDeletes(dto.Configuration.ParameterizeDeletes);
             this.forceRecompileQuery(dto.Configuration.ForceQueryRecompile);
             this.tableQuotation(dto.Configuration.QuoteTables);
+            
+            this.manualChooseMentor(!!dto.Configuration.MentorNode);
+            this.preferredMentor(dto.Configuration.MentorNode);
             
             this.transformationScripts(dto.Configuration.Transforms.map(x => new ongoingTaskSqlEtlTransformationModel(x, false)));
             this.sqlTables(dto.Configuration.SqlTables.map(x => new ongoingTaskSqlEtlTableModel(x, false)));            
@@ -61,7 +65,7 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
             ConnectionStringName: this.connectionStringName(),
             AllowEtlOnNonEncryptedChannel: false,
             Disabled: false,                     
-            MentorNode: null,
+            MentorNode: this.manualChooseMentor() ? this.preferredMentor() : undefined, 
             FactoryName: "System.Data.SqlClient",
             ForceQueryRecompile: this.forceRecompileQuery(),
             ParameterizeDeletes: this.parameterizedDeletes(),
