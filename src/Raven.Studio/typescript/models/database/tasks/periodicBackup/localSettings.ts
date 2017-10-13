@@ -3,8 +3,6 @@
 class localSettings extends backupSettings {
     folderPath = ko.observable<string>();
 
-    displaySameDriveWarning: KnockoutComputed<boolean>;
-
     constructor(dto: Raven.Client.ServerWide.PeriodicBackup.LocalSettings) {
         super(dto);
 
