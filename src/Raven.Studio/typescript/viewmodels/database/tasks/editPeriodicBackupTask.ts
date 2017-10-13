@@ -41,14 +41,18 @@ class editPeriodicBackupTask extends viewModelBase {
                     
                     router.navigate(appUrl.forOngoingTasks(this.activeDatabase()));
                 });
-        }
-        else {
+        } else {
             // 2. Creating a new task
             this.isAddingNewBackupTask(true);
 
             this.configuration(periodicBackupConfiguration.empty());
             deferred.resolve();
         }
+        
+        deferred
+            .done(() => {
+                this.dirtyFlag = this.configuration().dirtyFlag;
+            });
 
         return $.when<any>(deferred, this.loadPossibleMentors());
     }
@@ -69,7 +73,7 @@ class editPeriodicBackupTask extends viewModelBase {
 
     attached() {
         super.attached();
-
+        
         popoverUtils.longWithHover($("#backup-info"),
             {
                 content: 
@@ -164,7 +168,10 @@ class editPeriodicBackupTask extends viewModelBase {
 
         new savePeriodicBackupConfigurationCommand(this.activeDatabase(), dto)
             .execute()
-            .done(() => this.goToOngoingTasksView());
+            .done(() => {
+                this.dirtyFlag().reset();
+                this.goToOngoingTasksView();
+            });
     }
 
     testCredentials(bs: backupSettings) {
