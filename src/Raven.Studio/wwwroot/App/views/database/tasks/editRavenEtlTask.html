@@ -161,7 +161,7 @@
                         <label><strong>Name:</strong></label>
                         <div class="edit-name flex-horizontal margin-bottom">
                             <div class="flex-grow" title="Transform script name" data-bind="validationElement: name">
-                                <input autofocus class="form-control" type="text" data-bind="textInput: name, attr: { 'disabled': !isNew() }" placeholder="Enter a name for the transform script">
+                                <input class="form-control" type="text" data-bind="textInput: name, attr: { 'disabled': !isNew() }" placeholder="Enter a name for the transform script">
                             </div>
                             <div class="flex-noshrink">
                                 <button class="btn btn-success" data-bind="click: $root.saveEditedTransformation, attr: { title : (isNew() ? 'Add' : 'Update') +  ' this transformation script' }">

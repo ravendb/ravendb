@@ -66,6 +66,7 @@ class editRavenEtlTask extends viewModelBase {
             // 2. Creating a New task
             this.isAddingNewRavenEtlTask(true);
             this.editedRavenEtl(ongoingTaskRavenEtlEditModel.empty());
+            this.editedRavenEtl().editedTransformationScript(ongoingTaskRavenEtlTransformationModel.empty());
             deferred.resolve();
         }
 
