@@ -42,10 +42,7 @@ namespace Voron
         private bool _forceUsing32BitsPager;
         public bool ForceUsing32BitsPager
         {
-            get
-            {
-                return _forceUsing32BitsPager;
-            }
+            get => _forceUsing32BitsPager;
             set
             {
                 _forceUsing32BitsPager = value;
