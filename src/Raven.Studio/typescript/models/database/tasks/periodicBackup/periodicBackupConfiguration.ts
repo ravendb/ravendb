@@ -5,6 +5,8 @@ import glacierSettings = require("models/database/tasks/periodicBackup/glacierSe
 import azureSettings = require("models/database/tasks/periodicBackup/azureSettings");
 import ftpSettings = require("models/database/tasks/periodicBackup/ftpSettings");
 import getNextBackupOccurrenceCommand = require("commands/database/tasks/getNextBackupOccurrenceCommand");
+import jsonUtil = require("common/jsonUtil");
+import backupSettings = require("backupSettings");
 
 class periodicBackupConfiguration {
     taskId = ko.observable<number>();
@@ -31,6 +33,8 @@ class periodicBackupConfiguration {
 
     validationGroup: KnockoutValidationGroup;
     backupOptions = ["Backup", "Snapshot"];
+    
+    dirtyFlag: () => DirtyFlag;
 
     allBackupFrequencyOptions = [
         { label: "At 02:00 AM (every day)", value: "0 2 * * *", full: true, incremental: false },
@@ -98,6 +102,31 @@ class periodicBackupConfiguration {
         this.preferredMentor(dto.MentorNode);
 
         this.initValidation();
+        
+        const anyBackupTypeIsDirty = ko.pureComputed(() => {
+            let anyDirty = false;
+            const backupTypes = [this.localSettings(), this.s3Settings(), this.glacierSettings(), this.azureSettings(), this.ftpSettings()] as backupSettings[];
+            
+            backupTypes.forEach(type => {
+                if (type.dirtyFlag().isDirty()) {
+                    anyDirty = true;
+                }
+            });
+            
+            return anyDirty;
+        });
+        
+        this.dirtyFlag = new ko.DirtyFlag([
+            this.name, 
+            this.backupType,
+            this.fullBackupFrequency,
+            this.incrementalBackupFrequency,
+            this.manualChooseMentor,
+            this.preferredMentor,
+            anyBackupTypeIsDirty
+        ], false, jsonUtil.newLineNormalizingHashFunction);
+        
+        
     }
 
     private static getHumanReadable(backupFrequency: KnockoutObservable<string>,
@@ -274,11 +303,11 @@ class periodicBackupConfiguration {
             BackupType: null,
             FullBackupFrequency: null,
             IncrementalBackupFrequency: null,
-            LocalSettings: localSettings.empty().toDto(),
-            S3Settings: s3Settings.empty().toDto(),
-            GlacierSettings: glacierSettings.empty().toDto(),
-            AzureSettings: azureSettings.empty().toDto(),
-            FtpSettings: ftpSettings.empty().toDto(),
+            LocalSettings: null,
+            S3Settings: null,
+            GlacierSettings: null,
+            AzureSettings: null,
+            FtpSettings: null,
             MentorNode: null
         });
     }

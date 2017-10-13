@@ -1,6 +1,6 @@
 <form class="content-margin edit-backup" data-bind="with: configuration">
     <div class="toolbar" data-bind="with: $root">
-        <button data-bind="click: savePeriodicBackup" type="submit" class="btn btn-primary">
+        <button data-bind="click: savePeriodicBackup, enable: $root.dirtyFlag().isDirty" type="submit" class="btn btn-primary">
             <i class="icon-save"></i> <span>Save</span>
         </button>
         <button data-bind="click: cancelOperation" class="btn btn-default">
@@ -9,7 +9,7 @@
     </div>
     <div class="panel">
         <div class="padding">           
-            <h3 data-bind="text: $parent.isAddingNewBackupTask() ? `New Backup ETL` : `Edit Backup ETL`"></h3>
+            <h3 data-bind="text: $parent.isAddingNewBackupTask() ? `New Backup` : `Edit Backup`"></h3>
             <div class="row flex-row margin-bottom" data-bind="validationElement: name">
                 <label class="control-label col-sm-4 col-lg-2">Task name</label>
                 <div class="col-sm-4 col-lg-4">
@@ -259,7 +259,7 @@
                             <input data-bind="textInput: vaultName" type="text" class="form-control" />
                         </div>
                     </div>
-                    <div class="row flex-row margin-bottom" data-bind="validationElement: selectedAwsRegion">
+                    <div class="row flex-row margin-bottom" data-bind="validationElement: awsRegionName">
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4">Region</label>
                         <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationOptions: { insertMessages: false }">
                             <div class="dropdown btn-block">
