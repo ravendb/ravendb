@@ -142,7 +142,7 @@ class editRavenEtlTask extends viewModelBase {
                 return false;
             }
 
-            this.saveEditedTransformation(editedEtl.editedTransformationScript());
+            this.saveEditedTransformation();
         }
 
         if (!this.isValid(this.editedRavenEtl().validationGroup)) {
@@ -167,7 +167,8 @@ class editRavenEtlTask extends viewModelBase {
         this.editedRavenEtl().editedTransformationScript(null);
     }
 
-    saveEditedTransformation(transformation: ongoingTaskRavenEtlTransformationModel) {
+    saveEditedTransformation() {
+        const transformation = this.editedRavenEtl().editedTransformationScript();
         if (!this.isValid(transformation.validationGroup)) {
             return;
         }
