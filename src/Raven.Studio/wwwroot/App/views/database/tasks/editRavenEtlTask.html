@@ -56,7 +56,7 @@
                                 <span class="help-block" data-bind="validationMessage: connectionStringName"></span>
                             </div>
                         </div>
-                        <div data-bind="if: $root.activeDatabase().isEncrypted">
+                        <div data-bind="if: $root.activeDatabase() && $root.activeDatabase().isEncrypted">
                             <div class="form-group">
                                 <label class="control-label">&nbsp;</label>
                                 <div class="bg-info inline-block padding padding-xs small">

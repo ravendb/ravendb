@@ -144,14 +144,14 @@ class editPeriodicBackupTask extends viewModelBase {
         popoverUtils.longWithHover($("#ftp-host-info"),
             {
                 content:
-                    "To specify the server protocol, prepend the host with protocol identifier (ftp and ftps are supported).<br>" +
-                    "If no protocol is specified the default one (ftp://) will be used.<br>" +
+                    "To specify the server protocol, prepend the host with protocol identifier (ftp and ftps are supported).<br />" +
+                    "If no protocol is specified the default one (ftp://) will be used.<br />" +
                     "You can also enter a complete URL e.g. <strong>ftp://host.name:port/backup-folder/nested-backup-folder</strong>"
             });
     }
 
     private textForPopover(storageName: string): string {
-        return `${storageName} should be created manually in order for this backup to work.<br> ` +
+        return `${storageName} should be created manually in order for this backup to work.<br /> ` +
             "You can use the 'Test credentials' button to verify its existance.";
     }
 
