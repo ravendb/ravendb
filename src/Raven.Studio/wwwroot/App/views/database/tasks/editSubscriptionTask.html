@@ -3,7 +3,7 @@
             <div class="col-sm-12 col-lg-6 flex-vertical">
                 <form data-bind="submit: saveSubscription">
                     <div class="flex-header">
-                        <button type="submit" class="btn btn-primary">
+                        <button type="submit" class="btn btn-primary" data-bind="enable: dirtyFlag().isDirty">
                             <i class="icon-save"></i>
                             <span>Save</span>
                         </button>
@@ -32,13 +32,13 @@
                                 </div>
                             </div>                       
                             <h3 data-bind="text: $parent.isAddingNewSubscriptionTask() ? `New Subscription` : `Edit Subscription`"></h3>
-                            <div class="form-group margin-top">
+                            <div class="form-group margin-top" data-bind="validationElement: taskName">
                                 <label class="control-label">Task Name</label>
                                 <input type="text" class="form-control" id="taskName" placeholder="Enter a descriptive name for the subscription task" title="Note: if no name is supplied then server will create one for you"
-                                       data-bind="textInput: taskName, attr: { disabled: !$root.isAddingNewSubscriptionTask() }">
+                                       data-bind="textInput: taskName, attr: { disabled: !$root.isAddingNewSubscriptionTask() }" autocomplete="off" >
                             </div>
     
-                            <label>Subscription RQL :&nbsp;&nbsp;</label>
+                            <label>Subscription RQL:</label>
                             <div class="pull-right"><a href="#" data-bind="click: $root.syntaxHelp"><small>Syntax help</small></a></div>
                             <pre class="form-control margin-top" placeholder="Enter transform script" 
                                  data-bind="aceEditor: { code: query, lang:'ace/mode/rql', completer: $root.queryCompleter.complete }, validationOptions: { errorsAsTitle: false }, validationElement: query" style="height: 160px;">
@@ -76,9 +76,9 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="form-group" data-bind="visible: startingPointChangeVector() && setStartingPoint()">
+                            <div class="form-group" data-bind="visible: startingPointChangeVector() && setStartingPoint(), validationElement: startingChangeVector">
                                 <label class="control-label">Change Vector :</label>
-                                <div class="flex-grow" data-bind="validationOptions: { insertMessages: false }, validationElement: startingChangeVector">
+                                <div class="flex-grow" data-bind="validationOptions: { insertMessages: false }">
                                     <textarea rows="3" class="form-control" placeholder="Enter change vector to start sending documents from" data-bind="textInput: startingChangeVector, attr: { 'disabled': !setStartingPoint() }"></textarea>
                                     <!--<button class="btn btn-default btn-block btn-upcoming"><i class="icon-preview"></i><span>&nbsp;Show related document</span></button>--> <!-- todo: we need end point for this.. -->
                                     <span class="help-block" data-bind="validationMessage: startingChangeVector"></span>

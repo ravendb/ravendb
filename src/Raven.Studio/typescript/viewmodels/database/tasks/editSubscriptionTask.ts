@@ -86,6 +86,9 @@ class editSubscriptionTask extends viewModelBase {
             this.editedSubscription(ongoingTaskSubscriptionEdit.empty());
             deferred.resolve();
         }
+        
+        deferred
+            .done(() => this.dirtyFlag = this.editedSubscription().dirtyFlag);
 
         return $.when<any>(deferred, this.loadPossibleMentors());
     }
@@ -116,6 +119,7 @@ class editSubscriptionTask extends viewModelBase {
         new saveSubscriptionTaskCommand(this.activeDatabase(), dto, this.editedSubscription().taskId, this.editedSubscription().taskState()) 
             .execute()
             .done(() => {
+                this.dirtyFlag().reset();
                 this.goToOngoingTasksView();
             });
     }
