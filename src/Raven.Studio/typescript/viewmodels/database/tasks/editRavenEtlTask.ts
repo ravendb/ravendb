@@ -69,7 +69,7 @@ class editRavenEtlTask extends viewModelBase {
             deferred.resolve();
         }
 
-        deferred.always(() => {
+        deferred.done(() => {
             this.initObservables();
         });
 
