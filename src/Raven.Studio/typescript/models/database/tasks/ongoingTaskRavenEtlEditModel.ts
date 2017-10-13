@@ -28,7 +28,7 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
         
         this.showEditTransformationArea = ko.pureComputed(() => !!this.editedTransformationScript());
         
-        const innerDirtyFlag = ko.pureComputed(() => this.editedTransformationScript() && this.editedTransformationScript().dirtyFlag().isDirty());
+        const innerDirtyFlag = ko.pureComputed(() => !!this.editedTransformationScript() && this.editedTransformationScript().dirtyFlag().isDirty());
         const scriptsCount = ko.pureComputed(() => this.transformationScripts().length);
         const hasAnyDirtyTransformationScript = ko.pureComputed(() => {
             let anyDirty = false;
@@ -41,7 +41,8 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
             return anyDirty;
         });
         
-        this.dirtyFlag = new ko.DirtyFlag([innerDirtyFlag,
+        this.dirtyFlag = new ko.DirtyFlag([
+                innerDirtyFlag,
                 this.taskName,
                 this.preferredMentor,
                 this.manualChooseMentor,
