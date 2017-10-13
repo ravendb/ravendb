@@ -10,15 +10,15 @@
     <div class="panel">
         <div class="padding">           
             <h3 data-bind="text: $parent.isAddingNewBackupTask() ? `New Backup ETL` : `Edit Backup ETL`"></h3>
-            <div class="row flex-row margin-bottom">
+            <div class="row flex-row margin-bottom" data-bind="validationElement: name">
                 <label class="control-label col-sm-4 col-lg-2">Task name</label>
                 <div class="col-sm-4 col-lg-4">
                     <input data-bind="textInput: name" id="taskName" type="text" class="form-control" placeholder="Enter a descriptive name for the periodic backup task"/>
                 </div>
             </div>
-            <div class="row flex-row margin-bottom">
+            <div class="row flex-row margin-bottom" data-bind="validationElement: backupType">
                 <label class="control-label col-sm-4 col-lg-2">Backup type <i id="backup-info" class="icon-info text-info"></i></label>
-                <div class="col-sm-4 col-lg-4" data-bind="validationOptions: { insertMessages: false }, validationElement: backupType">
+                <div class="col-sm-4 col-lg-4" data-bind="validationOptions: { insertMessages: false }">
                     <div class="dropdown btn-block">
                         <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
                             <span data-bind="text: backupType() || 'Select backup type..'"></span>
@@ -60,9 +60,9 @@
     <h3>Schedule <i id="schedule-info" class="icon-info text-info"></i></h3>
     <div class="panel">
         <div class="padding">
-            <div class="row flex-row margin-bottom">
+            <div class="row flex-row margin-bottom" data-bind="validationElement: fullBackupFrequency">
                 <label class="control-label col-xs-12 col-sm-4 col-lg-2">Full</label>
-                <div class="col-xs-6 col-sm-4 col-lg-4" data-bind="validationElement: fullBackupFrequency">
+                <div class="col-xs-6 col-sm-4 col-lg-4">
                     <div class="dropdown btn-block">
                         <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
                                id="fullBackupFrequencyInput"
@@ -82,9 +82,9 @@
                     </div>
                 </div>
             </div>
-            <div class="row flex-row margin-bottom">
+            <div class="row flex-row margin-bottom" data-bind="validationElement: incrementalBackupFrequency">
                 <label class="control-label col-xs-12 col-sm-4 col-lg-2">Incremental</label>
-                <div class="col-xs-6 col-sm-4 col-lg-4" data-bind="validationElement: incrementalBackupFrequency">
+                <div class="col-xs-6 col-sm-4 col-lg-4">
                     <div class="dropdown btn-block">
                         <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
                                id="incrementalBackupFrequencyInput"
@@ -117,7 +117,7 @@
             
             <div class="row" data-bind="collapse: enabled">
                 <div class="col-sm-8 col-lg-6 margin-top">
-                    <div class="row flex-row margin-bottom">
+                    <div class="row flex-row margin-bottom" data-bind="validationElement: folderPath">
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4">Backup directory</label>
                         <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: folderPath">
                             <input data-bind="textInput: folderPath" type="text" class="form-control" placeholder="Full directory backup path" />
@@ -137,7 +137,7 @@
 
             <div class="row" data-bind="collapse: enabled">
                 <div class="col-sm-8 col-lg-6 margin-top">
-                    <div class="row flex-row margin-bottom">
+                    <div class="row flex-row margin-bottom" data-bind="validationElement: bucketName">
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4">
                             Bucket name <i id="bucket-info" class="icon-info text-info"></i>
                         </label>
@@ -145,15 +145,15 @@
                             <input data-bind="textInput: bucketName" type="text" class="form-control" />
                         </div>
                     </div>
-                    <div class="row flex-row margin-bottom">
+                    <div class="row flex-row margin-bottom" data-bind="validationElement: remoteFolderName">
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4">Remote folder name</label>
                         <div class="col-xs-12 col-sm-6 col-lg-8">
                             <input data-bind="textInput: remoteFolderName" type="text" class="form-control" />
                         </div>
                     </div>
-                    <div class="row flex-row margin-bottom">
+                    <div class="row flex-row margin-bottom" data-bind="validationElement: awsRegionName">
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4">Region</label>
-                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationOptions: { insertMessages: false }, validationElement: awsRegionName">
+                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationOptions: { insertMessages: false }">
                             <div class="dropdown btn-block">
                                 <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
                                        id="s3RegionInput"
@@ -169,15 +169,15 @@
                             <span class="help-block" data-bind="validationMessage: awsRegionName"></span>
                         </div>
                     </div>
-                    <div class="row flex-row margin-bottom">
+                    <div class="row flex-row margin-bottom" data-bind="validationElement: awsAccessKey">
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4">Access key</label>
                         <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: awsAccessKey">
                             <input data-bind="textInput: awsAccessKey" class="form-control" />
                         </div>
                     </div>
-                    <div class="row flex-row margin-bottom">
+                    <div class="row flex-row margin-bottom" data-bind="validationElement: awsSecretKey">
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4">Secret key</label>
-                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: awsSecretKey">
+                        <div class="col-xs-12 col-sm-6 col-lg-8">
                             <input data-bind="textInput: awsSecretKey" type="password" class="form-control" />
                         </div>
                     </div>
@@ -203,29 +203,29 @@
 
             <div class="row" data-bind="collapse: enabled">
                 <div class="col-sm-8 col-lg-6 margin-top">
-                    <div class="row flex-row margin-bottom">
+                    <div class="row flex-row margin-bottom" data-bind="validationElement: storageContainer">
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4">
                             Storage container <i id="storage-container-info" class="icon-info text-info"></i>
                         </label>
-                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: storageContainer">
+                        <div class="col-xs-12 col-sm-6 col-lg-8">
                             <input data-bind="textInput: storageContainer" type="text" class="form-control" />
                         </div>
                     </div>
-                    <div class="row flex-row margin-bottom">
+                    <div class="row flex-row margin-bottom" data-bind="validationElement: remoteFolderName">
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4">Remote folder name</label>
                         <div class="col-xs-12 col-sm-6 col-lg-8">
                             <input data-bind="textInput: remoteFolderName" type="text" class="form-control" />
                         </div>
                     </div>
-                    <div class="row flex-row margin-bottom">
+                    <div class="row flex-row margin-bottom" data-bind="validationElement: accountName">
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4">Account name</label>
-                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: accountName">
+                        <div class="col-xs-12 col-sm-6 col-lg-8">
                             <input data-bind="textInput: accountName" class="form-control" />
                         </div>
                     </div>
-                    <div class="row flex-row margin-bottom">
+                    <div class="row flex-row margin-bottom" data-bind="validationElement: accountKey">
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4">Account key</label>
-                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: accountKey">
+                        <div class="col-xs-12 col-sm-6 col-lg-8" >
                             <input data-bind="textInput: accountKey" type="password" class="form-control" />
                         </div>
                     </div>
@@ -251,17 +251,17 @@
 
             <div class="row" data-bind="collapse: enabled">
                 <div class="col-sm-8 col-lg-6 margin-top">
-                    <div class="row flex-row margin-bottom">
+                    <div class="row flex-row margin-bottom" data-bind="validationElement: vaultName">
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4">
                             Vault name <i id="vault-info" class="icon-info text-info"></i>
                         </label>
-                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: vaultName">
+                        <div class="col-xs-12 col-sm-6 col-lg-8">
                             <input data-bind="textInput: vaultName" type="text" class="form-control" />
                         </div>
                     </div>
-                    <div class="row flex-row margin-bottom">
+                    <div class="row flex-row margin-bottom" data-bind="validationElement: selectedAwsRegion">
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4">Region</label>
-                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationOptions: { insertMessages: false }, validationElement: awsRegionName">
+                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationOptions: { insertMessages: false }">
                             <div class="dropdown btn-block">
                                 <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
                                        id="glacierRegionInput"
@@ -277,15 +277,15 @@
                             <span class="help-block" data-bind="validationMessage: awsRegionName"></span>
                         </div>
                     </div>
-                    <div class="row flex-row margin-bottom">
+                    <div class="row flex-row margin-bottom" data-bind="validationElement: awsAccessKey">
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4">Access key</label>
-                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: awsAccessKey">
+                        <div class="col-xs-12 col-sm-6 col-lg-8">
                             <input data-bind="textInput: awsAccessKey" class="form-control" />
                         </div>
                     </div>
-                    <div class="row flex-row margin-bottom">
+                    <div class="row flex-row margin-bottom"  data-bind="validationElement: awsSecretKey">
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4">Secret key</label>
-                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: awsSecretKey">
+                        <div class="col-xs-12 col-sm-6 col-lg-8">
                             <input data-bind="textInput: awsSecretKey" type="password" class="form-control" />
                         </div>
                     </div>
@@ -311,35 +311,35 @@
 
             <div class="row" data-bind="collapse: enabled">
                 <div class="col-sm-8 col-lg-6 margin-top">
-                    <div class="row flex-row margin-bottom">
+                    <div class="row flex-row margin-bottom" data-bind="validationElement: url">
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4">
                             Host <i id="ftp-host-info" class="icon-info text-info"></i>
                         </label>
-                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: url">
+                        <div class="col-xs-12 col-sm-6 col-lg-8">
                             <input data-bind="textInput: url" type="text" class="form-control" />
                         </div>
                     </div>
-                    <div class="row flex-row margin-bottom">
+                    <div class="row flex-row margin-bottom" data-bind="validationElement: port">
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4">Port</label>
-                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: port">
+                        <div class="col-xs-12 col-sm-6 col-lg-8">
                             <input data-bind="textInput: port" type="text" class="form-control" placeholder="default: 21" />
                         </div>
                     </div>
-                    <div class="row flex-row margin-bottom">
+                    <div class="row flex-row margin-bottom" data-bind="validationElement: userName">
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4">User name</label>
-                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: userName">
+                        <div class="col-xs-12 col-sm-6 col-lg-8">
                             <input data-bind="textInput: userName" type="text" class="form-control" />
                         </div>
                     </div>
-                    <div class="row flex-row margin-bottom">
+                    <div class="row flex-row margin-bottom" data-bind="validationElement: password">
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4">Password</label>
-                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: password">
+                        <div class="col-xs-12 col-sm-6 col-lg-8">
                             <input data-bind="textInput: password" type="password" class="form-control" />
                         </div>
                     </div>
-                    <div class="row flex-row margin-bottom" data-bind="visible: isFtps">
+                    <div class="row flex-row margin-bottom" data-bind="visible: isFtps, validationElement: certificateFileName">
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4">Certificate</label>
-                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: certificateFileName">
+                        <div class="col-xs-12 col-sm-6 col-lg-8" >
                             <div class="input-group file-input">
                                 <input type="file" id="filePicker" data-bind="event: { change: fileSelected }, disable: isLoadingFile" tabindex="-1", disabled>
                                 <span class="static-name form-control" data-bind="text: certificateFileName() || 'Select file...'"></span>
@@ -352,7 +352,7 @@
                                 <p class="help-block" data-bind="validationMessage: certificateFileName"></p>
                             </div>
                         </div>
-                    </div>
+                    </div>  
 
                     <div class="text-right">
                         <button data-bind="click: _.partial($root.testCredentials, $data), disable: isTestingCredentials, css: { 'btn-spinner': isTestingCredentials }" class="btn btn-info">
