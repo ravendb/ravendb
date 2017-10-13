@@ -8,12 +8,12 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
     allowEtlOnNonEncryptedChannel = ko.observable<boolean>(false);
     transformationScripts = ko.observableArray<ongoingTaskRavenEtlTransformationModel>([]);
 
-    showEditTransformationArea = ko.observable<boolean>(false);
+    showEditTransformationArea: KnockoutComputed<boolean>;
 
-    editedTransformationScript = ko.observable<ongoingTaskRavenEtlTransformationModel>(ongoingTaskRavenEtlTransformationModel.empty());  
-    isDirtyEditedScript = new ko.DirtyFlag([]);
-    
+    editedTransformationScript = ko.observable<ongoingTaskRavenEtlTransformationModel>();  
     validationGroup: KnockoutValidationGroup;
+    
+    dirtyFlag: () => DirtyFlag;
     
     constructor(dto: Raven.Client.ServerWide.Operations.OngoingTaskRavenEtlDetails) {
         super();
@@ -26,13 +26,19 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
     initializeObservables() {
         super.initializeObservables();
         
-        this.initializeMentorValidation();
-
-        this.isDirtyEditedScript = new ko.DirtyFlag([this.editedTransformationScript().name,
-                                                        this.editedTransformationScript().script,
-                                                        this.editedTransformationScript().transformScriptCollections],
-                                                        false, jsonUtil.newLineNormalizingHashFunction);
+        this.showEditTransformationArea = ko.pureComputed(() => !!this.editedTransformationScript());
         
+        const innerDirtyFlag = ko.pureComputed(() => this.editedTransformationScript() && this.editedTransformationScript().dirtyFlag().isDirty());
+        
+        this.dirtyFlag = new ko.DirtyFlag([innerDirtyFlag,
+                this.taskName,
+                this.preferredMentor,
+                this.manualChooseMentor,
+                this.connectionStringName,
+                this.allowEtlOnNonEncryptedChannel,
+                this.transformationScripts()
+            ],
+            false, jsonUtil.newLineNormalizingHashFunction);
     }
     
     private initValidation() {
@@ -84,13 +90,15 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
 
     deleteTransformationScript(transformationScript: ongoingTaskRavenEtlTransformationModel) { 
         this.transformationScripts.remove(x => transformationScript.name() === x.name());
-        this.showEditTransformationArea(false);
+        
+        if (this.editedTransformationScript() && this.editedTransformationScript().name() === transformationScript.name()) {
+            this.editedTransformationScript(null);
+        }
     }
 
     editTransformationScript(transformationScript: ongoingTaskRavenEtlTransformationModel) {
-        this.editedTransformationScript().update(transformationScript.toDto(), false);
-        this.showEditTransformationArea(true);
-        this.isDirtyEditedScript().reset();
+        this.editedTransformationScript(new ongoingTaskRavenEtlTransformationModel(transformationScript.toDto(), false));
+        this.dirtyFlag().reset();
     }
 
     static empty(): ongoingTaskRavenEtlEditModel {

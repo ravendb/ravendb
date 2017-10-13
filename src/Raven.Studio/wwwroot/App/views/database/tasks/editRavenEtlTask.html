@@ -1,9 +1,9 @@
 <div class="content-margin edit-raven-etl-task">
     <div class="row flex-row absolute-fill">
         <div class="col-xs-12 col-lg-6 flex-vertical">
-            <form class="flex-form" data-bind="submit: trySaveRavenEtl">
+            <form class="flex-form" data-bind="submit: saveRavenEtl">
                 <div class="flex-header">
-                    <button type="submit" class="btn btn-primary"><i class="icon-save"></i><span>Save</span></button>
+                    <button type="submit" class="btn btn-primary" data-bind="enable: $root.dirtyFlag().isDirty"><i class="icon-save"></i><span>Save</span></button>
                     <button data-bind="click: cancelOperation" class="btn btn-default"><i class="icon-cancel"></i><span>Cancel</span></button>
                 </div>
                 <div class="panel">
