@@ -19,6 +19,7 @@ class ongoingTaskEtlTransformationModel {
     constructor(dto: Raven.Client.ServerWide.ETL.Transformation, isNew: boolean) {
         this.update(dto, isNew);
         this.initObservables();
+        this.initValidation();
 
         this.dirtyFlag = new ko.DirtyFlag([this.name,
                 this.script,
@@ -86,11 +87,10 @@ class ongoingTaskEtlTransformationModel {
     }
 
     addCollection() {
-        this.transformScriptCollections.push(this.inputCollection());
-        this.inputCollection("");
+        this.addWithBlink(this.inputCollection());
     }
     
-    autoAddCollection(collectionName: string) {
+    addWithBlink(collectionName: string) {
         this.transformScriptCollections.unshift(collectionName);
         this.inputCollection("");
         
