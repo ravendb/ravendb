@@ -51,6 +51,7 @@
                         <ul class="dropdown-menu" data-bind="foreach: $root.possibleMentors">
                             <li><a href="#" data-bind="text: 'Node ' + $data, click: $parent.preferredMentor.bind($parent.preferredMentor, $data)"></a></li>
                         </ul>
+                        <span class="help-block" data-bind="validationMessage: preferredMentor"></span>
                     </div>
                 </div>
             </div>

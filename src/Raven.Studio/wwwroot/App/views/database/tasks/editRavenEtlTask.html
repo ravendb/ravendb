@@ -35,6 +35,7 @@
                                 <ul class="dropdown-menu" data-bind="foreach: $root.possibleMentors">
                                     <li><a href="#" data-bind="text: 'Node ' + $data, click: $parent.preferredMentor.bind($parent.preferredMentor, $data)"></a></li>
                                 </ul>
+                                <span class="help-block" data-bind="validationMessage: preferredMentor"></span>
                             </div>
                         </div>
                         <div class="form-group"
@@ -56,14 +57,22 @@
                             </div>
                         </div>
                         <div data-bind="if: $root.activeDatabase().isEncrypted">
-                            <div class="bg-warning inline-block padding padding-xs small">
-                                <i class="icon-warning"></i>
-                                &nbsp;Note:&nbsp;&nbsp;Database&nbsp;<strong data-bind="text: $root.activeDatabase().name"></strong>&nbsp;is encrypted
+                            <div class="form-group">
+                                <label class="control-label">&nbsp;</label>
+                                <div class="bg-info inline-block padding padding-xs small">
+                                    <i class="icon-info"></i>
+                                    &nbsp;Note:&nbsp;&nbsp;Database&nbsp;<strong data-bind="text: $root.activeDatabase().name"></strong>&nbsp;is encrypted
+                                </div>
                             </div>
-                            <div class="toggle">
-                                <input id="toggle-non-encrypted-channel" type="checkbox" data-bind="checked: allowEtlOnNonEncryptedChannel">
-                                <label class="small" for="toggle-non-encrypted-channel">Allow ETL on non-encrypted communication channel</label>
+                          
+                            <div class="form-group">
+                                <label class="control-label">&nbsp;</label>
+                                <div class="toggle">
+                                    <input id="toggle-non-encrypted-channel" type="checkbox" data-bind="checked: allowEtlOnNonEncryptedChannel">
+                                    <label  for="toggle-non-encrypted-channel">Allow ETL on non-encrypted communication channel</label>
+                                </div>
                             </div>
+                            
                         </div>
                         <div class="flex-horizontal">
                             <div class="flex-grow">
@@ -98,15 +107,16 @@
                 <div class="flex-header">
                     <div class="flex-row">
                         <h3>Transform Scripts:</h3>
-                        <button id="addNewScript" data-bind="click: tryAddNewTransformation" title="Add a new transformation script for this ETL task" class="btn btn-info pull-right"><i class="icon-plus"></i><span>Add New Script</span></button>
+                        <button type="button" id="addNewScript" data-bind="click: addNewTransformation" title="Add a new transformation script for this ETL task" class="btn btn-info pull-right">
+                            <i class="icon-plus"></i><span>Add New Script</span>
+                        </button>
                     </div>
                 </div>
                 <div class="scroll">
                     <div class="etl-list" id="transformsList" data-bind="with: editedRavenEtl">
                         <div data-bind="if: transformationScripts().length === 0">
                             <div>
-                                <i class="icon-xl icon-empty-set text-muted"></i>
-                                <h3 class="text-center text-muted">No transformation scripts have been defined.</h3>
+                                <h3 class="text-center text-muted" data-bind="css: { 'text-danger': !transformationScripts.isValid() && transformationScripts.isModified() }">No transformation scripts have been defined.</h3>
                             </div>
                         </div>
                         <div data-bind="foreach: transformationScripts">
@@ -117,11 +127,11 @@
                                             <div class="transformer-name" data-bind="text: name" title="Transformation script name"></div>
                                             <div class="collections">
                                                 Collections:
-                                                <span class="etl-collections" data-bind="foreach: transformScriptCollections" title="The Collections transformed">
+                                                <span class="etl-collections" data-bind="foreach: transformScriptCollections, visible: !applyScriptForAllCollections() && transformScriptCollections().length" title="The Collections transformed">
                                                     <span data-bind="text: $data, attr: { class: 'collection-color-' + $parent.getCollectionEntry($data) }"></span>
                                                 </span>
-                                                <span data-bind="visible: transformScriptCollections().length === 0">
-                                                    No collections selected..
+                                                <span class="etl-collections" data-bind="visible: applyScriptForAllCollections" title="The Collections transformed">
+                                                    <span>All collections</span>
                                                 </span>
                                             </div>
                                         </div>
@@ -156,7 +166,14 @@
                         </div>
                         <label><strong>Script:</strong></label>
                         <span class="pull-right"><a href="#" data-bind="click: $root.syntaxHelp"><small>Syntax help</small></a></span>
-                        <textarea class="form-control" rows="7" data-bind="textinput: script" placeholder="Enter script"></textarea>
+                        <div data-bind="validationElement: script">
+                            <pre class="form-control editor"
+                                 data-bind="aceEditor: { code: script, fontSize: '14px', lang: 'ace/mode/javascript' }, validationOptions: { errorsAsTitle: false }, validationElement: script" style="height: 300px;"></pre>
+
+                            <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: script">
+                                <div class="help-block" data-bind="validationMessage: script"></div>
+                            </div>
+                        </div>
                         <div class="toggle">
                             <input id="applyToAll" type="checkbox" data-bind="checked: applyScriptForAllCollections">
                             <label for="applyToAll">Apply script to all collections</label>
@@ -169,30 +186,28 @@
                                     <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
                                     <ul class="dropdown-menu" role="menu" style="display: none;"
                                         data-bind="autoComplete: '#' + 'collectionNameInput', foreach: $root.createCollectionNameAutocompleter(transformScriptCollections, inputCollection)">
-                                        <li role="presentation" data-bind="click: $parent.inputCollection.bind($parent, $data)">
+                                        <li role="presentation" data-bind="click: $parent.autoAddCollection.bind($parent, $data)">
                                             <a role="menuitem" tabindex="-1" href="#">
                                                 <span data-bind="text: $data"></span>
                                             </a>
                                         </li>
                                     </ul>
+                                    <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: transformScriptCollections">
+                                        <div class="help-block" data-bind="validationMessage: transformScriptCollections"></div>
+                                    </div>
                                 </div>
                             </div>
                             <div>
                                 <button class="btn btn-info" data-bind="click: addCollection, attr: { 'disabled': !inputCollection() || !canAddCollection() }"><i class="icon-plus"></i> <span>Add Collection</span></button>
                             </div>
                         </div>
-                        <div data-bind="collapse: !applyScriptForAllCollections(), css: {'invisible': applyScriptForAllCollections }">
+                        <div data-bind="collapse: !applyScriptForAllCollections(), visible: !applyScriptForAllCollections() && transformScriptCollections().length">
                             <label><strong>Collections Selected:</strong></label>
                             <ul class="well collection-list">
                                 <!-- ko foreach: transformScriptCollections -->
                                 <li>
                                     <div class="name" data-bind="text: $data"></div>
                                     <a title="Remove collection" href="#" data-bind="click: $parent.removeCollection.bind($parent, $data)"><i class="icon-trash"></i></a>
-                                </li>
-                                <!-- /ko -->
-                                <!-- ko if: transformScriptCollections().length === 0 && !applyScriptForAllCollections()-->
-                                <li>
-                                    <div class="name">No collections have been defined yet..</div>
                                 </li>
                                 <!-- /ko -->
                             </ul>

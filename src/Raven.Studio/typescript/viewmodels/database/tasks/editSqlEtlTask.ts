@@ -15,6 +15,7 @@ import transformationScriptSyntax = require("viewmodels/database/tasks/transform
 import ongoingTaskSqlEtlTableModel = require("models/database/tasks/ongoingTaskSqlEtlTableModel");
 import testSqlConnectionStringCommand = require("commands/database/cluster/testSqlConnectionStringCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
+import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
 
 class editSqlEtlTask extends viewModelBase {
 
@@ -41,7 +42,9 @@ class editSqlEtlTask extends viewModelBase {
     fullErrorDetailsVisible = ko.observable<boolean>(false);
     shortErrorText: KnockoutObservable<string>;
       
-    collectionNames: KnockoutComputed<string[]>;    
+    collectionNames: KnockoutComputed<string[]>;
+
+    possibleMentors = ko.observableArray<string>([]);
     
     validationGroup: KnockoutValidationGroup;
 
@@ -97,7 +100,13 @@ class editSqlEtlTask extends viewModelBase {
             this.initValidation();
         });
 
-        return $.when<any>(this.getAllConnectionStrings(), deferred);
+        return $.when<any>(this.getAllConnectionStrings(), this.loadPossibleMentors(), deferred);
+    }
+
+    private loadPossibleMentors() {
+        return new getPossibleMentorsCommand(this.activeDatabase().name)
+            .execute()
+            .done(mentors => this.possibleMentors(mentors));
     }
     
     /***************************************************/
@@ -135,6 +144,12 @@ class editSqlEtlTask extends viewModelBase {
         
         // TODO ... this.dirtyFlag = 
     }
+    
+    compositionComplete() {
+        super.compositionComplete();
+
+        //TODO: $('.edit-backup [data-toggle="tooltip"]').tooltip();
+    }
 
     private initValidation() {
         this.editedSqlEtl().connectionStringName.extend({
@@ -165,10 +180,17 @@ class editSqlEtlTask extends viewModelBase {
             ]
         });
 
+        this.editedSqlEtl().preferredMentor.extend({
+            required: {
+                onlyIf: () => this.editedSqlEtl().manualChooseMentor()
+            }
+        });
+
         this.validationGroup = ko.validatedObservable({
             connectionStringName: this.editedSqlEtl().connectionStringName,
             sqlTables: this.editedSqlEtl().sqlTables,
-            transformationScripts: this.editedSqlEtl().transformationScripts
+            transformationScripts: this.editedSqlEtl().transformationScripts,
+            preferredMentor: this.editedSqlEtl().preferredMentor
         });
     }
 

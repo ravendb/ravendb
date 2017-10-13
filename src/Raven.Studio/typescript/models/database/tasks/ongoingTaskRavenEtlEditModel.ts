@@ -41,10 +41,20 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
         this.connectionStringName.extend({
             required: true
         });
+        
+        this.transformationScripts.extend({
+            validation: [
+                {
+                    validator: () => this.transformationScripts().length > 0,
+                    message: "Transformation Script is Not defined"
+                }
+            ]
+        });
 
         this.validationGroup = ko.validatedObservable({
-            connectionStringName: this.connectionStringName ,
-            preferredMentor: this.preferredMentor
+            connectionStringName: this.connectionStringName,
+            preferredMentor: this.preferredMentor,
+            transformationScripts: this.transformationScripts
         });
     }
 
@@ -60,24 +70,12 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
     }
 
     toDto(): Raven.Client.ServerWide.ETL.RavenEtlConfiguration { 
-        const transformations = this.transformationScripts().map(x => {
-            const collections = x.applyScriptForAllCollections() ? null : x.transformScriptCollections();
-            return {
-                ApplyToAllDocuments: x.applyScriptForAllCollections(),
-                Collections: collections,
-                Disabled: false,
-                HasLoadAttachment: false,
-                Name: x.name(),
-                Script: x.script()
-            } as Raven.Client.ServerWide.ETL.Transformation;
-        });
-
         return {
             Name: this.taskName(),
             ConnectionStringName: this.connectionStringName(),
             AllowEtlOnNonEncryptedChannel: this.allowEtlOnNonEncryptedChannel(),
             Disabled: false,
-            Transforms: transformations,
+            Transforms: this.transformationScripts().map(x => x.toDto()),
             EtlType: "Raven",
             MentorNode: this.manualChooseMentor() ? this.preferredMentor() : undefined,
             TaskId: this.taskId,
@@ -98,24 +96,17 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
     static empty(): ongoingTaskRavenEtlEditModel {
         return new ongoingTaskRavenEtlEditModel(
             {
-                TaskId: null,
                 TaskName: "",
                 TaskType: "RavenEtl",
                 TaskState: "Enabled",
-                ResponsibleNode: null,
                 TaskConnectionStatus: "Active",
                 Configuration: {
                     EtlType: "Raven",
                     Transforms: [],
-                    AllowEtlOnNonEncryptedChannel: false,
                     ConnectionStringName: "",
-                    Disabled: false,
                     Name: "",
-                    TaskId: null,
-                    MentorNode: null 
                 },
-                Error: null,
-            });
+            } as Raven.Client.ServerWide.Operations.OngoingTaskRavenEtlDetails);
     }
 }
 

@@ -15,13 +15,35 @@
                 <div class="panel">
                     <div data-bind="with: editedSqlEtl">
                         <div class="panel-body">                       
-                            <h3 data-bind="text: $parent.isAddingNewSqlEtlTask() ? `New SQL ETL` : `Edit SQL ETL`"></h3>
+                            <h3 data-bind="text: $parent.isAddingNewSqlEtlTask() ? 'New SQL ETL' : 'Edit SQL ETL'"></h3>
                             <div class="form-group" data-bind="validationElement: taskName">
                                 <label for="taskName" class="control-label">Task Name</label>
                                 <div class="flex-grow">
                                     <input type="text" class="form-control" id="taskName" autocomplete=""
                                            placeholder="Enter a descriptive name for the SQL ETL task"
                                            data-bind="textInput: taskName">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="control-label">&nbsp;</label>
+                                <div class="toggle" data-placement="left" data-toggle="tooltip" title="Mentor node is responsible for given ongoing task">
+                                    <input id="manualMentorSelection" type="checkbox" data-bind="checked: manualChooseMentor">
+                                    <label for="manualMentorSelection">Choose preferred mentor node manually</label>
+                                </div>
+                            </div>
+                            <div class="form-group" data-bind="validationElement: preferredMentor, visible: manualChooseMentor">
+                                <div>
+                                    <label class="control-label">Preferred mentor</label>
+                                </div>
+                                <div class="flex-grow">
+                                    <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
+                                        <span data-bind="text: preferredMentor() ? 'Node ' + preferredMentor() : 'Select preferred mentor'"></span>
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul class="dropdown-menu" data-bind="foreach: $root.possibleMentors">
+                                        <li><a href="#" data-bind="text: 'Node ' + $data, click: $parent.preferredMentor.bind($parent.preferredMentor, $data)"></a></li>
+                                    </ul>
+                                    <span class="help-block" data-bind="validationMessage: preferredMentor"></span>
                                 </div>
                             </div>
                             <div class="form-group" data-bind="validationOptions: { insertMessages: false }, validationElement: connectionStringName">
