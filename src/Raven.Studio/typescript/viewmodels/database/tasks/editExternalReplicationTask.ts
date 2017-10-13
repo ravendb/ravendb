@@ -8,6 +8,7 @@ import eventsCollector = require("common/eventsCollector");
 import generalUtils = require("common/generalUtils");
 import testClusterNodeConnectionCommand = require("commands/database/cluster/testClusterNodeConnectionCommand");
 import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
+import jsonUtil = require("common/jsonUtil");
 
 class editExternalReplicationTask extends viewModelBase {
 
@@ -80,6 +81,16 @@ class editExternalReplicationTask extends viewModelBase {
             }
             return generalUtils.trimMessage(result.Error);
         });
+        
+        const model = this.editedExternalReplication();
+        
+        this.dirtyFlag = new ko.DirtyFlag([
+                model.taskName,
+                model.manualChooseMentor,
+                model.preferredMentor,
+                model.destinationDB,
+                model.destinationURL
+            ], false, jsonUtil.newLineNormalizingHashFunction);
     }
 
     compositionComplete() {
