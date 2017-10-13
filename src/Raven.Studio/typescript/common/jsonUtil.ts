@@ -26,7 +26,7 @@ class jsonUtil {
     static newLineNormalizingHashFunction = (object: any) => {
         return ko.toJSON(object).replace(/\\r\\n/g, '\\n');
     };
-
+    
     static newLineNormalizingHashFunctionWithIgnoredFields = (ignoredFields: string[]) => {
         return (object: any) => {
             return ko.toJSON(object, (k:string, v:string) => ignoredFields.indexOf(k) == -1 ? v : null).replace(/\\r\\n/g, '\\n');

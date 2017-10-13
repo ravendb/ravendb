@@ -154,7 +154,6 @@ class editRavenEtlTask extends viewModelBase {
             .execute()
             .done(() => {
                 this.editedRavenEtl().dirtyFlag().reset();
-                this.dirtyFlag().reset();
                 this.goToOngoingTasksView();
             });
     }
@@ -173,16 +172,19 @@ class editRavenEtlTask extends viewModelBase {
             return;
         }
         
-        // we don't care here about actuall modifications, when user hit create/update force dirty flag
-        this.dirtyFlag().forceDirty(); // TODO: impl full dirty flag!
-
         if (transformation.isNew()) {
             let newTransformationItem = new ongoingTaskRavenEtlTransformationModel(transformation.toDto(), false);
-
-            this.editedRavenEtl().transformationScripts.push(newTransformationItem); 
+            newTransformationItem.dirtyFlag().forceDirty();
+            this.editedRavenEtl().transformationScripts.push(newTransformationItem);
         } else {
             const oldItem = this.editedRavenEtl().transformationScripts().find(x => x.name() === transformation.name());
-            this.editedRavenEtl().transformationScripts.replace(oldItem, new ongoingTaskRavenEtlTransformationModel(transformation.toDto(), false));
+            const newItem = new ongoingTaskRavenEtlTransformationModel(transformation.toDto(), false);
+            
+            if (oldItem.dirtyFlag().isDirty() || newItem.hasUpdates(oldItem)) {
+                newItem.dirtyFlag().forceDirty();
+            }
+            
+            this.editedRavenEtl().transformationScripts.replace(oldItem, newItem);
         }
 
         this.editedRavenEtl().transformationScripts.sort((a, b) => a.name().toLowerCase().localeCompare(b.name().toLowerCase()));
@@ -218,7 +220,6 @@ class editRavenEtlTask extends viewModelBase {
 
     removeTransformationScript(model: ongoingTaskRavenEtlTransformationModel) {
         this.editedRavenEtl().deleteTransformationScript(model);
-        this.dirtyFlag().forceDirty();
     }
 
     syntaxHelp() {

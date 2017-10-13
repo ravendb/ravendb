@@ -124,7 +124,9 @@
                                 <div class="padding padding-sm">
                                     <div class="flex-horizontal">
                                         <div class="flex-grow info">
-                                            <div class="transformer-name" data-bind="text: name" title="Transformation script name"></div>
+                                            <div class="transformer-name" title="Transformation script name">
+                                                <span data-bind="text: name"></span>
+                                            </div>
                                             <div class="collections">
                                                 Collections:
                                                 <span class="etl-collections" data-bind="foreach: transformScriptCollections, visible: !applyScriptForAllCollections() && transformScriptCollections().length" title="The Collections transformed">
@@ -134,6 +136,11 @@
                                                     <span>All collections</span>
                                                 </span>
                                             </div>
+                                        </div>
+                                        <div data-bind="visible: dirtyFlag().isDirty">
+                                            <small class="text-warning">
+                                                <i class="icon-warning"></i> Modified
+                                            </small>
                                         </div>
                                         <div class="actions">
                                             <button data-bind="click: $parent.editTransformationScript.bind($parent, $data)" class="btn btn-default"><i class="icon-edit" title="Edit script"></i></button>
