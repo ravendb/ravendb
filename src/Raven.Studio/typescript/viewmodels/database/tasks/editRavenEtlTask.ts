@@ -66,7 +66,6 @@ class editRavenEtlTask extends viewModelBase {
             // 2. Creating a New task
             this.isAddingNewRavenEtlTask(true);
             this.editedRavenEtl(ongoingTaskRavenEtlEditModel.empty());
-            this.editedRavenEtl().showEditTransformationArea(true);
             deferred.resolve();
         }
 
@@ -110,7 +109,7 @@ class editRavenEtlTask extends viewModelBase {
             return generalUtils.trimMessage(result.Error);
         });
 
-        this.dirtyFlag = new ko.DirtyFlag([this.editedRavenEtl().isDirtyEditedScript().isDirty, this.editedRavenEtl().transformationScripts]);
+        this.dirtyFlag = this.editedRavenEtl().dirtyFlag;
     }
 
     useConnectionString(connectionStringToUse: string) {
@@ -132,7 +131,7 @@ class editRavenEtlTask extends viewModelBase {
         );
     }
 
-    trySaveRavenEtl() {
+    saveRavenEtl() {
         const editedEtl = this.editedRavenEtl();
 
         // show validations errors if any - ignore returned value
@@ -140,77 +139,54 @@ class editRavenEtlTask extends viewModelBase {
         
         if (editedEtl.showEditTransformationArea()) {
             if (!this.isValid(editedEtl.editedTransformationScript().validationGroup)) {
-                return true;
+                return false;
             }
 
             this.saveEditedTransformation(editedEtl.editedTransformationScript());
         }
-        
-        this.saveRavenEtl();
-    }
 
-    saveRavenEtl() {
-        // 1. Validate model
         if (!this.isValid(this.editedRavenEtl().validationGroup)) {
-            return;
+            return false;
         }
 
-        // 2. Create/add the new raven-etl task
         const dto = this.editedRavenEtl().toDto();
         saveEtlTaskCommand.forRavenEtl(this.activeDatabase(), dto)
             .execute()
             .done(() => {
-                this.editedRavenEtl().isDirtyEditedScript().reset();
+                this.editedRavenEtl().dirtyFlag().reset();
                 this.dirtyFlag().reset();
                 this.goToOngoingTasksView();
             });
     }
 
     addNewTransformation() {
-        this.editedRavenEtl().showEditTransformationArea(false);
-        this.editedRavenEtl().editedTransformationScript().update(ongoingTaskRavenEtlTransformationModel.empty().toDto(), true);
-
-        this.editedRavenEtl().showEditTransformationArea(true);
-        this.editedRavenEtl().isDirtyEditedScript().reset();    
+        this.editedRavenEtl().editedTransformationScript(ongoingTaskRavenEtlTransformationModel.empty());
     }
 
     cancelEditedTransformation() {
-        this.editedRavenEtl().showEditTransformationArea(false);
-        this.editedRavenEtl().isDirtyEditedScript().reset();
+        this.editedRavenEtl().editedTransformationScript(null);
     }
 
     saveEditedTransformation(transformation: ongoingTaskRavenEtlTransformationModel) {
-        // 1. Validate
         if (!this.isValid(transformation.validationGroup)) {
             return;
         }
+        
+        // we don't care here about actuall modifications, when user hit create/update force dirty flag
+        this.dirtyFlag().forceDirty();
 
-        // 2. Save
         if (transformation.isNew()) {
-            let newTransformationItem = new ongoingTaskRavenEtlTransformationModel({
-                ApplyToAllDocuments: transformation.applyScriptForAllCollections(),
-                Collections: transformation.transformScriptCollections(),
-                Disabled: false,
-                HasLoadAttachment: false,
-                Name: transformation.name(),
-                Script: transformation.script()
-            }, true);
+            let newTransformationItem = new ongoingTaskRavenEtlTransformationModel(transformation.toDto(), false);
 
             this.editedRavenEtl().transformationScripts.push(newTransformationItem); 
-        }
-        else {
-            let item = this.editedRavenEtl().transformationScripts().find(x => x.name() === transformation.name());
-            item.applyScriptForAllCollections(transformation.applyScriptForAllCollections());
-            item.transformScriptCollections(transformation.transformScriptCollections());
-            item.script(transformation.script());
+        } else {
+            const oldItem = this.editedRavenEtl().transformationScripts().find(x => x.name() === transformation.name());
+            this.editedRavenEtl().transformationScripts.replace(oldItem, new ongoingTaskRavenEtlTransformationModel(transformation.toDto(), false));
         }
 
-        // 3. Sort
         this.editedRavenEtl().transformationScripts.sort((a, b) => a.name().toLowerCase().localeCompare(b.name().toLowerCase()));
 
-        // 4. Clear
-        this.editedRavenEtl().showEditTransformationArea(false);
-        this.editedRavenEtl().isDirtyEditedScript().reset();
+        this.editedRavenEtl().editedTransformationScript(null);
     }
 
     cancelOperation() {
@@ -241,6 +217,7 @@ class editRavenEtlTask extends viewModelBase {
 
     removeTransformationScript(model: ongoingTaskRavenEtlTransformationModel) {
         this.editedRavenEtl().deleteTransformationScript(model);
+        this.dirtyFlag().forceDirty();
     }
 
     syntaxHelp() {

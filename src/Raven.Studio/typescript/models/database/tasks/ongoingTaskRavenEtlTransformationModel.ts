@@ -1,5 +1,6 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
+import jsonUtil = require("common/jsonUtil");
 
 class ongoingTaskEtlTransformationModel {
     name = ko.observable<string>();
@@ -12,10 +13,17 @@ class ongoingTaskEtlTransformationModel {
     canAddCollection: KnockoutComputed<boolean>;
 
     validationGroup: KnockoutValidationGroup; 
+    
+    dirtyFlag: () => DirtyFlag;
   
     constructor(dto: Raven.Client.ServerWide.ETL.Transformation, isNew: boolean) {
         this.update(dto, isNew);
         this.initObservables();
+
+        this.dirtyFlag = new ko.DirtyFlag([this.name,
+                this.script,
+                this.transformScriptCollections],
+            false, jsonUtil.newLineNormalizingHashFunction);
     }
 
     getCollectionEntry(collectionName: string) {
@@ -90,17 +98,12 @@ class ongoingTaskEtlTransformationModel {
         $(".collection-list li").first().addClass("blink-style");
     }
 
-    update(dto: Raven.Client.ServerWide.ETL.Transformation, isNew: boolean) {
+    private update(dto: Raven.Client.ServerWide.ETL.Transformation, isNew: boolean) {
         this.name(dto.Name);
         this.script(dto.Script);
         this.transformScriptCollections(dto.Collections || []);
         this.applyScriptForAllCollections(dto.ApplyToAllDocuments);
         this.isNew(isNew);
-
-        // Reset validation for this transformation script model 
-        this.name.extend({ validatable: false });
-        this.transformScriptCollections.extend({ validatable: false });
-        this.initValidation();
     }
 }
 
