@@ -21,10 +21,12 @@ class ongoingTaskEtlTransformationModel {
         this.initObservables();
         this.initValidation();
 
-        this.dirtyFlag = new ko.DirtyFlag([this.name,
-                this.script,
-                this.transformScriptCollections],
-            false, jsonUtil.newLineNormalizingHashFunction);
+        this.dirtyFlag = new ko.DirtyFlag([
+            this.name,
+            this.script,
+            this.applyScriptForAllCollections,
+            this.transformScriptCollections], 
+        false, jsonUtil.newLineNormalizingHashFunction);
     }
 
     getCollectionEntry(collectionName: string) {
@@ -104,6 +106,11 @@ class ongoingTaskEtlTransformationModel {
         this.transformScriptCollections(dto.Collections || []);
         this.applyScriptForAllCollections(dto.ApplyToAllDocuments);
         this.isNew(isNew);
+    }
+
+    hasUpdates(oldItem: this) {
+        const hashFunction = jsonUtil.newLineNormalizingHashFunctionWithIgnoredFields(["__moduleId__", "validationGroup"]);
+        return hashFunction(this) !== hashFunction(oldItem);
     }
 }
 

@@ -29,6 +29,17 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
         this.showEditTransformationArea = ko.pureComputed(() => !!this.editedTransformationScript());
         
         const innerDirtyFlag = ko.pureComputed(() => this.editedTransformationScript() && this.editedTransformationScript().dirtyFlag().isDirty());
+        const scriptsCount = ko.pureComputed(() => this.transformationScripts().length);
+        const hasAnyDirtyTransformationScript = ko.pureComputed(() => {
+            let anyDirty = false;
+            this.transformationScripts().forEach(script => {
+                if (script.dirtyFlag().isDirty()) {
+                    anyDirty = true;
+                    // don't break here - we want to track all dependencies
+                }
+            });
+            return anyDirty;
+        });
         
         this.dirtyFlag = new ko.DirtyFlag([innerDirtyFlag,
                 this.taskName,
@@ -36,7 +47,8 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
                 this.manualChooseMentor,
                 this.connectionStringName,
                 this.allowEtlOnNonEncryptedChannel,
-                this.transformationScripts()
+                scriptsCount,
+                hasAnyDirtyTransformationScript
             ],
             false, jsonUtil.newLineNormalizingHashFunction);
     }
@@ -64,7 +76,7 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
         });
     }
 
-    update(dto: Raven.Client.ServerWide.Operations.OngoingTaskRavenEtlDetails) {
+    protected update(dto: Raven.Client.ServerWide.Operations.OngoingTaskRavenEtlDetails) {
         super.update(dto);
 
         if (dto.Configuration) {
@@ -98,7 +110,6 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
 
     editTransformationScript(transformationScript: ongoingTaskRavenEtlTransformationModel) {
         this.editedTransformationScript(new ongoingTaskRavenEtlTransformationModel(transformationScript.toDto(), false));
-        this.dirtyFlag().reset();
     }
 
     static empty(): ongoingTaskRavenEtlEditModel {
