@@ -1,5 +1,7 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 
+import jsonUtil = require("common/jsonUtil");
+
 class ongoingTaskSqlEtlTableModel {
     tableName = ko.observable<string>();
     documentIdColumn = ko.observable<string>();
@@ -7,11 +9,19 @@ class ongoingTaskSqlEtlTableModel {
     
     isNew = ko.observable<boolean>(true); 
     validationGroup: KnockoutValidationGroup; 
+    
+    dirtyFlag: () => DirtyFlag;
   
     constructor(dto: Raven.Client.ServerWide.ETL.SqlEtlTable, isNew: boolean) {
         this.update(dto, isNew);
         
         this.initValidation();
+        
+        this.dirtyFlag = new ko.DirtyFlag([
+            this.tableName,
+            this.documentIdColumn,
+            this.insertOnlyMode
+        ], false);
     }
 
     static empty(): ongoingTaskSqlEtlTableModel {
@@ -46,12 +56,18 @@ class ongoingTaskSqlEtlTableModel {
         });
     }
 
-    update(dto: Raven.Client.ServerWide.ETL.SqlEtlTable, isNew: boolean) {
+    private update(dto: Raven.Client.ServerWide.ETL.SqlEtlTable, isNew: boolean) {
         this.tableName(dto.TableName);
         this.documentIdColumn(dto.DocumentIdColumn); 
         this.insertOnlyMode(dto.InsertOnlyMode);
         this.isNew(isNew);       
     }
+
+    hasUpdates(oldItem: this) {
+        const hashFunction = jsonUtil.newLineNormalizingHashFunctionWithIgnoredFields(["__moduleId__", "validationGroup"]);
+        return hashFunction(this) !== hashFunction(oldItem);
+    }
+    
 }
 
 export = ongoingTaskSqlEtlTableModel;
