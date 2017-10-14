@@ -1,12 +1,12 @@
 <div class="content-margin edit-raven-sql-task">
     <div class="row flex-row absolute-fill">
         <div class="col-xs-12 col-lg-6 flex-vertical">
-            <form class="flex-form">
+            <form class="flex-form" data-bind="submit: saveSqlEtl">
                 
                 <div class="flex-header">
-                    <button data-bind="click: saveSqlEtl" class="btn btn-primary">
+                    <button type="submit" class="btn btn-primary" data-bind="enable: $root.dirtyFlag().isDirty">
                         <i class="icon-save"></i><span>Save</span>
-                    </button>   <!-- todo: change to trySaveSqlEtl later, when working on dirty flag... -->
+                    </button>
                     <button data-bind="click: cancelOperation" class="btn btn-default">
                         <i class="icon-cancel"></i><span>Cancel</span>
                     </button>
@@ -19,7 +19,7 @@
                             <div class="form-group" data-bind="validationElement: taskName">
                                 <label for="taskName" class="control-label">Task Name</label>
                                 <div class="flex-grow">
-                                    <input type="text" class="form-control" id="taskName" autocomplete=""
+                                    <input type="text" class="form-control" id="taskName" autocomplete="off"
                                            placeholder="Enter a descriptive name for the SQL ETL task"
                                            data-bind="textInput: taskName">
                                 </div>
@@ -36,7 +36,7 @@
                                     <label class="control-label">Preferred mentor</label>
                                 </div>
                                 <div class="flex-grow">
-                                    <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
+                                    <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
                                         <span data-bind="text: preferredMentor() ? 'Node ' + preferredMentor() : 'Select preferred mentor'"></span>
                                         <span class="caret"></span>
                                     </button>
@@ -49,7 +49,7 @@
                             <div class="form-group" data-bind="validationOptions: { insertMessages: false }, validationElement: connectionStringName">
                                 <label class="control-label">Connection String</label>
                                 <div class="flex-grow">
-                                    <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown"
+                                    <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown"
                                             data-bind="textInput: connectionStringName, attr: { disabled: $root.sqlEtlConnectionStringsNames().length === 0 }">
                                         <span data-bind="text: connectionStringName() || 'Select a connection string'"></span>
                                         <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
@@ -70,7 +70,7 @@
                                     </button>
                                 </div>
                                 <div>
-                                    <button type="submit" class="btn btn-default btn-info" title="Test the connection string connection"
+                                    <button class="btn btn-default btn-info" title="Test the connection string connection"
                                             data-bind="click: $root.testConnection, disable: !connectionStringName() || $root.spinners.test(), css: { 'btn-spinner': $root.spinners.test }">
                                         <i class="icon-rocket"></i>
                                         <span>Test Connection</span>
@@ -100,7 +100,7 @@
                             <div>Successfully connected to server</div>
                         </div>
                         <div class="padding bg-danger small"
-                             data-bind="visible: !Success && $root.connectionStringIsDefined()">
+                             data-bind="visible: !Success">
                             Connection test failed: <span data-bind="text: $root.fullErrorDetailsVisible() ? Error : $root.shortErrorText()"></span>
                             <div>
                                 <a href="#" 
@@ -119,7 +119,7 @@
             </form>
             <div class="flex-horizontal flex-header">
                 <div class="flex-grow"><h3>SQL Tables</h3></div>
-                <div><button class="btn btn-info" data-bind="click: addNewSqlTable, disable: showEditSqlTableArea()"><i class="icon-plus"></i><span>Add Table</span></button></div>                
+                <div><button type="button" class="btn btn-info" data-bind="click: addNewSqlTable, disable: showEditSqlTableArea()"><i class="icon-plus"></i><span>Add Table</span></button></div>                
             </div>
             <div class="sql-tables-list margin-bottom">
                 <!-- Sql table edit area -->
@@ -139,8 +139,8 @@
                             <label for="toggle1">Insert only</label>
                         </div>
                         <div class="flex-noshrink">
-                            <button class="btn btn-success btn-sm" title="Add this sql table" data-bind="click: $root.saveEditedSqlTable"><i class="icon-tick"></i></button>
-                            <button class="btn btn-default btn-sm" title="Cancel" data-bind="click: $root.cancelEditedSqlTable"><i class="icon-cancel"></i></button>
+                            <button type="button" class="btn btn-success btn-sm" title="Add this sql table" data-bind="click: $root.saveEditedSqlTable"><i class="icon-tick"></i></button>
+                            <button type="button" class="btn btn-default btn-sm" title="Cancel" data-bind="click: $root.cancelEditedSqlTable"><i class="icon-cancel"></i></button>
                         </div>
                     </div>
                 </div>
@@ -162,9 +162,14 @@
                                 </div>
                                 <div class="col-sm-4" data-bind="if: insertOnlyMode">Insert only</div>
                             </div>
+                            <div data-bind="visible: dirtyFlag().isDirty">
+                                <small class="text-warning">
+                                    <i class="icon-warning"></i> Modified
+                                </small>
+                            </div>
                             <div class="flex-noshrink">
-                                <button class="btn btn-default btn-sm" title="Edit this SQL table" data-bind="click: $root.editSqlTable.bind($data)"><i class="icon-edit"></i></button>
-                                <button class="btn btn-danger btn-sm" title="Remove this SQL table" data-bind="click: $root.deleteSqlTable.bind($data)"><i class="icon-trash"></i></button>
+                                <button type="button" class="btn btn-default btn-sm" title="Edit this SQL table" data-bind="click: $root.editSqlTable.bind($data)"><i class="icon-edit"></i></button>
+                                <button type="button" class="btn btn-danger btn-sm" title="Remove this SQL table" data-bind="click: $root.deleteSqlTable.bind($data)"><i class="icon-trash"></i></button>
                             </div>
                         </div>
                     </div>
@@ -173,12 +178,12 @@
             <div class="flex-horizontal flex-header">
                 <div class="flex-grow"><h3>Transform Scripts</h3></div>
                 <div>
-                    <button class="btn btn-info" data-bind="click: tryAddNewTransformation"><i class="icon-plus"></i><span>Add Transformation Script</span></button>
+                    <button type="button" class="btn btn-info" data-bind="click: addNewTransformation"><i class="icon-plus"></i><span>Add Transformation Script</span></button>
                 </div> 
             </div>
             <!-- The transformation scripts -->
             <div class="etl-list" data-bind="with: editedSqlEtl">
-                <div data-bind="if: transformationScripts().length === 0 && !$root.showEditTransformationArea()">
+                <div data-bind="if: transformationScripts().length === 0">
                     <div>                       
                         <h3 class="text-center text-muted" data-bind="css: { 'text-danger': !transformationScripts.isValid() && transformationScripts.isModified() }">No transformation scripts have been defined.</h3>
                     </div>
@@ -194,11 +199,16 @@
                                         data-bind="text: collection, attr: { class: 'collection-color-' + getCollectionEntry(collection) }"></span>                                      
                                     </div>
                                 </div>
+                                <div data-bind="visible: dirtyFlag().isDirty">
+                                    <small class="text-warning">
+                                        <i class="icon-warning"></i> Modified
+                                    </small>
+                                </div>
                                 <div class="actions">
-                                    <button data-bind="click: $root.editTransformationScript.bind($root, $data)"
+                                    <button type="button" data-bind="click: $root.editTransformationScript.bind($root, $data)"
                                             class="btn btn-default"><i class="icon-edit" title="Edit script"></i>
                                     </button>
-                                    <button data-bind="click: $root.removeTransformationScript"
+                                    <button type="button" data-bind="click: $root.removeTransformationScript"
                                             class="btn btn-danger"><i class="icon-trash" title="Delete script"></i>
                                     </button>
                                 </div>
@@ -220,11 +230,11 @@
                                        placeholder="Enter a name for the transform script">
                             </div>
                             <div class="flex-noshrink">
-                                <button class="btn btn-success" data-bind="click: $root.saveEditedTransformation, attr: { title : (isNew() ? 'Add' : 'Update') +  ' this transformation script' }">
+                                <button type="button" class="btn btn-success" data-bind="click: $root.saveEditedTransformation, attr: { title : (isNew() ? 'Add' : 'Update') +  ' this transformation script' }">
                                     <i class="icon-tick"></i>
                                     <span data-bind="text: isNew() ? 'Add' : 'Update'"></span>
                                 </button>                                
-                                <button title="Cancel" class="btn btn-default" data-bind="click: $root.cancelEditedTransformation"><i class="icon-cancel"></i><Span>Cancel</Span></button>
+                                <button type="button" title="Cancel" class="btn btn-default" data-bind="click: $root.cancelEditedTransformation"><i class="icon-cancel"></i><Span>Cancel</Span></button>
                             </div>
                         </div>
                         <label><strong>Script:</strong></label>

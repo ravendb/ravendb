@@ -61,8 +61,7 @@ class editRavenEtlTask extends viewModelBase {
                     deferred.reject();
                     router.navigate(appUrl.forOngoingTasks(this.activeDatabase())); 
                 });
-        }
-        else {
+        } else {
             // 2. Creating a New task
             this.isAddingNewRavenEtlTask(true);
             this.editedRavenEtl(ongoingTaskRavenEtlEditModel.empty());
@@ -174,7 +173,7 @@ class editRavenEtlTask extends viewModelBase {
         }
         
         if (transformation.isNew()) {
-            let newTransformationItem = new ongoingTaskRavenEtlTransformationModel(transformation.toDto(), false);
+            const newTransformationItem = new ongoingTaskRavenEtlTransformationModel(transformation.toDto(), false);
             newTransformationItem.dirtyFlag().forceDirty();
             this.editedRavenEtl().transformationScripts.push(newTransformationItem);
         } else {
@@ -189,7 +188,6 @@ class editRavenEtlTask extends viewModelBase {
         }
 
         this.editedRavenEtl().transformationScripts.sort((a, b) => a.name().toLowerCase().localeCompare(b.name().toLowerCase()));
-
         this.editedRavenEtl().editedTransformationScript(null);
     }
 

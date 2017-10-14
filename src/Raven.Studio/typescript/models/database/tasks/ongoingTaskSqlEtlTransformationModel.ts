@@ -1,5 +1,6 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
+import jsonUtil = require("common/jsonUtil");
 
 class ongoingTaskSqlEtlTransformationModel {
     name = ko.observable<string>();
@@ -11,6 +12,8 @@ class ongoingTaskSqlEtlTransformationModel {
     
     validationGroup: KnockoutValidationGroup; 
   
+    dirtyFlag: () => DirtyFlag;
+    
     constructor(dto: Raven.Client.ServerWide.ETL.Transformation, isNew: boolean) {
         this.update(dto, isNew);
         
@@ -20,6 +23,12 @@ class ongoingTaskSqlEtlTransformationModel {
 
     initObservables() {
         this.collectionColorIndex = ko.pureComputed(() => collectionsTracker.default.getCollectionColorIndex(this.collection()));
+        
+        this.dirtyFlag = new ko.DirtyFlag([
+            this.name, 
+            this.script,
+            this.collection
+        ], false, jsonUtil.newLineNormalizingHashFunction);
     }
    
     static empty(): ongoingTaskSqlEtlTransformationModel {
@@ -68,12 +77,17 @@ class ongoingTaskSqlEtlTransformationModel {
     update(dto: Raven.Client.ServerWide.ETL.Transformation, isNew: boolean) {
         this.name(dto.Name);
         this.script(dto.Script); 
-        this.collection(dto.Collections[0]); // todo: check this..
+        this.collection(dto.Collections[0]); // todo: check this..  
         this.isNew(isNew);
     }
 
     getCollectionEntry(collectionName: string) {
         return collectionsTracker.default.getCollectionColorIndex(collectionName);       
+    }
+
+    hasUpdates(oldItem: this) {
+        const hashFunction = jsonUtil.newLineNormalizingHashFunctionWithIgnoredFields(["__moduleId__", "validationGroup"]);
+        return hashFunction(this) !== hashFunction(oldItem);
     }
 }
 

@@ -65,35 +65,35 @@
                 </div>
                 <form class="flex-form padding">
                     <div data-bind="with: editedRavenEtlConnectionString">
-                        <div class="form-group">
+                        <div class="form-group" data-bind="validationElement: connectionStringName">
                             <label class="control-label">Name</label>
-                            <div class="flex-grow" data-bind="validationElement: connectionStringName">
+                            <div class="flex-grow">
                                 <input class="form-control" data-bind="textInput: connectionStringName" placeholder="Enter a name for the connection string" title="Any name of your choice for this connection string">
                             </div>
                         </div>
-                        <div class="form-group">
+                        <div class="form-group" data-bind="validationElement: url">
                             <label class="control-label">URL</label>
-                            <div class="flex-grow" data-bind="validationElement: url">
+                            <div class="flex-grow" >
                                 <input type="text" class="form-control" data-bind="textInput: url" placeholder="Enter url for the connection string" title="Destination url">
                             </div>
                         </div>
-                        <div class="form-group">
+                        <div class="form-group" data-bind="validationElement: database">
                             <label class="control-label">Database</label>
-                            <div class="flex-grow" data-bind="validationElement: database">
+                            <div class="flex-grow">
                                 <input class="form-control" data-bind="textInput: database" placeholder="Enter database for the connection string" title="Destination database">
                             </div>
                         </div>
                     </div>
                     <div data-bind="with: editedSqlEtlConnectionString">
-                        <div class="form-group">
+                        <div class="form-group" data-bind="validationElement: connectionStringName">
                             <label class="control-label">Name</label>
-                            <div class="flex-grow" data-bind="validationElement: connectionStringName">
+                            <div class="flex-grow">
                                 <input class="form-control" data-bind="textInput: connectionStringName" placeholder="Enter a name for the connection string" title="Any name of your choice for this connection string">
                             </div>
                         </div>
-                        <div class="form-group">
+                        <div class="form-group" data-bind="validationElement: connectionString">
                             <label class="control-label">Connection string</label>
-                            <div class="flex-grow" data-bind="validationElement: connectionString">
+                            <div class="flex-grow">
                                 <textarea class="form-control" data-bind="textInput: connectionString" rows="3" title="The connecction string for the sql server" placeholder="Enter the complete connection string for the sql server"></textarea>
                             </div>
                         </div>
