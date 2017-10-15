@@ -23,7 +23,7 @@ class editSqlEtlTask extends viewModelBase {
     editedSqlEtl = ko.observable<ongoingTaskSqlEtlEditModel>();
     isAddingNewSqlEtlTask = ko.observable<boolean>(true);
     editedTransformationScript = ko.observable<ongoingTaskSqlEtlTransformationModel>();
-    editedSqlTable = ko.observable<ongoingTaskSqlEtlTableModel>(ongoingTaskSqlEtlTableModel.empty());
+    editedSqlTable = ko.observable<ongoingTaskSqlEtlTableModel>();
 
     possibleMentors = ko.observableArray<string>([]);
     sqlEtlConnectionStringsNames = ko.observableArray<string>([]); 
@@ -85,6 +85,7 @@ class editSqlEtlTask extends viewModelBase {
             this.isAddingNewSqlEtlTask(true);
             this.editedSqlEtl(ongoingTaskSqlEtlEditModel.empty());
             this.editedTransformationScript(ongoingTaskSqlEtlTransformationModel.empty());
+            this.editedSqlTable(ongoingTaskSqlEtlTableModel.empty());
             deferred.resolve();
         }
         
