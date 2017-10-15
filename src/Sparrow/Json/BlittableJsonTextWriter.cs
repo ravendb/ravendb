@@ -364,6 +364,7 @@ namespace Sparrow.Json
             {
                 numberOfEscapeSequences--;
                 var bytesToSkip = BlittableJsonReaderBase.ReadVariableSizeInt(strSrcBuffer, ref escapeSequencePos);
+                EnsureBuffer(bytesToSkip);
                 WriteRawString(strBuffer, bytesToSkip);
                 strBuffer += bytesToSkip;
                 size -= bytesToSkip + 1 /*for the escaped char we skip*/;
@@ -375,6 +376,7 @@ namespace Sparrow.Json
             }
 
             // write remaining (or full string) to the buffer in one shot
+            EnsureBuffer(size);
             WriteRawString(strBuffer, size);
 
             EnsureBuffer(1);

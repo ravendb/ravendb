@@ -1,84 +1,24 @@
 using Raven.Client.Documents;
-using System;
+using Raven.Client.Documents.Indexes;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
-using FastTests.Blittable;
-using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Identity;
 
 namespace RavenDB4RCTests
 {
-    class Program
+    class TestLargeIndex
     {
-        static void Main(string[] args)
-        {
-            MainAsync().Wait();
-        }
-
-        static async Task MainAsync()
+        public static void Main()
         {
             var documentStore = new DocumentStore
             {
-                Urls = new[] {"http://4.live-test.ravendb.net"},
-                Database = "Test"
+                Urls = new[] { "http://localhost.fiddler:8080" },
+                Database = "large-index-test",
             };
-         
+
             documentStore.Initialize();
 
-            while (true)
-            {
-                using (var s = documentStore.OpenAsyncSession())
-                {
-                    dynamic load;
-                    using (documentStore.AggressivelyCache())
-                    {
-                        load = await s.LoadAsync<dynamic>("users/1");
-                    }
-                    Console.WriteLine(load.Name);
-                    Console.WriteLine(documentStore.GetRequestExecutor().NumberOfServerRequests);
-                }
-                Console.ReadLine();
-            }
+          
         }
 
-        private static bool ShouldInitData(DocumentStore documentStore)
-        {
-            using (var session = documentStore.OpenSession())
-            {
-                var doc = session.Load<Doc>("doc/1");
-                return doc == null;
-            }
-        }
-
-        private static void InitializeData(DocumentStore documentStore)
-        {
-            Console.WriteLine("Generating data.");
-            var rng = new Random();
-            for (int batchNo = 0; batchNo < 100; batchNo++)
-            {
-                Console.WriteLine(DateTime.Now.ToLongTimeString() + ": Generating batch " + batchNo);
-                using (var session = documentStore.OpenSession())
-                {
-                    for (int i = 1; i <= 1000; i++)
-                    {
-                        session.Store(new Doc
-                        {
-                            Id = "doc/" + (batchNo * 1000 + i),
-                            NumVals = Enumerable.Range(1, 300).ToDictionary(x => "Value-" + x, _ => rng.NextDouble()),
-                        });
-                    }
-                    session.SaveChanges();
-                }
-            }
-            Console.WriteLine("Data generated.");
-        }
-    }
-
-    public class Doc
-    {
-        public string Id { get; set; }
-        public Dictionary<string, double> NumVals { get; set; }
     }
 }
