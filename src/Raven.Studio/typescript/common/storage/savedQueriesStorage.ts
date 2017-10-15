@@ -3,79 +3,78 @@
 import database = require("models/resources/database");
 import storageKeyProvider = require("common/storage/storageKeyProvider");
 
-class recentQueriesStorage {
+class savedQueriesStorage {
 
-    static getRecentQueriesWithIndexNameCheck(db: database): JQueryPromise<storedQueryDto[]> {
-        const recentQueries = this.getRecentQueries(db);
-        return $.when(recentQueries);
+    static getSavedQueriesWithIndexNameCheck(db: database): JQueryPromise<storedQueryDto[]> {
+        const saved = this.getSavedQueries(db);
+        return $.when(saved);
     }
 
-    static getRecentQueries(db: database): storedQueryDto[] {
-        const localStorageName = recentQueriesStorage.getLocalStorageKey(db.name);
-        let recentQueriesFromLocalStorage: storedQueryDto[] = this.getRecentQueriesFromLocalStorage(localStorageName);
+    static getSavedQueries(db: database): storedQueryDto[] {
+        const localStorageName = savedQueriesStorage.getLocalStorageKey(db.name);
+        let savedQueriesFromLocalStorage: storedQueryDto[] = this.getSavedQueriesFromLocalStorage(localStorageName);
 
-        if (recentQueriesFromLocalStorage == null || recentQueriesFromLocalStorage instanceof Array === false) {
+        if (savedQueriesFromLocalStorage == null || savedQueriesFromLocalStorage instanceof Array === false) {
             localStorage.setObject(localStorageName, []);
-            recentQueriesFromLocalStorage = [];
+            savedQueriesFromLocalStorage = [];
         }
 
-        return recentQueriesFromLocalStorage;
+        return savedQueriesFromLocalStorage;
     }
 
-    static saveRecentQueries(db: database, recentQueries: storedQueryDto[]) {
-        const localStorageName = recentQueriesStorage.getLocalStorageKey(db.name);
-        localStorage.setObject(localStorageName, recentQueries);
+    static storeSavedQueries(db: database, savedQueries: storedQueryDto[]) {
+        const localStorageName = savedQueriesStorage.getLocalStorageKey(db.name);
+        localStorage.setObject(localStorageName, savedQueries);
     }
 
     static removeRecentQueryByQueryText(db: database, queryText: string) {
-        const localStorageName = recentQueriesStorage.getLocalStorageKey(db.name);
-        const recentQueriesFromLocalStorage: storedQueryDto[] = this.getRecentQueriesFromLocalStorage(localStorageName);
-        if (recentQueriesFromLocalStorage == null)
+        const localStorageName = savedQueriesStorage.getLocalStorageKey(db.name);
+        const savedQueriesFromLocalStorage: storedQueryDto[] = this.getSavedQueriesFromLocalStorage(localStorageName);
+        if (savedQueriesFromLocalStorage == null)
             return;
 
-        const newRecentQueries = recentQueriesFromLocalStorage.filter((query: storedQueryDto) => query.queryText !== queryText);
-        localStorage.setObject(localStorageName, newRecentQueries);
+        const newSavedQueries = savedQueriesFromLocalStorage.filter((query: storedQueryDto) => query.queryText !== queryText);
+        localStorage.setObject(localStorageName, newSavedQueries);
     }
 
-    static removeRecentQueries(db: database) {
-        const localStorageName = recentQueriesStorage.getLocalStorageKey(db.name);
+    static removeSavedQueries(db: database) {
+        const localStorageName = savedQueriesStorage.getLocalStorageKey(db.name);
         localStorage.setObject(localStorageName, []);
     }
 
     private static getLocalStorageKey(dbName: string) {
-        return storageKeyProvider.storageKeyFor("recentQueries." + dbName);
+        return storageKeyProvider.storageKeyFor("savedQueries." + dbName);
     }
    
-    private static getRecentQueriesFromLocalStorage(localStorageName: string): storedQueryDto[]  {
-        let recentQueriesFromLocalStorage: storedQueryDto[] = null;
+    private static getSavedQueriesFromLocalStorage(localStorageName: string): storedQueryDto[]  {
+        let savedQueriesFromLocalStorage: storedQueryDto[] = null;
         try {
-            recentQueriesFromLocalStorage = localStorage.getObject(localStorageName);
+            savedQueriesFromLocalStorage = localStorage.getObject(localStorageName);
         } catch(err) {
             //no need to do anything
         }
-        return recentQueriesFromLocalStorage;
+        return savedQueriesFromLocalStorage;
     }
 
-    static appendQuery(query: storedQueryDto, recentQueries: KnockoutObservableArray<storedQueryDto>): void {
-        const existing = recentQueries().find(q => q.hash === query.hash);
+    static appendQuery(query: storedQueryDto, savedQueries: KnockoutObservableArray<storedQueryDto>): void {
+        const existing = savedQueries().find(q => q.hash === query.hash);
         if (existing) {
-            recentQueries.remove(existing);
-            recentQueries.unshift(existing);
+            savedQueries.remove(existing);
+            savedQueries.unshift(existing);
         } else {
-            recentQueries.unshift(query);
+            savedQueries.unshift(query);
         }
 
         // Limit us to 15 query recent runs.
-        if (recentQueries().length > 15) {
-            recentQueries.pop();
+        if (savedQueries().length > 15) {
+            savedQueries.pop();
         }
     }
 
     static onDatabaseDeleted(qualifer: string, name: string) {
-        const localStorageName = recentQueriesStorage.getLocalStorageKey(name);
+        const localStorageName = savedQueriesStorage.getLocalStorageKey(name);
         localStorage.removeItem(localStorageName);
     }
-
 }
 
-export = recentQueriesStorage;
+export = savedQueriesStorage;
