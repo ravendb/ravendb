@@ -887,6 +887,7 @@ namespace Raven.Server.Documents
             tx.InnerTransaction.LowLevelTransaction.OnDispose += state => reader.Dispose();
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static Document ParseDocument(JsonOperationContext context, ref TableValueReader tvr)
         {
             var result = new Document
@@ -899,36 +900,19 @@ namespace Raven.Server.Documents
                 ChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref tvr),
                 LastModified = TableValueToDateTime((int)DocumentsTable.LastModified, ref tvr),
                 Flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr),
-                TransactionMarker = *(short*)tvr.Read((int)DocumentsTable.TransactionMarker, out size)
+                TransactionMarker = TableValueToShort((int)DocumentsTable.TransactionMarker, nameof(DocumentsTable.TransactionMarker), ref tvr),
             };
 
             return result;
         }
 
-        public static Document ParseRawDataSectionDocumentWithValidation(JsonOperationContext context, ref TableValueReader tvr, int expectedSize, out long etag)
+        public static Document ParseRawDataSectionDocumentWithValidation(JsonOperationContext context, ref TableValueReader tvr, int expectedSize)
         {
-            var mem = tvr.Read((int)DocumentsTable.Data, out int size);
-
+            tvr.Read((int)DocumentsTable.Data, out int size);
             if (size > expectedSize || size <= 0)
                 throw new ArgumentException("Data size is invalid, possible corruption when parsing BlittableJsonReaderObject", nameof(size));
 
-            var result = new Document
-            {
-                StorageId = tvr.Id,
-                LowerId = TableValueToString(context, (int)DocumentsTable.LowerId, ref tvr),
-                Id = TableValueToId(context, (int)DocumentsTable.Id, ref tvr),
-                Etag = etag = TableValueToEtag((int)DocumentsTable.Etag, ref tvr),
-                Data = new BlittableJsonReaderObject(mem, size, context),
-                ChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref tvr),
-                LastModified = TableValueToDateTime((int)DocumentsTable.LastModified, ref tvr),
-                Flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr),
-                TransactionMarker = *(short*)tvr.Read((int)DocumentsTable.TransactionMarker, out size)
-            };
-
-            if (size != sizeof(short))
-                throw new ArgumentException("TransactionMarker size is invalid, possible corruption when parsing BlittableJsonReaderObject", nameof(size));
-
-            return result;
+            return ParseDocument(context, ref tvr);
         }
 
         private static DocumentTombstone TableValueToTombstone(JsonOperationContext context, ref TableValueReader tvr)
@@ -1538,6 +1522,20 @@ namespace Raven.Server.Documents
         public static DocumentFlags TableValueToFlags(int index, ref TableValueReader tvr)
         {
             return *(DocumentFlags*)tvr.Read(index, out _);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static short TableValueToShort(int index, string name, ref TableValueReader tvr)
+        {
+            var value = *(short*)tvr.Read(index, out int size);
+            if (size != sizeof(short))
+                ThrowInvalidShortSize(name, size);
+            return value;
+        }
+
+        private static void ThrowInvalidShortSize(string name, int size)
+        {
+            throw new InvalidOperationException($"{name} size is invalid, expected short but got {size}.");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

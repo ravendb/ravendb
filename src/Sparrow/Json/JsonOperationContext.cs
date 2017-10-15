@@ -362,9 +362,7 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public LazyStringValue GetLazyStringForFieldWithCaching(string field)
         {
-            LazyStringValue value;
-
-            if (_fieldNames.TryGetValue(field, out value))
+            if (_fieldNames.TryGetValue(field, out LazyStringValue value))
             {
                 // PERF: This is usually the most common scenario, so actually being contiguous improves the behavior.
                 Debug.Assert(value.IsDisposed == false);
