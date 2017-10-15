@@ -79,6 +79,7 @@ namespace Raven.Client.Documents.Subscriptions
                 var script = predicate.CompileToJavascript(
                     new JavascriptCompilationOptions(
                         JsCompilationFlags.BodyOnly,
+                        new JavascriptConversionExtensions.MathSupport(),
                         new JavascriptConversionExtensions.LinqMethodsSupport(),
                         new JavascriptConversionExtensions.BooleanSupport(),
                         new JavascriptConversionExtensions.ReplaceParameterWithThis { Parameter = predicate.Parameters[0] },
@@ -93,6 +94,7 @@ namespace Raven.Client.Documents.Subscriptions
                 var script = project.CompileToJavascript(
                     new JavascriptCompilationOptions(
                         JsCompilationFlags.BodyOnly,
+                        new JavascriptConversionExtensions.MathSupport(),
                         new JavascriptConversionExtensions.LinqMethodsSupport(),
                         new JavascriptConversionExtensions.DateTimeSupport()
                     ));

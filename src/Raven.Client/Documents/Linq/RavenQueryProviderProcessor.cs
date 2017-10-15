@@ -1719,6 +1719,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
         {
             var js = expression.CompileToJavascript(
                 new JavascriptCompilationOptions(
+                    new JavascriptConversionExtensions.MathSupport(),
                     new JavascriptConversionExtensions.LinqMethodsSupport(),
                     new JavascriptConversionExtensions.BooleanSupport(),
                     new JavascriptConversionExtensions.IgnoreTransparentParameter(),
