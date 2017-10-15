@@ -2,7 +2,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import getIndexTermsCommand = require("commands/database/index/getIndexTermsCommand");
 import getIndexEntriesFieldsCommand = require("commands/database/index/getIndexEntriesFieldsCommand");
 import queryCriteria = require("models/database/query/queryCriteria");
-import recentQueriesStorage = require("common/storage/recentQueriesStorage");
+import recentQueriesStorage = require("common/storage/savedQueriesStorage");
 import queryUtil = require("common/queryUtil");
 import appUrl = require("common/appUrl");
 

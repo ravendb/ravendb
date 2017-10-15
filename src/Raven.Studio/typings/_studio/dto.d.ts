@@ -299,6 +299,10 @@ interface patchDto {
     PatchAll: boolean;
 }
 
+interface storedPatchDto extends patchDto {
+    Hash: number;
+}
+
 interface feedbackSavedSettingsDto {
     Name: string;
     Email: string;

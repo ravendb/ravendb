@@ -1,4 +1,6 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
+import moment = require("moment");
+import genUtils = require("common/generalUtils");
 
 class patchDocument {
 
@@ -7,14 +9,26 @@ class patchDocument {
     selectedItem = ko.observable<string>("");
     patchAll = ko.observable<boolean>(true);
 
-    toDto(): patchDto {
+    toStorageDto(): storedPatchDto {
+
+        const _name = this.name();
+        const _query = this.query();
+        const _selectedItem = this.selectedItem();
+        const _patchAll = this.patchAll();
+
         return {
-            Name: this.name(),
-            Query: this.query(),
-            SelectedItem: this.selectedItem(),
-            ModificationDate: this.getCurrentTime(),
-            PatchAll: this.patchAll()
-        } as patchDto;
+            Name: _name,
+            Query: _query,
+            SelectedItem: _selectedItem,
+            ModificationDate: moment().format("YYYY-MM-DD HH:mm"),
+            PatchAll: _patchAll,
+            Hash: genUtils.hashCode(
+                (_name || "") +
+                _query +
+                _selectedItem +
+                _patchAll
+            )
+        } as storedPatchDto;
     }
 
     private getCurrentTime(): string {

@@ -6,7 +6,7 @@
                     <div class="input-group patch-save" data-bind="css: { active: inSaveMode }, validationOptions: { insertMessages: false }, validationElement: patchDocument().name">
                         <input class="form-control" style="display: none" placeholder="Patch name" data-bind="textInput: patchDocument().name">
                         <span class="input-group-btn">
-                            <button class="btn btn-success" data-class="active" type="button" data-bind="click: savePatch(false), css: { 'btn-spinner': spinners.save }" title="Save patch under given name">
+                            <button class="btn btn-success" data-class="active" type="button" data-bind="click: savePatch(), css: { 'btn-spinner': spinners.save }" title="Save patch under given name">
                                 <i class="icon-save"></i> <span data-bind="text: inSaveMode() ? 'Save' : 'Save...'"></span>
                             </button>
                         </span>
