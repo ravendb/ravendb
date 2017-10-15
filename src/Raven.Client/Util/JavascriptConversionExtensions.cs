@@ -166,6 +166,53 @@ namespace Raven.Client.Util
             }
         }
 
+        public class MathSupport : JavascriptConversionExtension
+        {        
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                var methodCallExpression = context.Node as MethodCallExpression;
+                var method = methodCallExpression?.Method;
+
+                if (method == null || method.DeclaringType != typeof(Math))
+                    return;
+
+                var supportedNames = new List<string>
+                {
+                    "Abs", "Acos", "Asin", "Atan", "Atan2", "Ceiling",
+                    "Cos", "Exp", "Floor", "Log", "Max", "Min", "Pow",
+                    "Round", "Sin", "Sqrt", "Tan"
+                };
+
+                if (supportedNames.Contains(method.Name) == false)
+                    return;
+
+                var newName = method.Name == "Ceiling" ? "ceil" : method.Name.ToLower();
+
+                var writer = context.GetWriter();
+                context.PreventDefault();
+
+                using (writer.Operation(methodCallExpression))
+                {
+                    writer.Write("Math.");
+                    writer.Write(newName);
+
+                    writer.Write("(");
+
+                    for (var i = 0; i < methodCallExpression.Arguments.Count; i++)
+                    {
+                        if (i != 0)
+                        {
+                            writer.Write(", ");
+                        }
+
+                        context.Visitor.Visit(methodCallExpression.Arguments[i]);
+                    }
+
+                    writer.Write(")");
+                }
+            }
+        }
+
         public class ReplaceParameterWithThis : JavascriptConversionExtension
         {
             public ParameterExpression Parameter;
@@ -253,7 +300,6 @@ namespace Raven.Client.Util
                 }
             }
         }
-
 
         public class DateTimeSupport : JavascriptConversionExtension
         {

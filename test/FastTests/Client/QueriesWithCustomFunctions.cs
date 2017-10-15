@@ -1179,7 +1179,37 @@ FROM Users as u WHERE (Name = $p0) AND (IsActive = $p1) ORDER BY LastName DESC L
             }
         }
 
+        [Fact]
+        public void Custom_Functions_Math_Support()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia" , IdNumber = 7}, "users/1");
+                    session.SaveChanges();
+                }
 
+                using (var session = store.OpenSession())
+                {
+                    var query = from u in session.Query<User>()
+                                select new
+                                {
+                                    Pow = Math.Pow(u.IdNumber, u.IdNumber),
+                                    Max = Math.Max(u.IdNumber + 1, u.IdNumber)
+                                };
+
+                    Assert.Equal("FROM Users as u SELECT { Pow : Math.pow(u.IdNumber, u.IdNumber), Max : Math.max((u.IdNumber+1), u.IdNumber) }", query.ToString());
+
+                    var queryResult = query.ToList();
+
+                    Assert.Equal(1, queryResult.Count);
+
+                    Assert.Equal(8, queryResult[0].Max);
+                    Assert.Equal(823543, queryResult[0].Pow);
+                }
+            }
+        }
 
         private class User
         {
