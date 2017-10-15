@@ -169,12 +169,12 @@ namespace Raven.Server.Documents
                 yield return list;
         }
 
-        public IEnumerable<ReplicationBatchItem> GetConflictsFrom(DocumentsOperationContext context, long etag)
+        public IEnumerable<DocumentConflict> GetConflictsFrom(DocumentsOperationContext context, long etag)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
             foreach (var tvr in table.SeekForwardFrom(ConflictsSchema.FixedSizeIndexes[AllConflictedDocsEtagsSlice], etag, 0))
             {
-                yield return ReplicationBatchItem.From(TableValueToConflictDocument(context, ref tvr.Reader));
+                yield return TableValueToConflictDocument(context, ref tvr.Reader);
             }
         }
 

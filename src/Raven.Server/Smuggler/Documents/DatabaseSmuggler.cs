@@ -67,6 +67,7 @@ namespace Raven.Server.Smuggler.Documents
                     EnsureStepProcessed(result.RevisionDocuments);
                     EnsureStepProcessed(result.RevisionDocuments.Attachments);
                     EnsureStepProcessed(result.Tombstones);
+                    EnsureStepProcessed(result.Conflicts);
                     EnsureStepProcessed(result.Indexes);
                     EnsureStepProcessed(result.Identities);
                 }
@@ -106,6 +107,9 @@ namespace Raven.Server.Smuggler.Documents
                     break;
                 case DatabaseItemType.Tombstones:
                     counts = ProcessTombstones(result);
+                    break;
+                case DatabaseItemType.Conflicts:
+                    counts = ProcessConflicts(result);
                     break;
                 case DatabaseItemType.Indexes:
                     counts = ProcessIndexes(result);
@@ -148,6 +152,9 @@ namespace Raven.Server.Smuggler.Documents
                     break;
                 case DatabaseItemType.Tombstones:
                     counts = result.Tombstones;
+                    break;
+                case DatabaseItemType.Conflicts:
+                    counts = result.Conflicts;
                     break;
                 case DatabaseItemType.Indexes:
                     counts = result.Indexes;
@@ -446,6 +453,40 @@ namespace Raven.Server.Smuggler.Documents
                     actions.WriteTombstone(tombstone, result.Tombstones);
 
                     result.Tombstones.LastEtag = tombstone.Etag;
+                }
+            }
+
+            return result.Documents;
+        }
+
+        private SmugglerProgressBase.Counts ProcessConflicts(SmugglerResult result)
+        {
+            using (var actions = _destination.Conflicts())
+            {
+                foreach (var conflict in _source.GetConflicts(_options.Collections, actions))
+                {
+                    _token.ThrowIfCancellationRequested();
+                    result.Conflicts.ReadCount++;
+
+                    if (result.Conflicts.ReadCount % 1000 == 0)
+                    {
+                        var message = $"Read {result.Conflicts.ReadCount:#,#;;0} conflicts.";
+                        result.AddInfo(message);
+                        _onProgress.Invoke(result.Progress);
+                    }
+
+                    if (conflict == null)
+                    {
+                        result.Conflicts.ErroredCount++;
+                        continue;
+                    }
+
+                    if (conflict.LowerId == null)
+                        ThrowInvalidData();
+
+                    actions.WriteConflict(conflict, result.Conflicts);
+
+                    result.Conflicts.LastEtag = conflict.Etag;
                 }
             }
 

@@ -32,6 +32,7 @@ namespace Raven.Server.Smuggler.Documents
             DatabaseItemType.Documents,
             DatabaseItemType.RevisionDocuments,
             DatabaseItemType.Tombstones,
+            DatabaseItemType.Conflicts,
             DatabaseItemType.Indexes,
             DatabaseItemType.Identities,
             DatabaseItemType.None
@@ -108,13 +109,36 @@ namespace Raven.Server.Smuggler.Documents
 
         public IEnumerable<DocumentTombstone> GetTombstones(List<string> collectionsToExport, INewDocumentActions actions)
         {
-            var tombstones = collectionsToExport.Count != 0
+            var tombstones = collectionsToExport.Count > 0
                 ? _database.DocumentsStorage.GetTombstonesFrom(_context, collectionsToExport, _startDocumentEtag, int.MaxValue)
                 : _database.DocumentsStorage.GetTombstonesFrom(_context, _startDocumentEtag, 0, int.MaxValue);
 
             foreach (var tombstone in tombstones)
             {
                 yield return tombstone;
+            }
+        }
+
+        public IEnumerable<DocumentConflict> GetConflicts(List<string> collectionsToExport, INewDocumentActions actions)
+        {
+            var conflicts = _database.DocumentsStorage.ConflictsStorage.GetConflictsFrom(_context, _startDocumentEtag);
+
+            if (collectionsToExport.Count > 0)
+            {
+                foreach (var conflict in conflicts)
+                {
+                    if (collectionsToExport.Contains(conflict.Collection) == false)
+                        continue;
+
+                    yield return conflict;
+                }
+                
+                yield break;
+            }
+
+            foreach (var conflict in conflicts)
+            {
+                yield return conflict;
             }
         }
 

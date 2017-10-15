@@ -14,6 +14,7 @@ namespace Raven.Server.Smuggler.Documents.Data
         IDocumentActions Documents();
         IDocumentActions RevisionDocuments();
         IDocumentActions Tombstones();
+        IDocumentActions Conflicts();
         IIndexActions Indexes();
         IIdentityActions Identities();
     }
@@ -22,6 +23,7 @@ namespace Raven.Server.Smuggler.Documents.Data
     {
         void WriteDocument(DocumentItem item, SmugglerProgressBase.CountsWithLastEtag progress);
         void WriteTombstone(DocumentTombstone tombstone, SmugglerProgressBase.CountsWithLastEtag progress);
+        void WriteConflict(DocumentConflict conflict, SmugglerProgressBase.CountsWithLastEtag progress);
     }
 
     public interface INewDocumentActions
