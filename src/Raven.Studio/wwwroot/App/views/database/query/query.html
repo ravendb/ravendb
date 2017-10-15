@@ -17,12 +17,12 @@
                         <div class="btn-group btn-group-sm pull-right" role="group">
                             <div class="dropdown">
                                 <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true"
-                                        data-bind="enable: recentQueries().length">
+                                        data-bind="enable: savedQueries().length">
                                     <i class="icon-recent"></i><span>Recent</span>
                                     <span class="caret"></span>
                                 </button>
                                 <div class="dropdown-menu" role="menu">
-                                    <ul class="menu max-height" data-bind="foreach: recentQueries">
+                                    <ul class="menu max-height" data-bind="foreach: savedQueries">
                                         <li>
                                             <a href="#" data-bind="click: _.partial($root.runRecentQuery, $data)">
                                                 <span data-bind="visible: queryText">

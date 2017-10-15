@@ -18,7 +18,7 @@ import querySort = require("models/database/query/querySort");
 import collection = require("models/database/documents/collection");
 import document = require("models/database/documents/document");
 import queryStatsDialog = require("viewmodels/database/query/queryStatsDialog");
-import recentQueriesStorage = require("common/storage/savedQueriesStorage");
+import savedQueriesStorage = require("common/storage/savedQueriesStorage");
 import queryUtil = require("common/queryUtil");
 import eventsCollector = require("common/eventsCollector");
 import queryCriteria = require("models/database/query/queryCriteria");
@@ -53,7 +53,7 @@ class query extends viewModelBase {
 
     private gridController = ko.observable<virtualGridController<any>>();
 
-    recentQueries = ko.observableArray<storedQueryDto>();
+    savedQueries = ko.observableArray<storedQueryDto>();
 
     indexes = ko.observableArray<Raven.Client.Documents.Operations.IndexInformation>();
 
@@ -270,7 +270,7 @@ class query extends viewModelBase {
     canActivate(args: any) {
         super.canActivate(args);
 
-        this.loadRecentQueries();
+        this.loadSavedQueries();
 
         return true;
     }
@@ -309,7 +309,7 @@ class query extends viewModelBase {
         this.createKeyboardShortcut("alt+r", () => this.runQuery(), query.containerSelector); // Using keyboard shortcut here, rather than HTML's accesskey, so that we don't steal focus from the editor.
         */
 
-        this.registerDisposableHandler($(window), "storage", () => this.loadRecentQueries());
+        this.registerDisposableHandler($(window), "storage", () => this.loadSavedQueries());
     }
 
     compositionComplete() {
@@ -363,12 +363,12 @@ class query extends viewModelBase {
         this.queryHasFocus(true);
     }
 
-    private loadRecentQueries() {
+    private loadSavedQueries() {
 
         const db = this.activeDatabase();
 
-        recentQueriesStorage.getRecentQueriesWithIndexNameCheck(db)
-            .done(queries => this.recentQueries(queries));
+        savedQueriesStorage.getSavedQueriesWithIndexNameCheck(db)
+            .done(queries => this.savedQueries(queries));
 
         const myLastQuery = query.lastQuery.get(db.name);
 
@@ -393,7 +393,7 @@ class query extends viewModelBase {
             this.runQueryOnIndex(indexNameOrRecentQueryHash);
         } else if (indexNameOrRecentQueryHash.indexOf("recentquery-") === 0) {
             const hash = parseInt(indexNameOrRecentQueryHash.substr("recentquery-".length), 10);
-            const matchingQuery = this.recentQueries().find(q => q.hash === hash);
+            const matchingQuery = this.savedQueries().find(q => q.hash === hash);
             if (matchingQuery) {
                 this.runRecentQuery(matchingQuery);
             } else {
@@ -487,8 +487,8 @@ class query extends viewModelBase {
                     })
                     .fail((request: JQueryXHR) => {
                         const queryText = this.criteria().queryText();
-                        recentQueriesStorage.removeRecentQueryByQueryText(database, queryText);
-                        this.recentQueries.shift();
+                        savedQueriesStorage.removeRecentQueryByQueryText(database, queryText);
+                        this.savedQueries.shift();
                         
                         resultsTask.reject(request);
                     });
@@ -526,8 +526,8 @@ class query extends viewModelBase {
         const queryUrl = appUrl.forQuery(this.activeDatabase(), newQuery.hash);
         this.updateUrl(queryUrl);
 
-        recentQueriesStorage.appendQuery(newQuery, this.recentQueries);
-        recentQueriesStorage.saveRecentQueries(this.activeDatabase(), this.recentQueries());
+        savedQueriesStorage.appendQuery(newQuery, this.savedQueries);
+        savedQueriesStorage.storeSavedQueries(this.activeDatabase(), this.savedQueries());
     }
 
     runRecentQuery(storedQuery: storedQueryDto) {
