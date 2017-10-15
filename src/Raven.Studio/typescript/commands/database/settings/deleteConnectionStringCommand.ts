@@ -13,7 +13,7 @@ class deleteConnectionStringCommand extends commandBase {
         const url = endpoints.global.adminDatabases.adminConnectionStrings + this.urlEncodeArgs(args);
 
         return this.del<void>(url, null)
-            .done(() => this.reportSuccess(`Successfullly deleted connection string - ${this.connectionStringName}`))
+            .done(() => this.reportSuccess(`Successfully deleted connection string - ${this.connectionStringName}`))
             .fail((response: JQueryXHR) => this.reportError(`Failed to delete connection string - ${this.connectionStringName}`, response.responseText, response.statusText));
     }
 }

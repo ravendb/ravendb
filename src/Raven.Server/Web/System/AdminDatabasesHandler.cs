@@ -46,6 +46,7 @@ using Raven.Server.Rachis;
 using Raven.Server.Smuggler.Migration;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.Smuggler.Documents;
+using Raven.Client.Extensions;
 using Sparrow;
 using Sparrow.Utils;
 using Constants = Raven.Client.Constants;
@@ -237,12 +238,12 @@ namespace Raven.Server.Web.System
                     throw new BadRequestException("Database document validation failed.", e);
                 }
                 var clusterTopology = ServerStore.GetClusterTopology(context);
+                ValidateClusterMembers(clusterTopology, databaseRecord);
 
                 DatabaseTopology topology;
                 if (databaseRecord.Topology?.Members?.Count > 0)
                 {
                     topology = databaseRecord.Topology;
-                    ValidateClusterMembers(context, topology, databaseRecord);
                     foreach (var member in topology.Members)
                     {
                         var nodeUrl = clusterTopology.GetUrlFromTag(member);
@@ -403,9 +404,18 @@ namespace Raven.Server.Web.System
             return topology;
         }
 
-        private void ValidateClusterMembers(TransactionOperationContext context, DatabaseTopology topology, DatabaseRecord databaseRecord)
+        private void ValidateClusterMembers(ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
         {
-            var clusterTopology = ServerStore.GetClusterTopology(context);
+            var topology = databaseRecord.Topology;
+
+            if(topology == null)
+                return;
+
+            if (topology.Members?.Count == 1 && topology.Members[0] == "?")
+            {
+                // this is a special case where we pass '?' as member.
+                topology.Members.Clear();
+            }
 
             foreach (var node in topology.AllNodes)
             {
@@ -603,6 +613,15 @@ namespace Raven.Server.Web.System
                 var restorePathJson = JsonDeserializationServer.DatabaseRestorePath(restorePathBlittable);
 
                 var restorePoints = new RestorePoints();
+
+                try
+                {
+                    Directory.GetLastAccessTime(restorePathJson.Path);
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    throw new InvalidOperationException($"Unauthorized access to path: {restorePathJson.Path}");
+                }
 
                 if (Directory.Exists(restorePathJson.Path) == false)
                     throw new InvalidOperationException($"Path '{restorePathJson.Path}' doesn't exist");
@@ -987,6 +1006,15 @@ namespace Raven.Server.Web.System
                 fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
         }
 
+        [RavenAction("/admin/etl", "RESET", AuthorizationStatus.Operator)]
+        public async Task ResetEtl()
+        {
+            var configurationName = GetStringQueryString("configuration-name");
+            var transformationName = GetStringQueryString("transformation-name");
+
+            await DatabaseConfigurations((_, databaseName, etlConfiguration) => ServerStore.ResetEtl(_, databaseName, configurationName, transformationName), "etl-reset");
+        }
+
         private bool CanAddOrUpdateEtl(string databaseName, BlittableJsonReaderObject etlConfiguration)
         {
             LicenseLimit licenseLimit;
@@ -1310,7 +1338,7 @@ namespace Raven.Server.Web.System
                 if (string.IsNullOrWhiteSpace(migrationConfigurationJson.ServerUrl))
                     throw new ArgumentException("Url cannot be null or empty");
 
-                var migrator = new Migrator(migrationConfigurationJson, ServerStore, ServerStore.Operations, ServerStore.ServerShutdown);
+                var migrator = new Migrator(migrationConfigurationJson, ServerStore, ServerStore.ServerShutdown);
                 await migrator.MigrateDatabases(migrationConfigurationJson.DatabasesNames);
 
                 NoContentStatus();
@@ -1326,12 +1354,11 @@ namespace Raven.Server.Web.System
                 var migrationConfiguration = await context.ReadForMemoryAsync(RequestBodyStream(), "migration-configuration");
                 configuration = JsonDeserializationServer.OfflineMigrationConfiguration(migrationConfiguration);
             }
-                
+
             var dataDir = configuration.DataDirectory;
-            if(Directory.Exists(dataDir) == false)
+            if (Directory.Exists(dataDir) == false)
                 throw new DirectoryNotFoundException($"Could not find directory {dataDir}");
 
-            //var timeout = GetTimeSpanQueryString("timeout");
             var dataExporter = configuration.DataExporterFullPath;
             var databaseName = configuration.DatabaseName;
             var database = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName, true);
@@ -1339,77 +1366,93 @@ namespace Raven.Server.Web.System
             {
                 throw new DatabaseDoesNotExistException($"Can't import into database {databaseName} because it doesn't exist.");
             }
-            var commandline = configuration.GenerateExporterCommandLine();
+            var (commandline, tmpFile) = configuration.GenerateExporterCommandLine();
             var processStartInfo = new ProcessStartInfo(dataExporter, commandline);
+            var token = new OperationCancelToken(database.DatabaseShutdown);
             Task timeout = null;
             if (configuration.Timeout.HasValue)
             {
-                timeout = Task.Delay((int)configuration.Timeout.Value.TotalMilliseconds);
+                timeout = Task.Delay((int)configuration.Timeout.Value.TotalMilliseconds, token.Token);
             }
             processStartInfo.RedirectStandardOutput = true;
-            var processDone = new AsyncManualResetEvent();
+            processStartInfo.RedirectStandardInput = true;
             var process = new Process
             {
                 StartInfo = processStartInfo,
                 EnableRaisingEvents = true,
-            };
-            var token = new OperationCancelToken(database.DatabaseShutdown);
-            process.Exited += (sender, e) => { processDone.Set(); };
+            };            
             process.Start();
-            var progress = new IndeterminateProgress();
-            var result = new SmugglerResult();
-            var operationId = database.Operations.GetNextOperationId();
-            var timer = new Stopwatch();
+            var result = new OfflineMigrationResult();
+            var overallProgress = result.Progress as SmugglerResult.SmugglerProgress;
+            var operationId = ServerStore.Operations.GetNextOperationId();
+            var processDone = new AsyncManualResetEvent(token.Token);
 
-            await database.Operations.AddOperation(database, $"Migration of {dataDir} to {databaseName}", Documents.Operations.Operations.OperationType.DatabaseExport,
+            // send new line to avoid issue with read key 
+            process.StandardInput.WriteLine();
+            process.EnableRaisingEvents = true;
+            process.Exited += (sender, e) => { processDone.Set(); };
+           
+           // don't await here - this operation is async - all we return is operation id 
+            var t = ServerStore.Operations.AddOperation(null, $"Migration of {dataDir} to {databaseName}",
+                Documents.Operations.Operations.OperationType.MigrationFromLegacyData,
                 onProgress =>
                 {
                     return Task.Run(async () =>
                     {
                         try
                         {
-                            timer.Start();
-                            while (processDone.IsSet == false)
+                            while (true)
                             {
-                                if(await ReadLineOrTimeout(process, timeout, configuration, progress) == false)
+                                var (hasTimeout, readMessage) = await ReadLineOrTimeout(process, timeout, configuration,token.Token);
+                                if (readMessage == null)
+                                {
+                                    // reached end of stream
+                                    break;
+                                }
+                                if(token.Token.IsCancellationRequested)
+                                    throw new TaskCanceledException("Was requested to cancel the offline migration task");
+                                if (hasTimeout)
                                 {
                                     //renewing the timeout so not to spam timeouts once the timeout is reached
-                                    timeout = Task.Delay(configuration.Timeout.Value);
+                                    timeout = Task.Delay(configuration.Timeout.Value,token.Token);
                                 }
-                                if (timer.ElapsedMilliseconds > 1000)
-                                {
-                                    onProgress(progress);
-                                    progress.Progress = string.Empty;
-                                    timer.Restart();
-                                }
+
+                                result.AddInfo(readMessage);
+                                onProgress(overallProgress);
                             }
-                            await ReadLineOrTimeout(process, timeout, configuration, progress);
-                            onProgress(progress);
+
+                            var ended = await processDone.WaitAsync(configuration.Timeout.HasValue ? configuration.Timeout.Value : TimeSpan.MaxValue);
+                            if (ended == false)
+                            {
+                                if (token.Token.IsCancellationRequested)
+                                    throw new TaskCanceledException("Was requested to cancel the offline migration process midway");
+                                token.Cancel(); //To release the MRE
+                                throw new TimeoutException($"After waiting for {configuration.Timeout.HasValue} the export tool didn't exit, aborting.");
+                            }
+
                             if (process.ExitCode != 0)
                             {
                                 throw new ApplicationException($"The data export tool have exited with code {process.ExitCode}.");
                             }
 
+                            result.DataExporter.Processed = true;
+
                             if (File.Exists(configuration.OutputFilePath) == false)
                             {
                                 throw new FileNotFoundException($"Was expecting the output file to be located at {configuration.OutputFilePath}, but it is not there.");
                             }
-                            progress.Progress = $"Starting the import phase of the migration{Environment.NewLine}";
-                            onProgress(progress);
+                            result.AddInfo("Starting the import phase of the migration");
+                            onProgress(overallProgress);
                             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                             using (var reader = File.OpenRead(configuration.OutputFilePath))
                             using (var stream = new GZipStream(reader, CompressionMode.Decompress))
                             using (var source = new StreamSource(stream, context))
                             {
                                 var destination = new DatabaseDestination(database);
-                                var smuggler = new DatabaseSmuggler(database, source, destination, database.Time, result: result, onProgress: onProgress);
+                                var smuggler = new DatabaseSmuggler(database, source, destination, database.Time, result: result, onProgress: onProgress,
+                                    token: token.Token);
 
                                 smuggler.Execute();
-                                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                                {
-                                    var json = result.ToJson();
-                                    context.Write(writer, json);
-                                }
                             }
                         }
                         catch (Exception e)
@@ -1417,12 +1460,25 @@ namespace Raven.Server.Web.System
                             result.AddError(e.ToString());
                             throw;
                         }
+                        finally
+                        {
+                            if (string.IsNullOrEmpty(tmpFile) == false)
+                            {
+                                new FileInfo(Path.GetDirectoryName(tmpFile)).Delete();
+                            }
+                        }
                         return (IOperationResult)result;
                     });
                 }, operationId, token);
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteOperationId(context, operationId);
+            }
         }
 
-        private static async Task<bool> ReadLineOrTimeout(Process process, Task timeout, OfflineMigrationConfiguration configuration, IndeterminateProgress progress)
+        private static async Task<(bool HasTimeout, string Line)> ReadLineOrTimeout(Process process, Task timeout, OfflineMigrationConfiguration configuration, CancellationToken token)
         {
             var readline = process.StandardOutput.ReadLineAsync();
             string progressLine = null;
@@ -1431,17 +1487,14 @@ namespace Raven.Server.Web.System
                 var finishedTask = await Task.WhenAny(readline, timeout);
                 if (finishedTask == timeout)
                 {
-                    progressLine = $"Export is taking more than the configured timeout {configuration.Timeout.Value}";
-                    progress.Progress += $"{progressLine}{Environment.NewLine}";
-                    return false;
+                    return (true, $"Export is taking more than the configured timeout {configuration.Timeout.Value}");
                 }
             }
             else
             {
-              progressLine = await readline;
+              progressLine = await readline.WithCancellation(token);
             } 
-            progress.Progress += $"{progressLine}{Environment.NewLine}";
-            return true;
+            return (false, progressLine);
         }
     }
 }

@@ -1,17 +1,20 @@
 ﻿import backupSettings = require("models/database/tasks/periodicBackup/backupSettings");
+import jsonUtil = require("common/jsonUtil");
 
 class localSettings extends backupSettings {
     folderPath = ko.observable<string>();
 
-    displaySameDriveWarning: KnockoutComputed<boolean>;
-
     constructor(dto: Raven.Client.ServerWide.PeriodicBackup.LocalSettings) {
-        super(dto);
+        super(dto, "Local");
 
         this.folderPath(dto.FolderPath);
 
-        this.connectionType = "Local";
         this.initValidation();
+        
+        this.dirtyFlag = new ko.DirtyFlag([
+            this.enabled,
+            this.folderPath
+        ], false,  jsonUtil.newLineNormalizingHashFunction);
     }
 
     initValidation() {

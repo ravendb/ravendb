@@ -2,6 +2,8 @@
 using Raven.Server.Documents.Queries.Parser;
 using System;
 using System.IO;
+using Raven.Client.Exceptions;
+using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Xunit;
 
@@ -9,6 +11,77 @@ namespace FastTests.Server.Documents.Queries.Parser
 {
     public class ParserTests : NoDisposalNeeded
     {
+        [Theory]
+        [InlineData(@"from Orders
+select ID('not valid argument')", QueryType.Select)]
+        [InlineData(@"declare function Name() {
+    var a = 's{tri}}}ng""';
+    var b = function () {
+        var a = ""'"";
+    }
+    var c = 's{tri}}}ng';
+}
+
+
+from Orders as o
+where o.Company == ''
+load o.Company as c, o.ShipTo.  as e, o.ShipVia as s
+select {
+    Name: Value,
+    var a = a;
+}", QueryType.Select)]
+        [InlineData(@"declare function Name() {
+   var a = ;
+}
+
+
+from Orders as o
+where o.Company == ''
+load o.Company as c, o.ShipTo.  as e, o.ShipVia as s
+select {
+    Name: Value,
+    var a = a;
+}", QueryType.Select)]
+        [InlineData(@"
+from Orders as o
+update { 
+    this.++;
+}
+", QueryType.Update)]
+        public void FailToParseInvalidJavascript(string q, QueryType type)
+        {
+            Assert.Throws<InvalidQueryException>(() => new QueryMetadata(q, null, 1, type));
+        }
+
+        [Theory]
+        [InlineData(@"
+declare function Name() {
+    var a = ""{{\"""";
+        var b = '\'{{'
+    }
+from Orders as o
+    where o.Company == """"
+load o.Company as c, o.ShipTo as e, o.ShipVia as s
+select {
+    Name:
+    Value
+}", QueryType.Select)]
+        [InlineData(@"FROM INDEX 'Orders/Totals' 
+WHERE Employee = $emp 
+UPDATE {
+    for(var i = 0; i < this.Lines.length; i++)
+    {
+        this.Lines[i].Discount = Math.max(this.Lines[i].Discount || 0, discount);
+    }
+}", QueryType.Update)]
+        public void ParseQueries(string q, QueryType type)
+        {
+            var parser = new QueryParser();
+            parser.Init(q);
+
+            parser.Parse(type);
+        }
+
         [Theory]
         [InlineData("Name")]
         [InlineData("Address.City")]

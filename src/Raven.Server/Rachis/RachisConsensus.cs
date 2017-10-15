@@ -564,7 +564,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public void SwitchToLeaderState(long electionTerm, string reason)
+        public void SwitchToLeaderState(long electionTerm, string reason, Dictionary<string, RemoteConnection> connections = null)
         {
             if (Log.IsInfoEnabled)
             {
@@ -572,7 +572,7 @@ namespace Raven.Server.Rachis
             }
             var leader = new Leader(this);
             SetNewState(State.LeaderElect, leader, electionTerm, reason, () => _currentLeader = leader);
-            leader.Start();
+            leader.Start(connections);
         }
 
         public async Task<(long Index, object Result)> PutAsync(CommandBase cmd)
@@ -765,7 +765,7 @@ namespace Raven.Server.Rachis
                     {
                         case InitialMessageType.RequestVote:
                             var elector = new Elector(this, remoteConnection);
-                            elector.HandleVoteRequest();
+                            elector.Run();
                             break;
                         case InitialMessageType.AppendEntries:
                             var follower = new Follower(this, remoteConnection);

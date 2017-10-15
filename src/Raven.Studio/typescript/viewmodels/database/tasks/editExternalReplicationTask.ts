@@ -2,17 +2,21 @@ import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import router = require("plugins/router");
 import saveExternalReplicationTaskCommand = require("commands/database/tasks/saveExternalReplicationTaskCommand");
-import ongoingTaskReplication = require("models/database/tasks/ongoingTaskReplicationModel");
+import ongoingTaskReplicationEditModel = require("models/database/tasks/ongoingTaskReplicationEditModel");
 import ongoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskInfoCommand");
 import eventsCollector = require("common/eventsCollector");
 import generalUtils = require("common/generalUtils");
 import testClusterNodeConnectionCommand = require("commands/database/cluster/testClusterNodeConnectionCommand");
+import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
+import jsonUtil = require("common/jsonUtil");
 
 class editExternalReplicationTask extends viewModelBase {
 
-    editedExternalReplication = ko.observable<ongoingTaskReplication>();
+    editedExternalReplication = ko.observable<ongoingTaskReplicationEditModel>();
     isAddingNewReplicationTask = ko.observable<boolean>(true);
     private taskId: number = null;
+    
+    possibleMentors = ko.observableArray<string>([]);
 
     testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
     spinners = { 
@@ -40,7 +44,7 @@ class editExternalReplicationTask extends viewModelBase {
             ongoingTaskInfoCommand.forExternalReplication(this.activeDatabase(), this.taskId)
                 .execute()
                 .done((result: Raven.Client.ServerWide.Operations.OngoingTaskReplication) => { 
-                    this.editedExternalReplication(new ongoingTaskReplication(result, false));
+                    this.editedExternalReplication(new ongoingTaskReplicationEditModel(result));
                     deferred.resolve();
                 })
                 .fail(() => {
@@ -52,12 +56,18 @@ class editExternalReplicationTask extends viewModelBase {
         else {
             // 2. Creating a new task
             this.isAddingNewReplicationTask(true);
-            this.editedExternalReplication(ongoingTaskReplication.empty());
+            this.editedExternalReplication(ongoingTaskReplicationEditModel.empty());
             deferred.resolve();
         }
 
         deferred.done(() => this.initObservables());
-        return deferred;
+        return $.when<any>(deferred, this.loadPossibleMentors());
+    }
+    
+    private loadPossibleMentors() {
+        return new getPossibleMentorsCommand(this.activeDatabase().name)
+            .execute()
+            .done(mentors => this.possibleMentors(mentors));
     }
 
     private initObservables() {
@@ -71,10 +81,23 @@ class editExternalReplicationTask extends viewModelBase {
             }
             return generalUtils.trimMessage(result.Error);
         });
+        
+        const model = this.editedExternalReplication();
+        
+        this.dirtyFlag = new ko.DirtyFlag([
+                model.taskName,
+                model.manualChooseMentor,
+                model.preferredMentor,
+                model.destinationDB,
+                model.destinationURL
+            ], false, jsonUtil.newLineNormalizingHashFunction);
     }
 
     compositionComplete() {
+        super.compositionComplete();
         document.getElementById('taskName').focus();
+        
+        $('.edit-replication-task [data-toggle="tooltip"]').tooltip();
     }
 
     saveExternalReplication() {
@@ -84,11 +107,11 @@ class editExternalReplicationTask extends viewModelBase {
         }
 
         // 2. Create/add the new replication task
-        const dto = this.editedExternalReplication().toDto();
+        const dto = this.editedExternalReplication().toDto(this.taskId);
 
         this.taskId = this.isAddingNewReplicationTask() ? 0 : this.taskId;
 
-        new saveExternalReplicationTaskCommand(this.activeDatabase(), this.taskId, dto)
+        new saveExternalReplicationTaskCommand(this.activeDatabase(), dto)
             .execute()
             .done(() => {
                 this.goToOngoingTasksView();

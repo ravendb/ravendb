@@ -8,7 +8,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Client.Documents.BulkInsert;
 using Raven.Client.Documents.Changes;
@@ -18,7 +17,6 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Http;
 using Raven.Client.Util;
-using Sparrow.Collections;
 
 namespace Raven.Client.Documents
 {
@@ -154,6 +152,8 @@ namespace Raven.Client.Documents
 
         public override RequestExecutor GetRequestExecutor(string database = null)
         {
+            AssertInitialized();
+
             if (database == null)
                 database = Database;
 
@@ -349,12 +349,27 @@ namespace Raven.Client.Documents
 
         public DatabaseSmuggler Smuggler => _smuggler ?? (_smuggler = new DatabaseSmuggler(this));
 
-        public override AdminOperationExecutor Admin => _adminOperationExecutor ?? (_adminOperationExecutor = new AdminOperationExecutor(this));
+        public override AdminOperationExecutor Admin
+        {
+            get
+            {
+                AssertInitialized();
+                return _adminOperationExecutor ?? (_adminOperationExecutor = new AdminOperationExecutor(this));
+            }
+        }
 
-        public override OperationExecutor Operations => _operationExecutor ?? (_operationExecutor = new OperationExecutor(this));
+        public override OperationExecutor Operations
+        {
+            get
+            {
+                AssertInitialized();
+                return _operationExecutor ?? (_operationExecutor = new OperationExecutor(this));
+            }
+        }
 
         public override BulkInsertOperation BulkInsert(string database = null)
         {
+            AssertInitialized();
             return new BulkInsertOperation(database ?? Database, this);
         }
     }

@@ -97,7 +97,7 @@ namespace Raven.Server.Documents.Queries.AST
             _writer.WriteEndArray();
         }
 
-        public override void VisitDeclaredFunctions(Dictionary<StringSegment, StringSegment> declaredFunctions)
+        public override void VisitDeclaredFunctions(Dictionary<StringSegment, string> declaredFunctions)
         {
             _writer.WritePropertyName("Declare");
             _writer.WriteStartObject();

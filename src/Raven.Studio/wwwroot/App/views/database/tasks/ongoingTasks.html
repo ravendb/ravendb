@@ -116,7 +116,7 @@
                 
                 <div data-bind="if: etlTasks().length > 0 && (selectedTaskType() === 'RavenDB ETL' || selectedTaskType() === 'All tasks' )">
                     <div class="hr-title">
-                        <h5 class="tasks-list-item ravendb-etl no-text-transform">RavenDB ETL</h5><hr>
+                        <h5 class="tasks-list-item ravendb-etl no-text-transform"><i class="icon-etl"></i><span>RavenDB ETL</span></h5><hr> 
                     </div>
                     <div data-bind="foreach: etlTasks">
                         <div class="panel destination-item ravendb-etl" data-bind="if: responsibleNode().NodeTag === $parent.selectedNode() || $parent.selectedNode() === 'All nodes'">
@@ -152,7 +152,7 @@
                                             <li>
                                                 <span>Connection String:</span> 
                                                 <span title="Destination <database>@<Url>">
-                                                    <a target="_blank" data-bind="attr: { href: connectionStringsUrl }, text: connectionStringName"></a>
+                                                    <a target="_blank" data-bind="attr: { href: $root.connectionStringsUrl }, text: connectionStringName"></a>
                                                 </span>
                                             </li>
                                         </ul>
@@ -164,34 +164,55 @@
                 </div>
                
                 <!-- sql -->
-                <!-- TODO... -->
-                <!--<div data-bind="if: sqlTasks().length > 0 && (selectedTaskType() === 'SQL ETL' || selectedTaskType() === 'All tasks' )">
-                        <div class="hr-title">
-                            <h5 class="tasks-list-item sql-etl no-text-transform">SQL ETL</h5><hr>
-                        </div>
-                        <div data-bind="foreach: sqlTasks">
-                            <div class="panel destination-item sql-etl">
-                                <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
-                                <div class="padding padding-sm destination-info">
-                                    <div class="info-container flex-horizontal flex-grow">
-                                        <div class="checkbox">
-                                            <input type="checkbox" class="styled">
-                                            <label></label>
-                                        </div>
-                                        <div class="destination flex-grow">                                           
-                                            <h3>
-                                                <a title="SQL Server" class="destination-name"><i class="icon-sql-etl"></i><span data-bind="text: destinationServer"></span></a>
-                                                <span title="SQL Database" class="location" data-bind="text: destinationDatabaseText"></span>
-                                            </h3>
-                                        </div>
-                                        <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
-                                        <div class="status" data-bind="template: { name: 'status-template' }"></div>
+                
+                <div data-bind="if: sqlTasks().length > 0 && (selectedTaskType() === 'SQL ETL' || selectedTaskType() === 'All tasks' )">
+                    <div class="hr-title">
+                        <h5 class="tasks-list-item sql-etl no-text-transform"><i class="icon-sql-etl"></i><span>SQL ETL</span></h5><hr>
+                    </div>
+                    <div data-bind="foreach: sqlTasks">
+                        <div class="panel destination-item sql-etl" data-bind="if: responsibleNode().NodeTag === $parent.selectedNode() || $parent.selectedNode() === 'All nodes'">
+                            <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
+                            <div class="padding padding-sm destination-info flex-vertical">
+                                <div class="flex-horizontal">
+                                    <div class="checkbox panel-checkbox hide">
+                                        <input type="checkbox" class="styled">
+                                        <label></label>
                                     </div>
+                                    <div class="panel-name flex-grow">
+                                        <h3>
+                                            <a href="#" data-bind="click: editTask" title="SQL ETL task name">
+                                                <span data-bind="text: taskName"></span>
+                                            </a>
+                                        </h3>
+                                    </div>
+                                    <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
+                                    <div class="status" data-bind="template: { name: 'status-template' }"></div>
                                     <div data-bind="template: { name: 'actions-template' }"></div>
                                 </div>
                             </div>
+                            <div class="collapse panel-addon" data-bind="collapse: showSqlEtlDetails">
+                                <div class="padding padding-sm flex-horizontal">
+                                    <div class="flex-grow">
+                                        <ul class="properties">
+                                            <li>
+                                                <span>Destination:</span>
+                                                <span title="Destination <database>@<server>">
+                                                    <span data-bind="text: destinationDatabase() + '@' + destinationServer()"></span>
+                                                </span>
+                                            </li>
+                                            <li>
+                                                <span>Connection String:</span>
+                                                <span title="Connection string name">
+                                                    <a target="_blank" data-bind="attr: { href: $root.connectionStringsUrl }, text: connectionStringName"></a>
+                                                </span>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                    </div>-->
+                    </div>
+                </div>                               
                
                 <!-- backup -->
             
@@ -333,7 +354,7 @@
                         <div class="row">
                             <div class="col-xs-12"><i class="task-rect task-external-replication"></i><span>External Replication</span></div>
                             <div class="col-xs-12"><i class="task-rect task-ravendb-etl"></i><span>RavenDB ETL</span></div>
-                            <!--<div class="col-xs-12"><i class="task-rect task-sql-etl"></i><span>SQL ETL</span></div>-->
+                            <div class="col-xs-12"><i class="task-rect task-sql-etl"></i><span>SQL ETL</span></div>
                             <div class="col-xs-12"><i class="task-rect task-periodic-backup"></i><span>Backup</span></div> <!-- todo: change class name to just backup ..-->
                             <div class="col-xs-12"><i class="task-rect task-subscriptions"></i><span>Subscription</span></div>
                         </div>

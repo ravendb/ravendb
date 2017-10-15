@@ -58,12 +58,12 @@ namespace SlowTests.Bugs.Metadata
                 {
                     Assert.Empty(session.Advanced.DocumentQuery<User>()
                                     .WaitForNonStaleResults()
-                                    .WhereEquals("@metadata." + "Test-Property1", "Test-Value-1")
+                                    .WhereEquals("@metadata.'Test-Property1'", "Test-Value-1")
                                     .ToList());
 
                     var result = session.Advanced.DocumentQuery<User>()
                         .WaitForNonStaleResults()
-                        .WhereEquals("@metadata." + "Test-Property-1", "Test-Value-1")
+                        .WhereEquals("@metadata.'Test-Property-1'", "Test-Value-1")
                         .ToList();
 
                     Assert.NotNull(result);

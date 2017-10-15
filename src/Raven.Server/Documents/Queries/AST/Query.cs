@@ -15,16 +15,16 @@ namespace Raven.Server.Documents.Queries.AST
         public List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> OrderBy;
         public List<FieldExpression> GroupBy;
 
-        public Dictionary<StringSegment, StringSegment> DeclaredFunctions;
+        public Dictionary<StringSegment, string> DeclaredFunctions;
 
         public string QueryText;
-        public StringSegment? SelectFunctionBody;
-        public StringSegment? UpdateBody;
+        public string SelectFunctionBody;
+        public string UpdateBody;
 
-        public bool TryAddFunction(StringSegment name, StringSegment func)
+        public bool TryAddFunction(StringSegment name, string func)
         {
             if (DeclaredFunctions == null)
-                DeclaredFunctions = new Dictionary<StringSegment, StringSegment>(CaseInsensitiveStringSegmentEqualityComparer.Instance);
+                DeclaredFunctions = new Dictionary<StringSegment, string>(CaseInsensitiveStringSegmentEqualityComparer.Instance);
 
             return DeclaredFunctions.TryAdd(name, func);
         }

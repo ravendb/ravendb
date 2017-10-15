@@ -21,6 +21,8 @@ namespace Raven.Server.Documents.Queries.Suggestion
             }
         }
 
+        public TimeSpan? WaitForNonStaleResultsTimeout => null;
+
         protected internal bool PageSizeSet { get; private set; }
 
         public static SuggestionQueryServerSide Create(BlittableJsonReaderObject json)

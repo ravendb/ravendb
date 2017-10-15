@@ -12,6 +12,8 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
         private readonly IndexReader _ir;
         private readonly IState _state;
 
+        public string Document { get; set; }
+
         public RavenMoreLikeThis(IndexReader ir, MoreLikeThisQueryServerSide query, IState state)
             : base(ir, state)
         {
@@ -20,6 +22,9 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
 
             if (query.Boost != null)
                 Boost = query.Boost.Value;
+
+            if (query.Document != null)
+                Document = query.Document;
 
             if (query.BoostFactor != null)
                 BoostFactor = query.BoostFactor.Value;

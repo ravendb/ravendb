@@ -16,6 +16,7 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.ETL;
+using Raven.Client.ServerWide.Expiration;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Operations.ConnectionStrings;
@@ -187,9 +188,15 @@ namespace TypingsGenerator
             scripter.AddType(typeof(DatabaseSmugglerExportOptions));
             scripter.AddType(typeof(SmugglerResult));
             scripter.AddType(typeof(SingleDatabaseMigrationConfiguration));
+            scripter.AddType(typeof(OfflineMigrationResult));
+            scripter.AddType(typeof(OfflineMigrationProgress));
+            scripter.AddType(typeof(BuildInfo));
 
             // revisions
             scripter.AddType(typeof(RevisionsConfiguration));
+            
+            // expiration 
+            scripter.AddType(typeof(ExpirationConfiguration));
 
             // storage report
             scripter.AddType(typeof(StorageReport));
@@ -249,7 +256,9 @@ namespace TypingsGenerator
             scripter.AddType(typeof(PeriodicBackupTestConnectionType));
             scripter.AddType(typeof(RestoreBackupConfiguration));
             scripter.AddType(typeof(RestorePoints));
+            scripter.AddType(typeof(RestoreProgress));
             scripter.AddType(typeof(NextBackupOccurrence));
+            scripter.AddType(typeof(OfflineMigrationConfiguration));
 
             // ongoing tasks - subscription
             scripter.AddType(typeof(OngoingTaskSubscription));
@@ -263,13 +272,15 @@ namespace TypingsGenerator
             scripter.AddType(typeof(SubscriptionOpeningStrategy));
 
             // ongoing tasks - ravenDB ETL
-            scripter.AddType(typeof(OngoingTaskRavenEtl));
+            scripter.AddType(typeof(OngoingTaskRavenEtlDetails));
+            scripter.AddType(typeof(OngoingTaskRavenEtlListView));
             scripter.AddType(typeof(RavenEtlConfiguration));
             scripter.AddType(typeof(EtlProcessStatistics));
             scripter.AddType(typeof(EtlType));
 
             // ongoing tasks - SQL ETL
-            scripter.AddType(typeof(OngoingTaskSqlEtl));
+            scripter.AddType(typeof(OngoingTaskSqlEtlDetails));
+            scripter.AddType(typeof(OngoingTaskSqlEtlListView));
             scripter.AddType(typeof(SqlEtlConfiguration));
             scripter.AddType(typeof(SimulateSqlEtl));
             scripter.AddType(typeof(SqlEtlTable));

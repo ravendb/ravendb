@@ -1,0 +1,127 @@
+﻿/// <reference path="../../../../typings/tsd.d.ts"/>
+import ongoingTaskEditModel = require("models/database/tasks/ongoingTaskEditModel");
+import ongoingTaskSqlEtlTransformationModel = require("models/database/tasks/ongoingTaskSqlEtlTransformationModel");
+import ongoingTaskSqlEtlTableModel = require("models/database/tasks/ongoingTaskSqlEtlTableModel");
+
+class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
+    connectionStringName = ko.observable<string>();
+    
+    parameterizedDeletes = ko.observable<boolean>(false);
+    forceRecompileQuery = ko.observable<boolean>(false);
+    tableQuotation = ko.observable<boolean>(false);
+    
+    transformationScripts = ko.observableArray<ongoingTaskSqlEtlTransformationModel>([]);
+    sqlTables = ko.observableArray<ongoingTaskSqlEtlTableModel>([]);
+    
+    validationGroup: KnockoutValidationGroup;
+    dirtyFlag: () => DirtyFlag;
+   
+    constructor(dto: Raven.Client.ServerWide.Operations.OngoingTaskSqlEtlDetails) {
+        super();
+
+        this.update(dto);
+        this.initializeObservables();
+        this.initializeValidation();
+    }
+    
+    protected initializeObservables() {
+        super.initializeObservables();
+        
+        this.dirtyFlag = new ko.DirtyFlag([
+            this.taskName,
+            this.connectionStringName,
+            this.preferredMentor,
+            this.manualChooseMentor,
+            this.parameterizedDeletes,
+            this.forceRecompileQuery,
+            this.tableQuotation
+        ])
+    }
+    
+    initializeValidation() {
+        this.initializeMentorValidation();
+
+        this.connectionStringName.extend({
+            required: true
+        });
+
+        this.sqlTables.extend({
+            validation: [
+                {
+                    validator: () => this.sqlTables().length > 0,
+                    message: "SQL table is Not defined"
+                }
+            ]
+        });
+
+        this.transformationScripts.extend({
+            validation: [
+                {
+                    validator: () => this.transformationScripts().length > 0,
+                    message: "Transformation Script is Not defined"
+                }
+            ]
+        });
+
+        this.validationGroup = ko.validatedObservable({
+            connectionStringName: this.connectionStringName,
+            sqlTables: this.sqlTables,
+            transformationScripts: this.transformationScripts,
+            preferredMentor: this.preferredMentor
+        });
+    }
+
+    update(dto: Raven.Client.ServerWide.Operations.OngoingTaskSqlEtlDetails) {
+        super.update(dto);
+
+        if (dto.Configuration) {
+            this.connectionStringName(dto.Configuration.ConnectionStringName);
+            this.parameterizedDeletes(dto.Configuration.ParameterizeDeletes);
+            this.forceRecompileQuery(dto.Configuration.ForceQueryRecompile);
+            this.tableQuotation(dto.Configuration.QuoteTables);
+            
+            this.manualChooseMentor(!!dto.Configuration.MentorNode);
+            this.preferredMentor(dto.Configuration.MentorNode);
+            
+            this.transformationScripts(dto.Configuration.Transforms.map(x => new ongoingTaskSqlEtlTransformationModel(x, false)));
+            this.sqlTables(dto.Configuration.SqlTables.map(x => new ongoingTaskSqlEtlTableModel(x, false)));            
+        }        
+    }
+
+    toDto(): Raven.Client.ServerWide.ETL.SqlEtlConfiguration {
+        return {
+            TaskId: this.taskId,
+            Name: this.taskName(),
+            EtlType: "Sql",
+            ConnectionStringName: this.connectionStringName(),
+            AllowEtlOnNonEncryptedChannel: false,
+            Disabled: false,                     
+            MentorNode: this.manualChooseMentor() ? this.preferredMentor() : undefined, 
+            FactoryName: "System.Data.SqlClient",
+            ForceQueryRecompile: this.forceRecompileQuery(),
+            ParameterizeDeletes: this.parameterizedDeletes(),
+            QuoteTables: this.tableQuotation(),
+            Transforms: this.transformationScripts().map(x => x.toDto()),
+            SqlTables: this.sqlTables().map(x => x.toDto())     
+        
+        } as Raven.Client.ServerWide.ETL.SqlEtlConfiguration;
+    }
+    
+    static empty(): ongoingTaskSqlEtlEditModel {
+        return new ongoingTaskSqlEtlEditModel(
+            {                
+                TaskType: "SqlEtl",
+                TaskState: "Enabled",               
+                TaskConnectionStatus: "Active",                
+                Configuration: {                
+                     ForceQueryRecompile: false,
+                     ParameterizeDeletes: false,
+                     QuoteTables: false,
+                     Transforms: [],
+                     SqlTables: []
+                }
+            } as Raven.Client.ServerWide.Operations.OngoingTaskSqlEtlDetails);
+    }
+}
+
+export = ongoingTaskSqlEtlEditModel;

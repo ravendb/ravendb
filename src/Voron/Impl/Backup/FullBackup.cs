@@ -148,15 +148,23 @@ namespace Voron.Impl.Backup
                     using (var dataStream = dataPart.Open())
                     {
                         // now can copy everything else
-                        copier.ToStream(dataPager,0, allocatedPages, dataStream);
+                        copier.ToStream(dataPager, 0, allocatedPages, dataStream);
                     }
                 }
 
                 try
                 {
-                    foreach (JournalFile journalFile in usedJournals)
+                    foreach (var journalFile in usedJournals)
                     {
-                        var entryName = Path.Combine(basePath, StorageEnvironmentOptions.JournalName(journalFile.Number));
+                        var journalPath = env.Options.GetJournalPath(journalFile.Number).FullPath;
+                        var journalBasePath = basePath;
+                        var journalDirectoryName = new DirectoryInfo(journalPath).Parent.Name;
+                        if (journalDirectoryName.Equals("Journal", StringComparison.OrdinalIgnoreCase))
+                        {
+                            journalBasePath = "Journal";
+                        }
+
+                        var entryName = Path.Combine(journalBasePath, StorageEnvironmentOptions.JournalName(journalFile.Number));
                         var journalPart = package.CreateEntry(entryName, compression);
 
                         Debug.Assert(journalPart != null);

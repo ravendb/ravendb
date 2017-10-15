@@ -40,7 +40,7 @@ namespace FastTests.Server.Documents.Queries.Parser
         [InlineData(" \"he \"", "he ")]
         [InlineData(" \"he\"\" \" ", "he\" ")]
         [InlineData(" 'we''ll' ", "we'll")]
-        [InlineData(" 'we\\r\\nll' ", "we\r\nll")]
+        [InlineData(" 'we\r\nll' ", "we\r\nll")]
         public void ParseStringLiterals(string q, string escape)
         {
             var qs = new QueryScanner();

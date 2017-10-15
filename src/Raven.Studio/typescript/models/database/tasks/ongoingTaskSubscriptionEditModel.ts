@@ -1,10 +1,11 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
-import ongoingTaskSubscriptionModel = require("models/database/tasks/ongoingTaskSubscriptionModel");
+import ongoingTaskEditModel = require("models/database/tasks/ongoingTaskEditModel");
 import getRevisionsConfigurationCommand = require("commands/database/documents/getRevisionsConfigurationCommand");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
+import jsonUtil = require("common/jsonUtil");
 
-class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
+class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
 
     liveConnection = ko.observable<boolean>();
 
@@ -19,21 +20,31 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
     changeVectorForNextBatchStartingPoint = ko.observable<string>(null); 
 
     validationGroup: KnockoutValidationGroup; 
+    
+    dirtyFlag: () => DirtyFlag;
 
-    activeDatabase = activeDatabaseTracker.default.database;
-   
-    constructor(dto: Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails, isInListView: boolean) {
-        super(dto, isInListView);
-
-        this.isInTasksListView = isInListView;
+    constructor(dto: Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails) {
+        super();
+        
         this.query(dto.Query);
-        this.editViewUpdate(dto);
-        this.editViewInitializeObservables(); 
-        this.editViewInitValidation();
+        this.updateDetails(dto);
+        this.initializeObservables(); 
+        this.initValidation();
+        
+        this.dirtyFlag = new ko.DirtyFlag([
+            this.taskName,
+            this.preferredMentor,
+            this.manualChooseMentor,
+            this.query,
+            this.startingPointType,
+            this.startingChangeVector, 
+            this.setStartingPoint,
+            this.changeVectorForNextBatchStartingPoint
+        ], false, jsonUtil.newLineNormalizingHashFunction);
     }
 
-    editViewInitializeObservables() {
-        super.listViewInitializeObservables();
+    initializeObservables() {
+        super.initializeObservables();
         
         this.startingPointType("Beginning of Time");
 
@@ -44,46 +55,78 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
         this.startingPointLatestDocument = ko.pureComputed(() => {
             return this.startingPointType() === "Latest Document";
         });
-    }
+    }   
 
-    editViewUpdate(dto: Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails) {
+    updateDetails(dto: Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails) {
+        const dtoEditModel = dto as Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails;
+
+        const state: Raven.Client.ServerWide.Operations.OngoingTaskState = dtoEditModel.Disabled ? 'Disabled' : 'Enabled';
+        const emptyNodeId: Raven.Client.ServerWide.Operations.NodeId = { NodeTag: "", NodeUrl: "", ResponsibleNode: "" };
+
+        const dtoListModel: Raven.Client.ServerWide.Operations.OngoingTask = {
+            ResponsibleNode: emptyNodeId,
+            TaskConnectionStatus: 'Active',
+            TaskId: dtoEditModel.SubscriptionId,
+            TaskName: dtoEditModel.SubscriptionName,
+            TaskState: state,
+            TaskType: 'Subscription',
+            Error: null
+        };
+
+        super.update(dtoListModel);
+        
+        this.manualChooseMentor(!!dto.MentorNode);
+        this.preferredMentor(dto.MentorNode);
+
         this.query(dto.Query);
         this.changeVectorForNextBatchStartingPoint(dto.ChangeVectorForNextBatchStartingPoint);
         this.setStartingPoint(false);
     }
 
-    dataFromUI(): subscriptionDataFromUI {
-        const query = _.trim(this.query()) || null;
-        
-        let changeVector: Raven.Client.Constants.Documents.SubscriptionChangeVectorSpecialStates | string = "DoNotChange";
+    private serializeChangeVector() {
+        let changeVector: Raven.Client.Constants.Documents.SubscriptionChangeVectorSpecialStates | string = this.taskId ? "DoNotChange" : "BeginningOfTime"; 
 
         if (this.setStartingPoint()) {
             switch (this.startingPointType()) {
-            case "Beginning of Time":
-                changeVector = "BeginningOfTime";
-                break;
-            case "Latest Document":
-                changeVector = "LastDocument";
-                break;
-            case "Change Vector":
-                changeVector = this.startingChangeVector();
-                break;
+                case "Beginning of Time":
+                    changeVector = "BeginningOfTime";
+                    break;
+                case "Latest Document":
+                    changeVector = "LastDocument";
+                    break;
+                case "Change Vector":
+                    changeVector = this.startingChangeVector();
+                    break;
             }
         }
+        return changeVector;
+    }
+    
+    toTestDto() {
+        const subscriptionToTest: Raven.Client.Documents.Subscriptions.SubscriptionTryout = {
+            ChangeVector: this.serializeChangeVector(),
+            Query: this.query()
+        };
+    }
+    
+    toDto(): Raven.Client.Documents.Subscriptions.SubscriptionCreationOptions {
+        const query = _.trim(this.query()) || null;
 
         return {
-            TaskName: this.taskName(),
+            Name: this.taskName(),
             Query: query,
-            ChangeVector: changeVector
+            MentorNode: this.manualChooseMentor() ? this.preferredMentor() : undefined,
+            ChangeVector: this.serializeChangeVector()
         }
     }
 
-    editViewInitValidation() {
-
+    initValidation() {
         this.query.extend({
             required: true,
             aceValidation: true
         });
+        
+        this.initializeMentorValidation();
 
         this.startingChangeVector.extend({
             validation: [
@@ -100,7 +143,9 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
 
         this.validationGroup = ko.validatedObservable({
             query: this.query,
-            startingChangeVector: this.startingChangeVector
+            startingChangeVector: this.startingChangeVector,
+            preferredMentor: this.preferredMentor
+            
         });
     }
 
@@ -116,7 +161,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
                 LastClientConnectionTime: null,
                 LastTimeServerMadeProgressWithDocuments: null,
                 MentorNode: null
-            }, false);
+            });
     }
 }
 

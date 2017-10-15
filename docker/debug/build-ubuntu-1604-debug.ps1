@@ -23,10 +23,10 @@ CALLSTACK:$(Get-PSCallStack | Out-String)
 
 $scriptDir = Get-ScriptDirectory
 
-$projectDir = [io.path]::combine($scriptDir, "../..")
+$projectDir = [io.path]::combine($scriptDir, "..\..")
 $dockerDir = [io.path]::combine($projectDir, "docker")
 $debugDockerDir = [io.path]::combine($projectDir, "docker", "debug")
-$debugDockerfileDir = [io.path]::combine($projectDir, "docker", "debug", "ravendb-ubuntu1604-debug")
+$debugDockerfileDir = [io.path]::combine($projectDir, "docker", "debug", "ravendb-ubuntu-debug")
 
 $pkgFile = [io.path]::combine($projectDir, "artifacts", "RavenDB-4.0.0-custom-40-ubuntu.16.04-x64.tar.bz2")
 
@@ -61,7 +61,7 @@ finally {
 
 Push-Location .
 
-$dockerDebugTag = "ravendb/ravendb:ubuntu1604-debug"
+$dockerDebugTag = "ravendb/ravendb:ubuntu-debug"
 
 try {
     Set-Location $debugDockerDir

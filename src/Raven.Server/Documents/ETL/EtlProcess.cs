@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
@@ -36,13 +37,19 @@ namespace Raven.Server.Documents.ETL
 
         public string Name { get; protected set; }
 
+        public string ConfigurationName { get; protected set; }
+
+        public string TransformationName { get; protected set; }
+
         public abstract void Start();
 
         public abstract void Stop();
 
         public abstract void Dispose();
 
-        public abstract void NotifyAboutWork(DocumentChange change);
+        public abstract void Reset();
+
+        public abstract void Reset(DocumentChange change);
 
         public abstract EtlPerformanceStats[] GetPerformanceStats();
 
@@ -78,6 +85,8 @@ namespace Raven.Server.Documents.ETL
             Configuration = configuration;
             _cts = CancellationTokenSource.CreateLinkedTokenSource(database.DatabaseShutdown);
             Tag = tag;
+            ConfigurationName = Configuration.Name;
+            TransformationName = Transformation.Name;
             Name = $"{Configuration.Name}/{Transformation.Name}";
             Logger = LoggingSource.Instance.GetLogger(database.Name, GetType().FullName);
             Database = database;
@@ -302,7 +311,17 @@ namespace Raven.Server.Documents.ETL
             Metrics.BatchSizeMeter.Mark(stats.NumberOfExtractedItems);
         }
 
-        public override void NotifyAboutWork(DocumentChange change)
+        public override void Reset()
+        {
+            Statistics.Reset();
+
+            if (_thread == null)
+                return;
+            
+            _waitForChanges.Set();
+        }
+
+        public override void Reset(DocumentChange change)
         {
             if (Transformation.ApplyToAllDocuments || _collections.Contains(change.CollectionName))
                 _waitForChanges.Set();
@@ -413,7 +432,12 @@ namespace Raven.Server.Documents.ETL
                                     }
 
                                     if (didWork)
+                                    {
                                         UpdateMetrics(startTime, stats);
+
+                                        if (Logger.IsInfoEnabled)
+                                            LogSuccessfulBatchInfo(stats);
+                                    }
                                 }
                             }
                             catch (OperationCanceledException)
@@ -422,7 +446,7 @@ namespace Raven.Server.Documents.ETL
                             }
                             catch (Exception e)
                             {
-                                var message = $"Exception in ETL process named '{Name}'";
+                                var message = $"Exception in ETL process '{Name}'";
 
                                 if (Logger.IsInfoEnabled)
                                     Logger.Info($"{Tag} {message}", e);
@@ -552,6 +576,25 @@ namespace Raven.Server.Documents.ETL
                 // .Select(x => x == lastStats ? x.ToEtlPerformanceStats().ToIndexingPerformanceLiveStatsWithDetails() : x.ToIndexingPerformanceStats())
                 .Select(x => x.ToPerformanceStats())
                 .ToArray();
+        }
+
+        private void LogSuccessfulBatchInfo(EtlStatsScope stats)
+        {
+            var message = new StringBuilder();
+
+            message.Append(
+                $"{Tag} process '{Name}' extracted {stats.NumberOfExtractedItems} docs, transformed and loaded {stats.NumberOfTransformedItems} docs in {stats.Duration}. ");
+
+            message.Append($"{nameof(stats.LastTransformedEtag)}: {stats.LastTransformedEtag}. ");
+            message.Append($"{nameof(stats.LastLoadedEtag)}: {stats.LastLoadedEtag}. ");
+
+            if (stats.LastFilteredOutEtag > 0)
+                message.Append($"{nameof(stats.LastFilteredOutEtag)}: {stats.LastFilteredOutEtag}. ");
+
+            if (stats.BatchCompleteReason != null)
+                message.Append($"Batch completion reason: {stats.BatchCompleteReason}");
+
+            Logger.Info(message.ToString());
         }
 
         public override void Dispose()

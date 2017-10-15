@@ -111,14 +111,22 @@ namespace Raven.Client.Json
                         var newArray = newProp.Value as BlittableJsonReaderArray;
                         var oldArray = oldProp.Value as BlittableJsonReaderArray;
 
-                        if ((newArray == null) || (oldArray == null))
-                            throw new InvalidDataException("Invalid blittable");
+                        if (newArray == null)
+                            throw new InvalidDataException($"Invalid blittable, expected array but got {newProp.Value}");
+
+                        if (oldArray == null)
+                        {
+                            if (changes == null)
+                                return true;
+
+                            NewChange(newProp.Name, newProp.Value, oldProp.Value, docChanges, 
+                                DocumentsChanges.ChangeType.FieldChanged);
+
+                            break;
+                        }
 
                         var changed = CompareBlittableArray(id, oldArray, newArray, changes, docChanges, newProp.Name);
-                        if (changed == false)
-                            break;
-
-                        if (changes == null)
+                        if (changes == null && changed)
                             return true;
 
                         break;
@@ -128,21 +136,18 @@ namespace Raven.Client.Json
                             if (changes == null)
                                 return true;
 
-                            changed = true;
                             NewChange(newProp.Name, newProp.Value, null, docChanges,
                                 DocumentsChanges.ChangeType.FieldChanged);
-                        }
-                        else
-                        {
-                            changed = CompareBlittable(id, oldProp.Value as BlittableJsonReaderObject,
-                                newProp.Value as BlittableJsonReaderObject, changes, docChanges);
+                            break;
                         }
 
-                        if ((changes == null) && (changed))
+                        changed = CompareBlittable(id, oldProp.Value as BlittableJsonReaderObject,
+                            newProp.Value as BlittableJsonReaderObject, changes, docChanges);
+
+                        if (changes == null && changed)
                             return true;
 
                         break;
-
                     default:
                         throw new ArgumentOutOfRangeException();
                 }

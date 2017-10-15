@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -74,7 +75,7 @@ namespace Raven.Server.Rachis
         private MultipleUseFlag _running = new MultipleUseFlag();
         public bool Running => _running.IsRaised();
 
-        public void Start()
+        public void Start(Dictionary<string, RemoteConnection> connections = null)
         {
             _running.Raise();
             ClusterTopology clusterTopology;
@@ -84,7 +85,7 @@ namespace Raven.Server.Rachis
                 clusterTopology = _engine.GetTopology(context);
             }
 
-            RefreshAmbassadors(clusterTopology);
+            RefreshAmbassadors(clusterTopology, connections);
 
             _thread = new Thread(Run)
             {
@@ -140,7 +141,7 @@ namespace Raven.Server.Rachis
             return dict;
         }
 
-        private void RefreshAmbassadors(ClusterTopology clusterTopology)
+        private void RefreshAmbassadors(ClusterTopology clusterTopology, Dictionary<string, RemoteConnection> connections = null)
         {
             bool lockTaken = false;
             Monitor.TryEnter(this, ref lockTaken);
@@ -183,7 +184,7 @@ namespace Raven.Server.Rachis
                     }
 
                     var ambasaddor = new FollowerAmbassador(_engine, this, _voterResponded, voter.Key, voter.Value,
-                        _engine.ClusterCertificate);
+                        _engine.ClusterCertificate, connections?[voter.Key]);
                     _voters.Add(voter.Key, ambasaddor);
                     _engine.AppendStateDisposable(this, ambasaddor);
                     if (_engine.Log.IsInfoEnabled)
@@ -204,7 +205,7 @@ namespace Raven.Server.Rachis
                     }
 
                     var ambasaddor = new FollowerAmbassador(_engine, this, _promotableUpdated, promotable.Key, promotable.Value,
-                        _engine.ClusterCertificate);
+                        _engine.ClusterCertificate, connections?[promotable.Key]);
                     _promotables.Add(promotable.Key, ambasaddor);
                     _engine.AppendStateDisposable(this, ambasaddor);
                     if (_engine.Log.IsInfoEnabled)
@@ -225,7 +226,7 @@ namespace Raven.Server.Rachis
                         continue; // already here
                     }
                     var ambasaddor = new FollowerAmbassador(_engine, this, _noop, nonVoter.Key, nonVoter.Value,
-                        _engine.ClusterCertificate);
+                        _engine.ClusterCertificate, connections?[nonVoter.Key]);
                     _nonVoters.Add(nonVoter.Key, ambasaddor);
                     _engine.AppendStateDisposable(this, ambasaddor);
                     if (_engine.Log.IsInfoEnabled)
@@ -346,7 +347,6 @@ namespace Raven.Server.Rachis
         {
             if (_engine.Timeout.Disable)
                 return;
-
             var sb = new StringBuilder();
             var now = DateTime.UtcNow;
             sb.AppendLine("Triggered because of:");

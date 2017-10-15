@@ -62,6 +62,8 @@ namespace Raven.Client.Http
 
         public Topology Topology => _nodeSelector?.Topology;
 
+        public HttpClient HttpClient { get; }
+
         public IReadOnlyList<ServerNode> TopologyNodes => _nodeSelector?.Topology.Nodes;
 
         private Timer _updateTopologyTimer;
@@ -140,7 +142,7 @@ namespace Raven.Client.Http
                 lazyClient = GlobalHttpClient.GetOrAdd(thumbprint, new Lazy<HttpClient>(CreateClient));
             }
 
-            _httpClient = lazyClient.Value;
+            HttpClient = lazyClient.Value;
         }
 
         public static RequestExecutor Create(string[] urls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
@@ -587,7 +589,7 @@ namespace Raven.Client.Http
                             cts.CancelAfter(timeout.Value);
                             try
                             {
-                                var preferredTask = command.SendAsync(_httpClient, request, cts.Token);
+                                var preferredTask = command.SendAsync(HttpClient, request, cts.Token);
                                 if (ShouldExecuteOnAll(chosenNode, command))
                                 {
                                     await ExecuteOnAllToFigureOutTheFastest(chosenNode, command, preferredTask, cts.Token).ConfigureAwait(false);
@@ -622,7 +624,7 @@ namespace Raven.Client.Http
                     }
                     else
                     {
-                        var preferredTask = command.SendAsync(_httpClient, request, token);
+                        var preferredTask = command.SendAsync(HttpClient, request, token);
                         if (ShouldExecuteOnAll(chosenNode, command))
                         {
                             await ExecuteOnAllToFigureOutTheFastest(chosenNode, command, preferredTask, token).ConfigureAwait(false);
@@ -781,7 +783,7 @@ namespace Raven.Client.Http
                     var request = CreateRequest(tmpCtx, nodes[i], command, out var _);
 
                     Interlocked.Increment(ref NumberOfServerRequests);
-                    tasks[i] = command.SendAsync(_httpClient, request, token).ContinueWith(x =>
+                    tasks[i] = command.SendAsync(HttpClient, request, token).ContinueWith(x =>
                     {
                         try
                         {
@@ -1055,7 +1057,6 @@ namespace Raven.Client.Http
         protected bool _disposed;
         protected Task _firstTopologyUpdate;
         protected string[] _lastKnownUrls;
-        private readonly HttpClient _httpClient;
 
         public virtual void Dispose()
         {

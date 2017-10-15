@@ -17,6 +17,7 @@ import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import subscriptionConnectionDetailsCommand = require("commands/database/tasks/getSubscriptionConnectionDetailsCommand");
 import queryCompleter = require("common/queryCompleter");
 import subscriptionRqlSyntax = require("viewmodels/database/tasks/subscriptionRqlSyntax");
+import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
 
 type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<documentObject>>;
 
@@ -26,6 +27,8 @@ class editSubscriptionTask extends viewModelBase {
     editedSubscription = ko.observable<ongoingTaskSubscriptionEdit>();
     isAddingNewSubscriptionTask = ko.observable<boolean>(true);
 
+    possibleMentors = ko.observableArray<string>([]);
+    
     enableTestArea = ko.observable<boolean>(false);
     testResultsLimit = ko.observable<number>(10);
 
@@ -60,7 +63,7 @@ class editSubscriptionTask extends viewModelBase {
             ongoingTaskInfoCommand.forSubscription(this.activeDatabase(), args.taskId, args.taskName)
                 .execute()
                 .done((result: Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails) => {
-                    this.editedSubscription(new ongoingTaskSubscriptionEdit(result, false));
+                    this.editedSubscription(new ongoingTaskSubscriptionEdit(result));
 
                     deferred.resolve();
 
@@ -84,11 +87,23 @@ class editSubscriptionTask extends viewModelBase {
             deferred.resolve();
         }
         
-        return deferred;
+        deferred
+            .done(() => this.dirtyFlag = this.editedSubscription().dirtyFlag);
+
+        return $.when<any>(deferred, this.loadPossibleMentors());
+    }
+
+    private loadPossibleMentors() {
+        return new getPossibleMentorsCommand(this.activeDatabase().name)
+            .execute()
+            .done(mentors => this.possibleMentors(mentors));
     }
 
     compositionComplete() {
         super.compositionComplete();
+
+        $('.edit-subscription-task [data-toggle="tooltip"]').tooltip();
+        
         document.getElementById('taskName').focus(); 
     }
 
@@ -99,11 +114,12 @@ class editSubscriptionTask extends viewModelBase {
         }
 
         // 2. Create/add the new replication task
-        const dtoDataFromUI = this.editedSubscription().dataFromUI();
+        const dto = this.editedSubscription().toDto();
 
-        new saveSubscriptionTaskCommand(this.activeDatabase(), dtoDataFromUI, this.editedSubscription().taskId, this.editedSubscription().taskState()) 
+        new saveSubscriptionTaskCommand(this.activeDatabase(), dto, this.editedSubscription().taskId, this.editedSubscription().taskState()) 
             .execute()
             .done(() => {
+                this.dirtyFlag().reset();
                 this.goToOngoingTasksView();
             });
     }
@@ -189,12 +205,12 @@ class editSubscriptionTask extends viewModelBase {
     }
 
     private fetchTestDocuments(start: number, take: number): JQueryPromise<pagedResult<documentObject>> {
-        const dtoDataFromUI = this.editedSubscription().dataFromUI();
+        const dto = this.editedSubscription().toDto();
         const resultsLimit = this.testResultsLimit() || 1;
 
         this.spinners.globalToggleDisable(true);
 
-        return new testSubscriptionTaskCommand(this.activeDatabase(), dtoDataFromUI, resultsLimit)
+        return new testSubscriptionTaskCommand(this.activeDatabase(), dto, resultsLimit)
             .execute()
             .always(() => this.spinners.globalToggleDisable(false));
     }

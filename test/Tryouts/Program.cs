@@ -1,7 +1,12 @@
 using Raven.Client.Documents;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests.Blittable;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Identity;
 
 namespace RavenDB4RCTests
 {
@@ -9,33 +14,32 @@ namespace RavenDB4RCTests
     {
         static void Main(string[] args)
         {
+            MainAsync().Wait();
+        }
+
+        static async Task MainAsync()
+        {
             var documentStore = new DocumentStore
             {
-                Urls = new[] { "http://4.live-test.ravendb.net" },
-                Database = "TestStreamingTimeout"
+                Urls = new[] {"http://4.live-test.ravendb.net"},
+                Database = "Test"
             };
-
+         
             documentStore.Initialize();
 
-            if (ShouldInitData(documentStore))
+            while (true)
             {
-                InitializeData(documentStore);
-            }
-
-            using (var session = documentStore.OpenAsyncSession())
-            {
-                var query = session.Query<Doc>(collectionName: "Docs");
-                var stream = session.Advanced.StreamAsync(query).Result;
-
-                var position = 0;
-                while (stream.MoveNextAsync().Result)
+                using (var s = documentStore.OpenAsyncSession())
                 {
-                    ++position;
-                    if (position % 1000 == 0)
+                    dynamic load;
+                    using (documentStore.AggressivelyCache())
                     {
-                        Console.WriteLine(DateTime.Now.ToLongTimeString() + ": Processing item " + position);
+                        load = await s.LoadAsync<dynamic>("users/1");
                     }
+                    Console.WriteLine(load.Name);
+                    Console.WriteLine(documentStore.GetRequestExecutor().NumberOfServerRequests);
                 }
+                Console.ReadLine();
             }
         }
 

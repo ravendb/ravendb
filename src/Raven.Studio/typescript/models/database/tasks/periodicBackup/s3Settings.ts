@@ -1,17 +1,27 @@
 ﻿import amazonSettings = require("models/database/tasks/periodicBackup/amazonSettings");
+import jsonUtil = require("common/jsonUtil");
 
 class s3Settings extends amazonSettings {
     bucketName = ko.observable<string>();
     remoteFolderName = ko.observable<string>();
 
     constructor(dto: Raven.Client.ServerWide.PeriodicBackup.S3Settings) {
-        super(dto);
+        super(dto, "S3");
 
         this.bucketName(dto.BucketName);
         this.remoteFolderName(dto.RemoteFolderName);
 
-        this.connectionType = "S3";
         this.initValidation();
+
+        this.dirtyFlag = new ko.DirtyFlag([
+            this.enabled,
+            this.bucketName,
+            this.remoteFolderName,
+            this.awsAccessKey,
+            this.awsSecretKey,
+            this.awsRegionName,
+            this. selectedAwsRegion
+        ], false, jsonUtil.newLineNormalizingHashFunction);
     }
 
     initValidation() {

@@ -186,6 +186,7 @@ namespace Raven.Server.ServerWide
                     case nameof(ToggleSubscriptionStateCommand):
                     case nameof(UpdateSubscriptionClientConnectionTime):
                     case nameof(UpdateSnmpDatabaseIndexesMappingCommand):
+                    case nameof(RemoveEtlProcessStateCommand):
                         SetValueForTypedDatabaseCommand(context, type, cmd, index, leader, out _);
                         break;
                     case nameof(CompareExchangeCommand):
@@ -1100,7 +1101,7 @@ namespace Raven.Server.ServerWide
             Stream stream = null;
             try
             {
-                tcpClient = await TcpUtils.ConnectAsync(info.Url).ConfigureAwait(false);
+                tcpClient = await TcpUtils.ConnectAsync(info.Url, _parent.TcpConnectionTimeout).ConfigureAwait(false);
                 stream = await TcpUtils.WrapStreamWithSslAsync(tcpClient, info, _parent.ClusterCertificate);
 
                 using (ContextPoolForReadOnlyOperations.AllocateOperationContext(out JsonOperationContext context))

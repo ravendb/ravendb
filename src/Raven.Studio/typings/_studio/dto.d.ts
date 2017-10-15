@@ -141,8 +141,11 @@ interface databaseCreatedEventArgs {
     name: string;
 }
 
+type availableConfigurationSectionId =  "restore" | "legacyMigration" | "encryption" | "replication" | "path";
+
 interface availableConfigurationSection {
     name: string;
+    id: availableConfigurationSectionId;
     alwaysEnabled: boolean;
     enabled: KnockoutObservable<boolean>;
     validationGroup?: KnockoutValidationGroup;
@@ -298,25 +301,6 @@ interface feedbackSavedSettingsDto {
     Email: string;
 }
 
-interface externalReplicationDataFromUI {
-    TaskName: string;
-    DestinationDB: string;
-    DestinationURL: string;
-} 
-
-interface ravenEtlDataFromUI {
-    TaskName: string;
-    ConnectionStringName: string;
-    AllowEtlOnNonEncryptedChannel: boolean;
-    TransformationScripts: Array<Raven.Client.ServerWide.ETL.Transformation>;
-} 
-
-interface subscriptionDataFromUI {
-    TaskName: string;
-    Query: string;
-    ChangeVector: Raven.Client.Constants.Documents.SubscriptionChangeVectorSpecialStates | string;
-} 
-
 interface layoutable {
     x: number;
     y: number;
@@ -329,7 +313,7 @@ interface indexStalenessReasonsResponse {
 
 
 interface autoCompleteWordList {
-    caption?: string; 
+    caption: string; 
     value: string; 
     snippet?: string; 
     score: number; 
@@ -338,7 +322,6 @@ interface autoCompleteWordList {
 
 interface autoCompleteLastKeyword {
     info: rqlQueryInfo, 
-    keywordsBefore: string[],
     keyword: string,
     asSpecified: boolean,
     notSpecified: boolean,
@@ -370,4 +353,8 @@ type rqlQueryType = "Select" | "Update";
 
 type autoCompleteCompleter = (editor: AceAjax.Editor, session: AceAjax.IEditSession, pos: AceAjax.Position, prefix: string, callback: (errors: any[], wordlist: autoCompleteWordList[]) => void) => void;
 type certificateMode = "generate" | "upload" | "editExisting";
-    
+
+type dbCreationMode = "newDatabase" | "restore" | "legacyMigration";
+
+type legacySourceType = "ravendb" | "ravenfs";
+type legacyEncryptionAlgorithms = "DES" | "RC2" | "Rijndael" | "Triple DES";

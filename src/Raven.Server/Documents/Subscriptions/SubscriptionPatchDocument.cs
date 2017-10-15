@@ -8,10 +8,10 @@ namespace Raven.Server.Documents.Subscriptions
     public class SubscriptionPatchDocument : ScriptRunnerCache.Key
     {
         public readonly string Script;
-        public readonly StringSegment[] DeclaredFunctions;
+        public readonly string[] DeclaredFunctions;
 
 
-        public SubscriptionPatchDocument(string script, StringSegment[] declaredFunctions)
+        public SubscriptionPatchDocument(string script, string[] declaredFunctions)
         {
             Script = script;
             DeclaredFunctions = declaredFunctions;

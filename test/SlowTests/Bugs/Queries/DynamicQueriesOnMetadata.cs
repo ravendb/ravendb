@@ -23,7 +23,7 @@ namespace SlowTests.Bugs.Queries
                 using (var s = store.OpenSession())
                 {
                     var glasses = s.Advanced.DocumentQuery<Glass>()
-                        .WhereEquals("@metadata.Is-Nice", true)
+                        .WhereEquals("@metadata.'Is-Nice'", true)
                         .ToArray();
                     Assert.NotEmpty(glasses);
                 }

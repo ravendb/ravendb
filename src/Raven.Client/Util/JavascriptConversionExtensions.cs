@@ -157,7 +157,7 @@ namespace Raven.Client.Util
                 }
             }
 
-            private static bool IsCollection(Type type)
+            public static bool IsCollection(Type type)
             {
                 if (type.GetGenericArguments().Length == 0)
                     return false;
@@ -185,6 +185,75 @@ namespace Raven.Client.Util
                 }
             }
         }
+
+        public class IgnoreTransparentParameter : JavascriptConversionExtension
+        {
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                if (!(context.Node is MemberExpression member))
+                    return;
+
+                if (member.Expression is MemberExpression innerMember
+                    && innerMember.Member.Name.StartsWith("<>h__TransparentIdentifier"))
+                {
+                    context.PreventDefault();
+
+                    var writer = context.GetWriter();
+                    using (writer.Operation(innerMember))
+                    {
+                        writer.Write($"{member.Member.Name}");
+                    }
+
+                }
+
+                if (member.Expression is ParameterExpression parameter && parameter.Name.StartsWith("<>h__TransparentIdentifier"))
+                {
+                    context.PreventDefault();
+
+                    if (member.Member.Name.StartsWith("<>h__TransparentIdentifier"))
+                        return;
+
+                    var writer = context.GetWriter();
+
+                    using (writer.Operation(parameter))
+                    {
+                        writer.Write($"{member.Member.Name}");
+                    }
+                }
+            }
+        }
+
+        public class InvokeSupport : JavascriptConversionExtension
+        {
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                if (!(context.Node is InvocationExpression invocationExpression))
+                    return;
+
+                context.PreventDefault();
+                context.Visitor.Visit(invocationExpression.Expression);
+
+                var writer = context.GetWriter();
+                using (writer.Operation(invocationExpression))
+                {
+
+                    writer.Write("(");
+
+                    for (var i = 0; i < invocationExpression.Arguments.Count; i++)
+                    {
+                        if (i != 0)
+                        {
+                            writer.Write(", ");
+                        }
+
+                        context.Visitor.Visit(invocationExpression.Arguments[i]);
+                    }
+
+                    writer.Write(")");
+                }
+            }
+        }
+
 
         public class DateTimeSupport : JavascriptConversionExtension
         {

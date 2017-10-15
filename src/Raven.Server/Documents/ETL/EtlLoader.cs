@@ -8,6 +8,7 @@ using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Logging;
 
@@ -237,7 +238,7 @@ namespace Raven.Server.Documents.ETL
             // ReSharper disable once ForCanBeConvertedToForeach
             for (var i = 0; i < _processes.Length; i++)
             {
-                _processes[i].NotifyAboutWork(documentChange);
+                _processes[i].Reset(documentChange);
             }
         }
 
@@ -281,6 +282,23 @@ namespace Raven.Server.Documents.ETL
 
             foreach (var process in old)
                 _database.DocumentTombstoneCleaner.Unsubscribe(process);
+        }
+
+        public void HandleDatabaseValueChanged(DatabaseRecord record)
+        {
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                foreach (var process in _processes)
+                {
+                    var state = _serverStore.Cluster.Read(context, EtlProcessState.GenerateItemName(record.DatabaseName, process.ConfigurationName, process.TransformationName));
+
+                    if (state == null)
+                    {
+                        process.Reset();
+                    }
+                }
+            }
         }
     }
 }

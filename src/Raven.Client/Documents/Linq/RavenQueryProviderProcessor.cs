@@ -11,6 +11,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.Serialization;
 using System.Text;
 using System.Text.RegularExpressions;
 using Lambda2Js;
@@ -18,6 +19,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Spatial;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Session.Tokens;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
 
@@ -46,8 +48,12 @@ namespace Raven.Client.Documents.Linq
         private readonly Parameters _transformerParameters;
         private Expression _groupByElementSelector;
         private string _jsSelectBody;
-        private string[] _jsProjectionNames;
+        private List<string> _jsProjectionNames;
         private string _fromAlias;
+        private StringBuilder _declareBuilder;
+        private DeclareToken _declareToken;
+        private List<LoadToken> _loadTokens;
+        private int _insideLet = 0;
 
         private readonly LinqPathProvider _linqPathProvider;
         /// <summary>
@@ -1207,7 +1213,18 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         {
                             _documentQuery.AddRootType(expression.Arguments[0].Type.GetGenericArguments()[0]);
                         }
+
+                        if (expression.Arguments.Count > 1 && expression.Arguments[1] is UnaryExpression unaryExpression
+                            && unaryExpression.Operand is LambdaExpression lambdaExpression
+                            && lambdaExpression.Body.NodeType == ExpressionType.New
+                            && lambdaExpression.Parameters[0] != null
+                            && lambdaExpression.Parameters[0].Name.StartsWith("<>h__TransparentIdentifier"))
+                        {
+                            _insideLet++;
+                        }
+
                         VisitExpression(expression.Arguments[0]);
+
                         var operand = ((UnaryExpression)expression.Arguments[1]).Operand;
 
                         if (_documentQuery.IsDynamicMapReduce)
@@ -1430,7 +1447,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                             constantValue = $"\"{stringConst}\"";
                             break;
                         default:
-                            constantValue = constantExpression.Value.ToString();
+                            constantValue = constantExpression.Value?.ToString() ?? "null";
                             break;
                     }
 
@@ -1530,15 +1547,62 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     var newExpression = ((NewExpression)body);
                     _newExpressionType = newExpression.Type;
 
+                    if (_insideLet > 0)
+                    {
+                        VisitLet(newExpression);
+                        _insideLet--;
+                        return;
+                    }
+
+                    if (_declareBuilder != null)
+                    {
+                        var js = TranslateSelectBodyToJs(newExpression);
+                        _declareBuilder.Append("\t").Append("return ").Append(js).Append(";");
+
+                        if (_loadTokens != null)
+                        {
+                            //need to add loaded documents 
+                            var paramBuilder = new StringBuilder();
+                            paramBuilder.Append(_fromAlias);
+
+                            for (int i = 0; i < _loadTokens.Count; i++)
+                            {
+                                var alias = _loadTokens[i].Alias.EndsWith("[]")
+                                    ? _loadTokens[i].Alias.Substring(0, _loadTokens[i].Alias.Length - 3)
+                                    : _loadTokens[i].Alias;
+
+                                paramBuilder.Append(", ").Append(alias);
+                            }
+                            _declareToken = DeclareToken.Create("output", _declareBuilder.ToString(), paramBuilder.ToString());
+                            break;
+
+                        }
+
+                        _declareToken = DeclareToken.Create("output", _declareBuilder.ToString(), _fromAlias);
+
+                        break;
+                    }
+
                     for (int index = 0; index < newExpression.Arguments.Count; index++)
                     {
                         var field = newExpression.Arguments[index] as MemberExpression;
                         if (field == null)
                         {
-                            // lambda 2 js
-                            TranslateSelectBodyToJs(newExpression);
+                            if (newExpression.Arguments[index] is ParameterExpression parameter 
+                                && parameter.Name == lambdaExpression?.Parameters[0].Name)
+                                continue;
+
+                            //lambda 2 js
+
+                            if (_fromAlias == null)
+                            {
+                                _fromAlias = lambdaExpression?.Parameters[0].Name;
+                            }
+
+                            _jsProjectionNames = new List<string>();
                             FieldsToFetch = new HashSet<FieldToFetch>();
-                            _fromAlias = lambdaExpression?.Parameters[0].Name;
+
+                            _jsSelectBody = TranslateSelectBodyToJs(newExpression);
 
                             break;
                         }
@@ -1576,9 +1640,57 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
         }
 
-        private void TranslateSelectBodyToJs(NewExpression expression)
+        private void VisitLet(NewExpression expression)
         {
-            _jsProjectionNames = new string[expression.Arguments.Count];
+            if (_insideWhere > 0)
+                throw new NotSupportedException("Queries with a LET clause before a WHERE clause are not supported. " +
+                                                "WHERE clauses should appear before any LET clauses.");
+
+            var name = GetSelectPath(expression.Members[1]);
+            var parameter = expression?.Arguments[0] as ParameterExpression;
+
+            if (expression.Arguments[1] is MethodCallExpression mce && mce.Method.Name == "Load")
+            {
+                //need to add a LOAD token to the query 
+                var arg = ToJs(mce.Arguments[0]);
+
+                if (mce.Arguments[0].Type.IsArray || JavascriptConversionExtensions.LinqMethodsSupport.IsCollection(mce.Arguments[0].Type))
+                {
+                    name += "[]";
+                }
+
+                if (_loadTokens == null)
+                {
+                    _loadTokens = new List<LoadToken>();
+                }
+                _loadTokens.Add(LoadToken.Create(arg, name));
+
+                if (_fromAlias == null)
+                {
+                    _fromAlias = parameter?.Name;
+                }
+
+                return;
+            }
+
+            if (_declareBuilder == null)
+            {
+                _declareBuilder = new StringBuilder();
+                _jsSelectBody = null;
+                _jsProjectionNames = new List<string>();
+                FieldsToFetch = new HashSet<FieldToFetch>();
+                if (_fromAlias == null)
+                {
+                    _fromAlias = parameter?.Name;
+                }
+            }
+
+            var js = ToJs(expression.Arguments[1]);
+            _declareBuilder.Append("\t").Append("var ").Append(name).Append(" = ").Append(js).Append(";").Append(Environment.NewLine);           
+        }
+
+        private string TranslateSelectBodyToJs(NewExpression expression)
+        {
             var sb = new StringBuilder();
 
             sb.Append("{ ");
@@ -1586,19 +1698,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
             for (int index = 0; index < expression.Arguments.Count; index++)
             {
                 var name = GetSelectPath(expression.Members[index]);
-                _jsProjectionNames[index] = name;
 
-                var js = expression.Arguments[index].CompileToJavascript(
-                    new JavascriptCompilationOptions(
-                        new JavascriptConversionExtensions.LinqMethodsSupport(),
-                        new JavascriptConversionExtensions.BooleanSupport(),
-                        new JavascriptConversionExtensions.DateTimeSupport()));
+                _jsProjectionNames.Add(name);
 
-                if (expression.Arguments[index].Type == typeof(TimeSpan) && expression.Arguments[index].NodeType != ExpressionType.MemberAccess)
-                {
-                    //convert milliseconds to a TimeSpan string
-                    js = $"convertJsTimeToTimeSpanString({js})";
-                }
+                var js = ToJs(expression.Arguments[index]);
 
                 if (index > 0)
                 {
@@ -1609,9 +1712,28 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
 
             sb.Append(" }");
-
-            _jsSelectBody = sb.ToString();            
+            return sb.ToString();
         }
+
+        private static string ToJs(Expression expression)
+        {
+            var js = expression.CompileToJavascript(
+                new JavascriptCompilationOptions(
+                    new JavascriptConversionExtensions.LinqMethodsSupport(),
+                    new JavascriptConversionExtensions.BooleanSupport(),
+                    new JavascriptConversionExtensions.IgnoreTransparentParameter(),
+                    new JavascriptConversionExtensions.InvokeSupport(),
+                    new JavascriptConversionExtensions.DateTimeSupport()));
+
+            if (expression.Type == typeof(TimeSpan) && expression.NodeType != ExpressionType.MemberAccess)
+            {
+                //convert milliseconds to a TimeSpan string
+                js = $"convertJsTimeToTimeSpanString({js})";
+            }
+
+            return js;
+        }
+
 
         private void VisitSelectAfterGroupBy(Expression operand, Expression elementSelectorPath)
         {
@@ -1952,14 +2074,20 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             _customizeQuery?.Invoke((IDocumentQueryCustomization)_documentQuery);
 
+
+            if (_declareToken != null)
+            {
+                return documentQuery.SelectFields<T>(new QueryData(new[] { $"output({_declareToken.Parameters})" }, _jsProjectionNames, _fromAlias, _declareToken , _loadTokens , true));
+            }
+
             if (_jsSelectBody != null)
             {
-                return documentQuery.SelectFields<T>(new QueryData(new[] { _jsSelectBody }, _jsProjectionNames, _fromAlias));
+                return documentQuery.SelectFields<T>(new QueryData(new[] { _jsSelectBody }, _jsProjectionNames, _fromAlias, null, _loadTokens , true));
             }
 
             var (fields, projections) = GetProjections();
 
-            return documentQuery.SelectFields<T>(new QueryData(fields, projections, null));
+            return documentQuery.SelectFields<T>(new QueryData(fields, projections, _fromAlias, null , _loadTokens));
         }
 
         /// <summary>
@@ -1985,14 +2113,19 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             _customizeQuery?.Invoke((IDocumentQueryCustomization)asyncDocumentQuery);
 
+            if (_declareToken != null)
+            {
+                return asyncDocumentQuery.SelectFields<T>(new QueryData(new[] { $"output({_declareToken.Parameters})" }, _jsProjectionNames, _fromAlias, _declareToken, _loadTokens, true));
+            }
+
             if (_jsSelectBody != null)
             {
-                return asyncDocumentQuery.SelectFields<T>(new QueryData(new[] { _jsSelectBody }, _jsProjectionNames, _fromAlias));
+                return asyncDocumentQuery.SelectFields<T>(new QueryData(new[] { _jsSelectBody }, _jsProjectionNames, _fromAlias, null , _loadTokens , true));
             }
 
             var (fields, projections) = GetProjections();
 
-            return asyncDocumentQuery.SelectFields<T>(new QueryData(fields, projections, null));
+            return asyncDocumentQuery.SelectFields<T>(new QueryData(fields, projections, _fromAlias, null , _loadTokens));
         }
 
         /// <summary>
@@ -2034,7 +2167,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
         {
             var (fields, projections) = GetProjections();
 
-            var finalQuery = ((IDocumentQuery<T>)_documentQuery).SelectFields<TProjection>(new QueryData(fields, projections, _fromAlias));
+            var finalQuery = ((IDocumentQuery<T>)_documentQuery).SelectFields<TProjection>(new QueryData(fields, projections, _fromAlias, _declareToken , _loadTokens , _declareToken !=null || _jsSelectBody !=null));
 
             //no reason to override a value that may or may not exist there
             if (!String.IsNullOrEmpty(_resultsTransformer))
@@ -2043,7 +2176,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             var executeQuery = GetQueryResult(finalQuery);
 
-            var queryResult = finalQuery.QueryResult;
+            var queryResult = finalQuery.GetQueryResult();
             _afterQueryExecuted?.Invoke(queryResult);
             return executeQuery;
         }
@@ -2078,7 +2211,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         if (finalQuery.IsDistinct)
                             throw new NotSupportedException("RavenDB does not support mixing Distinct & Count together.\r\n" +
                                                             "See: https://groups.google.com/forum/#!searchin/ravendb/CountDistinct/ravendb/yKQikUYKY5A/nCNI5oQB700J");
-                        var qr = finalQuery.QueryResult;
+                        var qr = finalQuery.GetQueryResult();
                         if (_queryType != SpecialQueryType.Count)
                             return (long)qr.TotalResults;
                         return qr.TotalResults;

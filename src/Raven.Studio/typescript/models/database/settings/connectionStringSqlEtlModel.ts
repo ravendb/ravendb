@@ -6,6 +6,7 @@ class connectionStringSqlEtlModel {
     connectionString = ko.observable<string>();     
     
     validationGroup: KnockoutValidationGroup;
+    testConnectionValidationGroup: KnockoutValidationGroup;
 
     constructor(dto: Raven.Client.ServerWide.ETL.SqlConnectionString) {
         this.update(dto);
@@ -30,6 +31,10 @@ class connectionStringSqlEtlModel {
             connectionStringName: this.connectionStringName,
             connectionString: this.connectionString
         });
+
+        this.testConnectionValidationGroup = ko.validatedObservable({
+            connectionString: this.connectionString
+        })
     }
 
     static empty(): connectionStringSqlEtlModel {

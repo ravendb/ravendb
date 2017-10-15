@@ -4,16 +4,13 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import database = require("models/resources/database");
 import databaseInfo = require("models/resources/info/databaseInfo");
 import ongoingTasksCommand = require("commands/database/tasks/getOngoingTasksCommand");
-import ongoingTaskReplication = require("models/database/tasks/ongoingTaskReplicationModel");
-import ongoingTaskBackup = require("models/database/tasks/ongoingTaskBackupModel");
-import ongoingTaskEtl = require("models/database/tasks/ongoingTaskRavenEtlModel");
-import ongoingTaskSql = require("models/database/tasks/ongoingTaskSqlEtlModel");
-import ongoingTaskSubscription = require("models/database/tasks/ongoingTaskSubscriptionModel");
+import ongoingTaskReplicationListModel = require("models/database/tasks/ongoingTaskReplicationListModel");
+import ongoingTaskBackupListModel = require("models/database/tasks/ongoingTaskBackupListModel");
+import ongoingTaskRavenEtlListModel = require("models/database/tasks/ongoingTaskRavenEtlListModel");
+import ongoingTaskSqlEtlListModel = require("models/database/tasks/ongoingTaskSqlEtlListModel");
+import ongoingTaskSubscriptionListModel = require("models/database/tasks/ongoingTaskSubscriptionListModel");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import createOngoingTask = require("viewmodels/database/tasks/createOngoingTask");
-import deleteOngoingTaskConfirm = require("viewmodels/database/tasks/deleteOngoingTaskConfirm");
-import enableOngoingTaskConfirm = require("viewmodels/database/tasks/enableOngoingTaskConfirm");
-import disableOngoingTaskConfirm = require("viewmodels/database/tasks/disableOngoingTaskConfirm");
 import ongoingTaskModel = require("models/database/tasks/ongoingTaskModel");
 import deleteOngoingTaskCommand = require("commands/database/tasks/deleteOngoingTaskCommand");
 import toggleOngoingTaskCommand = require("commands/database/tasks/toggleOngoingTaskCommand");
@@ -32,17 +29,19 @@ class ongoingTasks extends viewModelBase {
     private graph = new databaseGroupGraph();
 
     // The Ongoing Tasks Lists:
-    replicationTasks = ko.observableArray<ongoingTaskReplication>(); 
-    etlTasks = ko.observableArray<ongoingTaskEtl>();
-    sqlTasks = ko.observableArray<ongoingTaskSql>();
-    backupTasks = ko.observableArray<ongoingTaskBackup>();
-    subscriptionTasks = ko.observableArray<ongoingTaskSubscription>();
+    replicationTasks = ko.observableArray<ongoingTaskReplicationListModel>(); 
+    etlTasks = ko.observableArray<ongoingTaskRavenEtlListModel>();
+    sqlTasks = ko.observableArray<ongoingTaskSqlEtlListModel>();
+    backupTasks = ko.observableArray<ongoingTaskBackupListModel>();
+    subscriptionTasks = ko.observableArray<ongoingTaskSubscriptionListModel>();
 
     existingTaskTypes = ko.observableArray<string>();
     selectedTaskType = ko.observable<string>();
 
     existingNodes = ko.observableArray<string>();
     selectedNode = ko.observable<string>();
+
+    connectionStringsUrl = appUrl.forCurrentDatabase().connectionStrings();
     
     constructor() {
         super();
@@ -124,23 +123,23 @@ class ongoingTasks extends viewModelBase {
 
             switch (task.TaskType) {
                 case 'Replication':
-                    this.replicationTasks.push(new ongoingTaskReplication(task as Raven.Client.ServerWide.Operations.OngoingTaskReplication, true));
+                    this.replicationTasks.push(new ongoingTaskReplicationListModel(task as Raven.Client.ServerWide.Operations.OngoingTaskReplication));
                     taskTypesSet.add("External Replication");
                     break;
                 case 'Backup':
-                    this.backupTasks.push(new ongoingTaskBackup(task as Raven.Client.ServerWide.Operations.OngoingTaskBackup, true));
+                    this.backupTasks.push(new ongoingTaskBackupListModel(task as Raven.Client.ServerWide.Operations.OngoingTaskBackup));
                     taskTypesSet.add("Backup");
                     break;
                 case 'RavenEtl':
-                    this.etlTasks.push(new ongoingTaskEtl(task as Raven.Client.ServerWide.Operations.OngoingTaskRavenEtl, true));
+                    this.etlTasks.push(new ongoingTaskRavenEtlListModel(task as Raven.Client.ServerWide.Operations.OngoingTaskRavenEtlListView));
                     taskTypesSet.add("RavenDB ETL");
                     break;
                 case 'SqlEtl':
-                    this.sqlTasks.push(new ongoingTaskSql(task as Raven.Client.ServerWide.Operations.OngoingTaskSqlEtl, true));
+                    this.sqlTasks.push(new ongoingTaskSqlEtlListModel(task as Raven.Client.ServerWide.Operations.OngoingTaskSqlEtlListView));
                     taskTypesSet.add("SQL ETL");
                     break;
                 case 'Subscription': 
-                    this.subscriptionTasks.push(new ongoingTaskSubscription(task as Raven.Client.ServerWide.Operations.OngoingTaskSubscription, true)); 
+                    this.subscriptionTasks.push(new ongoingTaskSubscriptionListModel(task as Raven.Client.ServerWide.Operations.OngoingTaskSubscription)); 
                     taskTypesSet.add("Subscription");
                     break;
             };
@@ -163,47 +162,40 @@ class ongoingTasks extends viewModelBase {
     confirmEnableOngoingTask(model: ongoingTaskModel) {
         const db = this.activeDatabase();
 
-        const confirmEnableViewModel = new enableOngoingTaskConfirm(db, model.taskType(), model.taskId); 
-        app.showBootstrapDialog(confirmEnableViewModel);
-        confirmEnableViewModel.result.done(result => {
-            if (result.can) {
-                new toggleOngoingTaskCommand(db, model.taskType(), model.taskId, model.taskName(), false)
-                    .execute()
-                    .done(() => {
-                        return model.taskState('Enabled');
-                    })
-                    .always(() => this.fetchOngoingTasks());
-            }
-        });
+        this.confirmationMessage("Enable Task", "You're enabling task of type: " + model.taskType(), ["Cancel", "Enable"])
+            .done(result => {
+                if (result.can) {
+                    new toggleOngoingTaskCommand(db, model.taskType(), model.taskId, model.taskName(), false)
+                        .execute()
+                        .done(() => model.taskState('Enabled'))
+                        .always(() => this.fetchOngoingTasks());
+                }
+            });
     }
 
     confirmDisableOngoingTask(model: ongoingTaskModel) {
         const db = this.activeDatabase();
 
-        const confirmDisableViewModel = new disableOngoingTaskConfirm(db, model.taskType(), model.taskId);
-        app.showBootstrapDialog(confirmDisableViewModel);
-        confirmDisableViewModel.result.done(result => {
-            if (result.can) {
-                new toggleOngoingTaskCommand(db, model.taskType(), model.taskId, model.taskName(), true)
-                    .execute()
-                    .done(() => {
-                        return model.taskState('Disabled');
-                    })
-                    .always(() => this.fetchOngoingTasks());
-            }
-        });
+        this.confirmationMessage("Disable Task", "You're disabling task of type: " + model.taskType(), ["Cancel", "Disable"])
+            .done(result => {
+                if (result.can) {
+                    new toggleOngoingTaskCommand(db, model.taskType(), model.taskId, model.taskName(), true)
+                        .execute()
+                        .done(() => model.taskState('Disabled'))
+                        .always(() => this.fetchOngoingTasks());
+                }
+            });
     }
 
     confirmRemoveOngoingTask(model: ongoingTaskModel) {
         const db = this.activeDatabase();
 
-        const confirmDeleteViewModel = new deleteOngoingTaskConfirm(db, model.taskType(), model.taskId);
-        app.showBootstrapDialog(confirmDeleteViewModel);
-        confirmDeleteViewModel.result.done(result => {
-            if (result.can) {
-                this.deleteOngoingTask(db, model);
-            }
-        });
+        this.confirmationMessage("Delete Task", "You're deleting task of type: " + model.taskType(), ["Cancel", "Delete"])
+            .done(result => {
+                if (result.can) {
+                    this.deleteOngoingTask(db, model);
+                }
+            });
     }
 
     private deleteOngoingTask(db: database, model: ongoingTaskModel) {

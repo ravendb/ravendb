@@ -23,6 +23,14 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             dynamicHash: appUrls.connectionStrings,
             enabled: accessHelper.isGlobalAdmin
         }),
+        new leafMenuItem({
+            route: 'databases/settings/clientConfiguration',
+            moduleId: 'viewmodels/database/settings/clientConfiguration',
+            title: 'Client Configuration',
+            nav: true,
+            css: 'icon-client-configuration',
+            dynamicHash: appUrls.clientConfiguration
+        }),
         /* TODO
         new leafMenuItem({
             route: 'databases/settings/quotas',
@@ -41,12 +49,12 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             dynamicHash: appUrls.revisions
         }),
         new leafMenuItem({
-            route: 'databases/settings/clientConfiguration',
-            moduleId: 'viewmodels/database/settings/clientConfiguration',
-            title: 'Client Configuration',
+            route: 'databases/settings/expiration',
+            moduleId: 'viewmodels/database/settings/expiration',
+            title: 'Document Expiration',
             nav: true,
-            css: 'icon-client-configuration',
-            dynamicHash: appUrls.clientConfiguration
+            css: 'icon-plus',
+            dynamicHash: appUrls.expiration
         }),
         new leafMenuItem({
             route: 'databases/manageDatabaseGroup',
@@ -100,12 +108,20 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             itemRouteToHighlight: 'databases/tasks/ongoingTasks'
         }),
         new leafMenuItem({
-            route: 'databases/tasks/importDatabase',
-            moduleId: 'viewmodels/database/tasks/importDatabase',
+            route: 'databases/tasks/editSqlEtlTask',
+            moduleId: 'viewmodels/database/tasks/editSqlEtlTask',
+            title: 'SQL ETL Task',
+            nav: false,
+            dynamicHash: appUrls.editSqlEtlTaskUrl,
+            itemRouteToHighlight: 'databases/tasks/ongoingTasks'
+        }),
+        new leafMenuItem({
+            route: 'databases/tasks/import*details',
+            moduleId: 'viewmodels/database/tasks/importParent',
             title: 'Import Database',
             nav: true,
             css: 'icon-import-database',
-            dynamicHash: appUrls.importDatabaseUrl
+            dynamicHash: appUrls.importDatabaseFromFileUrl
         }),
         new leafMenuItem({
             route: 'databases/tasks/exportDatabase',
@@ -114,14 +130,6 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-export-database',
             dynamicHash: appUrls.exportDatabaseUrl
-        }),
-        new leafMenuItem({
-            route: 'databases/tasks/migrateDatabase',
-            moduleId: 'viewmodels/database/tasks/migrateDatabase',
-            title: 'Migrate Database',
-            nav: true,
-            css: 'icon-import-database', //TODO-new icon
-            dynamicHash: appUrls.migrateDatabaseUrl
         }),
         new leafMenuItem({
             route: 'databases/tasks/sampleData',

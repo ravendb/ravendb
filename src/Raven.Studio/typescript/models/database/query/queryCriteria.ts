@@ -24,7 +24,8 @@ class queryCriteria {
     
     private initValidation() {
         this.queryText.extend({
-            aceValidation: true
+            // We want to be able to send invalid queryies in order to get the server side error as well.
+            // aceValidation: true
         });
         
         this.validationGroup = ko.validatedObservable({

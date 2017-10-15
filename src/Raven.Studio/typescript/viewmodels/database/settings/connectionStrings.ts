@@ -8,6 +8,7 @@ import saveConnectionStringCommand = require("commands/database/settings/saveCon
 import getConnectionStringsCommand = require("commands/database/settings/getConnectionStringsCommand");
 import getConnectionStringInfoCommand = require("commands/database/settings/getConnectionStringInfoCommand");
 import deleteConnectionStringCommand = require("commands/database/settings/deleteConnectionStringCommand");
+import testSqlConnectionStringCommand = require("commands/database/cluster/testSqlConnectionStringCommand");
 import eventsCollector = require("common/eventsCollector");
 import generalUtils = require("common/generalUtils");
 
@@ -145,8 +146,21 @@ class connectionStrings extends viewModelBase {
                     .always(() => this.spinners.test(false));
             } 
         }
+        
+        const sqlConnectionString = this.editedSqlEtlConnectionString();
+        
+        if (sqlConnectionString) {
+            if (this.isValid(sqlConnectionString.testConnectionValidationGroup)) {
+                eventsCollector.default.reportEvent("ravenDB-SQL-connection-string", "test-connection");
 
-        // TODO: test connection for sql ... will be done with issue 7128
+                this.spinners.test(true);
+
+                new testSqlConnectionStringCommand(this.activeDatabase(), sqlConnectionString.connectionString())
+                    .execute()
+                    .done(result => this.testConnectionResult(result))
+                    .always(() => this.spinners.test(false));
+            }
+        }
     }
     
     onCloseEdit() {

@@ -5,7 +5,7 @@ import document = require("models/database/documents/document");
 
 class testSubscriptionTaskCommand extends commandBase {
 
-    constructor(private db: database, private subscriptionSettings: subscriptionDataFromUI, private resultsLimit: number) {
+    constructor(private db: database, private payload: Raven.Client.Documents.Subscriptions.SubscriptionTryout, private resultsLimit: number) {
         super();
     }
 
@@ -24,12 +24,7 @@ class testSubscriptionTaskCommand extends commandBase {
 
         const testTask = $.Deferred<pagedResult<document>>();
 
-        const subscriptionToTest: Raven.Client.Documents.Subscriptions.SubscriptionTryout = {
-            ChangeVector: this.subscriptionSettings.ChangeVector,
-            Query: this.subscriptionSettings.Query
-        };
-
-        this.post(url, JSON.stringify(subscriptionToTest), this.db)
+        this.post(url, JSON.stringify(this.payload), this.db)
             .done((dto: resultsDto<documentDto>) => { 
 
                 const result = {

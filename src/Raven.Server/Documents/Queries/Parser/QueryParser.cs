@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Esprima;
 using Raven.Client.Documents.Linq;
+using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries.AST;
 using Sparrow;
 
@@ -74,7 +76,16 @@ namespace Raven.Server.Documents.Queries.Parser
                     if (Scanner.FunctionBody() == false)
                         ThrowParseException("Update clause must have a single function body");
 
-                    q.UpdateBody = new StringSegment(Scanner.Input, functionStart, Scanner.Position - functionStart);
+                    q.UpdateBody = Scanner.Input.Substring(functionStart, Scanner.Position - functionStart);
+                    try
+                    {
+                        // validate the js code
+                        ValidateScript("function test()" + q.UpdateBody);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new InvalidQueryException("Update clause contains invalid script",Scanner.Input,e);
+                    }
                     break;
                 default:
                     ThrowUnknownQueryType(queryType);
@@ -85,6 +96,12 @@ namespace Raven.Server.Documents.Queries.Parser
                 ThrowParseException("Expected end of query");
 
             return q;
+        }
+
+        private static void ValidateScript(string script)
+        {
+            var javaScriptParser = new JavaScriptParser(script);
+            javaScriptParser.ParseProgram();
         }
 
         private static void ThrowUnknownQueryType(QueryType queryType)
@@ -114,7 +131,7 @@ namespace Raven.Server.Documents.Queries.Parser
             return includes;
         }
 
-        private (StringSegment Name, StringSegment FunctionText) DeclaredFunction()
+        private (StringSegment Name, string FunctionText) DeclaredFunction()
         {
             // becuase of how we are processing them, we don't actually care for
             // parsing the function directly. We have implemented a minimal parser
@@ -144,7 +161,17 @@ namespace Raven.Server.Documents.Queries.Parser
             if (Scanner.FunctionBody() == false)
                 ThrowParseException("Unable to get function body for " + name);
 
-            return (name, new StringSegment(Scanner.Input, functionStart, Scanner.Position - functionStart));
+            var functionText = Scanner.Input.Substring(functionStart, Scanner.Position - functionStart);
+            // validate this function
+            try
+            {
+                ValidateScript(functionText);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidQueryException("Invalid script inside function " + name, Scanner.Input,e);
+            }
+            return (name, functionText);
         }
 
         private List<FieldExpression> GroupBy()
@@ -230,8 +257,18 @@ namespace Raven.Server.Documents.Queries.Parser
             var functionStart = Scanner.Position;
             if (Scanner.FunctionBody())
             {
-                query.SelectFunctionBody = new StringSegment(Scanner.Input,
-                    functionStart, Scanner.Position - functionStart);
+                query.SelectFunctionBody = 
+                    Scanner.Input.Substring(functionStart, Scanner.Position - functionStart);
+
+                // validate that this is valid JS code
+                try
+                {
+                    ValidateScript("return " + query.SelectFunctionBody);
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidQueryException("Select clause contains invalid script", Scanner.Input, e);
+                }
 
                 return new List<(QueryExpression, StringSegment?)>();
             }
@@ -806,7 +843,9 @@ namespace Raven.Server.Documents.Queries.Parser
                     }
                 }
 
-                if (Scanner.TryScan('['))
+                bool? hasNextPart = null;
+
+                while (Scanner.TryScan('['))
                 {
                     switch (Scanner.TryNumber())
                     {
@@ -826,16 +865,23 @@ namespace Raven.Server.Documents.Queries.Parser
                             ThrowParseException("Array indexer must be integer, but got double");
                             break;
                     }
+
+                    hasNextPart = Scanner.TryScan('.');
                 }
+
+                if (hasNextPart == true)
+                    continue;
 
                 if (Scanner.TryScan('.') == false)
                     break;
             }
+            
 
             token = new FieldExpression(parts)
             {
                 IsQuoted = quoted
             };
+
             return true;
         }
 

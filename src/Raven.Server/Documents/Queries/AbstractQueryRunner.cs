@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Queries
         public abstract Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token);
 
         public abstract Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response,
-            BlittableJsonTextWriter writer, OperationCancelToken token);
+            IStreamDocumentQueryResultWriter writer, OperationCancelToken token);
 
         public abstract Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext context, long? existingResultEtag, OperationCancelToken token);
 

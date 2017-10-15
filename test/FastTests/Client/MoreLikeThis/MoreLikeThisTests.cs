@@ -9,7 +9,6 @@ using Lucene.Net.Analysis.Standard;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.MoreLikeThis;
-using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace FastTests.Client.MoreLikeThis
@@ -417,7 +416,7 @@ namespace FastTests.Client.MoreLikeThis
                             Boost = true
                         });
 
-                    Assert.NotEqual(0, list.Count());
+                    Assert.NotEqual(0, list.Count);
                     Assert.Equal("I have a test tomorrow.", list[0].Body);
                 }
             }
@@ -471,7 +470,7 @@ namespace FastTests.Client.MoreLikeThis
             }
         }
 
-        [Fact(Skip = "RavenDB-6092 Support artificial documents on MoreLikeThisQuery")]
+        [Fact]
         public void CanMakeDynamicDocumentQueries()
         {
             using (var store = GetDocumentStore())
@@ -490,7 +489,7 @@ namespace FastTests.Client.MoreLikeThis
 
                 using (var session = store.OpenSession())
                 {
-                    /*var list = session.Advanced.MoreLikeThis<Data, DataIndex>(
+                    var list = session.Advanced.MoreLikeThis<Data, DataIndex>(
                         new MoreLikeThisQuery
                         {
                             Document = "{ \"Body\": \"A test\" }",
@@ -499,12 +498,12 @@ namespace FastTests.Client.MoreLikeThis
                             MinimumDocumentFrequency = 1
                         });
     
-                    Assert.Equal(7, list.Count());*/
+                    Assert.Equal(7, list.Count());
                 }
             }
         }
 
-        [Fact(Skip = "RavenDB-6092 Support artificial documents on MoreLikeThisQuery")]
+        [Fact]
         public void CanMakeDynamicDocumentQueriesWithComplexProperties()
         {
             using (var store = GetDocumentStore())
@@ -527,7 +526,7 @@ namespace FastTests.Client.MoreLikeThis
 
                 using (var session = store.OpenSession())
                 {
-                    /*var list = session.Advanced.MoreLikeThis<ComplexData, ComplexDataIndex>(
+                    var list = session.Advanced.MoreLikeThis<ComplexData, ComplexDataIndex>(
                         new MoreLikeThisQuery
                         {
                             Document = "{ \"Property\": { \"Body\": \"test\" } }",
@@ -535,7 +534,7 @@ namespace FastTests.Client.MoreLikeThis
                             MinimumDocumentFrequency = 1
                         });
     
-                    Assert.Equal(1, list.Count());*/
+                    Assert.Equal(1, list.Count);
                 }
             }
         }

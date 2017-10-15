@@ -300,8 +300,13 @@
 }
 
 .sql-tables-list {
-    .item {
-    }
+    max-height: 500px;
+    overflow: auto;
+}
+
+.transformation-scripts-list {
+    max-height: 500px;
+    overflow: auto;
 }
 
 .collection-list {
@@ -357,7 +362,7 @@
     margin-left: auto;
 }
 
-.etl-collections {
+.etl-collections, .transformation-scripts-list {
 
     .collection-color-0 {
         color: #a6e20e;

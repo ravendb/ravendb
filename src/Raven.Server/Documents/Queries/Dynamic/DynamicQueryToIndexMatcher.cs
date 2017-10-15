@@ -252,7 +252,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 if (explanations != null)
                 {
-                    var extraFields = definition.GroupByFields.Where(x => query.GroupByFields.Select(y => y.Value.Name).Contains(x.Key) == false);
+                    var extraFields = definition.GroupByFields.Where(x => query.GroupByFields.Select(y => y.Value.Name.Value).Contains(x.Key) == false);
                     explanations.Add(new Explanation(indexName, $"Index {indexName} has additional group by fields: {string.Join(", ", extraFields)}"));
                 }
 

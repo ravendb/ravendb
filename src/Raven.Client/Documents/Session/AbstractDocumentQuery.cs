@@ -79,6 +79,10 @@ namespace Raven.Client.Documents.Session
 
         protected readonly FromToken FromToken;
 
+        protected readonly DeclareToken DeclareToken;
+
+        protected readonly List<LoadToken> LoadTokens;
+
         protected internal FieldsToFetchToken FieldsToFetchToken;
 
         protected LinkedList<QueryToken> WhereTokens = new LinkedList<QueryToken>();
@@ -166,6 +170,8 @@ namespace Raven.Client.Documents.Session
                                      string indexName,
                                      string collectionName,
                                      bool isGroupBy,
+                                     DeclareToken declareToken,
+                                     List<LoadToken> loadTokens,
                                      string fromAlias = null)
         {
             IsGroupBy = isGroupBy;
@@ -173,6 +179,10 @@ namespace Raven.Client.Documents.Session
             CollectionName = collectionName;
 
             FromToken = FromToken.Create(indexName, collectionName, fromAlias);
+
+            DeclareToken = declareToken;
+
+            LoadTokens = loadTokens;
 
             TheSession = session;
             AfterQueryExecuted(UpdateStatsAndHighlightings);
@@ -948,10 +958,12 @@ If you really want to do in memory filtering on the data returned from the query
 
             var queryText = new StringBuilder();
 
+            BuildDeclare(queryText);
             BuildFrom(queryText);
             BuildGroupBy(queryText);
             BuildWhere(queryText);
             BuildOrderBy(queryText);
+            BuildLoad(queryText);
             BuildSelect(queryText);
             BuildInclude(queryText);
 
@@ -1134,6 +1146,26 @@ If you really want to do in memory filtering on the data returned from the query
             FromToken.WriteTo(writer);
         }
 
+        private void BuildDeclare(StringBuilder writer)
+        {
+            DeclareToken?.WriteTo(writer);
+        }
+
+        private void BuildLoad(StringBuilder writer)
+        {
+            if (LoadTokens == null || LoadTokens.Count == 0)
+                return;
+
+            writer.Append(" LOAD ");
+
+            for (int i = 0; i < LoadTokens.Count; i++)
+            {
+                if (i != 0)
+                    writer.Append(", ");
+                LoadTokens[i].WriteTo(writer);
+            }
+        }
+
         private void BuildWhere(StringBuilder writer)
         {
             if (WhereTokens.Count == 0)
@@ -1310,7 +1342,7 @@ If you really want to do in memory filtering on the data returned from the query
         private string EnsureValidFieldName(string fieldName, bool isNestedPath)
         {
             if (TheSession?.Conventions == null || isNestedPath || IsGroupBy)
-                return EscapeIfNecessary(fieldName);
+                return QueryFieldUtil.EscapeIfNecessary(fieldName);
 
             foreach (var rootType in RootTypes)
             {
@@ -1321,41 +1353,7 @@ If you really want to do in memory filtering on the data returned from the query
                 }
             }
 
-            return EscapeIfNecessary(fieldName);
-
-            string EscapeIfNecessary(string name)
-            {
-                if (string.IsNullOrEmpty(name))
-                    return name;
-
-                var escape = false;
-                for (var i = 0; i < name.Length; i++)
-                {
-                    var c = name[i];
-
-                    if (i == 0)
-                    {
-                        if (char.IsLetter(c) == false && c != '_' && c != '@')
-                        {
-                            escape = true;
-                            break;
-                        }
-                    }
-                    else
-                    {
-                        if (char.IsLetterOrDigit(c) == false && c != '_' && c != '@' && c != '.' && c != '[' && c != ']')
-                        {
-                            escape = true;
-                            break;
-                        }
-                    }
-                }
-
-                if (escape)
-                    return $"'{name}'";
-
-                return name;
-            }
+            return QueryFieldUtil.EscapeIfNecessary(fieldName);
         }
 
         private static Func<object, string> GetImplicitStringConversion(Type type)

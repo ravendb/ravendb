@@ -7,11 +7,13 @@ import getPeriodicBackupConfigurationCommand = require("commands/database/tasks/
 import testPeriodicBackupCredentialsCommand = require("commands/database/tasks/testPeriodicBackupCredentialsCommand");
 import popoverUtils = require("common/popoverUtils");
 import backupSettings = require("models/database/tasks/periodicBackup/backupSettings");
+import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
 
 class editPeriodicBackupTask extends viewModelBase {
 
     configuration = ko.observable<periodicBackupConfiguration>();
     isAddingNewBackupTask = ko.observable<boolean>(true);
+    possibleMentors = ko.observableArray<string>([]);
 
     constructor() {
         super();
@@ -39,26 +41,39 @@ class editPeriodicBackupTask extends viewModelBase {
                     
                     router.navigate(appUrl.forOngoingTasks(this.activeDatabase()));
                 });
-        }
-        else {
+        } else {
             // 2. Creating a new task
             this.isAddingNewBackupTask(true);
 
             this.configuration(periodicBackupConfiguration.empty());
             deferred.resolve();
         }
+        
+        deferred
+            .done(() => {
+                this.dirtyFlag = this.configuration().dirtyFlag;
+            });
 
-        return deferred;
+        return $.when<any>(deferred, this.loadPossibleMentors());
+    }
+
+    private loadPossibleMentors() {
+        return new getPossibleMentorsCommand(this.activeDatabase().name)
+            .execute()
+            .done(mentors => this.possibleMentors(mentors));
     }
 
     compositionComplete() {
         super.compositionComplete();
+
+        $('.edit-backup [data-toggle="tooltip"]').tooltip();
+        
         document.getElementById("taskName").focus();
     }
 
     attached() {
         super.attached();
-
+        
         popoverUtils.longWithHover($("#backup-info"),
             {
                 content: 
@@ -133,14 +148,14 @@ class editPeriodicBackupTask extends viewModelBase {
         popoverUtils.longWithHover($("#ftp-host-info"),
             {
                 content:
-                    "To specify the server protocol, prepend the host with protocol identifier (ftp and ftps are supported).<br>" +
-                    "If no protocol is specified the default one (ftp://) will be used.<br>" +
+                    "To specify the server protocol, prepend the host with protocol identifier (ftp and ftps are supported).<br />" +
+                    "If no protocol is specified the default one (ftp://) will be used.<br />" +
                     "You can also enter a complete URL e.g. <strong>ftp://host.name:port/backup-folder/nested-backup-folder</strong>"
             });
     }
 
     private textForPopover(storageName: string): string {
-        return `${storageName} should be created manually in order for this backup to work.<br> ` +
+        return `${storageName} should be created manually in order for this backup to work.<br /> ` +
             "You can use the 'Test credentials' button to verify its existance.";
     }
 
@@ -153,7 +168,10 @@ class editPeriodicBackupTask extends viewModelBase {
 
         new savePeriodicBackupConfigurationCommand(this.activeDatabase(), dto)
             .execute()
-            .done(() => this.goToOngoingTasksView());
+            .done(() => {
+                this.dirtyFlag().reset();
+                this.goToOngoingTasksView();
+            });
     }
 
     testCredentials(bs: backupSettings) {

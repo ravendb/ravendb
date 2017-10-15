@@ -42,10 +42,10 @@ namespace Raven.Server.Documents.Queries.Dynamic
             return Task.FromResult(result);
         }
 
-        public override Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, BlittableJsonTextWriter writer,
+        public override Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamDocumentQueryResultWriter writer,
             OperationCancelToken token)
         {
-            using (var result = new StreamDocumentQueryResult(response, writer, documentsContext))
+            using (var result = new StreamDocumentQueryResult(response, writer))
             {
                 documentsContext.OpenReadTransaction();
 

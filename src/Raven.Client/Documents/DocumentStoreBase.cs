@@ -73,6 +73,7 @@ namespace Raven.Client.Documents
         /// </summary>
         public virtual Task ExecuteIndexAsync(AbstractIndexCreationTask task, CancellationToken token = default(CancellationToken))
         {
+            AssertInitialized();
             return task.ExecuteAsync(this, Conventions, token);
         }
 
@@ -89,6 +90,7 @@ namespace Raven.Client.Documents
         /// </summary>
         public virtual Task ExecuteIndexesAsync(IEnumerable<AbstractIndexCreationTask> tasks, CancellationToken token = default(CancellationToken))
         {
+            AssertInitialized();
             var indexesToAdd = IndexCreation.CreateIndexesToAdd(tasks, Conventions);
 
             return Admin.SendAsync(new PutIndexesOperation(indexesToAdd), token);

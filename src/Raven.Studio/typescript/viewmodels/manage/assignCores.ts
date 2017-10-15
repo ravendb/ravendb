@@ -6,6 +6,10 @@ class assignCores extends dialogViewModelBase {
     availableCores = ko.observable<number>();
     numberOfCores = ko.observable<number>();
 
+    warningText = ko.pureComputed(() => {
+        return this.assignedCores() ? this.assignedCores() + " cores will be leased from license limits." : "";
+    });
+
     validationGroup: KnockoutValidationGroup = ko.validatedObservable({
         assignedCores: this.assignedCores
     });
@@ -14,24 +18,35 @@ class assignCores extends dialogViewModelBase {
         save: ko.observable<boolean>(false)
     };
 
-    constructor(private nodeTag: string, assignedCores: number, availableCores: number, numberOfCores: number) {
+    constructor(private nodeTag: string, assignedCores: number, remainingCoresToAssign: number, numberOfCores: number) {
         super();
 
+        const maxCoresAccordingToLicense = assignedCores + remainingCoresToAssign;
+
         this.assignedCores(assignedCores);
-        this.availableCores(availableCores);
+        this.availableCores(remainingCoresToAssign);
         this.numberOfCores(numberOfCores);
 
         this.assignedCores.extend({
             required: true,
-            min: 1
+            min: 1,
+            validation: [
+                {
+                    validator: (num: number) => num <= this.numberOfCores(),
+                    message: "Number exceeds max cores on node"
+                },
+                {
+                    validator: (num: number) => num <= maxCoresAccordingToLicense,
+                    message: "Number exceeds license limit"
+                }
+            ]
         });
     }
 
     save() {
-        //TODO: http://issues.hibernatingrhinos.com/issue/RavenDB-8482
-        //if (this.isValid(this.validationGroup)) {
-        //    return;
-        //}
+
+        if (!this.isValid(this.validationGroup)) 
+            return;
 
         this.spinners.save(true);
 

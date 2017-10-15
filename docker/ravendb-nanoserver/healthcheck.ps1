@@ -1,6 +1,9 @@
-$serviceStatus = (Get-Service -Name "RavenDB").Status
-if (($serviceStatus -eq "Running") -or ($serviceStatus -eq "StartPending")) {
-    exit 0;
-} else {
-    exit 1;
+$ErrorActionPreference = 'Stop'
+
+$p = Get-Process -Name "Raven.Server"
+if ($p.HasExited) {
+    Write-Host "Server exited with code $($p.ExitCode)."
+    exit 1
 }
+
+exit 0

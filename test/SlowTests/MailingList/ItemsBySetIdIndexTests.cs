@@ -52,7 +52,7 @@ namespace SlowTests.MailingList
                                 .AndAlso()
                                 .WhereEquals("SoundCode", "ROCK")
                                 .SelectFields<DataView>("SongId", "Title", "Interpret", "Year", "Attributes", "SID", "SetId", "NumberOfTests", "LastTestDate", "LastTestId", "Date");
-                    var total = query.QueryResult.TotalResults;
+                    var total = query.GetQueryResult().TotalResults;
                     Assert.Equal(1, total);
                     Assert.Equal("EGOIST", query.First().Title);
                 }

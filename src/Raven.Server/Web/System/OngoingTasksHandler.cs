@@ -9,6 +9,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Json.Converters;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.ETL;
 using Raven.Client.ServerWide.ETL.SQL;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.PeriodicBackup;
@@ -231,18 +232,13 @@ namespace Raven.Server.Web.System
                 {
                     var tag = dbTopology.WhoseTaskIsIt(ravenEtl, store.IsPassive());
 
-                    var taskState = OngoingTaskState.Enabled;
-
-                    if (ravenEtl.Disabled || ravenEtl.Transforms.All(x => x.Disabled))
-                        taskState = OngoingTaskState.Disabled;
-                    else if (ravenEtl.Transforms.Any(x => x.Disabled))
-                        taskState = OngoingTaskState.PartiallyEnabled;
+                    var taskState = GetEtlTaskState(ravenEtl);
 
                     if (databaseRecord.RavenConnectionStrings.TryGetValue(ravenEtl.ConnectionStringName, out var connection) == false)
                         throw new InvalidOperationException(
                             $"Could not find connection string named '{ravenEtl.ConnectionStringName}' in the database record for '{ravenEtl.Name}' ETL");
 
-                    yield return new OngoingTaskRavenEtl
+                    yield return new OngoingTaskRavenEtlListView()
                     {
                         TaskId = ravenEtl.TaskId,
                         TaskName = ravenEtl.Name,
@@ -266,12 +262,7 @@ namespace Raven.Server.Web.System
                 {
                     var tag = dbTopology.WhoseTaskIsIt(sqlEtl, store.IsPassive());
 
-                    var taskState = OngoingTaskState.Enabled;
-
-                    if (sqlEtl.Disabled || sqlEtl.Transforms.All(x => x.Disabled))
-                        taskState = OngoingTaskState.Disabled;
-                    else if (sqlEtl.Transforms.Any(x => x.Disabled))
-                        taskState = OngoingTaskState.PartiallyEnabled;
+                    var taskState = GetEtlTaskState(sqlEtl);
 
                     if (databaseRecord.SqlConnectionStrings.TryGetValue(sqlEtl.ConnectionStringName, out var sqlConnection) == false)
                         throw new InvalidOperationException(
@@ -280,7 +271,7 @@ namespace Raven.Server.Web.System
                     var (database, server) =
                         SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString(sqlEtl.FactoryName, sqlConnection.ConnectionString);
 
-                    yield return new OngoingTaskSqlEtl
+                    yield return new OngoingTaskSqlEtlListView()
                     {
                         TaskId = sqlEtl.TaskId,
                         TaskName = sqlEtl.Name,
@@ -292,7 +283,8 @@ namespace Raven.Server.Web.System
                             NodeUrl = clusterTopology.GetUrlFromTag(tag)
                         },
                         DestinationServer = server,
-                        DestinationDatabase = database
+                        DestinationDatabase = database,
+                        ConnectionStringName = sqlEtl.ConnectionStringName
                     };
                 }
             }
@@ -338,6 +330,7 @@ namespace Raven.Server.Web.System
                             {
                                 TaskId = watcher.TaskId,
                                 TaskName = watcher.Name,
+                                MentorNode = watcher.MentorNode,
                                 ResponsibleNode = new NodeId
                                 {
                                     NodeTag = tag,
@@ -395,11 +388,12 @@ namespace Raven.Server.Web.System
                                 break;
                             }
 
-                            WriteResult(context, new OngoingTaskSqlEtl
+                            WriteResult(context, new OngoingTaskSqlEtlDetails()
                             {
                                 TaskId = sqlEtl.TaskId,
                                 TaskName = sqlEtl.Name,
-                                Configuration = sqlEtl
+                                Configuration = sqlEtl,
+                                TaskState = GetEtlTaskState(sqlEtl)
                             });
                             break;
 
@@ -412,11 +406,12 @@ namespace Raven.Server.Web.System
                                 break;
                             }
 
-                            WriteResult(context, new OngoingTaskRavenEtl
+                            WriteResult(context, new OngoingTaskRavenEtlDetails()
                             {
                                 TaskId = ravenEtl.TaskId,
                                 TaskName = ravenEtl.Name,
-                                Configuration = ravenEtl
+                                Configuration = ravenEtl,
+                                TaskState = GetEtlTaskState(ravenEtl)
                             });
                             break;
 
@@ -443,6 +438,7 @@ namespace Raven.Server.Web.System
                                 LastTimeServerMadeProgressWithDocuments = subscriptionState.LastTimeServerMadeProgressWithDocuments,
                                 Disabled = subscriptionState.Disabled,
                                 LastClientConnectionTime = subscriptionState.LastClientConnectionTime,
+                                MentorNode = subscriptionState.MentorNode,
                                 ResponsibleNode = new NodeId
                                 {
                                     NodeTag = tag,
@@ -579,6 +575,21 @@ namespace Raven.Server.Web.System
             }
         }
 
+
+        [RavenAction("/databases/*/subscription-tasks", "DELETE", AuthorizationStatus.ValidUser)]
+        public async Task DeleteSubscriptionTask()
+        {
+            // Note: Only Subscription task needs User authentication, All other tasks need Admin authentication
+            var typeStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
+            if (Enum.TryParse<OngoingTaskType>(typeStr, true, out var type) == false)
+                throw new ArgumentException($"Unknown task type: {type}", nameof(type));
+
+            if (type != OngoingTaskType.Subscription)
+                throw new ArgumentException("Only Subscription type can call this method");
+
+            await DeleteOngoingTask();
+        }
+
         [RavenAction("/databases/*/admin/tasks", "DELETE", AuthorizationStatus.Operator)]
         public async Task DeleteOngoingTask()
         {
@@ -609,6 +620,18 @@ namespace Raven.Server.Web.System
                     writer.Flush();
                 }
             }
+        }
+
+        private static OngoingTaskState GetEtlTaskState<T>(EtlConfiguration<T> config) where T : ConnectionString
+        {
+            var taskState = OngoingTaskState.Enabled;
+
+            if (config.Disabled || config.Transforms.All(x => x.Disabled))
+                taskState = OngoingTaskState.Disabled;
+            else if (config.Transforms.Any(x => x.Disabled))
+                taskState = OngoingTaskState.PartiallyEnabled;
+
+            return taskState;
         }
     }
 

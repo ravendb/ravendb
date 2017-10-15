@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.Handlers
 
                 stats.DatabaseChangeVector = statsDatabaseChangeVector;
                 stats.DatabaseId = Database.DocumentsStorage.Environment.Base64Id;
-                stats.Is64Bit = IntPtr.Size == sizeof(long);
+                stats.Is64Bit = !Database.DocumentsStorage.Environment.Options.ForceUsing32BitsPager && IntPtr.Size == sizeof(long);
                 stats.Pager = Database.DocumentsStorage.Environment.Options.DataPager.GetType().ToString();
 
                 stats.Indexes = new IndexInformation[indexes.Count];

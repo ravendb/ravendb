@@ -1,45 +1,85 @@
-<div class="migrateDatabase content-margin">
+<div class="migrateDatabase">
     <div class="panel">
         <div class="panel-body">
-            <form data-bind="submit: migrateDb">
-                <h3>Migrate data from RavenDB v3.x</h3>
+            <form class="flex-form" data-bind="submit: migrateDb">
+                <h3>Migrate data from another RavenDB Server</h3>
                 <p class="bg-warning padding padding-xs small"><i class="icon-warning"></i> Note: Migration will overwrite any existing documents and indexes.</p>
                 <div class="row" data-bind="with: model">
                     <div class="col-sm-8 col-lg-6 margin-top">
-                        <div class="row flex-row margin-bottom">
-                            <label class="control-label col-xs-12 col-sm-6 col-lg-4">Server URL</label>
-                            <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: serverUrl">
-                                <input data-bind="textInput: serverUrl" type="text" class="form-control" />
+                        <div class="form-group" data-bind="validationElement: serverUrl">
+                            <label class="control-label">Server URL</label>
+                            <div class="flex-grow">
+                                <input data-bind="textInput: serverUrl" type="text" class="form-control" placeholder="Source server url" />
                             </div>
                         </div>
-                        <div class="row flex-row margin-bottom">
-                            <label class="control-label col-xs-12 col-sm-6 col-lg-4">Database name</label>
-                            <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: databaseName">
-                                <input data-bind="textInput: databaseName" type="text" class="form-control" />
+                        <div class="form-group" data-bind="validationElement: serverMajorVersion">
+                            <label class="control-label">Server Version</label>
+                            <div class="flex-grow">
+                                <span class="margin-right btn-group">
+                                    <button type="button" class="btn btn-default" 
+                                            data-bind="click: _.partial(serverMajorVersion, 'V2'), css: { active: serverMajorVersion() === 'V2' }">2.x</button>
+                                    <button type="button" class="btn btn-default" 
+                                            data-bind="click: _.partial(serverMajorVersion, 'V30'), css: { active: serverMajorVersion() === 'V30' }">3.0</button>
+                                    <button type="button" class="btn btn-default" 
+                                            data-bind="click: _.partial(serverMajorVersion, 'V35'), css: { active: serverMajorVersion() === 'V35' }">3.5</button>
+                                    <button type="button" class="btn btn-default" 
+                                            data-bind="click: _.partial(serverMajorVersion, 'V4'), css: { active: serverMajorVersion() === 'V4' }">4.0</button>
+                                </span>
+                                
+                                <button type="button" class="btn btn-default" title="Perform automatic detection" 
+                                        data-bind="click: $root.detectServerVersion, css: { 'btn-spinner': $root.spinners.versionDetect() }, disable: $root.spinners.versionDetect">
+                                    <i class="icon-refresh"></i>
+                                    <span>Detect</span>
+                                </button>
+                                
                             </div>
                         </div>
-                        <div class="row flex-row margin-bottom">
-                            <label class="control-label col-xs-12 col-sm-6 col-lg-4">User name</label>
-                            <div class="col-xs-12 col-sm-6 col-lg-8">
-                                <input data-bind="textInput: userName" type="text" class="form-control" />
+                        <div class="form-group" data-bind="validationElement: databaseName">
+                            <label class="control-label">Database name</label>
+                            <div class="flex-grow">
+                                <input data-bind="textInput: databaseName" type="text" class="form-control" placeholder="Source database name" />
                             </div>
                         </div>
-                        <div class="row flex-row margin-bottom">
-                            <label class="control-label col-xs-12 col-sm-6 col-lg-4">Password</label>
-                            <div class="col-xs-12 col-sm-6 col-lg-8">
-                                <input data-bind="textInput: password" type="password" class="form-control" />
+                        
+                        <div data-bind="visible: showAuthenticationMethods">
+                            <div class="form-group">
+                                <label class="control-label">Authentication method</label>
+                                <div class="flex-grow" data-bind="validationElement: authenticationMethod">
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-default"
+                                                data-bind="click: _.partial(authenticationMethod, 'none'), css: { active: authenticationMethod() === 'none' }">None</button>
+                                        <button type="button" class="btn btn-default"
+                                                data-bind="click: _.partial(authenticationMethod, 'windows'), css: { active: authenticationMethod() === 'windows' }">Windows Credentials</button>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        <div class="row flex-row margin-bottom">
-                            <label class="control-label col-xs-12 col-sm-6 col-lg-4">Domain</label>
-                            <div class="col-xs-12 col-sm-6 col-lg-8">
-                                <input data-bind="textInput: domain" type="text" class="form-control" />
+                            <div data-bind="visible: showWindowsCredentialInputs">
+                                <div class="form-group" data-bind="validationElement: userName">
+                                    <label class="control-label">User name</label>
+                                    <div class="flex-grow">
+                                        <input data-bind="textInput: userName" type="text" class="form-control" placeholder="User name" />
+                                    </div>
+                                </div>
+                                <div class="form-group" data-bind="validationElement: password">
+                                    <label class="control-label">Password</label>
+                                    <div class="flex-grow">
+                                        <input data-bind="textInput: password" type="password" class="form-control" placeholder="Password" />
+                                    </div>
+                                </div>
+                                <div class="form-group" data-bind="validationElement: domain">
+                                    <label class="control-label">Domain</label>
+                                    <div class="flex-grow">
+                                        <input data-bind="textInput: domain" type="text" class="form-control" placeholder="Domain" />
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <br />
-                <button class="btn btn-primary" type="submit" data-bind="css: { 'btn-spinner': startingMigration() }, disable: startingMigration"><span class="icon-import"></span> <span>Migrate Database</span></button>
+                <hr />
+                <button class="btn btn-primary" type="submit" data-bind="css: { 'btn-spinner': spinners.migration() }, disable: spinners.migration">
+                    <span class="icon-import"></span> <span>Migrate Database</span>
+                </button>
             </form>
         </div>
     </div>

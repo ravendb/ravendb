@@ -166,7 +166,7 @@ loadToOrders(orderData);
 
                 taskId = addRavenEtlResult.TaskId;
 
-                var etlResult = (OngoingTaskRavenEtl)await GetTaskInfo((DocumentStore)store, taskId, OngoingTaskType.RavenEtl);
+                var etlResult = (OngoingTaskRavenEtlDetails)await GetTaskInfo((DocumentStore)store, taskId, OngoingTaskType.RavenEtl);
                 Assert.Equal("cs", etlResult.Configuration.ConnectionStringName);
                 Assert.Equal("tesst", etlResult.Configuration.Name);
                 Assert.Equal("loadAll", etlResult.Configuration.Transforms[0].Name);
@@ -176,7 +176,7 @@ loadToOrders(orderData);
 
                 taskId = addSqlEtlResult.TaskId;
 
-                var sqlResult = (OngoingTaskSqlEtl)await GetTaskInfo((DocumentStore)store, taskId, OngoingTaskType.SqlEtl);
+                var sqlResult = (OngoingTaskSqlEtlDetails)await GetTaskInfo((DocumentStore)store, taskId, OngoingTaskType.SqlEtl);
                 Assert.Equal("abc", sqlResult.Configuration.ConnectionStringName);
                 Assert.Equal("abc", sqlResult.Configuration.Name);
                 Assert.Equal("OrdersAndLines", sqlResult.Configuration.Transforms[0].Name);

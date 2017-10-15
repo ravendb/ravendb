@@ -20,8 +20,8 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Initializes a new instance of the <see cref="DocumentQuery{T}"/> class.
         /// </summary>
-        public DocumentQuery(InMemoryDocumentSessionOperations session, string indexName, string collectionName, bool isGroupBy, string fromAlias = null)
-            : base(session, indexName, collectionName, isGroupBy, fromAlias)
+        public DocumentQuery(InMemoryDocumentSessionOperations session, string indexName, string collectionName, bool isGroupBy, DeclareToken declareToken = null, List<LoadToken> loadTokens = null, string fromAlias = null)
+            : base(session, indexName, collectionName, isGroupBy, declareToken, loadTokens ,fromAlias)
         {
         }
 
@@ -32,7 +32,7 @@ namespace Raven.Client.Documents.Session
             var projections = propertyInfos.Select(x => x.Name).ToArray();
             var identityProperty = Conventions.GetIdentityProperty(typeof(TProjection));
             var fields = propertyInfos.Select(p => p == identityProperty ? Constants.Documents.Indexing.Fields.DocumentIdFieldName : p.Name).ToArray();
-            return SelectFields<TProjection>(new QueryData(fields, projections, null));
+            return SelectFields<TProjection>(new QueryData(fields, projections));
         }
 
         /// <inheritdoc />
@@ -66,13 +66,13 @@ namespace Raven.Client.Documents.Session
         /// <inheritdoc />
         public IDocumentQuery<TProjection> SelectFields<TProjection>(params string[] fields)
         {
-            return SelectFields<TProjection>(new QueryData(fields, fields, null));
+            return SelectFields<TProjection>(new QueryData(fields, fields));
         }
 
         /// <inheritdoc />
         public IDocumentQuery<TProjection> SelectFields<TProjection>(QueryData queryData)
         {
-            return CreateDocumentQueryInternal<TProjection>(queryData.Fileds.Length > 0 ? FieldsToFetchToken.Create(queryData.Fileds, queryData.Projections, queryData.FromAlias != null) : null, queryData.FromAlias);
+            return CreateDocumentQueryInternal<TProjection>(queryData);
         }
 
         /// <inheritdoc />
@@ -288,14 +288,11 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public QueryResult QueryResult
+        public QueryResult GetQueryResult()
         {
-            get
-            {
-                InitSync();
+            InitSync();
 
-                return QueryOperation.CurrentQueryResults.CreateSnapshot();
-            }
+            return QueryOperation.CurrentQueryResults.CreateSnapshot();
         }
 
         /// <inheritdoc />
@@ -719,7 +716,7 @@ namespace Raven.Client.Documents.Session
         public int Count()
         {
             Take(0);
-            var queryResult = QueryResult;
+            var queryResult = GetQueryResult();
             return queryResult.TotalResults;
         }
 
@@ -781,8 +778,12 @@ namespace Raven.Client.Documents.Session
             InvokeAfterQueryExecuted(QueryOperation.CurrentQueryResults);
         }
 
-        private DocumentQuery<TResult> CreateDocumentQueryInternal<TResult>(FieldsToFetchToken newFieldsToFetch = null, string fromAlias = null)
+        private DocumentQuery<TResult> CreateDocumentQueryInternal<TResult>(QueryData queryData = null)
         {
+            var newFieldsToFetch = queryData != null && queryData.Fileds.Length > 0
+                ? FieldsToFetchToken.Create(queryData.Fileds, queryData.Projections.ToArray(), queryData.IsCustomFunction)
+                : null;
+
             if (newFieldsToFetch != null)
                 UpdateFieldsToFetchToken(newFieldsToFetch);
 
@@ -791,7 +792,9 @@ namespace Raven.Client.Documents.Session
                 IndexName,
                 CollectionName,
                 IsGroupBy,
-                fromAlias)
+                queryData?.DeclareToken,
+                queryData?.LoadTokens,
+                queryData?.FromAlias)
             {
                 QueryRaw = QueryRaw,
                 PageSize = PageSize,

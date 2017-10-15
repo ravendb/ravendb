@@ -22,7 +22,7 @@ namespace SlowTests.Issues
             UseNewLocalServer();
             using (var store = GetDocumentStore())
             {
-                var notifications = new AsyncQueue<Notification>();
+                var notifications = new AsyncQueue<DynamicJsonValue>();
 
                 using (Server.ServerStore.NotificationCenter.TrackActions(notifications, null))
                 {
@@ -61,11 +61,15 @@ namespace SlowTests.Issues
                     // db unloaded
                     Assert.True(SpinWait.SpinUntil(() => Server.ServerStore.DatabasesLandlord.DatabasesCache.Any() == false, TimeSpan.FromMinutes(1)));
 
-                    var alert = await notifications.TryDequeueOfTypeAsync<AlertRaised>(TimeSpan.Zero);
-
-                    Assert.True(alert.Item1);
-                    Assert.Equal(AlertType.CatastrophicDatabaseFailure, alert.Item2.AlertType);
-                    Assert.Contains(database.Name, alert.Item2.Title);
+                    Tuple<bool, DynamicJsonValue> alert;
+                    do
+                    {
+                        alert = await notifications.TryDequeueAsync(TimeSpan.Zero);
+                    } while (alert.Item2["Type"].ToString() != NotificationType.AlertRaised.ToString());
+                 
+                    
+                    Assert.Equal(AlertType.CatastrophicDatabaseFailure, alert.Item2[nameof(AlertRaised.AlertType)]);
+                    Assert.Contains(database.Name, alert.Item2[nameof(AlertRaised.Title)] as string);
                 }
 
                 using (var session = store.OpenSession())

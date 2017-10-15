@@ -172,7 +172,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             CheckDisposed();
             CheckInitialized();
-
+                        
             return new IndexReadOperation(_index, _directory, _indexSearcherHolder, readTransaction);
         }
 

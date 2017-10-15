@@ -43,12 +43,12 @@ namespace Raven.Server.Documents.Queries.AST
 
             if (q.SelectFunctionBody != null)
             {
-                VisitSelectFunctionBody(q.SelectFunctionBody.Value);
+                VisitSelectFunctionBody(q.SelectFunctionBody);
             }
 
             if (q.UpdateBody != null)
             {
-                VisitUpdate(q.UpdateBody.Value);
+                VisitUpdate(q.UpdateBody);
             }
 
             if (q.Include != null)
@@ -99,7 +99,7 @@ namespace Raven.Server.Documents.Queries.AST
             }
         }
 
-        public virtual void VisitDeclaredFunctions(Dictionary<StringSegment, StringSegment> declaredFunctions)
+        public virtual void VisitDeclaredFunctions(Dictionary<StringSegment, string> declaredFunctions)
         {
             foreach (var kvp in declaredFunctions)
             {
@@ -236,7 +236,7 @@ namespace Raven.Server.Documents.Queries.AST
             
         }
 
-        public virtual void VisitDeclaredFunction(StringSegment name, StringSegment func)
+        public virtual void VisitDeclaredFunction(StringSegment name, string func)
         {
             
         }

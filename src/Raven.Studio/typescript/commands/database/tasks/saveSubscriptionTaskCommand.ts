@@ -4,25 +4,17 @@ import endpoints = require("endpoints");
 
 class saveSubscriptionTaskCommand extends commandBase {
 
-    constructor(private db: database, private subscriptionSettings: subscriptionDataFromUI, private taskId?: number, private disabled?: Raven.Client.ServerWide.Operations.OngoingTaskState) {
+    constructor(private db: database, private payload: Raven.Client.Documents.Subscriptions.SubscriptionCreationOptions, private taskId?: number, private disabled?: Raven.Client.ServerWide.Operations.OngoingTaskState) {
         super();
     }
 
     execute(): JQueryPromise<Raven.Client.ServerWide.Operations.ModifyOngoingTaskResult> {
         return this.updateSubscription()
             .fail((response: JQueryXHR) => {
-                if (this.taskId) {
-                    this.reportError("Failed to update subscription task", response.responseText, response.statusText);
-                } else {
-                    this.reportError("Failed to create subscription task: " + this.subscriptionSettings.TaskName, response.responseText, response.statusText); 
-                }
+                this.reportError("Failed to save subscription task", response.responseText, response.statusText); 
             })
             .done(() => {
-                if (this.taskId) {
-                    this.reportSuccess(`Updated subscription task`);
-                } else {
-                    this.reportSuccess(`Created subscription task ${this.subscriptionSettings.TaskName} from database ${this.db.name}`);
-                }
+                this.reportSuccess(`Saved subscription task ${this.payload.Name} from database ${this.db.name}`);
             });
     }
 
@@ -30,9 +22,7 @@ class saveSubscriptionTaskCommand extends commandBase {
         let args: any;
 
         if (this.taskId) { 
-            // An existing task
-            args = this.disabled === "Disabled" ? { name: this.db.name, id: this.taskId, disabled: true } :
-                                                  { name: this.db.name, id: this.taskId };
+            args = { name: this.db.name, id: this.taskId, disabled: this.disabled === "Disabled" };
         } else {
             // New task
             args = { name: this.db.name };
@@ -42,14 +32,7 @@ class saveSubscriptionTaskCommand extends commandBase {
 
         const saveTask = $.Deferred<Raven.Client.ServerWide.Operations.ModifyOngoingTaskResult>();
 
-        const subscriptionToSend: Raven.Client.Documents.Subscriptions.SubscriptionCreationOptions = {
-            ChangeVector: this.subscriptionSettings.ChangeVector,
-            Name: this.subscriptionSettings.TaskName,
-            Query: this.subscriptionSettings.Query,
-            MentorNode: null
-        };
-
-        this.put(url, JSON.stringify(subscriptionToSend), this.db)
+        this.put(url, JSON.stringify(this.payload), this.db)
             .done((results: Raven.Client.ServerWide.Operations.ModifyOngoingTaskResult) => { 
                 saveTask.resolve(results);
             })

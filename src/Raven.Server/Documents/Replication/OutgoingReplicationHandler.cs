@@ -48,8 +48,6 @@ namespace Raven.Server.Documents.Replication
 
         internal string LastAcceptedChangeVector;
 
-        internal string _destinationLastKnownChangeVectorAsString;
-
         private TcpClient _tcpClient;
 
         private readonly AsyncManualResetEvent _connectionDisposed = new AsyncManualResetEvent();
@@ -701,7 +699,7 @@ namespace Raven.Server.Documents.Replication
                 {
                     case ReplicationMessageReply.ReplyType.Ok:
                         _log.Info(
-                            $"Received reply for replication batch from {Destination.FromString()}. New destination change vector is {_destinationLastKnownChangeVectorAsString}");
+                            $"Received reply for replication batch from {Destination.FromString()}. New destination change vector is {LastAcceptedChangeVector}");
                         break;
                     case ReplicationMessageReply.ReplyType.Error:
                         _log.Info(

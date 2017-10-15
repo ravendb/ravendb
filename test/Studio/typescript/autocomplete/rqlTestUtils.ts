@@ -2,6 +2,27 @@ import queryCompleter = require("src/Raven.Studio/typescript/common/queryComplet
 import aceEditorBindingHandler = require("src/Raven.Studio/typescript/common/bindingHelpers/aceEditorBindingHandler");
 
 class rqlTestUtils {
+
+    static validationTest(query: string,
+                        callback: (annotations: Array<AceAjax.Annotation>) => void): void {
+        const element = $("<div></div>").html(query)[0];
+        const aceEditor: AceAjax.Editor = ace.edit(element);
+
+        rqlTestUtils.trySpeedupValidation();
+
+        aceEditor.setOption("newLineMode", "windows");
+        aceEditor.getSession().setUseWorker(true);
+
+        aceEditor.getSession().on("changeAnnotation", () => {
+            const annotations = aceEditor.getSession().getAnnotations() as Array<AceAjax.Annotation>;
+            callback(annotations);
+        });
+        
+        setTimeout(() => {
+            aceEditor.getSession().setMode("ace/mode/rql");
+        }, 100);
+    }
+    
     static autoComplete(query: string, 
                         queryCompleterProvider: () => queryCompleter, 
                         callback: (errors: any[], worldlist: autoCompleteWordList[], prefix: string, lastKeyword: autoCompleteLastKeyword) => void): void {
@@ -19,6 +40,8 @@ class rqlTestUtils {
             throw "RQL test must include the position"
         }
 
+        rqlTestUtils.trySpeedupValidation();
+        
         const langTools = ace.require("ace/ext/language_tools");
         const util = ace.require("ace/autocomplete/util");
         aceEditorBindingHandler.customizeCompletionPrefix(util);
@@ -49,7 +72,34 @@ class rqlTestUtils {
 
         setTimeout(() => {
             aceEditor.getSession().setMode("ace/mode/rql");
-        }, 200);
+        }, 110);
+    }
+    
+    static alreadyAppliedSpeedup = false;
+    
+    static trySpeedupValidation() {
+        if (!rqlTestUtils.alreadyAppliedSpeedup) {
+            rqlTestUtils.alreadyAppliedSpeedup = true;
+            
+            const tokenizer = ace.require("ace/background_tokenizer").BackgroundTokenizer;
+
+            // both start & scheduleStart methods are 1:1 copy from ace
+            // except reduced timeout in setTimeout (so it speeds up testing)
+            
+            tokenizer.prototype.start = function(startRow : any) {
+                this.currentLine = Math.min(startRow || 0, this.currentLine, this.doc.getLength());
+                this.lines.splice(this.currentLine, this.lines.length);
+                this.states.splice(this.currentLine, this.states.length);
+
+                this.stop();
+                this.running = setTimeout(this.$worker, 150);
+            };
+            
+            tokenizer.prototype.scheduleStart = function() {
+                if (!this.running)
+                    this.running = setTimeout(this.$worker, 150);
+            }    
+        }
     }
     
     static emptyProvider() {
@@ -108,7 +158,25 @@ class rqlTestUtils {
                                     "City": "String",
                                     "Region": "String",
                                     "PostalCode": "String",
-                                    "Country": "String"
+                                    "Country": "String",
+                                    "Nested": "Object",
+                                });
+                                break;
+                            case "ShipTo.Nested":
+                                callback({
+                                    "L1": "String",
+                                    "L2": "Null",
+                                    "C": "String",
+                                    "R": "String",
+                                    "P": "String",
+                                    "NestedObject": "Object",
+                                });
+                                break;
+                            case "ShipTo.Nested.NestedObject":
+                                callback({
+                                    "C2": "String",
+                                    "R2": "String",
+                                    "P2": "String"
                                 });
                                 break;
                             default:

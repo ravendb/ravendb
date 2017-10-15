@@ -131,9 +131,11 @@
                     <div class="btn-group has-disable-reason" data-bind="attr: { 'data-original-title': !canDeleteDocumentsMatchingQuery() ? 'Available only for map indexes' : '' }">
                         <button type="button" class="btn btn-danger btn-sm" data-bind="enable: canDeleteDocumentsMatchingQuery, click: deleteDocsMatchingQuery"><i class="icon-trash"></i> <span>Delete documents</span></button>
                     </div>
-                    <!-- TODO: csv enabled for: isStaticIndexSelected -->
-                    <!-- TODO <button type="button" class="btn btn-default" disabled="disabled"><i class="icon-csv-export"></i> <span>Export CSV</span></button>-->
-                    <button class="btn btn-default statistics" data-bind="click: openQueryStats">
+                    <button type="button" class="btn btn-default" title="Export query results as CSV"
+                        data-bind="click: exportCsv, enable: queryStats">
+                        <i class="icon-csv-export"></i> <span>Export CSV</span>
+                    </button>
+                    <button class="btn btn-default statistics" data-bind="click: openQueryStats, enable: queryStats">
                         <i class="icon-stats"></i><span>Statistics</span>
                     </button>
 
@@ -176,6 +178,11 @@
                 Includes &nbsp; <span class="label" data-bind="text: totalIncludes().toLocaleString(), css: { 'label-primary': totalIncludes(), 'label-default': !totalIncludes()}"></span>
             </button>
         </div>
+    </div>
+    <div class="hidden">
+        <form method="post" download target="hidden-form" id="exportCsvForm">
+            <input type="hidden" name="ExportOptions"/>
+        </form>
     </div>
 </div>
 

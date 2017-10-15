@@ -12,8 +12,6 @@ abstract class ongoingTaskModel {
     badgeText: KnockoutComputed<string>;
     badgeClass: KnockoutComputed<string>;
    
-    isInTasksListView: boolean = true;
-
     protected initializeObservables() {
         
         this.badgeClass = ko.pureComputed(() => {
@@ -49,12 +47,8 @@ abstract class ongoingTaskModel {
     }
 
     protected update(dto: Raven.Client.ServerWide.Operations.OngoingTask) {
-        if (this.isInTasksListView) {
-            dto.TaskName = ongoingTaskModel.generateTaskNameIfNeeded(dto);
-        }
-
+        this.taskName(ongoingTaskModel.generateTaskNameIfNeeded(dto));
         this.taskId = dto.TaskId;
-        this.taskName(dto.TaskName);
         this.taskType(dto.TaskType);
         this.responsibleNode(dto.ResponsibleNode);
         this.taskState(dto.TaskState);
@@ -77,15 +71,15 @@ abstract class ongoingTaskModel {
                 break;
             case "Backup":
                 const dtoBackup = dto as Raven.Client.ServerWide.Operations.OngoingTaskBackup;
-                taskName = dtoBackup.BackupDestinations.length === 0 ? "No destinations" : `${dtoBackup.BackupType} to ${dtoBackup.BackupDestinations.join(", ")}`;
+                taskName = dtoBackup.BackupDestinations.length === 0 ? "Backup w/o destinations" : `${dtoBackup.BackupType} to ${dtoBackup.BackupDestinations.join(", ")}`;
                 break;
             case "RavenEtl":
-                const dtoRavenEtl = dto as Raven.Client.ServerWide.Operations.OngoingTaskRavenEtl;
+                const dtoRavenEtl = dto as Raven.Client.ServerWide.Operations.OngoingTaskRavenEtlListView;
                 taskName = `ETL to ${dtoRavenEtl.DestinationDatabase}@${dtoRavenEtl.DestinationUrl}`;
                 break;
             case "SqlEtl":
-                const dtoSqlEtl = dto as Raven.Client.ServerWide.Operations.OngoingTaskSqlEtl;
-                taskName = ""; // Todo...
+                const dtoSqlEtl = dto as Raven.Client.ServerWide.Operations.OngoingTaskSqlEtlListView;
+                taskName = `SQL ETL to ${dtoSqlEtl.DestinationDatabase}@${dtoSqlEtl.DestinationServer}`;
                 break;
             case "Subscription":
                 taskName = dto.TaskName;

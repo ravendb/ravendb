@@ -297,6 +297,17 @@ describe("RQL Autocomplete", () => {
         {caption: "include", value: "include ", score: 18, meta: "keyword"}
     ];
 
+    const afterSelect = [
+        {caption: ",", value: ", ", score: 23, meta: "separator"},
+        {caption: "as", value: "as ", score: 21, meta: "keyword"},
+        {caption: "include", value: "include ", score: 20, meta: "keyword"}
+    ];
+
+    const afterSelectAs = [
+        {caption: ",", value: ", ", score: 23, meta: "separator"},
+        {caption: "include", value: "include ", score: 20, meta: "keyword"}
+    ];
+
     const afterOrderOrGroupList = [
         {caption: "by", value: "by ", score: 21, meta: "keyword"}
     ];
@@ -725,14 +736,63 @@ select ShipTo.City|`, northwindProvider(), (errors, wordlist, prefix, lastKeywor
         });
     });
 
-    it('from Collection select nested field | after should list as keyword only', done => {
+    it('from Collection select multi nested field | without sapce should list fields with the ShipTo.Nested.NestedObject. field prefix', done => {
+        rqlTestUtils.autoComplete(`from Orders 
+select ShipTo.Nested.NestedObject.|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, [
+                {caption: "C2", value: "C2 ", score: 103, meta: "string field"},
+                {caption: "P2", value: "P2 ", score: 102, meta: "string field"},
+                {caption: "R2", value: "R2 ", score: 101, meta: "string field"}
+            ]);
+
+            assert.equal(lastKeyword.keyword, "select");
+            assert.equal(lastKeyword.dividersCount, 1);
+            assert.deepEqual(lastKeyword.fieldPrefix, ["ShipTo", "Nested", "NestedObject"]);
+
+            done();
+        });
+    });
+
+    it('from Collection select nested field | after should list as keyword and next keywords', done => {
         rqlTestUtils.autoComplete(`from Orders 
 select ShipTo.City |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
-            assert.deepEqual(wordlist, queryCompleter.asList);
+            assert.deepEqual(wordlist, afterSelect);
 
             assert.equal(lastKeyword.keyword, "select");
+            assert.isFalse(lastKeyword.asSpecified);
             assert.equal(lastKeyword.dividersCount, 2);
+            assert.deepEqual(lastKeyword.fieldPrefix, ["ShipTo"]);
+
+            done();
+        });
+    });
+
+    it('from Collection select nested field with as | should not list anything', done => {
+        rqlTestUtils.autoComplete(`from Orders 
+select ShipTo.City as |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.isNull(wordlist);
+
+            assert.equal(lastKeyword.keyword, "select");
+            assert.isTrue(lastKeyword.asSpecified);
+            assert.equal(lastKeyword.dividersCount, 3);
+            assert.deepEqual(lastKeyword.fieldPrefix, ["ShipTo"]);
+
+            done();
+        });
+    });
+
+    it('from Collection select nested field with as specified | should list separator and next keywords', done => {
+        rqlTestUtils.autoComplete(`from Orders 
+select ShipTo.City as c |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, afterSelectAs);
+
+            assert.equal(lastKeyword.keyword, "select");
+            assert.isTrue(lastKeyword.asSpecified);
+            assert.equal(lastKeyword.dividersCount, 4);
             assert.deepEqual(lastKeyword.fieldPrefix, ["ShipTo"]);
 
             done();
@@ -1754,8 +1814,8 @@ group by ShippedAt, |`, northwindProvider(), (errors, wordlist, prefix, lastKeyw
             assert.equal(prefix, "");
             assert.deepEqual(wordlist, emptyList);
 
-            assert.isUndefined(lastKeyword.keyword);
-            assert.equal(lastKeyword.dividersCount, 1);
+            assert.equal(lastKeyword.keyword, "declare function");
+            assert.equal(lastKeyword.dividersCount, 3);
 
             done();
         });
@@ -1768,8 +1828,8 @@ group by ShippedAt, |`, northwindProvider(), (errors, wordlist, prefix, lastKeyw
             assert.equal(prefix, "");
             assert.deepEqual(wordlist, emptyList);
 
-            assert.isUndefined(lastKeyword.keyword);
-            assert.equal(lastKeyword.dividersCount, 1);
+            assert.equal(lastKeyword.keyword, "declare function");
+            assert.equal(lastKeyword.dividersCount, 2);
 
             done();
         });
@@ -1785,8 +1845,88 @@ group by ShippedAt, |`, northwindProvider(), (errors, wordlist, prefix, lastKeyw
             assert.equal(prefix, "");
             assert.deepEqual(wordlist, emptyList);
 
-            assert.isUndefined(lastKeyword.keyword);
-            assert.equal(lastKeyword.dividersCount, 1);
+            assert.equal(lastKeyword.keyword, "declare function");
+            assert.equal(lastKeyword.dividersCount, 5);
+
+            done();
+        });
+    });
+
+    it('decalre function with nested function. After semi colon | should not list anything', done => {
+        rqlTestUtils.autoComplete(`declare function Name() {
+    var a = "s{tri}}}ng'";
+    var b = function () {
+        var a = "";
+    }
+    var c = 's{tri}}}ng"';
+    |
+}
+
+
+from Orders as o
+where o.Company == ""
+load o.Company as c, o.ShipTo as e, o.ShipVia as s
+`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.isNull(wordlist);
+
+            assert.equal(lastKeyword.keyword, "declare function");
+            assert.equal(lastKeyword.dividersCount, 9);
+
+            done();
+        });
+    });
+
+    it('decalre function with nested function. After error | should not list anything', done => {
+        rqlTestUtils.autoComplete(`declare function Name() {
+    var a = "s{tri}}}ng'";
+    var b = function () {
+        var a = "";
+    }
+    var c = 's{tri}}}ng"';
+    #|
+}
+
+
+from Orders as o
+where o.Company == ""
+load o.Company as c, o.ShipTo as e, o.ShipVia as s
+`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.isNull(wordlist);
+
+            assert.equal(lastKeyword.keyword, "declare function");
+            assert.equal(lastKeyword.dividersCount, 9);
+
+            done();
+        });
+    });
+
+    it('decalre function with nested function with error. After load | should detect the load keyword', done => {
+        rqlTestUtils.autoComplete(`declare function Name() {
+    var a = "s{tri}}}ng'";
+    var b = function () {
+        var a = "";
+    }
+    var c = 's{tri}}}ng"';
+    #
+}
+
+
+from Orders as o
+where o.Company == ""
+load o.Company as c, o.ShipTo as e, o.ShipVia as s
+|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, afterLoad);
+
+            assert.equal(lastKeyword.keyword, "load");
+            assert.isTrue(lastKeyword.asSpecified);
+            assert.equal(lastKeyword.dividersCount, 4);
+            assert.equal(lastKeyword.info.collection, "Orders");
+            assert.isUndefined(lastKeyword.info.index);
+            assert.equal(lastKeyword.info.alias, "o");
+            assert.deepEqual(lastKeyword.info.aliases, {o: "Orders"});
 
             done();
         });

@@ -131,8 +131,8 @@ namespace Raven.Server
                             Console.WriteLine("TIP: type 'help' to list the available commands.");
                             Console.ForegroundColor = prevColor;
 
-                            IsRunningAsService = false;
-                            rerun = CommandLineSwitches.Daemon ? RunAsService() : RunInteractive(server);
+                            IsRunningNonInteractive = false;
+                            rerun = CommandLineSwitches.NonInteractive ? RunAsNonInteractive() : RunInteractive(server);
 
                             Console.WriteLine("Starting shut down...");
                             if (Logger.IsInfoEnabled)
@@ -173,18 +173,23 @@ namespace Raven.Server
         public static ManualResetEvent ShutdownServerMre = new ManualResetEvent(false);
         public static ManualResetEvent ResetServerMre = new ManualResetEvent(false);
 
-        public static bool IsRunningAsService;
+        public static bool IsRunningNonInteractive;
 
-        public static bool RunAsService()
+        public static bool RunAsNonInteractive()
         {
-            IsRunningAsService = true;
+            IsRunningNonInteractive = true;
 
             if (Logger.IsInfoEnabled)
-                Logger.Info("Server is running as a service");
-            Console.WriteLine("Running as Service");
+                Logger.Info("Server is running as non-interactive.");
+
+            Console.WriteLine("Running non-interactive.");
+
+            if (CommandLineSwitches.LogToConsole)
+                LoggingSource.Instance.EnableConsoleLogging();
 
             AssemblyLoadContext.Default.Unloading += s =>
             {
+                LoggingSource.Instance.DisableConsoleLogging();
                 if (ShutdownServerMre.WaitOne(0))
                     return; // already done
                 Console.WriteLine("Received graceful exit request...");

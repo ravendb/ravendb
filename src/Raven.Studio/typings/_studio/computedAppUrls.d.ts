@@ -19,12 +19,13 @@ interface computedAppUrls {
     editPeriodicBackupTask: (taskId?: number) => KnockoutComputed<string>;
     editSubscription: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     editRavenEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
+    editSqlEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     query: (indexName?: string) => KnockoutComputed<string>;
     terms: (indexName?: string) => KnockoutComputed<string>;
     reporting: KnockoutComputed<string>;
     exploration: KnockoutComputed<string>;
     tasks: KnockoutComputed<string>;
-    importDatabaseUrl: KnockoutComputed<string>;
+    importDatabaseFromFileUrl: KnockoutComputed<string>;
     exportDatabaseUrl: KnockoutComputed<string>;
     migrateDatabaseUrl: KnockoutComputed<string>;
     sampleDataUrl: KnockoutComputed<string>;
@@ -32,6 +33,7 @@ interface computedAppUrls {
     editExternalReplicationTaskUrl: KnockoutComputed<string>;
     editSubscriptionTaskUrl: KnockoutComputed<string>;
     editRavenEtlTaskUrl: KnockoutComputed<string>;
+    editSqlEtlTaskUrl: KnockoutComputed<string>;
     csvImportUrl: KnockoutComputed<string>;
     status: KnockoutComputed<string>;
     indexPerformance: KnockoutComputed<string>;
@@ -48,6 +50,7 @@ interface computedAppUrls {
     databaseRecord: KnockoutComputed<string>;
     quotas: KnockoutComputed<string>;
     revisions: KnockoutComputed<string>;
+    expiration: KnockoutComputed<string>;
     connectionStrings: KnockoutComputed<string>;
     databaseStudioConfig: KnockoutComputed<string>;
     statusDebug: KnockoutComputed<string>;

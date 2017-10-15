@@ -26,6 +26,8 @@ type attachmentsListItem = {
 
 class smugglerDatabaseDetails extends abstractOperationDetails {
 
+    static extractingDataStageName = "Extracting data";
+    
     detailsVisible = ko.observable<boolean>(false);
     tail = ko.observable<boolean>(false);
 
@@ -55,11 +57,25 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
             }
 
             const result = [] as Array<smugglerListItem>;
+            if ("SnapshotRestore" in status) {
+                const restoreCounts = (status as Raven.Server.Documents.PeriodicBackup.RestoreProgress).SnapshotRestore;
+                
+                // skip it this case means it is not backup progress object or it is restore of non-binary data 
+                if (!restoreCounts.Skipped) {
+                    result.push(this.mapToExportListItem("Preparing restore", restoreCounts));
+                }
+            }
+            
+            if (this.op.taskType() === "MigrationFromLegacyData") {
+                const migrationCounts = (status as Raven.Client.Documents.Smuggler.OfflineMigrationProgress).DataExporter;
+                result.push(this.mapToExportListItem(smugglerDatabaseDetails.extractingDataStageName, migrationCounts));
+            }
+            
             result.push(this.mapToExportListItem("Documents", status.Documents, true));
             result.push(this.mapToExportListItem("Revisions", status.RevisionDocuments, true));
             result.push(this.mapToExportListItem("Indexes", status.Indexes));
             result.push(this.mapToExportListItem("Identities", status.Identities));
-
+            
             let shouldUpdateToPending = false;
             result.forEach(item => {
                 if (item.stage === "processing") {
@@ -70,7 +86,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
                     shouldUpdateToPending = true;
                 }
 
-                if (item.stage === "pending" || item.stage === "skipped") {
+                if (item.stage === "pending" || item.stage === "skipped" || item.name === smugglerDatabaseDetails.extractingDataStageName) {
                     item.hasReadCount = false;
                     item.hasErroredCount = false;
                     item.hasSkippedCount = false;
@@ -174,7 +190,9 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
         (notification.taskType() === "DatabaseExport" ||
             notification.taskType() === "DatabaseImport" ||
             notification.taskType() === "DatabaseMigration" ||
-            notification.taskType() === "DatabaseRestore");
+            notification.taskType() === "DatabaseRestore" ||
+            notification.taskType() === "MigrationFromLegacyData"
+        );
     }
 
     static showDetailsFor(op: operation, center: notificationCenter) {

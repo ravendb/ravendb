@@ -76,7 +76,7 @@ namespace Raven.Client.Documents.Smuggler
 
         public class SmugglerProgress : SmugglerProgressBase, IOperationProgress
         {
-            private readonly SmugglerResult _result;
+            protected readonly SmugglerResult _result;
 
             public SmugglerProgress(SmugglerResult result)
             {
@@ -105,7 +105,9 @@ namespace Raven.Client.Documents.Smuggler
             if (RevisionDocuments.LastEtag > lastEtag)
                 lastEtag = RevisionDocuments.LastEtag;
 
-            //TODO: take into account the last tombstones etag
+            if (Tombstones.LastEtag > lastEtag)
+                lastEtag = Tombstones.LastEtag;
+
             //TODO: take into account the last conflicts etag
 
             return lastEtag;

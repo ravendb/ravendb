@@ -58,6 +58,10 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
 
                         includes.Add(item.Value[0]);
                     }
+                    else if (string.Equals(item.Key, "document", StringComparison.OrdinalIgnoreCase))
+                    {
+                        result.Document = item.Value;
+                    }
                     else if (string.Equals(item.Key, "fields", StringComparison.OrdinalIgnoreCase))
                     {
                         result.Fields = item.Value;
@@ -134,5 +138,7 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
 
             return result;
         }
+
+
     }
 }
