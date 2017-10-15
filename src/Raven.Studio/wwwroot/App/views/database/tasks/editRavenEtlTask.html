@@ -114,7 +114,7 @@
                 </div>
                 <div class="scroll">
                     <div class="etl-list" id="transformsList" data-bind="with: editedRavenEtl">
-                        <div data-bind="if: transformationScripts().length === 0">
+                        <div data-bind="if: transformationScripts().length === 0 && !editedTransformationScript()">
                             <div>
                                 <h3 class="text-center text-muted" data-bind="css: { 'text-danger': !transformationScripts.isValid() && transformationScripts.isModified() }">No transformation scripts have been defined.</h3>
                             </div>
