@@ -131,7 +131,7 @@ namespace Raven.Server.Documents.Replication
         {
             var docs = _parent._database.DocumentsStorage.GetDocumentsFrom(ctx, etag + 1);
             var tombs = _parent._database.DocumentsStorage.GetTombstonesFrom(ctx, etag + 1);
-            var conflicts = _parent._database.DocumentsStorage.ConflictsStorage.GetConflictsFrom(ctx, etag + 1);
+            var conflicts = _parent._database.DocumentsStorage.ConflictsStorage.GetConflictsFrom(ctx, etag + 1).Select(ReplicationBatchItem.From);
             var revisionsStorage = _parent._database.DocumentsStorage.RevisionsStorage;
             var revisions = revisionsStorage.GetRevisionsFrom(ctx, etag + 1, int.MaxValue).Select(ReplicationBatchItem.From);
             var attachments = _parent._database.DocumentsStorage.AttachmentsStorage.GetAttachmentsFrom(ctx, etag + 1);
@@ -139,7 +139,7 @@ namespace Raven.Server.Documents.Replication
             using (var docsIt = docs.GetEnumerator())
             using (var tombsIt = tombs.GetEnumerator())
             using (var conflictsIt = conflicts.GetEnumerator())
-            using (var versionsIt = revisions?.GetEnumerator())
+            using (var versionsIt = revisions.GetEnumerator())
             using (var attachmentsIt = attachments.GetEnumerator())
             using (var mergedInEnumerator = new MergedReplicationBatchEnumerator(stats.DocumentRead, stats.AttachmentRead, stats.TombstoneRead))
             {

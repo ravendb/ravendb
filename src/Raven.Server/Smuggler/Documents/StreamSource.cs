@@ -103,6 +103,7 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.Documents:
                 case DatabaseItemType.RevisionDocuments:
                 case DatabaseItemType.Tombstones:
+                case DatabaseItemType.Conflicts:
                 case DatabaseItemType.Indexes:
                 case DatabaseItemType.Identities:
                     return SkipArray();
@@ -129,6 +130,11 @@ namespace Raven.Server.Smuggler.Documents
         public IEnumerable<DocumentTombstone> GetTombstones(List<string> collectionsToExport, INewDocumentActions actions)
         {
             return ReadTombstones(actions);
+        }
+
+        public IEnumerable<DocumentConflict> GetConflicts(List<string> collectionsToExport, INewDocumentActions actions)
+        {
+            return ReadConflicts(actions);
         }
 
         public IEnumerable<IndexDefinitionAndType> GetIndexes()
@@ -503,6 +509,11 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
+        private IEnumerable<DocumentConflict> ReadConflicts(INewDocumentActions actions = null)
+        {
+            throw new NotImplementedException("TODO");
+        }
+
         internal unsafe LegacyAttachmentDetails ProcessLegacyAttachment(DocumentsOperationContext context, BlittableJsonReaderObject data, ref DocumentItem.AttachmentStream attachment)
         {
             BlittableJsonReaderObject bjr;
@@ -617,6 +628,9 @@ namespace Raven.Server.Smuggler.Documents
 
             if (type.Equals(nameof(DatabaseItemType.Tombstones), StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.Tombstones;
+
+            if (type.Equals(nameof(DatabaseItemType.Conflicts), StringComparison.OrdinalIgnoreCase))
+                return DatabaseItemType.Conflicts;
 
             if (type.Equals(nameof(DatabaseItemType.Indexes), StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.Indexes;

@@ -22,6 +22,7 @@ namespace Raven.Client.Documents.Smuggler
             Documents = new CountsWithSkippedCountAndLastEtag();
             RevisionDocuments = new CountsWithLastEtag();
             Tombstones = new CountsWithLastEtag();
+            Conflicts = new CountsWithLastEtag();
             Identities = new Counts();
             Indexes = new Counts();
         }
@@ -88,6 +89,7 @@ namespace Raven.Client.Documents.Smuggler
             public override CountsWithSkippedCountAndLastEtag Documents => _result.Documents;
             public override CountsWithLastEtag RevisionDocuments => _result.RevisionDocuments;
             public override CountsWithLastEtag Tombstones => _result.Tombstones;
+            public override CountsWithLastEtag Conflicts => _result.Conflicts;
             public override Counts Identities => _result.Identities;
             public override Counts Indexes => _result.Indexes;
 
@@ -102,13 +104,15 @@ namespace Raven.Client.Documents.Smuggler
         public long GetLastEtag()
         {
             var lastEtag = Documents.LastEtag;
+
             if (RevisionDocuments.LastEtag > lastEtag)
                 lastEtag = RevisionDocuments.LastEtag;
 
             if (Tombstones.LastEtag > lastEtag)
                 lastEtag = Tombstones.LastEtag;
 
-            //TODO: take into account the last conflicts etag
+            if (Conflicts.LastEtag > lastEtag)
+                lastEtag = Conflicts.LastEtag;
 
             return lastEtag;
         }
@@ -122,6 +126,8 @@ namespace Raven.Client.Documents.Smuggler
 
         public virtual CountsWithLastEtag Tombstones { get; set; }
 
+        public virtual CountsWithLastEtag Conflicts { get; set; }
+
         public virtual Counts Identities { get; set; }
 
         public virtual Counts Indexes { get; set; }
@@ -133,6 +139,7 @@ namespace Raven.Client.Documents.Smuggler
                 [nameof(Documents)] = Documents.ToJson(),
                 [nameof(RevisionDocuments)] = RevisionDocuments.ToJson(),
                 [nameof(Tombstones)] = Tombstones.ToJson(),
+                [nameof(Conflicts)] = Conflicts.ToJson(),
                 [nameof(Identities)] = Identities.ToJson(),
                 [nameof(Indexes)] = Indexes.ToJson(),
             };

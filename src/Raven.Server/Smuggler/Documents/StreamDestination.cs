@@ -65,6 +65,11 @@ namespace Raven.Server.Smuggler.Documents
             return new StreamDocumentActions(_writer, _context, _source, nameof(DatabaseItemType.Tombstones));
         }
 
+        public IDocumentActions Conflicts()
+        {
+            return new StreamDocumentActions(_writer, _context, _source, nameof(DatabaseItemType.Conflicts));
+        }
+
         public IIdentityActions Identities()
         {
             return new StreamIdentityActions(_writer);
@@ -171,6 +176,24 @@ namespace Raven.Server.Smuggler.Documents
                     [nameof(DocumentTombstone.DeletedEtag)] = tombstone.DeletedEtag,
                     [nameof(DocumentTombstone.Etag)] = tombstone.Etag,
                     [nameof(DocumentTombstone.LastModified)] = tombstone.LastModified,
+                });
+            }
+
+            public void WriteConflict(DocumentConflict conflict, SmugglerProgressBase.CountsWithLastEtag progress)
+            {
+                if (First == false)
+                    Writer.WriteComma();
+                First = false;
+
+                _context.Write(Writer, new DynamicJsonValue
+                {
+                    [nameof(DocumentConflict.Id)] = conflict.Id,
+                    [nameof(DocumentConflict.Collection)] = conflict.Collection,
+                    [nameof(DocumentConflict.Flags)] = conflict.Flags.ToString(),
+                    [nameof(DocumentConflict.ChangeVector)] = conflict.ChangeVector,
+                    [nameof(DocumentConflict.Etag)] = conflict.Etag,
+                    [nameof(DocumentConflict.LastModified)] = conflict.LastModified,
+                    [nameof(DocumentConflict.Doc)] = conflict.Doc,
                 });
             }
 
