@@ -183,8 +183,8 @@
             </div>
             <!-- The transformation scripts -->
             <div class="etl-list" data-bind="with: editedSqlEtl">
-                <div data-bind="if: transformationScripts().length === 0">
-                    <div>                       
+                <div data-bind="if: transformationScripts().length === 0 && !$root.editedTransformationScript()">
+                    <div>
                         <h3 class="text-center text-muted" data-bind="css: { 'text-danger': !transformationScripts.isValid() && transformationScripts.isModified() }">No transformation scripts have been defined.</h3>
                     </div>
                 </div>
