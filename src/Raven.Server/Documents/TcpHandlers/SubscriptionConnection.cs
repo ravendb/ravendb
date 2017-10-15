@@ -116,7 +116,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
 
             _options.SubscriptionName = _options.SubscriptionName ?? SubscriptionId.ToString();
-            SubscriptionState = await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionConnectionDetails(SubscriptionId,_options.SubscriptionName, TimeSpan.FromSeconds(15));
+            SubscriptionState = await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionConnectionDetails(SubscriptionId,_options.SubscriptionName);
 
             (Collection, (Script, Functions), Revisions) = ParseSubscriptionQuery(SubscriptionState.Query);
 
@@ -138,6 +138,12 @@ namespace Raven.Server.Documents.TcpHandlers
                     Stats.ConnectedAt = DateTime.UtcNow;
                     await TcpConnection.DocumentDatabase.SubscriptionStorage.UpdateClientConnectionTime(SubscriptionState.SubscriptionId,
                         SubscriptionState.SubscriptionName, SubscriptionState.MentorNode);
+
+                    await TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(
+                        SubscriptionId,
+                        Options.SubscriptionName,
+                        nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
+                        nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange));
                     return;
                 }
                 catch (TimeoutException)

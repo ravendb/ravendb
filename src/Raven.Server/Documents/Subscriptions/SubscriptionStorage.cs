@@ -118,7 +118,7 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        public async Task<SubscriptionState> AssertSubscriptionConnectionDetails(long id, string name, TimeSpan timeout)
+        public async Task<SubscriptionState> AssertSubscriptionConnectionDetails(long id, string name)
         {
             await _serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, id);
 
