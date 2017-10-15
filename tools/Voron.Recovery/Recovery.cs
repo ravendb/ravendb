@@ -664,7 +664,7 @@ namespace Voron.Recovery
                 Document document = null;
                 try
                 {
-                    document = DocumentsStorage.ParseRawDataSectionDocumentWithValidation(context, ref tvr, sizeInBytes, out var currentEtag);
+                    document = DocumentsStorage.ParseRawDataSectionDocumentWithValidation(context, ref tvr, sizeInBytes);
                     if (document == null)
                     {
                         logWriter.WriteLine($"Failed to convert table value to document at position {GetFilePosition(startOffest, mem)}");
@@ -678,11 +678,11 @@ namespace Voron.Recovery
                         // This is a duplicate doc. It can happen when a page is marked as freed, but still exists in the data file.
                         // We determine which one to choose by their etag. If the document is newer, we will write it again to the
                         // smuggler file. This way, when importing, it will be the one chosen (last write wins)
-                        if (currentEtag <= previousEtag)
+                        if (document.Etag <= previousEtag)
                             return false;
                     }
 
-                    _previouslyWrittenDocs[document.Id] = currentEtag;
+                    _previouslyWrittenDocs[document.Id] = document.Etag;
                 }
                 catch (Exception e)
                 {
