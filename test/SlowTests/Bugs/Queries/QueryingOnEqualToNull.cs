@@ -32,8 +32,31 @@ namespace SlowTests.Bugs.Queries
                 using (var s = store.OpenSession())
                 {
                     int actual = s.Query<Company>().Where(x => x.Name == null).Count();
-                    WaitForUserToContinueTheTest(store);
                     Assert.Equal(1, actual);
+                }
+            }
+        }
+
+        [Fact]
+        public void QueryingOnEqNotNull()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var s = store.OpenSession())
+                {
+                    s.Store(new Company
+                    {
+                        Phone = 1,
+                        Type = Company.CompanyType.Public,
+                        Name = null
+                    });
+                    s.SaveChanges();
+                }
+
+                using (var s = store.OpenSession())
+                {
+                    int actual = s.Query<Company>().Where(x => x.Id != "companies/1").Count();
+                    Assert.Equal(0, actual);
                 }
             }
         }
