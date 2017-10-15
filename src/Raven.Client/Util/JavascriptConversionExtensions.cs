@@ -167,7 +167,14 @@ namespace Raven.Client.Util
         }
 
         public class MathSupport : JavascriptConversionExtension
-        {        
+        {
+            private static readonly Dictionary<string, string> SupportedNames = new Dictionary<string, string>{
+                {"Abs", "abs"}, {"Acos", "acos"}, {"Asin", "asin"}, {"Atan", "atan"}, {"Atan2", "atan2"},
+                {"Ceiling", "ceil"}, {"Cos", "cos"}, {"Exp", "exp"}, {"Floor", "floor"}, {"Log", "log"},
+                {"Max", "max"}, {"Min", "min" }, {"Pow", "pow" }, {"Round", "round"}, {"Sin", "sin"},
+                {"Sqrt", "sqrt"}, {"Tan", "tan"}
+            };
+
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
                 var methodCallExpression = context.Node as MethodCallExpression;
@@ -176,17 +183,8 @@ namespace Raven.Client.Util
                 if (method == null || method.DeclaringType != typeof(Math))
                     return;
 
-                var supportedNames = new List<string>
-                {
-                    "Abs", "Acos", "Asin", "Atan", "Atan2", "Ceiling",
-                    "Cos", "Exp", "Floor", "Log", "Max", "Min", "Pow",
-                    "Round", "Sin", "Sqrt", "Tan"
-                };
-
-                if (supportedNames.Contains(method.Name) == false)
-                    return;
-
-                var newName = method.Name == "Ceiling" ? "ceil" : method.Name.ToLower();
+                if (SupportedNames.ContainsKey(method.Name) == false)
+                    throw new NotSupportedException($"Translation of System.Math.{method.Name} to JavaScript is not supported");
 
                 var writer = context.GetWriter();
                 context.PreventDefault();
@@ -194,7 +192,7 @@ namespace Raven.Client.Util
                 using (writer.Operation(methodCallExpression))
                 {
                     writer.Write("Math.");
-                    writer.Write(newName);
+                    writer.Write(SupportedNames[method.Name]);
 
                     writer.Write("(");
 
