@@ -43,18 +43,9 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             if (record.Topology.WhoseTaskIsIt(subscription, isPassive) != NodeTag)
                 throw new InvalidOperationException($"Can't update subscription with name {subscriptionName} by node {NodeTag}, because it's not it's task to update this subscription");
 
-            if (Constants.Documents.SubscriptionChangeVectorSpecialStates.TryParse(ChangeVector,
-                out Constants.Documents.SubscriptionChangeVectorSpecialStates specialValue))
+            if (ChangeVector == nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange))
             {
-                if (specialValue == Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange)
-                {
-                    return context.ReadObject(existingValue, SubscriptionName);
-
-                }
-                else
-                {
-                    throw new InvalidOperationException($"Subscription with name {subscriptionName} has received an ACK with and invalid ChangeVector {ChangeVector}");
-                }
+                return context.ReadObject(existingValue, SubscriptionName);
             }
 
             if (LastKnownSubscriptionChangeVector != subscription.ChangeVectorForNextBatchStartingPoint)
