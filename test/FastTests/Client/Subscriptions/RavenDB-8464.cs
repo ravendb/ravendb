@@ -22,7 +22,7 @@ namespace FastTests.Client.Subscriptions
  
     public class RavenDB_8464:RavenTestBase
     {
-        private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(60 * 10) : TimeSpan.FromSeconds(6);
+        private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(60 * 10) : TimeSpan.FromSeconds(60);
         [Fact]
         public async Task AfterAckShouldHappenAfterTheEndOfBatchRun()
         {
@@ -37,6 +37,13 @@ namespace FastTests.Client.Subscriptions
                 {
                     var amre = new AsyncManualResetEvent();
 
+                    subscription.AfterAcknowledgment += batch =>
+                    {
+                        amre.Set();
+
+                        return Task.CompletedTask;
+                    };
+
                     var task = subscription.Run(x => { });
                     
                     using (var session = store.OpenSession())
@@ -47,12 +54,7 @@ namespace FastTests.Client.Subscriptions
                         cv = (string)session.Advanced.GetMetadataFor(entity)[Constants.Documents.Metadata.ChangeVector];
                     }
 
-                    subscription.AfterAcknowledgment += batch =>
-                    {
-                        amre.Set();
-
-                        return Task.CompletedTask;
-                    };
+                 
 
                     Assert.True(await amre.WaitAsync(_reasonableWaitTime));
 
