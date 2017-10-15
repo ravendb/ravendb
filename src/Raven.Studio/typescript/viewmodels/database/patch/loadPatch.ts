@@ -1,3 +1,4 @@
+/*
 import patchDocument = require("models/database/patch/patchDocument");
 import dialog = require("plugins/dialog");
 import database = require("models/resources/database");
@@ -56,3 +57,5 @@ class loadPatch extends dialogViewModelBase {
 }
 
 export = loadPatch;
+*/
+//TODO: delete file?

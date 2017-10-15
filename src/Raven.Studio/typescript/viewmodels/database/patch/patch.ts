@@ -28,7 +28,7 @@ class patchList {
 
     previewItem = ko.observable<patchDto>();
 
-    allPatches = ko.observableArray<patchDto>([]);  
+    allPatches = ko.observableArray<storedPatchDto>([]);  
 
     private readonly useHandler: (patch: patchDto) => void;
     private readonly removeHandler: (patch: patchDto) => void;
@@ -82,18 +82,29 @@ class patchList {
     }
 
     loadAll(db: database) {
-
         savedPatchesStorage.getSavedPatchesWithIndexNameCheck(db)
             .done(queries => this.allPatches(queries));
     }     
 
-    push(doc: patchDto) {
-        if (this.allPatches().find(x => x.Name === doc.Name)) {
-            messagePublisher.reportError("Name already exists");
-            return;
-        }
+    append(doc: storedPatchDto, isRecent: boolean) {
 
-        this.allPatches.push(doc);
+        if (isRecent) {
+            const existing = this.allPatches().find(patch => patch.Hash === doc.Hash);
+            if (existing) {
+                this.allPatches.remove(existing);
+                this.allPatches.unshift(doc);
+            } else {
+                this.allPatches.unshift(doc);
+            }
+        }
+        else {
+            const existing = this.allPatches().find(x => x.Name === doc.Name);
+            if (existing) {
+                this.allPatches.replace(existing, doc);
+            } else {
+                this.allPatches.unshift(doc);
+            }
+        }
     }
 }
 
@@ -285,18 +296,9 @@ class patch extends viewModelBase {
             eventsCollector.default.reportEvent("patch", "save");
 
             if (this.isValid(this.savePatchValidationGroup)) {
-                this.spinners.save(true);           
-
-                this.savePatchInStorage()
-                    .always(() => this.spinners.save(false))
-                    .done(() => {
-                        this.inSaveMode(false);
-                        this.patchDocument().name("");
-                        this.savePatchValidationGroup.errors.showAllMessages(false);
-                        this.savedPatches.loadAll(this.activeDatabase());
-
-                        messagePublisher.reportSuccess("Patch saved succesfully");
-                    });;;
+                this.savePatchInStorage(false);
+                this.savePatchValidationGroup.errors.showAllMessages(false);
+                messagePublisher.reportSuccess("Patch saved successfully");
             }
         } else {
             if (this.isValid(this.runPatchValidationGroup)) {
@@ -308,13 +310,15 @@ class patch extends viewModelBase {
     private saveRecentPatch() {
         const name = this.getRecentPatchName();
         this.patchDocument().name(name);
-        this.savePatchInStorage();
-        this.patchDocument().name("");
+        this.savePatchInStorage(true);
     }
 
-    private savePatchInStorage() {
-        this.savedPatches.push(this.patchDocument().toDto());
-        return $.when(savedPatchesStorage.storeSavedPatches(this.activeDatabase(), this.savedPatches.allPatches()));
+    private savePatchInStorage(isRecent: boolean) {
+        this.savedPatches.append(this.patchDocument().toStorageDto(), isRecent);
+        savedPatchesStorage.storeSavedPatches(this.activeDatabase(), this.savedPatches.allPatches());
+
+        this.patchDocument().name("");
+        this.savedPatches.loadAll(this.activeDatabase());
     }
 
     private getRecentPatchName(): string {

@@ -5,14 +5,14 @@ import storageKeyProvider = require("common/storage/storageKeyProvider");
 
 class savedPatchesStorage {
 
-    static getSavedPatchesWithIndexNameCheck(db: database): JQueryPromise<patchDto[]> {
+    static getSavedPatchesWithIndexNameCheck(db: database): JQueryPromise<storedPatchDto[]> {
         const savedPatches = this.getSavedPatches(db);
         return $.when(savedPatches);
     }
 
-    static getSavedPatches(db: database): patchDto[] {
+    static getSavedPatches(db: database): storedPatchDto[] {
         const localStorageName = savedPatchesStorage.getLocalStorageKey(db.name);
-        let savedPatchesFromLocalStorage: patchDto[] = this.getSavedPatchesFromLocalStorage(localStorageName);
+        let savedPatchesFromLocalStorage: storedPatchDto[] = this.getSavedPatchesFromLocalStorage(localStorageName);
 
         if (savedPatchesFromLocalStorage == null || savedPatchesFromLocalStorage instanceof Array === false) {
             localStorage.setObject(localStorageName, []);
@@ -22,18 +22,18 @@ class savedPatchesStorage {
         return savedPatchesFromLocalStorage;
     }
 
-    static storeSavedPatches(db: database, savedPatches: patchDto[]): JQueryPromise<void>{
+    static storeSavedPatches(db: database, savedPatches: storedPatchDto[]){
         const localStorageName = savedPatchesStorage.getLocalStorageKey(db.name);
-        return $.when(localStorage.setObject(localStorageName, savedPatches));
+        localStorage.setObject(localStorageName, savedPatches);
     }
 
     static removeSavedPatchByName(db: database, name: string) {
         const localStorageName = savedPatchesStorage.getLocalStorageKey(db.name);
-        const savedPatchesFromLocalStorage: patchDto[] = this.getSavedPatchesFromLocalStorage(localStorageName);
+        const savedPatchesFromLocalStorage: storedPatchDto[] = this.getSavedPatchesFromLocalStorage(localStorageName);
         if (savedPatchesFromLocalStorage == null)
             return;
 
-        const newSavedPatches = savedPatchesFromLocalStorage.filter((dto: patchDto) => dto.Name !== name);
+        const newSavedPatches = savedPatchesFromLocalStorage.filter((dto: storedPatchDto) => dto.Name !== name);
         localStorage.setObject(localStorageName, newSavedPatches);
     }
 
@@ -41,8 +41,8 @@ class savedPatchesStorage {
         return storageKeyProvider.storageKeyFor(`savedPatches.${dbName}`);
     }
 
-    private static getSavedPatchesFromLocalStorage(localStorageName: string): patchDto[] {
-        let savedPatchesFromLocalStorage: patchDto[] = null;
+    private static getSavedPatchesFromLocalStorage(localStorageName: string): storedPatchDto[] {
+        let savedPatchesFromLocalStorage: storedPatchDto[] = null;
         try {
             savedPatchesFromLocalStorage = localStorage.getObject(localStorageName);
         } catch (err) {
