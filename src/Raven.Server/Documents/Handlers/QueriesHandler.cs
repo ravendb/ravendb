@@ -301,28 +301,19 @@ namespace Raven.Server.Documents.Handlers
                     throw new BadRequestException("Missing 'Query' property.");
 
                 var query = IndexQueryServerSide.Create(queryJson, context, Database.QueryMetadataCache, QueryType.Update);
-                
+
                 var patch = new PatchRequest(query.Metadata.GetUpdateBody(query.QueryParameters), PatchRequestType.Patch);
 
-                var docId = GetDocumentId(query);
+                var docId = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
 
-                PatchDocumentCommand command;
-                if (query.Metadata.IsDynamic == false)
-                {
-                    command = new PatchDocumentCommand(context, docId,
-                        expectedChangeVector: null,
-                        skipPatchIfChangeVectorMismatch: false,
-                        patch: (patch, query.QueryParameters),
-                        patchIfMissing: (null, null),
-                        database: context.DocumentDatabase,
-                        debugMode: true,
-                        isTest: true);
-                }
-                else
-                {
-                    command = new PatchDocumentCommand(context, docId, null, false, (patch, query.QueryParameters), (null, null),
-                        Database, true, true);
-                }
+                var command = new PatchDocumentCommand(context, docId,
+                    expectedChangeVector: null,
+                    skipPatchIfChangeVectorMismatch: false,
+                    patch: (patch, query.QueryParameters),
+                    patchIfMissing: (null, null),
+                    database: context.DocumentDatabase,
+                    debugMode: true,
+                    isTest: true);
 
                 using (context.OpenWriteTransaction())
                 {
@@ -352,24 +343,6 @@ namespace Raven.Server.Documents.Handlers
 
                 return Task.CompletedTask;
             }
-        }
-
-        private StringSegment  GetDocumentId(IndexQueryServerSide query)
-        {
-            if (!(query.Metadata?.Query?.Where is BinaryExpression binaryExpression))
-            {
-                throw new InvalidOperationException("Patch test query must contain have a where clause with a simple id() equality test, but was " + query.Query);
-            }
-            if (!(binaryExpression.Left is MethodExpression me) || "id".Equals(me.Name, StringComparison.OrdinalIgnoreCase) == false)
-            {
-                throw new InvalidOperationException("Patch test query must contain have a where clause with a simple id() equality test, but was " + query.Query);
-            }
-            if (!(binaryExpression.Right is ValueExpression ve))
-            {
-                throw new InvalidOperationException("Patch test query must contain have a where clause with an id() equality test to a constant value, but was " + query.Query);
-            }
-
-            return ve.Token;
         }
 
         private void WritePatchResultToResponse(DocumentsOperationContext context, PatchDocumentCommand command)
