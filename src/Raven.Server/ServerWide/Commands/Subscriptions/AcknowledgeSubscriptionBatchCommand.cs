@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
@@ -42,6 +43,19 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             if (record.Topology.WhoseTaskIsIt(subscription, isPassive) != NodeTag)
                 throw new InvalidOperationException($"Can't update subscription with name {subscriptionName} by node {NodeTag}, because it's not it's task to update this subscription");
 
+            if (Constants.Documents.SubscriptionChangeVectorSpecialStates.TryParse(ChangeVector,
+                out Constants.Documents.SubscriptionChangeVectorSpecialStates specialValue))
+            {
+                if (specialValue == Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange)
+                {
+                    return context.ReadObject(existingValue, SubscriptionName);
+
+                }
+                else
+                {
+                    throw new InvalidOperationException($"Subscription with name {subscriptionName} has received an ACK with and invalid ChangeVector {ChangeVector}");
+                }
+            }
 
             if (LastKnownSubscriptionChangeVector != subscription.ChangeVectorForNextBatchStartingPoint)
                 throw new ConcurrencyException($"Can't acknowledge subscription with name {subscriptionName} due to inconsistency in change vector progress. Probably there was an admin intervention that changed the change vector value");
