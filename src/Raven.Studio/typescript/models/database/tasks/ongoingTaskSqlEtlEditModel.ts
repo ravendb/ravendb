@@ -110,6 +110,7 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
     static empty(): ongoingTaskSqlEtlEditModel {
         return new ongoingTaskSqlEtlEditModel(
             {                
+                TaskName: "", 
                 TaskType: "SqlEtl",
                 TaskState: "Enabled",               
                 TaskConnectionStatus: "Active",                
