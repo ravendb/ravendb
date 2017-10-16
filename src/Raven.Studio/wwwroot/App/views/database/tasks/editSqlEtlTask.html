@@ -255,8 +255,7 @@
                                            placeholder="Select a collection">
                                     <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
                                     <ul class="dropdown-menu max-height"
-                                        data-bind="foreach: $root.collectionNames">
-                                        <!--todo: autocomplete...-->
+                                        data-bind="foreach: $root.createCollectionNameAutocompleter(collection)">
                                         <li data-bind="click: _.partial($root.useCollection, $data)">
                                             <a href="#" data-bind="text: $data"></a>
                                         </li>
