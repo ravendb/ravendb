@@ -47,6 +47,7 @@ using Raven.Server.Smuggler.Migration;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.Smuggler.Documents;
 using Raven.Client.Extensions;
+using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Utils;
 using Constants = Raven.Client.Constants;
@@ -207,8 +208,6 @@ namespace Raven.Server.Web.System
         public async Task Put()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            var nodeUrlsAddedTo = new List<string>();
-
             if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
 
@@ -218,49 +217,11 @@ namespace Raven.Server.Web.System
                 context.OpenReadTransaction();
 
                 var index = GetLongFromHeaders("ETag");
-                var existingDatabaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out long _);
-
-                if (index.HasValue && existingDatabaseRecord == null)
-                    throw new BadRequestException($"Attempted to modify non-existing database: '{name}'");
-
-                if (existingDatabaseRecord != null && index.HasValue == false)
-                    throw new ConcurrencyException($"Database '{name}' already exists!");
-
+                var replicationFactor = GetIntValueQueryString("replication-factor", required: false) ?? 0;
                 var json = context.ReadForDisk(RequestBodyStream(), name);
                 var databaseRecord = JsonDeserializationCluster.DatabaseRecord(json);
 
-                try
-                {
-                    DatabaseHelper.Validate(name, databaseRecord);
-                }
-                catch (Exception e)
-                {
-                    throw new BadRequestException("Database document validation failed.", e);
-                }
-                var clusterTopology = ServerStore.GetClusterTopology(context);
-                ValidateClusterMembers(clusterTopology, databaseRecord);
-
-                DatabaseTopology topology;
-                if (databaseRecord.Topology?.Members?.Count > 0)
-                {
-                    topology = databaseRecord.Topology;
-                    foreach (var member in topology.Members)
-                    {
-                        var nodeUrl = clusterTopology.GetUrlFromTag(member);
-                        if (nodeUrl == null)
-                            throw new ArgumentException($"Failed to add node {member}, becasue we don't have it in the cluster.");
-                        nodeUrlsAddedTo.Add(nodeUrl);
-                    }
-                }
-                else
-                {
-                    var factor = Math.Max(1, GetIntValueQueryString("replication-factor", required: false) ?? 0);
-                    databaseRecord.Topology = topology = AssignNodesToDatabase(context, factor, name, databaseRecord.Encrypted, out nodeUrlsAddedTo);
-                }
-                topology.ReplicationFactor = topology.Members.Count;
-                var (newIndex, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index);
-
-                await WaitForExecutionOnRelevantNodes(context, name, clusterTopology, databaseRecord.Topology.Members, newIndex);
+                var (newIndex, topology, nodeUrlsAddedTo) = await CreateDatabase(name, databaseRecord, context, replicationFactor, index);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
@@ -276,6 +237,52 @@ namespace Raven.Server.Web.System
                     writer.Flush();
                 }
             }
+        }
+
+        private async Task<(long, DatabaseTopology, List<string>)> CreateDatabase(string name, DatabaseRecord databaseRecord, TransactionOperationContext context, int replicationFactor, long? index)
+        {
+            var existingDatabaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out long _);
+
+            if (index.HasValue && existingDatabaseRecord == null)
+                throw new BadRequestException($"Attempted to modify non-existing database: '{name}'");
+
+            if (existingDatabaseRecord != null && index.HasValue == false)
+                throw new ConcurrencyException($"Database '{name}' already exists!");
+
+            var nodeUrlsAddedTo = new List<string>();
+            try
+            {
+                DatabaseHelper.Validate(name, databaseRecord);
+            }
+            catch (Exception e)
+            {
+                throw new BadRequestException("Database document validation failed.", e);
+            }
+            var clusterTopology = ServerStore.GetClusterTopology(context);
+            ValidateClusterMembers(clusterTopology, databaseRecord);
+
+            DatabaseTopology topology;
+            if (databaseRecord.Topology?.Members?.Count > 0)
+            {
+                topology = databaseRecord.Topology;
+                foreach (var member in topology.Members)
+                {
+                    var nodeUrl = clusterTopology.GetUrlFromTag(member);
+                    if (nodeUrl == null)
+                        throw new ArgumentException($"Failed to add node {member}, becasue we don't have it in the cluster.");
+                    nodeUrlsAddedTo.Add(nodeUrl);
+                }
+            }
+            else
+            {
+                var factor = Math.Max(1, replicationFactor);
+                databaseRecord.Topology = topology = AssignNodesToDatabase(context, factor, name, databaseRecord.Encrypted, out nodeUrlsAddedTo);
+            }
+            topology.ReplicationFactor = topology.Members.Count;
+            var (newIndex, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index);
+
+            await WaitForExecutionOnRelevantNodes(context, name, clusterTopology, databaseRecord.Topology?.Members, newIndex);
+            return (newIndex, topology, nodeUrlsAddedTo);
         }
 
         [RavenAction("/admin/databases/reorder", "POST", AuthorizationStatus.Operator)]
@@ -1344,11 +1351,16 @@ namespace Raven.Server.Web.System
                 NoContentStatus();
             }
         }
+        
 
+        
         [RavenAction("/admin/migrate/offline", "POST", AuthorizationStatus.ClusterAdmin)]
         public async Task MigrateDatabaseOffline()
         {
             OfflineMigrationConfiguration configuration;
+
+            ServerStore.EnsureNotPassive();
+
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var migrationConfiguration = await context.ReadForMemoryAsync(RequestBodyStream(), "migration-configuration");
@@ -1360,7 +1372,19 @@ namespace Raven.Server.Web.System
                 throw new DirectoryNotFoundException($"Could not find directory {dataDir}");
 
             var dataExporter = configuration.DataExporterFullPath;
+            if (File.Exists(configuration.DataExporterFullPath) == false)
+                throw new FileNotFoundException($"Could not Find file {dataExporter}");
+
             var databaseName = configuration.DatabaseName;
+            if (ResourceNameValidator.IsValidResourceName(databaseName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+                throw new BadRequestException(errorMessage);
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                context.OpenReadTransaction();
+                await CreateDatabase(databaseName, configuration.DatabaseRecord, context, 1, null);
+            }
+            
             var database = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName, true);
             if (database == null)
             {
@@ -1414,14 +1438,14 @@ namespace Raven.Server.Web.System
                                 if (hasTimeout)
                                 {
                                     //renewing the timeout so not to spam timeouts once the timeout is reached
-                                    timeout = Task.Delay(configuration.Timeout.Value,token.Token);
+                                    timeout = Task.Delay(configuration.Timeout.Value, token.Token);
                                 }
 
                                 result.AddInfo(readMessage);
                                 onProgress(overallProgress);
                             }
 
-                            var ended = await processDone.WaitAsync(configuration.Timeout.HasValue ? configuration.Timeout.Value : TimeSpan.MaxValue);
+                            var ended = await processDone.WaitAsync(configuration.Timeout ?? TimeSpan.MaxValue);
                             if (ended == false)
                             {
                                 if (token.Token.IsCancellationRequested)
@@ -1441,6 +1465,7 @@ namespace Raven.Server.Web.System
                             {
                                 throw new FileNotFoundException($"Was expecting the output file to be located at {configuration.OutputFilePath}, but it is not there.");
                             }
+
                             result.AddInfo("Starting the import phase of the migration");
                             onProgress(overallProgress);
                             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -1464,7 +1489,7 @@ namespace Raven.Server.Web.System
                         {
                             if (string.IsNullOrEmpty(tmpFile) == false)
                             {
-                                new FileInfo(Path.GetDirectoryName(tmpFile)).Delete();
+                                IOExtensions.DeleteFile(tmpFile);
                             }
                         }
                         return (IOperationResult)result;

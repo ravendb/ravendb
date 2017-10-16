@@ -403,18 +403,19 @@ class databaseCreationModel {
     
     toOfflineMigrationDto(): Raven.Server.Smuggler.Migration.OfflineMigrationConfiguration {
         const migration = this.legacyMigration;
-        return {
+        return (({
             DataDirectory: migration.dataDirectory(),
             DataExporterFullPath: migration.dataExporterFullPath(),
-            BatchSize: migration.batchSize() || null, 
+            BatchSize: migration.batchSize() || null,
             IsRavenFs: migration.sourceType() === "ravenfs",
             IsCompressed: migration.isCompressed(),
             JournalsPath: migration.journalsPath(),
             DatabaseName: this.name(),
+            DatabaseRecord: this.toDto(),
             EncryptionKey: migration.isEncrypted() ? migration.encryptionKey() : undefined,
             EncryptionAlgorithm: migration.isEncrypted() ? migration.encryptionAlgorithm() : undefined,
             EncryptionKeyBitsSize: migration.isEncrypted() ? migration.encryptionKeyBitsSize() : undefined
-        } as Raven.Server.Smuggler.Migration.OfflineMigrationConfiguration;
+        }) as any) as Raven.Server.Smuggler.Migration.OfflineMigrationConfiguration;
     }
 }
 
