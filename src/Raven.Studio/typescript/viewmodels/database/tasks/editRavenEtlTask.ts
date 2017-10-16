@@ -134,7 +134,6 @@ class editRavenEtlTask extends viewModelBase {
     saveRavenEtl() {
         const editedEtl = this.editedRavenEtl();
 
-        // show validations errors if any - ignore returned value
         this.isValid(this.editedRavenEtl().validationGroup);
         
         if (editedEtl.showEditTransformationArea()) {
