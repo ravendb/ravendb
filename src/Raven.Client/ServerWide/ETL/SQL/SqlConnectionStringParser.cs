@@ -40,8 +40,11 @@ namespace Raven.Client.ServerWide.ETL.SQL
             foreach (var part in parts)
             {
                 var keyValue = part.Split('=');
-
-                Debug.Assert(keyValue.Length == 2);
+               
+                if (keyValue.Length != 2)
+                {
+                    continue;
+                }
 
                 foreach (var key in keyNames)
                 {
@@ -51,7 +54,7 @@ namespace Raven.Client.ServerWide.ETL.SQL
             }
 
             if (throwIfNotFound)
-                throw new InvalidDataException($"Invalid connection string. Could not found neither of '{string.Join(",", keyNames)}' keys in the connection string: {connectionString}");
+                throw new InvalidDataException($"Invalid connection string. Could not find neither of '{string.Join(",", keyNames)}' keys in the connection string: {connectionString}");
 
             return null;
         }
