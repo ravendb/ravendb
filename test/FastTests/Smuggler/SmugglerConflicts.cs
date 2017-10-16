@@ -1,7 +1,7 @@
 using System.IO;
 using System.Threading.Tasks;
-using FastTests.Server.Documents.Revisions;
 using FastTests.Server.Replication;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Tests.Core.Utils.Entities;
@@ -66,38 +66,63 @@ namespace FastTests.Smuggler
                         await session.SaveChangesAsync();
                     }
 
-                    await SetupReplicationAsync(store1, store2);
                     await SetupReplicationAsync(store2, store1);
 
                     Assert.Equal(2, WaitUntilHasConflict(store1, "users/fitzchak").Length);
-                    Assert.Equal(2, WaitUntilHasConflict(store2, "users/fitzchak").Length);
 
                     await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
 
-                    WaitForUserToContinueTheTest(store1);
-
                     var stats = await store1.Admin.SendAsync(new GetStatisticsOperation());
-                    Assert.Equal(4, stats.CountOfDocuments);
-                    Assert.Equal(8, stats.CountOfRevisionDocuments);
+                    Assert.Equal(2, stats.CountOfDocuments);
+                    Assert.Equal(4, stats.CountOfConflicts);
+
+                    stats = await store2.Admin.SendAsync(new GetStatisticsOperation());
+                    Assert.Equal(6, stats.CountOfDocuments);
+                    Assert.Equal(0, stats.CountOfConflicts);
+
+                    // Assert import to an existing database
+                    await AssertImport(store1, file);
+
+                    // Assert import to a database that has the same document.
+                    // We'll delete the document but create the same conflict.
+                    await AssertImport(store2, file);
+
+                   /* using (var session = store2.OpenAsyncSession())
+                    {
+                        var user = await session.LoadAsync<User>("users/fitzchak");
+                        user.LastName = "Update to generate another conflict.";
+                        await session.SaveChangesAsync();
+                    }
+
+                    // Assert import to a database that has a different document.
+                    // We'll delete the document but create create another conflict for it.
+                    await AssertImport(store2, file);*/
                 }
 
-                using (var store2 = GetDocumentStore(new Options
+                // Assert import to a new database
+                using (var store3 = GetDocumentStore(new Options
                 {
-                    ModifyDatabaseName = s => $"{s}_store2"
+                    ModifyDatabaseName = s => $"{s}_store3"
                 }))
                 {
-                    await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database);
-
-                    await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
-
-                    var stats = await store2.Admin.SendAsync(new GetStatisticsOperation());
-                    Assert.Equal(4, stats.CountOfDocuments);
-                    Assert.Equal(10, stats.CountOfRevisionDocuments);
+                    await AssertImport(store3, file);
                 }
             }
             finally
             {
                 File.Delete(file);
+            }
+        }
+
+        private async Task AssertImport(DocumentStore store, string file)
+        {
+            for (int i = 0; i < 3; i++)
+            {
+                await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+
+                var stats = await store.Admin.SendAsync(new GetStatisticsOperation());
+                Assert.Equal(2, stats.CountOfDocuments);
+                Assert.Equal(4, stats.CountOfConflicts);
             }
         }
     }

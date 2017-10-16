@@ -54,7 +54,7 @@ namespace Raven.Server.Smuggler.Migration
 
             using (var responseStream = await response.Content.ReadAsStreamAsync())
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var source = new StreamSource(responseStream, context))
+            using (var source = new StreamSource(responseStream, context, Database))
             {
                 var destination = new DatabaseDestination(Database);
                 var options = new DatabaseSmugglerOptionsServerSide();
@@ -82,7 +82,7 @@ namespace Raven.Server.Smuggler.Migration
             // indexes endpoint returns an array
             using (var indexesStream = new IndexesStream(responseStream))
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var source = new StreamSource(indexesStream, context))
+            using (var source = new StreamSource(indexesStream, context, Database))
             {
                 var destination = new DatabaseDestination(Database);
                 var options = new DatabaseSmugglerOptionsServerSide();

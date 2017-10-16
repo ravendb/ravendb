@@ -481,7 +481,7 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
                     }
 
-                    if (conflict.LowerId == null)
+                    if (conflict.Id == null)
                         ThrowInvalidData();
 
                     actions.WriteConflict(conflict, result.Conflicts);
