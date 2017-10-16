@@ -372,6 +372,9 @@ namespace Raven.Server.Documents.Operations
             [Description("Database import")]
             DatabaseImport,
 
+            [Description("Database import from csv")]
+            DatabaseImportFromCsv,
+
             [Description("Database migration")]
             DatabaseMigration,
 
