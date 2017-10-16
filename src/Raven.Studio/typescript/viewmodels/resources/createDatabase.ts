@@ -323,8 +323,7 @@ class createDatabase extends dialogViewModelBase {
             .always(() => {
                 dialog.close(this);
                 this.spinners.create(false);
-            })
-            .fail(() => this.spinners.create(false));
+            });
     }
 
     toggleSelectAll() {
