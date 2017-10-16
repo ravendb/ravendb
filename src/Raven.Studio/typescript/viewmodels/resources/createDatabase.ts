@@ -294,17 +294,18 @@ class createDatabase extends dialogViewModelBase {
             .fail(() => this.spinners.create(false));
     }
 
-    private createDatabaseFromLegacyDatafiles(): JQueryPromise<operationIdDto> {
-        return this.createDatabaseInternal(false)
-            .then(() => {
-                const restoreDocument = this.databaseModel.toOfflineMigrationDto();
+    private createDatabaseFromLegacyDatafiles(): JQueryPromise<operationIdDto> {  
 
-                return new migrateLegacyDatabaseFromDatafilesCommand(restoreDocument)
-                    .execute()
-                    .done((operationIdDto: operationIdDto) => {
-                        const operationId = operationIdDto.OperationId;
-                        notificationCenter.instance.openDetailsForOperationById(null, operationId);
-                    });
+        const restoreDocument = this.databaseModel.toOfflineMigrationDto();
+        return new migrateLegacyDatabaseFromDatafilesCommand(restoreDocument)
+            .execute()
+            .done((operationIdDto: operationIdDto) => {
+                const operationId = operationIdDto.OperationId;
+                notificationCenter.instance.openDetailsForOperationById(null, operationId);
+                dialog.close(this);
+            })
+            .always(() => {
+                this.spinners.create(false);
             });
     }
     
@@ -322,7 +323,8 @@ class createDatabase extends dialogViewModelBase {
             .always(() => {
                 dialog.close(this);
                 this.spinners.create(false);
-            });
+            })
+            .fail(() => this.spinners.create(false));
     }
 
     toggleSelectAll() {
