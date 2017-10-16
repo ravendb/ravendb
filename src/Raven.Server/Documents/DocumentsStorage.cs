@@ -79,6 +79,11 @@ namespace Raven.Server.Documents
             TransactionMarker = 7
         }
 
+        public enum CollectionsTable
+        {
+            Name = 0,
+        }
+
         static DocumentsStorage()
         {
             Slice.From(StorageEnvironment.LabelsContext, "AllTombstonesEtags", ByteStringType.Immutable, out AllTombstonesEtagsSlice);
@@ -94,6 +99,7 @@ namespace Raven.Server.Documents
             Slice.From(StorageEnvironment.LabelsContext, "LastReplicatedEtags", ByteStringType.Immutable, out LastReplicatedEtagsSlice);
             Slice.From(StorageEnvironment.LabelsContext, "GlobalTree", ByteStringType.Immutable, out GlobalTreeSlice);
             Slice.From(StorageEnvironment.LabelsContext, "GlobalChangeVector", ByteStringType.Immutable, out GlobalChangeVectorSlice);
+
             /*
             Collection schema is:
             full name
@@ -101,7 +107,7 @@ namespace Raven.Server.Documents
             */
             CollectionsSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
-                StartIndex = 0,
+                StartIndex = (int)CollectionsTable.Name,
                 Count = 1,
                 IsGlobal = false
             });
@@ -1461,8 +1467,7 @@ namespace Raven.Server.Documents
                 }
 
                 DocsSchema.Create(context.Transaction.InnerTransaction, name.GetTableName(CollectionTableType.Documents), 16);
-                TombstonesSchema.Create(context.Transaction.InnerTransaction,
-                    name.GetTableName(CollectionTableType.Tombstones), 16);
+                TombstonesSchema.Create(context.Transaction.InnerTransaction, name.GetTableName(CollectionTableType.Tombstones), 16);
 
                 // Add to cache ONLY if the transaction was committed. 
                 // this would prevent NREs next time a PUT is run,since if a transaction
@@ -1489,13 +1494,12 @@ namespace Raven.Server.Documents
         {
             var result = new Dictionary<string, CollectionName>(OrdinalIgnoreCaseStringStructComparer.Instance);
 
-            var collections = tx.OpenTable(CollectionsSchema, CollectionsSlice);
-
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
+                var collections = tx.OpenTable(CollectionsSchema, CollectionsSlice);
                 foreach (var tvr in collections.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
                 {
-                    var collection = TableValueToId(context, 0, ref tvr.Reader);
+                    var collection = TableValueToId(context, (int)CollectionsTable.Name, ref tvr.Reader);
                     var collectionName = new CollectionName(collection);
                     result.Add(collection, collectionName);
 
