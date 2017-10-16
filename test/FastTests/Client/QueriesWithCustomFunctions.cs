@@ -85,7 +85,7 @@ namespace FastTests.Client
                     var query = session.Query<User>()
                         .Select(u => new { u.Name, Age = DateTime.Today - u.Birthday});
 
-                    Assert.Equal("FROM Users as u SELECT { Name : u.Name, Age : convertJsTimeToTimeSpanString(new Date().setHours(0,0,0,0)-Date.parse(u.Birthday)) }",
+                    Assert.Equal("FROM Users as u SELECT { Name : u.Name, Age : convertJsTimeToTimeSpanString(new Date().setHours(0,0,0,0)-new Date(Date.parse(u.Birthday))) }",
                                 query.ToString());
 
                     var queryResult = query.ToList();
@@ -114,7 +114,7 @@ namespace FastTests.Client
                     var query = session.Query<User>()
                         .Select(u => new { u.Name, Age = DateTime.Today - u.Birthday });
 
-                    Assert.Equal("FROM Users as u SELECT { Name : u.Name, Age : convertJsTimeToTimeSpanString(new Date().setHours(0,0,0,0)-Date.parse(u.Birthday)) }",
+                    Assert.Equal("FROM Users as u SELECT { Name : u.Name, Age : convertJsTimeToTimeSpanString(new Date().setHours(0,0,0,0)-new Date(Date.parse(u.Birthday))) }",
                         query.ToString());
 
                     var queryResult = await query.ToListAsync();
@@ -1280,6 +1280,46 @@ FROM Users as user SELECT output(user)", query.ToString());
                     Assert.Equal(2, queryResult.Count);
                     Assert.Equal("Jerry Garcia", queryResult[0].FullName);
                     Assert.Equal("Bob Weir", queryResult[1].FullName);
+                }
+            }
+        }
+
+        [Fact]
+        public void Custom_Functions_With_DateTime_Object()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia", Birthday = new DateTime(1942, 8, 1) }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from u in session.Query<User>()
+                        let date = new DateTime(1960, 1, 1)
+                        select new
+                        {
+                            Bday = u.Birthday,
+                            Date = date
+                        };
+
+                    Assert.Equal(
+                        @"DECLARE function output(u) {
+	var date = new Date(1960, 0, 1);
+	return { Bday : new Date(Date.parse(u.Birthday)), Date : date };
+}
+FROM Users as u SELECT output(u)", query.ToString());
+
+
+                    var queryResult = query.ToList();
+
+                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal(new DateTime(1942, 8, 1), queryResult[0].Bday);
+                    Assert.Equal(new DateTime(1960, 1, 1), queryResult[0].Date);
+
+
                 }
             }
         }
