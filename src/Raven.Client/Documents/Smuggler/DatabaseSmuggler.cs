@@ -144,8 +144,7 @@ namespace Raven.Client.Documents.Smuggler
             if (stream == null)
                 throw new ArgumentNullException(nameof(stream));
 
-            JsonOperationContext context;
-            using (_requestExecutor.ContextPool.AllocateOperationContext(out context))
+            using (_requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 var getOperationIdCommand = new GetNextOperationIdCommand();
                 await _requestExecutor.ExecuteAsync(getOperationIdCommand, context, token).ConfigureAwait(false);
