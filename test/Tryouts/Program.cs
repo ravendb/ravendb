@@ -5,9 +5,11 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Blittable;
+using FastTests.Client.Attachments;
 using FastTests.Smuggler;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Identity;
+using SlowTests.Client.Attachments;
 
 namespace RavenDB4RCTests
 {
@@ -15,6 +17,7 @@ namespace RavenDB4RCTests
     {
         static void Main(string[] args)
         {
+ //           new AttachmentsRevisions().PutAttachments().Wait();
             new SmugglerConflicts().CanExportAndImportWithConflicts().Wait();
         }
 

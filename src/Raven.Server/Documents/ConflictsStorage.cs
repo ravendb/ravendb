@@ -196,7 +196,7 @@ namespace Raven.Server.Documents
                 Id = TableValueToId(context, (int)ConflictsTable.Id, ref tvr),
                 ChangeVector = TableValueToChangeVector(context, (int)ConflictsTable.ChangeVector, ref tvr),
                 Etag = TableValueToEtag((int)ConflictsTable.Etag, ref tvr),
-                Collection = TableValueToString(context, (int)ConflictsTable.Collection, ref tvr),
+                Collection = TableValueToId(context, (int)ConflictsTable.Collection, ref tvr),
                 LastModified = TableValueToDateTime((int)ConflictsTable.LastModified, ref tvr),
                 Flags = TableValueToFlags((int)ConflictsTable.Flags, ref tvr)
             };
@@ -226,7 +226,7 @@ namespace Raven.Server.Documents
                 ChangeVector = TableValueToChangeVector(context, (int)ConflictsTable.ChangeVector, ref tvr),
                 Etag = etag = TableValueToEtag((int)ConflictsTable.Etag, ref tvr),
                 Doc = new BlittableJsonReaderObject(read, size, context),
-                Collection = TableValueToString(context, (int)ConflictsTable.Collection, ref tvr),
+                Collection = TableValueToId(context, (int)ConflictsTable.Collection, ref tvr),
                 LastModified = TableValueToDateTime((int)ConflictsTable.LastModified, ref tvr),
                 Flags = TableValueToFlags((int)ConflictsTable.Flags, ref tvr)
             };         
@@ -564,23 +564,21 @@ namespace Raven.Server.Documents
 
                 // ReSharper disable once ArgumentsStyleLiteral
                 var existing = _documentsStorage.GetDocumentOrTombstone(context, id, throwOnConflict: false);
-                LazyStringValue lazyCollectionName;
                 if (existing.Document != null)
                 {
                     var existingDoc = existing.Document;
 
-                    lazyCollectionName = CollectionName.GetLazyCollectionNameFrom(context, existingDoc.Data);
-
-                    using (Slice.From(context.Allocator, existingDoc.ChangeVector, out var cv))
+                    using (Slice.From(context.Allocator, existingDoc.ChangeVector, out Slice cv))
+                    using (DocumentIdWorker.GetStringPreserveCase(context, CollectionName.GetLazyCollectionNameFrom(context, existingDoc.Data), out Slice collectionSlice))
                     using (conflictsTable.Allocate(out TableValueBuilder tvb))
                     {
                         tvb.Add(lowerId);
                         tvb.Add(SpecialChars.RecordSeparator);
-                        tvb.Add(cv.Content.Ptr, cv.Size);
+                        tvb.Add(cv);
                         tvb.Add(idPtr);
                         tvb.Add(existingDoc.Data.BasePointer, existingDoc.Data.Size);
                         tvb.Add(Bits.SwapBytes(_documentsStorage.GenerateNextEtag()));
-                        tvb.Add(lazyCollectionName.Buffer, lazyCollectionName.Size);
+                        tvb.Add(collectionSlice);
                         tvb.Add(existingDoc.LastModified.Ticks);
                         tvb.Add((int)existingDoc.Flags);
                         if (conflictsTable.Set(tvb))
@@ -600,15 +598,16 @@ namespace Raven.Server.Documents
                 {
                     var existingTombstone = existing.Tombstone;
                     using (Slice.From(context.Allocator, existingTombstone.ChangeVector, out var cv))
+                    using (DocumentIdWorker.GetStringPreserveCase(context, existingTombstone.Collection, out Slice collectionSlice))
                     using (conflictsTable.Allocate(out TableValueBuilder tvb))
                     {
                         tvb.Add(lowerId);
                         tvb.Add(SpecialChars.RecordSeparator);
-                        tvb.Add(cv.Content.Ptr, cv.Size);
+                        tvb.Add(cv);
                         tvb.Add(idPtr);
                         tvb.Add(null, 0);
                         tvb.Add(Bits.SwapBytes(_documentsStorage.GenerateNextEtag()));
-                        tvb.Add(existingTombstone.Collection.Buffer, existingTombstone.Collection.Size);
+                        tvb.Add(collectionSlice);
                         tvb.Add(existingTombstone.LastModified.Ticks);
                         tvb.Add((int)existingTombstone.Flags);
                         if (conflictsTable.Set(tvb))
@@ -654,28 +653,29 @@ namespace Raven.Server.Documents
 
                 byte* doc = null;
                 var docSize = 0;
+                string collection;
                 if (incomingDoc != null) // can be null if it is a tombstone
                 {
                     doc = incomingDoc.BasePointer;
                     docSize = incomingDoc.Size;
-                    lazyCollectionName = CollectionName.GetLazyCollectionNameFrom(context, incomingDoc);
+                    collection = CollectionName.GetLazyCollectionNameFrom(context, incomingDoc);
                 }
                 else
                 {
-                    lazyCollectionName = context.GetLazyString(incomingTombstoneCollection);
+                    collection = incomingTombstoneCollection;
                 }
 
-                using (lazyCollectionName)
                 using (Slice.From(context.Allocator, incomingChangeVector, out var cv))
+                using (DocumentIdWorker.GetStringPreserveCase(context, collection, out Slice collectionSlice))
                 using (conflictsTable.Allocate(out TableValueBuilder tvb))
                 {
                     tvb.Add(lowerId);
                     tvb.Add(SpecialChars.RecordSeparator);
-                    tvb.Add(cv.Content.Ptr, cv.Size);
+                    tvb.Add(cv);
                     tvb.Add(idPtr);
                     tvb.Add(doc, docSize);
                     tvb.Add(Bits.SwapBytes(etag));
-                    tvb.Add(lazyCollectionName.Buffer, lazyCollectionName.Size);
+                    tvb.Add(collectionSlice);
                     tvb.Add(lastModifiedTicks);
                     tvb.Add((int)flags);
                     if (conflictsTable.Set(tvb))

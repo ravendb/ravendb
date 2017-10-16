@@ -346,10 +346,8 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public LazyStringValue GetLazyStringForFieldWithCaching(StringSegment key)
         {
-            LazyStringValue value;
-
             var field = key.Value; // This will allocate if we are using a substring. 
-            if (_fieldNames.TryGetValue(field, out value))
+            if (_fieldNames.TryGetValue(field, out LazyStringValue value))
             {
                 //sanity check, in case the 'value' is manually disposed outside of this function
                 Debug.Assert(value.IsDisposed == false);

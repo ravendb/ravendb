@@ -486,9 +486,9 @@ namespace Raven.Server.Documents.Revisions
             if (table.VerifyKeyExists(keySlice))
                 return; // revisions (and revisions tombstones) are immutable, we can safely ignore this 
 
-            using (Slice.From(context.Allocator, collectionName.Name, out Slice collectionSlice))
-            using (table.Allocate(out TableValueBuilder tvb))
+            using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
             using (Slice.From(context.Allocator, changeVector, out var cv))
+            using (table.Allocate(out TableValueBuilder tvb))
             {
                 tvb.Add(keySlice.Content.Ptr, keySlice.Size);
                 tvb.Add(Bits.SwapBytes(newEtag));

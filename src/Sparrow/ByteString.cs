@@ -1124,7 +1124,6 @@ namespace Sparrow
             return new InternalScope(this, str);
         }
 
-
         public InternalScope From(string value, ByteStringType type, out ByteString str)
         {
             Debug.Assert(value != null, $"{nameof(value)} cant be null.");
