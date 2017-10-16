@@ -114,15 +114,12 @@ namespace Raven.Server.NotificationCenter
                         return;
                 }
                 
-                if (_watchers.Any())
+                 // ReSharper disable once InconsistentlySynchronizedField
+                foreach (var watcher in _watchers)
                 {
-                    var serializedNotification = notification.ToJson();
-                    // ReSharper disable once InconsistentlySynchronizedField
-                    foreach (var watcher in _watchers)
-                    {
-                        // serialize to avoid race conditions
-                        watcher.NotificationsQueue.Enqueue(serializedNotification);
-                    }
+                    // serialize to avoid race conditions
+                    // please notice we call ToJson inside a loop since DynamicJsonValue is not thread-safe
+                    watcher.NotificationsQueue.Enqueue(notification.ToJson());
                 }
             }
             catch (ObjectDisposedException)
