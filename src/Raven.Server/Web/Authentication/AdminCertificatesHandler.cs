@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client;
@@ -138,11 +139,21 @@ namespace Raven.Server.Web.Authentication
             };
 
             if (chain.Build(x509Certificate2) == false)
-                throw new InvalidOperationException($"The certificate chain for {certificate.Name} is broken, admin assistance required.");
+            {
+                var status = new StringBuilder();
+                if (chain.ChainStatus.Length != 0)
+                {
+                    status.Append("Chain Status:\r\n");
+                    foreach (var chainStatus in chain.ChainStatus)
+                        status.Append(chainStatus.Status + " : " + chainStatus.StatusInformation + "\r\n");
+                }
+
+                throw new InvalidOperationException($"The certificate chain for {certificate.Name} is broken, admin assistance required. {status}");
+            }
 
             var rootCert = GetRootCertificate(chain);
             if (rootCert == null)
-                throw new InvalidOperationException($"The certificate chain for {certificate.Name} is broken, admin assistance required.");
+                throw new InvalidOperationException($"The certificate chain for {certificate.Name} is broken. Reason: partial chain, cannot extract CA from chain. Admin assistance required.");
 
 
             using (var machineRootStore = new X509Store(StoreName.Root, StoreLocation.LocalMachine, OpenFlags.ReadOnly))
