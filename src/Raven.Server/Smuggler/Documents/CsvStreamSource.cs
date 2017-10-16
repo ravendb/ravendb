@@ -10,10 +10,8 @@ using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Size = Sparrow.Size;
 
 namespace Raven.Server.Smuggler.Documents
 {
@@ -25,7 +23,6 @@ namespace Raven.Server.Smuggler.Documents
         private string _collection;
         private StreamReader _reader;
         private CsvReader _csvReader;
-        private Size _totalObjectsRead = new Size(0, SizeUnit.Bytes);
         private bool _hasId;
         private int _idIndex;
         private bool _hasCollection;
