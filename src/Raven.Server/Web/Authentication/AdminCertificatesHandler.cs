@@ -441,6 +441,26 @@ namespace Raven.Server.Web.Authentication
             return Task.CompletedTask;
         }
 
+        [RavenAction("/certificates/whoami", "GET", AuthorizationStatus.ValidUser)]
+        public Task WhoAmI()
+        {
+            var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+            var clientCert = feature?.Certificate;
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                var certificate = ServerStore.Cluster.Read(ctx, Constants.Certificates.Prefix + clientCert?.Thumbprint);
+
+                using (var writer = new BlittableJsonTextWriter(ctx, ResponseBodyStream()))
+                {
+                    writer.WriteObject(certificate);
+                }
+            }
+
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/admin/certificates/edit", "POST", AuthorizationStatus.Operator)]
         public async Task Edit()
         {
