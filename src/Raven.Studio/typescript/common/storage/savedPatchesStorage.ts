@@ -27,13 +27,13 @@ class savedPatchesStorage {
         localStorage.setObject(localStorageName, savedPatches);
     }
 
-    static removeSavedPatchByName(db: database, name: string) {
+    static removeSavedPatchByHash(db: database, hash: number) {
         const localStorageName = savedPatchesStorage.getLocalStorageKey(db.name);
         const savedPatchesFromLocalStorage: storedPatchDto[] = this.getSavedPatchesFromLocalStorage(localStorageName);
         if (savedPatchesFromLocalStorage == null)
             return;
 
-        const newSavedPatches = savedPatchesFromLocalStorage.filter((dto: storedPatchDto) => dto.Name !== name);
+        const newSavedPatches = savedPatchesFromLocalStorage.filter((dto: storedPatchDto) => dto.Hash !== hash);
         localStorage.setObject(localStorageName, newSavedPatches);
     }
 
