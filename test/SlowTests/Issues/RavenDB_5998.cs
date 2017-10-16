@@ -24,7 +24,7 @@ namespace SlowTests.Issues
 
                 using (var database = CreateDocumentDatabase())
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                using (var source = new StreamSource(stream, context))
+                using (var source = new StreamSource(stream, context, database))
                 {
                     var destination = new DatabaseDestination(database);
 
