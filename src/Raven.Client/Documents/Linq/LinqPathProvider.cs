@@ -202,17 +202,8 @@ namespace Raven.Client.Documents.Linq
             if (lambdaExpression != null)
                 return GetMemberExpression(lambdaExpression.Body);
 
-            var memberExpression = expression as MemberExpression;
 
-            if (memberExpression == null)
-            {
-                throw new InvalidOperationException("Could not understand how to translate '" + expression + "' to a RavenDB query." +
-                                                    Environment.NewLine +
-                                                    "Are you trying to do computation during the query?" + Environment.NewLine +
-                                                    "RavenDB doesn't allow computation during the query, computation is only allowed during index. Consider moving the operation to an index.");
-            }
-
-            return memberExpression;
+            return expression as MemberExpression;
         }
 
 

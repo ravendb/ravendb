@@ -1211,6 +1211,79 @@ FROM Users as u WHERE (Name = $p0) AND (IsActive = $p1) ORDER BY LastName DESC L
             }
         }
 
+        [Fact]
+        public void Can_Project_Into_Class()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia" }, "users/1");
+                    session.Store(new User { Name = "Bob", LastName = "Weir" }, "users/2");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from user in session.Query<User>()
+                                select new QueryResult
+                                {
+                                    FullName = user.Name + " " + user.LastName
+                                };
+
+                    Assert.Equal("FROM Users as user SELECT { FullName : user.Name+\" \"+user.LastName }", query.ToString());
+
+                    var queryResult = query.ToList();
+
+                    Assert.Equal(2, queryResult.Count);
+                    Assert.Equal("Jerry Garcia", queryResult[0].FullName);
+                    Assert.Equal("Bob Weir", queryResult[1].FullName);
+                }
+            }
+        }
+
+        [Fact]
+        public void Can_Project_Into_Class_With_Let()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia" }, "users/1");
+                    session.Store(new User { Name = "Bob", LastName = "Weir" }, "users/2");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from user in session.Query<User>()
+                                let first = user.Name
+                                let last = user.LastName
+                                let format = (Func<string>)(() => first + " " + last)
+                                select new QueryResult
+                                {
+                                    FullName = format()
+                                };
+
+                    Assert.Equal(
+@"DECLARE function output(user) {
+	var first = user.Name;
+	var last = user.LastName;
+	var format = function(){return first+"" ""+last;};
+	return { FullName : format() };
+}
+FROM Users as user SELECT output(user)", query.ToString());
+
+
+                    var queryResult = query.ToList();
+
+                    Assert.Equal(2, queryResult.Count);
+                    Assert.Equal("Jerry Garcia", queryResult[0].FullName);
+                    Assert.Equal("Bob Weir", queryResult[1].FullName);
+                }
+            }
+        }
+
         private class User
         {
             public string Name { get; set; }
@@ -1227,6 +1300,10 @@ FROM Users as u WHERE (Name = $p0) AND (IsActive = $p1) ORDER BY LastName DESC L
         private class Detail
         {
             public int Number { get; set; }
+        }
+        public class QueryResult
+        {
+            public string FullName { get; set; }
         }
     }
 }
