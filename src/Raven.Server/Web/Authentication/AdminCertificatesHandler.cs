@@ -331,17 +331,14 @@ namespace Raven.Server.Web.Authentication
 
         private CertificateDefinition ReadCertificateFromCluster(TransactionOperationContext ctx, string key)
         {
-            CertificateDefinition definition;
             using (ctx.OpenReadTransaction())
             {
                 var certificate = ServerStore.Cluster.Read(ctx, key);
                 if (certificate == null)
                     return null;
 
-                definition = JsonDeserializationServer.CertificateDefinition(certificate);
+                return JsonDeserializationServer.CertificateDefinition(certificate);
             }
-
-            return definition;
         }
 
         private async Task DeleteInternal(string key)
@@ -384,9 +381,7 @@ namespace Raven.Server.Web.Authentication
                         {
                             var def = JsonDeserializationServer.CertificateDefinition(item.Item2);
 
-                            if (showSecondary)
-                                certificates.Add(item);
-                            else if (string.IsNullOrEmpty(def.CollectionPrimaryKey))
+                            if (showSecondary || string.IsNullOrEmpty(def.CollectionPrimaryKey))
                                 certificates.Add(item);
                         }
                     }
@@ -500,21 +495,15 @@ namespace Raven.Server.Web.Authentication
         [RavenAction("/admin/certificates/export", "GET", AuthorizationStatus.ClusterAdmin)]
         public Task GetClusterCertificates()
         {
-            if (IsClusterAdmin() == false)
-                throw new InvalidOperationException("Cannot export certificate collection. This is a 'Cluster Admin' only operation.");
-            
-            var start = GetStart();
-            var pageSize = GetPageSize();
-
             var collection = new X509Certificate2Collection();
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                List<Tuple<string, BlittableJsonReaderObject>> allItems = null;
+                var allItems = new List<Tuple<string, BlittableJsonReaderObject>>();
                 try
                 {
-                    allItems = ServerStore.Cluster.ItemsStartingWith(context, Constants.Certificates.Prefix, start, pageSize).ToList();
+                    allItems = ServerStore.Cluster.ItemsStartingWith(context, Constants.Certificates.Prefix, 0, int.MaxValue).ToList();
                     var clusterNodes = allItems.Select(item => JsonDeserializationServer.CertificateDefinition(item.Item2))
                         .Where(certificateDef => certificateDef.SecurityClearance == SecurityClearance.ClusterNode)
                         .ToList();
@@ -530,15 +519,14 @@ namespace Raven.Server.Web.Authentication
                 }
                 finally
                 {
-                    if (allItems != null)
-                        foreach (var cert in allItems)
-                            cert.Item2?.Dispose();
+                    foreach (var cert in allItems)
+                        cert.Item2?.Dispose();
                 }
             }
 
             var pfx = collection.Export(X509ContentType.Pfx);
 
-            var contentDisposition = "attachment; filename=" + Uri.EscapeDataString("ClusterCertificatesCollection") + ".pfx";
+            var contentDisposition = "attachment; filename=ClusterCertificatesCollection.pfx";
             HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
             HttpContext.Response.ContentType = "binary/octet-stream";
 
