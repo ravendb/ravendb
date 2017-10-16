@@ -349,9 +349,9 @@ namespace Raven.Client.Util
                         //match DateTime expressions like user.DateOfBirth, order.ShipmentInfo.DeliveryDate, etc
                         if (node.Expression != null)
                         {
-                            writer.Write("Date.parse(");
+                            writer.Write("new Date(Date.parse(");
                             context.Visitor.Visit(node.Expression); //visit inner expression (user ,order.ShipmentInfo, etc)
-                            writer.Write($".{node.Member.Name})");
+                            writer.Write($".{node.Member.Name}))");
                             return;
                         }
 
@@ -387,7 +387,10 @@ namespace Raven.Client.Util
 
                         if (memberExpression.Member.DeclaringType != typeof(DateTime))
                         {
-                            writer.Write($"Date.parse({node.Expression})");
+                            writer.Write("Date.parse(");
+                            context.Visitor.Visit(memberExpression.Expression);
+                            writer.Write($".{memberExpression.Member.Name}");
+                            writer.Write(")");
                         }
 
                         writer.Write(")");

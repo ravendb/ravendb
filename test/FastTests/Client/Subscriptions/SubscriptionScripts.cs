@@ -772,6 +772,60 @@ namespace FastTests.Client.Subscriptions
         }
 
         [Fact]
+        public async Task CanHandleDates_Year()
+        {
+            using (var store = GetDocumentStore())
+            {
+                Server.ServerStore.Observer.Suspended = true;
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new SupportCall
+                    {
+                        Name = "Michael",
+                        Started = new DateTime(2000, 1, 1)
+                    });
+
+                    await session.StoreAsync(new SupportCall
+                    {
+                        Name = "Maxim",
+                        Started = new DateTime(1983, 6, 6)
+                    });
+
+                    await session.StoreAsync(new SupportCall
+                    {
+                        Name = "Aviv",
+                        Started = new DateTime(1942, 8, 1)
+                    });
+
+                    await session.SaveChangesAsync();
+                }
+
+                var id = await store.Subscriptions.CreateAsync<SupportCall>(
+                    call => call.Started.Year > 1999
+                );
+
+                using (
+                    var subscription =
+                        store.Subscriptions.Open<SupportCall>(new SubscriptionConnectionOptions(id)))
+                {
+                    var users = new BlockingCollection<SupportCall>();
+
+                    GC.KeepAlive(subscription.Run(supportCall =>
+                    {
+                        foreach (var item in supportCall.Items)
+                        {
+                            users.Add(item.Result);
+                        }
+                    }));
+
+                    Assert.True(users.TryTake(out SupportCall call, 5000));
+                    Assert.Equal("Michael", call.Name);
+                    Assert.False(users.TryTake(out call, 50));
+                }
+            }
+        }
+
+        [Fact]
         public async Task CanHandleNestedDates()
         {
             using (var store = GetDocumentStore())
