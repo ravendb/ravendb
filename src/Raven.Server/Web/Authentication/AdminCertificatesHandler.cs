@@ -90,7 +90,7 @@ namespace Raven.Server.Web.Authentication
                 };
 
                 throw new InvalidOperationException($"Cannot generate the client certificate '{certificate.Name}' becuase the server certificate is not loaded. " +
-                                                    $"You can supply a server certificate by using the following configuration keys: {keys}" +
+                                                    $"You can supply a server certificate by using the following configuration keys: {string.Join(", ", keys)}" +
                                                     "For a more detailed explanation please read about authentication and certificates in the RavenDB documentation.");
             }
 
