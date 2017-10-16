@@ -77,7 +77,7 @@ namespace Raven.Server.Documents.Handlers
                 ByteStringContext.InternalScope disposeCv = default(ByteStringContext.InternalScope);
                 if (isDocument == false)
                 {
-                    var stream = TryGetRequestFormStream("ChangeVectorAndType") ?? RequestBodyStream();
+                    var stream = TryGetRequestFromStream("ChangeVectorAndType") ?? RequestBodyStream();
                     var request = context.Read(stream, "GetAttachment");
 
                     if (request.TryGet("Type", out string typeString) == false ||

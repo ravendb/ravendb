@@ -81,7 +81,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 var operationId = GetLongQueryString("operationId", true);
                 var startDocumentEtag = GetLongQueryString("startEtag", false) ?? 0;
 
-                var stream = TryGetRequestFormStream("DownloadOptions") ?? RequestBodyStream();
+                var stream = TryGetRequestFromStream("DownloadOptions") ?? RequestBodyStream();
 
                 var blittableJson = await context.ReadForMemoryAsync(stream, "DownloadOptions");
                 var options = JsonDeserializationServer.DatabaseSmugglerOptions(blittableJson);

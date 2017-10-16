@@ -11,6 +11,7 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Commercial;
+using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -346,16 +347,17 @@ namespace Raven.Server.Documents.Handlers.Admin
                             $"Adding a new node to cluster failed. The new node is already in another cluster. Expected topology id: {topologyId}, but we get {nodeInfo.TopologyId}");
                     }
 
-                    var nodeTag = nodeInfo.NodeTag == RachisConsensus.InitialTag
-                        ? null : nodeInfo.NodeTag;
+                    var nodeTag = nodeInfo.NodeTag == RachisConsensus.InitialTag ? null : nodeInfo.NodeTag;
+                    CertificateDefinition oldServerCert = null;
+                    X509Certificate2 certificate = null;
 
                     if (remoteIsHttps)
                     {
                         if (nodeInfo.Certificate == null)
                             throw  new InvalidOperationException($"Cannot add node {nodeTag} with url {nodeUrl} to cluster because it has no certificate while trying to use HTTPS");
 
-                        var certificate = new X509Certificate2(Convert.FromBase64String(nodeInfo.Certificate));
-                            
+                        certificate = new X509Certificate2(Convert.FromBase64String(nodeInfo.Certificate));
+
                         if (certificate.NotBefore > DateTime.UtcNow)
                             throw new InvalidOperationException($"Cannot add node {nodeTag} with url {nodeUrl} to cluster because its certificate '{certificate.FriendlyName}' is not yet valid. It starts on {certificate.NotBefore}");
 
@@ -369,17 +371,27 @@ namespace Raven.Server.Documents.Handlers.Admin
                                 throw new InvalidOperationException($"Cannot add node {nodeTag} with url {nodeUrl} to cluster because its certificate thumbprint '{certificate.Thumbprint}' doesn't match the expected thumbprint '{expected}'.");
                         }
 
-                        var nodeName = nodeTag == null ? "" : $"(Node {nodeTag})";
-                        var certificateDefinition = new CertificateDefinition
+                        using (ctx.OpenReadTransaction())
                         {
-                            Certificate = nodeInfo.Certificate,
-                            Thumbprint = certificate.Thumbprint,
-                            Name = $"Server Certificate {certificate.GetNameInfo(X509NameType.SimpleName, false)} {nodeName}",
-                            SecurityClearance = SecurityClearance.ClusterAdmin
-                        };
+                            var key = Constants.Certificates.Prefix + certificate.Thumbprint;
+                            var readCert = ServerStore.Cluster.Read(ctx, key);
+                            if (readCert != null)
+                                oldServerCert = JsonDeserializationServer.CertificateDefinition(readCert);
+                        }
 
-                        var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + certificate.Thumbprint, certificateDefinition));
-                        await ServerStore.Cluster.WaitForIndexNotification(res.Index);
+                        if (oldServerCert == null)
+                        {
+                            var certificateDefinition = new CertificateDefinition
+                            {
+                                Certificate = nodeInfo.Certificate,
+                                Thumbprint = certificate.Thumbprint,
+                                Name = "Server Certificate for " + nodeUrl,
+                                SecurityClearance = SecurityClearance.ClusterNode
+                            };
+
+                            var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + certificate.Thumbprint, certificateDefinition));
+                            await ServerStore.Cluster.WaitForIndexNotification(res.Index);
+                        }
                     }
                         
                     await ServerStore.AddNodeToClusterAsync(nodeUrl, nodeTag, validateNotInTopology:false, asWatcher: watcher ?? false);
@@ -389,6 +401,31 @@ namespace Raven.Server.Documents.Handlers.Admin
                         var clusterTopology = ServerStore.GetClusterTopology(ctx);
                         var possibleNode = clusterTopology.TryGetNodeTagByUrl(nodeUrl);
                         nodeTag = possibleNode.HasUrl ? possibleNode.NodeTag : null;
+
+                        if (certificate != null)
+                        {
+                            var key = Constants.Certificates.Prefix + certificate.Thumbprint;
+
+                            var modifiedServerCert = JsonDeserializationServer.CertificateDefinition(ServerStore.Cluster.Read(ctx, key));
+
+                            if(modifiedServerCert == null)
+                                throw new ConcurrencyException("After adding the certificate, it was removed, shouldn't happen unless another admin removed it midway through.");
+
+                            if (oldServerCert == null)
+                            {
+                                modifiedServerCert.Name = "Server certificate for Node " + nodeTag;
+                            }
+                            else
+                            {
+                                var value = "Node " + nodeTag;
+                                if (modifiedServerCert.Name.Contains(value) == false)
+                                    modifiedServerCert.Name += ", " + value;
+                            }
+
+                            var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(key, modifiedServerCert));
+                            await ServerStore.Cluster.WaitForIndexNotification(res.Index);
+                        }
+
                         ServerStore.LicenseManager.CalculateLicenseLimits(nodeTag, assignedCores, nodeInfo, forceFetchingNodeInfo: true);
                     }
 
@@ -398,6 +435,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
             RedirectToLeader();
         }
+        
 
         [RavenAction("/admin/cluster/node", "DELETE", AuthorizationStatus.ClusterAdmin)]
         public async Task DeleteNode()

@@ -9,6 +9,9 @@ class certificateModel {
             label: "Cluster Administator",
             value: "ClusterAdmin"
         }, {
+            label: "Cluster Node",
+            value: "ClusterNode"
+        }, {
             label: "Operator", 
             value: "Operator"
         }, {

@@ -439,6 +439,10 @@ namespace Raven.Server
                         {
                             authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
                         }
+                        else if (definition.SecurityClearance == SecurityClearance.ClusterNode)
+                        {
+                            authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
+                        }
                         else if (definition.SecurityClearance == SecurityClearance.Operator)
                         {
                             authenticationStatus.Status = AuthenticationStatus.Operator;

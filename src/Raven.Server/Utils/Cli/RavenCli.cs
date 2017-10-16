@@ -491,8 +491,8 @@ namespace Raven.Server.Utils.Cli
                 {
                     // this does not include the private key, that is only for the client
                     Certificate = Convert.ToBase64String(cert.Export(X509ContentType.Cert)),
-                    Permissions = null,
-                    SecurityClearance = SecurityClearance.ClusterAdmin,
+                    Permissions = new Dictionary<string, DatabaseAccess>(),
+                    SecurityClearance = SecurityClearance.ClusterNode,
                     Thumbprint = cert.Thumbprint
                 }.ToJson();
 
