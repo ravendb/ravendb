@@ -1,7 +1,5 @@
 /// <reference path="../../typings/tsd.d.ts" />
 
-import getIndexTermsCommand = require("commands/database/index/getIndexTermsCommand");
-import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
 import database = require("models/resources/database");
 import getIndexEntriesFieldsCommand = require("commands/database/index/getIndexEntriesFieldsCommand");
 import collection = require("models/database/documents/collection");
@@ -87,10 +85,6 @@ class queryUtil {
 
     private static readonly RQL_TOKEN_REGEX = /(?=([^{]*{[^}{]*})*[^}]*$)(?=([^']*'[^']*')*[^']*$)(?=([^"]*"[^"]*")*[^"]*$)(SELECT|WHERE|ORDER BY|LOAD|UPDATE)(\s+|{)/gi;
 
-    private static readonly RQL_TOKEN_ORDER = [
-        'where', 'load', 'orderby', 'update'
-    ];
-
     static replaceSelectWithFetchAllStoredFields(query: string) {
         if (!query)
             throw new Error("Query is required.");
@@ -121,45 +115,6 @@ class queryUtil {
         }
         
         return tokenIndexes;
-    }
-    
-    static replaceWhereWithDocumentIdPredicate(query: string, documentId: string) {
-        if (!query)
-            throw new Error("Query is required.");
-
-        if (!documentId)
-            throw new Error("Document ID is required.");
-
-        const tokenIndexes = queryUtil.findTokenIndexes(query);
-
-        const { where, update, load, orderby } = tokenIndexes;
-
-        let startToken;
-        if (where) {
-            startToken = where;
-
-            let endToken = queryUtil.RQL_TOKEN_ORDER
-                .filter(x => x !== 'where')
-                .filter(token => (tokenIndexes as any)[token])
-                .map(x => (tokenIndexes as any)[x])[0] as RegExpExecArray;
-
-            let whereStartIndex = where.index;
-            let whereEndIndex = endToken ? endToken.index : query.length; 
-            const qstart = query.substring(0, whereStartIndex).trim();
-            const qend = query.substring(whereEndIndex, query.length).trim();
-            return `${qstart} where id() = '${documentId}' ${qend}`.trim();
-        }
-
-        startToken = queryUtil.RQL_TOKEN_ORDER
-            .filter(token => (tokenIndexes as any)[token])
-            .map(x => (tokenIndexes as any)[x])[0] as RegExpExecArray;
-        if (!startToken) {
-            return `${query} where id() = '${documentId}'`;
-        }
-
-        const qstart = query.substring(0, startToken.index).trim() ;
-        const qend = query.substring(startToken.index, query.length).trim();
-        return `${qstart} where id() = '${documentId}' ${qend}`;
     }
 }
 

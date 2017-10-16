@@ -171,10 +171,6 @@ class patchTester extends viewModelBase {
         this.loadDocument();
     }
 
-    addTestDocumentIdPredicate(query: string): string {
-        return queryUtil.replaceWhereWithDocumentIdPredicate(query, this.documentId());
-    }
-
     runTest(): void {
         eventsCollector.default.reportEvent("patch", "test");
 
@@ -183,9 +179,9 @@ class patchTester extends viewModelBase {
                 this.spinners.testing(true);
                 this.resetForm();
 
-                const query = this.addTestDocumentIdPredicate(this.query());
+                const query = this.query();
 
-                new patchCommand(query, this.db(), { test: true })
+                new patchCommand(query, this.db(), { test: true, documentId: this.documentId() })
                     .execute()
                     .done((result: any) => {
                         this.beforeDoc(result.OriginalDocument);
