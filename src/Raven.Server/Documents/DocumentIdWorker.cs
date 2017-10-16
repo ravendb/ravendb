@@ -189,7 +189,7 @@ namespace Raven.Server.Documents
             var writePos = ptr + strLength;
 
             JsonParserState.WriteVariableSizeInt(ref writePos, strLength);
-            _jsonParserState.WriteEscapePositionsTo(writePos + strLength);
+            escapePositionsSize = _jsonParserState.WriteEscapePositionsTo(writePos + strLength);
             idSize = escapePositionsSize + strLength + idSize;
 
             Slice.External(context.Allocator, ptr + strLength, idSize, out idSlice);
@@ -249,7 +249,7 @@ namespace Raven.Server.Documents
                 }
 
                 JsonParserState.WriteVariableSizeInt(ref writePos, idSize);
-                _jsonParserState.WriteEscapePositionsTo(writePos + idSize);
+                escapePositionsSize = _jsonParserState.WriteEscapePositionsTo(writePos + idSize);
                 idSize += escapePositionsSize + maxIdLenSize;
 
                 Slice.External(context.Allocator, id, idSize, out idSlice);

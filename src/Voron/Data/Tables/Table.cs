@@ -277,8 +277,7 @@ namespace Voron.Data.Tables
         {
             for (int i = 0; i < builder.Count; i++)
             {
-                Slice slice;
-                using (builder.SliceFromLocation(_tx.Allocator, i, out slice))
+                using (builder.SliceFromLocation(_tx.Allocator, i, out Slice slice))
                 {
                     if (slice.Content.Ptr >= oldData &&
                         slice.Content.Ptr < oldData + oldDataSize)
