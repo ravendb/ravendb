@@ -1324,6 +1324,39 @@ FROM Users as u SELECT output(u)", query.ToString());
             }
         }
 
+        [Fact]
+        public void Custom_Functions_With_Escape_Hatch()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia", Birthday = new DateTime(1942, 8, 1) }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from user in session.Query<User>()
+                        select new
+                        {
+                            Date = RavenQuery.Raw<DateTime>("new Date(Date.parse(user.Birthday))"),
+                            Name = RavenQuery.Raw<string>("user.Name.substr(0,3)"),
+                        };
+
+                    Assert.Equal("FROM Users as user SELECT { Date : new Date(Date.parse(user.Birthday)), Name : user.Name.substr(0,3) }",
+                        query.ToString());
+
+                    var queryResult = query.ToList();
+
+                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal(new DateTime(1942, 8, 1), queryResult[0].Date);
+                    Assert.Equal("Jer", queryResult[0].Name);
+
+                }
+            }
+        }
+
         private class User
         {
             public string Name { get; set; }
