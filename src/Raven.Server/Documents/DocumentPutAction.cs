@@ -418,8 +418,7 @@ namespace Raven.Server.Documents
 
                 // this is using a different collection, so we need to handle that.
 
-                var collectionPtr = reader.Read((int)TombstoneTable.Collection, out lowerSize);
-                collectionName = new CollectionName(Encoding.UTF8.GetString(collectionPtr, lowerSize));
+                collectionName = new CollectionName(TableValueToId(context, (int)TombstoneTable.Collection, ref reader));
                 tombstoneTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
                 tombstoneTable.Delete(reader.Id);
             }
