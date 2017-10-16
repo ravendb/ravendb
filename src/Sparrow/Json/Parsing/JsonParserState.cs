@@ -107,15 +107,17 @@ namespace Sparrow.Json.Parsing
             }
         }
 
-        public void WriteEscapePositionsTo(byte* buffer)
+        public int WriteEscapePositionsTo(byte* buffer)
         {
             var escapePositions = EscapePositions;
-
+            var originalBuffer = buffer;
             WriteVariableSizeInt(ref buffer, escapePositions.Count);
 
             // PERF: Using a for in this way will evict the bounds-check and also avoid the cost of using an struct enumerator. 
             for (int i = 0; i < escapePositions.Count; i++)
                 WriteVariableSizeInt(ref buffer, escapePositions[i]);
+
+            return (int)(buffer - originalBuffer);
         }
 
         public void Reset()
