@@ -318,12 +318,13 @@ namespace Raven.Server.Web.Authentication
                     throw new InvalidOperationException(
                         $"Cannot delete the certificate '{definition.Name}' with thumbprint '{definition.Thumbprint}'. You need to delete the primary certificate of the collection: {definition.CollectionPrimaryKey}");
 
-                await DeleteInternal(key);
-
-                foreach (var secondaryKey in definition.CollectionSecondaryKeys) // If it's a collection, also delete the secondary certificates
+                var keysToDelete = new List<string>
                 {
-                    await DeleteInternal(secondaryKey);
-                }
+                    key
+                };
+                keysToDelete.AddRange(definition.CollectionSecondaryKeys);
+
+                await DeleteInternal(keysToDelete);
             }
 
             HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
@@ -340,13 +341,13 @@ namespace Raven.Server.Web.Authentication
                 return JsonDeserializationServer.CertificateDefinition(certificate);
             }
         }
-
-        private async Task DeleteInternal(string key)
+        
+        private async Task DeleteInternal(List<string> keys)
         {
             // Delete from cluster
-            var res = await ServerStore.SendToLeaderAsync(new DeleteCertificateFromClusterCommand
+            var res = await ServerStore.SendToLeaderAsync(new DeleteCertificateCollectionFromClusterCommand()
             {
-                Name = key
+                Names = keys
             });
             await ServerStore.Cluster.WaitForIndexNotification(res.Index);
 
@@ -355,7 +356,7 @@ namespace Raven.Server.Web.Authentication
             {
                 using (ctx.OpenWriteTransaction())
                 {
-                    ServerStore.Cluster.DeleteLocalState(ctx, key);
+                    ServerStore.Cluster.DeleteLocalState(ctx, keys);
                 }
             }
         }

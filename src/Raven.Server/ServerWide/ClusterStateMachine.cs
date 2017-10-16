@@ -134,6 +134,10 @@ namespace Raven.Server.ServerWide
                     case nameof(DeleteCertificateFromClusterCommand):
                         DeleteValue(context, type, cmd, index, leader);
                         break;
+                    case nameof(DeleteMultipleValuesCommand):
+                    case nameof(DeleteCertificateCollectionFromClusterCommand):
+                        DeleteMultipleValues(context, type, cmd, index, leader);
+                        break;
                     case nameof(IncrementClusterIdentityCommand):
                         if (ValidatePropertyExistence(cmd, nameof(IncrementClusterIdentityCommand), nameof(IncrementClusterIdentityCommand.Prefix), out errorMessage) == false)
                         {
@@ -500,6 +504,34 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        private void DeleteMultipleValues(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader)
+        {
+            try
+            {
+                var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+                var delCmd = JsonDeserializationCluster.DeleteMultipleValuesCommand(cmd);
+                if (delCmd.Names.Any(name => name.StartsWith("db/")))
+                {
+                    NotifyLeaderAboutError(index, leader,
+                        new InvalidOperationException("Cannot delete " + delCmd.Names + " using DeleteMultipleValuesCommand, only via dedicated database calls"));
+                    return;
+                }
+
+                foreach (var name in delCmd.Names)
+                {
+                    using (Slice.From(context.Allocator, name, out Slice _))
+                    using (Slice.From(context.Allocator, name.ToLowerInvariant(), out Slice keyNameLowered))
+                    {
+                        items.DeleteByKey(keyNameLowered);
+                    }
+                }
+            }
+            finally
+            {
+                NotifyValueChanged(context, type, index);
+            }
+        }
+
         private unsafe void UpdateValue<T>(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
             try
@@ -737,6 +769,15 @@ namespace Raven.Server.ServerWide
         {
             var localState = context.Transaction.InnerTransaction.CreateTree(LocalNodeStateTreeName);
             localState.Delete(key);
+        }
+
+        public void DeleteLocalState(TransactionOperationContext context, List<string> keys)
+        {
+            var localState = context.Transaction.InnerTransaction.CreateTree(LocalNodeStateTreeName);
+            foreach (var key in keys)
+            {
+                localState.Delete(key);
+            }
         }
 
         public unsafe BlittableJsonReaderObject GetLocalState(TransactionOperationContext context, string key)
