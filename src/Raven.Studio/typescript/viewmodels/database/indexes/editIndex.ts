@@ -1,7 +1,7 @@
 import app = require("durandal/app");
 import router = require("plugins/router");
 import viewModelBase = require("viewmodels/viewModelBase");
-import document = require("models/database/documents/document");
+import documentModel = require("models/database/documents/document");
 import dialog = require("plugins/dialog");
 import indexDefinition = require("models/database/index/indexDefinition");
 import autoIndexDefinition = require("models/database/index/autoIndexDefinition");
@@ -23,6 +23,7 @@ import eventsCollector = require("common/eventsCollector");
 import popoverUtils = require("common/popoverUtils");
 import showDataDialog = require("viewmodels/common/showDataDialog");
 import formatIndexCommand = require("commands/database/index/formatIndexCommand");
+import additionalSource = require("models/database/index/additionalSource");
 
 class editIndex extends viewModelBase {
 
@@ -56,12 +57,13 @@ class editIndex extends viewModelBase {
     constructor() {
         super();
 
-        this.bindToCurrentInstance("removeMap", "removeField", "createFieldNameAutocompleter", "removeConfigurationOption", "formatIndex");
+        this.bindToCurrentInstance("removeMap", "removeField", "createFieldNameAutocompleter", "removeConfigurationOption", "formatIndex", "deleteAdditionalSource");
 
         aceEditorBindingHandler.install();
         autoCompleteBindingHandler.install();
 
         this.initializeObservables();
+        
 
         /* TODO: side by side
         this.canSaveSideBySideIndex = ko.computed(() => {
@@ -169,6 +171,7 @@ class editIndex extends viewModelBase {
         super.attached();
         this.addMapHelpPopover();
         this.addReduceHelpPopover();
+        this.addAdditionalSourcesPopover();
     }
 
     private updateIndexFields() {
@@ -214,12 +217,19 @@ class editIndex extends viewModelBase {
                 checkedFieldsArray.push(spatial.maxY);
                 checkedFieldsArray.push(spatial.units);
             }
-        }
+        };
 
         indexDef.fields().forEach(field => addDirtyFlagInput(field));
 
         const hasDefaultFieldOptions = ko.pureComputed(() => !!indexDef.defaultFieldOptions());
         checkedFieldsArray.push(hasDefaultFieldOptions);
+        
+        checkedFieldsArray.push(indexDef.numberOfAdditionalSources);
+        
+        indexDef.additionalSources().forEach(source => {
+            checkedFieldsArray.push(source.code);
+            checkedFieldsArray.push(source.name);
+        });
 
         const defaultFieldOptions = indexDef.defaultFieldOptions();
         if (defaultFieldOptions)
@@ -264,6 +274,13 @@ class editIndex extends viewModelBase {
                 'RegionId = g.Key.RegionId,<br/>  Amount = g.Sum(x => x.Amount)<br/>}</pre>' +
                 'The objects produced by the Reduce function should have the same fields as the inputs.'
             });
+    }
+    
+    addAdditionalSourcesPopover() {
+        const html = $("#additional-source-template").html();
+        popoverUtils.longWithHover($("#additionalSources p small"), {
+            content: html
+        });
     }
 
 
@@ -529,6 +546,44 @@ class editIndex extends viewModelBase {
             .done((formatedText) => {
                 textToFormat(formatedText.Expression);             
             });
+    }
+
+    fileSelected() {
+        const fileInput = <HTMLInputElement>document.querySelector("#additionalSourceFilePicker");
+        const self = this;
+        if (fileInput.files.length === 0) {
+            return;
+        }
+
+        const file = fileInput.files[0];
+        const fileName = file.name;
+        
+        const reader = new FileReader();
+        reader.onload = function() {
+// ReSharper disable once SuspiciousThisUsage
+            self.onFileAdded(fileName, this.result);
+        };
+        reader.onerror = function(error: any) {
+            alert(error);
+        };
+        reader.readAsText(file);
+
+        $("#additionalSourceFilePicker").val(null);
+    }
+    
+    private onFileAdded(fileName: string, contents: string) {
+        const sources = this.editedIndex().additionalSources;
+        const existingItem = sources().find(x => x.name() === fileName);
+        const newItem = additionalSource.create(fileName, contents);
+        if (existingItem) {
+            sources.replace(existingItem, newItem);
+        } else {
+            this.editedIndex().additionalSources.push(newItem);    
+        }
+    }
+
+    deleteAdditionalSource(sourceToDelete: additionalSource) {
+        this.editedIndex().additionalSources.remove(sourceToDelete);
     }
 
     /* TODO

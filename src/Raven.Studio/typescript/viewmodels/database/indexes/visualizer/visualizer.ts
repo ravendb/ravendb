@@ -268,7 +268,7 @@ class visualizer extends viewModelBase {
                     visitor(node.Children[i]);
                 }
             }
-        }
+        };
 
         visitor(root);
 
