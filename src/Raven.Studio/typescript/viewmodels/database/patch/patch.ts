@@ -20,9 +20,7 @@ import getDocumentsPreviewCommand = require("commands/database/documents/getDocu
 import defaultAceCompleter = require("common/defaultAceCompleter");
 import queryCompleter = require("common/queryCompleter");
 import patchSyntax = require("viewmodels/database/patch/patchSyntax");
-import viewHelpers = require("common/helpers/view/viewHelpers");
 import patchTester = require("viewmodels/database/patch/patchTester");
-import validationHelpers = require("viewmodels/common/validationHelpers");
 
 type fetcherType = (skip: number, take: number, previewCols: string[], fullCols: string[]) => JQueryPromise<pagedResult<document>>;
 
@@ -240,63 +238,6 @@ class patch extends viewModelBase {
                 + `<li><code>output(message)</code> - allows to output debug info when testing patches</li>`
                 + `</ul>`
             });
-    }
-
-    compositionComplete() {
-        super.compositionComplete();
-        /* TODO
-
-        const grid = this.gridController();
-        this.documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), grid, {
-            showRowSelectionCheckbox: false,
-            showSelectAllCheckbox: false,
-            createHyperlinks: false,
-            customInlinePreview: (doc: document) => this.showPreview(doc),
-            enableInlinePreview: true
-        });
-
-        const fakeFetcher: fetcherType = () => $.Deferred<pagedResult<document>>().resolve({
-            items: [],
-            totalResultCount: -1
-        });
-
-        grid.headerVisible(true);
-
-        const allColumnsProvider = (results: pagedResultWithAvailableColumns<document>) => {
-            const selectedItem = this.patchDocument().selectedItem();
-            if (!selectedItem || this.patchDocument().patchOnOption() === "Document" || !this.fetcher()) {
-                return [];
-            }
-
-            switch (this.patchDocument().patchOnOption()) {
-                case "Document":
-                    return [];
-                case "Query":
-                    return documentBasedColumnsProvider.extractUniquePropertyNames(results);
-            }
-        };
-
-        this.columnsSelector.init(grid, (s, t, previewCols, fullCols) => this.fetcher() ? this.fetcher()(s, t, previewCols, fullCols) : fakeFetcher(s, t, [], []),
-            (w, r) => this.documentsProvider.findColumns(w, r),
-            allColumnsProvider);
-
-        this.columnPreview.install(".patch-grid", ".tooltip", (doc: document, column: virtualColumn, e: JQueryEventObject, onValue: (context: any) => void) => {
-            if (column instanceof textColumn) {
-                this.fullDocumentsProvider.resolvePropertyValue(doc, column, (v: any) => {
-                    if (!_.isUndefined(v)) {
-                        const json = JSON.stringify(v, null, 4);
-                        const html = Prism.highlight(json, (Prism.languages as any).javascript);
-                        onValue(html);    
-                    }
-                }, error => {
-                    const html = Prism.highlight("Unable to generate column preview: " + error.toString(), (Prism.languages as any).javascript);
-                    onValue(html);
-                });
-            }
-        });
-
-        this.fetcher.subscribe(() => grid.reset());
-        */
     }
 
     private showPreview(doc: document) {
