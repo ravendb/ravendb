@@ -34,7 +34,7 @@
                             <h3 data-bind="text: $parent.isAddingNewSubscriptionTask() ? `New Subscription` : `Edit Subscription`"></h3>
                             <div class="form-group margin-top" data-bind="validationElement: taskName">
                                 <label class="control-label">Task Name</label>
-                                <input type="text" class="form-control" id="taskName" placeholder="Enter a descriptive name for the subscription task" title="Note: if no name is supplied then server will create one for you"
+                                <input type="text" class="form-control" id="taskName" placeholder="Enter a descriptive name for the subscription task (optional)" title="Note: if no name is supplied then server will create one for you"
                                        data-bind="textInput: taskName, attr: { disabled: !$root.isAddingNewSubscriptionTask() }" autocomplete="off" >
                             </div>
     
