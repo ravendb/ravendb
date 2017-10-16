@@ -52,9 +52,9 @@ class indexTerms extends viewModelBase {
         query.queryText(queryText);
 
         const queryDto = query.toStorageDto();
-        const recentQueries = recentQueriesStorage.getRecentQueries(this.activeDatabase());
+        const recentQueries = recentQueriesStorage.getSavedQueries(this.activeDatabase());
         recentQueriesStorage.appendQuery(queryDto, ko.observableArray(recentQueries));
-        recentQueriesStorage.saveRecentQueries(this.activeDatabase(), recentQueries);
+        recentQueriesStorage.storeSavedQueries(this.activeDatabase(), recentQueries);
 
         const queryUrl = appUrl.forQuery(this.activeDatabase(), queryDto.hash);
         this.navigate(queryUrl);
