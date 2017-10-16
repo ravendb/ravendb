@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.Diagnostics;
 using System.Dynamic;
 using System.IO;
@@ -914,7 +915,21 @@ namespace Raven.Server.ServerWide
                     command = new PutRavenConnectionString(JsonDeserializationCluster.RavenConnectionString(connectionString), databaseName);
                     break;
                 case ConnectionStringType.Sql:
-                    command = new PutSqlConnectionString(JsonDeserializationCluster.SqlConnectionString(connectionString), databaseName);
+                    var connection = JsonDeserializationCluster.SqlConnectionString(connectionString);
+                    try
+                    {
+                        using (new SqlConnection(connection.ConnectionString))
+                        {
+                            // if connection string is invalid then the above 'new' will throw..
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        throw new Exception("Invalid connection string. " + e.Message);
+                    }
+
+                    command = new PutSqlConnectionString(connection, databaseName);
+                    
                     break;
                 default:
                     throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
