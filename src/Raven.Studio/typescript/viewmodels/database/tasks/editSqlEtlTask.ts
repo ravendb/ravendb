@@ -325,6 +325,20 @@ class editSqlEtlTask extends viewModelBase {
     editTransformationScript(model: ongoingTaskSqlEtlTransformationModel) {
         this.editedTransformationScript(new ongoingTaskSqlEtlTransformationModel(model.toDto(), false));
     }
+
+    createCollectionNameAutocompleter(collectionText: KnockoutObservable<string>) {
+        return ko.pureComputed(() => {
+            const key = collectionText();
+
+            const options = this.collectionNames();
+
+            if (key) {
+                return options.filter(x => x.toLowerCase().includes(key.toLowerCase()));
+            } else {
+                return options;
+            }
+        });
+    }
     
     /********************************/
     /*** Sql Table Actions Region ***/
