@@ -649,6 +649,8 @@ namespace Raven.Server.Documents
                 }
 
                 var etag = _documentsStorage.GenerateNextEtag();
+                if (context.LastDatabaseChangeVector == null)
+                    context.LastDatabaseChangeVector = GetDatabaseChangeVector(context);
                 ChangeVectorUtils.TryUpdateChangeVector(_documentDatabase.ServerStore.NodeTag, _documentDatabase.DbId, etag, ref context.LastDatabaseChangeVector);
 
                 byte* doc = null;
