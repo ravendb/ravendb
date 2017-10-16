@@ -933,13 +933,13 @@ namespace Raven.Server.Documents
 
             if (result.Type == DocumentTombstone.TombstoneType.Document)
             {
-                result.Collection = TableValueToString(context, (int)TombstoneTable.Collection, ref tvr);
+                result.Collection = TableValueToId(context, (int)TombstoneTable.Collection, ref tvr);
                 result.Flags = TableValueToFlags((int)TombstoneTable.Flags, ref tvr);
                 result.LastModified = TableValueToDateTime((int)TombstoneTable.LastModified, ref tvr);
             }
             else if (result.Type == DocumentTombstone.TombstoneType.Revision)
             {
-                result.Collection = TableValueToString(context, (int)TombstoneTable.Collection, ref tvr);
+                result.Collection = TableValueToId(context, (int)TombstoneTable.Collection, ref tvr);
             }
 
             return result;
@@ -1190,7 +1190,7 @@ namespace Raven.Server.Documents
 
             var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
                 collectionName.GetTableName(CollectionTableType.Tombstones));
-            using (Slice.From(context.Allocator, collectionName.Name, out Slice collectionSlice))
+            using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
             using (Slice.From(context.Allocator, changeVector, out var cv))
             using (table.Allocate(out TableValueBuilder tvb))
             {
@@ -1452,7 +1452,7 @@ namespace Raven.Server.Documents
                 throw new InvalidOperationException("Should never happen!");
 
             name = new CollectionName(collectionName);
-            using (Slice.From(context.Allocator, collectionName, out Slice collectionSlice))
+            using (DocumentIdWorker.GetStringPreserveCase(context, collectionName, out Slice collectionSlice))
             {
                 using (collections.Allocate(out TableValueBuilder tvr))
                 {
@@ -1495,7 +1495,7 @@ namespace Raven.Server.Documents
             {
                 foreach (var tvr in collections.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
                 {
-                    var collection = TableValueToString(context, 0, ref tvr.Reader);
+                    var collection = TableValueToId(context, 0, ref tvr.Reader);
                     var collectionName = new CollectionName(collection);
                     result.Add(collection, collectionName);
 
