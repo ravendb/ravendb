@@ -1216,7 +1216,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                         if (expression.Arguments.Count > 1 && expression.Arguments[1] is UnaryExpression unaryExpression
                             && unaryExpression.Operand is LambdaExpression lambdaExpression
-                            && lambdaExpression.Body.NodeType == ExpressionType.New
+                            && (lambdaExpression.Body.NodeType == ExpressionType.New || lambdaExpression.Body.NodeType == ExpressionType.MemberInit)
                             && lambdaExpression.Parameters[0] != null
                             && lambdaExpression.Parameters[0].Name.StartsWith("<>h__TransparentIdentifier"))
                         {
@@ -1556,30 +1556,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                     if (_declareBuilder != null)
                     {
-                        var js = TranslateSelectBodyToJs(newExpression);
-                        _declareBuilder.Append("\t").Append("return ").Append(js).Append(";");
-
-                        if (_loadTokens != null)
-                        {
-                            //need to add loaded documents 
-                            var paramBuilder = new StringBuilder();
-                            paramBuilder.Append(_fromAlias);
-
-                            for (int i = 0; i < _loadTokens.Count; i++)
-                            {
-                                var alias = _loadTokens[i].Alias.EndsWith("[]")
-                                    ? _loadTokens[i].Alias.Substring(0, _loadTokens[i].Alias.Length - 3)
-                                    : _loadTokens[i].Alias;
-
-                                paramBuilder.Append(", ").Append(alias);
-                            }
-                            _declareToken = DeclareToken.Create("output", _declareBuilder.ToString(), paramBuilder.ToString());
-                            break;
-
-                        }
-
-                        _declareToken = DeclareToken.Create("output", _declareBuilder.ToString(), _fromAlias);
-
+                        AddReturnStatmentToOutputFunction(newExpression);
                         break;
                     }
 
@@ -1615,6 +1592,13 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 case ExpressionType.MemberInit:
                     var memberInitExpression = ((MemberInitExpression)body);
                     _newExpressionType = memberInitExpression.NewExpression.Type;
+
+                    if (_declareBuilder != null)
+                    {
+                        AddReturnStatmentToOutputFunction(memberInitExpression);
+                        break;
+                    }
+
                     foreach (MemberBinding t in memberInitExpression.Bindings)
                     {
                         var field = t as MemberAssignment;
@@ -1622,6 +1606,24 @@ The recommended method is to use full text search (mark the field as Analyzed an
                             continue;
 
                         var expression = _linqPathProvider.GetMemberExpression(field.Expression);
+
+                        if (expression == null)
+                        {
+                            //lambda 2 js
+
+                            if (_fromAlias == null)
+                            {
+                                _fromAlias = lambdaExpression?.Parameters[0].Name;
+                            }
+
+                            _jsProjectionNames = new List<string>();
+                            FieldsToFetch = new HashSet<FieldToFetch>();
+
+                            _jsSelectBody = TranslateSelectBodyToJs(memberInitExpression);
+
+                            break;
+                        }
+
                         var renamedField = GetSelectPath(expression);
 
                         AddToFieldsToFetch(renamedField, GetSelectPath(field.Member));
@@ -1638,6 +1640,33 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 default:
                     throw new NotSupportedException("Node not supported: " + body.NodeType);
             }
+        }
+
+        private void AddReturnStatmentToOutputFunction(Expression expression)
+        {
+            var js = TranslateSelectBodyToJs(expression);
+            _declareBuilder.Append("\t").Append("return ").Append(js).Append(";");
+
+            if (_loadTokens != null)
+            {
+                //need to add loaded documents 
+                var paramBuilder = new StringBuilder();
+                paramBuilder.Append(_fromAlias);
+
+                for (int i = 0; i < _loadTokens.Count; i++)
+                {
+                    var alias = _loadTokens[i].Alias.EndsWith("[]")
+                        ? _loadTokens[i].Alias.Substring(0, _loadTokens[i].Alias.Length - 3)
+                        : _loadTokens[i].Alias;
+
+                    paramBuilder.Append(", ").Append(alias);
+                }
+                _declareToken = DeclareToken.Create("output", _declareBuilder.ToString(), paramBuilder.ToString());
+                return;
+            }
+
+            _declareToken = DeclareToken.Create("output", _declareBuilder.ToString(), _fromAlias);
+
         }
 
         private void VisitLet(NewExpression expression)
@@ -1689,30 +1718,52 @@ The recommended method is to use full text search (mark the field as Analyzed an
             _declareBuilder.Append("\t").Append("var ").Append(name).Append(" = ").Append(js).Append(";").Append(Environment.NewLine);           
         }
 
-        private string TranslateSelectBodyToJs(NewExpression expression)
+        private string TranslateSelectBodyToJs(Expression expression)
         {
             var sb = new StringBuilder();
 
             sb.Append("{ ");
 
-            for (int index = 0; index < expression.Arguments.Count; index++)
+            if (expression is NewExpression newExpression)
             {
-                var name = GetSelectPath(expression.Members[index]);
-
-                _jsProjectionNames.Add(name);
-
-                var js = ToJs(expression.Arguments[index]);
-
-                if (index > 0)
+                for (int index = 0; index < newExpression.Arguments.Count; index++)
                 {
-                    sb.Append(", ");
-                }
+                    var name = GetSelectPath(newExpression.Members[index]);
 
-                sb.Append(name).Append(" : ").Append(js);
+                    AddJsProjection(name, newExpression.Arguments[index], sb, index != 0);
+                }
+            }
+
+            if (expression is MemberInitExpression mie)
+            {
+                for (int index = 0; index < mie.Bindings.Count; index++)
+                {
+                    var field = mie.Bindings[index] as MemberAssignment;
+                    if (field == null)
+                        continue;
+
+                    var name = GetSelectPath(field.Member);
+                    AddJsProjection(name, field.Expression, sb, index != 0);
+                }
             }
 
             sb.Append(" }");
+
             return sb.ToString();
+        }
+
+        private void AddJsProjection(string name, Expression expression, StringBuilder sb, bool addComma)
+        {
+            _jsProjectionNames.Add(name);
+
+            var js = ToJs(expression);           
+
+            if (addComma)
+            {
+                sb.Append(", ");
+            }
+
+            sb.Append(name).Append(" : ").Append(js);
         }
 
         private static string ToJs(Expression expression)
