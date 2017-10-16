@@ -16,7 +16,7 @@ class editDocumentUploader {
 
     spinners = {
         upload: ko.observable<boolean>(false)
-    }
+    };
 
     constructor(document: KnockoutObservable<document>, db: KnockoutObservable<database>, afterUpload: () => void) {
         this.document = document;
