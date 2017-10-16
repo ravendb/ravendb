@@ -1373,9 +1373,9 @@ namespace Raven.Server.Web.System
 
             var dataExporter = configuration.DataExporterFullPath;
             if (File.Exists(configuration.DataExporterFullPath) == false)
-                throw new FileNotFoundException($"Could not Find file {dataExporter}");
+                throw new FileNotFoundException($"Could not find file {dataExporter}");
 
-            var databaseName = configuration.DatabaseName;
+            var databaseName = configuration.DatabaseRecord.DatabaseName;
             if (ResourceNameValidator.IsValidResourceName(databaseName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
 
