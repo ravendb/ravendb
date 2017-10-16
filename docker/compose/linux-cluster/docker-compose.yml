@@ -1,4 +1,4 @@
-version: '2'
+version: '3.1'
 services:
   raven1:
     image: ravendb/ravendb:ubuntu-latest
@@ -10,6 +10,7 @@ services:
       - UNSECURED_ACCESS_ALLOWED=PublicNetwork
       - PUBLIC_SERVER_URL=http://raven1:8080
       - PUBLIC_TCP_SERVER_URL=tcp://raven1:38888
+    env_file: ./license.env
       
   raven2:
     image: ravendb/ravendb:ubuntu-latest
@@ -21,6 +22,7 @@ services:
       - UNSECURED_ACCESS_ALLOWED=PublicNetwork
       - PUBLIC_SERVER_URL=http://raven2:8080
       - PUBLIC_TCP_SERVER_URL=tcp://raven2:38888
+    env_file: ./license.env
    
   raven3:
     image: ravendb/ravendb:ubuntu-latest
@@ -32,3 +34,4 @@ services:
       - UNSECURED_ACCESS_ALLOWED=PublicNetwork
       - PUBLIC_SERVER_URL=http://raven3:8080
       - PUBLIC_TCP_SERVER_URL=tcp://raven3:38888
+    env_file: ./license.env
