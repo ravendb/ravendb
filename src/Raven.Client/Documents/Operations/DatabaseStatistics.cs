@@ -33,6 +33,11 @@ namespace Raven.Client.Documents.Operations
         public long CountOfRevisionDocuments { get; set; }
 
         /// <summary>
+        /// Total number of conflicts in database.
+        /// </summary>
+        public long CountOfConflicts { get; set; }
+
+        /// <summary>
         /// Total number of attachments in database.
         /// </summary>
         public long CountOfAttachments { get; set; }
