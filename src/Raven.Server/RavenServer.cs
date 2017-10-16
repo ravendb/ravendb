@@ -374,7 +374,10 @@ namespace Raven.Server
                 var tls = context.Features.Get<ITlsConnectionFeature>();
                 var certificate = tls?.ClientCertificate;
                 var authenticationStatus = _server.AuthenticateConnectionCertificate(certificate);
-
+                
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations($"Received TLS connection request with client certificate: {certificate?.SubjectName?.Name}. Authentication status: {authenticationStatus.Status}.");
+                
                 // build the token
                 context.Features.Set<IHttpAuthenticationFeature>(authenticationStatus);
 
