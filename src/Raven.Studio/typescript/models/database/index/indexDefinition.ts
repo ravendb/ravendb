@@ -1,7 +1,7 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 
 import indexFieldOptions = require("models/database/index/indexFieldOptions");
-import configuration = require("configuration");
+import additionalSource = require("models/database/index/additionalSource");
 import configurationItem = require("models/database/index/configurationItem");
 
 class mapItem {
@@ -34,6 +34,7 @@ class indexDefinition {
     reduce = ko.observable<string>();
     isTestIndex = ko.observable<boolean>(false);
     fields = ko.observableArray<indexFieldOptions>();
+    additionalSources = ko.observableArray<additionalSource>();
     defaultFieldOptions = ko.observable<indexFieldOptions>(null);
     isAutoIndex = ko.observable<boolean>(false);
 
@@ -42,6 +43,7 @@ class indexDefinition {
 
     numberOfFields = ko.pureComputed(() => this.fields().length);
     numberOfConfigurationFields = ko.pureComputed(() => this.configuration() ? this.configuration().length : 0);
+    numberOfAdditionalSources = ko.pureComputed(() => this.additionalSources() ? this.additionalSources().length : 0);
 
     configuration = ko.observableArray<configurationItem>();
     lockMode: Raven.Client.Documents.Indexes.IndexLockMode;
@@ -77,13 +79,14 @@ class indexDefinition {
         this.priority(dto.Priority);
         this.configuration(this.parseConfiguration(dto.Configuration));
 
+        this.additionalSources(_.map(dto.AdditionalSources, (code, name) => additionalSource.create(name, code)));
+        
         if (!this.isAutoIndex()) {
             this.initValidation();
         } 
     }
-
+    
     private initValidation() {
-
         const rg1 = /^[^\\]*$/; // forbidden character - backslash
         this.name.extend({
             required: true,
@@ -152,6 +155,19 @@ class indexDefinition {
 
         return result;
     }
+    
+    private additionalSourceToDto(): dictionary<string> {
+        if (!this.additionalSources().length) {
+            return null;  
+        }
+        const result = {} as dictionary<string>;
+        
+        this.additionalSources().forEach(source => {
+            result[source.name()] = source.code();
+        });
+        
+        return result;
+    }
 
     toDto(): Raven.Client.Documents.Indexes.IndexDefinition {
         return {
@@ -166,7 +182,7 @@ class indexDefinition {
             Fields: this.fieldToDto(),
             IsTestIndex: false, //TODO: test indexes
             OutputReduceToCollection: this.outputReduceToCollection() ? this.reduceToCollectionName() : null,
-            AdditionalSources: null
+            AdditionalSources: this.additionalSourceToDto()
         }
     }
 
