@@ -376,7 +376,6 @@ namespace Sparrow.Json
             }
 
             // write remaining (or full string) to the buffer in one shot
-            EnsureBuffer(size);
             WriteRawString(strBuffer, size);
 
             EnsureBuffer(1);
