@@ -1756,7 +1756,17 @@ The recommended method is to use full text search (mark the field as Analyzed an
         {
             _jsProjectionNames.Add(name);
 
-            var js = ToJs(expression);           
+            string js;
+            if (expression is MethodCallExpression mce
+                && mce.Method.DeclaringType == typeof(RavenQuery)
+                && mce.Method.Name == "Raw")
+            {
+                js = (mce.Arguments[0] as ConstantExpression)?.Value.ToString();
+            }
+            else
+            {
+                js = ToJs(expression);
+            }
 
             if (addComma)
             {
