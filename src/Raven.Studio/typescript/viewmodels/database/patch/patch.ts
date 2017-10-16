@@ -26,12 +26,14 @@ type fetcherType = (skip: number, take: number, previewCols: string[], fullCols:
 
 class patchList {
 
-    previewItem = ko.observable<patchDto>();
+    private readonly recentPatchLimit = 6;
+
+    previewItem = ko.observable<storedPatchDto>();
 
     allPatches = ko.observableArray<storedPatchDto>([]);  
 
-    private readonly useHandler: (patch: patchDto) => void;
-    private readonly removeHandler: (patch: patchDto) => void;
+    private readonly useHandler: (patch: storedPatchDto) => void;
+    private readonly removeHandler: (patch: storedPatchDto) => void;
 
     hasAnySavedPatch = ko.pureComputed(() => this.allPatches().length > 0);
 
@@ -44,7 +46,7 @@ class patchList {
         return item.Query;
     });
 
-    constructor(useHandler: (patch: patchDto) => void, removeHandler: (patch: patchDto) => void) {
+    constructor(useHandler: (patch: storedPatchDto) => void, removeHandler: (patch: storedPatchDto) => void) {
         _.bindAll(this, ...["previewPatch", "removePatch", "usePatch"] as Array<keyof this>);
         this.useHandler = useHandler;
         this.removeHandler = removeHandler;
@@ -66,7 +68,7 @@ class patchList {
         searchText: ko.observable<string>()
     };
 
-    previewPatch(item: patchDto) {
+    previewPatch(item: storedPatchDto) {
         this.previewItem(item);
     }
 
@@ -74,7 +76,7 @@ class patchList {
         this.useHandler(this.previewItem());
     }
 
-    removePatch(item: patchDto) {
+    removePatch(item: storedPatchDto) {
         if (this.previewItem() === item) {
             this.previewItem(null);
         }
@@ -94,6 +96,7 @@ class patchList {
                 this.allPatches.remove(existing);
                 this.allPatches.unshift(doc);
             } else {
+                this.removeLastRecentPatchIfMoreThanLimit();
                 this.allPatches.unshift(doc);
             }
         }
@@ -106,9 +109,24 @@ class patchList {
             }
         }
     }
+
+    private removeLastRecentPatchIfMoreThanLimit() {
+        let count = 0;
+
+        const dto = this.allPatches().find(x => {
+            if (x.Name.startsWith(patch.recentKeyWord)) {
+                count++;
+                return count >= this.recentPatchLimit;
+            }
+        });
+
+        this.allPatches.remove(dto);
+    }
 }
 
 class patch extends viewModelBase {
+
+    static readonly recentKeyWord = 'Recent Patch';
 
     static readonly $body = $("body");
     static readonly ContainerSelector = "#patchContainer";
@@ -268,17 +286,17 @@ class patch extends viewModelBase {
         }
     }
 
-    usePatch(item: patchDto) {
+    usePatch(item: storedPatchDto) {
         const patchDoc = this.patchDocument();
         patchDoc.copyFrom(item);
     }
 
-    removePatch(item: patchDto) {
+    removePatch(item: storedPatchDto) {
 
         this.confirmationMessage("Patch", `Are you sure you want to delete patch '${item.Name}'?`, ["Cancel", "Delete"])
             .done(result => {
                 if (result.can) {
-                    savedPatchesStorage.removeSavedPatchByName(this.activeDatabase(), item.Name);
+                    savedPatchesStorage.removeSavedPatchByHash(this.activeDatabase(), item.Hash);
                     this.savedPatches.loadAll(this.activeDatabase());
                 }
             });
@@ -325,7 +343,7 @@ class patch extends viewModelBase {
 
         const collectionIndexName = queryUtil.getCollectionOrIndexName(this.patchDocument().query());
 
-        return "Recent Patch (" + collectionIndexName + ")";
+        return patch.recentKeyWord + " (" + collectionIndexName + ")";
     }
 
     private patchOnQuery() {
