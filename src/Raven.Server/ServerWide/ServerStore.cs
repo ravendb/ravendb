@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
@@ -21,6 +22,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.ETL;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Documents;
@@ -1146,6 +1148,20 @@ namespace Raven.Server.ServerWide
                         }
                     }
                 }
+            }
+
+            if (Server.ClusterCertificateHolder?.Certificate != null)
+            {
+                // Also need to register my own certificate in the cluster, for other nodes to trust me
+                var myCertificate = new CertificateDefinition
+                {
+                    Certificate = Convert.ToBase64String(Server.ClusterCertificateHolder.Certificate.Export(X509ContentType.Cert)),
+                    Thumbprint = Server.ClusterCertificateHolder.Certificate.Thumbprint,
+                    Name = $"Server Certificate for Node {_engine.Tag}",
+                    SecurityClearance = SecurityClearance.ClusterNode
+                };
+
+                PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + myCertificate.Thumbprint, myCertificate));
             }
         }
 
