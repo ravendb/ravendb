@@ -11,22 +11,22 @@ class patchDocument {
 
     toStorageDto(): storedPatchDto {
 
-        const _name = this.name();
-        const _query = this.query();
-        const _selectedItem = this.selectedItem();
-        const _patchAll = this.patchAll();
+        const name = this.name();
+        const query = this.query();
+        const selectedItem = this.selectedItem();
+        const patchAll = this.patchAll();
 
         return {
-            Name: _name,
-            Query: _query,
-            SelectedItem: _selectedItem,
+            Name: name,
+            Query: query,
+            SelectedItem: selectedItem,
             ModificationDate: moment().format("YYYY-MM-DD HH:mm"),
-            PatchAll: _patchAll,
+            PatchAll: patchAll,
             Hash: genUtils.hashCode(
-                (_name || "") +
-                _query +
-                _selectedItem +
-                _patchAll
+                (name || "") +
+                query +
+                selectedItem +
+                patchAll
             )
         } as storedPatchDto;
     }
