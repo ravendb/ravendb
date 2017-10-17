@@ -4,6 +4,7 @@ using System.Linq;
 using NodaTime;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using static FastTests.Client.Indexing.PeopleUtil;
 
 namespace FastTests.Client.Indexing
 {
@@ -44,7 +45,7 @@ namespace FastTests.Client.Indexing
             {
                 Map = people => from person in people select new
                 {
-                    _ =  CreateField("Email", PeopleUtil.CalculatePersonEmail(person.Name, person.Age), true, true),
+                    _ =  CreateField("Email", CalculatePersonEmail(person.Name, person.Age), true, true),
                 };
                 AdditionalSources = new Dictionary<string, string>
                 {
@@ -53,6 +54,7 @@ namespace FastTests.Client.Indexing
                         @"
 using System;
 using NodaTime;
+using static My.Crazy.Namespace.PeopleUtil;
 namespace My.Crazy.Namespace
 {
     public static class PeopleUtil
