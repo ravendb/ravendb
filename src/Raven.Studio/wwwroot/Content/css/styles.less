@@ -1683,6 +1683,67 @@ pre {
     }
 }
 
+ul.item-list {
+    background: @gray-base;
+    display: block;
+    overflow-y: auto;
+    width: 300px;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+
+    li {
+        display: flex;
+        align-items: stretch;
+        font-size: 13px;
+
+        &:hover {
+            background-color: @gray-darker;
+        }
+
+        span {
+            padding: 5px @grid-gutter-width/2;
+        }
+
+        .column-name {
+            flex-grow: 1;
+        }
+
+        a {
+            padding: 5px 10px;
+            color: @gray-light;
+            -webkit-transition: opacity .1s;
+            transition: opacity .1s;
+            cursor: pointer;
+
+            &:hover {
+                background-color: @gray-dark;
+                color: @gray-lighter;
+            }
+
+            &.remove {
+                color: @brand-danger;
+
+                &:hover {
+                    background-color: @brand-danger-dark;
+                }
+            }
+
+            &.rearrange {
+                color: @gray;
+                cursor: move;
+
+                &:hover {
+                    color: @gray-light;
+                }
+
+                &:active {
+                }
+            }
+        }
+    }
+}
+
 ul.properties {
     display: block;
     font-size: 11px;

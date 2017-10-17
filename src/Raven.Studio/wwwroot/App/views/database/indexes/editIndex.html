@@ -115,6 +115,11 @@
                         <i class="icon-settings"></i><span>Configuration</span>
                     </a>
                 </li>
+                <li role="presentation">
+                    <a href="#additionalsource" aria-controls="additionalsource" role="tab" data-toggle="tab">
+                        <i class="icon-chash"></i><span>Additional sources</span> <span class="label label-primary margin-left margin-left-sm">2</span>
+                    </a>
+                </li>
             </ul>
 
             <div class="tab-content">
@@ -162,6 +167,24 @@
                                 <button type="button" data-bind="click: addConfigurationOption" class="btn btn-info"><i class="icon-plus"></i> <span>Add customized option</span></button>
                             </div>
                         </div>
+                    </div>
+                </div>
+                <div role="tabpanel" class="tab-pane fade" id="additionalsource">
+                    <button class="btn btn-primary"><i class="icon-upload"></i><span>Upload source file</span></button>
+                    <div class="flex-horizontal flex-stretch-items margin-top">
+                        <ul class="item-list">
+                            <li class="item">
+                                <span class="column-name">ProductExtensions</span>
+                                <a class="edit"><i class="icon-edit"></i></a>
+                                <a class="remove"><i class="icon-trash"></i></a>
+                                <a class="rearrange"><i class="icon-menu"></i></a>
+                            </li>
+                            <li class="item">
+                                <span class="column-name">OrderExtensions</span>
+                                <a class="remove"><i class="icon-trash"></i></a>
+                            </li>
+                        </ul>
+                        <div class="flex-grow"><pre class="form-control"></pre></div>
                     </div>
                 </div>
             </div>
