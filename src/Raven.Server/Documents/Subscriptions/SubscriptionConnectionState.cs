@@ -123,7 +123,14 @@ namespace Raven.Server.Documents.Subscriptions
 
         public void Dispose()
         {
-            EndConnection();
+            try
+            {
+                EndConnection();
+            }
+            catch
+            {
+                // ignored: If we've failed to raise the cancellation token, it means that it's already raised
+            }
         }
     }
 }

@@ -172,7 +172,6 @@ namespace Raven.Client.Documents.Subscriptions
     public class Subscription<T> : IAsyncDisposable, IDisposable where T : class
     {
         public delegate Task AfterAcknowledgmentAction(SubscriptionBatch<T> batch);
-
         private readonly Logger _logger;
         private readonly IDocumentStore _store;
         private readonly string _dbName;
@@ -189,6 +188,8 @@ namespace Raven.Client.Documents.Subscriptions
         /// get those documents again)
         /// </summary>
         public event AfterAcknowledgmentAction AfterAcknowledgment;
+
+        public event Action OnSubscriptionConnectionRetry;
 
         internal Subscription(SubscriptionConnectionOptions options, IDocumentStore documentStore, string dbName)
         {
@@ -423,7 +424,7 @@ namespace Raven.Client.Documents.Subscriptions
                                 connectionStatus.Status != SubscriptionConnectionServerMessage.ConnectionStatus.Accepted)
                                 AssertConnectionState(connectionStatus);
                         }
-
+                        LastConnectionFailure = null;
                         if (_processingCts.IsCancellationRequested)
                             return;
 
@@ -633,6 +634,8 @@ namespace Raven.Client.Documents.Subscriptions
                         if (ShouldTryToReconnect(ex))
                         {
                             await TimeoutManager.WaitFor(_options.TimeToWaitBeforeConnectionRetry).ConfigureAwait(false);
+                            var onSubscriptionConnectionRetry = OnSubscriptionConnectionRetry;
+                            onSubscriptionConnectionRetry?.Invoke();
                         }
                         else
                         {
@@ -653,11 +656,33 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
+        private DateTime? LastConnectionFailure;
+
+        private void AssertLastConnectionFailure()
+        {
+            if (LastConnectionFailure == null)
+            {
+                LastConnectionFailure = DateTime.Now;
+                return;
+            }
+
+            if ((DateTime.Now - LastConnectionFailure) > _options.MaxErrorousPeriod)
+            {                
+                throw new SubscriptionInvalidStateException(
+                    $"Subscription connection was in invalide state for more than {_options.MaxErrorousPeriod} and therefore will be terminated");
+                
+            }
+
+
+        }
+
         private bool ShouldTryToReconnect(Exception ex)
         {
             switch (ex)
             {
                 case SubscriptionDoesNotBelongToNodeException se:
+                    AssertLastConnectionFailure();
+                    
                     var requestExecutor = _store.GetRequestExecutor(_dbName);
 
                     if (se.AppropriateNode == null)
@@ -667,7 +692,7 @@ namespace Raven.Client.Documents.Subscriptions
                         .FirstOrDefault(x => x.ClusterTag == se.AppropriateNode);
                     _redirectNode = nodeToRedirectTo ?? throw new AggregateException(ex,
                                         new InvalidOperationException($"Could not redirect to {se.AppropriateNode}, because it was not found in local topology, even after retrying"));
-
+                    
                     return true;
                 case SubscriptionInUseException _:
                 case SubscriptionDoesNotExistException _:
@@ -681,6 +706,7 @@ namespace Raven.Client.Documents.Subscriptions
                     _processingCts.Cancel();
                     return false;
                 default:
+                    AssertLastConnectionFailure();
                     return true;
             }
         }

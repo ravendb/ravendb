@@ -81,18 +81,27 @@ namespace Raven.Server.Documents.Subscriptions
 
 		public async Task AcknowledgeBatchProcessed(long id, string name, string changeVector, string previousChangeVector)
         {
-            var command = new AcknowledgeSubscriptionBatchCommand(_db.Name)
+            try
             {
-                ChangeVector = changeVector,
-                NodeTag = _serverStore.NodeTag,
-                SubscriptionId = id,
-                SubscriptionName = name,
-                LastTimeServerMadeProgressWithDocuments = DateTime.UtcNow,
-                LastKnownSubscriptionChangeVector = previousChangeVector,
-            };
+                var command = new AcknowledgeSubscriptionBatchCommand(_db.Name)
+                {
+                    ChangeVector = changeVector,
+                    NodeTag = _serverStore.NodeTag,
+                    SubscriptionId = id,
+                    SubscriptionName = name,
+                    LastTimeServerMadeProgressWithDocuments = DateTime.UtcNow,
+                    LastKnownSubscriptionChangeVector = previousChangeVector,
+                };
 
-            var (etag, _) = await _serverStore.SendToLeaderAsync(command);
-            await _db.RachisLogIndexNotifications.WaitForIndexNotification(etag);
+                var (etag, _) = await _serverStore.SendToLeaderAsync(command);                
+                await _db.RachisLogIndexNotifications.WaitForIndexNotification(etag);                
+            }
+            catch (Exception ex)
+            {                
+                throw new SubscriptionDoesNotBelongToNodeException(
+                    $"Subscription {name} has failed to acknowledge batch, therefore another server should be attempted", ex);
+            }
+            
         }
 
 

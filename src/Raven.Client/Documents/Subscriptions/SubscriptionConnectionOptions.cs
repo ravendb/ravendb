@@ -67,7 +67,8 @@ namespace Raven.Client.Documents.Subscriptions
             // for deserialization
             Strategy = SubscriptionOpeningStrategy.OpenIfFree;
             MaxDocsPerBatch = 4096;
-            TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(5000);
+            TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5);
+            MaxErrorousPeriod = TimeSpan.FromMinutes(5);
         }
 
         public SubscriptionConnectionOptions(string subscriptionName) : this()
@@ -78,10 +79,34 @@ namespace Raven.Client.Documents.Subscriptions
             SubscriptionName = subscriptionName;
         }
 
+        /// <summary>
+        /// Subscription name as received from CreateSubscription
+        /// </summary>
         public string SubscriptionName { get; set; }
+
+        /// <summary>
+        /// Cooldown time between connection retry. Default: 5 seconds
+        /// </summary>
         public TimeSpan TimeToWaitBeforeConnectionRetry { get; set; }
+
+        /// <summary>
+        /// Whether subscriber error should halt the subscription processing or not. Default: false
+        /// </summary>
         public bool IgnoreSubscriberErrors { get; set; }
+
+        /// <summary>
+        /// How connection attempt handle existing\incoming connection. Default: OpenIfFree
+        /// </summary>
         public SubscriptionOpeningStrategy Strategy { get; set; }
+
+        /// <summary>
+        /// Max amount that the server will try to retriev and send to client. Default: 4096
+        /// </summary>
         public int MaxDocsPerBatch { get; set; }
+        
+        /// <summary>
+        /// Maximum amount of time during which a subscription connection may be in errorrous state. Default: 5 minutes
+        /// </summary>
+        public TimeSpan MaxErrorousPeriod { get; set; }
     }
 }

@@ -20,6 +20,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Platform;
 using Xunit;
@@ -307,6 +308,15 @@ namespace Tests.Infrastructure
             serverToDispose.Dispose();
 
             mre.Wait();
+        }
+
+        protected static async Task DisposeServerAndWaitForFinishOfDisposalAsync(RavenServer serverToDispose)
+        {
+            var mre = new AsyncManualResetEvent();
+            serverToDispose.AfterDisposal += () => mre.Set();
+            serverToDispose.Dispose();
+
+            await mre.WaitAsync().ConfigureAwait(false);
         }
 
         protected List<DocumentStore> GetStoresFromTopology(IReadOnlyList<ServerNode> topologyNodes)
