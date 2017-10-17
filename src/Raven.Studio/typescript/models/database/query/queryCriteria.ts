@@ -5,6 +5,8 @@ import querySort = require("models/database/query/querySort");
 import queryUtil = require("common/queryUtil");
 
 class queryCriteria {
+
+    name = ko.observable<string>("");
     showFields = ko.observable<boolean>(false);
     indexEntries = ko.observable<boolean>(false);
     queryText = ko.observable<string>("");
@@ -54,15 +56,21 @@ class queryCriteria {
     }
 
     toStorageDto(): storedQueryDto {
+
+        const name = this.name();
         const indexEntries = this.indexEntries();
         const queryText = this.queryText();
         const showFields = this.showFields();
 
         return {
+            name: name,
             indexEntries: indexEntries,
             queryText: queryText,
             showFields: showFields,
-            hash: genUtils.hashCode((queryText || "") +
+            modificationDate: moment().format("YYYY-MM-DD HH:mm"),
+            hash: genUtils.hashCode(
+                name +
+                (queryText || "") +
                 showFields +
                 indexEntries)
         } as storedQueryDto;
@@ -78,6 +86,13 @@ class queryCriteria {
             rql += "index '" + indexName + "'";
         }
         this.queryText(rql);
+    }
+
+    copyFrom(incoming: queryDto) {
+        this.name("");
+        this.showFields(incoming.showFields);
+        this.indexEntries(incoming.indexEntries);
+        this.queryText(incoming.queryText);
     }
 }
 

@@ -37,6 +37,16 @@ class savedQueriesStorage {
         localStorage.setObject(localStorageName, newSavedQueries);
     }
 
+    static removeSavedQueryByHash(db: database, hash: number) {
+        const localStorageName = savedQueriesStorage.getLocalStorageKey(db.name);
+        const savedQueriesFromLocalStorage: storedQueryDto[] = this.getSavedQueriesFromLocalStorage(localStorageName);
+        if (savedQueriesFromLocalStorage == null)
+            return;
+
+        const newSavedQueries = savedQueriesFromLocalStorage.filter((dto: storedQueryDto) => dto.hash !== hash);
+        localStorage.setObject(localStorageName, newSavedQueries);
+    }
+
     static removeSavedQueries(db: database) {
         const localStorageName = savedQueriesStorage.getLocalStorageKey(db.name);
         localStorage.setObject(localStorageName, []);

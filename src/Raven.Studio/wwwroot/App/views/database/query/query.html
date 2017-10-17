@@ -1,72 +1,59 @@
 <div class="flex-window stretch query content-margin" id="queryContainer">
     <div class="flex-window-head">
-        <div class="row margin-bottom">
-            <div class="col-sm-2">
-                <h2 class="query-title">Query </h2>
-                <div><a href="#" data-bind="click: syntaxHelp"><small>Syntax help</small></a></div>
+       
+        <!-- TODO
+            <div class="dropdown">
+            <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                <i class="icon-settings"></i><span>Settings</span>
+                <span class="caret"></span>
+            </button>
+            <div class="dropdown-menu settings-menu" data-bind="dropdownPanel: true, template: { name: 'settings-template' }">
             </div>
-            <div class="col-sm-10">
-                <div class="query-container">
-                    <div class="query-main">
-                        <div class="has-warning query-error" data-bind="visible: containsAsterixQuery">
-                            <div class="help-block">
-                                <i class="icon-warning"></i> <span>The Query contains <strong>*.*</strong>. Did you intend to use <strong>*:*</strong> ?</span>
-                            </div>
-                        </div>
+        </div>-->
 
-                        <div class="btn-group btn-group-sm pull-right" role="group">
-                            <div class="dropdown">
-                                <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true"
-                                        data-bind="enable: savedQueries().length">
-                                    <i class="icon-recent"></i><span>Recent</span>
-                                    <span class="caret"></span>
-                                </button>
-                                <div class="dropdown-menu" role="menu">
-                                    <ul class="menu max-height" data-bind="foreach: savedQueries">
-                                        <li>
-                                            <a href="#" data-bind="click: _.partial($root.runRecentQuery, $data)">
-                                                <span data-bind="visible: queryText">
-                                                    <span data-bind="text: queryText"></span>
-                                                </span>
-                                                <span data-bind="visible: showFields">
-                                                    <span class="text-muted">|</span>
-                                                    <span>show fields</span>
-                                                </span>
-                                                <span data-bind="visible: indexEntries">
-                                                    <span class="text-muted">|</span>
-                                                    <span>index entries</span>
-                                                </span>
-                                            </a>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </div>
-                            <div class="dropdown">
-                                <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-                                    <i class="icon-settings"></i><span>Settings</span>
-                                    <span class="caret"></span>
-                                </button>
-                                <div class="dropdown-menu settings-menu" data-bind="dropdownPanel: true, template: { name: 'settings-template' }">
-                                </div>
-                            </div>
-                        </div>
-                        <pre class="form-control editor query-source" 
-                             data-bind="aceEditor: { code: criteria().queryText, allowResize: false, minHeight: 180, maxHeight: 180, lang:'ace/mode/rql', completer: queryCompleter.complete, hasFocus: queryHasFocus }, validationOptions: { errorsAsTitle: false }, validationElement: criteria().queryText"></pre>
-                        
-                        <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: criteria().queryText">
-                            <div class="help-block" data-bind="validationMessage: criteria().queryText"></div>
-                        </div>
+        <div id="patch-target">
+            <div class="clearfix toolbar">
+                <div class="pull-right-sm flex-horizontal">
+                    <div class="input-group query-save" data-bind="css: { active: inSaveMode }, validationOptions: { insertMessages: false }, validationElement: criteria().name">
+                        <input class="form-control" style="display: none" placeholder="Query name" data-bind="textInput: criteria().name">
+                        <span class="input-group-btn">
+                            <button class="btn btn-success" data-class="active" type="button" data-bind="click: saveQuery()" title="Save query under given name">
+                                <i class="icon-save"></i> <span data-bind="text: inSaveMode() ? 'Save' : 'Save...'"></span>
+                            </button>
+                        </span>
                     </div>
-                    <div class="query-controls">
-                        <button class="btn btn-primary btn-block btn-lg text-center run-query" data-bind="click: runQuery, css: { 'btn-spinner': isLoading }">
-                            <i class="icon-play2 icon-lg"></i><br />
-                            <small class="kbd"><kbd>ctrl</kbd> <strong>+</strong> <kbd>enter</kbd></small>
-                        </button>
+                    <div class="dropdown dropdown-right loadpatch" data-bind="template: { name: 'saved-queries-dialog' }">
                     </div>
                 </div>
+            </div>
+            <div class="form-horizontal">
+                <div class="row">
+                    <div class="col-sm-3 col-lg-2">
+                        <h2 class="query-label">
+                            Query
+                        </h2>
+                        <a href="#" data-bind="click: syntaxHelp">Syntax help</a>
+                    </div>
+                    <div class="col-sm-9 col-lg-10 margin-bottom">
+                        <div class="patch-container">
+                            <pre class="form-control editor query-source"
+                                 data-bind="aceEditor: { code: criteria().queryText, allowResize: false, minHeight: 180, maxHeight: 180, lang:'ace/mode/rql', completer: queryCompleter.complete, hasFocus: queryHasFocus }, validationOptions: { errorsAsTitle: false }, validationElement: criteria().queryText"></pre>
 
+                            <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: criteria().queryText">
+                                <div class="help-block" data-bind="validationMessage: criteria().queryText"></div>
+                            </div>
+                            <div class="patch-controls">
+                                <button class="btn btn-primary btn-block btn-lg text-center" data-bind="click: runQuery" title="Execute query">
+                                    <i class="icon-play2 icon-lg"></i><br />
+                                    <small class="kbd"><kbd>ctrl</kbd> <strong>+</strong> <kbd>enter</kbd></small>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
+
         <h2 class="pull-left-sm">
             Results
             <a target="_blank" href="#" title="Show raw output" data-bind="attr: { href: rawJsonUrl }"><i class="icon-link"></i></a>
@@ -231,6 +218,70 @@
                 <input type="checkbox" class="styled" data-bind="checked: criteria().indexEntries, disable: isDynamicIndex">
                 <label></label>
             </div>
+        </div>
+    </div>
+</script>
+
+
+<script type="text/html" id="saved-queries-dialog">
+    <button class="btn btn-default dropdown-toggle" type="button" id="dropdownLoadQuery" data-toggle="dropdown" data-bind="enable: hasAnySavedQuery" title="Load saved query">
+        <i class="icon-query"></i> <span>Load Query</span>
+        <span class="caret"></span>
+    </button>
+    <div class="dropdown-menu slidein-style" aria-labelledby="dropdownLoadQuery" data-bind="dropdownPanel: true">
+        <div class="loadpatch-dropdown flex-vertical" data-bind="css: { 'show-preview': previewItem() }">
+            <div class="flex-grow loadpatch-container">
+                <div class="patch-preview-container flex-vertical">
+                    <div class="flex-header">
+                        <h3>
+                            Query preview
+                        </h3>
+                    </div>
+                    <div class="flex-grow flex-vertical scroll">
+                        <div class="bg-info padding padding-sm">
+                            <div class="row">
+                                <div class="col-xs-6">
+                                   Name: &nbsp;<strong data-bind="text: previewItem() ? previewItem().name : ''"></strong>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="pre-container">
+                            <pre>
+<code data-bind="html: previewCode"></code>
+</pre>
+                        </div>
+                    </div>
+                </div>
+                <div class="patch-list-container flex-vertical">
+                    <div class="flex-header">
+                        <div class="row">
+                            <div class="col-xs-6">
+                                <h3>Select query</h3>
+                            </div>
+                            <div class="col-xs-6">
+                                <input type="search" class="form-control input-sm patch-filter" data-bind="textInput: filters.searchText" placeholder="filter" title="Filter saved queries by name">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex-grow scroll">
+                        <ul class="patch-list" data-bind="foreach: filteredQueries">
+                            <li data-bind="css: { selected: $data === $parent.previewItem() }">
+                                <a href="#" class="patch-link" data-bind="click: $parent.previewQuery">
+                                    <span class="name" data-bind="text: name"></span>
+                                    <span class="modified" data-bind="text: modificationDate"></span>
+                                </a>
+                                <a href="#" data-bind="click: $parent.removeQuery" class="patch-remove"><i class="icon-trash"></i></a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+                <div class="flex-footer">
+                    <div class="text-right">
+                        <button title="Load saved query" class="btn btn-success btn-sm close-panel" data-bind="click: useQuery, enable: previewItem()">Load</button>
+                    </div>
+                </div>
+            
         </div>
     </div>
 </script>
