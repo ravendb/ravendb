@@ -1605,9 +1605,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         if (field == null)
                             continue;
 
-                        var expression = _linqPathProvider.GetMemberExpression(field.Expression);
-
-                        if (expression == null)
+                        if ((field.Expression is UnaryExpression 
+                             ||field.Expression is LabelExpression 
+                             || field.Expression is MemberExpression) == false)
                         {
                             //lambda 2 js
 
@@ -1624,6 +1624,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                             break;
                         }
 
+                        var expression = _linqPathProvider.GetMemberExpression(field.Expression);
                         var renamedField = GetSelectPath(expression);
 
                         AddToFieldsToFetch(renamedField, GetSelectPath(field.Member));

@@ -776,7 +776,6 @@ namespace FastTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                Server.ServerStore.Observer.Suspended = true;
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new SupportCall
