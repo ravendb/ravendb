@@ -30,13 +30,13 @@ namespace Voron.Impl.Paging
         private DateTime _lastIncrease;
         private readonly object _pagerStateModificationLocker = new object();
         public bool UsePageProtection { get; } = false;
-        private MultipleUseFlag _lowMemoryFlag = new MultipleUseFlag();
+        private readonly MultipleUseFlag _lowMemoryFlag = new MultipleUseFlag();
 
         public Action<PagerState> PagerStateChanged;
 
         public void SetPagerState(PagerState newState)
         {
-            if (Disposed)
+            if (DisposeOnceRunner.Disposed)
                 ThrowAlreadyDisposedException();
 
             lock (_pagerStateModificationLocker)
@@ -52,7 +52,7 @@ namespace Voron.Impl.Paging
 
         internal PagerState GetPagerStateAndAddRefAtomically()
         {
-            if (Disposed)
+            if (DisposeOnceRunner.Disposed)
                 ThrowAlreadyDisposedException();
 
             lock (_pagerStateModificationLocker)
@@ -68,7 +68,7 @@ namespace Voron.Impl.Paging
         {
             get
             {
-                if (Disposed)
+                if (DisposeOnceRunner.Disposed)
                     ThrowAlreadyDisposedException();
                 return _pagerState;
             }
@@ -76,10 +76,7 @@ namespace Voron.Impl.Paging
 
         private string _debugInfo;
 
-        public string DebugInfo
-        {
-            get { return _debugInfo; }
-        }
+        public string DebugInfo => _debugInfo;
 
         public const int PageMaxSpace = Constants.Storage.PageSize - Constants.Tree.PageHeaderSize;
 
@@ -87,6 +84,23 @@ namespace Voron.Impl.Paging
 
         protected AbstractPager(StorageEnvironmentOptions options, bool usePageProtection = false)
         {
+            DisposeOnceRunner = new DisposeOnce<SingleAttempt>(() =>
+            {
+                if (FileName?.FullPath != null)
+                    _options?.IoMetrics?.FileClosed(FileName.FullPath);
+
+                if (_pagerState != null)
+                {
+                    _pagerState.Release();
+                    _pagerState = null;
+                }
+
+                if (FileName?.FullPath != null)
+                    NativeMemory.UnregisterFileMapping(FileName.FullPath);
+
+                DisposeInternal();
+            });
+
             _options = options;
             UsePageProtection = usePageProtection;
             Debug.Assert((Constants.Storage.PageSize - Constants.Tree.PageHeaderSize) / Constants.Tree.MinKeysInPage >= 1024);
@@ -141,7 +155,7 @@ namespace Voron.Impl.Paging
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private byte* AcquirePagePointerInternal(IPagerLevelTransactionState tx, long pageNumber, PagerState pagerState)
         {
-            if (Disposed)
+            if (DisposeOnceRunner.Disposed)
                 goto AlreadyDisposed;
 
             if (pageNumber > NumberOfAllocatedPages || pageNumber < 0)
@@ -177,7 +191,7 @@ namespace Voron.Impl.Paging
         
         public PagerState EnsureContinuous(long requestedPageNumber, int numberOfPages)
         {
-            if (Disposed)
+            if (DisposeOnceRunner.Disposed)
                 ThrowAlreadyDisposedException();
 
             if (requestedPageNumber + numberOfPages <= NumberOfAllocatedPages)
@@ -207,33 +221,20 @@ namespace Voron.Impl.Paging
             // This method is currently implemented only in WindowsMemoryMapPager and POSIX
         }
 
-        public bool Disposed { get; private set; }
-
         public uint UniquePhysicalDriveId;
+        protected readonly DisposeOnce<SingleAttempt> DisposeOnceRunner;
+        public bool Disposed => DisposeOnceRunner.Disposed;
+
+        protected abstract void DisposeInternal();
 
         public virtual void Dispose()
         {
-            if (Disposed)
-                return;
-
-            if (FileName?.FullPath != null)
-                _options?.IoMetrics?.FileClosed(FileName.FullPath);
-
-            if (_pagerState != null)
-            {
-                _pagerState.Release();
-                _pagerState = null;
-            }
-
-            Disposed = true;
-            if (FileName?.FullPath != null)
-                NativeMemory.UnregisterFileMapping(FileName.FullPath);
-            GC.SuppressFinalize(this);
+            DisposeOnceRunner.Dispose();
         }
 
         ~AbstractPager()
         {
-            Dispose();
+            DisposeOnceRunner.Dispose();
         }
 
         protected internal abstract PagerState AllocateMorePages(long newLength);

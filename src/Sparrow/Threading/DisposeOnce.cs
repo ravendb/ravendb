@@ -103,5 +103,37 @@ namespace Sparrow.Threading
                 throw new AggregateException(e);
             }
         }
+
+        public bool Disposed
+        {
+            get
+            {
+                if (_disposeInProgress == false)
+                    return false;
+
+                if (typeof(TOperationMode) == typeof(SingleAttempt))
+                    return true;
+                // ReSharper disable once RedundantIfElseBlock
+                else if (typeof(TOperationMode) == typeof(ExceptionRetry))
+                {
+                    // TODO: this approach may not be very good for this case...
+                    if (_disposeCompleted.Task.IsFaulted || _disposeCompleted.Task.IsCanceled)
+                        return false;
+
+                    return _disposeCompleted.Task.IsCompleted;
+
+                }
+                // ReSharper disable once RedundantIfElseBlock
+                else
+                {
+                    // This is here to prevent people from writing bad code. 
+                    // It will fail to compile if the operation mode is not
+                    // properly handled in the code.
+                    var configurationGuard = new object[typeof(TOperationMode) != typeof(SingleAttempt) ? -1 : 0];
+                    GC.KeepAlive(configurationGuard);
+                    return false;
+                }
+            }
+        }
     }
 }

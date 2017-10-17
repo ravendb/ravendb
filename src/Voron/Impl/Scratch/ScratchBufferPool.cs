@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Sparrow.Collections.LockFree;
+using Sparrow.Threading;
 using Voron.Global;
 using Voron.Impl.Paging;
 
@@ -37,8 +38,28 @@ namespace Voron.Impl.Scratch
 
         private readonly LinkedList<ScratchBufferItem> _recycleArea = new LinkedList<ScratchBufferItem>();
 
+        private readonly DisposeOnce<ExceptionRetry> _disposeOnceRunner;
+
         public ScratchBufferPool(StorageEnvironment env)
         {
+            _disposeOnceRunner = new DisposeOnce<ExceptionRetry>(() =>
+            {
+                if (_pagerStatesAllScratchesCache != null)
+                {
+                    foreach (var pagerState in _pagerStatesAllScratchesCache)
+                    {
+                        pagerState.Value.Release();
+                    }
+                }
+
+                foreach (var scratch in _scratchBuffers)
+                {
+                    scratch.Value.File.Dispose();
+                }
+
+                _scratchBuffers.Clear();
+            });
+
             _env = env;
             _options = env.Options;
             _current = NextFile(_options.InitialLogFileSize, null);
@@ -244,18 +265,7 @@ namespace Voron.Impl.Scratch
 
         public void Dispose()
         {
-            if (_pagerStatesAllScratchesCache != null)
-            {
-                foreach (var pagerState in _pagerStatesAllScratchesCache)
-                {
-                    pagerState.Value.Release();
-                }
-            }
-            foreach (var scratch in _scratchBuffers)
-            {
-                scratch.Value.File.Dispose();
-            }
-            _scratchBuffers.Clear();
+            _disposeOnceRunner.Dispose();
         }
 
         private class ScratchBufferItem

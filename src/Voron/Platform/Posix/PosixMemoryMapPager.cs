@@ -99,7 +99,7 @@ namespace Voron.Platform.Posix
 
         protected internal override PagerState AllocateMorePages(long newLength)
         {
-            if (Disposed)
+            if (DisposeOnceRunner.Disposed)
                 ThrowAlreadyDisposedException();
             var newLengthAfterAdjustment = NearestSizeToPageSize(newLength);
 
@@ -245,9 +245,8 @@ namespace Voron.Platform.Posix
         }
 
 
-        public override void Dispose()
+        protected override void DisposeInternal()
         {
-            base.Dispose();
             if (_fd != -1)
             {
                 Syscall.close(_fd);
