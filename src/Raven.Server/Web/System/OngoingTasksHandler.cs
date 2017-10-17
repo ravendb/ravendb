@@ -112,50 +112,60 @@ namespace Raven.Server.Web.System
 
             foreach (var watcher in watchers)
             {
-                NodeId responsibale = null;
+                var taskInfo = GetExternalReplicationInfo(name, dbTopology, clusterTopology, store, watcher);
 
-                var tag = dbTopology.WhoseTaskIsIt(watcher, store.IsPassive());
-                if (tag != null)
-                {
-                    responsibale = new NodeId
-                    {
-                        NodeTag = tag,
-                        NodeUrl = clusterTopology.GetUrlFromTag(tag)
-                    };
-                }
+                yield return taskInfo;
+            }
+        }
 
-                (string Url, OngoingTaskReplication.ReplicationStatus Status) res = (null, OngoingTaskReplication.ReplicationStatus.None);
-                string error = null;
-                if (tag == store.NodeTag)
-                {
-                    try
-                    {
-                        store.DatabasesLandlord.DatabasesCache.TryGetValue(name, out var task);
-                        res = task.Result.ReplicationLoader.GetExternalReplicationDestination(watcher.TaskId);
-                    }
-                    catch (Exception e)
-                    {
-                        // failed to retrive the destination url
-                        error = e.ToString();
-                    }
-                }
-                else
-                {
-                    res.Status = OngoingTaskReplication.ReplicationStatus.NotOnThisNode;
-                }
+        private static OngoingTaskReplication GetExternalReplicationInfo(string name, DatabaseTopology dbTopology, ClusterTopology clusterTopology, ServerStore store,
+            ExternalReplication watcher)
+        {
+            NodeId responsibale = null;
 
-                yield return new OngoingTaskReplication
+            var tag = dbTopology.WhoseTaskIsIt(watcher, store.IsPassive());
+            if (tag != null)
+            {
+                responsibale = new NodeId
                 {
-                    TaskId = watcher.TaskId,
-                    TaskName = watcher.Name,
-                    ResponsibleNode = responsibale,
-                    DestinationDatabase = watcher.Database,
-                    TaskState = watcher.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
-                    DestinationUrl = res.Url,
-                    Status = res.Status,
-                    Error = error
+                    NodeTag = tag,
+                    NodeUrl = clusterTopology.GetUrlFromTag(tag)
                 };
             }
+
+            (string Url, OngoingTaskReplication.ReplicationStatus Status) res = (null, OngoingTaskReplication.ReplicationStatus.None);
+            string error = null;
+            if (tag == store.NodeTag)
+            {
+                try
+                {
+                    store.DatabasesLandlord.DatabasesCache.TryGetValue(name, out var task);
+                    res = task.Result.ReplicationLoader.GetExternalReplicationDestination(watcher.TaskId);
+                }
+                catch (Exception e)
+                {
+                    // failed to retrive the destination url
+                    error = e.ToString();
+                }
+            }
+            else
+            {
+                res.Status = OngoingTaskReplication.ReplicationStatus.NotOnThisNode;
+            }
+
+            var taskInfo = new OngoingTaskReplication
+            {
+                TaskId = watcher.TaskId,
+                TaskName = watcher.Name,
+                ResponsibleNode = responsibale,
+                DestinationDatabase = watcher.Database,
+                TaskState = watcher.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
+                DestinationUrl = res.Url,
+                Status = res.Status,
+                Error = error
+            };
+            
+            return taskInfo;
         }
 
         private static IEnumerable<OngoingTask> CollectBackupTasks(
@@ -323,25 +333,9 @@ namespace Raven.Server.Web.System
                                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                                 break;
                             }
+                            var taskInfo = GetExternalReplicationInfo(Database.Name, dbTopology, clusterTopology, ServerStore, watcher);
 
-                            tag = dbTopology?.WhoseTaskIsIt(watcher, ServerStore.IsPassive());
-
-                            var replicationTaskInfo = new OngoingTaskReplication
-                            {
-                                TaskId = watcher.TaskId,
-                                TaskName = watcher.Name,
-                                MentorNode = watcher.MentorNode,
-                                ResponsibleNode = new NodeId
-                                {
-                                    NodeTag = tag,
-                                    NodeUrl = clusterTopology.GetUrlFromTag(tag)
-                                },
-                                DestinationDatabase = watcher.Database,
-                                TaskState = watcher.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
-                                DestinationUrl = watcher.Url
-                            };
-
-                            WriteResult(context, replicationTaskInfo);
+                            WriteResult(context, taskInfo);
 
                             break;
 

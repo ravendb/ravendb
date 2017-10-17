@@ -114,6 +114,7 @@ class editExternalReplicationTask extends viewModelBase {
         new saveExternalReplicationTaskCommand(this.activeDatabase(), dto)
             .execute()
             .done(() => {
+                this.dirtyFlag().reset();
                 this.goToOngoingTasksView();
             });
     }
