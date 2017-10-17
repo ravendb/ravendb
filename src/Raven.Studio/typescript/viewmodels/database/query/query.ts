@@ -42,6 +42,9 @@ type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<doc
 
 class query extends viewModelBase {
 
+    static readonly recentQueryLimit = 6;
+    static readonly recentKeyWord = 'Recent Query';
+
     static readonly ContainerSelector = "#queryContainer";
     static readonly $body = $("body");
 
@@ -50,6 +53,39 @@ class query extends viewModelBase {
     static readonly SortTypes: querySortType[] = ["Ascending", "Descending", "Range Ascending", "Range Descending"];
 
     static lastQuery = new Map<string, string>();
+
+    hasAnySavedQuery = ko.pureComputed(() => this.savedQueries().length > 0);
+
+    filteredQueries = ko.pureComputed(() => {
+        let text = this.filters.searchText();
+
+        if (!text) {
+            return this.savedQueries();
+        }
+
+        text = text.toLowerCase();
+
+        return this.savedQueries().filter(x => x.name.toLowerCase().includes(text));
+    });
+
+    filters = {
+        searchText: ko.observable<string>()
+    };
+
+    previewItem = ko.observable<storedQueryDto>();
+
+    previewCode = ko.pureComputed(() => {
+        const item = this.previewItem();
+        if (!item) {
+            return "";
+        }
+
+        return item.queryText;
+    });
+
+    inSaveMode = ko.observable<boolean>();
+
+    saveQueryValidationGroup: KnockoutValidationGroup;
 
     private gridController = ko.observable<virtualGridController<any>>();
 
@@ -119,8 +155,15 @@ class query extends viewModelBase {
 
     static queryGridSelector = "#queryResultsGrid";*/
 
+    private hideSaveQueryHandler = (e: Event) => {
+        if ($(e.target).closest(".query-save").length === 0) {
+            this.inSaveMode(false);
+        }
+    };
+
     constructor() {
         super();
+        _.bindAll(this, ...["previewQuery", "removeQuery", "useQuery"] as Array<keyof this>);
 
         this.queryCompleter = queryCompleter.remoteCompleter(this.activeDatabase, this.indexes, "Select");
         aceEditorBindingHandler.install();
@@ -154,6 +197,9 @@ class query extends viewModelBase {
         this.queriedIndexDescription = ko.pureComputed(() => {
             const indexName = this.queriedIndex();
 
+            if (!indexName)
+                return "";
+                    
             if (indexName === "AllDocs") {
                 return "All Documents";
             }
@@ -246,7 +292,11 @@ class query extends viewModelBase {
                 this.runQuery();
             }
         });
-        
+
+        criteria.name.extend({
+            required: true
+        });
+
         this.totalResults = ko.pureComputed(() => {
             const stats = this.queryStats();
             if (!stats) {
@@ -262,9 +312,25 @@ class query extends viewModelBase {
 
         this.selectedIndex.subscribe(index => this.onIndexChanged(index));
         });*/
+
+        this.inSaveMode.subscribe(enabled => {
+            const $input = $(".query-save .form-control");
+            if (enabled) {
+                $input.show();
+                window.addEventListener("click", this.hideSaveQueryHandler, true);
+            } else {
+                this.saveQueryValidationGroup.errors.showAllMessages(false);
+                window.removeEventListener("click", this.hideSaveQueryHandler, true);
+                setTimeout(() => $input.hide(), 200);
+            }
+        });
     }
 
     private initValidation() {
+
+        this.saveQueryValidationGroup = ko.validatedObservable({
+            querySaveName: this.criteria().name
+        });
     }
 
     canActivate(args: any) {
@@ -372,8 +438,9 @@ class query extends viewModelBase {
 
         const myLastQuery = query.lastQuery.get(db.name);
 
-        if (myLastQuery)
+        if (myLastQuery) {
             this.criteria().queryText(myLastQuery);
+        }
     }
 
     private fetchAllIndexes(db: database): JQueryPromise<any> {
@@ -482,14 +549,10 @@ class query extends viewModelBase {
                             this.queryStats(queryResults.additionalResultInfo);
                             this.onIncludesLoaded(queryResults.includes);
                         }
-
                         this.saveLastQuery("");
+                        this.saveRecentQuery();
                     })
                     .fail((request: JQueryXHR) => {
-                        const queryText = this.criteria().queryText();
-                        savedQueriesStorage.removeRecentQueryByQueryText(database, queryText);
-                        this.savedQueries.shift();
-                        
                         resultsTask.reject(request);
                     });
                 
@@ -499,6 +562,103 @@ class query extends viewModelBase {
             this.queryFetcher(resultsFetcher);
             this.recordQueryRun(this.criteria());
         }
+    }
+
+    saveQuery() {
+        if (this.inSaveMode()) {
+            eventsCollector.default.reportEvent("query", "save");
+
+            if (this.isValid(this.saveQueryValidationGroup)) {
+                this.saveQueryInStorage(false);
+                this.saveQueryValidationGroup.errors.showAllMessages(false);
+                messagePublisher.reportSuccess("Query saved successfully");
+            }
+        } else {
+            if (this.isValid(this.criteria().validationGroup)) {
+                this.inSaveMode(true);
+            }
+        }
+    }
+
+    private saveRecentQuery() {
+        const name = this.getRecentQueryName();
+        this.criteria().name(name);
+        this.saveQueryInStorage(true);
+    }
+
+    private saveQueryInStorage(isRecent: boolean) {
+        this.appendQuery(this.criteria().toStorageDto(), isRecent);
+        savedQueriesStorage.storeSavedQueries(this.activeDatabase(), this.savedQueries());
+
+        this.criteria().name("");
+        this.loadSavedQueries();
+    }
+
+    appendQuery(doc: storedQueryDto, isRecent: boolean) {
+
+        if (isRecent) {
+            const existing = this.savedQueries().find(query => query.hash === doc.hash);
+            if (existing) {
+                this.savedQueries.remove(existing);
+                this.savedQueries.unshift(doc);
+            } else {
+                this.removeLastRecentQueryIfMoreThanLimit();
+                this.savedQueries.unshift(doc);
+            }
+        }
+        else {
+            const existing = this.savedQueries().find(x => x.name === doc.name);
+            if (existing) {
+                this.savedQueries.replace(existing, doc);
+            } else {
+                this.savedQueries.unshift(doc);
+            }
+        }
+    }
+
+    private removeLastRecentQueryIfMoreThanLimit() {
+        let count = 0;
+
+        const dto = this.savedQueries().find(x => {
+            if (x.name.startsWith(query.recentKeyWord)) {
+                count++;
+                return count >= query.recentQueryLimit;
+            }
+        });
+        this.savedQueries.remove(dto);
+    }
+
+    private getRecentQueryName(): string {
+
+        const collectionIndexName = queryUtil.getCollectionOrIndexName(this.criteria().queryText());
+
+        return query.recentKeyWord + " (" + collectionIndexName + ")";
+    }
+
+    previewQuery(item: storedQueryDto) {
+        this.previewItem(item);
+    }
+
+    useQuery() {
+        const queryDoc = this.criteria();
+        queryDoc.copyFrom(this.previewItem());
+        this.runQuery();
+    }
+
+    removeQuery(item: storedQueryDto) {
+
+        this.confirmationMessage("Query", `Are you sure you want to delete query '${item.name}'?`, ["Cancel", "Delete"])
+            .done(result => {
+                if (result.can) {
+
+                    if (this.previewItem() === item) {
+                        this.previewItem(null);
+                    }
+
+                    savedQueriesStorage.removeSavedQueryByHash(this.activeDatabase(), item.hash);
+                    this.loadSavedQueries();
+                }
+            });
     }
     
     private onIncludesLoaded(includes: dictionary<any>) {
@@ -524,10 +684,7 @@ class query extends viewModelBase {
         const newQuery: storedQueryDto = criteria.toStorageDto();
 
         const queryUrl = appUrl.forQuery(this.activeDatabase(), newQuery.hash);
-        this.updateUrl(queryUrl);
-
-        savedQueriesStorage.appendQuery(newQuery, this.savedQueries);
-        savedQueriesStorage.storeSavedQueries(this.activeDatabase(), this.savedQueries());
+        this.updateUrl(queryUrl);        
     }
 
     runRecentQuery(storedQuery: storedQueryDto) {
