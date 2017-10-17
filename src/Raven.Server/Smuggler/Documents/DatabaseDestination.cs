@@ -323,7 +323,7 @@ namespace Raven.Server.Smuggler.Documents
                     if (conflict != null)
                     {
                         var modifiedTicks = _database.Time.GetUtcNow().Ticks;
-                        _database.DocumentsStorage.ConflictsStorage.AddConflict(context, conflict.Id, modifiedTicks, conflict.Doc, conflict.ChangeVector, conflict.Collection, conflict.Flags);
+                        _database.DocumentsStorage.ConflictsStorage.AddConflict(context, conflict.Id, modifiedTicks, conflict.Doc, conflict.ChangeVector, conflict.Collection, conflict.Flags, NonPersistentDocumentFlags.FromSmuggler);
 
                         continue;
                     }
