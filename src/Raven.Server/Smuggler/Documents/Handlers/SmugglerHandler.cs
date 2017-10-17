@@ -420,8 +420,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 }
                 var token = new OperationCancelToken(Database.DatabaseShutdown);
                 var result = new SmugglerResult();
-                var operationId = Database.Operations.GetNextOperationId();
-                await Database.Operations.AddOperation(Database, $"Import to: {Database.Name} from csv file", Raven.Server.Documents.Operations.Operations.OperationType.DatabaseImportFromCsv,
+                var operationId = GetLongQueryString("operationId");
+                await Database.Operations.AddOperation(Database, "Import from csv file", Raven.Server.Documents.Operations.Operations.OperationType.DatabaseImportFromCsv,
                     onProgress =>
                     {
                         return Task.Run(async () =>

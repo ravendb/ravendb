@@ -572,8 +572,7 @@ namespace Sparrow.Json
         {
             var reader = CreateReader();
             reader.NoCache = noCache;
-            BlittableJsonReaderArray array;
-            if (reader.TryGet("_", out array))
+            if (reader.TryGet("_", out BlittableJsonReaderArray array))
                 return array;
             throw new InvalidOperationException("Couldn't find array");
         }
