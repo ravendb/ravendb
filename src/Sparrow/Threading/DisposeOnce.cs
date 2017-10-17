@@ -11,12 +11,12 @@ namespace Sparrow.Threading
     public struct ExceptionRetry : IDisposeOnceOperationMode { }
     public struct SingleAttempt : IDisposeOnceOperationMode { }
 
-    public class DisposeOnce<TOperationMode>
+    public sealed class DisposeOnce<TOperationMode>
         where TOperationMode : struct, IDisposeOnceOperationMode
     {
+        private readonly Action _action;
         private readonly MultipleUseFlag _disposeInProgress = new MultipleUseFlag();
         private TaskCompletionSource<object> _disposeCompleted = new TaskCompletionSource<object>();
-        private readonly Action _action;
 
         public DisposeOnce(Action action)
         {
@@ -43,22 +43,11 @@ namespace Sparrow.Threading
         {
             if (_disposeInProgress.Raise() == false)
             {
-                try
-                {
-                    // If a dispose is in progress, all other threads
-                    // attempting to dispose will stop here and wait until it
-                    // is over.
-                    _disposeCompleted.Task.Wait();
-                }
-                catch (AggregateException e)
-                {
-                    // Theres two reasons we may be here, either we were 
-                    // waiting and it failed, or we never got to wait because
-                    // it was already errored. In either way, this exception
-                    // is an AggregateException.
-                    throw e.InnerException;
-                }
-
+                // If a dispose is in progress, all other threads
+                // attempting to dispose will stop here and wait until it
+                // is over. This call to Wait may throw with an
+                // AggregateException
+                _disposeCompleted.Task.Wait();
                 return;
             }
 
@@ -70,20 +59,38 @@ namespace Sparrow.Threading
                 _disposeCompleted.SetResult(null);
             }
             catch (Exception e)
-            {                
-                // Let everyone waiting know that this run failed
-                _disposeCompleted.SetException(e);
-
-                // Reset the state for the next attempt. Order of operations here is 
-                // important: the new round starts when _disposeInProgress is set to
-                // false. Since we are using GC, the threads waiting on the completion
-                // won't end up with null references.
+            {
                 if (typeof(TOperationMode) == typeof(ExceptionRetry))
                 {
+                    // Reset the state for the next attempt. First backup the
+                    // current task completion.
+                    var oldDisposeCompleted = _disposeCompleted;
+
+                    // Reset the TSC. All new threads entering the Dispose
+                    // from this point and on will have to wait until the flag
+                    // is set to low and another thread enters the Dispose.
                     Interlocked.Exchange(ref _disposeCompleted, new TaskCompletionSource<object>());
+
+                    // Let everyone waiting know that this run failed
+                    oldDisposeCompleted.SetException(e);
+
+                    // The new round starts when _disposeInProgress is lowered.
+                    // Since we are using GC, the threads waiting on the
+                    // completion won't end up with null references.
                     _disposeInProgress.LowerOrDie();
+
+                    // NOTICE: There is an interim moment in which the threads
+                    // that enter Dispose will wait on a new TSC those Task is
+                    // not actually in progress. They will wait on it until a
+                    // different thread goes into the Dispose and effectively
+                    // runs the action and sets them free.
                 }
-                else if (typeof(TOperationMode) != typeof(SingleAttempt))
+                else if (typeof(TOperationMode) == typeof(SingleAttempt))
+                {
+                    // Let everyone waiting know that this run failed
+                    _disposeCompleted.SetException(e);
+                }
+                else
                 {
                     // This is here to prevent people from writing bad code. 
                     // It will fail to compile if the operation mode is not
@@ -93,7 +100,7 @@ namespace Sparrow.Threading
                 }
 
                 // Rethrow so that our thread knows it failed
-                throw;
+                throw new AggregateException(e);
             }
         }
     }

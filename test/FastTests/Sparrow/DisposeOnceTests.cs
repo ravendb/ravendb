@@ -645,11 +645,11 @@ namespace FastTests.Sparrow
                 throw new InvalidOperationException("This code should never run");
             });
 
-            Assert.Throws(typeof(InvalidOperationException), () => disposer.Dispose());
+            Assert.Throws(typeof(AggregateException), () => disposer.Dispose());
             Assert.Equal(counter, 1);
 
             // Subsequent runs also throw, but don't run anything
-            Assert.Throws(typeof(InvalidOperationException), () => disposer.Dispose());
+            Assert.Throws(typeof(AggregateException), () => disposer.Dispose());
             Assert.Equal(counter, 1);
         }
 
@@ -686,7 +686,7 @@ namespace FastTests.Sparrow
             for (int i = 0; i < numRetries; i++)
             {
                 Assert.Equal(counter, i);
-                Assert.Throws(typeof(InvalidOperationException), () => disposer.Dispose());
+                Assert.Throws(typeof(AggregateException), () => disposer.Dispose());
             }
 
             Assert.Equal(counter, numRetries);
@@ -753,7 +753,7 @@ namespace FastTests.Sparrow
                     {
                         var task = new Task(() =>
                         {
-                            Assert.Throws(typeof(InvalidOperationException), () => disposer.Dispose());
+                            Assert.Throws(typeof(AggregateException), () => disposer.Dispose());
                             Assert.Equal(counter, 1);
 
                             if (Interlocked.Decrement(ref pendingAttempts) == 0)
@@ -868,7 +868,7 @@ namespace FastTests.Sparrow
                                 // will be run.
                                 //barrier.SignalAndWait();
 
-                                Assert.Throws(typeof(InvalidOperationException), () => disposer.Dispose());
+                                Assert.Throws(typeof(AggregateException), () => disposer.Dispose());
 
                                 if (Interlocked.Decrement(ref workItemsPending) == 0)
                                     // ReSharper disable once AccessToDisposedClosure
