@@ -52,6 +52,61 @@ namespace Raven.Client.Documents.Session
 
         public static BlittableJsonReaderObject ConvertEntityToBlittable(object entity, DocumentConventions conventions, JsonOperationContext context, DocumentInfo documentInfo = null)
         {
+            if (entity is Users users)
+            {
+                using (var writer = new BlittableJsonWriter(context))
+                {
+                    writer.WriteStartObject();
+
+                    writer.WritePropertyName("Name");
+                    if (users.Name == null)
+                        writer.WriteNull();
+                    else
+                        writer.WriteValue(users.Name);
+                    writer.WritePropertyName("Email");
+                    if (users.Email == null)
+                        writer.WriteNull();
+                    else
+                        writer.WriteValue(users.Email);
+                    writer.WritePropertyName("Phone");
+                    if (users.Phone == null)
+                        writer.WriteNull();
+                    else
+                        writer.WriteValue(users.Phone);
+                    writer.WritePropertyName("Roles");
+                    writer.WriteStartArray();
+                    if (users.Roles != null)
+                    {
+                        bool first = false;
+                        foreach (var usersRole in users.Roles)
+                        {
+                            writer.WriteStartObject();
+                            writer.WritePropertyName("Role");
+                            writer.WriteValue(usersRole);
+                            writer.WriteEndObject();
+                        }
+                    }
+                    writer.WriteEndArray();
+                    writer.WritePropertyName("LastLogIn");
+                    writer.WriteValue(users.LastLogIn);
+
+
+                    writer.WriteEndObject();
+                    writer.FinalizeDocument();
+                    var reader = writer.CreateReader();
+                    var type = entity.GetType();
+
+                    var changes = TryRemoveIdentityProperty(reader, type, conventions);
+                    changes |= TrySimplifyJson(reader);
+
+                    if (changes)
+                        reader = context.ReadObject(reader, "convert/entityToBlittable");
+
+                    return reader;
+                }
+
+            }
+
             using (var writer = new BlittableJsonWriter(context, documentInfo))
             {
                 var serializer = conventions.CreateSerializer();
