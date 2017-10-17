@@ -2,10 +2,10 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Util;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -22,6 +22,24 @@ namespace Raven.Server.Documents.Handlers
             {
                 var indexes = Database.IndexStore.GetIndexes().ToList();
 
+                long sizeOnDiskInBytes = 0;
+                var storageEnvironments = Database.GetAllStoragesEnvironment();
+                if (storageEnvironments != null)
+                {
+                    foreach (var environment in storageEnvironments)
+                    {
+                        using (var tx = environment?.Environment.ReadTransaction())
+                        {
+                            var storageReport = environment?.Environment.GenerateReport(tx);
+                            if(storageReport == null)
+                                continue;
+
+                            var journalSize = storageReport.Journals.Sum(j => j.AllocatedSpaceInBytes);
+                            sizeOnDiskInBytes += storageReport.DataFile.AllocatedSpaceInBytes + journalSize;
+                        }
+                    }
+                }
+
                 var stats = new DatabaseStatistics
                 {
                     LastDocEtag = DocumentsStorage.ReadLastDocumentEtag(context.Transaction.InnerTransaction),
@@ -29,6 +47,7 @@ namespace Raven.Server.Documents.Handlers
                     CountOfRevisionDocuments = Database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(context),
                     CountOfDocumentsConflicts = Database.DocumentsStorage.ConflictsStorage.GetCountOfDocumentsConflicts(context),
                     CountOfConflicts = Database.DocumentsStorage.ConflictsStorage.ConflictsCount,
+                    SizeOnDisk = new Size(sizeOnDiskInBytes)
                 };
 
                 var attachments = Database.DocumentsStorage.AttachmentsStorage.GetNumberOfAttachments(context);

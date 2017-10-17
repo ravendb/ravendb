@@ -544,6 +544,19 @@ namespace Raven.Server.Json
                 writer.WriteNull();
             writer.WriteComma();
 
+            writer.WritePropertyName(nameof(statistics.SizeOnDisk));
+            writer.WriteStartObject();
+
+            writer.WritePropertyName(nameof(statistics.SizeOnDisk.HumaneSize));
+            writer.WriteString(statistics.SizeOnDisk.HumaneSize);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(statistics.SizeOnDisk.SizeInBytes));
+            writer.WriteInteger(statistics.SizeOnDisk.SizeInBytes);
+
+            writer.WriteEndObject();
+            writer.WriteComma();
+
             writer.WritePropertyName(nameof(statistics.Indexes));
             writer.WriteStartArray();
             var isFirstInternal = true;

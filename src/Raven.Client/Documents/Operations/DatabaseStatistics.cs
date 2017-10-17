@@ -7,6 +7,7 @@
 using System;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Operations
 {
@@ -80,6 +81,8 @@ namespace Raven.Client.Documents.Operations
         public string Pager { get; set; }
 
         public DateTime? LastIndexingTime { get; set; }
+
+        public Size SizeOnDisk { get; set; }
     }
 
     public class IndexInformation
