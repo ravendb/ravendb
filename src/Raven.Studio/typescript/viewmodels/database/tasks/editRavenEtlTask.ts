@@ -17,6 +17,8 @@ import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleM
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 
 class editRavenEtlTask extends viewModelBase {
+    
+    static readonly scriptNamePrefix = "Script #";
 
     editedRavenEtl = ko.observable<ongoingTaskRavenEtlEditModel>();
     isAddingNewRavenEtlTask = ko.observable<boolean>(true);
@@ -65,7 +67,7 @@ class editRavenEtlTask extends viewModelBase {
             // 2. Creating a New task
             this.isAddingNewRavenEtlTask(true);
             this.editedRavenEtl(ongoingTaskRavenEtlEditModel.empty());
-            this.editedRavenEtl().editedTransformationScript(ongoingTaskRavenEtlTransformationModel.empty());
+            this.editedRavenEtl().editedTransformationScriptSandbox(ongoingTaskRavenEtlTransformationModel.empty());
             deferred.resolve();
         }
 
@@ -137,7 +139,7 @@ class editRavenEtlTask extends viewModelBase {
         this.isValid(this.editedRavenEtl().validationGroup);
         
         if (editedEtl.showEditTransformationArea()) {
-            if (!this.isValid(editedEtl.editedTransformationScript().validationGroup)) {
+            if (!this.isValid(editedEtl.editedTransformationScriptSandbox().validationGroup)) {
                 return false;
             }
 
@@ -158,25 +160,28 @@ class editRavenEtlTask extends viewModelBase {
     }
 
     addNewTransformation() {
-        this.editedRavenEtl().editedTransformationScript(ongoingTaskRavenEtlTransformationModel.empty());
+        this.editedRavenEtl().transformationScriptSelectedForEdit(null);
+        this.editedRavenEtl().editedTransformationScriptSandbox(ongoingTaskRavenEtlTransformationModel.empty());
     }
 
     cancelEditedTransformation() {
-        this.editedRavenEtl().editedTransformationScript(null);
+        this.editedRavenEtl().editedTransformationScriptSandbox(null);
+        this.editedRavenEtl().transformationScriptSelectedForEdit(null);
     }
 
     saveEditedTransformation() {
-        const transformation = this.editedRavenEtl().editedTransformationScript();
+        const transformation = this.editedRavenEtl().editedTransformationScriptSandbox();
         if (!this.isValid(transformation.validationGroup)) {
             return;
         }
         
         if (transformation.isNew()) {
             const newTransformationItem = new ongoingTaskRavenEtlTransformationModel(transformation.toDto(), false);
+            newTransformationItem.name(this.findNameForNewTransformation());
             newTransformationItem.dirtyFlag().forceDirty();
             this.editedRavenEtl().transformationScripts.push(newTransformationItem);
         } else {
-            const oldItem = this.editedRavenEtl().transformationScripts().find(x => x.name() === transformation.name());
+            const oldItem = this.editedRavenEtl().transformationScriptSelectedForEdit();
             const newItem = new ongoingTaskRavenEtlTransformationModel(transformation.toDto(), false);
             
             if (oldItem.dirtyFlag().isDirty() || newItem.hasUpdates(oldItem)) {
@@ -187,7 +192,20 @@ class editRavenEtlTask extends viewModelBase {
         }
 
         this.editedRavenEtl().transformationScripts.sort((a, b) => a.name().toLowerCase().localeCompare(b.name().toLowerCase()));
-        this.editedRavenEtl().editedTransformationScript(null);
+        this.editedRavenEtl().editedTransformationScriptSandbox(null);
+        this.editedRavenEtl().transformationScriptSelectedForEdit(null);
+    }
+    
+    private findNameForNewTransformation() {
+        const scriptsWithPrefix = this.editedRavenEtl().transformationScripts().filter(script => {
+            return script.name().startsWith(editRavenEtlTask.scriptNamePrefix);
+        });
+        
+        const maxNumber =  _.max(scriptsWithPrefix
+            .map(x => x.name().substr(editRavenEtlTask.scriptNamePrefix.length))
+            .map(x => _.toInteger(x))) || 0;
+        
+        return editRavenEtlTask.scriptNamePrefix + (maxNumber + 1);
     }
 
     cancelOperation() {

@@ -114,18 +114,19 @@
                 </div>
                 <div class="scroll">
                     <div class="etl-list" id="transformsList" data-bind="with: editedRavenEtl">
-                        <div data-bind="if: transformationScripts().length === 0 && !editedTransformationScript()">
+                        <div data-bind="if: transformationScripts().length === 0 && !editedTransformationScriptSandbox()">
                             <div>
                                 <h3 class="text-center text-muted" data-bind="css: { 'text-danger': !transformationScripts.isValid() && transformationScripts.isModified() }">No transformation scripts have been defined.</h3>
                             </div>
                         </div>
                         <div data-bind="foreach: transformationScripts">
-                            <div class="panel item">
+                            <div class="panel item" data-bind="css: { active: $data === $parent.transformationScriptSelectedForEdit() }">
                                 <div class="padding padding-sm">
                                     <div class="flex-horizontal">
                                         <div class="flex-grow info">
                                             <div class="transformer-name" title="Transformation script name">
                                                 <span data-bind="text: name"></span>
+                                                <span class="text-warning" data-bind="visible: dirtyFlag().isDirty">*</span>
                                             </div>
                                             <div class="collections">
                                                 Collections:
@@ -136,11 +137,6 @@
                                                     <span>All collections</span>
                                                 </span>
                                             </div>
-                                        </div>
-                                        <div data-bind="visible: dirtyFlag().isDirty">
-                                            <small class="text-warning">
-                                                <i class="icon-warning"></i> Modified
-                                            </small>
                                         </div>
                                         <div class="actions">
                                             <button data-bind="click: $parent.editTransformationScript.bind($parent, $data)" class="btn btn-default"><i class="icon-edit" title="Edit script"></i></button>
@@ -157,19 +153,13 @@
         <div class="col-xs-12 col-lg-6 flex-vertical" data-bind="with: editedRavenEtl()">
             <div class="flex-grow">
                 <div id="editTransform" class="panel" data-bind="if: showEditTransformationArea">
-                    <div class="padding padding-sm" data-bind="with: editedTransformationScript">
-                        <label><strong>Name:</strong></label>
-                        <div class="edit-name flex-horizontal margin-bottom">
-                            <div class="flex-grow" title="Transform script name" data-bind="validationElement: name">
-                                <input class="form-control" type="text" data-bind="textInput: name, attr: { 'disabled': !isNew() }" placeholder="Enter a name for the transform script">
-                            </div>
-                            <div class="flex-noshrink">
-                                <button class="btn btn-success" data-bind="click: $root.saveEditedTransformation, attr: { title : (isNew() ? 'Add' : 'Update') +  ' this transformation script' }">
-                                    <i class="icon-tick"></i>
-                                </button>
-                                <button title="Cancel" class="btn btn-default" data-bind="click: $root.cancelEditedTransformation"><i class="icon-cancel"></i></button>
-                            </div>
+                    <div class="padding padding-sm" data-bind="with: editedTransformationScriptSandbox">
+                        <div>
+                            <label>
+                                <strong>Name:</strong> <span data-bind="text: name"></span>
+                            </label>
                         </div>
+                        
                         <label><strong>Script:</strong> <small>(leave empty to send documents w/o any modifications)</small></label>
                         <span class="pull-right"><a href="#" data-bind="click: $root.syntaxHelp"><small>Syntax help</small></a></span>
                         <div data-bind="validationElement: script">
@@ -184,39 +174,49 @@
                             <input id="applyToAll" type="checkbox" data-bind="checked: applyScriptForAllCollections">
                             <label for="applyToAll">Apply script to all collections</label>
                         </div>
-                        <div class="flex-horizontal margin-bottom" data-bind="collapse: !applyScriptForAllCollections(), css: {'invisible': applyScriptForAllCollections }">
-                            <div class="flex-grow">
-                                <div class="dropdown btn-block flex-grow"> 
-                                    <input class="form-control dropdown-toggle" placeholder="Select collection" data-toggle="dropdown"
-                                           data-bind="textInput: inputCollection, attr: { id: 'collectionNameInput', disabled: $root.collections().length == 0 }" />
-                                    <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
-                                    <ul class="dropdown-menu" role="menu" style="display: none;"
-                                        data-bind="autoComplete: '#' + 'collectionNameInput', foreach: $root.createCollectionNameAutocompleter(transformScriptCollections, inputCollection)">
-                                        <li role="presentation" data-bind="click: $parent.addWithBlink.bind($parent, $data)">
-                                            <a role="menuitem" tabindex="-1" href="#">
-                                                <span data-bind="text: $data"></span>
-                                            </a>
-                                        </li>
-                                    </ul>
-                                    <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: transformScriptCollections">
-                                        <div class="help-block" data-bind="validationMessage: transformScriptCollections"></div>
+                        
+                        <div class="margin-bottom" data-bind="collapse: !applyScriptForAllCollections(), css: {'invisible': applyScriptForAllCollections }">
+                            <div class="flex-horizontal">
+                                <div class="flex-grow">
+                                    <div class="dropdown btn-block flex-grow">
+                                        <input class="form-control dropdown-toggle" placeholder="Select collection" data-toggle="dropdown"
+                                               data-bind="textInput: inputCollection, attr: { id: 'collectionNameInput', disabled: $root.collections().length == 0 }" />
+                                        <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                                        <ul class="dropdown-menu" role="menu" style="display: none;"
+                                            data-bind="autoComplete: '#' + 'collectionNameInput', foreach: $root.createCollectionNameAutocompleter(transformScriptCollections, inputCollection)">
+                                            <li role="presentation" data-bind="click: $parent.addWithBlink.bind($parent, $data)">
+                                                <a role="menuitem" tabindex="-1" href="#">
+                                                    <span data-bind="text: $data"></span>
+                                                </a>
+                                            </li>
+                                        </ul>
+                                        <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: transformScriptCollections">
+                                            <div class="help-block" data-bind="validationMessage: transformScriptCollections"></div>
+                                        </div>
                                     </div>
                                 </div>
+                                <div>
+                                    <button class="btn btn-info" data-bind="click: addCollection, attr: { 'disabled': !inputCollection() || !canAddCollection() }"><i class="icon-plus"></i> <span>Add Collection</span></button>
+                                </div>
                             </div>
-                            <div>
-                                <button class="btn btn-info" data-bind="click: addCollection, attr: { 'disabled': !inputCollection() || !canAddCollection() }"><i class="icon-plus"></i> <span>Add Collection</span></button>
+                            <div data-bind="visible: !applyScriptForAllCollections() && transformScriptCollections().length">
+                                <label><strong>Collections Selected:</strong></label>
+                                <ul class="well collection-list">
+                                    <!-- ko foreach: transformScriptCollections -->
+                                    <li>
+                                        <div class="name" data-bind="text: $data"></div>
+                                        <a title="Remove collection" href="#" data-bind="click: $parent.removeCollection.bind($parent, $data)"><i class="icon-trash"></i></a>
+                                    </li>
+                                    <!-- /ko -->
+                                </ul>
                             </div>
                         </div>
-                        <div data-bind="collapse: !applyScriptForAllCollections(), visible: !applyScriptForAllCollections() && transformScriptCollections().length">
-                            <label><strong>Collections Selected:</strong></label>
-                            <ul class="well collection-list">
-                                <!-- ko foreach: transformScriptCollections -->
-                                <li>
-                                    <div class="name" data-bind="text: $data"></div>
-                                    <a title="Remove collection" href="#" data-bind="click: $parent.removeCollection.bind($parent, $data)"><i class="icon-trash"></i></a>
-                                </li>
-                                <!-- /ko -->
-                            </ul>
+
+                        <div>
+                            <button class="btn btn-success" data-bind="click: $root.saveEditedTransformation, attr: { title : (isNew() ? 'Add' : 'Update') +  ' this transformation script' }">
+                                <i class="icon-tick"></i> <span data-bind="text: isNew() ? 'Add' : 'Update'"></span>
+                            </button>
+                            <button title="Cancel" class="btn btn-default" data-bind="click: $root.cancelEditedTransformation"><i class="icon-cancel"></i> <span>Cancel</span></button>
                         </div>
                     </div>
                 </div>
