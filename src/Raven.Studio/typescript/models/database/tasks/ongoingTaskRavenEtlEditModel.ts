@@ -10,7 +10,9 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
 
     showEditTransformationArea: KnockoutComputed<boolean>;
 
-    editedTransformationScript = ko.observable<ongoingTaskRavenEtlTransformationModel>();  
+    transformationScriptSelectedForEdit = ko.observable<ongoingTaskRavenEtlTransformationModel>();
+    editedTransformationScriptSandbox = ko.observable<ongoingTaskRavenEtlTransformationModel>();
+    
     validationGroup: KnockoutValidationGroup;
     
     dirtyFlag: () => DirtyFlag;
@@ -26,9 +28,9 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
     initializeObservables() {
         super.initializeObservables();
         
-        this.showEditTransformationArea = ko.pureComputed(() => !!this.editedTransformationScript());
+        this.showEditTransformationArea = ko.pureComputed(() => !!this.editedTransformationScriptSandbox());
         
-        const innerDirtyFlag = ko.pureComputed(() => !!this.editedTransformationScript() && this.editedTransformationScript().dirtyFlag().isDirty());
+        const innerDirtyFlag = ko.pureComputed(() => !!this.editedTransformationScriptSandbox() && this.editedTransformationScriptSandbox().dirtyFlag().isDirty());
         const scriptsCount = ko.pureComputed(() => this.transformationScripts().length);
         const hasAnyDirtyTransformationScript = ko.pureComputed(() => {
             let anyDirty = false;
@@ -104,13 +106,15 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
     deleteTransformationScript(transformationScript: ongoingTaskRavenEtlTransformationModel) { 
         this.transformationScripts.remove(x => transformationScript.name() === x.name());
         
-        if (this.editedTransformationScript() && this.editedTransformationScript().name() === transformationScript.name()) {
-            this.editedTransformationScript(null);
+        if (this.transformationScriptSelectedForEdit() === transformationScript) {
+            this.editedTransformationScriptSandbox(null);
+            this.transformationScriptSelectedForEdit(null);
         }
     }
 
     editTransformationScript(transformationScript: ongoingTaskRavenEtlTransformationModel) {
-        this.editedTransformationScript(new ongoingTaskRavenEtlTransformationModel(transformationScript.toDto(), false));
+        this.transformationScriptSelectedForEdit(transformationScript);
+        this.editedTransformationScriptSandbox(new ongoingTaskRavenEtlTransformationModel(transformationScript.toDto(), false));
     }
 
     static empty(): ongoingTaskRavenEtlEditModel {

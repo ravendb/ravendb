@@ -64,10 +64,6 @@ class ongoingTaskEtlTransformationModel {
     }
 
     private initValidation() {
-        this.name.extend({
-            required: true
-        });
-        
         this.transformScriptCollections.extend({
             validation: [
                 {
@@ -78,7 +74,6 @@ class ongoingTaskEtlTransformationModel {
         });
 
         this.validationGroup = ko.validatedObservable({
-            name: this.name,
             transformScriptCollections: this.transformScriptCollections
         });
     }
