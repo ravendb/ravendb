@@ -317,7 +317,7 @@ namespace Raven.Server.Web.Authentication
 
                 var key = Constants.Certificates.Prefix + thumbprint;
                 var definition = ReadCertificateFromCluster(ctx, key);
-                if (definition.SecurityClearance == SecurityClearance.ClusterAdmin || definition.SecurityClearance == SecurityClearance.ClusterNode 
+                if ((definition.SecurityClearance == SecurityClearance.ClusterAdmin || definition.SecurityClearance == SecurityClearance.ClusterNode) 
                     && IsClusterAdmin() == false)
                 {
                     var clientCertDef = ReadCertificateFromCluster(ctx, Constants.Certificates.Prefix + clientCert?.Thumbprint);
