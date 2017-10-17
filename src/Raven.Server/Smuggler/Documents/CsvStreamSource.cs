@@ -190,6 +190,11 @@ namespace Raven.Server.Smuggler.Documents
             return Enumerable.Empty<DocumentTombstone>();
         }
 
+        public IEnumerable<DocumentConflict> GetConflicts(List<string> collectionsToExport, INewDocumentActions actions)
+        {
+            yield break;
+        }
+
         public IEnumerable<IndexDefinitionAndType> GetIndexes()
         {
             return Enumerable.Empty<IndexDefinitionAndType>();
