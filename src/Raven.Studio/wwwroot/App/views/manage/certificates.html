@@ -29,7 +29,8 @@
                                     <h3 class="no-margin" data-bind="text: Name || '<empty name>'"></h3>
                                 </div>
                             </a>
-                            <div class="thumbprint" title="Certificate thumbprint" data-bind="text: Thumbprint"></div>
+                            <div class="thumbprint" title="Certificate thumbprint" data-bind="text: Thumbprints.join(', ')">
+                            </div>
                         </div>
                         <div class="expiration">
                             <!-- TODO
@@ -85,7 +86,7 @@
                                     Security clearance
                                 </label>
                                 <div class="btn-group btn-block">
-                                    <button type="button" class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
+                                    <button type="button" class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown" data-bind="enable: canEditClearance">
                                         <span data-bind="text: securityClearanceLabel"></span> <span class="caret"></span>
                                     </button>
                                     <ul class="dropdown-menu" data-bind="foreach: $data.constructor.securityClearanceTypes">
@@ -126,14 +127,24 @@
                                 </label>
                                 <input class="form-control" type="date" data-bind="textInput: expirationDate">
                             </div> -->
-                            
-                            <div class="form-group" data-bind="visible: mode() === 'editExisting'">
+
+                            <div class="bg-info padding padding-sm flex-horizontal" data-bind="visible: thumbprints().length > 1">
+                                <div>
+                                    <i class="icon-info"></i>
+                                </div>
+                                <div class="small">
+                                    This entry contains <span data-bind="text: thumbprints().length"></span> certificates. You can see its thumbprints below. 
+                                </div>
+                            </div>
+                            <!-- ko foreach: thumbprints -->
+                            <div class="form-group" data-bind="visible: $parent.mode() === 'editExisting'">
                                 <label class="control-label">
-                                    Thumbprint
+                                    <span data-bind="visible: $index() === 0">Thumbprint</span>
                                 </label>
-                                <input class="form-control" type="text" data-bind="value: thumbprint" disabled>
+                                <input class="form-control" type="text" data-bind="value: $data" disabled>
                                 <button type="button" data-bind="click: $root.copyThumbprint" class="btn btn-default"><i class="icon-copy"></i></button>
                             </div>
+                            <!-- /ko -->
                             <hr />
                             <h4>Database permissions</h4>
                            

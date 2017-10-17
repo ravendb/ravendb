@@ -24,7 +24,7 @@ class certificates extends viewModelBase {
     showDatabasesSelector: KnockoutComputed<boolean>;
     hasAllDatabasesAccess: KnockoutComputed<boolean>;
     canExportClusterCertificates: KnockoutComputed<boolean>;
-    certificates = ko.observableArray<Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition>();
+    certificates = ko.observableArray<unifiedCertificateDefinition>();
 
     importedFileName = ko.observable<string>();
     
@@ -61,13 +61,14 @@ class certificates extends viewModelBase {
             if (model) {
                 this.initPopover();
             }
-        })
+        });
     }
     
     private initPopover() {
         popoverUtils.longWithHover($(".certificate-file-label small"),
             {
-                content: 'Select .pfx store file with single or multiple certificates. All of them will be imported under a single name.'
+                content: 'Select .pfx store file with single or multiple certificates. All of them will be imported under a single name.',
+                placement: "top"
             });
     }
     
@@ -92,7 +93,7 @@ class certificates extends viewModelBase {
         });
     }
     
-    enterEditCertificateMode(itemToEdit: Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition) {
+    enterEditCertificateMode(itemToEdit: unifiedCertificateDefinition) {
         this.model(certificateModel.fromDto(itemToEdit));
         this.model().validationGroup.errors.showAllMessages(false);
     }
@@ -100,7 +101,6 @@ class certificates extends viewModelBase {
     deleteCertificate(certificate: Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition) {
         this.confirmationMessage("Are you sure?", "Do you want to delete certificate with thumbprint: " + certificate.Thumbprint + "", ["No", "Yes, delete"])
             .done(result => {
-                //TODO: spinners
                 if (result.can) {
                     new deleteCertificateCommand(certificate.Thumbprint)
                         .execute()
@@ -208,10 +208,29 @@ class certificates extends viewModelBase {
     }
     
     private loadCertificates() {
-        return new getCertificatesCommand()
+        return new getCertificatesCommand(true)
             .execute()
             .done(certificates => {
-                this.certificates(certificates);
+                const mergedCertificates = [] as Array<unifiedCertificateDefinition>;
+                
+                const secondaryCertificates = [] as Array<Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition>;
+                
+                certificates.forEach(cert => {
+                    if (cert.CollectionPrimaryKey) {
+                        secondaryCertificates.push(cert);
+                    } else {
+                        (cert as unifiedCertificateDefinition).Thumbprints = [cert.Thumbprint];
+                        mergedCertificates.push(cert as unifiedCertificateDefinition);
+                    }
+                });
+                
+                secondaryCertificates.forEach(cert => {
+                    const thumbprint = cert.CollectionPrimaryKey.split("/")[1];
+                    const primaryCert = mergedCertificates.find(x => x.Thumbprint === thumbprint);
+                    primaryCert.Thumbprints.push(cert.Thumbprint);
+                });
+                
+                this.certificates(mergedCertificates);
             });
     }
     
@@ -271,8 +290,8 @@ class certificates extends viewModelBase {
         }
     }
 
-    copyThumbprint(model: certificateModel) {
-        copyToClipboard.copy(model.thumbprint(), "Thumbprint was copied to clipboard.");
+    copyThumbprint(thumbprint: string) {
+        copyToClipboard.copy(thumbprint, "Thumbprint was copied to clipboard.");
     }
 }
 
