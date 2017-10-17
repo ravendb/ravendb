@@ -27,7 +27,8 @@ namespace Raven.Server.Documents.Handlers
                     LastDocEtag = DocumentsStorage.ReadLastDocumentEtag(context.Transaction.InnerTransaction),
                     CountOfDocuments = Database.DocumentsStorage.GetNumberOfDocuments(context),
                     CountOfRevisionDocuments = Database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(context),
-                    CountOfConflicts = Database.DocumentsStorage.ConflictsStorage.GetCountOfDocumentsConflicts(context)
+                    CountOfDocumentsConflicts = Database.DocumentsStorage.ConflictsStorage.GetCountOfDocumentsConflicts(context),
+                    CountOfConflicts = Database.DocumentsStorage.ConflictsStorage.ConflictsCount,
                 };
 
                 var attachments = Database.DocumentsStorage.AttachmentsStorage.GetNumberOfAttachments(context);

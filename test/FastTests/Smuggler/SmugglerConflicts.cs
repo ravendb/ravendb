@@ -80,7 +80,8 @@ namespace FastTests.Smuggler
                 WaitForDocument(store3, "people/1-A");
 
                 var stats = await store3.Admin.SendAsync(new GetStatisticsOperation());
-                Assert.Equal(6, stats.CountOfDocuments);
+                Assert.Equal(7, stats.CountOfDocuments);
+                Assert.Equal(0, stats.CountOfDocumentsConflicts);
                 Assert.Equal(0, stats.CountOfConflicts);
 
                 await AssertImport(store3);
@@ -137,6 +138,7 @@ namespace FastTests.Smuggler
                 await session.StoreAsync(new User { Name = "Fitzchak 1", Id = "users/fitzchak" });
                 await session.StoreAsync(new Person { Name = "Name1" });
                 await session.StoreAsync(new Person { Name = "Name2" });
+                await session.StoreAsync(new Person { Name = "Name - No conflict" });
                 await session.StoreAsync(new Company { Name = "Hibernating Rhinos " });
                 await session.SaveChangesAsync();
             }
@@ -146,6 +148,7 @@ namespace FastTests.Smuggler
                 await session.StoreAsync(new User { Name = "Fitzchak 2", Id = "users/fitzchak" });
                 await session.StoreAsync(new Person { Name = "Name11" });
                 await session.StoreAsync(new Person { Name = "Name12" });
+                await session.StoreAsync(new Person { Name = "Name - No conflict" });
                 await session.StoreAsync(new Company { Name = "Hibernating Rhinos 2 " });
                 await session.SaveChangesAsync();
             }
@@ -177,11 +180,13 @@ namespace FastTests.Smuggler
             Assert.Equal(2, WaitUntilHasConflict(store1, "users/fitzchak").Length);
 
             var stats = await store1.Admin.SendAsync(new GetStatisticsOperation());
-            Assert.Equal(2, stats.CountOfDocuments);
-            Assert.Equal(4, stats.CountOfConflicts);
+            Assert.Equal(3, stats.CountOfDocuments);
+            Assert.Equal(4, stats.CountOfDocumentsConflicts);
+            Assert.Equal(8, stats.CountOfConflicts);
 
             stats = await store2.Admin.SendAsync(new GetStatisticsOperation());
-            Assert.Equal(6, stats.CountOfDocuments);
+            Assert.Equal(7, stats.CountOfDocuments);
+            Assert.Equal(0, stats.CountOfDocumentsConflicts);
             Assert.Equal(0, stats.CountOfConflicts);
         }
 
@@ -195,6 +200,7 @@ namespace FastTests.Smuggler
                 await session.StoreAsync(new User { Name = "Fitzchak 3", Id = "users/fitzchak" });
                 await session.StoreAsync(new Person { Name = "Name13" });
                 await session.StoreAsync(new Person { Name = "Name23" });
+                await session.StoreAsync(new Person { Name = "Name - No conflict" });
                 await session.StoreAsync(new Company { Name = "Hibernating Rhinos " });
                 await session.SaveChangesAsync();
             }
@@ -204,6 +210,7 @@ namespace FastTests.Smuggler
                 await session.StoreAsync(new User { Name = "Fitzchak 4", Id = "users/fitzchak" });
                 await session.StoreAsync(new Person { Name = "Name14" });
                 await session.StoreAsync(new Person { Name = "Name14" });
+                await session.StoreAsync(new Person { Name = "Name - No conflict" });
                 await session.StoreAsync(new Company { Name = "Hibernating Rhinos 2 " });
                 await session.SaveChangesAsync();
             }
@@ -235,11 +242,13 @@ namespace FastTests.Smuggler
             Assert.Equal(2, WaitUntilHasConflict(store3, "users/fitzchak").Length);
 
             var stats = await store3.Admin.SendAsync(new GetStatisticsOperation());
-            Assert.Equal(2, stats.CountOfDocuments);
-            Assert.Equal(4, stats.CountOfConflicts);
+            Assert.Equal(3, stats.CountOfDocuments);
+            Assert.Equal(4, stats.CountOfDocumentsConflicts);
+            Assert.Equal(8, stats.CountOfConflicts);
 
             stats = await store4.Admin.SendAsync(new GetStatisticsOperation());
-            Assert.Equal(6, stats.CountOfDocuments);
+            Assert.Equal(7, stats.CountOfDocuments);
+            Assert.Equal(0, stats.CountOfDocumentsConflicts);
             Assert.Equal(0, stats.CountOfConflicts);
         }
 
@@ -250,8 +259,9 @@ namespace FastTests.Smuggler
                 await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), _file);
 
                 var stats = await store.Admin.SendAsync(new GetStatisticsOperation());
-                Assert.Equal(2, stats.CountOfDocuments);
-                Assert.Equal(4, stats.CountOfConflicts);
+                Assert.Equal(3, stats.CountOfDocuments);
+                Assert.Equal(4, stats.CountOfDocumentsConflicts);
+                Assert.Equal(8, stats.CountOfConflicts);
 
                 var conflicts = (await store.Commands().GetConflictsForAsync("users/fitzchak")).ToList();
                 Assert.Equal(2, conflicts.Count);
@@ -273,8 +283,9 @@ namespace FastTests.Smuggler
                 await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), _file);
 
                 var stats = await store.Admin.SendAsync(new GetStatisticsOperation());
-                Assert.Equal(2, stats.CountOfDocuments);
-                Assert.Equal(4, stats.CountOfConflicts);
+                Assert.Equal(3, stats.CountOfDocuments);
+                Assert.Equal(4, stats.CountOfDocumentsConflicts);
+                Assert.Equal(13, stats.CountOfConflicts);
 
                 var conflicts = (await store.Commands().GetConflictsForAsync("users/fitzchak")).ToList();
                 Assert.Equal(4, conflicts.Count);
