@@ -9,7 +9,11 @@
                     </button>
                     <button class="btn btn-default" data-bind="click: enterUploadCertificateMode">
                         <i class="icon-upload"></i>
-                        <span>Upload client certificate</span>
+                        <span>Upload client certificates</span>
+                    </button>
+                    <button class="btn btn-default" data-bind="click: exportClusterCertificates, enable: canExportClusterCertificates" title="Exports cluster certificates into .pfx file">
+                        <i class="icon-export"></i>
+                        <span>Export cluster certificates</span>
                     </button>
                 </div>
             </div>
@@ -59,7 +63,7 @@
                         <div class="flex-horizontal margin-bottom">
                             <div class="flex-grow">
                                 <h3 data-bind="visible: mode() === 'generate'">Generate client certificate</h3>
-                                <h3 data-bind="visible: mode() === 'upload'">Upload client certificate</h3>
+                                <h3 data-bind="visible: mode() === 'upload'">Upload client certificates</h3>
                                 <h3 data-bind="visible: mode() === 'editExisting'">Edit permissions</h3>
                             </div>
                             <div class="flex-start">
@@ -72,7 +76,7 @@
                                     Name
                                 </label>
                                 <div class="flex-grow" data-bind="validationElement: name">
-                                    <input type="text" class="form-control" data-bind="textInput: name, disable: mode() === 'editExisting'">
+                                    <input type="text" class="form-control" data-bind="textInput: name">
                                 </div>
                             </div>
     
@@ -91,12 +95,13 @@
                             </div>
     
                             <div class="form-group" data-bind="visible: mode() === 'upload'">
-                                <label class="control-label">
+                                <label class="control-label certificate-file-label">
                                     Certificate file
+                                    <small><i class="icon-info text-info"></i></small>
                                 </label>
                                 <div class="input-group file-input" data-bind="validationElement: $root.importedFileName">
                                     <input type="file" tabindex="-1" name="importFile" id="importFile" accept="" data-bind="event: { change: _.partial($root.fileSelected, $element) }">
-                                    <span class="static-name form-control" data-bind="text: $root.importedFileName() || 'Select file...'"></span>
+                                    <span class="static-name form-control" data-bind="text: $root.importedFileName() || 'Select .pfx file...'"></span>
                                     <span class="input-group-btn">
                                         <label for="importFile" class="btn btn-default">
                                             <i class="icon-document"></i>
@@ -215,8 +220,11 @@
     </div>
 </div>
 
-<form target="certificate_download_iframe" style="display: none" method="post">
+<form id="certificate_download_form" target="certificate_download_iframe" style="display: none" method="post">
     <input name="Options" data-bind="textInput: generateCertPayload" />
+</form>
+
+<form id="certificates_export_form" target="certificate_download_iframe" style="display: none">
 </form>
 
 <iframe name="certificate_download_iframe" style="display: none"></iframe>

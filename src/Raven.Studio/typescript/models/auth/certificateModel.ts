@@ -104,6 +104,7 @@ class certificateModel {
 
     toUpdatePermissionsDto() {
         return {
+            Name: this.name(),
             Thumbprint: this.thumbprint(),
             SecurityClearance: this.securityClearance(),
             Permissions: this.serializePermissions()
