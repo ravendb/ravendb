@@ -154,17 +154,12 @@
                         <div class="padding padding-sm flex-horizontal item">
                             <div class="row flex-grow">
                                 <div class="col-sm-4">
-                                    <div class="widthlabel"><label class="superscript">Table</label><strong data-bind="text: tableName"></strong></div>
+                                    <div class="widthlabel"><label class="superscript">Table</label><strong data-bind="text: tableName"></strong><span class="text-warning" data-bind="visible: dirtyFlag().isDirty">*</span></div>
                                 </div>
                                 <div class="col-sm-4">
                                     <div class="widthlabel"><label class="superscript">Document Id Column</label><strong data-bind="text: documentIdColumn"></strong></div>
                                 </div>
                                 <div class="col-sm-4" data-bind="if: insertOnlyMode">Insert only</div>
-                            </div>
-                            <div data-bind="visible: dirtyFlag().isDirty">
-                                <small class="text-warning">
-                                    <i class="icon-warning"></i> Modified
-                                </small>
                             </div>
                             <div class="flex-noshrink">
                                 <button type="button" class="btn btn-default btn-sm" title="Edit this SQL table" data-bind="click: $root.editSqlTable.bind($data)"><i class="icon-edit"></i></button>
@@ -182,26 +177,23 @@
             </div>
             <!-- The transformation scripts -->
             <div class="etl-list" data-bind="with: editedSqlEtl">
-                <div data-bind="if: transformationScripts().length === 0 && !$root.editedTransformationScript()">
+                <div data-bind="if: transformationScripts().length === 0 && !$root.editedTransformationScriptSandbox()">
                     <div>
                         <h3 class="text-center text-muted" data-bind="css: { 'text-danger': !transformationScripts.isValid() && transformationScripts.isModified() }">No transformation scripts have been defined.</h3>
                     </div>
                 </div>
                 <div class="transformation-scripts-list" data-bind="foreach: transformationScripts">
-                    <div class="panel item">
+                    <div class="panel item" data-bind="css: { active: $data === $root.transformationScriptSelectedForEdit() }">
                         <div class="padding padding-sm">
                             <div class="flex-horizontal">
                                 <div class="flex-grow info">
-                                    <div class="transformer-name" data-bind="text: name"
-                                         title="Transformation script name"></div>
+                                    <div class="transformer-name" title="Transformation script name">
+                                        <span data-bind="text: name"></span>
+                                        <span class="text-warning" data-bind="visible: dirtyFlag().isDirty">*</span>
+                                    </div>
                                     <div class="collections">Collection:<span
                                         data-bind="text: collection, attr: { class: 'collection-color-' + getCollectionEntry(collection) }"></span>                                      
                                     </div>
-                                </div>
-                                <div data-bind="visible: dirtyFlag().isDirty">
-                                    <small class="text-warning">
-                                        <i class="icon-warning"></i> Modified
-                                    </small>
                                 </div>
                                 <div class="actions">
                                     <button type="button" data-bind="click: $root.editTransformationScript.bind($root, $data)"
@@ -217,23 +209,14 @@
                 </div>
             </div>
         </div>
-        <div class="col-xs-12 col-lg-6 flex-vertical" data-bind="with: editedTransformationScript()">
+        <div class="col-xs-12 col-lg-6 flex-vertical" data-bind="with: editedTransformationScriptSandbox()">
             <div class="flex-grow">
                 <div class="panel" data-bind="if: $root.showEditTransformationArea">
                     <div class="padding padding-sm">
-                        <label><strong>Name:</strong></label>
-                        <div class="edit-name flex-horizontal margin-bottom">
-                            <div class="flex-grow" title="Transform script name" data-bind="validationElement: name">
-                                <input autofocus class="form-control" type="text"
-                                       data-bind="textInput: name, attr: { 'disabled': !isNew() }"
-                                       placeholder="Enter a name for the transform script">
-                            </div>
-                            <div class="flex-noshrink">
-                                <button type="button" class="btn btn-success" data-bind="click: $root.saveEditedTransformation, attr: { title : (isNew() ? 'Add' : 'Update') +  ' this transformation script' }">
-                                    <i class="icon-tick"></i>
-                                </button>                                
-                                <button type="button" title="Cancel" class="btn btn-default" data-bind="click: $root.cancelEditedTransformation"><i class="icon-cancel"></i></button>
-                            </div>
+                        <div data-bind="visible: !isNew()">
+                            <label>
+                                <strong>Name:</strong> <span data-bind="text: name"></span>
+                            </label>
                         </div>
                         <label><strong>Script:</strong></label>
                         <span class="pull-right"><a href="#" data-bind="click: $root.syntaxHelp"><small>Syntax help</small></a></span>
@@ -262,7 +245,13 @@
                                 </div>
                                 <span class="help-block" data-bind="validationMessage: collection"></span>
                             </div>
-                        </div>                                                             
+                        </div>   
+                        <div class="flex-noshrink">
+                            <button type="button" class="btn btn-success" data-bind="click: $root.saveEditedTransformation, attr: { title : (isNew() ? 'Add' : 'Update') +  ' this transformation script' }">
+                                <i class="icon-tick"></i> <span data-bind="text: isNew() ? 'Add' : 'Update'"></span>
+                            </button>
+                            <button type="button" title="Cancel" class="btn btn-default" data-bind="click: $root.cancelEditedTransformation"><i class="icon-cancel"></i> <span>Cancel</span></button>
+                        </div>
                     </div>
                 </div>
             </div>

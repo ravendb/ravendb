@@ -154,7 +154,7 @@
             <div class="flex-grow">
                 <div id="editTransform" class="panel" data-bind="if: showEditTransformationArea">
                     <div class="padding padding-sm" data-bind="with: editedTransformationScriptSandbox">
-                        <div>
+                        <div data-bind="visible: !isNew()">
                             <label>
                                 <strong>Name:</strong> <span data-bind="text: name"></span>
                             </label>
