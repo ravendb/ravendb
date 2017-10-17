@@ -171,7 +171,8 @@ namespace Tests.Infrastructure
                 {
                     break;
                 }
-                rachis.AcceptNewConnection(tcpClient.GetStream(), hello =>
+                var stream = tcpClient.GetStream();
+                rachis.AcceptNewConnection(stream, hello =>
                 {
                     lock (this)
                     {
@@ -187,6 +188,7 @@ namespace Tests.Infrastructure
                         connections.Add(Tuple.Create(hello.DebugSourceIdentifier, tcpClient));
                     }
                 });
+
             }
         }
 
@@ -313,7 +315,13 @@ namespace Tests.Infrastructure
 
             public override async Task<Stream> ConnectToPeer(string url, X509Certificate2 certificate)
             {
-                var tcpClient = await TcpUtils.ConnectAsync(url, _parent.ElectionTimeout);
+                TimeSpan time;
+                using (ContextPoolForReadOnlyOperations.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    time = _parent.ElectionTimeout * (_parent.GetTopology(ctx).AllNodes.Count - 2);
+                }
+                var tcpClient = await TcpUtils.ConnectAsync(url, time);
                 return tcpClient.GetStream();
             }
         }

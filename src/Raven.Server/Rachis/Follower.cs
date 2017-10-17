@@ -195,10 +195,15 @@ namespace Raven.Server.Rachis
 
                 if (logLength.Term < _engine.CurrentTerm)
                 {
+                    var msg = $"The incoming term {logLength.Term} is smaller than current term {_engine.CurrentTerm} and is therefor rejected";
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info(msg);
+                    }
                     _connection.Send(context, new LogLengthNegotiationResponse
                     {
                         Status = LogLengthNegotiationResponse.ResponseStatus.Rejected,
-                        Message = $"The incoming term {logLength.Term} is smaller than current term {_engine.CurrentTerm} and is therefor rejected",
+                        Message = msg,
                         CurrentTerm = _engine.CurrentTerm
                     });
                     _connection.Dispose();

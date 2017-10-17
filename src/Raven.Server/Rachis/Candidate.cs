@@ -21,7 +21,7 @@ namespace Raven.Server.Rachis
 
         private MultipleUseFlag _running = new MultipleUseFlag();
         public bool Running => _running.IsRaised();
-
+        public ElectionResult ElectionResult;
 
         public Candidate(RachisConsensus engine)
         {
@@ -44,17 +44,14 @@ namespace Raven.Server.Rachis
                     }
                     ClusterTopology clusterTopology;
                     using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                    using (var tx = context.OpenReadTransaction())
+                    using (context.OpenReadTransaction())
                     {
-                        ElectionTerm = _engine.CurrentTerm + 1;
-
                         clusterTopology = _engine.GetTopology(context);
-
-                        tx.Commit();
                     }
 
                     if (clusterTopology.Members.Count == 1)
                     {
+                        CastVoteForSelf();
                         _engine.SwitchToLeaderState(ElectionTerm, "I\'m the only one in the cluster, so no need for elections, I rule.");
                         return;
                     }
@@ -62,6 +59,10 @@ namespace Raven.Server.Rachis
                     if (IsForcedElection)
                     {
                         CastVoteForSelf();
+                    }
+                    else
+                    {
+                        ElectionTerm = _engine.CurrentTerm + 1;
                     }
 
                     foreach (var voter in clusterTopology.Members)
@@ -136,14 +137,15 @@ namespace Raven.Server.Rachis
 
                         if (realElectionsCount >= majority)
                         {
+                            ElectionResult = ElectionResult.Won;
+                            _running.Lower();
+                            StateChange();
+
                             var connections = new Dictionary<string, RemoteConnection>();
                             foreach (var candidateAmbassador in _voters)
                             {
-                                candidateAmbassador.ElectionWon = true;
                                 connections[candidateAmbassador.Tag] = candidateAmbassador.Connection;
                             }
-                            _running.Lower();
-                            StateChange();
                             _engine.SwitchToLeaderState(ElectionTerm, $"Was elected by {majority} nodes to leadership", connections);
 
                             break;
@@ -228,6 +230,11 @@ namespace Raven.Server.Rachis
 
         public void Dispose()
         {
+            // We lost the election, if we disposing the candidate without winning 
+            if (ElectionResult != ElectionResult.Won)
+            {
+                ElectionResult = ElectionResult.Lost;
+            }
             _running.Lower();
             _stateChange.TrySetResult(null);
             _peersWaiting.Set();

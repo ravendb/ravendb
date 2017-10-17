@@ -30,6 +30,11 @@ namespace Raven.Server.Rachis
             lock (this)
             {
                 _edi?.Throw();
+                if (onTimeout == _timeoutHappened)
+                {
+                    Defer(_currentLeader);
+                    return;
+                }
                 _timeoutHappened = onTimeout;
                 _timer.Change(TimeoutPeriod, TimeoutPeriod);
             }
