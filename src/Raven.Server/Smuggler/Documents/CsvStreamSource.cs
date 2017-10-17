@@ -38,14 +38,14 @@ namespace Raven.Server.Smuggler.Documents
             _context = context;
             _currentType = DatabaseItemType.Documents;
             _collection = collection;
-        }      
+        }
 
         public IDisposable Initialize(DatabaseSmugglerOptions options, SmugglerResult result, out long buildVersion)
         {
             buildVersion = 40;
             _reader = new StreamReader(_stream);
             _csvReader = new CsvReader(_reader);
-            _csvReader.Configuration.Delimiter = ",";            
+            _csvReader.Configuration.Delimiter = ",";
             return new DisposableAction(() =>
             {
                 _reader.Dispose();
@@ -54,11 +54,13 @@ namespace Raven.Server.Smuggler.Documents
         }
 
         private bool _headersProcessed;
+        private readonly List<IDisposable> _disposibales = new List<IDisposable>();
+        private static readonly string CollectionFullPath = $"{Constants.Documents.Metadata.Key}.{Constants.Documents.Metadata.Collection}";
 
         private void ProcessFieldsIfNeeded()
         {
-            if(_headersProcessed)
-                return;            
+            if (_headersProcessed)
+                return;
             for (var i = 0; i < _csvReader.FieldHeaders.Length; i++)
             {
                 if (_csvReader.FieldHeaders[i].Equals(Constants.Documents.Metadata.Id))
@@ -66,7 +68,7 @@ namespace Raven.Server.Smuggler.Documents
                     _hasId = true;
                     _idIndex = i;
                 }
-                if (_csvReader.FieldHeaders[i].Equals(Constants.Documents.Metadata.Collection))
+                if (_csvReader.FieldHeaders[i].Equals(Constants.Documents.Metadata.Collection) || _csvReader.FieldHeaders[i].Equals(CollectionFullPath))
                 {
                     _hasCollection = true;
                     _collectionIndex = i;
@@ -74,15 +76,48 @@ namespace Raven.Server.Smuggler.Documents
                 if (_csvReader.FieldHeaders[i][0] == '@')
                     continue;
                 var indexOfDot = _csvReader.FieldHeaders[i].IndexOf('.');
-                //We have a nested property
+                //We probably have a nested property
                 if (indexOfDot >= 0)
                 {
-                    if(_nestedPropertyDictionary == null)
+                    if (_nestedPropertyDictionary == null)
                         _nestedPropertyDictionary = new Dictionary<int, string[]>();
-                    _nestedPropertyDictionary[i] = _csvReader.FieldHeaders[i].Split('.', StringSplitOptions.RemoveEmptyEntries);
+                    (var arr,var hasSegments) = SplitByDotWhileIgnoringEscapedDot(_csvReader.FieldHeaders[i]);
+                    //May be false if all dots are escaped
+                    if (hasSegments)
+                        _nestedPropertyDictionary[i] = arr;
                 }
             }
             _headersProcessed = true;
+        }
+
+        private (string[] Segments, bool HasSegments) SplitByDotWhileIgnoringEscapedDot(string csvReaderFieldHeader)
+        {            
+            List<string> segments = new List<string>();
+            bool escaped = false;
+            int startSegment = 0;
+            //Need to handle the general case where we can have Foo.'Foos.Name'.First
+            for (var i = 0; i < csvReaderFieldHeader.Length; i++)
+            {
+                if (csvReaderFieldHeader[i] == '.' && escaped == false)
+                {
+                    segments.Add(csvReaderFieldHeader.Substring(startSegment, i - startSegment));
+                    startSegment = i + 1;
+                    continue;
+                }
+                if (csvReaderFieldHeader[i] == '\'')
+                {
+                    escaped ^= escaped;
+                }
+            }
+            //No segments, this means the dot is escaped e.g. 'Foo.Bar'
+            if (startSegment == 0)
+            {
+                return (null, false);
+            }
+            //Adding the last segment
+            segments.Add(csvReaderFieldHeader.Substring(startSegment, csvReaderFieldHeader.Length - startSegment));
+            //At this point we have atleast 2 segments
+            return (segments.ToArray(), true);
         }
 
         public DatabaseItemType GetNextType()
@@ -99,78 +134,88 @@ namespace Raven.Server.Smuggler.Documents
                 ProcessFieldsIfNeeded();
                 yield return ConvertRecordToDocumentItem(_csvReader.CurrentRecord, _csvReader.FieldHeaders, _collection);
             }
-            
+
         }
 
         private DocumentItem ConvertRecordToDocumentItem(string[] csvReaderCurrentRecord, string[] csvReaderFieldHeaders, string collection)
         {
-            var idStr = _hasId ? csvReaderCurrentRecord[_idIndex] : _hasCollection? $"{csvReaderCurrentRecord[_collectionIndex]}/" : $"{collection}/";
-            var data = new DynamicJsonValue();
-            for (int i = 0; i < csvReaderFieldHeaders.Length; i++)
+            try
             {
-                //ignoring reserved properties
-                if (csvReaderFieldHeaders[i][0] == '@')
+                var idStr = _hasId ? csvReaderCurrentRecord[_idIndex] : _hasCollection ? $"{csvReaderCurrentRecord[_collectionIndex]}/" : $"{collection}/";
+                var data = new DynamicJsonValue();
+                for (int i = 0; i < csvReaderFieldHeaders.Length; i++)
                 {
-                    if (_hasCollection && i == _collectionIndex)
+                    //ignoring reserved properties
+                    if (csvReaderFieldHeaders[i][0] == '@')
                     {
-                        var metadata = new DynamicJsonValue
+                        if (_hasCollection && i == _collectionIndex)
                         {
-                            [nameof(Constants.Documents.Metadata.Collection)] = csvReaderCurrentRecord[_collectionIndex]
-                        };
-                        data[Constants.Documents.Metadata.Key] = metadata;
+                            var metadata = new DynamicJsonValue
+                            {
+                                [nameof(Constants.Documents.Metadata.Collection)] = csvReaderCurrentRecord[_collectionIndex]
+                            };
+                            data[Constants.Documents.Metadata.Key] = metadata;
+                        }
+                        continue;
                     }
-                    continue;
+
+                    if (_nestedPropertyDictionary != null && _nestedPropertyDictionary.TryGetValue(i, out var segments))
+                    {
+                        var nestedData = data;
+                        for (var j = 0;; j++)
+                        {
+                            //last segment holds the data
+                            if (j == segments.Length - 1)
+                            {
+                                nestedData[segments[j]] = ParseValue(csvReaderCurrentRecord[i]);
+                                break; //we are done
+                            }
+                            //Creating the objects along the path if needed e.g. Foo.Bar.Name will create the 'Bar' oject if needed
+                            if (nestedData[segments[j]] == null)
+                            {
+                                var tmpRef = new DynamicJsonValue();
+                                nestedData[segments[j]] = tmpRef;
+                                nestedData = tmpRef;
+                            }
+                        }
+                        continue;
+                    }
+                    data[csvReaderFieldHeaders[i]] = ParseValue(csvReaderCurrentRecord[i]);
                 }
 
-                if (_nestedPropertyDictionary != null && _nestedPropertyDictionary.TryGetValue(i, out var segments))
+                return new DocumentItem
                 {
-                    var nestedData = data;
-                    for (var j = 0;; j++)
+                    Document = new Document
                     {
-                        //last segment holds the data
-                        if (j == segments.Length - 1)
-                        {
-                            nestedData[segments[j]] = ParseValue(csvReaderCurrentRecord[i]);
-                            break; //we are done
-                        }
-                        //Creating the objects along the path if needed e.g. Foo.Bar.Name will create the 'Bar' oject if needed
-                        if (nestedData[segments[j]] == null)
-                        {
-                            var tmpRef = new DynamicJsonValue();
-                            nestedData[segments[j]] = tmpRef;
-                            nestedData = tmpRef;
-                        }
-                    }
-                    continue;
-                }
-                data[csvReaderFieldHeaders[i]] = ParseValue(csvReaderCurrentRecord[i]);
+                        Data = _context.ReadObject(data, idStr),
+                        Id = _context.GetLazyString(idStr),
+                        ChangeVector = string.Empty,
+                        Flags = DocumentFlags.None,
+                        NonPersistentFlags = NonPersistentDocumentFlags.FromSmuggler
+                    },
+                    Attachments = null
+                };
             }
-
-            return new DocumentItem
+            finally
             {
-                Document = new Document
+                foreach (var disposeMe in _disposibales)
                 {
-                    Data = _context.ReadObject(data,idStr),
-                    Id = _context.GetLazyString(idStr),
-                    ChangeVector = string.Empty,
-                    Flags = DocumentFlags.None,
-                    NonPersistentFlags = NonPersistentDocumentFlags.FromSmuggler
-                },
-                Attachments = null
-            };
+                    disposeMe.Dispose();
+                }
+                _disposibales.Clear();
+            }
         }
 
-        private unsafe object ParseValue(string s)
+        private object ParseValue(string s)
         {
             if (s.StartsWith('\"') && s.EndsWith('\"'))
-                return s.Substring(1, s.Length-2);
+                return s.Substring(1, s.Length - 2);
             if (s.StartsWith('[') && s.EndsWith(']'))
             {
-                var bytes = Encoding.UTF8.GetBytes(s);
-                fixed (byte* ptr = bytes)
-                {
-                    return _context.ParseBufferToArray(ptr, bytes.Length, "CsvImport/ArrayValue", BlittableJsonDocumentBuilder.UsageMode.None);
-                }
+                var array = _context.ParseBufferToArray(s,"CsvImport/ArrayValue",
+                    BlittableJsonDocumentBuilder.UsageMode.None);
+                _disposibales.Add(array);
+                return array;
             }
             return s;
         }
@@ -203,7 +248,7 @@ namespace Raven.Server.Smuggler.Documents
         public IDisposable GetIdentities(out IEnumerable<(string Prefix, long Value)> identities)
         {
             identities = Enumerable.Empty<(string Prefix, long Value)>();
-            return new DisposableAction(()=>{});
+            return new DisposableAction(() => { });
         }
 
         public long SkipType(DatabaseItemType type)

@@ -608,7 +608,7 @@ namespace Sparrow.Json
             }
         }
 
-        public unsafe BlittableJsonReaderArray ParseBufferToArray(byte* buffer, int length, string debugTag,
+        public unsafe BlittableJsonReaderArray ParseBufferToArray(string value, string debugTag,
             BlittableJsonDocumentBuilder.UsageMode mode, IBlittableDocumentModifier modifier = null)
         {
 
@@ -618,14 +618,28 @@ namespace Sparrow.Json
             _jsonParserState.Reset();
             using (var parser = new UnmanagedJsonParser(this, _jsonParserState, debugTag))
             using (var builder = new BlittableJsonDocumentBuilder(this, mode, debugTag, parser, _jsonParserState, modifier: modifier))
+            using(GetManagedBuffer(out var buffer))
             {
                 CachedProperties.NewDocument();
                 builder.ReadArrayDocument();
-                parser.SetBuffer(buffer, length);
 
-                if (builder.Read() == false)
+                var maxChars = buffer.Length / 8; //utf8 max size is 8 bytes, must consider worst case possiable
+
+                bool lastReadResult = false;
+                for (int i = 0; i < value.Length; i += maxChars)
+                {
+                    var charsToRead = Math.Min(value.Length - i, maxChars);
+                    var length = Encodings.Utf8.GetBytes(value, i,
+                        charsToRead,
+                        buffer.Buffer.Array,
+                        buffer.Buffer.Offset);
+
+                    parser.SetBuffer(buffer.Pointer, length);
+                    lastReadResult = builder.Read();                                                    
+                }
+                if(lastReadResult == false)
                     throw new EndOfStreamException("Buffer ended without reaching end of json content");
-
+                
                 builder.FinalizeDocument();
 
                 var reader = builder.CreateArrayReader(false);
