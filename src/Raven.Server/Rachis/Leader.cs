@@ -182,9 +182,10 @@ namespace Raven.Server.Rachis
                         old.Remove(voter.Key);
                         continue; // already here
                     }
-
+                    RemoteConnection connection = null;
+                    connections?.TryGetValue(voter.Key, out connection);
                     var ambasaddor = new FollowerAmbassador(_engine, this, _voterResponded, voter.Key, voter.Value,
-                        _engine.ClusterCertificate, connections?[voter.Key]);
+                        _engine.ClusterCertificate, connection);
                     _voters.Add(voter.Key, ambasaddor);
                     _engine.AppendStateDisposable(this, ambasaddor);
                     if (_engine.Log.IsInfoEnabled)
@@ -203,9 +204,10 @@ namespace Raven.Server.Rachis
                         old.Remove(promotable.Key);
                         continue; // already here
                     }
-
+                    RemoteConnection connection = null;
+                    connections?.TryGetValue(promotable.Key, out connection);
                     var ambasaddor = new FollowerAmbassador(_engine, this, _promotableUpdated, promotable.Key, promotable.Value,
-                        _engine.ClusterCertificate, connections?[promotable.Key]);
+                        _engine.ClusterCertificate, connection);
                     _promotables.Add(promotable.Key, ambasaddor);
                     _engine.AppendStateDisposable(this, ambasaddor);
                     if (_engine.Log.IsInfoEnabled)
@@ -225,8 +227,10 @@ namespace Raven.Server.Rachis
                         old.Remove(nonVoter.Key);
                         continue; // already here
                     }
+                    RemoteConnection connection = null;
+                    connections?.TryGetValue(nonVoter.Key, out connection);
                     var ambasaddor = new FollowerAmbassador(_engine, this, _noop, nonVoter.Key, nonVoter.Value,
-                        _engine.ClusterCertificate, connections?[nonVoter.Key]);
+                        _engine.ClusterCertificate, connection);
                     _nonVoters.Add(nonVoter.Key, ambasaddor);
                     _engine.AppendStateDisposable(this, ambasaddor);
                     if (_engine.Log.IsInfoEnabled)
@@ -347,6 +351,9 @@ namespace Raven.Server.Rachis
         {
             if (_engine.Timeout.Disable)
                 return;
+
+            _engine.Timeout.DisableTimeout();
+
             var sb = new StringBuilder();
             var now = DateTime.UtcNow;
             sb.AppendLine("Triggered because of:");

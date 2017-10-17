@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Server.Rachis;
+using Sparrow.Logging;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -38,30 +39,48 @@ namespace RachisTests
         public async Task OnNetworkDisconnectionANewLeaderIsElectedAfterReconnectOldLeaderStepsDownAndRollBackHisLog(int numberOfNodes)
         {
             var firstLeader = await CreateNetworkAndGetLeader(numberOfNodes);
-            var timeToWait = TimeSpan.FromMilliseconds(firstLeader.ElectionTimeout.TotalMilliseconds * 8); // was 'TotalMilliseconds * 4', changed to *8 for low end machines RavenDB-7263
+            var timeToWait = TimeSpan.FromMilliseconds(firstLeader.ElectionTimeout.TotalMilliseconds * 4 * numberOfNodes); // was 'TotalMilliseconds * 4', changed to *8 for low end machines RavenDB-7263
             await IssueCommandsAndWaitForCommit(firstLeader, 3, "test", 1);
 
             DisconnectFromNode(firstLeader);
-            List<Task> invalidCommands = IssueCommandsWithoutWaitingForCommits(firstLeader, 5, "test", 1);
+            List<Task> invalidCommands = IssueCommandsWithoutWaitingForCommits(firstLeader, 3, "test", 1);
             var followers = GetFollowers();
             List<Task> waitingList = new List<Task>();
-            foreach (var follower in followers)
+            var currentTerm = 1L;
+            while (true)
             {
-                waitingList.Add(follower.WaitForState(RachisConsensus.State.Leader));
+                foreach (var follower in followers)
+                {
+                    waitingList.Add(follower.WaitForState(RachisConsensus.State.Leader));
+                }
+                if (Log.IsInfoEnabled)
+                {
+                    Log.Info("Started waiting for new leader");
+                }
+                var done = await Task.WhenAny(waitingList).WaitAsync(timeToWait);
+                if (done)
+                {
+                    break;
+                }
+                var maxTerm = followers.Max(f => f.CurrentTerm);
+                Assert.True(currentTerm + 1 < maxTerm, "Followers didn't become leaders although old leader can't communicate with the cluster");
+                Assert.True(maxTerm < 10, "Followers were unable to elect a leader.");
+                currentTerm = maxTerm;
+                waitingList.Clear();
             }
-            if (Log.IsInfoEnabled)
-            {
-                Log.Info("Started waiting for new leader");
-            }
-            var done = await Task.WhenAny(waitingList).WaitAsync(timeToWait);
-            Assert.True(done, "Followers didn't become leaders although old leader can't communicate with the cluster");
+
 
             var newLeader = followers.First(f => f.CurrentState == RachisConsensus.State.Leader);
-            var newLeaderLastIndex = await IssueCommandsAndWaitForCommit(newLeader, 3, "test", 1);
+            var newLeaderLastIndex = await IssueCommandsAndWaitForCommit(newLeader, 5, "test", 1);
+            if (Log.IsInfoEnabled)
+            {
+                Log.Info("Reconnect old leader");
+            }
             ReconnectToNode(firstLeader);
             Assert.True(await firstLeader.WaitForState(RachisConsensus.State.Follower).WaitAsync(timeToWait), "Old leader didn't become follower after two election timeouts");
             var waitForCommitIndexChange = firstLeader.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newLeaderLastIndex);
             Assert.True(await waitForCommitIndexChange.WaitAsync(timeToWait), "Old leader didn't rollback his log to the new leader log");
+            Assert.Equal(numberOfNodes, RachisConsensuses.Count);
             var leaderUrl = new HashSet<string>();
             foreach (var consensus in RachisConsensuses)
             {

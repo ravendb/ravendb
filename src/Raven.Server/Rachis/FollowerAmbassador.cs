@@ -121,10 +121,14 @@ namespace Raven.Server.Rachis
                         {
                             if (needNewConnection)
                             {
+                                if (_engine.Log.IsInfoEnabled)
+                                {
+                                    _engine.Log.Info($"FollowerAmbassador {_engine.Tag}: Creating new connection to {_tag}");
+                                }
                                 using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                                 {
-                                    var stream = _engine.ConnectToPeer(_url, _certificate, context).Result;
                                     _connection?.Dispose();
+                                    var stream = _engine.ConnectToPeer(_url, _certificate, context).Result;
                                     _connection = new RemoteConnection(_tag, _engine.Tag, stream);
                                     ClusterTopology topology;
                                     using (context.OpenReadTransaction())
@@ -595,7 +599,7 @@ namespace Raven.Server.Rachis
                     if (llr.CurrentTerm > engineCurrentTerm)
                     {
                         // we need to abort the current leadership
-                        var msg = "Found election term " + llr.CurrentTerm + " that is higher than ours " + engineCurrentTerm;
+                        var msg = $"Follower ambassador {_engine.Tag}: found election term {llr.CurrentTerm} that is higher than ours {engineCurrentTerm}";
                         _engine.SetNewState(RachisConsensus.State.Follower, null, engineCurrentTerm,
                             msg);
                         _engine.FoundAboutHigherTerm(llr.CurrentTerm);

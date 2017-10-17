@@ -5,17 +5,18 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Rachis
 {
-    public class Elector : IDisposable
+    public class Elector
     {
         private readonly RachisConsensus _engine;
         private readonly RemoteConnection _connection;
+        private Thread _thread;
+        private bool _electionWon;
 
         public Elector(RachisConsensus engine, RemoteConnection connection)
         {
             _engine = engine;
             _connection = connection;
         }
-
 
         public void Run()
         {
@@ -36,19 +37,7 @@ namespace Raven.Server.Rachis
                     {
                         var rv = _connection.Read<RequestVote>(context);
 
-                        if (rv.ElectionResult == ElectionResult.Won)
-                        {
-                            ElectionWon = true;
-                            var follower = new Follower(_engine, _connection);
-                            follower.TryAcceptConnection();
-                            return;
-                        }
-
-                        if (rv.ElectionResult == ElectionResult.Lost)
-                        {
-                            _connection.Dispose();
-                            return;
-                        }
+                        
 
                         ClusterTopology clusterTopology;
                         long lastIndex;
@@ -77,6 +66,20 @@ namespace Raven.Server.Rachis
                                 NotInTopology = _engine.CurrentState == RachisConsensus.State.Leader,
                                 Message = $"Node {rv.Source} is not in my topology, cannot vote for it"
                             });
+                            _connection.Dispose();
+                            return;
+                        }
+
+                        if (rv.Term == _engine.CurrentTerm && rv.ElectionResult == ElectionResult.Won)
+                        {
+                            _electionWon = true;
+                            var follower = new Follower(_engine, _connection);
+                            follower.TryAcceptConnection();
+                            return;
+                        }
+
+                        if (rv.Term == _engine.CurrentTerm && rv.ElectionResult == ElectionResult.Lost)
+                        {
                             _connection.Dispose();
                             return;
                         }
@@ -220,24 +223,11 @@ namespace Raven.Server.Rachis
             }
             finally
             {
-                if (ElectionWon == false)
+                if (_electionWon == false)
                 {
                     _connection.Dispose();
                 }
             }
-        }
-
-        public bool ElectionWon;
-        private Thread _thread;
-
-        public void Dispose()
-        {
-            if (ElectionWon == false)
-            {
-                _connection.Dispose();
-            }
-            if (_thread != null && _thread.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
-                _thread.Join();
         }
     }
 }

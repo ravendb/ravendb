@@ -341,7 +341,8 @@ namespace RachisTests.DatabaseCluster
 
                 watcher = new ExternalReplication("Watcher", res.NodesAddedTo.ToArray())
                 {
-                    Name = "MyExternalReplication1"
+                    Name = "MyExternalReplication1",
+                    MentorNode = leader.ServerStore.NodeTag
                 };
 
                 await AddWatcherToReplicationTopology((DocumentStore)store, watcher);
@@ -351,7 +352,7 @@ namespace RachisTests.DatabaseCluster
             Assert.Equal(1, tasks.OngoingTasksList.Count);
             var repTask = tasks.OngoingTasksList[0] as OngoingTaskReplication;
             Assert.Equal(repTask?.DestinationDatabase, watcher.Database);
-            Assert.NotNull(repTask?.DestinationUrl);
+            Assert.Equal(leader.ServerStore.NodeHttpServerUrl, repTask?.DestinationUrl);
             Assert.Equal(repTask?.TaskName, watcher.Name);
 
             watcher.TaskId = Convert.ToInt64(repTask?.TaskId);
