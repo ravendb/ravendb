@@ -1,6 +1,6 @@
 FROM ubuntu:16.04
 
-COPY RavenDB-4.0.*-*-*-ubuntu.16.04-x64.tar.bz2 /opt/RavenDB.tar.bz2
+COPY RavenDB-4.0.*-*-*-linux-x64.tar.bz2 /opt/RavenDB.tar.bz2
 
 RUN apt-get update \
     && apt-get install -y \

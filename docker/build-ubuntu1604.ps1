@@ -4,7 +4,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 function BuildUbuntuDockerImage ( $projectDir, $version = "4.0.0-custom-40" ) {
-    $packageFileName = "RavenDB-$version-ubuntu.16.04-x64.tar.bz2"
+    $packageFileName = "RavenDB-$version-linux-x64.tar.bz2"
     $packagePath = [io.path]::combine($projectDir, "artifacts", $packageFileName)
 
     if ([string]::IsNullOrEmpty($packagePath))
