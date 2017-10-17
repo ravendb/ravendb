@@ -37,8 +37,6 @@ namespace Voron.Impl.Journal
 
         private long _journalIndex = -1;
 
-        private bool _disposed;
-
         private readonly JournalApplicator _journalApplicator;
         private readonly ModifyHeaderAction _updateLogInfo;
 
@@ -60,6 +58,8 @@ namespace Voron.Impl.Journal
         
         internal NativeMemory.ThreadStats CurrentFlushingInProgressHolder;
 
+        private readonly DisposeOnce<SingleAttempt> _disposeRunner;
+
         public WriteAheadJournal(StorageEnvironment env)
         {
             _env = env;
@@ -78,6 +78,38 @@ namespace Voron.Impl.Journal
 
             _compressionPager = CreateCompressionPager(_env.Options.InitialFileSize ?? _env.Options.InitialLogFileSize);
             _journalApplicator = new JournalApplicator(this);
+
+            _disposeRunner = new DisposeOnce<SingleAttempt>(() =>
+            {
+                // We cannot dispose the journal until we are done with all of
+                // the pending writes
+                if (_lazyTransactionBuffer != null)
+                {
+                    _lazyTransactionBuffer.WriteBufferToFile(CurrentFile, null);
+                    _lazyTransactionBuffer.Dispose();
+                }
+                _compressionPager.Dispose();
+
+                _journalApplicator.Dispose();
+                if (_env.Options.OwnsPagers)
+                {
+                    foreach (var logFile in _files)
+                    {
+                        logFile.Dispose();
+                    }
+
+                }
+                else
+                {
+                    foreach (var logFile in _files)
+                    {
+                        GC.SuppressFinalize(logFile);
+                    }
+
+                }
+
+                _files = ImmutableAppendOnlyList<JournalFile>.Empty;
+            });
         }
 
         public ImmutableAppendOnlyList<JournalFile> Files => _files;
@@ -311,40 +343,9 @@ namespace Voron.Impl.Journal
             return null;
         }
 
-
         public void Dispose()
         {
-            if (_disposed)
-                return;
-            _disposed = true;
-
-            // we cannot dispose the journal until we are done with all of the pending writes
-            if (_lazyTransactionBuffer != null)
-            {
-                _lazyTransactionBuffer.WriteBufferToFile(CurrentFile, null);
-                _lazyTransactionBuffer.Dispose();
-            }
-            _compressionPager.Dispose();
-
-            _journalApplicator.Dispose();
-            if (_env.Options.OwnsPagers)
-            {
-                foreach (var logFile in _files)
-                {
-                    logFile.Dispose();
-                }
-
-            }
-            else
-            {
-                foreach (var logFile in _files)
-                {
-                    GC.SuppressFinalize(logFile);
-                }
-
-            }
-
-            _files = ImmutableAppendOnlyList<JournalFile>.Empty;
+            _disposeRunner.Dispose();
         }
 
         public JournalInfo GetCurrentJournalInfo()

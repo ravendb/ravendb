@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Threading;
 using Voron.Data.BTrees;
 using Voron.Global;
 using Voron.Impl;
@@ -37,6 +38,19 @@ namespace Voron.Data.Compression
         {
             _options = options;
             _maxNumberOfPagesInScratchBufferPool = _options.MaxScratchBufferSize / Constants.Storage.PageSize;
+
+            _disposeOnceRunner = new DisposeOnce<SingleAttempt>(() =>
+            {
+                if (_initialized == false)
+                    return;
+
+                _compressionPager?.Dispose();
+
+                foreach (var pager in _oldPagers)
+                {
+                    pager.Dispose();
+                }
+            });
         }
 
         public AbstractPager CreateDecompressionPager(long initialSize)
@@ -46,8 +60,7 @@ namespace Voron.Data.Compression
 
         public DecompressedLeafPage GetPage(LowLevelTransaction tx, int pageSize, DecompressionUsage usage, TreePage original)
         {
-            TemporaryPage tempPage;
-            GetTemporaryPage(tx, pageSize, out tempPage);
+            GetTemporaryPage(tx, pageSize, out var tempPage);
 
             var treePage = tempPage.GetTempPage();
 
@@ -181,17 +194,12 @@ namespace Voron.Data.Compression
             }
             return index;
         }
+
+        private readonly DisposeOnce<SingleAttempt> _disposeOnceRunner;
+
         public void Dispose()
         {
-            if (_initialized == false)
-                return;
-
-            _compressionPager?.Dispose();
-
-            foreach (var pager in _oldPagers)
-            {
-                pager.Dispose();
-            }
+            _disposeOnceRunner.Dispose();
         }
 
         public void Cleanup()

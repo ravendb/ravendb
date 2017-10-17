@@ -625,9 +625,12 @@ namespace FastTests.Sparrow
         {
             int counter = 0;
             var disposer = new DisposeOnce<SingleAttempt>(() => counter++);
+            Assert.False(disposer.Disposed);
             disposer.Dispose();
+            Assert.True(disposer.Disposed);
             Assert.Equal(counter, 1);
             disposer.Dispose();
+            Assert.True(disposer.Disposed);
             Assert.Equal(counter, 1);
         }
 
@@ -645,11 +648,14 @@ namespace FastTests.Sparrow
                 throw new InvalidOperationException("This code should never run");
             });
 
+            Assert.False(disposer.Disposed);
             Assert.Throws(typeof(AggregateException), () => disposer.Dispose());
             Assert.Equal(counter, 1);
+            Assert.True(disposer.Disposed);
 
             // Subsequent runs also throw, but don't run anything
             Assert.Throws(typeof(AggregateException), () => disposer.Dispose());
+            Assert.True(disposer.Disposed);
             Assert.Equal(counter, 1);
         }
 
@@ -658,9 +664,12 @@ namespace FastTests.Sparrow
         {
             int counter = 0;
             var disposer = new DisposeOnce<ExceptionRetry>(() => counter++);
+            Assert.False(disposer.Disposed);
             disposer.Dispose();
+            Assert.True(disposer.Disposed);
             Assert.Equal(counter, 1);
             disposer.Dispose();
+            Assert.True(disposer.Disposed);
             Assert.Equal(counter, 1);
         }
 
@@ -686,11 +695,15 @@ namespace FastTests.Sparrow
             for (int i = 0; i < numRetries; i++)
             {
                 Assert.Equal(counter, i);
+                Assert.False(disposer.Disposed);
                 Assert.Throws(typeof(AggregateException), () => disposer.Dispose());
+                Assert.False(disposer.Disposed);
             }
 
             Assert.Equal(counter, numRetries);
+            Assert.False(disposer.Disposed);
             disposer.Dispose();
+            Assert.True(disposer.Disposed);
             Assert.Equal(counter, numRetries);
         }
 
@@ -724,6 +737,7 @@ namespace FastTests.Sparrow
 
                     resetEvent.WaitOne();
                     // After this point, all threads have run.
+                    Assert.True(disposer.Disposed);
                     Assert.Equal(counter, 1);
                 }
             });
@@ -766,6 +780,7 @@ namespace FastTests.Sparrow
 
                     resetEvent.WaitOne();
                     // After this point, all threads have run.
+                    Assert.True(disposer.Disposed);
                     Assert.Equal(counter, 1);
                 }
             });
@@ -808,6 +823,7 @@ namespace FastTests.Sparrow
 
                     resetEvent.WaitOne();
                     // After this point, all threads have run.
+                    Assert.True(disposer.Disposed);
                     Assert.Equal(counter, 1);
                 }
             });

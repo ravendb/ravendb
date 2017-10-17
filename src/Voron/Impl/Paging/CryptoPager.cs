@@ -124,11 +124,8 @@ namespace Voron.Impl.Paging
         {
             var state = GetTransactionState(tx);
 
-            EncryptionBuffer buffer;
-            if (state.LoadedBuffers.TryGetValue(pageNumber, out buffer))
-            {
+            if (state.LoadedBuffers.TryGetValue(pageNumber, out var buffer))
                 return buffer.Pointer;
-            }
 
             var pagePointer = Inner.AcquirePagePointer(tx, pageNumber, pagerState);
 
@@ -222,8 +219,7 @@ namespace Voron.Impl.Paging
             if (tx.CryptoPagerTransactionState == null)
                 return;
 
-            CryptoTransactionState state;
-            if (tx.CryptoPagerTransactionState.TryGetValue(this, out state) == false)
+            if (tx.CryptoPagerTransactionState.TryGetValue(this, out var state) == false)
                 return;
 
             foreach (var buffer in state.LoadedBuffers)
@@ -248,8 +244,7 @@ namespace Voron.Impl.Paging
             if (tx.CryptoPagerTransactionState == null)
                 return;
 
-            CryptoTransactionState state;
-            if (tx.CryptoPagerTransactionState.TryGetValue(this, out state) == false)
+            if (tx.CryptoPagerTransactionState.TryGetValue(this, out var state) == false)
                 return;
 
             tx.CryptoPagerTransactionState.Remove(this);
@@ -343,7 +338,7 @@ namespace Voron.Impl.Paging
             }
         }
 
-        public override void Dispose()
+        protected override void DisposeInternal()
         {
             Inner.Dispose();
             _encryptionBuffersPool.Dispose();

@@ -179,7 +179,7 @@ namespace Voron.Platform.Win32
 
         protected internal override PagerState AllocateMorePages(long newLength)
         {
-            if (Disposed)
+            if (DisposeOnceRunner.Disposed)
                 ThrowAlreadyDisposedException();
 
             var newLengthAfterAdjustment = NearestSizeToAllocationGranularity(newLength);
@@ -347,7 +347,7 @@ namespace Voron.Platform.Win32
 
         public override void Sync(long totalUnsynced)
         {
-            if (Disposed)
+            if (DisposeOnceRunner.Disposed)
                 ThrowAlreadyDisposedException();
 
             if ((_fileAttributes & Win32NativeFileAttributes.Temporary) == Win32NativeFileAttributes.Temporary ||
@@ -394,18 +394,12 @@ namespace Voron.Platform.Win32
             return _fileInfo.Name;
         }
 
-        public override void Dispose()
+        protected override void DisposeInternal()
         {
-            if (Disposed)
-                return;
-
-            base.Dispose();
-
             _fileStream?.Dispose();
             _handle?.Dispose();
             if (DeleteOnClose)
                 _fileInfo?.Delete();
-
         }
 
         public override void ReleaseAllocationInfo(byte* baseAddress, long size)

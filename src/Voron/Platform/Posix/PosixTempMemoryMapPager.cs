@@ -81,7 +81,7 @@ namespace Voron.Platform.Posix
 
         protected internal override PagerState AllocateMorePages(long newLength)
         {
-            if (Disposed)
+            if (DisposeOnceRunner.Disposed)
                 ThrowAlreadyDisposedException();
 
             var newLengthAfterAdjustment = NearestSizeToPageSize(newLength);
@@ -165,9 +165,8 @@ namespace Voron.Platform.Posix
             NativeMemory.UnregisterFileMapping(FileName.FullPath, ptr, size);
         }
 
-        public override void Dispose()
+        protected override void DisposeInternal()
         {
-            base.Dispose();
             if (_fd != -1)
             {
                 // note that the orders of operations is important here, we first unlink the file

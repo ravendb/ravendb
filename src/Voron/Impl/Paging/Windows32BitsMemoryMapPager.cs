@@ -12,6 +12,7 @@ using Microsoft.Win32.SafeHandles;
 using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Logging;
+using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron.Data;
 using Voron.Global;
@@ -158,8 +159,7 @@ namespace Voron.Impl.Paging
 
             var state = GetTransactionState(tx);
 
-            LoadedPage page;
-            if (state.LoadedPages.TryGetValue(allocationStartPosition, out page))
+            if (state.LoadedPages.TryGetValue(allocationStartPosition, out var page))
             {
                 if (distanceFromStart + numberOfPages < page.NumberOfPages)
                     return false; // already mapped large enough here
@@ -243,7 +243,7 @@ namespace Voron.Impl.Paging
 
         public override byte* AcquirePagePointer(IPagerLevelTransactionState tx, long pageNumber, PagerState pagerState = null)
         {
-            if (Disposed)
+            if (DisposeOnceRunner.Disposed)
                 ThrowAlreadyDisposedException();
 
             if (pageNumber > NumberOfAllocatedPages || pageNumber < 0)
@@ -254,13 +254,10 @@ namespace Voron.Impl.Paging
             var distanceFromStart = (pageNumber % NumberOfPagesInAllocationGranularity);
             var allocationStartPosition = pageNumber - distanceFromStart;
 
-            LoadedPage page;
-            if (state.LoadedPages.TryGetValue(allocationStartPosition, out page))
-            {
+            if (state.LoadedPages.TryGetValue(allocationStartPosition, out var page))
                 return page.Pointer + (distanceFromStart * Constants.Storage.PageSize);
-            }
 
-            page = MapPages(state, allocationStartPosition, AllocationGranularity, allowPartialMapAtEndOfFile:true);
+            page = MapPages(state, allocationStartPosition, AllocationGranularity, true);
             return page.Pointer + (distanceFromStart * Constants.Storage.PageSize);
         }
 
@@ -402,8 +399,7 @@ namespace Voron.Impl.Paging
             if (lowLevelTransaction.PagerTransactionState32Bits == null)
                 return;
 
-            TransactionState value;
-            if (lowLevelTransaction.PagerTransactionState32Bits.TryGetValue(this, out value) == false)
+            if (lowLevelTransaction.PagerTransactionState32Bits.TryGetValue(this, out var value) == false)
                 return; // nothing mapped here
 
             lowLevelTransaction.PagerTransactionState32Bits.Remove(this);
@@ -432,8 +428,7 @@ namespace Voron.Impl.Paging
                     if (addr.Usages != 0)
                         continue;
 
-                    ConcurrentSet<MappedAddresses> set;
-                    if (!_globalMapping.TryGetValue(addr.StartPage, out set))
+                    if (!_globalMapping.TryGetValue(addr.StartPage, out var set))
                         continue;
 
                     if (!set.TryRemove(addr))
@@ -482,18 +477,13 @@ namespace Voron.Impl.Paging
 
                 var ammountToMapInBytes = _parent.NearestSizeToAllocationGranularity((distanceFromStart + numberOfPages) * Constants.Storage.PageSize);
 
-                LoadedPage page;
-                if (_state.LoadedPages.TryGetValue(allocationStartPosition, out page))
+                if (_state.LoadedPages.TryGetValue(allocationStartPosition, out var page))
                 {
                     if (page.NumberOfPages < distanceFromStart + numberOfPages)
-                    {
                         page = _parent.MapPages(_state, allocationStartPosition, ammountToMapInBytes);
-                    }
                 }
                 else
-                {
                     page = _parent.MapPages(_state, allocationStartPosition, ammountToMapInBytes);
-                }
 
                 var toWrite = numberOf4Kbs * 4 * Constants.Size.Kilobyte;
                 byte* destination = page.Pointer +
@@ -529,7 +519,7 @@ namespace Voron.Impl.Paging
 
         public override void Sync(long totalUnsynced)
         {
-            if (Disposed)
+            if (DisposeOnceRunner.Disposed)
                 ThrowAlreadyDisposedException();
 
             if ((_fileAttributes & Win32NativeFileAttributes.Temporary) == Win32NativeFileAttributes.Temporary ||
@@ -596,18 +586,12 @@ namespace Voron.Impl.Paging
             // we never want to do this here
         }
 
-        public override void Dispose()
+        protected override void DisposeInternal()
         {
-            if (Disposed)
-                return;
-
-            base.Dispose();
-
             _fileStream?.Dispose();
             _handle?.Dispose();
             if (DeleteOnClose)
                 _fileInfo?.Delete();
-
         }
     }
 }
