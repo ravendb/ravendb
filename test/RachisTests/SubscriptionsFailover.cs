@@ -13,15 +13,18 @@ using Tests.Infrastructure;
 using Xunit;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Revisions;
 using Raven.Client.Util;
 using Raven.Server;
+using Raven.Server.Config;
 using Raven.Server.Rachis;
 using Sparrow;
 using Sparrow.Json;
+using Xunit.Sdk;
 
 
 namespace RachisTests
@@ -192,7 +195,7 @@ namespace RachisTests
             }
         }
 
-        [NightlyBuildFact]
+        [Fact]
         public async Task SetMentorToSubscriptionWithFailover()
         {
             const int nodesAmount = 5;
@@ -569,6 +572,240 @@ namespace RachisTests
                         .ConfigureAwait(false);
                 }
                 await session.SaveChangesAsync().ConfigureAwait(false);
+            }
+        }
+
+
+        [NightlyBuildFact]
+        public async Task SubscriptionShouldFailIfLeaderIsDownAndItIsOnlyOpening()
+        {
+            const int nodesAmount = 2;
+            var leader = await CreateRaftClusterAndGetLeader(nodesAmount);
+            var defaultDatabase = "SubscriptionShouldFailIfLeaderIsDown";
+
+            await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrl).ConfigureAwait(false);
+
+            string mentor = Servers.First(x => x.ServerStore.NodeTag != x.ServerStore.LeaderTag).ServerStore.NodeTag;
+            
+            using (var store = new DocumentStore
+            {
+                Urls = new[] { leader.WebUrl },
+                Database = defaultDatabase
+            }.Initialize())
+            {
+                await GenerateDocuments(store);
+                
+                var subscriptionName = await store.Subscriptions.CreateAsync<User>(options: new SubscriptionCreationOptions
+                {
+                    MentorNode = mentor
+                }).ConfigureAwait(false);
+
+              
+                var subscripitonState = await store.Subscriptions.GetSubscriptionStateAsync(subscriptionName, store.Database);
+                var getDatabaseTopologyCommand = new GetDatabaseRecordOperation(defaultDatabase);
+                var record = await store.Admin.Server.SendAsync(getDatabaseTopologyCommand).ConfigureAwait(false);
+
+                foreach (var server in Servers.Where(s => record.Topology.RelevantFor(s.ServerStore.NodeTag)))
+                {
+                    await server.ServerStore.Cluster.WaitForIndexNotification(subscripitonState.SubscriptionId).ConfigureAwait(false);
+                }
+
+                if (mentor != null)
+                {
+                    Assert.Equal(mentor, record.Topology.WhoseTaskIsIt(subscripitonState, false));
+                }
+
+                await DisposeServerAndWaitForFinishOfDisposalAsync(leader);
+
+                using (var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionName)
+                {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(500),
+                    MaxDocsPerBatch = 20,
+                    MaxErrorousPeriod = TimeSpan.FromSeconds(6)
+                }))
+                {
+                    var task = subscription.Run(a => { });
+                    Assert.True(await ThrowsAsync<SubscriptionInvalidStateException>(task).WaitWithTimeout(TimeSpan.FromSeconds(120)).ConfigureAwait(false));
+                }
+            }
+        }
+
+        [NightlyBuildFact]
+        public async Task SubscriptionShouldFailIfLeaderIsDownBeforeAck()
+        {
+            const int nodesAmount = 2;
+            var leader = await CreateRaftClusterAndGetLeader(nodesAmount);
+            var defaultDatabase = "SubscriptionShouldFailIfLeaderIsDownBeforeAck";
+
+            await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrl).ConfigureAwait(false);
+
+            string mentor = Servers.First(x => x.ServerStore.NodeTag != x.ServerStore.LeaderTag).ServerStore.NodeTag;
+
+            using (var store = new DocumentStore
+            {
+                Urls = new[] { leader.WebUrl },
+                Database = defaultDatabase
+            }.Initialize())
+            {
+                var subscriptionName = await store.Subscriptions.CreateAsync<User>(options: new SubscriptionCreationOptions
+                {
+                    MentorNode = mentor
+                }).ConfigureAwait(false);
+
+                var subscripitonState = await store.Subscriptions.GetSubscriptionStateAsync(subscriptionName, store.Database);
+                var getDatabaseTopologyCommand = new GetDatabaseRecordOperation(defaultDatabase);
+                var record = await store.Admin.Server.SendAsync(getDatabaseTopologyCommand).ConfigureAwait(false);
+
+                foreach (var server in Servers.Where(s => record.Topology.RelevantFor(s.ServerStore.NodeTag)))
+                {
+                    await server.ServerStore.Cluster.WaitForIndexNotification(subscripitonState.SubscriptionId).ConfigureAwait(false);
+                }
+
+                if (mentor != null)
+                {
+                    Assert.Equal(mentor, record.Topology.WhoseTaskIsIt(subscripitonState, false));
+                }
+
+                using (var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionName)
+                {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(500),
+                    MaxDocsPerBatch = 20,
+                    MaxErrorousPeriod = TimeSpan.FromSeconds(6)
+                }))
+                {
+                    var batchProccessed = new AsyncManualResetEvent();
+                  
+                    var task = subscription.Run(async a =>
+                    {
+                        batchProccessed.Set();
+                        await DisposeServerAndWaitForFinishOfDisposalAsync(leader);
+                    });
+                    
+                    await GenerateDocuments(store);
+
+                    Assert.True(await batchProccessed.WaitAsync(_reasonableWaitTime));
+
+                    Assert.True(await ThrowsAsync<SubscriptionInvalidStateException>(task).WaitWithTimeout(TimeSpan.FromSeconds(120)).ConfigureAwait(false));
+                }
+            }
+        }
+
+        [NightlyBuildFact]
+        public async Task SubscriptionShouldNotFailIfLeaderIsDownButItStillHasEnoughTimeToRetry()
+        {
+            const int nodesAmount = 2;
+            var leader = await CreateRaftClusterAndGetLeader(nodesAmount, shouldRunInMemory:false);
+
+            var leaderDataDir = leader.Configuration.Core.DataDirectory.FullPath.Split('/').Last();
+            var leaderUrl = leader.WebUrl;
+
+            var defaultDatabase = "SubscriptionShouldNotFailIfLeaderIsDownButItStillHasEnoughTimeToRetry";
+
+            await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrl).ConfigureAwait(false);
+
+            string mentor = Servers.First(x => x.ServerStore.NodeTag != x.ServerStore.LeaderTag).ServerStore.NodeTag;
+
+            using (var store = new DocumentStore
+            {
+                Urls = new[] { leader.WebUrl },
+                Database = defaultDatabase
+            }.Initialize())
+            {
+                var subscriptionName = await store.Subscriptions.CreateAsync<User>(options: new SubscriptionCreationOptions
+                {
+                    MentorNode = mentor
+                }).ConfigureAwait(false);
+
+                var subscripitonState = await store.Subscriptions.GetSubscriptionStateAsync(subscriptionName, store.Database);
+                var getDatabaseTopologyCommand = new GetDatabaseRecordOperation(defaultDatabase);
+                var record = await store.Admin.Server.SendAsync(getDatabaseTopologyCommand).ConfigureAwait(false);
+
+                foreach (var server in Servers.Where(s => record.Topology.RelevantFor(s.ServerStore.NodeTag)))
+                {
+                    await server.ServerStore.Cluster.WaitForIndexNotification(subscripitonState.SubscriptionId).ConfigureAwait(false);
+                }
+
+                if (mentor != null)
+                {
+                    Assert.Equal(mentor, record.Topology.WhoseTaskIsIt(subscripitonState, false));
+                }
+
+                using (var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionName)
+                {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(500),
+                    MaxDocsPerBatch = 20,
+                    MaxErrorousPeriod = TimeSpan.FromSeconds(120)
+                }))
+                {
+                    var batchProccessed = new AsyncManualResetEvent();
+                    var subscriptionRetryBegins = new AsyncManualResetEvent();
+                    var batchedAcked = new AsyncManualResetEvent();
+                    var disposedOnce = false;
+
+                    subscription.AfterAcknowledgment+= async x=>
+                    {
+                        batchedAcked.Set();
+                    };
+
+                    var task = subscription.Run(async a =>
+                    {
+                        if (disposedOnce == false)
+                        {
+                            subscription.OnSubscriptionConnectionRetry += () =>
+                            {
+                                subscriptionRetryBegins.SetAndResetAtomically();
+                            };
+                            await DisposeServerAndWaitForFinishOfDisposalAsync(leader);
+                            disposedOnce = true;
+                        }
+                        batchProccessed.SetAndResetAtomically();
+                    });
+
+                    await GenerateDocuments(store);
+
+                    Assert.True(await batchProccessed.WaitAsync(_reasonableWaitTime));
+                    Assert.True(await subscriptionRetryBegins.WaitAsync(TimeSpan.FromSeconds(30)));
+                    Assert.True(await subscriptionRetryBegins.WaitAsync(TimeSpan.FromSeconds(30)));
+                    Assert.True(await subscriptionRetryBegins.WaitAsync(TimeSpan.FromSeconds(30)));
+
+                    leader = Servers[0] = 
+                        GetNewServer(new Dictionary<string, string>
+                            {
+                                {RavenConfiguration.GetKey(x => x.Core.PublicServerUrl), leaderUrl},
+                                {RavenConfiguration.GetKey(x => x.Core.ServerUrl), leaderUrl}
+                            },
+                            runInMemory: false,
+                            deletePrevious: false,
+                            partialPath: leaderDataDir);
+                    
+                    Assert.True(await batchProccessed.WaitAsync(TimeSpan.FromSeconds(120)));
+                    Assert.True(await batchedAcked.WaitAsync(TimeSpan.FromSeconds(120)));
+
+                }
+            }
+        }
+
+        protected static async Task ThrowsAsync<T>(Task task) where T:Exception
+        {
+            var threw = false;
+            try
+            {
+                await task.ConfigureAwait(false);
+                Exception exception = null;
+            }
+            catch (T)
+            {
+                threw = true;
+            }
+            catch (Exception ex)
+            {
+                threw = true;
+                throw new ThrowsException(typeof(T), ex);
+            }
+            finally
+            {
+                if (threw == false)
+                    throw new ThrowsException(typeof(T));
             }
         }
     }

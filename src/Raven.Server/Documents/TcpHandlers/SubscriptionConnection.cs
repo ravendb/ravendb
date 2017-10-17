@@ -30,6 +30,7 @@ namespace Raven.Server.Documents.TcpHandlers
 {
     public class SubscriptionConnection : IDisposable
     {
+        private const int WaitForChangedDocumentsTimeoutInMs = 3000;
         private static readonly StringSegment DataSegment = new StringSegment("Data");
         private static readonly StringSegment ExceptionSegment = new StringSegment("Exception");
         private static readonly StringSegment TypeSegment = new StringSegment("Type");
@@ -123,28 +124,12 @@ namespace Raven.Server.Documents.TcpHandlers
             _connectionState = TcpConnection.DocumentDatabase.SubscriptionStorage.OpenSubscription(this);
             var timeout = TimeSpan.FromMilliseconds(16);
 
-            while (true)
+            var shouldRetry = false;
+            do
             {
                 try
                 {
                     DisposeOnDisconnect = await _connectionState.RegisterSubscriptionConnection(this, timeout);
-
-                    await WriteJsonAsync(new DynamicJsonValue
-                    {
-                        [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
-                        [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.Accepted)
-                    });
-
-                    Stats.ConnectedAt = DateTime.UtcNow;
-                    await TcpConnection.DocumentDatabase.SubscriptionStorage.UpdateClientConnectionTime(SubscriptionState.SubscriptionId,
-                        SubscriptionState.SubscriptionName, SubscriptionState.MentorNode);
-
-                    await TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(
-                        SubscriptionId,
-                        Options.SubscriptionName,
-                        nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
-                        nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange));
-                    return;
                 }
                 catch (TimeoutException)
                 {
@@ -155,7 +140,26 @@ namespace Raven.Server.Documents.TcpHandlers
                     }
                     timeout = TimeSpan.FromMilliseconds(Math.Max(250, (long)_options.TimeToWaitBeforeConnectionRetry.TotalMilliseconds / 2));
                     await SendHeartBeat();
+                    shouldRetry = true;
                 }
+            } while (shouldRetry);
+
+            try
+            {
+                await SendNoopAck();
+                await WriteJsonAsync(new DynamicJsonValue
+                {
+                    [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
+                    [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.Accepted)
+                });
+
+                Stats.ConnectedAt = DateTime.UtcNow;
+                await TcpConnection.DocumentDatabase.SubscriptionStorage.UpdateClientConnectionTime(SubscriptionState.SubscriptionId,
+                    SubscriptionState.SubscriptionName, SubscriptionState.MentorNode);
+            }
+            catch
+            {
+                DisposeOnDisconnect.Dispose();
             }
         }
 
@@ -554,6 +558,7 @@ namespace Raven.Server.Documents.TcpHandlers
                             break;
                         }
                         await SendHeartBeat();
+                        await SendNoopAck();
                     }
 
                     CancellationTokenSource.Token.ThrowIfCancellationRequested();
@@ -648,7 +653,7 @@ namespace Raven.Server.Documents.TcpHandlers
             do
             {
                 var hasMoreDocsTask = _waitForMoreDocuments.WaitAsync();
-                var resultingTask = await Task.WhenAny(hasMoreDocsTask, pendingReply, TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(3000))).ConfigureAwait(false);
+                var resultingTask = await Task.WhenAny(hasMoreDocsTask, pendingReply, TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(WaitForChangedDocumentsTimeoutInMs))).ConfigureAwait(false);
 
                 if (CancellationTokenSource.IsCancellationRequested)
                     return false;
@@ -662,8 +667,18 @@ namespace Raven.Server.Documents.TcpHandlers
                 }
 
                 await SendHeartBeat();
+                await SendNoopAck();
             } while (CancellationTokenSource.IsCancellationRequested == false);
             return false;
+        }
+
+        private async Task SendNoopAck()
+        {
+            await TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(
+                SubscriptionId,
+                Options.SubscriptionName,
+                nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
+                nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange));
         }
 
         private SubscriptionPatchDocument SetupFilterScript()
