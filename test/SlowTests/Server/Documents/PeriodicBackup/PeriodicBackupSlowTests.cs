@@ -19,7 +19,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 {
     public class PeriodicBackupTestsSlow : RavenTestBase
     {
-        [Fact, Trait("Category", "Smuggler")]
+        [Fact(Skip = "RavenDB-9017"), Trait("Category", "Smuggler")]
         public async Task can_backup_to_directory()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
