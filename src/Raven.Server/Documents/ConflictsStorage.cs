@@ -649,6 +649,11 @@ namespace Raven.Server.Documents
                                     DeleteConflictsFor(context, conflict.ChangeVector); // delete this, it has been subsumed
                                     break;
                                 case ConflictStatus.Conflict:
+                                    if (fromSmuggler &&
+                                        DocumentCompare.IsEqualTo(conflict.Doc, incomingDoc, false) == DocumentCompareResult.Equal)
+                                    {
+                                        return; // we already have a conflict with equal content, no need to create another one
+                                    }
                                     break; // we'll add this conflict if no one else also includes it
                                 case ConflictStatus.AlreadyMerged:
                                     return; // we already have a conflict that includes this version

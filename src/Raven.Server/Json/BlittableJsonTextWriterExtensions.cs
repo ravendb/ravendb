@@ -494,6 +494,10 @@ namespace Raven.Server.Json
                 writer.WriteComma();
             }
 
+            writer.WritePropertyName(nameof(statistics.CountOfDocumentsConflicts));
+            writer.WriteInteger(statistics.CountOfDocumentsConflicts);
+            writer.WriteComma();
+
             writer.WritePropertyName(nameof(statistics.CountOfConflicts));
             writer.WriteInteger(statistics.CountOfConflicts);
             writer.WriteComma();

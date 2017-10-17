@@ -17,8 +17,7 @@ namespace RavenDB4RCTests
     {
         static void Main(string[] args)
         {
- //           new AttachmentsRevisions().PutAttachments().Wait();
-            new SmugglerConflicts().CanExportAndImportWithConflicts().Wait();
+            new SmugglerConflicts().ToDatabaseWithDifferentConflicts_AndTheImportedConflictsInAdditionToTheExistingConflicts().Wait();
         }
 
         static async Task MainAsync()
