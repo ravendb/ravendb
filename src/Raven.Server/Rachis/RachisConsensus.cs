@@ -433,6 +433,7 @@ namespace Raven.Server.Rachis
                 SetNewStateInTx(context, state, disposable, expectedTerm, stateChangedReason , beforeStateChangedEvent);
                 context.Transaction.Commit();
             }
+            _leadershipTimeChanged.SetAndResetAtomically();
         }
 
         public class StateTransition
@@ -1449,7 +1450,7 @@ namespace Raven.Server.Rachis
             if (_heartbeatWaitersCounter == 0)
                 return;
 
-            _leadershipTimeChanged.Set();
+            _leadershipTimeChanged.SetAndResetAtomically();
         }
 
         public DynamicJsonArray GetClusterErrorsFromLeader()
