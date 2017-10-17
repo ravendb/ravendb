@@ -1,4 +1,5 @@
 ﻿import backupSettings = require("models/database/tasks/periodicBackup/backupSettings");
+import jsonUtil = require("common/jsonUtil");
 
 class ftpSettings extends backupSettings {
     url = ko.observable<string>();
@@ -17,7 +18,7 @@ class ftpSettings extends backupSettings {
     });
 
     constructor(dto: Raven.Client.ServerWide.PeriodicBackup.FtpSettings) {
-        super(dto);
+        super(dto, "FTP");
 
         this.url(dto.Url);
         this.port(dto.Port);
@@ -31,8 +32,16 @@ class ftpSettings extends backupSettings {
             this.certificateFileName("certificate.cer");
         }
 
-        this.connectionType = "FTP";
         this.initValidation();
+
+        this.dirtyFlag = new ko.DirtyFlag([
+            this.enabled,
+            this.url,
+            this.port, 
+            this.userName,
+            this.password,
+            this.certificateAsBase64
+        ], false,  jsonUtil.newLineNormalizingHashFunction);
     }
 
     initValidation() {

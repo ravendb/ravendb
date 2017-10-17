@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.ServerWide.Context;
@@ -113,7 +114,7 @@ namespace Raven.Server.Rachis
                                 removedFromTopology = true;
                                 break;
                             }
-                            if (ambassador.ReadlElectionWonAtTerm == ElectionTerm)
+                            if (ambassador.RealElectionWonAtTerm == ElectionTerm)
                                 realElectionsCount++;
                             if (ambassador.TrialElectionWonAtTerm == ElectionTerm)
                                 trialElectionsCount++;
@@ -135,8 +136,16 @@ namespace Raven.Server.Rachis
 
                         if (realElectionsCount >= majority)
                         {
+                            var connections = new Dictionary<string, RemoteConnection>();
+                            foreach (var candidateAmbassador in _voters)
+                            {
+                                candidateAmbassador.ElectionWon = true;
+                                connections[candidateAmbassador.Tag] = candidateAmbassador.Connection;
+                            }
                             _running.Lower();
-                            _engine.SwitchToLeaderState(ElectionTerm, $"Was elected by {majority} nodes to leadership");
+                            StateChange();
+                            _engine.SwitchToLeaderState(ElectionTerm, $"Was elected by {majority} nodes to leadership", connections);
+
                             break;
                         }
                         if (RunRealElectionAtTerm != ElectionTerm &&
@@ -220,7 +229,7 @@ namespace Raven.Server.Rachis
         public void Dispose()
         {
             _running.Lower();
-            _stateChange.TrySetCanceled();
+            _stateChange.TrySetResult(null);
             _peersWaiting.Set();
             //TODO: shutdown notification of some kind?
             if (_engine.Log.IsInfoEnabled)

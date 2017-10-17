@@ -8,12 +8,14 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
     allowEtlOnNonEncryptedChannel = ko.observable<boolean>(false);
     transformationScripts = ko.observableArray<ongoingTaskRavenEtlTransformationModel>([]);
 
-    showEditTransformationArea = ko.observable<boolean>(false);
+    showEditTransformationArea: KnockoutComputed<boolean>;
 
-    editedTransformationScript = ko.observable<ongoingTaskRavenEtlTransformationModel>(ongoingTaskRavenEtlTransformationModel.empty());  
-    isDirtyEditedScript = new ko.DirtyFlag([]);
+    transformationScriptSelectedForEdit = ko.observable<ongoingTaskRavenEtlTransformationModel>();
+    editedTransformationScriptSandbox = ko.observable<ongoingTaskRavenEtlTransformationModel>();
     
     validationGroup: KnockoutValidationGroup;
+    
+    dirtyFlag: () => DirtyFlag;
     
     constructor(dto: Raven.Client.ServerWide.Operations.OngoingTaskRavenEtlDetails) {
         super();
@@ -26,13 +28,32 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
     initializeObservables() {
         super.initializeObservables();
         
-        this.initializeMentorValidation();
-
-        this.isDirtyEditedScript = new ko.DirtyFlag([this.editedTransformationScript().name,
-                                                        this.editedTransformationScript().script,
-                                                        this.editedTransformationScript().transformScriptCollections],
-                                                        false, jsonUtil.newLineNormalizingHashFunction);
+        this.showEditTransformationArea = ko.pureComputed(() => !!this.editedTransformationScriptSandbox());
         
+        const innerDirtyFlag = ko.pureComputed(() => !!this.editedTransformationScriptSandbox() && this.editedTransformationScriptSandbox().dirtyFlag().isDirty());
+        const scriptsCount = ko.pureComputed(() => this.transformationScripts().length);
+        const hasAnyDirtyTransformationScript = ko.pureComputed(() => {
+            let anyDirty = false;
+            this.transformationScripts().forEach(script => {
+                if (script.dirtyFlag().isDirty()) {
+                    anyDirty = true;
+                    // don't break here - we want to track all dependencies
+                }
+            });
+            return anyDirty;
+        });
+        
+        this.dirtyFlag = new ko.DirtyFlag([
+                innerDirtyFlag,
+                this.taskName,
+                this.preferredMentor,
+                this.manualChooseMentor,
+                this.connectionStringName,
+                this.allowEtlOnNonEncryptedChannel,
+                scriptsCount,
+                hasAnyDirtyTransformationScript
+            ],
+            false, jsonUtil.newLineNormalizingHashFunction);
     }
     
     private initValidation() {
@@ -41,14 +62,24 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
         this.connectionStringName.extend({
             required: true
         });
+        
+        this.transformationScripts.extend({
+            validation: [
+                {
+                    validator: () => this.transformationScripts().length > 0,
+                    message: "Transformation Script is Not defined"
+                }
+            ]
+        });
 
         this.validationGroup = ko.validatedObservable({
-            connectionStringName: this.connectionStringName ,
-            preferredMentor: this.preferredMentor
+            connectionStringName: this.connectionStringName,
+            preferredMentor: this.preferredMentor,
+            transformationScripts: this.transformationScripts
         });
     }
 
-    update(dto: Raven.Client.ServerWide.Operations.OngoingTaskRavenEtlDetails) {
+    protected update(dto: Raven.Client.ServerWide.Operations.OngoingTaskRavenEtlDetails) {
         super.update(dto);
 
         if (dto.Configuration) {
@@ -60,24 +91,12 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
     }
 
     toDto(): Raven.Client.ServerWide.ETL.RavenEtlConfiguration { 
-        const transformations = this.transformationScripts().map(x => {
-            const collections = x.applyScriptForAllCollections() ? null : x.transformScriptCollections();
-            return {
-                ApplyToAllDocuments: x.applyScriptForAllCollections(),
-                Collections: collections,
-                Disabled: false,
-                HasLoadAttachment: false,
-                Name: x.name(),
-                Script: x.script()
-            } as Raven.Client.ServerWide.ETL.Transformation;
-        });
-
         return {
             Name: this.taskName(),
             ConnectionStringName: this.connectionStringName(),
             AllowEtlOnNonEncryptedChannel: this.allowEtlOnNonEncryptedChannel(),
             Disabled: false,
-            Transforms: transformations,
+            Transforms: this.transformationScripts().map(x => x.toDto()),
             EtlType: "Raven",
             MentorNode: this.manualChooseMentor() ? this.preferredMentor() : undefined,
             TaskId: this.taskId,
@@ -86,36 +105,32 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
 
     deleteTransformationScript(transformationScript: ongoingTaskRavenEtlTransformationModel) { 
         this.transformationScripts.remove(x => transformationScript.name() === x.name());
-        this.showEditTransformationArea(false);
+        
+        if (this.transformationScriptSelectedForEdit() === transformationScript) {
+            this.editedTransformationScriptSandbox(null);
+            this.transformationScriptSelectedForEdit(null);
+        }
     }
 
     editTransformationScript(transformationScript: ongoingTaskRavenEtlTransformationModel) {
-        this.editedTransformationScript().update(transformationScript.toDto(), false);
-        this.showEditTransformationArea(true);
-        this.isDirtyEditedScript().reset();
+        this.transformationScriptSelectedForEdit(transformationScript);
+        this.editedTransformationScriptSandbox(new ongoingTaskRavenEtlTransformationModel(transformationScript.toDto(), false));
     }
 
     static empty(): ongoingTaskRavenEtlEditModel {
         return new ongoingTaskRavenEtlEditModel(
             {
-                TaskId: null,
                 TaskName: "",
                 TaskType: "RavenEtl",
                 TaskState: "Enabled",
-                ResponsibleNode: null,
                 TaskConnectionStatus: "Active",
                 Configuration: {
                     EtlType: "Raven",
                     Transforms: [],
-                    AllowEtlOnNonEncryptedChannel: false,
                     ConnectionStringName: "",
-                    Disabled: false,
                     Name: "",
-                    TaskId: null,
-                    MentorNode: null 
                 },
-                Error: null,
-            });
+            } as Raven.Client.ServerWide.Operations.OngoingTaskRavenEtlDetails);
     }
 }
 

@@ -4,10 +4,12 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
+using Raven.Server.Exceptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
@@ -181,15 +183,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             }
             catch (Exception e)
             {
-                _index.HandleError(e);
+                _index.ThrowIfCorruptionException(e);
 
-                var message = $"Failed to execute reduce function for reduce key '{reduceKeyHash}' on nested values of '{_indexDefinition.Name}' index.";
-
-                if (_logger.IsInfoEnabled)
-                    _logger.Info(message, e);
-
-                stats.RecordReduceErrors(numberOfEntriesToReduce);
-                stats.AddReduceError(message + $"  Exception: {e}");
+                LogReductionError(e, reduceKeyHash, stats, updateStats: true, page: null, numberOfNestedValues: numberOfEntriesToReduce);
             }
         }
 
@@ -236,8 +232,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     {
                         if (leafPage.PageNumber != tree.State.RootPageNumber)
                         {
-                            throw new InvalidOperationException(
-                                $"Encountered empty page which isn't a root. Page #{leafPage.PageNumber} in '{tree.Name}' tree.");
+                            throw new UnexpectedReduceTreePageException(
+                                $"Encountered empty page which isn't a root. Page {leafPage} in '{tree.Name}' tree.");
                         }
 
                         writer.DeleteReduceResult(reduceKeyHash, stats);
@@ -279,19 +275,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     }
                     catch (Exception e)
                     {
-                        _index.HandleError(e);
+                        _index.ThrowIfCorruptionException(e);
 
-                        var message =
-                            $"Failed to execute reduce function for reduce key '{tree.Name}' on a leaf page #{leafPage} of '{_indexDefinition.Name}' index.";
-
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info(message, e);
-
-                        if (parentPage == -1)
-                        {
-                            stats.RecordReduceErrors(leafPage.NumberOfEntries);
-                            stats.AddReduceError(message + $"  Exception: {e}");
-                        }
+                        LogReductionError(e, reduceKeyHash, stats, updateStats: parentPage == -1, page: leafPage);
                     }
                 }
             }
@@ -321,8 +307,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     {
                         if (page.IsBranch == false)
                         {
-                            throw new InvalidOperationException("Parent page was found that wasn't a branch, error at " +
-                                                                page.PageNumber);
+                            throw new UnexpectedReduceTreePageException("Parent page was found that wasn't a branch, error at " + page);
                         }
 
                         stats.RecordReduceAttempts(page.NumberOfEntries);
@@ -354,16 +339,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     }
                     catch (Exception e)
                     {
-                        _index.HandleError(e);
+                        _index.ThrowIfCorruptionException(e);
 
-                        var message =
-                            $"Failed to execute reduce function for reduce key '{tree.Name}' on a branch page #{page} of '{_indexDefinition.Name}' index.";
-
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info(message, e);
-
-                        stats.RecordReduceErrors(page.NumberOfEntries);
-                        stats.AddReduceError(message + $" Exception: {e}");
+                        LogReductionError(e, reduceKeyHash, stats, updateStats: true, page: page);
                     }
                     finally
                     {
@@ -509,6 +487,41 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
             _nestedValuesReductionStats.NestedValuesRead = stats.For(IndexingOperation.Reduce.NestedValuesRead, start: false);
             _nestedValuesReductionStats.NestedValuesAggregation = stats.For(IndexingOperation.Reduce.NestedValuesAggregation, start: false);
+        }
+
+        private void LogReductionError(Exception error, LazyStringValue reduceKeyHash, IndexingStatsScope stats, bool updateStats, TreePage page,
+            int numberOfNestedValues = -1)
+        {
+            var builder = new StringBuilder("Failed to execute reduce function on ");
+
+            if (page != null)
+                builder.Append($"page {page} ");
+            else
+                builder.Append("nested values ");
+
+            builder.Append($"of '{_indexDefinition.Name}' index (reduce key hash: {reduceKeyHash}");
+
+            var sampleItem = _aggregationBatch?.Items?.FirstOrDefault();
+
+            if (sampleItem != null)
+                builder.Append($", sample item to reduce: {sampleItem}");
+
+            builder.Append(")");
+
+            var message = builder.ToString();
+
+            if (_logger.IsInfoEnabled)
+                _logger.Info(message, error);
+
+            if (updateStats)
+            {
+                var errorCount = page?.NumberOfEntries ?? numberOfNestedValues;
+
+                Debug.Assert(errorCount != -1);
+
+                stats.RecordReduceErrors(errorCount);
+                stats.AddReduceError(message + $" Exception: {error}");
+            }
         }
 
         private class AggegationBatch : IDisposable

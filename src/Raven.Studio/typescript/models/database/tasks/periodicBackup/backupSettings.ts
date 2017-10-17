@@ -13,8 +13,10 @@ abstract class backupSettings {
     shortErrorText: KnockoutObservable<string>;
 
     validationGroup: KnockoutValidationGroup;
+    
+    dirtyFlag: () => DirtyFlag;
 
-    constructor(dto: Raven.Client.ServerWide.PeriodicBackup.BackupSettings) {
+    constructor(dto: Raven.Client.ServerWide.PeriodicBackup.BackupSettings, connectionType: Raven.Server.Documents.PeriodicBackup.PeriodicBackupTestConnectionType) {
         this.enabled(!dto.Disabled);
         
         this.initObservables();

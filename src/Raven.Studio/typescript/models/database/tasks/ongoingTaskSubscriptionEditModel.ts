@@ -3,6 +3,7 @@ import ongoingTaskEditModel = require("models/database/tasks/ongoingTaskEditMode
 import getRevisionsConfigurationCommand = require("commands/database/documents/getRevisionsConfigurationCommand");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
+import jsonUtil = require("common/jsonUtil");
 
 class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
 
@@ -19,6 +20,8 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
     changeVectorForNextBatchStartingPoint = ko.observable<string>(null); 
 
     validationGroup: KnockoutValidationGroup; 
+    
+    dirtyFlag: () => DirtyFlag;
 
     constructor(dto: Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails) {
         super();
@@ -27,6 +30,17 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
         this.updateDetails(dto);
         this.initializeObservables(); 
         this.initValidation();
+        
+        this.dirtyFlag = new ko.DirtyFlag([
+            this.taskName,
+            this.preferredMentor,
+            this.manualChooseMentor,
+            this.query,
+            this.startingPointType,
+            this.startingChangeVector, 
+            this.setStartingPoint,
+            this.changeVectorForNextBatchStartingPoint
+        ], false, jsonUtil.newLineNormalizingHashFunction);
     }
 
     initializeObservables() {

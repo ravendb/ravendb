@@ -14,6 +14,7 @@ namespace Raven.Server.Smuggler.Documents.Data
         IEnumerable<DocumentItem> GetRevisionDocuments(List<string> collectionsToExport, INewDocumentActions actions);
         IEnumerable<DocumentItem> GetLegacyAttachments(INewDocumentActions actions);
         IEnumerable<DocumentTombstone> GetTombstones(List<string> collectionsToExport, INewDocumentActions actions);
+        IEnumerable<DocumentConflict> GetConflicts(List<string> collectionsToExport, INewDocumentActions actions);
         IEnumerable<IndexDefinitionAndType> GetIndexes();
         IDisposable GetIdentities(out IEnumerable<(string Prefix, long Value)> identities);
         long SkipType(DatabaseItemType type);

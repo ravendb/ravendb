@@ -102,7 +102,7 @@ namespace Raven.Server.Documents.Handlers
             using (var token = CreateTimeLimitedOperationToken())
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                var stream = TryGetRequestFormStream("ExportOptions") ?? RequestBodyStream(); 
+                var stream = TryGetRequestFromStream("ExportOptions") ?? RequestBodyStream(); 
                 var queryJson = await context.ReadForMemoryAsync(stream, "index/query");
                 var query = IndexQueryServerSide.Create(queryJson, context, Database.QueryMetadataCache);
                 var format = GetStringQueryString("format", false);

@@ -24,11 +24,13 @@ class certificateModel {
     certificateAsBase64 = ko.observable<string>();
     certificatePassphrase = ko.observable<string>();
     expirationDate = ko.observable<string>();
-    thumbprint = ko.observable<string>();
+    thumbprint = ko.observable<string>(); // primary cert thumbprint
+    thumbprints = ko.observableArray<string>(); // all thumbprints
 
     permissions = ko.observableArray<certificatePermissionModel>();
 
     securityClearanceLabel: KnockoutComputed<string>;
+    canEditClearance: KnockoutComputed<boolean>;
     
     validationGroup: KnockoutValidationGroup = ko.validatedObservable({
         name: this.name,
@@ -52,10 +54,15 @@ class certificateModel {
             }
             
             return certificateModel.clearanceLabelFor(clearance);
-        })
+        });
+        
+        this.canEditClearance = ko.pureComputed(() => this.securityClearance() !== "ClusterNode");
     }
     
     static clearanceLabelFor(input: Raven.Client.ServerWide.Operations.Certificates.SecurityClearance) {
+        if (input === "ClusterNode") {
+            return "Cluster node";
+        }
         return certificateModel.securityClearanceTypes.find(x => x.value === input).label;
     }
 
@@ -101,6 +108,7 @@ class certificateModel {
 
     toUpdatePermissionsDto() {
         return {
+            Name: this.name(),
             Thumbprint: this.thumbprint(),
             SecurityClearance: this.securityClearance(),
             Permissions: this.serializePermissions()
@@ -128,11 +136,12 @@ class certificateModel {
         return new certificateModel("upload");
     }
     
-    static fromDto(dto: Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition) {
+    static fromDto(dto: unifiedCertificateDefinition) {
         const model = new certificateModel("editExisting");
         model.name(dto.Name);
         model.securityClearance(dto.SecurityClearance);
         model.thumbprint(dto.Thumbprint);
+        model.thumbprints(dto.Thumbprints);
         
         model.permissions(_.map(dto.Permissions, (access, databaseName) => {
             const permission = new certificatePermissionModel();

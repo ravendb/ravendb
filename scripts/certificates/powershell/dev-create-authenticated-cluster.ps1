@@ -12,7 +12,7 @@ $ErrorActionPreference = "Stop"
 $SecurePassword = ConvertTo-SecureString $CertificatePassword -asplaintext -force
 
 # generate server certificate 
-pushd "$serverDir\scripts\certificates\" 
+pushd "$serverDir\scripts\certificates\powershell\" 
 ./generate-server-cert.ps1 -CN localhost -CertificatePassword $SecurePassword
 popd 
 
@@ -37,10 +37,11 @@ pushd $serverDir
 
 $commonArgs = "--Cluster.TimeBeforeAddingReplicaInSec=15" 
 
-$authArgs = "--Security.Certificate.Path=$serverDir\scripts\certificates\server.pfx --Security.Certificate.Password=$CertificatePassword" 
+$authArgs = "--Security.Certificate.Path=$serverDir\scripts\certificates\powershell\server.pfx --Security.Certificate.Password=$CertificatePassword" 
 
 for($i=1; $i -le $nodeCount; $i++){    
     start powershell "-NoExit -NoProfile dotnet run -p .\src\Raven.Server\Raven.Server.csproj --ServerUrl=https://localhost:808$i --DataDir=$serverDir\src\Raven.Server\bin\$conf\netcoreapp2.0\$i --Logs.Path=$serverDir\src\Raven.Server\bin\$conf\netcoreapp2.0\$i --License.Path=$licensePath $commonArgs $authArgs" 
+    sleep -Milliseconds 500
 } 
 popd 
 
@@ -48,7 +49,7 @@ write-host "Before you continue, make sure that server https://localhost:8081 ha
 sleep 3
 
 # obtain client cert using server cert 
-pushd "$serverDir\scripts\certificates\" 
+pushd "$serverDir\scripts\certificates\powershell\" 
 ./obtain-cluster-admin-client-cert.ps1 -ServerUrl https://localhost:8081 -ClientCertPassword $CertificatePassword
 
 # add client cert to trusted root (for chrome)

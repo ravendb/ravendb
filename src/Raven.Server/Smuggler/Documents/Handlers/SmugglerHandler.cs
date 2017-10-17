@@ -16,6 +16,7 @@ using System.Threading.Tasks;
 using System.Xml.Linq;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Net.Http.Headers;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Util;
@@ -81,7 +82,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 var operationId = GetLongQueryString("operationId", true);
                 var startDocumentEtag = GetLongQueryString("startEtag", false) ?? 0;
 
-                var stream = TryGetRequestFormStream("DownloadOptions") ?? RequestBodyStream();
+                var stream = TryGetRequestFromStream("DownloadOptions") ?? RequestBodyStream();
 
                 var blittableJson = await context.ReadForMemoryAsync(stream, "DownloadOptions");
                 var options = JsonDeserializationServer.DatabaseSmugglerOptions(blittableJson);
@@ -192,7 +193,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                         using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         using (var file = await getFile())
                         using (var stream = new GZipStream(new BufferedStream(file, 128 * Voron.Global.Constants.Size.Kilobyte), CompressionMode.Decompress))
-                        using (var source = new StreamSource(stream, context))
+                        using (var source = new StreamSource(stream, context, Database))
                         {
                             var destination = new DatabaseDestination(Database);
 
@@ -271,7 +272,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
                 using (var stream = new GZipStream(new BufferedStream(await GetImportStream(), 128 * Voron.Global.Constants.Size.Kilobyte), CompressionMode.Decompress))
                 using (var token = CreateOperationToken())
-                using (var source = new StreamSource(stream, context))
+                using (var source = new StreamSource(stream, context, Database))
                 {
                     var destination = new DatabaseDestination(Database);
 
@@ -387,7 +388,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                             }
                             catch (Exception e)
                             {
-                                result.AddError($"Error occurred during export. Exception: {e.Message}");
+                                result.AddError($"Error occurred during import. Exception: {e.Message}");
                                 throw;
                             }
 
@@ -399,11 +400,101 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
+        [RavenAction("/databases/*/smuggler/import/csv", "POST", AuthorizationStatus.ValidUser)]
+        public async Task ImportFromCsv()
+        {
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                if (HttpContext.Request.HasFormContentType == false)
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        context.Write(writer, new DynamicJsonValue
+                        {
+                            ["Type"] = "Error",
+                            ["Error"] = "Import from csv requires form content type"
+                        });
+                        return;
+                    }
+                }
+                var token = new OperationCancelToken(Database.DatabaseShutdown);
+                var result = new SmugglerResult();
+                var operationId = GetLongQueryString("operationId");
+                await Database.Operations.AddOperation(Database, "Import from csv file", Raven.Server.Documents.Operations.Operations.OperationType.DatabaseImportFromCsv,
+                    onProgress =>
+                    {
+                        return Task.Run(async () =>
+                        {
+                            try
+                            {
+                                var reader = new MultipartReader(MultipartRequestHelper.GetBoundary(MediaTypeHeaderValue.Parse(HttpContext.Request.ContentType),
+                                    MultipartRequestHelper.MultipartBoundaryLengthLimit), HttpContext.Request.Body);
+                                while (true)
+                                {
+                                    var section = await reader.ReadNextSectionAsync().ConfigureAwait(false);
+                                    if (section == null)
+                                        break;
+
+                                    if (ContentDispositionHeaderValue.TryParse(section.ContentDisposition, out ContentDispositionHeaderValue contentDisposition) == false)
+                                        continue;
+
+                                    if (MultipartRequestHelper.HasFileContentDisposition(contentDisposition))
+                                    {
+                                        if (ContentDispositionHeaderValue.TryParse(section.ContentDisposition, out contentDisposition) == false)
+                                            continue;
+
+                                        var filename = contentDisposition.FileName.ToString().Trim('\"');
+                                        var options = new DatabaseSmugglerOptionsServerSide();
+                                        if (section.Headers.ContainsKey("Content-Encoding") && section.Headers["Content-Encoding"] == "gzip")
+                                        {
+                                            using (var gzipStream = new GZipStream(section.Body, CompressionMode.Decompress))
+                                            {
+                                                ImportDocumentsFromCsvStream(gzipStream, context, filename, options, result, onProgress, token);
+                                            }
+                                        }
+                                        else
+                                        {
+                                            ImportDocumentsFromCsvStream(section.Body, context, filename, options, result, onProgress, token);
+                                        }
+                                    }
+                                }
+                            }
+                            catch (Exception e)
+                            {
+                                result.AddError($"Error occurred during csv import. Exception: {e.Message}");
+                                throw;
+                            }
+                            return (IOperationResult)result;
+                        });
+                    }, operationId, token);
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteOperationId(context, operationId);
+                }
+            }
+        }
+
+        private void ImportDocumentsFromCsvStream(Stream stream, DocumentsOperationContext context, string fileName, DatabaseSmugglerOptionsServerSide options, SmugglerResult result, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        {
+            var entity =
+                Inflector.Pluralize(CSharpClassName.ConvertToValidClassName(Path.GetFileNameWithoutExtension(fileName)));
+            if (string.IsNullOrEmpty(entity) == false && char.IsLower(entity[0]))
+                entity = char.ToUpper(entity[0]) + entity.Substring(1);
+
+            using (var source = new CsvStreamSource(stream, context, entity))
+            {
+                var destination = new DatabaseDestination(Database);
+                var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options, result, onProgress, token.Token);
+                smuggler.Execute();
+            }
+        }
+
         private void DoImportInternal(DocumentsOperationContext context, Stream stream, DatabaseSmugglerOptionsServerSide options, SmugglerResult result, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
             using (stream)
             using (token)
-            using (var source = new StreamSource(stream, context))
+            using (var source = new StreamSource(stream, context, Database))
             {
                 var destination = new DatabaseDestination(Database);
                 var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options, result, onProgress, token.Token);

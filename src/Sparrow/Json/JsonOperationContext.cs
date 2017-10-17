@@ -346,10 +346,8 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public LazyStringValue GetLazyStringForFieldWithCaching(StringSegment key)
         {
-            LazyStringValue value;
-
             var field = key.Value; // This will allocate if we are using a substring. 
-            if (_fieldNames.TryGetValue(field, out value))
+            if (_fieldNames.TryGetValue(field, out LazyStringValue value))
             {
                 //sanity check, in case the 'value' is manually disposed outside of this function
                 Debug.Assert(value.IsDisposed == false);
@@ -362,9 +360,7 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public LazyStringValue GetLazyStringForFieldWithCaching(string field)
         {
-            LazyStringValue value;
-
-            if (_fieldNames.TryGetValue(field, out value))
+            if (_fieldNames.TryGetValue(field, out LazyStringValue value))
             {
                 // PERF: This is usually the most common scenario, so actually being contiguous improves the behavior.
                 Debug.Assert(value.IsDisposed == false);
@@ -608,6 +604,45 @@ namespace Sparrow.Json
                 builder.FinalizeDocument();
 
                 var reader = builder.CreateReader();
+                return reader;
+            }
+        }
+
+        public unsafe BlittableJsonReaderArray ParseBufferToArray(string value, string debugTag,
+            BlittableJsonDocumentBuilder.UsageMode mode, IBlittableDocumentModifier modifier = null)
+        {
+
+            if (_disposed)
+                ThrowObjectDisposed();
+
+            _jsonParserState.Reset();
+            using (var parser = new UnmanagedJsonParser(this, _jsonParserState, debugTag))
+            using (var builder = new BlittableJsonDocumentBuilder(this, mode, debugTag, parser, _jsonParserState, modifier: modifier))
+            using(GetManagedBuffer(out var buffer))
+            {
+                CachedProperties.NewDocument();
+                builder.ReadArrayDocument();
+
+                var maxChars = buffer.Length / 8; //utf8 max size is 8 bytes, must consider worst case possiable
+
+                bool lastReadResult = false;
+                for (int i = 0; i < value.Length; i += maxChars)
+                {
+                    var charsToRead = Math.Min(value.Length - i, maxChars);
+                    var length = Encodings.Utf8.GetBytes(value, i,
+                        charsToRead,
+                        buffer.Buffer.Array,
+                        buffer.Buffer.Offset);
+
+                    parser.SetBuffer(buffer.Pointer, length);
+                    lastReadResult = builder.Read();                                                    
+                }
+                if(lastReadResult == false)
+                    throw new EndOfStreamException("Buffer ended without reaching end of json content");
+                
+                builder.FinalizeDocument();
+
+                var reader = builder.CreateArrayReader(false);
                 return reader;
             }
         }

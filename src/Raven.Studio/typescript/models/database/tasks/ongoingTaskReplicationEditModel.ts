@@ -65,7 +65,7 @@ class ongoingTaskReplicationEditModel extends ongoingTaskEditModel {
             TaskName: "",
             TaskType: "Replication",
             DestinationDatabase: null,
-            DestinationUrl: clusterTopologyManager.default.localNodeUrl()
+            DestinationUrl: null
         } as Raven.Client.ServerWide.Operations.OngoingTaskReplication);
     }
 }

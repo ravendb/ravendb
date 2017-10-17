@@ -22,6 +22,7 @@ using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
@@ -1175,10 +1176,11 @@ namespace Raven.Server.Documents.Indexes
             SetState(IndexState.Error);
         }
 
-        public void HandleError(Exception e)
+        public void ThrowIfCorruptionException(Exception e)
         {
-            var ide = e as VoronUnrecoverableErrorException;
-            if (ide == null)
+            if (e is VoronUnrecoverableErrorException == false && 
+                e is PageCompressedException == false &&
+                e is UnexpectedReduceTreePageException == false)
                 return;
 
             throw new IndexCorruptionException(e);

@@ -38,6 +38,12 @@
             </div>
             <div class="col-sm-6 col-lg-4 col-xl-3">
                 <div class="stats-item">
+                    <div class="name"><i class="icon-conflicts"></i><span>Conflicts Count</span></div>
+                    <div class="value"><span data-bind="text: countOfConflicts"></span></div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-4 col-xl-3">
+                <div class="stats-item">
                     <div class="name"><i class="icon-attachment"></i><span>Attachments Count</span></div>
                     <div class="value">
                         <span data-bind="text: countOfAttachments"></span>
@@ -58,6 +64,12 @@
                 <div class="stats-item">
                     <div class="name"><i class="icon-server"></i><span>Architecture</span></div>
                     <div class="value"><span data-bind="visible: is64Bit">64 Bit</span><span data-bind="visible : !is64Bit">32 Bit</span></div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-4 col-xl-3">
+                <div class="stats-item">
+                    <div class="name"><i class="icon-storage"></i><span>Size On Disk</span></div>
+                    <div class="value"><span data-bind="text: sizeOnDisk"></span></div>
                 </div>
             </div>
         </div>

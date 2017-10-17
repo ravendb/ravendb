@@ -11,9 +11,6 @@ import ongoingTaskSqlEtlListModel = require("models/database/tasks/ongoingTaskSq
 import ongoingTaskSubscriptionListModel = require("models/database/tasks/ongoingTaskSubscriptionListModel");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import createOngoingTask = require("viewmodels/database/tasks/createOngoingTask");
-import deleteOngoingTaskConfirm = require("viewmodels/database/tasks/deleteOngoingTaskConfirm");
-import enableOngoingTaskConfirm = require("viewmodels/database/tasks/enableOngoingTaskConfirm");
-import disableOngoingTaskConfirm = require("viewmodels/database/tasks/disableOngoingTaskConfirm");
 import ongoingTaskModel = require("models/database/tasks/ongoingTaskModel");
 import deleteOngoingTaskCommand = require("commands/database/tasks/deleteOngoingTaskCommand");
 import toggleOngoingTaskCommand = require("commands/database/tasks/toggleOngoingTaskCommand");
@@ -165,47 +162,40 @@ class ongoingTasks extends viewModelBase {
     confirmEnableOngoingTask(model: ongoingTaskModel) {
         const db = this.activeDatabase();
 
-        const confirmEnableViewModel = new enableOngoingTaskConfirm(db, model.taskType(), model.taskId); 
-        app.showBootstrapDialog(confirmEnableViewModel);
-        confirmEnableViewModel.result.done(result => {
-            if (result.can) {
-                new toggleOngoingTaskCommand(db, model.taskType(), model.taskId, model.taskName(), false)
-                    .execute()
-                    .done(() => {
-                        return model.taskState('Enabled');
-                    })
-                    .always(() => this.fetchOngoingTasks());
-            }
-        });
+        this.confirmationMessage("Enable Task", "You're enabling task of type: " + model.taskType(), ["Cancel", "Enable"])
+            .done(result => {
+                if (result.can) {
+                    new toggleOngoingTaskCommand(db, model.taskType(), model.taskId, model.taskName(), false)
+                        .execute()
+                        .done(() => model.taskState('Enabled'))
+                        .always(() => this.fetchOngoingTasks());
+                }
+            });
     }
 
     confirmDisableOngoingTask(model: ongoingTaskModel) {
         const db = this.activeDatabase();
 
-        const confirmDisableViewModel = new disableOngoingTaskConfirm(db, model.taskType(), model.taskId);
-        app.showBootstrapDialog(confirmDisableViewModel);
-        confirmDisableViewModel.result.done(result => {
-            if (result.can) {
-                new toggleOngoingTaskCommand(db, model.taskType(), model.taskId, model.taskName(), true)
-                    .execute()
-                    .done(() => {
-                        return model.taskState('Disabled');
-                    })
-                    .always(() => this.fetchOngoingTasks());
-            }
-        });
+        this.confirmationMessage("Disable Task", "You're disabling task of type: " + model.taskType(), ["Cancel", "Disable"])
+            .done(result => {
+                if (result.can) {
+                    new toggleOngoingTaskCommand(db, model.taskType(), model.taskId, model.taskName(), true)
+                        .execute()
+                        .done(() => model.taskState('Disabled'))
+                        .always(() => this.fetchOngoingTasks());
+                }
+            });
     }
 
     confirmRemoveOngoingTask(model: ongoingTaskModel) {
         const db = this.activeDatabase();
 
-        const confirmDeleteViewModel = new deleteOngoingTaskConfirm(db, model.taskType(), model.taskId);
-        app.showBootstrapDialog(confirmDeleteViewModel);
-        confirmDeleteViewModel.result.done(result => {
-            if (result.can) {
-                this.deleteOngoingTask(db, model);
-            }
-        });
+        this.confirmationMessage("Delete Task", "You're deleting task of type: " + model.taskType(), ["Cancel", "Delete"])
+            .done(result => {
+                if (result.can) {
+                    this.deleteOngoingTask(db, model);
+                }
+            });
     }
 
     private deleteOngoingTask(db: database, model: ongoingTaskModel) {

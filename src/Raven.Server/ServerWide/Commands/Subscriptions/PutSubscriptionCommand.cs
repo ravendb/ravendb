@@ -61,9 +61,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                         throw new InvalidOperationException("A subscription could not be modified because the name '" + subscriptionItemName +
                                                             "' is already in use in a subscription with different Id.");
 
-                    if (string.IsNullOrEmpty(InitialChangeVector) == false && Enum.TryParse(InitialChangeVector,
-                            out Constants.Documents.SubscriptionChangeVectorSpecialStates changeVectorState)
-                        && changeVectorState == Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange)
+                    if (string.IsNullOrEmpty(InitialChangeVector) == false && InitialChangeVector == nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange))
                     {
                         InitialChangeVector = existingSubscriptionState.ChangeVectorForNextBatchStartingPoint;
                     }

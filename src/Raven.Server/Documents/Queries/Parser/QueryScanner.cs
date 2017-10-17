@@ -272,6 +272,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 if (i + 1 < _q.Length && _q[i + 1] == quoteChar)
                 {
                     i++; // escape char
+                    hasEscape = true;
                     continue;
                 }
                 Column += i + 1 - _pos;

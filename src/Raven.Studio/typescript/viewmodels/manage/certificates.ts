@@ -9,9 +9,9 @@ import deleteCertificateCommand = require("commands/auth/deleteCertificateComman
 import updateCertificatePermissionsCommand = require("commands/auth/updateCertificatePermissionsCommand");
 import getNextOperationId = require("commands/database/studio/getNextOperationId");
 import notificationCenter = require("common/notifications/notificationCenter");
-import appUrl = require("common/appUrl");
 import endpoints = require("endpoints");
 import copyToClipboard = require("common/copyToClipboard");
+import popoverUtils = require("common/popoverUtils");
 import messagePublisher = require("common/messagePublisher");
 
 class certificates extends viewModelBase {
@@ -23,7 +23,8 @@ class certificates extends viewModelBase {
     model = ko.observable<certificateModel>();
     showDatabasesSelector: KnockoutComputed<boolean>;
     hasAllDatabasesAccess: KnockoutComputed<boolean>;
-    certificates = ko.observableArray<Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition>();
+    canExportClusterCertificates: KnockoutComputed<boolean>;
+    certificates = ko.observableArray<unifiedCertificateDefinition>();
 
     importedFileName = ko.observable<string>();
     
@@ -34,6 +35,7 @@ class certificates extends viewModelBase {
     });
 
     generateCertificateUrl = endpoints.global.adminCertificates.adminCertificates;
+    exportCertificateUrl = endpoints.global.adminCertificates.adminCertificatesExport;
     generateCertPayload = ko.observable<string>();
 
     clearanceLabelFor = certificateModel.clearanceLabelFor;
@@ -52,6 +54,23 @@ class certificates extends viewModelBase {
         return this.loadCertificates();
     }
     
+    compositionComplete() {
+        super.compositionComplete();
+
+        this.model.subscribe(model  => {
+            if (model) {
+                this.initPopover();
+            }
+        });
+    }
+    
+    private initPopover() {
+        popoverUtils.longWithHover($(".certificate-file-label small"),
+            {
+                content: 'Select .pfx store file with single or multiple certificates. All of them will be imported under a single name.',
+                placement: "top"
+            });
+    }
     
     private initObservables() {
         this.showDatabasesSelector = ko.pureComputed(() => {
@@ -61,6 +80,11 @@ class certificates extends viewModelBase {
             
             return this.model().securityClearance() === "ValidUser";
         });
+        
+        this.canExportClusterCertificates = ko.pureComputed(() => {
+            const certs = this.certificates();
+            return _.some(certs, x => x.SecurityClearance === "ClusterNode");
+        })
     }
     
     private initValidation() {
@@ -69,7 +93,7 @@ class certificates extends viewModelBase {
         });
     }
     
-    enterEditCertificateMode(itemToEdit: Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition) {
+    enterEditCertificateMode(itemToEdit: unifiedCertificateDefinition) {
         this.model(certificateModel.fromDto(itemToEdit));
         this.model().validationGroup.errors.showAllMessages(false);
     }
@@ -77,13 +101,18 @@ class certificates extends viewModelBase {
     deleteCertificate(certificate: Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition) {
         this.confirmationMessage("Are you sure?", "Do you want to delete certificate with thumbprint: " + certificate.Thumbprint + "", ["No", "Yes, delete"])
             .done(result => {
-                //TODO: spinners
                 if (result.can) {
                     new deleteCertificateCommand(certificate.Thumbprint)
                         .execute()
                         .always(() => this.loadCertificates());
                 }
             });
+    }
+
+    exportClusterCertificates() {
+        const targetFrame = $("form#certificates_export_form");
+        targetFrame.attr("action", this.exportCertificateUrl);
+        targetFrame.submit();
     }
     
     enterGenerateCertificateMode() {
@@ -134,7 +163,7 @@ class certificates extends viewModelBase {
                     .execute()
                     .done(operationId => {
                         
-                        const targetFrame = $("form[target=certificate_download_iframe]");
+                        const targetFrame = $("form#certificate_download_form");
                         targetFrame.attr("action", this.generateCertificateUrl + "?operationId=" + operationId);
                         targetFrame.submit();
 
@@ -179,10 +208,29 @@ class certificates extends viewModelBase {
     }
     
     private loadCertificates() {
-        return new getCertificatesCommand()
+        return new getCertificatesCommand(true)
             .execute()
             .done(certificates => {
-                this.certificates(certificates);
+                const mergedCertificates = [] as Array<unifiedCertificateDefinition>;
+                
+                const secondaryCertificates = [] as Array<Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition>;
+                
+                certificates.forEach(cert => {
+                    if (cert.CollectionPrimaryKey) {
+                        secondaryCertificates.push(cert);
+                    } else {
+                        (cert as unifiedCertificateDefinition).Thumbprints = [cert.Thumbprint];
+                        mergedCertificates.push(cert as unifiedCertificateDefinition);
+                    }
+                });
+                
+                secondaryCertificates.forEach(cert => {
+                    const thumbprint = cert.CollectionPrimaryKey.split("/")[1];
+                    const primaryCert = mergedCertificates.find(x => x.Thumbprint === thumbprint);
+                    primaryCert.Thumbprints.push(cert.Thumbprint);
+                });
+                
+                this.certificates(mergedCertificates);
             });
     }
     
@@ -232,14 +280,18 @@ class certificates extends viewModelBase {
     }
     
     resolveDatabasesAccess(certificateDefinition: Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition): Array<string> {
-        if (certificateDefinition.SecurityClearance === "ClusterAdmin" || certificateDefinition.SecurityClearance === "Operator") {
-            return ["All"];
+        switch (certificateDefinition.SecurityClearance) {
+            case "ClusterAdmin":
+            case "Operator":
+            case "ClusterNode":
+                return ["All"];
+            default: 
+                return Object.keys(certificateDefinition.Permissions);
         }
-        return Object.keys(certificateDefinition.Permissions);
     }
 
-    copyThumbprint(model: certificateModel) {
-        copyToClipboard.copy(model.thumbprint(), "Thumbprint was copied to clipboard.");
+    copyThumbprint(thumbprint: string) {
+        copyToClipboard.copy(thumbprint, "Thumbprint was copied to clipboard.");
     }
 }
 

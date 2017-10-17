@@ -11,47 +11,48 @@ import saveEtlTaskCommand = require("commands/database/tasks/saveEtlTaskCommand"
 import generalUtils = require("common/generalUtils");
 import ongoingTaskSqlEtlTransformationModel = require("models/database/tasks/ongoingTaskSqlEtlTransformationModel");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
-import deleteTransformationScriptConfirm = require("viewmodels/database/tasks/deleteTransformationScriptConfirm");
-import deleteSqlTableConfirm = require("viewmodels/database/tasks/deleteSqlTableConfirm");
 import transformationScriptSyntax = require("viewmodels/database/tasks/transformationScriptSyntax");
 import ongoingTaskSqlEtlTableModel = require("models/database/tasks/ongoingTaskSqlEtlTableModel");
+import testSqlConnectionStringCommand = require("commands/database/cluster/testSqlConnectionStringCommand");
+import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
+import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
+import jsonUtil = require("common/jsonUtil");
 
 class editSqlEtlTask extends viewModelBase {
 
-    // The sql etl task model
+    static readonly scriptNamePrefix = "Script #";
+    
     editedSqlEtl = ko.observable<ongoingTaskSqlEtlEditModel>();
     isAddingNewSqlEtlTask = ko.observable<boolean>(true);
+    transformationScriptSelectedForEdit = ko.observable<ongoingTaskSqlEtlTransformationModel>();
+    editedTransformationScriptSandbox = ko.observable<ongoingTaskSqlEtlTransformationModel>();
+    editedSqlTable = ko.observable<ongoingTaskSqlEtlTableModel>();
 
-    // The currently edited transformation script 
-    editedTransformationScript = ko.observable<ongoingTaskSqlEtlTransformationModel>(ongoingTaskSqlEtlTransformationModel.empty());
-
-    // The currently edited sql table 
-    editedSqlTable = ko.observable<ongoingTaskSqlEtlTableModel>(ongoingTaskSqlEtlTableModel.empty());
-
+    possibleMentors = ko.observableArray<string>([]);
     sqlEtlConnectionStringsNames = ko.observableArray<string>([]); 
-    connectionStringIsDefined: KnockoutComputed<boolean>; // TODO: this computed and all the places using it should be refactored in RavenDB-8934 !    
     connectionStringsUrl = appUrl.forCurrentDatabase().connectionStrings();
 
     testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
-    spinners = {test: ko.observable<boolean>(false)};
+    
+    spinners = {
+        test: ko.observable<boolean>(false)
+    };
+    
     fullErrorDetailsVisible = ko.observable<boolean>(false);
     shortErrorText: KnockoutObservable<string>;
-      
-    collectionNames: KnockoutComputed<string[]>;    
     
-    validationGroup: KnockoutValidationGroup;
-
+    collectionNames: KnockoutComputed<string[]>;
+    
     showAdvancedOptions = ko.observable<boolean>(false);
-    showEditTransformationArea = ko.observable<boolean>(false);
-    showEditSqlTableArea = ko.observable<boolean>(false);
+    showEditTransformationArea: KnockoutComputed<boolean>;
+    showEditSqlTableArea: KnockoutComputed<boolean>;
 
     constructor() {
         super();
         this.bindToCurrentInstance("useConnectionString",
                                    "useCollection",
                                    "testConnection",
-                                   "confirmRemoveTransformationScript",
-                                   "confirmRemoveSqlTable",
+                                   "removeTransformationScript",
                                    "cancelEditedTransformation",
                                    "cancelEditedSqlTable",
                                    "saveEditedTransformation",
@@ -59,7 +60,9 @@ class editSqlEtlTask extends viewModelBase {
                                    "syntaxHelp",
                                    "toggleAdvancedArea",
                                    "deleteSqlTable",
-                                   "editSqlTable");           
+                                   "editSqlTable");
+
+        aceEditorBindingHandler.install();
     }
 
     activate(args: any) {
@@ -80,22 +83,34 @@ class editSqlEtlTask extends viewModelBase {
                     deferred.reject();
                     router.navigate(appUrl.forOngoingTasks(this.activeDatabase()));
                 });
-        }
-        else {
+        } else {
             // 2. Creating a New task
             this.isAddingNewSqlEtlTask(true);
             this.editedSqlEtl(ongoingTaskSqlEtlEditModel.empty());
+            this.editedTransformationScriptSandbox(ongoingTaskSqlEtlTransformationModel.empty());
+            this.editedSqlTable(ongoingTaskSqlEtlTableModel.empty());
             deferred.resolve();
         }
-
-        deferred.always(() => {
+        
+        deferred.done(() => {
             this.initObservables();
-            this.initValidation();
         });
 
-        return $.when<any>(this.getAllConnectionStrings(), deferred);
+        return $.when<any>(this.getAllConnectionStrings(), this.loadPossibleMentors(), deferred);
     }
-   
+
+    private loadPossibleMentors() {
+        return new getPossibleMentorsCommand(this.activeDatabase().name)
+            .execute()
+            .done(mentors => this.possibleMentors(mentors));
+    }
+    
+    compositionComplete() {
+        super.compositionComplete();
+
+        $('.edit-raven-sql-task [data-toggle="tooltip"]').tooltip();
+    }
+    
     /***************************************************/
     /*** General Sql ETl Model / Page Actions Region ***/
     /***************************************************/
@@ -121,101 +136,124 @@ class editSqlEtlTask extends viewModelBase {
             return generalUtils.trimMessage(result.Error);
         });
 
-        this.connectionStringIsDefined = ko.pureComputed(() => {
-            return !!(_.find(this.sqlEtlConnectionStringsNames(), (x) => x.toString() === this.editedSqlEtl().connectionStringName()));
-        });
-
         this.collectionNames = ko.pureComputed(() => {
            return collectionsTracker.default.getCollectionNames(); 
         });
         
-        // TODO ... this.dirtyFlag = 
+        
+        this.showEditSqlTableArea = ko.pureComputed((() => !!this.editedSqlTable()));
+        this.showEditTransformationArea = ko.pureComputed(() => !!this.editedTransformationScriptSandbox());
+        
+        this.initDirtyFlag();
     }
-
-    private initValidation() {
-        this.editedSqlEtl().connectionStringName.extend({
-            required: true,
-            validation: [
-                {
-                    validator: () => this.connectionStringIsDefined(),
-                    message: "Connection string is Not defined"
+    
+    private initDirtyFlag() {
+        const innerDirtyFlag = ko.pureComputed(() => this.editedSqlEtl().dirtyFlag().isDirty());
+        const editedScriptFlag = ko.pureComputed(() => !!this.editedTransformationScriptSandbox() && this.editedTransformationScriptSandbox().dirtyFlag().isDirty());
+        const editedSqlTableFlag = ko.pureComputed(() => !!this.editedSqlTable() && this.editedSqlTable().dirtyFlag().isDirty());
+        
+        const scriptsCount = ko.pureComputed(() => this.editedSqlEtl().transformationScripts().length);
+        const tablesCount = ko.pureComputed(() => this.editedSqlEtl().sqlTables().length);
+        
+        const hasAnyDirtyTransformationScript = ko.pureComputed(() => {
+            let anyDirty = false;
+            this.editedSqlEtl().transformationScripts().forEach(script => {
+                if (script.dirtyFlag().isDirty()) {
+                    anyDirty = true;
+                    // don't break here - we want to track all dependencies
                 }
-            ]
+            });
+            return anyDirty;
         });
-
-        this.editedSqlEtl().sqlTables.extend({
-            validation: [
-                {
-                    validator: () => this.editedSqlEtl().sqlTables().length > 0,
-                    message: "SQL table is Not defined"
+        
+        const hasAnyDirtySqlTable = ko.pureComputed(() => {
+            let anyDirty = false;
+            this.editedSqlEtl().sqlTables().forEach(table => {
+                if (table.dirtyFlag().isDirty()) {
+                    anyDirty = true;
+                    // don't break here - we want to track all dependencies
                 }
-            ]
+            });
+            return anyDirty;
         });
 
-        this.editedSqlEtl().transformationScripts.extend({
-            validation: [
-                {
-                    validator: () => this.editedSqlEtl().transformationScripts().length > 0,
-                    message: "Transformation Script is Not defined"
-                }
-            ]
-        });
-
-        this.validationGroup = ko.validatedObservable({
-            connectionStringName: this.editedSqlEtl().connectionStringName,
-            sqlTables: this.editedSqlEtl().sqlTables,
-            transformationScripts: this.editedSqlEtl().transformationScripts
-        });
+        this.dirtyFlag = new ko.DirtyFlag([
+            innerDirtyFlag,
+            editedScriptFlag,
+            editedSqlTableFlag,
+            scriptsCount,
+            tablesCount,
+            hasAnyDirtyTransformationScript,
+            hasAnyDirtySqlTable,
+            
+        ], false, jsonUtil.newLineNormalizingHashFunction);
     }
-
+    
     useConnectionString(connectionStringToUse: string) {
         this.editedSqlEtl().connectionStringName(connectionStringToUse);
     }
 
     testConnection() {
-        if (this.editedSqlEtl().connectionStringName) {
-            if (this.connectionStringIsDefined()) {
-                // 1. Input connection string name is pre-defined
-                eventsCollector.default.reportEvent("SQL-ETL-connection-string", "test-connection");
-                this.spinners.test(true);
+        eventsCollector.default.reportEvent("SQL-ETL-connection-string", "test-connection");
+        this.spinners.test(true);
 
-                getConnectionStringInfoCommand.forSqlEtl(this.activeDatabase(), this.editedSqlEtl().connectionStringName())
+        getConnectionStringInfoCommand.forSqlEtl(this.activeDatabase(), this.editedSqlEtl().connectionStringName())
+            .execute()
+            .done((result: Raven.Client.ServerWide.ETL.SqlConnectionString) => {
+                new testSqlConnectionStringCommand(this.activeDatabase(), result.ConnectionString)
                     .execute()
-                    .done((result: Raven.Client.ServerWide.ETL.SqlConnectionString) => {
-                        alert("Need to execute test sql connection command...");
-                        // todo:...
-                        // new testSqlServerConnectionCommand(result.ConnectionString)
-                        //     .execute()
-                        //     .done(result => this.testConnectionResult(result))
-                        //     .always(() => this.spinners.test(false));
-                    });
-            }
-            else {
-                // 2. Input connection string name was Not yet defined
-                this.testConnectionResult({Error: "Connection string Not yet defined", Success: false});
-            }
-        }
-    }
-
-    trySaveSqlEtl() {
-        // TODO: 1. Handle 'dirty' edited *transfrom script* 
-        // TODO: 2. Handle 'dirty' edited *sql table* 
-        // 3. If both are validated and saved than we can save the sql etl task model itself
-        this.saveSqlEtl();
+                    .done(result => this.testConnectionResult(result))
+                    .always(() => this.spinners.test(false));
+            });
     }
 
     saveSqlEtl() {
-        // 1. Validate model
-        if (!this.isValid(this.validationGroup)) {
-            return;
+        let hasAnyErrors = false;
+
+        if (this.showEditSqlTableArea()) {
+            if (!this.isValid(this.editedSqlTable().validationGroup)) {
+                // we have some errors in edited sql table
+                hasAnyErrors = true;
+            } else {
+                this.saveEditedSqlTable();
+            }
+        }
+        
+        if (this.showEditTransformationArea()) {
+            if (!this.isValid(this.editedTransformationScriptSandbox().validationGroup)) {
+                // we have some errors in edited transformation script
+                hasAnyErrors = true;
+            } else {
+                this.saveEditedTransformation();
+            }
+        }
+        
+        if (!this.isValid(this.editedSqlEtl().validationGroup)) {
+            // we have some error in general form
+            hasAnyErrors = true;
+        }
+        
+        if (hasAnyErrors) {
+            // at least one section contains errors 
+            return false;
         }
 
-        // 2. Create/add the new sql-etl task
+        // validation completed - try to save opened sections (if any)
+        
+        if (this.showEditTransformationArea()) {
+            this.saveEditedTransformation();
+        }
+        
+        if (this.showEditSqlTableArea()) {
+            this.saveEditedSqlTable();
+        }
+        
+        // convert form to dto and send collected data to server 
         const dto = this.editedSqlEtl().toDto();
         saveEtlTaskCommand.forSqlEtl(this.activeDatabase(), dto)
             .execute()
             .done(() => {
-                // TODO: handle dirty flag state
+                this.dirtyFlag().reset();
                 this.goToOngoingTasksView();
             });
     }
@@ -234,7 +272,7 @@ class editSqlEtlTask extends viewModelBase {
     }
    
     toggleAdvancedArea() {
-        this.showAdvancedOptions(!this.showAdvancedOptions());
+        this.showAdvancedOptions.toggle();
     }
 
     /********************************************/
@@ -242,77 +280,85 @@ class editSqlEtlTask extends viewModelBase {
     /********************************************/
 
     useCollection(collectionToUse: string) {
-        this.editedTransformationScript().collection(collectionToUse);
+        this.editedTransformationScriptSandbox().collection(collectionToUse);
     }
     
-    tryAddNewTransformation() {
-        // 1. TODO: Think what we want to do if there is an edited transfromation that is already opened but Not saved yet...
-        // 2. add..
-        this.addNewTransformation();
-    }
-
-    private addNewTransformation() {
-        this.showEditTransformationArea(false);
-        this.editedTransformationScript().update(ongoingTaskSqlEtlTransformationModel.empty().toDto(), true);
-
-        this.showEditTransformationArea(true);                 
+    addNewTransformation() {
+        this.transformationScriptSelectedForEdit(null);
+        this.editedTransformationScriptSandbox(ongoingTaskSqlEtlTransformationModel.empty());
     }
 
     cancelEditedTransformation() {
-        this.showEditTransformationArea(false);
+        this.editedTransformationScriptSandbox(null);
+        this.transformationScriptSelectedForEdit(null);
     }    
     
     saveEditedTransformation() {
-        const transformation = this.editedTransformationScript();
+        const transformation = this.editedTransformationScriptSandbox();
         
-        // 1. Validate
         if (!this.isValid(transformation.validationGroup)) {
             return;
         }
 
-        // 2. Save
         if (transformation.isNew()) {
-            let newTransformationItem = new ongoingTaskSqlEtlTransformationModel({
-                ApplyToAllDocuments: false,
-                Collections: [transformation.collection()],
-                Disabled: false,
-                HasLoadAttachment: false,
-                Name: transformation.name(),
-                Script: transformation.script()
-            }, true);
-
+            const newTransformationItem = new ongoingTaskSqlEtlTransformationModel(transformation.toDto(), false);
+            newTransformationItem.name(this.findNameForNewTransformation());
+            newTransformationItem.dirtyFlag().forceDirty();
             this.editedSqlEtl().transformationScripts.push(newTransformationItem);
-        }
-        else {
-            let item = this.editedSqlEtl().transformationScripts().find(x => x.name() === transformation.name());
-            item.collection(transformation.collection());
-            item.script(transformation.script());
+        } else {
+            const oldItem = this.editedSqlEtl().transformationScripts().find(x => x.name() === transformation.name());
+            const newItem = new ongoingTaskSqlEtlTransformationModel(transformation.toDto(), false);
+            
+            if (oldItem.dirtyFlag().isDirty() || newItem.hasUpdates(oldItem)) {
+                newItem.dirtyFlag().forceDirty();
+            }
+
+            this.editedSqlEtl().transformationScripts.replace(oldItem, newItem);
         }
 
-        // 3. Sort
         this.editedSqlEtl().transformationScripts.sort((a, b) => a.name().toLowerCase().localeCompare(b.name().toLowerCase()));
-
-        // 4. Clear
-        this.showEditTransformationArea(false);
-        // todo: handle dirty flag (reset)     
+        this.editedTransformationScriptSandbox(null);
     }
 
-    confirmRemoveTransformationScript(model: ongoingTaskSqlEtlTransformationModel) {
-        const db = this.activeDatabase();
-
-        const confirmDeleteViewModel = new deleteTransformationScriptConfirm(db, model.name());
-        app.showBootstrapDialog(confirmDeleteViewModel);
-        confirmDeleteViewModel.result.done(result => {
-            if (result.can) {
-                this.editedSqlEtl().transformationScripts.remove(x => model.name() === x.name());
-                this.showEditTransformationArea(false);
-            }
+    private findNameForNewTransformation() {
+        const scriptsWithPrefix = this.editedSqlEtl().transformationScripts().filter(script => {
+            return script.name().startsWith(editSqlEtlTask.scriptNamePrefix);
         });
+
+        const maxNumber =  _.max(scriptsWithPrefix
+            .map(x => x.name().substr(editSqlEtlTask.scriptNamePrefix.length))
+            .map(x => _.toInteger(x))) || 0;
+
+        return editSqlEtlTask.scriptNamePrefix + (maxNumber + 1);
+    }
+
+
+    removeTransformationScript(model: ongoingTaskSqlEtlTransformationModel) {
+        this.editedSqlEtl().transformationScripts.remove(x => model.name() === x.name());
+        
+        if (this.transformationScriptSelectedForEdit() === model) {
+            this.editedTransformationScriptSandbox(null);
+            this.transformationScriptSelectedForEdit(null);
+        }
     }
 
     editTransformationScript(model: ongoingTaskSqlEtlTransformationModel) {
-        this.editedTransformationScript().update(model.toDto(), false);
-        this.showEditTransformationArea(true); 
+        this.transformationScriptSelectedForEdit(model);
+        this.editedTransformationScriptSandbox(new ongoingTaskSqlEtlTransformationModel(model.toDto(), false));
+    }
+
+    createCollectionNameAutocompleter(collectionText: KnockoutObservable<string>) {
+        return ko.pureComputed(() => {
+            const key = collectionText();
+
+            const options = this.collectionNames();
+
+            if (key) {
+                return options.filter(x => x.toLowerCase().includes(key.toLowerCase()));
+            } else {
+                return options;
+            }
+        });
     }
     
     /********************************/
@@ -320,59 +366,38 @@ class editSqlEtlTask extends viewModelBase {
     /********************************/
 
     addNewSqlTable() {
-        this.showEditSqlTableArea(false);
-        this.editedSqlTable().update(ongoingTaskSqlEtlTableModel.empty().toDto(), true);
-
-        this.showEditSqlTableArea(true);
-        // todo: handle dirty flag (reset)          
-    }
-
-    confirmRemoveSqlTable(model: ongoingTaskSqlEtlTableModel) {
-        const db = this.activeDatabase();
-
-        const confirmDeleteViewModel = new deleteSqlTableConfirm(db, model.tableName()); 
-        app.showBootstrapDialog(confirmDeleteViewModel)
-        confirmDeleteViewModel.result.done(result => {
-            if (result.can) {                
-                this.editedSqlEtl().sqlTables.remove(x => model.tableName() === x.tableName());
-            }
-        });
+        this.editedSqlTable(ongoingTaskSqlEtlTableModel.empty());
+        // todo: handle dirty flag (reset) 
     }
 
     cancelEditedSqlTable() {
-        this.showEditSqlTableArea(false);
+        this.editedSqlTable(null);
         // todo: handle dirty flag (reset)     
     }   
        
     saveEditedSqlTable() {
-        // 1. Validate
-        if (!this.isValid(this.editedSqlTable().validationGroup)) {
+        const sqlTable = this.editedSqlTable();
+        if (!this.isValid(sqlTable.validationGroup)) {
             return;
         }
 
-        // 2. Save
-        let item = this.editedSqlEtl().sqlTables().find(x => x.tableName() === this.editedSqlTable().tableName());
-        if (item) {
-            item.tableName(this.editedSqlTable().tableName());
-            item.documentIdColumn(this.editedSqlTable().documentIdColumn());
-            item.insertOnlyMode(this.editedSqlTable().insertOnlyMode());
+        if (sqlTable.isNew()) {
+            const newSqlTable = new ongoingTaskSqlEtlTableModel(sqlTable.toDto(), false);
+            newSqlTable.dirtyFlag().forceDirty();
+            this.editedSqlEtl().sqlTables.push(newSqlTable);
+        } else {
+            const oldItem = this.editedSqlEtl().sqlTables().find(x => x.tableName() === sqlTable.tableName());
+            const newItem = new ongoingTaskSqlEtlTableModel(sqlTable.toDto(), false);
+            
+            if (oldItem.dirtyFlag().isDirty() || newItem.hasUpdates(oldItem)) {
+                newItem.dirtyFlag().forceDirty();
+            }
+            
+            this.editedSqlEtl().sqlTables.replace(oldItem,  newItem);
         }
-        else {
-            let newSqlTableItem = new ongoingTaskSqlEtlTableModel({
-                TableName: this.editedSqlTable().tableName(),
-                DocumentIdColumn: this.editedSqlTable().documentIdColumn(),
-                InsertOnlyMode: this.editedSqlTable().insertOnlyMode()
-            }, true);
-
-            this.editedSqlEtl().sqlTables.push(newSqlTableItem);
-        }
-
-        // 3. Sort & reset
+        
         this.editedSqlEtl().sqlTables.sort((a, b) => a.tableName().toLowerCase().localeCompare(b.tableName().toLowerCase()));
-        this.editedSqlTable(ongoingTaskSqlEtlTableModel.empty());
-
-        // 4. handle dirty flag...
-        // todo: ...  
+        this.editedSqlTable(null);
     }
     
     deleteSqlTable(sqlTable: ongoingTaskSqlEtlTableModel) {
@@ -380,8 +405,7 @@ class editSqlEtlTask extends viewModelBase {
     }
 
     editSqlTable(sqlTable: ongoingTaskSqlEtlTableModel) {
-        this.editedSqlTable().update(sqlTable.toDto(), false);
-        this.showEditSqlTableArea(true);
+        this.editedSqlTable(new ongoingTaskSqlEtlTableModel(sqlTable.toDto(), false));
     }
 }
 

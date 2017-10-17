@@ -67,8 +67,8 @@ class collectionsTracker {
         return matchedCollection ? matchedCollection.documentCount() : 0;
     }
     
-    getCollectionColorIndex(collectionName: string) {
-        return (_.findIndex(collectionsTracker.default.collections(), x => x.name === collectionName) - 1) % 6;
+    getCollectionColorIndex(collectionName: string) { //TODO: remove and compute based on collection name
+        return (_.findIndex(collectionsTracker.default.collections(), x => x.name === collectionName) + 5) % 6;
         // 6 is the number of classes that I have defined in etl.less for colors...
     }    
     

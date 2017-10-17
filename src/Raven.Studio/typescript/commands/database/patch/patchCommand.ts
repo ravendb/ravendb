@@ -4,6 +4,7 @@ import endpoints = require("endpoints");
 
 interface patchCommandOptions {
     test: boolean;
+    documentId?: string;
 }
 
 class patchCommand extends commandBase {
@@ -11,13 +12,15 @@ class patchCommand extends commandBase {
     constructor(private queryStr: string, private db: database, private options: patchCommandOptions = null) {
         super();
         this.options = this.options || {
-            test: false
+            test: false,
+            documentId: null
         };
     }
 
     execute(): JQueryPromise<operationIdDto> {
         const args = {
-            allowStale: true
+            allowStale: true,
+            id: this.options.test ? this.options.documentId : undefined
         };
 
         const payload = {

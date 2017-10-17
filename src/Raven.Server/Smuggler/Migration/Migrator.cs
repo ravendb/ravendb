@@ -28,7 +28,7 @@ namespace Raven.Server.Smuggler.Migration
         private readonly string _serverUrl;
         private readonly ServerStore _serverStore;
         private readonly CancellationToken _cancellationToken;
-        private BuildInfo _buildInfo;
+        private MajorVersion _buildMajorVersion;
 
         public Migrator(
             MigrationConfigurationBase configuration, 
@@ -55,21 +55,23 @@ namespace Raven.Server.Smuggler.Migration
             _serverUrl = configuration.ServerUrl.TrimEnd('/');
             
             _serverStore = serverStore;
-            _buildInfo = configuration.BuildInfo;
+            _buildMajorVersion = configuration.BuildMajorVersion;
             _cancellationToken = cancellationToken;
         }
 
         public async Task UpdateBuildInfoIfNeeded()
         {
-            if (_buildInfo != null && _buildInfo.MajorVersion != MajorVersion.Unknown)
+            if (_buildMajorVersion != MajorVersion.Unknown)
                 return;
 
-            _buildInfo = await GetBuildInfo();
+            var buildInfo = await GetBuildInfo();
+            
+            this._buildMajorVersion = buildInfo.MajorVersion;
 
-            if (_buildInfo.MajorVersion == MajorVersion.Unknown)
+            if (buildInfo.MajorVersion == MajorVersion.Unknown)
             {
-                throw new InvalidOperationException($"Unknown build version: {_buildInfo.BuildVersion}, " +
-                                                    $"product version: {_buildInfo.ProductVersion}");
+                throw new InvalidOperationException($"Unknown build version: {buildInfo.BuildVersion}, " +
+                                                    $"product version: {buildInfo.ProductVersion}");
             }
         }
 
@@ -102,6 +104,10 @@ namespace Raven.Server.Smuggler.Migration
                 else if (buildVersion >= 35000)
                 {
                     version = MajorVersion.V35;
+                }
+                else if (buildVersion >= 20000)
+                {
+                    version = MajorVersion.V2;
                 }
                 else if (buildVersion >= 3000)
                 {
@@ -168,14 +174,10 @@ namespace Raven.Server.Smuggler.Migration
                 {
                     onProgress?.Invoke(result.Progress);
 
-                    var majorVersion = _buildInfo.MajorVersion;
-                    var message = $"Importing from RavenDB {GetDescription(majorVersion)}, " +
-                                  $"build version: {_buildInfo.BuildVersion}";
+                    var majorVersion = _buildMajorVersion;
+                    var message = $"Importing from RavenDB {GetDescription(majorVersion)}";
 
-                    if (string.IsNullOrWhiteSpace(_buildInfo.FullVersion) == false)
-                        message += $", full version: {_buildInfo.FullVersion}";
-
-                    result.AddMessage(message);
+                    result.AddInfo(message);
 
                     using (cancelToken)
                     {

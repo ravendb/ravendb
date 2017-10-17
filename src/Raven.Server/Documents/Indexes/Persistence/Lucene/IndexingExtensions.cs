@@ -5,8 +5,9 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.IO;
 using System.Reflection;
-
+using System.Runtime.Loader;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 
@@ -55,6 +56,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 throw new InvalidOperationException($"Cannot find analyzer type '{analyzerTypeAsString}' for field: {name}");
 
             return analyzerType;
+        }
+
+        static IndexingExtensions()
+        {
+            AssemblyLoadContext.Default.Resolving += (context, name) =>
+            {
+                var assemblyPath = Path.Combine(AppContext.BaseDirectory, name.Name + ".dll");
+                var loadFromAssemblyPath = context.LoadFromAssemblyPath(assemblyPath);
+                if (loadFromAssemblyPath == null)
+                    throw new FileNotFoundException("Unable to load " + name.FullName + " from " + assemblyPath);
+                return loadFromAssemblyPath;
+            };
         }
     }
 }

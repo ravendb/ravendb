@@ -33,7 +33,7 @@ namespace Raven.Server.Web.Studio
                     .GetManifestResourceStream("Raven.Server.Web.Studio.EmbeddedData.Northwind_3.5.35168.ravendbdump"))
                 {
                     using (var stream = new GZipStream(sampleData, CompressionMode.Decompress))
-                    using (var source = new StreamSource(stream, context))
+                    using (var source = new StreamSource(stream, context, Database))
                     {
                         var destination = new DatabaseDestination(Database);
 

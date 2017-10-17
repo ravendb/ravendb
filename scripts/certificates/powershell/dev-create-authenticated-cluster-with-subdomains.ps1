@@ -23,7 +23,7 @@ $ErrorActionPreference = "Stop"
 $SecurePassword = ConvertTo-SecureString $CertificatePassword -asplaintext -force
 
 # generate server certificate
-pushd "$serverDir\scripts\certificates\"
+pushd "$serverDir\scripts\certificates\powershell\"
 ./generate-server-cert.ps1 -CN *.hrhinos.local -CertificatePassword $SecurePassword
 popd
 
@@ -47,7 +47,7 @@ popd
 pushd $serverDir
 $commonArgs = "--Cluster.TimeBeforeAddingReplicaInSec=15"
 
-$authArgs = "--Security.Certificate.Path=$serverDir\scripts\certificates\server.pfx --Security.Certificate.Password=$CertificatePassword"
+$authArgs = "--Security.Certificate.Path=$serverDir\scripts\certificates\powershell\server.pfx --Security.Certificate.Password=$CertificatePassword"
 
 for($i=1; $i -le $nodeCount; $i++){
     start powershell "-NoExit -NoProfile dotnet run -p .\src\Raven.Server\Raven.Server.csproj --ServerUrl=https://rvn$i.hrhinos.local:8080 DataDir=$serverDir\src\Raven.Server\bin\$conf\netcoreapp2.0\$i --Logs.Path=$serverDir\src\Raven.Server\bin\$conf\netcoreapp2.0\$i --License.Path=$licensePath $commonArgs $authArgs"
@@ -58,7 +58,7 @@ write-host "Before you continue, make sure that server https://rvn1.hrhinos.loca
 sleep 3
 
 # obtain client cert using server cert
-pushd "$serverDir\scripts\certificates\"
+pushd "$serverDir\scripts\certificates\powershell\"
 ./obtain-cluster-admin-client-cert.ps1 -ServerUrl https://rvn1.hrhinos.local:8080 -ClientCertPassword $CertificatePassword
 
 

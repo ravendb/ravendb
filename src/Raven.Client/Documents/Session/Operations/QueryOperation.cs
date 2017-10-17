@@ -163,13 +163,10 @@ namespace Raven.Client.Documents.Session.Operations
 
             if (_waitForNonStaleResults && result.IsStale)
             {
-                if (_sp.Elapsed > _timeout)
-                {
-                    _sp.Stop();
-                    var msg = $"Waited for {_sp.ElapsedMilliseconds:#,#;;0}ms for the query to return non stale result.";
+                _sp.Stop();
+                var msg = $"Waited for {_sp.ElapsedMilliseconds:#,#;;0}ms for the query to return non stale result.";
 
-                    throw new TimeoutException(msg);
-                }
+                throw new TimeoutException(msg);
             }
 
             _currentQueryResults = result;

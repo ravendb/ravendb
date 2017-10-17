@@ -17,7 +17,7 @@ class deleteOngoingTaskCommand extends commandBase {
                                                        endpoints.databases.ongoingTasks.adminTasks;
 
         return this.del<Raven.Client.ServerWide.Operations.ModifyOngoingTaskResult>(url + this.urlEncodeArgs(args), null, this.db)
-            .done(() => this.reportSuccess(`Successfullly deleted ${this.taskType} task`))
+            .done(() => this.reportSuccess(`successfully deleted ${this.taskType} task`))
             .fail((response: JQueryXHR) => this.reportError(`Failed to delete ${this.taskType}`, response.responseText));
     }
 }

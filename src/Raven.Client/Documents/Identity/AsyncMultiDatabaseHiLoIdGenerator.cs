@@ -12,29 +12,29 @@ namespace Raven.Client.Documents.Identity
 {
     public class AsyncMultiDatabaseHiLoIdGenerator
     {
-        private readonly DocumentStore _store;
-        private readonly DocumentConventions _conventions;
+        protected readonly DocumentStore Store;
+        protected readonly DocumentConventions Conventions;
 
         private readonly ConcurrentDictionary<string, AsyncMultiTypeHiLoIdGenerator> _generators =
             new ConcurrentDictionary<string, AsyncMultiTypeHiLoIdGenerator>();
 
         public AsyncMultiDatabaseHiLoIdGenerator(DocumentStore store, DocumentConventions conventions)
         {
-            _store = store;
-            _conventions = conventions;
+            Store = store;
+            Conventions = conventions;
         }
 
 
         public Task<string> GenerateDocumentIdAsync(string dbName, object entity)
         {
-            var db = dbName ?? _store.Database;
+            var db = dbName ?? Store.Database;
             var generator = _generators.GetOrAdd(db, GenerateAsyncMultiTypeHiLoFunc);
             return generator.GenerateDocumentIdAsync(entity);
         }
 
-        public AsyncMultiTypeHiLoIdGenerator GenerateAsyncMultiTypeHiLoFunc(string dbName)
+        public virtual AsyncMultiTypeHiLoIdGenerator GenerateAsyncMultiTypeHiLoFunc(string dbName)
         {
-            return new AsyncMultiTypeHiLoIdGenerator(_store, dbName, _conventions);
+            return new AsyncMultiTypeHiLoIdGenerator(Store, dbName, Conventions);
         }
 
         public async Task ReturnUnusedRange()

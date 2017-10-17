@@ -494,6 +494,14 @@ namespace Raven.Server.Json
                 writer.WriteComma();
             }
 
+            writer.WritePropertyName(nameof(statistics.CountOfDocumentsConflicts));
+            writer.WriteInteger(statistics.CountOfDocumentsConflicts);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(statistics.CountOfConflicts));
+            writer.WriteInteger(statistics.CountOfConflicts);
+            writer.WriteComma();
+
             writer.WritePropertyName(nameof(statistics.CountOfAttachments));
             writer.WriteInteger(statistics.CountOfAttachments);
             writer.WriteComma();
@@ -534,6 +542,19 @@ namespace Raven.Server.Json
                 writer.WriteDateTime(statistics.LastIndexingTime.Value, isUtc: true);
             else
                 writer.WriteNull();
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(statistics.SizeOnDisk));
+            writer.WriteStartObject();
+
+            writer.WritePropertyName(nameof(statistics.SizeOnDisk.HumaneSize));
+            writer.WriteString(statistics.SizeOnDisk.HumaneSize);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(statistics.SizeOnDisk.SizeInBytes));
+            writer.WriteInteger(statistics.SizeOnDisk.SizeInBytes);
+
+            writer.WriteEndObject();
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(statistics.Indexes));

@@ -1,4 +1,5 @@
 ﻿import backupSettings = require("models/database/tasks/periodicBackup/backupSettings");
+import jsonUtil = require("common/jsonUtil");
 
 abstract class amazonSettings extends backupSettings {
     awsAccessKey = ko.observable<string>();
@@ -28,8 +29,8 @@ abstract class amazonSettings extends backupSettings {
         { label: "US West (Oregon)", value: "us-west-2", hasS3: true, hasGlacier: true }
     ];
 
-    constructor(dto: Raven.Client.ServerWide.PeriodicBackup.AmazonSettings) {
-        super(dto);
+    constructor(dto: Raven.Client.ServerWide.PeriodicBackup.AmazonSettings, connectionType: Raven.Server.Documents.PeriodicBackup.PeriodicBackupTestConnectionType) {
+        super(dto, connectionType);
 
         this.awsAccessKey(dto.AwsAccessKey);
         this.awsSecretKey(dto.AwsSecretKey);
@@ -53,6 +54,13 @@ abstract class amazonSettings extends backupSettings {
 
             this.awsRegionName(newSelectedAwsRegion.trim());
         });
+        
+        this.dirtyFlag = new ko.DirtyFlag([
+            this.awsAccessKey,
+            this.awsSecretKey,
+            this.awsRegionName,
+            this.selectedAwsRegion
+        ], false, jsonUtil.newLineNormalizingHashFunction);
     }
 
     initAmazonValidation() {

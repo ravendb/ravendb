@@ -21,6 +21,7 @@ namespace Raven.Server.Smuggler.Documents
         public Document Document;
         public List<AttachmentStream> Attachments;
         public DocumentTombstone Tombstone;
+        public DocumentConflict Conflict;
 
         public struct AttachmentStream : IDisposable
         {

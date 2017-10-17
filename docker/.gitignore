@@ -1,2 +1,4 @@
 *.tar.bz2
 *.zip
+secrets.env
+license.env

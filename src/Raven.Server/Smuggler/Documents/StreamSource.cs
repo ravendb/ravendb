@@ -8,12 +8,14 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Util;
 using Raven.Server.Documents;
+using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 using Sparrow.Utils;
 using Voron;
 using Size = Sparrow.Size;
@@ -24,6 +26,8 @@ namespace Raven.Server.Smuggler.Documents
     {
         private readonly PeepingTomStream _peepingTomStream;
         private readonly DocumentsOperationContext _context;
+        private readonly Logger _log;
+
         private JsonOperationContext.ManagedPinnedBuffer _buffer;
         private JsonOperationContext.ReturnBuffer _returnBuffer;
         private JsonOperationContext.ManagedPinnedBuffer _writeBuffer;
@@ -38,10 +42,11 @@ namespace Raven.Server.Smuggler.Documents
 
         private Size _totalObjectsRead = new Size(0, SizeUnit.Bytes);
 
-        public StreamSource(Stream stream, DocumentsOperationContext context)
+        public StreamSource(Stream stream, DocumentsOperationContext context, DocumentDatabase database)
         {
             _peepingTomStream = new PeepingTomStream(stream, context);
             _context = context;
+            _log = LoggingSource.Instance.GetLogger<StreamSource>(database.Name);
         }
 
         public IDisposable Initialize(DatabaseSmugglerOptions options, SmugglerResult result, out long buildVersion)
@@ -103,6 +108,7 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.Documents:
                 case DatabaseItemType.RevisionDocuments:
                 case DatabaseItemType.Tombstones:
+                case DatabaseItemType.Conflicts:
                 case DatabaseItemType.Indexes:
                 case DatabaseItemType.Identities:
                     return SkipArray();
@@ -129,6 +135,11 @@ namespace Raven.Server.Smuggler.Documents
         public IEnumerable<DocumentTombstone> GetTombstones(List<string> collectionsToExport, INewDocumentActions actions)
         {
             return ReadTombstones(actions);
+        }
+
+        public IEnumerable<DocumentConflict> GetConflicts(List<string> collectionsToExport, INewDocumentActions actions)
+        {
+            return ReadConflicts(actions);
         }
 
         public IEnumerable<IndexDefinitionAndType> GetIndexes()
@@ -495,6 +506,83 @@ namespace Raven.Server.Smuggler.Documents
                         tombstone.Type = Enum.Parse<DocumentTombstone.TombstoneType>(type);
                         yield return tombstone;
                     }
+                    else
+                    {
+                        var msg = "Ignoring an invalied tombstone which you try to import. " + data;
+                        if (_log.IsOperationsEnabled)
+                            _log.Operations(msg);
+
+                        _result.Tombstones.ErroredCount++;
+                        _result.AddWarning(msg);
+                    }
+                }
+            }
+            finally
+            {
+                builder.Dispose();
+            }
+        }
+
+        private IEnumerable<DocumentConflict> ReadConflicts(INewDocumentActions actions = null)
+        {
+            if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
+                UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json", _peepingTomStream, _parser);
+
+            if (_state.CurrentTokenType != JsonParserToken.StartArray)
+                UnmanagedJsonParserHelper.ThrowInvalidJson("Expected start array, but got " + _state.CurrentTokenType, _peepingTomStream, _parser);
+
+            var context = _context;
+            var builder = CreateBuilder(context, null);
+            try
+            {
+                while (true)
+                {
+                    if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
+                        UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json while reading docs", _peepingTomStream, _parser);
+
+                    if (_state.CurrentTokenType == JsonParserToken.EndArray)
+                        break;
+
+                    if (actions != null)
+                    {
+                        var oldContext = context;
+                        context = actions.GetContextForNewDocument();
+                        if (oldContext != context)
+                        {
+                            builder.Dispose();
+                            builder = CreateBuilder(context, null);
+                        }
+                    }
+                    builder.Renew("import/object", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+
+                    ReadObject(builder);
+
+                    var data = builder.CreateReader();
+                    builder.Reset();
+
+                    var conflict = new DocumentConflict();
+                    if (data.TryGet(nameof(DocumentConflict.Id), out conflict.Id) && 
+                        data.TryGet(nameof(DocumentConflict.Collection), out conflict.Collection) && 
+                        data.TryGet(nameof(DocumentConflict.Flags), out string flags) && 
+                        data.TryGet(nameof(DocumentConflict.ChangeVector), out conflict.ChangeVector) && 
+                        data.TryGet(nameof(DocumentConflict.Etag), out conflict.Etag) && 
+                        data.TryGet(nameof(DocumentConflict.LastModified), out conflict.LastModified) && 
+                        data.TryGet(nameof(DocumentConflict.Doc), out conflict.Doc))
+                    {
+                        conflict.Flags = Enum.Parse<DocumentFlags>(flags);
+                        if (conflict.Doc != null) // This is null for conflict that was generated from tombstone
+                            conflict.Doc = context.ReadObject(conflict.Doc, conflict.Id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                        yield return conflict;
+                    }
+                    else
+                    {
+                        var msg = "Ignoring an invalied conflict which you try to import. " + data;
+                        if (_log.IsOperationsEnabled)
+                            _log.Operations(msg);
+
+                        _result.Conflicts.ErroredCount++;
+                        _result.AddWarning(msg);
+                    }
                 }
             }
             finally
@@ -617,6 +705,9 @@ namespace Raven.Server.Smuggler.Documents
 
             if (type.Equals(nameof(DatabaseItemType.Tombstones), StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.Tombstones;
+
+            if (type.Equals(nameof(DatabaseItemType.Conflicts), StringComparison.OrdinalIgnoreCase))
+                return DatabaseItemType.Conflicts;
 
             if (type.Equals(nameof(DatabaseItemType.Indexes), StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.Indexes;

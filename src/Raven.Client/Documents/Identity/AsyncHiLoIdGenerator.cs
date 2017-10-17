@@ -20,7 +20,7 @@ namespace Raven.Client.Documents.Identity
     {
         private readonly DocumentStore _store;
         private readonly string _tag;
-        private string _prefix;
+        protected string Prefix;
         private long _lastBatchSize;
         private DateTime _lastRangeDate;
         private readonly string _dbName;
@@ -40,9 +40,9 @@ namespace Raven.Client.Documents.Identity
             _range = new RangeValue(1, 0);
         }
 
-        protected string GetDocumentIdFromId(long nextId)
+        protected virtual string GetDocumentIdFromId(long nextId)
         {
-            return $"{_prefix}{nextId}-{_serverTag}";
+            return $"{Prefix}{nextId}-{ServerTag}";
         }
 
         protected RangeValue Range
@@ -67,7 +67,7 @@ namespace Raven.Client.Documents.Identity
         }
 
         private Lazy<Task> _nextRangeTask;
-        private string _serverTag;
+        protected string ServerTag;
 
         /// <summary>
         /// Generates the document ID.
@@ -116,8 +116,8 @@ namespace Raven.Client.Documents.Identity
                 await re.ExecuteAsync(hiloCommand, context).ConfigureAwait(false);
             }
 
-            _prefix = hiloCommand.Result.Prefix;
-            _serverTag = hiloCommand.Result.ServerTag;
+            Prefix = hiloCommand.Result.Prefix;
+            ServerTag = hiloCommand.Result.ServerTag;
             _lastRangeDate = hiloCommand.Result.LastRangeAt;
             _lastBatchSize = hiloCommand.Result.LastSize;
             Range = new RangeValue(hiloCommand.Result.Low, hiloCommand.Result.High);

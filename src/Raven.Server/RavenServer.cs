@@ -374,7 +374,10 @@ namespace Raven.Server
                 var tls = context.Features.Get<ITlsConnectionFeature>();
                 var certificate = tls?.ClientCertificate;
                 var authenticationStatus = _server.AuthenticateConnectionCertificate(certificate);
-
+                
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations($"Received TLS connection request with client certificate: {certificate?.SubjectName?.Name}. Authentication status: {authenticationStatus.Status}.");
+                
                 // build the token
                 context.Features.Set<IHttpAuthenticationFeature>(authenticationStatus);
 
@@ -436,6 +439,10 @@ namespace Raven.Server
                         var definition = JsonDeserializationServer.CertificateDefinition(cert);
                         authenticationStatus.Definition = definition;
                         if (definition.SecurityClearance == SecurityClearance.ClusterAdmin)
+                        {
+                            authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
+                        }
+                        else if (definition.SecurityClearance == SecurityClearance.ClusterNode)
                         {
                             authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
                         }

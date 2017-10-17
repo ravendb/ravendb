@@ -73,11 +73,8 @@ namespace Raven.Client.ServerWide.ETL
 
         public ulong GetTaskKey()
         {
-            Debug.Assert(Name != null);
-            Debug.Assert(ConnectionStringName != null);
-
-            return _taskKey ?? (_taskKey = Hashing.XXHash64.Calculate(Name.ToLowerInvariant(), Encodings.Utf8) ^
-                                           Hashing.XXHash64.Calculate(ConnectionStringName.ToLowerInvariant(), Encodings.Utf8)).Value;
+            Debug.Assert(TaskId != 0);
+            return (ulong)TaskId;
         }
 
         public string GetMentorNode()

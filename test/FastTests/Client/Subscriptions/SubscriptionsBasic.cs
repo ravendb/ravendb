@@ -861,8 +861,7 @@ namespace FastTests.Client.Subscriptions
         public async Task RunningSubscriptionShouldJumpToNextChangeVectorIfItWasChangedByAdmin()
         {
             using (var store = GetDocumentStore())
-            {
-                Server.ServerStore.Observer.Suspended = true;
+            {                
                 var subscriptionId = store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
                 using (var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId)
                 {
@@ -893,7 +892,6 @@ namespace FastTests.Client.Subscriptions
                         }
                         return Task.CompletedTask;
                     };
-                    var t = subscription.Run(x => x.Items.ForEach(i => users.Add(i.Result)));
 
                     using (var session = store.OpenSession())
                     {
@@ -907,6 +905,7 @@ namespace FastTests.Client.Subscriptions
                         var metadata = session.Advanced.GetMetadataFor(newUser);
                         cvFirst = (string)metadata[Raven.Client.Constants.Documents.Metadata.ChangeVector];
                     }
+                    var t = subscription.Run(x => x.Items.ForEach(i => users.Add(i.Result)));
 
                     var firstItemchangeVector = cvFirst.ToChangeVector();
                     firstItemchangeVector[0].Etag += 10;

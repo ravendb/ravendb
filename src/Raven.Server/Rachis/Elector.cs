@@ -9,12 +9,21 @@ namespace Raven.Server.Rachis
     {
         private readonly RachisConsensus _engine;
         private readonly RemoteConnection _connection;
-        private Thread _thread;
 
         public Elector(RachisConsensus engine, RemoteConnection connection)
         {
             _engine = engine;
             _connection = connection;
+        }
+
+
+        public void Run()
+        {
+            _thread = new Thread(HandleVoteRequest)
+            {
+                Name = $"{_engine.Tag} elector for candidate {_connection.Source}"
+            };
+            _thread.Start();
         }
 
         public void HandleVoteRequest()
@@ -26,6 +35,20 @@ namespace Raven.Server.Rachis
                     using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     {
                         var rv = _connection.Read<RequestVote>(context);
+
+                        if (rv.ElectionResult == ElectionResult.Won)
+                        {
+                            ElectionWon = true;
+                            var follower = new Follower(_engine, _connection);
+                            follower.TryAcceptConnection();
+                            return;
+                        }
+
+                        if (rv.ElectionResult == ElectionResult.Lost)
+                        {
+                            _connection.Dispose();
+                            return;
+                        }
 
                         ClusterTopology clusterTopology;
                         long lastIndex;
@@ -95,8 +118,7 @@ namespace Raven.Server.Rachis
                                 VoteGranted = false,
                                 Message = $"Already voted in {rv.LastLogTerm}, for {whoGotMyVoteIn}"
                             });
-                            _connection.Dispose();
-                            return;
+                            continue;
                         }
 
                         if (lastTerm > rv.LastLogTerm)
@@ -107,8 +129,7 @@ namespace Raven.Server.Rachis
                                 VoteGranted = false,
                                 Message = $"My last log entry is of term {lastTerm} / {lastIndex} while yours is {rv.LastLogTerm}, so I'm more up to date"
                             });
-                            _connection.Dispose();
-                            return;
+                            continue;
                         }
 
                         if (lastIndex > rv.LastLogIndex)
@@ -117,10 +138,10 @@ namespace Raven.Server.Rachis
                             {
                                 Term = _engine.CurrentTerm,
                                 VoteGranted = false,
-                                Message = $"My last log entry is of term {lastTerm} / {lastIndex} while yours is {rv.LastLogTerm} / {rv.LastLogIndex}, so I'm more up to date"
+                                Message =
+                                    $"My last log entry is of term {lastTerm} / {lastIndex} while yours is {rv.LastLogTerm} / {rv.LastLogIndex}, so I'm more up to date"
                             });
-                            _connection.Dispose();
-                            return;
+                            continue;
                         }
 
                         if (rv.IsTrialElection)
@@ -133,8 +154,7 @@ namespace Raven.Server.Rachis
                                     VoteGranted = false,
                                     Message = $"My leader {currentLeader} is keeping me up to date, so I don't want to vote for you"
                                 });
-                                _connection.Dispose();
-                                return;
+                                continue;
                             }
 
                             _connection.Send(context, new RequestVoteResponse
@@ -143,17 +163,6 @@ namespace Raven.Server.Rachis
                                 VoteGranted = true,
                                 Message = "I might vote for you"
                             });
-                            if (_thread == null) // let's wait for this in another thread
-                            {
-                                _thread = new Thread(HandleVoteRequest)
-                                {
-                                    Name =
-                                        $"Elector thread for {rv.Source} > {_engine.Tag}",
-                                    IsBackground = true
-                                };
-                                _thread.Start();
-                                return;
-                            }
                             continue;
                         }
 
@@ -189,7 +198,6 @@ namespace Raven.Server.Rachis
                                 Message = "I've voted for you"
                             });
                         }
-                        _connection.Dispose();
                     }
                 }
             }
@@ -210,13 +218,25 @@ namespace Raven.Server.Rachis
                     _engine.Log.Info("Failed to talk to candidate: " + _engine.Tag, e);
                 }
             }
+            finally
+            {
+                if (ElectionWon == false)
+                {
+                    _connection.Dispose();
+                }
+            }
         }
+
+        public bool ElectionWon;
+        private Thread _thread;
 
         public void Dispose()
         {
-            _connection?.Dispose();
-            if (_thread != null &&
-                _thread.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
+            if (ElectionWon == false)
+            {
+                _connection.Dispose();
+            }
+            if (_thread != null && _thread.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
                 _thread.Join();
         }
     }

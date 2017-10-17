@@ -1,15 +1,24 @@
 ﻿import amazonSettings = require("models/database/tasks/periodicBackup/amazonSettings");
+import jsonUtil = require("common/jsonUtil");
 
 class glacierSettings extends amazonSettings {
     vaultName = ko.observable<string>();
 
     constructor(dto: Raven.Client.ServerWide.PeriodicBackup.GlacierSettings) {
-        super(dto);
+        super(dto, "Glacier");
 
         this.vaultName(dto.VaultName);
 
-        this.connectionType = "Glacier";
         this.initValidation();
+
+        this.dirtyFlag = new ko.DirtyFlag([
+            this.enabled,
+            this.vaultName,
+            this.awsAccessKey,
+            this.awsSecretKey,
+            this.awsRegionName,
+            this. selectedAwsRegion
+        ], false, jsonUtil.newLineNormalizingHashFunction);
     }
 
     initValidation() {

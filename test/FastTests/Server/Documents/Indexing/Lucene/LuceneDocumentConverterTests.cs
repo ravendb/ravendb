@@ -456,8 +456,6 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             };
         }
 
-
-
         public override void Dispose()
         {
             foreach (var docReader in _docs)

@@ -54,7 +54,13 @@ namespace Raven.Server.Documents.Patch
         {
             try
             {
-                var engine = new Engine(options => { options.MaxStatements(1).LimitRecursion(1); });
+                var engine = new Engine(options =>
+                {
+                    options.MaxStatements(1).LimitRecursion(1);
+                    options.LocalTimeZone(TimeZoneInfo.Utc);
+
+
+                });
                 engine.Execute(script);
             }
             catch (Exception e)
@@ -95,7 +101,9 @@ namespace Raven.Server.Documents.Patch
                         .AddObjectConverter(new JintStringConverter())
                         .AddObjectConverter(new JintEnumConverter())
                         .AddObjectConverter(new JintDateTimeConverter())
-                        .AddObjectConverter(new JintTimeSpanConverter());
+                        .AddObjectConverter(new JintTimeSpanConverter())
+						.LocalTimeZone( TimeZoneInfo.Utc);
+                    
                 });
                 ScriptEngine.SetValue("output", new ClrFunctionInstance(ScriptEngine, OutputDebug));
 

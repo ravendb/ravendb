@@ -77,7 +77,7 @@ namespace SlowTests.Cluster
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-9020")]
         public async Task Fastst_node_should_choose_the_node_without_delay()
         {
             NoTimeouts();

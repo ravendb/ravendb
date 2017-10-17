@@ -166,6 +166,51 @@ namespace Raven.Client.Util
             }
         }
 
+        public class MathSupport : JavascriptConversionExtension
+        {
+            private static readonly Dictionary<string, string> SupportedNames = new Dictionary<string, string>{
+                {"Abs", "abs"}, {"Acos", "acos"}, {"Asin", "asin"}, {"Atan", "atan"}, {"Atan2", "atan2"},
+                {"Ceiling", "ceil"}, {"Cos", "cos"}, {"Exp", "exp"}, {"Floor", "floor"}, {"Log", "log"},
+                {"Max", "max"}, {"Min", "min" }, {"Pow", "pow" }, {"Round", "round"}, {"Sin", "sin"},
+                {"Sqrt", "sqrt"}, {"Tan", "tan"}
+            };
+
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                var methodCallExpression = context.Node as MethodCallExpression;
+                var method = methodCallExpression?.Method;
+
+                if (method == null || method.DeclaringType != typeof(Math))
+                    return;
+
+                if (SupportedNames.ContainsKey(method.Name) == false)
+                    throw new NotSupportedException($"Translation of System.Math.{method.Name} to JavaScript is not supported");
+
+                var writer = context.GetWriter();
+                context.PreventDefault();
+
+                using (writer.Operation(methodCallExpression))
+                {
+                    writer.Write("Math.");
+                    writer.Write(SupportedNames[method.Name]);
+
+                    writer.Write("(");
+
+                    for (var i = 0; i < methodCallExpression.Arguments.Count; i++)
+                    {
+                        if (i != 0)
+                        {
+                            writer.Write(", ");
+                        }
+
+                        context.Visitor.Visit(methodCallExpression.Arguments[i]);
+                    }
+
+                    writer.Write(")");
+                }
+            }
+        }
+
         public class ReplaceParameterWithThis : JavascriptConversionExtension
         {
             public ParameterExpression Parameter;
@@ -254,7 +299,6 @@ namespace Raven.Client.Util
             }
         }
 
-
         public class DateTimeSupport : JavascriptConversionExtension
         {
             public override void ConvertToJavascript(JavascriptConversionContext context)
@@ -305,9 +349,9 @@ namespace Raven.Client.Util
                         //match DateTime expressions like user.DateOfBirth, order.ShipmentInfo.DeliveryDate, etc
                         if (node.Expression != null)
                         {
-                            writer.Write("Date.parse(");
+                            writer.Write("new Date(Date.parse(");
                             context.Visitor.Visit(node.Expression); //visit inner expression (user ,order.ShipmentInfo, etc)
-                            writer.Write($".{node.Member.Name})");
+                            writer.Write($".{node.Member.Name}))");
                             return;
                         }
 
@@ -343,7 +387,10 @@ namespace Raven.Client.Util
 
                         if (memberExpression.Member.DeclaringType != typeof(DateTime))
                         {
-                            writer.Write($"Date.parse({node.Expression})");
+                            writer.Write("Date.parse(");
+                            context.Visitor.Visit(memberExpression.Expression);
+                            writer.Write($".{memberExpression.Member.Name}");
+                            writer.Write(")");
                         }
 
                         writer.Write(")");

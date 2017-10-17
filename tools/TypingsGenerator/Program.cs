@@ -190,6 +190,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(SingleDatabaseMigrationConfiguration));
             scripter.AddType(typeof(OfflineMigrationResult));
             scripter.AddType(typeof(OfflineMigrationProgress));
+            scripter.AddType(typeof(BuildInfo));
 
             // revisions
             scripter.AddType(typeof(RevisionsConfiguration));

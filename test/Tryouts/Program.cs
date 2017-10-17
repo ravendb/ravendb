@@ -3,7 +3,13 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using FastTests.Blittable;
+using FastTests.Client.Attachments;
+using FastTests.Smuggler;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Identity;
+using SlowTests.Client.Attachments;
 
 namespace RavenDB4RCTests
 {
@@ -11,14 +17,32 @@ namespace RavenDB4RCTests
     {
         static void Main(string[] args)
         {
-            for (int i = 0; i < 100; i++)
+            new SmugglerConflicts().ToDatabaseWithDifferentConflicts_AndTheImportedConflictsInAdditionToTheExistingConflicts().Wait();
+        }
+
+        static async Task MainAsync()
+        {
+            var documentStore = new DocumentStore
             {
-                Console.WriteLine(i);
-                using (var a = new SlowTests.Tests.Spatial.TwoLocations())
+                Urls = new[] {"http://4.live-test.ravendb.net"},
+                Database = "Test"
+            };
+         
+            documentStore.Initialize();
+
+            while (true)
+            {
+                using (var s = documentStore.OpenAsyncSession())
                 {
-                    a.CanQueryByMultipleLocationsOverHttp();
+                    dynamic load;
+                    using (documentStore.AggressivelyCache())
+                    {
+                        load = await s.LoadAsync<dynamic>("users/1");
+                    }
+                    Console.WriteLine(load.Name);
+                    Console.WriteLine(documentStore.GetRequestExecutor().NumberOfServerRequests);
                 }
-                
+                Console.ReadLine();
             }
         }
 

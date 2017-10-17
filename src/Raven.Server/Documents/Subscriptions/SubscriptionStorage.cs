@@ -118,7 +118,7 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        public async Task<SubscriptionState> AssertSubscriptionConnectionDetails(long id, string name, TimeSpan timeout)
+        public async Task<SubscriptionState> AssertSubscriptionConnectionDetails(long id, string name)
         {
             await _serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, id);
 
@@ -399,7 +399,7 @@ namespace Raven.Server.Documents.Subscriptions
                         continue;
                     }
 
-                    if (subscriptionState.Query != subscriptionStateKvp.Value.Connection.SubscriptionState.Query)
+                    if (subscriptionState.Query != subscriptionStateKvp.Value.Connection?.SubscriptionState.Query)
                     {
                         DropSubscriptionConnection(subscriptionStateKvp.Key, new SubscriptionClosedException($"The subscription {subscriptionName} query has been modified, connection must be restarted"));
                     }

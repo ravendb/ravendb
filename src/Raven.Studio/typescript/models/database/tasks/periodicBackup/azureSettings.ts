@@ -1,4 +1,5 @@
 ﻿import backupSettings = require("models/database/tasks/periodicBackup/backupSettings");
+import jsonUtil = require("common/jsonUtil");
 
 class azureSettings extends backupSettings {
     storageContainer = ko.observable<string>();
@@ -7,15 +8,22 @@ class azureSettings extends backupSettings {
     accountKey = ko.observable<string>();
 
     constructor(dto: Raven.Client.ServerWide.PeriodicBackup.AzureSettings) {
-        super(dto);
+        super(dto, "Azure");
 
         this.storageContainer(dto.StorageContainer);
         this.remoteFolderName(dto.RemoteFolderName);
         this.accountName(dto.AccountName);
         this.accountKey(dto.AccountKey);
 
-        this.connectionType = "Azure";
         this.initValidation();
+
+        this.dirtyFlag = new ko.DirtyFlag([
+            this.enabled,
+            this.storageContainer,
+            this.remoteFolderName,
+            this.accountName,
+            this.accountKey
+        ], false, jsonUtil.newLineNormalizingHashFunction);
     }
 
     initValidation() {

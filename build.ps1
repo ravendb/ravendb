@@ -2,8 +2,8 @@ param(
     $Target="",
     [switch]$WinX64,
     [switch]$WinX86,
-    [switch]$Ubuntu14,
-    [switch]$Ubuntu16,
+    [switch]$LinuxX64,
+    [switch]$Osx,
     [switch]$Rpi,
     [switch]$DontRebuildStudio,
     [switch]$DontBuildStudio,
@@ -71,12 +71,12 @@ if ([string]::IsNullOrEmpty($Target) -eq $false) {
         $Target = @( "win-x86" );
     }
 
-    if ($Ubuntu14) {
-        $Target = @( "ubuntu14" );
+    if ($LinuxX64) {
+        $Target = @( "linux-x64" );
     } 
 
-    if ($Ubuntu16) {
-        $Target = @( "ubuntu16" );
+    if ($Osx) {
+        $Target = @( "osx" );
     }
 
     if ($Rpi) {

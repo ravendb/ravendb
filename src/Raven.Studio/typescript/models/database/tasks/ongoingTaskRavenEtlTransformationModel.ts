@@ -1,5 +1,6 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
+import jsonUtil = require("common/jsonUtil");
 
 class ongoingTaskEtlTransformationModel {
     name = ko.observable<string>();
@@ -12,10 +13,20 @@ class ongoingTaskEtlTransformationModel {
     canAddCollection: KnockoutComputed<boolean>;
 
     validationGroup: KnockoutValidationGroup; 
+    
+    dirtyFlag: () => DirtyFlag;
   
     constructor(dto: Raven.Client.ServerWide.ETL.Transformation, isNew: boolean) {
         this.update(dto, isNew);
         this.initObservables();
+        this.initValidation();
+
+        this.dirtyFlag = new ko.DirtyFlag([
+            this.name,
+            this.script,
+            this.applyScriptForAllCollections,
+            this.transformScriptCollections], 
+        false, jsonUtil.newLineNormalizingHashFunction);
     }
 
     getCollectionEntry(collectionName: string) {
@@ -37,7 +48,7 @@ class ongoingTaskEtlTransformationModel {
     toDto(): Raven.Client.ServerWide.ETL.Transformation {
         return {
             ApplyToAllDocuments: this.applyScriptForAllCollections(),
-            Collections: this.transformScriptCollections(),
+            Collections: this.applyScriptForAllCollections() ? null : this.transformScriptCollections(),
             Disabled: false,
             HasLoadAttachment: false,
             Name: this.name(),
@@ -46,32 +57,24 @@ class ongoingTaskEtlTransformationModel {
     }
 
     private initObservables() {
-        this.applyScriptForAllCollections.subscribe(x => {
-            if (x) {
-                // Add all collections to the 'used' collections...
-                this.transformScriptCollections(collectionsTracker.default.collections()
-                    .filter(x => !x.isAllDocuments)
-                    .map(x => x.name));
-            }
-            else {
-                this.transformScriptCollections([]);
-            }
-        });
-
         this.canAddCollection = ko.pureComputed(() => {
-            // Add collection only if exists in collection tracker & not yet added...
-            return !!collectionsTracker.default.collections().find(x => x.name === this.inputCollection()) &&
-                   !this.transformScriptCollections().find(x => x === this.inputCollection());
-        }).extend({ throttle: 200});
+            const collectionToAdd = this.inputCollection();
+            return collectionToAdd && !this.transformScriptCollections().find(x => x === collectionToAdd);
+        });
     }
 
     private initValidation() {
-        this.name.extend({
-            required: true
+        this.transformScriptCollections.extend({
+            validation: [
+                {
+                    validator: () => this.applyScriptForAllCollections() || this.transformScriptCollections().length > 0,
+                    message: "All least one collection is required"
+                }
+            ]
         });
 
         this.validationGroup = ko.validatedObservable({
-            name: this.name
+            transformScriptCollections: this.transformScriptCollections
         });
     }
 
@@ -81,24 +84,28 @@ class ongoingTaskEtlTransformationModel {
     }
 
     addCollection() {
-        this.transformScriptCollections.push(this.inputCollection());
+        this.addWithBlink(this.inputCollection());
+    }
+    
+    addWithBlink(collectionName: string) {
+        this.transformScriptCollections.unshift(collectionName);
         this.inputCollection("");
-        this.transformScriptCollections.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+        
+        // blink on newly created item
+        $(".collection-list li").first().addClass("blink-style");
     }
 
-    update(dto: Raven.Client.ServerWide.ETL.Transformation, isNew: boolean) {
+    private update(dto: Raven.Client.ServerWide.ETL.Transformation, isNew: boolean) {
         this.name(dto.Name);
         this.script(dto.Script);
-        this.transformScriptCollections(dto.ApplyToAllDocuments ? collectionsTracker.default.collections()
-            .filter(x => !x.isAllDocuments)
-            .map(x => x.name) : dto.Collections);
+        this.transformScriptCollections(dto.Collections || []);
         this.applyScriptForAllCollections(dto.ApplyToAllDocuments);
         this.isNew(isNew);
+    }
 
-        // Reset validation for this transformation script model 
-        this.name.extend({ validatable: false });
-        this.transformScriptCollections.extend({ validatable: false });
-        this.initValidation();
+    hasUpdates(oldItem: this) {
+        const hashFunction = jsonUtil.newLineNormalizingHashFunctionWithIgnoredFields(["__moduleId__", "validationGroup"]);
+        return hashFunction(this) !== hashFunction(oldItem);
     }
 }
 

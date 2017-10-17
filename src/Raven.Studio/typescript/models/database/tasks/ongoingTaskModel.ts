@@ -71,7 +71,7 @@ abstract class ongoingTaskModel {
                 break;
             case "Backup":
                 const dtoBackup = dto as Raven.Client.ServerWide.Operations.OngoingTaskBackup;
-                taskName = dtoBackup.BackupDestinations.length === 0 ? "No destinations" : `${dtoBackup.BackupType} to ${dtoBackup.BackupDestinations.join(", ")}`;
+                taskName = dtoBackup.BackupDestinations.length === 0 ? "Backup w/o destinations" : `${dtoBackup.BackupType} to ${dtoBackup.BackupDestinations.join(", ")}`;
                 break;
             case "RavenEtl":
                 const dtoRavenEtl = dto as Raven.Client.ServerWide.Operations.OngoingTaskRavenEtlListView;
@@ -79,7 +79,7 @@ abstract class ongoingTaskModel {
                 break;
             case "SqlEtl":
                 const dtoSqlEtl = dto as Raven.Client.ServerWide.Operations.OngoingTaskSqlEtlListView;
-                taskName = ""; // Todo...
+                taskName = `SQL ETL to ${dtoSqlEtl.DestinationDatabase}@${dtoSqlEtl.DestinationServer}`;
                 break;
             case "Subscription":
                 taskName = dto.TaskName;

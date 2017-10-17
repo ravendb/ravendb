@@ -57,6 +57,11 @@ namespace Raven.Server.Smuggler.Documents
             return new DatabaseDocumentActions(_database, _buildType, isRevision: false, log: _log);
         }
 
+        public IDocumentActions Conflicts()
+        {
+            return new DatabaseDocumentActions(_database, _buildType, isRevision: false, log: _log);
+        }
+
         public IIdentityActions Identities()
         {
             return new DatabaseIdentityActions(_database);
@@ -132,6 +137,15 @@ namespace Raven.Server.Smuggler.Documents
                 _command.Add(new DocumentItem
                 {
                     Tombstone = tombstone
+                });
+                HandleBatchOfDocumentsIfNecessary();
+            }
+
+            public void WriteConflict(DocumentConflict conflict, SmugglerProgressBase.CountsWithLastEtag progress)
+            {
+                _command.Add(new DocumentItem
+                {
+                    Conflict = conflict
                 });
                 HandleBatchOfDocumentsIfNecessary();
             }
@@ -301,6 +315,16 @@ namespace Raven.Server.Smuggler.Documents
                                     break;
                             }
                         }
+
+                        continue;
+                    }
+
+                    var conflict = documentType.Conflict;
+                    if (conflict != null)
+                    {
+                        var modifiedTicks = _database.Time.GetUtcNow().Ticks;
+                        _database.DocumentsStorage.ConflictsStorage.AddConflict(context, conflict.Id, modifiedTicks, conflict.Doc, conflict.ChangeVector, 
+                            conflict.Collection, conflict.Flags, NonPersistentDocumentFlags.FromSmuggler);
 
                         continue;
                     }

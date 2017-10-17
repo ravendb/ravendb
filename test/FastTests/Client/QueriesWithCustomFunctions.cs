@@ -85,7 +85,7 @@ namespace FastTests.Client
                     var query = session.Query<User>()
                         .Select(u => new { u.Name, Age = DateTime.Today - u.Birthday});
 
-                    Assert.Equal("FROM Users as u SELECT { Name : u.Name, Age : convertJsTimeToTimeSpanString(new Date().setHours(0,0,0,0)-Date.parse(u.Birthday)) }",
+                    Assert.Equal("FROM Users as u SELECT { Name : u.Name, Age : convertJsTimeToTimeSpanString(new Date().setHours(0,0,0,0)-new Date(Date.parse(u.Birthday))) }",
                                 query.ToString());
 
                     var queryResult = query.ToList();
@@ -114,7 +114,7 @@ namespace FastTests.Client
                     var query = session.Query<User>()
                         .Select(u => new { u.Name, Age = DateTime.Today - u.Birthday });
 
-                    Assert.Equal("FROM Users as u SELECT { Name : u.Name, Age : convertJsTimeToTimeSpanString(new Date().setHours(0,0,0,0)-Date.parse(u.Birthday)) }",
+                    Assert.Equal("FROM Users as u SELECT { Name : u.Name, Age : convertJsTimeToTimeSpanString(new Date().setHours(0,0,0,0)-new Date(Date.parse(u.Birthday))) }",
                         query.ToString());
 
                     var queryResult = await query.ToListAsync();
@@ -1179,7 +1179,183 @@ FROM Users as u WHERE (Name = $p0) AND (IsActive = $p1) ORDER BY LastName DESC L
             }
         }
 
+        [Fact]
+        public void Custom_Functions_Math_Support()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia" , IdNumber = 7}, "users/1");
+                    session.SaveChanges();
+                }
 
+                using (var session = store.OpenSession())
+                {
+                    var query = from u in session.Query<User>()
+                                select new
+                                {
+                                    Pow = Math.Pow(u.IdNumber, u.IdNumber),
+                                    Max = Math.Max(u.IdNumber + 1, u.IdNumber)
+                                };
+
+                    Assert.Equal("FROM Users as u SELECT { Pow : Math.pow(u.IdNumber, u.IdNumber), Max : Math.max((u.IdNumber+1), u.IdNumber) }", query.ToString());
+
+                    var queryResult = query.ToList();
+
+                    Assert.Equal(1, queryResult.Count);
+
+                    Assert.Equal(8, queryResult[0].Max);
+                    Assert.Equal(823543, queryResult[0].Pow);
+                }
+            }
+        }
+
+        [Fact]
+        public void Can_Project_Into_Class()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia" }, "users/1");
+                    session.Store(new User { Name = "Bob", LastName = "Weir" }, "users/2");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from user in session.Query<User>()
+                                select new QueryResult
+                                {
+                                    FullName = user.Name + " " + user.LastName
+                                };
+
+                    Assert.Equal("FROM Users as user SELECT { FullName : user.Name+\" \"+user.LastName }", query.ToString());
+
+                    var queryResult = query.ToList();
+
+                    Assert.Equal(2, queryResult.Count);
+                    Assert.Equal("Jerry Garcia", queryResult[0].FullName);
+                    Assert.Equal("Bob Weir", queryResult[1].FullName);
+                }
+            }
+        }
+
+        [Fact]
+        public void Can_Project_Into_Class_With_Let()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia" }, "users/1");
+                    session.Store(new User { Name = "Bob", LastName = "Weir" }, "users/2");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from user in session.Query<User>()
+                                let first = user.Name
+                                let last = user.LastName
+                                let format = (Func<string>)(() => first + " " + last)
+                                select new QueryResult
+                                {
+                                    FullName = format()
+                                };
+
+                    Assert.Equal(
+@"DECLARE function output(user) {
+	var first = user.Name;
+	var last = user.LastName;
+	var format = function(){return first+"" ""+last;};
+	return { FullName : format() };
+}
+FROM Users as user SELECT output(user)", query.ToString());
+
+
+                    var queryResult = query.ToList();
+
+                    Assert.Equal(2, queryResult.Count);
+                    Assert.Equal("Jerry Garcia", queryResult[0].FullName);
+                    Assert.Equal("Bob Weir", queryResult[1].FullName);
+                }
+            }
+        }
+
+        [Fact]
+        public void Custom_Functions_With_DateTime_Object()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia", Birthday = new DateTime(1942, 8, 1) }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from u in session.Query<User>()
+                        let date = new DateTime(1960, 1, 1)
+                        select new
+                        {
+                            Bday = u.Birthday,
+                            Date = date
+                        };
+
+                    Assert.Equal(
+                        @"DECLARE function output(u) {
+	var date = new Date(1960, 0, 1);
+	return { Bday : new Date(Date.parse(u.Birthday)), Date : date };
+}
+FROM Users as u SELECT output(u)", query.ToString());
+
+
+                    var queryResult = query.ToList();
+
+                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal(new DateTime(1942, 8, 1), queryResult[0].Bday);
+                    Assert.Equal(new DateTime(1960, 1, 1), queryResult[0].Date);
+
+
+                }
+            }
+        }
+
+        [Fact]
+        public void Custom_Functions_With_Escape_Hatch()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia", Birthday = new DateTime(1942, 8, 1) }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from user in session.Query<User>()
+                        select new
+                        {
+                            Date = RavenQuery.Raw<DateTime>("new Date(Date.parse(user.Birthday))"),
+                            Name = RavenQuery.Raw<string>("user.Name.substr(0,3)"),
+                        };
+
+                    Assert.Equal("FROM Users as user SELECT { Date : new Date(Date.parse(user.Birthday)), Name : user.Name.substr(0,3) }",
+                        query.ToString());
+
+                    var queryResult = query.ToList();
+
+                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal(new DateTime(1942, 8, 1), queryResult[0].Date);
+                    Assert.Equal("Jer", queryResult[0].Name);
+
+                }
+            }
+        }
 
         private class User
         {
@@ -1197,6 +1373,10 @@ FROM Users as u WHERE (Name = $p0) AND (IsActive = $p1) ORDER BY LastName DESC L
         private class Detail
         {
             public int Number { get; set; }
+        }
+        public class QueryResult
+        {
+            public string FullName { get; set; }
         }
     }
 }

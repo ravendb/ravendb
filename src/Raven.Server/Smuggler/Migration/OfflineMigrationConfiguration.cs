@@ -1,9 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using Org.BouncyCastle.Security;
+using Raven.Client.ServerWide;
 
 namespace Raven.Server.Smuggler.Migration
 {
@@ -21,6 +20,7 @@ namespace Raven.Server.Smuggler.Migration
         public string EncryptionAlgorithm { get; set; }
         public int? EncryptionKeyBitsSize { get; set; }
         public TimeSpan? Timeout { get; set; }
+        public DatabaseRecord DatabaseRecord { get; set; }
 
         public (string Commandline, string TmpFile) GenerateExporterCommandLine()
         {

@@ -1,6 +1,7 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 import indexStatistics = require("models/database/stats/indexStatistics");
 import changeVectorUtils = require("common/changeVectorUtils");
+import generalUtils = require("common/generalUtils");
 
 class statistics {
     databaseId: string;
@@ -10,8 +11,10 @@ class statistics {
     countOfDocuments: string;
     countOfAttachments: string;
     countOfUniqueAttachments: string;
+    countOfConflicts: string;
     is64Bit: boolean;
     indexPerformanceURL: string;
+    sizeOnDisk: string;
 
     // The observable indexes array, ordered by type
     indexesByType = ko.observableArray<indexesWithType>(); 
@@ -25,7 +28,10 @@ class statistics {
         this.countOfIndexes = dbStats.CountOfIndexes.toLocaleString();
         this.countOfAttachments = dbStats.CountOfAttachments.toLocaleString();
         this.countOfUniqueAttachments = dbStats.CountOfUniqueAttachments.toLocaleString();
+        this.countOfConflicts = dbStats.CountOfConflicts.toLocaleString();
         this.is64Bit = dbStats.Is64Bit;
+        this.sizeOnDisk = generalUtils.formatBytesToSize(dbStats.SizeOnDisk.SizeInBytes);
+        
         
         // 1. Create the array with all indexes that we got from the endpoint
         const allIndexes = indexStats.map(x => new indexStatistics(x));

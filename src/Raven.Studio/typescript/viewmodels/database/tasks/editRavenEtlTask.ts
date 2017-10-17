@@ -12,11 +12,13 @@ import saveEtlTaskCommand = require("commands/database/tasks/saveEtlTaskCommand"
 import generalUtils = require("common/generalUtils");
 import ongoingTaskRavenEtlTransformationModel = require("models/database/tasks/ongoingTaskRavenEtlTransformationModel");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
-import deleteTransformationScriptConfirm = require("viewmodels/database/tasks/deleteTransformationScriptConfirm");
 import transformationScriptSyntax = require("viewmodels/database/tasks/transformationScriptSyntax");
 import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
+import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 
 class editRavenEtlTask extends viewModelBase {
+    
+    static readonly scriptNamePrefix = "Script #";
 
     editedRavenEtl = ko.observable<ongoingTaskRavenEtlEditModel>();
     isAddingNewRavenEtlTask = ko.observable<boolean>(true);
@@ -25,7 +27,10 @@ class editRavenEtlTask extends viewModelBase {
     possibleMentors = ko.observableArray<string>([]);
 
     testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
-    spinners = { test: ko.observable<boolean>(false) };
+    spinners = { 
+        test: ko.observable<boolean>(false) 
+    };
+    
     fullErrorDetailsVisible = ko.observable<boolean>(false);
     shortErrorText: KnockoutObservable<string>;
     
@@ -35,7 +40,9 @@ class editRavenEtlTask extends viewModelBase {
 
     constructor() {
         super();
-        this.bindToCurrentInstance("useConnectionString", "testConnection", "confirmRemoveTransformationScript", "cancelEditedTransformation", "saveEditedTransformation", "syntaxHelp");
+        
+        aceEditorBindingHandler.install();
+        this.bindToCurrentInstance("useConnectionString", "testConnection", "removeTransformationScript", "cancelEditedTransformation", "saveEditedTransformation", "syntaxHelp");
     }
 
     activate(args: any) {
@@ -56,15 +63,15 @@ class editRavenEtlTask extends viewModelBase {
                     deferred.reject();
                     router.navigate(appUrl.forOngoingTasks(this.activeDatabase())); 
                 });
-        }
-        else {
+        } else {
             // 2. Creating a New task
             this.isAddingNewRavenEtlTask(true);
             this.editedRavenEtl(ongoingTaskRavenEtlEditModel.empty());
+            this.editedRavenEtl().editedTransformationScriptSandbox(ongoingTaskRavenEtlTransformationModel.empty());
             deferred.resolve();
         }
 
-        deferred.always(() => {
+        deferred.done(() => {
             this.initObservables();
         });
 
@@ -104,7 +111,7 @@ class editRavenEtlTask extends viewModelBase {
             return generalUtils.trimMessage(result.Error);
         });
 
-        this.dirtyFlag = new ko.DirtyFlag([this.editedRavenEtl().isDirtyEditedScript().isDirty, this.editedRavenEtl().transformationScripts]);
+        this.dirtyFlag = this.editedRavenEtl().dirtyFlag;
     }
 
     useConnectionString(connectionStringToUse: string) {
@@ -112,129 +119,93 @@ class editRavenEtlTask extends viewModelBase {
     }
 
     testConnection() {
-        if (this.editedRavenEtl().connectionStringName) {
-            // 1. Input connection string name is pre-defined
-            eventsCollector.default.reportEvent("ravenDB-ETL-connection-string", "test-connection");
-            this.spinners.test(true);
+        eventsCollector.default.reportEvent("ravenDB-ETL-connection-string", "test-connection");
+        this.spinners.test(true);
 
-            getConnectionStringInfoCommand.forRavenEtl(this.activeDatabase(), this.editedRavenEtl().connectionStringName())
-                .execute()
-                .done((result: Raven.Client.ServerWide.ETL.RavenConnectionString) => {
-                    new testClusterNodeConnectionCommand(result.Url)
-                        .execute()
-                        .done(result => this.testConnectionResult(result))
-                        .always(() => this.spinners.test(false));
-                }
-            );
-        }
-    }
-
-    trySaveRavenEtl() {
-        if (!this.editedRavenEtl().isDirtyEditedScript().isDirty()) {
-            this.saveRavenEtl();
-            return true;
-        }
-
-        const deferredResult = $.Deferred<boolean>();
-        this.discardStayResult().done((result: confirmDialogResult) => {
-            if (!result.can) {
-                // Keep changes & stay
-                return;
-            } else {
-                // Discard changes & add save the Raven Etl model
-                this.saveRavenEtl();
+        getConnectionStringInfoCommand.forRavenEtl(this.activeDatabase(), this.editedRavenEtl().connectionStringName())
+            .execute()
+            .done((result: Raven.Client.ServerWide.ETL.RavenConnectionString) => {
+                new testClusterNodeConnectionCommand(result.Url)
+                    .execute()
+                    .done(result => this.testConnectionResult(result))
+                    .always(() => this.spinners.test(false));
             }
-
-            deferredResult.resolve(result.can);
-        });
-
-        return deferredResult;
+        );
     }
 
     saveRavenEtl() {
-        // 1. Validate model
-        if (!this.isValid(this.editedRavenEtl().validationGroup)) {
-            return;
+        const editedEtl = this.editedRavenEtl();
+
+        this.isValid(this.editedRavenEtl().validationGroup);
+        
+        if (editedEtl.showEditTransformationArea()) {
+            if (!this.isValid(editedEtl.editedTransformationScriptSandbox().validationGroup)) {
+                return false;
+            }
+
+            this.saveEditedTransformation();
         }
 
-        // 2. Create/add the new raven-etl task
+        if (!this.isValid(this.editedRavenEtl().validationGroup)) {
+            return false;
+        }
+
         const dto = this.editedRavenEtl().toDto();
         saveEtlTaskCommand.forRavenEtl(this.activeDatabase(), dto)
             .execute()
             .done(() => {
-                this.editedRavenEtl().isDirtyEditedScript().reset();
-                this.dirtyFlag().reset();
+                this.editedRavenEtl().dirtyFlag().reset();
                 this.goToOngoingTasksView();
             });
     }
 
-    tryAddNewTransformation() {
-        if (!this.editedRavenEtl().isDirtyEditedScript().isDirty()) {
-            this.addNewTransformation();
-            return true;
-        }
-
-        const deferredResult = $.Deferred<boolean>();
-        this.discardStayResult().done((result: confirmDialogResult) => {
-            if (!result.can) {
-                // Keep changes & stay
-                return; 
-            } else {
-                // Discard changes & add new transformation
-                this.addNewTransformation();
-            }
-
-            deferredResult.resolve(result.can);
-        });
-
-        return deferredResult;
-    }
-
-    private addNewTransformation() {
-        this.editedRavenEtl().showEditTransformationArea(false);
-        this.editedRavenEtl().editedTransformationScript().update(ongoingTaskRavenEtlTransformationModel.empty().toDto(), true);
-
-        this.editedRavenEtl().showEditTransformationArea(true);
-        this.editedRavenEtl().isDirtyEditedScript().reset();    
+    addNewTransformation() {
+        this.editedRavenEtl().transformationScriptSelectedForEdit(null);
+        this.editedRavenEtl().editedTransformationScriptSandbox(ongoingTaskRavenEtlTransformationModel.empty());
     }
 
     cancelEditedTransformation() {
-        this.editedRavenEtl().showEditTransformationArea(false);
-        this.editedRavenEtl().isDirtyEditedScript().reset();
+        this.editedRavenEtl().editedTransformationScriptSandbox(null);
+        this.editedRavenEtl().transformationScriptSelectedForEdit(null);
     }
 
-    saveEditedTransformation(transformation: ongoingTaskRavenEtlTransformationModel) {
-        // 1. Validate
-        if (!this.isValid(this.editedRavenEtl().editedTransformationScript().validationGroup)) {
+    saveEditedTransformation() {
+        const transformation = this.editedRavenEtl().editedTransformationScriptSandbox();
+        if (!this.isValid(transformation.validationGroup)) {
             return;
         }
-
-        // 2. Save
+        
         if (transformation.isNew()) {
-            let newTransformationItem = new ongoingTaskRavenEtlTransformationModel({
-                ApplyToAllDocuments: transformation.applyScriptForAllCollections(),
-                Collections: transformation.transformScriptCollections(),
-                Disabled: false,
-                HasLoadAttachment: false,
-                Name: transformation.name(),
-                Script: transformation.script()
-            }, true);
-
-            this.editedRavenEtl().transformationScripts.push(newTransformationItem); 
-        }
-        else {
-            let item = this.editedRavenEtl().transformationScripts().find(x => x.name() === transformation.name());
-            item.applyScriptForAllCollections(transformation.applyScriptForAllCollections());
-            item.transformScriptCollections(transformation.transformScriptCollections());
-            item.script(transformation.script());
+            const newTransformationItem = new ongoingTaskRavenEtlTransformationModel(transformation.toDto(), false);
+            newTransformationItem.name(this.findNameForNewTransformation());
+            newTransformationItem.dirtyFlag().forceDirty();
+            this.editedRavenEtl().transformationScripts.push(newTransformationItem);
+        } else {
+            const oldItem = this.editedRavenEtl().transformationScriptSelectedForEdit();
+            const newItem = new ongoingTaskRavenEtlTransformationModel(transformation.toDto(), false);
+            
+            if (oldItem.dirtyFlag().isDirty() || newItem.hasUpdates(oldItem)) {
+                newItem.dirtyFlag().forceDirty();
+            }
+            
+            this.editedRavenEtl().transformationScripts.replace(oldItem, newItem);
         }
 
-        // 3. Sort
         this.editedRavenEtl().transformationScripts.sort((a, b) => a.name().toLowerCase().localeCompare(b.name().toLowerCase()));
-
-        // 4. Clear
-        this.editedRavenEtl().showEditTransformationArea(false);
-        this.editedRavenEtl().isDirtyEditedScript().reset();
+        this.editedRavenEtl().editedTransformationScriptSandbox(null);
+        this.editedRavenEtl().transformationScriptSelectedForEdit(null);
+    }
+    
+    private findNameForNewTransformation() {
+        const scriptsWithPrefix = this.editedRavenEtl().transformationScripts().filter(script => {
+            return script.name().startsWith(editRavenEtlTask.scriptNamePrefix);
+        });
+        
+        const maxNumber =  _.max(scriptsWithPrefix
+            .map(x => x.name().substr(editRavenEtlTask.scriptNamePrefix.length))
+            .map(x => _.toInteger(x))) || 0;
+        
+        return editRavenEtlTask.scriptNamePrefix + (maxNumber + 1);
     }
 
     cancelOperation() {
@@ -263,16 +234,8 @@ class editRavenEtlTask extends viewModelBase {
         });
     }
 
-    confirmRemoveTransformationScript(model: ongoingTaskRavenEtlTransformationModel) {
-        const db = this.activeDatabase();
-
-        const confirmDeleteViewModel = new deleteTransformationScriptConfirm(db, model.name()); 
-        app.showBootstrapDialog(confirmDeleteViewModel);
-        confirmDeleteViewModel.result.done(result => {
-            if (result.can) {
-                this.editedRavenEtl().deleteTransformationScript(model);
-            }
-        });
+    removeTransformationScript(model: ongoingTaskRavenEtlTransformationModel) {
+        this.editedRavenEtl().deleteTransformationScript(model);
     }
 
     syntaxHelp() {

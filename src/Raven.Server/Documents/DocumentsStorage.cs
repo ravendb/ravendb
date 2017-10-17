@@ -79,6 +79,11 @@ namespace Raven.Server.Documents
             TransactionMarker = 7
         }
 
+        public enum CollectionsTable
+        {
+            Name = 0,
+        }
+
         static DocumentsStorage()
         {
             Slice.From(StorageEnvironment.LabelsContext, "AllTombstonesEtags", ByteStringType.Immutable, out AllTombstonesEtagsSlice);
@@ -94,6 +99,7 @@ namespace Raven.Server.Documents
             Slice.From(StorageEnvironment.LabelsContext, "LastReplicatedEtags", ByteStringType.Immutable, out LastReplicatedEtagsSlice);
             Slice.From(StorageEnvironment.LabelsContext, "GlobalTree", ByteStringType.Immutable, out GlobalTreeSlice);
             Slice.From(StorageEnvironment.LabelsContext, "GlobalChangeVector", ByteStringType.Immutable, out GlobalChangeVectorSlice);
+
             /*
             Collection schema is:
             full name
@@ -101,7 +107,7 @@ namespace Raven.Server.Documents
             */
             CollectionsSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
-                StartIndex = 0,
+                StartIndex = (int)CollectionsTable.Name,
                 Count = 1,
                 IsGlobal = false
             });
@@ -887,6 +893,7 @@ namespace Raven.Server.Documents
             tx.InnerTransaction.LowLevelTransaction.OnDispose += state => reader.Dispose();
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static Document ParseDocument(JsonOperationContext context, ref TableValueReader tvr)
         {
             var result = new Document
@@ -899,36 +906,19 @@ namespace Raven.Server.Documents
                 ChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref tvr),
                 LastModified = TableValueToDateTime((int)DocumentsTable.LastModified, ref tvr),
                 Flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr),
-                TransactionMarker = *(short*)tvr.Read((int)DocumentsTable.TransactionMarker, out size)
+                TransactionMarker = TableValueToShort((int)DocumentsTable.TransactionMarker, nameof(DocumentsTable.TransactionMarker), ref tvr),
             };
 
             return result;
         }
 
-        public static Document ParseRawDataSectionDocumentWithValidation(JsonOperationContext context, ref TableValueReader tvr, int expectedSize, out long etag)
+        public static Document ParseRawDataSectionDocumentWithValidation(JsonOperationContext context, ref TableValueReader tvr, int expectedSize)
         {
-            var mem = tvr.Read((int)DocumentsTable.Data, out int size);
-
+            tvr.Read((int)DocumentsTable.Data, out int size);
             if (size > expectedSize || size <= 0)
                 throw new ArgumentException("Data size is invalid, possible corruption when parsing BlittableJsonReaderObject", nameof(size));
 
-            var result = new Document
-            {
-                StorageId = tvr.Id,
-                LowerId = TableValueToString(context, (int)DocumentsTable.LowerId, ref tvr),
-                Id = TableValueToId(context, (int)DocumentsTable.Id, ref tvr),
-                Etag = etag = TableValueToEtag((int)DocumentsTable.Etag, ref tvr),
-                Data = new BlittableJsonReaderObject(mem, size, context),
-                ChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref tvr),
-                LastModified = TableValueToDateTime((int)DocumentsTable.LastModified, ref tvr),
-                Flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr),
-                TransactionMarker = *(short*)tvr.Read((int)DocumentsTable.TransactionMarker, out size)
-            };
-
-            if (size != sizeof(short))
-                throw new ArgumentException("TransactionMarker size is invalid, possible corruption when parsing BlittableJsonReaderObject", nameof(size));
-
-            return result;
+            return ParseDocument(context, ref tvr);
         }
 
         private static DocumentTombstone TableValueToTombstone(JsonOperationContext context, ref TableValueReader tvr)
@@ -949,13 +939,13 @@ namespace Raven.Server.Documents
 
             if (result.Type == DocumentTombstone.TombstoneType.Document)
             {
-                result.Collection = TableValueToString(context, (int)TombstoneTable.Collection, ref tvr);
+                result.Collection = TableValueToId(context, (int)TombstoneTable.Collection, ref tvr);
                 result.Flags = TableValueToFlags((int)TombstoneTable.Flags, ref tvr);
                 result.LastModified = TableValueToDateTime((int)TombstoneTable.LastModified, ref tvr);
             }
             else if (result.Type == DocumentTombstone.TombstoneType.Revision)
             {
-                result.Collection = TableValueToString(context, (int)TombstoneTable.Collection, ref tvr);
+                result.Collection = TableValueToId(context, (int)TombstoneTable.Collection, ref tvr);
             }
 
             return result;
@@ -1206,7 +1196,7 @@ namespace Raven.Server.Documents
 
             var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
                 collectionName.GetTableName(CollectionTableType.Tombstones));
-            using (Slice.From(context.Allocator, collectionName.Name, out Slice collectionSlice))
+            using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
             using (Slice.From(context.Allocator, changeVector, out var cv))
             using (table.Allocate(out TableValueBuilder tvb))
             {
@@ -1468,7 +1458,7 @@ namespace Raven.Server.Documents
                 throw new InvalidOperationException("Should never happen!");
 
             name = new CollectionName(collectionName);
-            using (Slice.From(context.Allocator, collectionName, out Slice collectionSlice))
+            using (DocumentIdWorker.GetStringPreserveCase(context, collectionName, out Slice collectionSlice))
             {
                 using (collections.Allocate(out TableValueBuilder tvr))
                 {
@@ -1477,8 +1467,7 @@ namespace Raven.Server.Documents
                 }
 
                 DocsSchema.Create(context.Transaction.InnerTransaction, name.GetTableName(CollectionTableType.Documents), 16);
-                TombstonesSchema.Create(context.Transaction.InnerTransaction,
-                    name.GetTableName(CollectionTableType.Tombstones), 16);
+                TombstonesSchema.Create(context.Transaction.InnerTransaction, name.GetTableName(CollectionTableType.Tombstones), 16);
 
                 // Add to cache ONLY if the transaction was committed. 
                 // this would prevent NREs next time a PUT is run,since if a transaction
@@ -1505,13 +1494,12 @@ namespace Raven.Server.Documents
         {
             var result = new Dictionary<string, CollectionName>(OrdinalIgnoreCaseStringStructComparer.Instance);
 
-            var collections = tx.OpenTable(CollectionsSchema, CollectionsSlice);
-
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
+                var collections = tx.OpenTable(CollectionsSchema, CollectionsSlice);
                 foreach (var tvr in collections.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
                 {
-                    var collection = TableValueToString(context, 0, ref tvr.Reader);
+                    var collection = TableValueToId(context, (int)CollectionsTable.Name, ref tvr.Reader);
                     var collectionName = new CollectionName(collection);
                     result.Add(collection, collectionName);
 
@@ -1538,6 +1526,20 @@ namespace Raven.Server.Documents
         public static DocumentFlags TableValueToFlags(int index, ref TableValueReader tvr)
         {
             return *(DocumentFlags*)tvr.Read(index, out _);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static short TableValueToShort(int index, string name, ref TableValueReader tvr)
+        {
+            var value = *(short*)tvr.Read(index, out int size);
+            if (size != sizeof(short))
+                ThrowInvalidShortSize(name, size);
+            return value;
+        }
+
+        private static void ThrowInvalidShortSize(string name, int size)
+        {
+            throw new InvalidOperationException($"{name} size is invalid, expected short but got {size}.");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

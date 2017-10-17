@@ -267,7 +267,7 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-        [RavenAction("/remote-server/build/version", "GET", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/remote-server/build/version", "GET", AuthorizationStatus.Operator)]
         public async Task GetRemoteServerBuildInfo()
         {
             var serverUrl = GetQueryStringValueAndAssertIfSingleAndNotEmpty("serverUrl");

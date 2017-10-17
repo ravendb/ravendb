@@ -20,5 +20,12 @@
 <span class="token keyword">update</span><span class="token punctuation"> { </span>
     i.LowerName = c.Name.toLowerCase();
 <span class="token punctuation">}</span></pre>
-
+    
+    <div>Working with metadata</div>
+<pre class="margin-bottom"><span class="token keyword">from </span><span class="token string">Orders </span>
+<span class="token keyword">update</span><span class="token punctuation"> { </span>
+    <span class="token keyword">this</span>.DocumentId = id(<span class="token keyword">this</span>);
+    <span class="token keyword">this</span>.DocumentCollection = <span class="token keyword">this</span>["@metadata"]["@collection"];
+<span class="token punctuation">}</span></pre>    
+    
 </div>

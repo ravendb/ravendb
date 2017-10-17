@@ -364,6 +364,7 @@ namespace Sparrow.Json
             {
                 numberOfEscapeSequences--;
                 var bytesToSkip = BlittableJsonReaderBase.ReadVariableSizeInt(strSrcBuffer, ref escapeSequencePos);
+                EnsureBuffer(bytesToSkip);
                 WriteRawString(strBuffer, bytesToSkip);
                 strBuffer += bytesToSkip;
                 size -= bytesToSkip + 1 /*for the escaped char we skip*/;
@@ -396,6 +397,7 @@ namespace Sparrow.Json
             // PERF: We are no longer ensuring the buffer has enough size anymore. Caller must ensure it is so.
             if (size < JsonOperationContext.ManagedPinnedBuffer.Size)
             {
+                EnsureBuffer(size);
                 Memory.Copy(_buffer + _pos, buffer, size);
                 _pos += size;
                 return;

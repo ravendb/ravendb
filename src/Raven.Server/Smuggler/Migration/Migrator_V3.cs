@@ -34,13 +34,13 @@ namespace Raven.Server.Smuggler.Migration
             DocumentDatabase database,
             HttpClient client,
             string migrationStateKey,
-            MajorVersion marjorVersion,
+            MajorVersion majorVersion,
             OperationCancelToken cancelToken)
             : base(serverUrl, databaseName, result, onProgress, database, cancelToken)
         {
             _client = client;
             _migrationStateKey = migrationStateKey;
-            _majorVersion = marjorVersion;
+            _majorVersion = majorVersion;
         }
 
         public override async Task Execute()
@@ -106,7 +106,7 @@ namespace Raven.Server.Smuggler.Migration
             using (var responseStream = await response.Content.ReadAsStreamAsync())
             using (var stream = new GZipStream(responseStream, mode: CompressionMode.Decompress))
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var source = new StreamSource(stream, context))
+            using (var source = new StreamSource(stream, context, Database))
             {
                 var destination = new DatabaseDestination(Database);
                 var options = new DatabaseSmugglerOptionsServerSide();
