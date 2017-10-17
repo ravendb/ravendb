@@ -1754,8 +1754,11 @@ ul.properties {
     li {
         & > span {
             display: inline-block;
-            width: 140px;
             margin-right: @grid-gutter-width/2;
+
+            &:first-of-type {
+                width: 140px;
+            }
         }
 
         & > strong {
