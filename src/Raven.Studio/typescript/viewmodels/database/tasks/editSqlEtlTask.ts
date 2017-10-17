@@ -20,9 +20,12 @@ import jsonUtil = require("common/jsonUtil");
 
 class editSqlEtlTask extends viewModelBase {
 
+    static readonly scriptNamePrefix = "Script #";
+    
     editedSqlEtl = ko.observable<ongoingTaskSqlEtlEditModel>();
     isAddingNewSqlEtlTask = ko.observable<boolean>(true);
-    editedTransformationScript = ko.observable<ongoingTaskSqlEtlTransformationModel>();
+    transformationScriptSelectedForEdit = ko.observable<ongoingTaskSqlEtlTransformationModel>();
+    editedTransformationScriptSandbox = ko.observable<ongoingTaskSqlEtlTransformationModel>();
     editedSqlTable = ko.observable<ongoingTaskSqlEtlTableModel>();
 
     possibleMentors = ko.observableArray<string>([]);
@@ -84,7 +87,7 @@ class editSqlEtlTask extends viewModelBase {
             // 2. Creating a New task
             this.isAddingNewSqlEtlTask(true);
             this.editedSqlEtl(ongoingTaskSqlEtlEditModel.empty());
-            this.editedTransformationScript(ongoingTaskSqlEtlTransformationModel.empty());
+            this.editedTransformationScriptSandbox(ongoingTaskSqlEtlTransformationModel.empty());
             this.editedSqlTable(ongoingTaskSqlEtlTableModel.empty());
             deferred.resolve();
         }
@@ -139,14 +142,14 @@ class editSqlEtlTask extends viewModelBase {
         
         
         this.showEditSqlTableArea = ko.pureComputed((() => !!this.editedSqlTable()));
-        this.showEditTransformationArea = ko.pureComputed(() => !!this.editedTransformationScript());
+        this.showEditTransformationArea = ko.pureComputed(() => !!this.editedTransformationScriptSandbox());
         
         this.initDirtyFlag();
     }
     
     private initDirtyFlag() {
         const innerDirtyFlag = ko.pureComputed(() => this.editedSqlEtl().dirtyFlag().isDirty());
-        const editedScriptFlag = ko.pureComputed(() => !!this.editedTransformationScript() && this.editedTransformationScript().dirtyFlag().isDirty());
+        const editedScriptFlag = ko.pureComputed(() => !!this.editedTransformationScriptSandbox() && this.editedTransformationScriptSandbox().dirtyFlag().isDirty());
         const editedSqlTableFlag = ko.pureComputed(() => !!this.editedSqlTable() && this.editedSqlTable().dirtyFlag().isDirty());
         
         const scriptsCount = ko.pureComputed(() => this.editedSqlEtl().transformationScripts().length);
@@ -217,7 +220,7 @@ class editSqlEtlTask extends viewModelBase {
         }
         
         if (this.showEditTransformationArea()) {
-            if (!this.isValid(this.editedTransformationScript().validationGroup)) {
+            if (!this.isValid(this.editedTransformationScriptSandbox().validationGroup)) {
                 // we have some errors in edited transformation script
                 hasAnyErrors = true;
             } else {
@@ -277,19 +280,21 @@ class editSqlEtlTask extends viewModelBase {
     /********************************************/
 
     useCollection(collectionToUse: string) {
-        this.editedTransformationScript().collection(collectionToUse);
+        this.editedTransformationScriptSandbox().collection(collectionToUse);
     }
     
     addNewTransformation() {
-        this.editedTransformationScript(ongoingTaskSqlEtlTransformationModel.empty());
+        this.transformationScriptSelectedForEdit(null);
+        this.editedTransformationScriptSandbox(ongoingTaskSqlEtlTransformationModel.empty());
     }
 
     cancelEditedTransformation() {
-        this.editedTransformationScript(null);
+        this.editedTransformationScriptSandbox(null);
+        this.transformationScriptSelectedForEdit(null);
     }    
     
     saveEditedTransformation() {
-        const transformation = this.editedTransformationScript();
+        const transformation = this.editedTransformationScriptSandbox();
         
         if (!this.isValid(transformation.validationGroup)) {
             return;
@@ -297,6 +302,7 @@ class editSqlEtlTask extends viewModelBase {
 
         if (transformation.isNew()) {
             const newTransformationItem = new ongoingTaskSqlEtlTransformationModel(transformation.toDto(), false);
+            newTransformationItem.name(this.findNameForNewTransformation());
             newTransformationItem.dirtyFlag().forceDirty();
             this.editedSqlEtl().transformationScripts.push(newTransformationItem);
         } else {
@@ -311,19 +317,34 @@ class editSqlEtlTask extends viewModelBase {
         }
 
         this.editedSqlEtl().transformationScripts.sort((a, b) => a.name().toLowerCase().localeCompare(b.name().toLowerCase()));
-        this.editedTransformationScript(null);
+        this.editedTransformationScriptSandbox(null);
     }
+
+    private findNameForNewTransformation() {
+        const scriptsWithPrefix = this.editedSqlEtl().transformationScripts().filter(script => {
+            return script.name().startsWith(editSqlEtlTask.scriptNamePrefix);
+        });
+
+        const maxNumber =  _.max(scriptsWithPrefix
+            .map(x => x.name().substr(editSqlEtlTask.scriptNamePrefix.length))
+            .map(x => _.toInteger(x))) || 0;
+
+        return editSqlEtlTask.scriptNamePrefix + (maxNumber + 1);
+    }
+
 
     removeTransformationScript(model: ongoingTaskSqlEtlTransformationModel) {
         this.editedSqlEtl().transformationScripts.remove(x => model.name() === x.name());
         
-        if (this.editedTransformationScript() && this.editedTransformationScript().name() === model.name()) {
-            this.editedTransformationScript(null);
+        if (this.transformationScriptSelectedForEdit() === model) {
+            this.editedTransformationScriptSandbox(null);
+            this.transformationScriptSelectedForEdit(null);
         }
     }
 
     editTransformationScript(model: ongoingTaskSqlEtlTransformationModel) {
-        this.editedTransformationScript(new ongoingTaskSqlEtlTransformationModel(model.toDto(), false));
+        this.transformationScriptSelectedForEdit(model);
+        this.editedTransformationScriptSandbox(new ongoingTaskSqlEtlTransformationModel(model.toDto(), false));
     }
 
     createCollectionNameAutocompleter(collectionText: KnockoutObservable<string>) {
