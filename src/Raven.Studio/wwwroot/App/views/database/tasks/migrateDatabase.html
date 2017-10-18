@@ -12,28 +12,15 @@
                                 <input data-bind="textInput: serverUrl" type="text" class="form-control" placeholder="Source server url" />
                             </div>
                         </div>
+
                         <div class="form-group" data-bind="validationElement: serverMajorVersion">
-                            <label class="control-label">Server Version</label>
-                            <div class="flex-grow">
-                                <span class="margin-right btn-group">
-                                    <button type="button" class="btn btn-default" 
-                                            data-bind="click: _.partial(serverMajorVersion, 'V2'), css: { active: serverMajorVersion() === 'V2' }">2.x</button>
-                                    <button type="button" class="btn btn-default" 
-                                            data-bind="click: _.partial(serverMajorVersion, 'V30'), css: { active: serverMajorVersion() === 'V30' }">3.0</button>
-                                    <button type="button" class="btn btn-default" 
-                                            data-bind="click: _.partial(serverMajorVersion, 'V35'), css: { active: serverMajorVersion() === 'V35' }">3.5</button>
-                                    <button type="button" class="btn btn-default" 
-                                            data-bind="click: _.partial(serverMajorVersion, 'V4'), css: { active: serverMajorVersion() === 'V4' }">4.0</button>
-                                </span>
-                                
-                                <button type="button" class="btn btn-default" title="Perform automatic detection" 
-                                        data-bind="click: $root.detectServerVersion, css: { 'btn-spinner': $root.spinners.versionDetect() }, disable: $root.spinners.versionDetect">
-                                    <i class="icon-refresh"></i>
-                                    <span>Detect</span>
-                                </button>
-                                
-                            </div>
+                                <label class="control-label">Server Version</label>
+                                <span data-bind="text: serverMajorVersionNumber, visible: $root.spinners.versionDetect() === false" />
+                                <div data-bind="visible: $root.spinners.versionDetect">
+                                    <i class="global-spinner"></i>
+                                </div>
                         </div>
+
                         <div class="form-group" data-bind="validationElement: databaseName">
                             <label class="control-label">Database name</label>
                             <div class="flex-grow">

@@ -18,6 +18,8 @@ class migrateDatabase extends viewModelBase {
         super();
         
         this.bindToCurrentInstance("detectServerVersion");
+
+        this.model.serverUrl.throttle(500).subscribe(this.detectServerVersion);
     }
     
     attached() {
@@ -27,19 +29,36 @@ class migrateDatabase extends viewModelBase {
     }
 
     detectServerVersion() {
-        if (!this.isValid(this.model.versionCheckValidationGroup)) {
-            return;
-        }
-        this.spinners.versionDetect(true);
-        
-        new getRemoteServerVersion(this.model.serverUrl())
-            .execute()
-            .done(buildInfo => {
-                if (buildInfo.MajorVersion !== "Unknown") {
-                    this.model.serverMajorVersion(buildInfo.MajorVersion);
-                }
-            })
-            .always(() => this.spinners.versionDetect(false));
+
+        this.afterAsyncValidationCompleted(this.model.versionCheckValidationGroup, () => {
+
+            if (!this.isValid(this.model.versionCheckValidationGroup)) {
+                this.model.serverMajorVersion(null);
+                return;
+            }
+
+            this.spinners.versionDetect(true);
+
+            const url = this.model.serverUrl();
+
+            new getRemoteServerVersion(url)
+                .execute()
+                .done(buildInfo => {
+                    if (buildInfo.MajorVersion !== "Unknown") {
+                        this.model.serverMajorVersion(buildInfo.MajorVersion);
+                    }
+                    else {
+                        this.model.serverMajorVersion(null);
+                    }
+                }).fail(() => this.model.serverMajorVersion(null))
+                .always(() => {
+                    this.spinners.versionDetect(false);
+                    if (url !== this.model.serverUrl())
+                        this.detectServerVersion();
+                });
+
+        });
+                
     }
     
     migrateDb() {
