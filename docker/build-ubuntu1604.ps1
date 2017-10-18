@@ -16,7 +16,7 @@ function BuildUbuntuDockerImage ( $projectDir, $version = "4.0.0-custom-40" ) {
         throw "Package file does not exist."
     }
 
-    Copy-Item -Destination ./ravendb-ubuntu1604 -Force $packagePath
+    Copy-Item -Destination ./ravendb-ubuntu1604/RavenDB.tar.bz2 -Force -Path $packagePath
 
     docker build ./ravendb-ubuntu1604 `
         -t ravendb/ravendb:$version-ubuntu.16.04-x64 `
