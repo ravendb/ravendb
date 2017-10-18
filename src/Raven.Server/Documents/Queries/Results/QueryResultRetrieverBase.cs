@@ -154,16 +154,36 @@ namespace Raven.Server.Documents.Queries.Results
                 {
                     if (fieldsToFetch.SingleBodyOrMethodWithNoAlias)
                     {
+                        Document newDoc = null;
                         if (fieldVal is BlittableJsonReaderObject nested)
-                            doc.Data = nested;
+                        {
+                            newDoc = new Document
+                            {
+                                Id = doc.Id,
+                                ChangeVector = doc.ChangeVector,
+                                Data = nested,
+                                Etag = doc.Etag,
+                                Flags = doc.Flags,
+                                IndexScore = score,
+                                LastModified = doc.LastModified,
+                                LowerId = doc.LowerId,
+                                NonPersistentFlags = doc.NonPersistentFlags,
+                                StorageId = doc.StorageId,
+                                TransactionMarker = doc.TransactionMarker
+                            };
+                        }
                         else if (fieldVal is Document d)
-                            doc = d;
+                        {
+                            newDoc = d;
+                            newDoc.IndexScore = score;
+                        }
+
                         else
                             ThrowInvalidQueryBodyResponse(fieldVal);
 
-                        doc.IndexScore = score;
-                        return doc;
+                        return newDoc;
                     }
+
                     if (fieldVal is List<object> list)
                         fieldVal = new DynamicJsonArray(list);
                     if (fieldVal is Document d2)
@@ -337,7 +357,7 @@ namespace Raven.Server.Documents.Queries.Results
             }
             _loadedDocumentIds.Clear();
 
-            //_loadedDocuments.Clear(); - explicitly not clearing this, we want to cahce this for the duration of the query
+            //_loadedDocuments.Clear(); - explicitly not clearing this, we want to cache this for the duration of the query
 
 
             _loadedDocuments[document.Id ?? string.Empty] = document;
