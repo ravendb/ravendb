@@ -6,6 +6,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using Lambda2Js;
 using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 
 namespace Raven.Client.Util
@@ -165,6 +166,39 @@ namespace Raven.Client.Util
                 return typeof(IEnumerable).IsAssignableFrom(type.GetGenericTypeDefinition());
             }
         }
+
+        public class LoadSupport : JavascriptConversionExtension
+        {
+            public bool HasLoad { get; set; }
+            public Expression Arg { get; set; }
+            public bool IsEnumerable { get; set; }
+
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                var methodCallExpression = context.Node as MethodCallExpression;
+
+                if (methodCallExpression?.Method.Name != "Load")
+                    return;
+
+                if (methodCallExpression.Method.DeclaringType != typeof(RavenQuery) 
+                    && (methodCallExpression.Object == null || methodCallExpression.Object.Type != typeof(IDocumentSession)))
+                    return;
+
+                HasLoad = true;
+                Arg = methodCallExpression.Arguments[0];
+                IsEnumerable = Arg.Type.IsArray || LinqMethodsSupport.IsCollection(Arg.Type);
+
+                if (IsEnumerable && methodCallExpression.Object?.Type == typeof(IDocumentSession))
+                {
+                    throw new NotSupportedException("Using IDocumentSession.Load(IEnumerable<string> ids) inside a query is not supported. " +
+                                                    "You should use RavenQuery.Load(IEnumerable<string> ids) instead");                    
+                }
+
+                context.PreventDefault();
+                
+            }
+        }
+
 
         public class MathSupport : JavascriptConversionExtension
         {

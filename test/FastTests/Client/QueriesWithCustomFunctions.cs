@@ -1357,6 +1357,100 @@ FROM Users as u SELECT output(u)", query.ToString());
             }
         }
 
+        [Fact]
+        public void Custom_Function_With_Complex_Loads()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Detail { Number = 1 }, "details/1");
+                    session.Store(new Detail { Number = 2 }, "details/2");
+                    session.Store(new Detail { Number = 3 }, "details/3");
+                    session.Store(new Detail { Number = 4 }, "details/4");
+
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia", FriendId = "users/2", DetailIds = new List<string> { "details/1", "details/2" }}, "users/1");
+                    session.Store(new User { Name = "Bob", LastName = "Weir", FriendId = "users/1", DetailIds = new List<string> { "details/3", "details/4" }}, "users/2");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from u in session.Query<User>()
+                                let friend = session.Load<User>(u.FriendId).Name
+                                let details = RavenQuery.Load<Detail>(u.DetailIds).Select(x=> x.Number)
+                                select new
+                                {
+                                    FullName = u.Name + " " + u.LastName,
+                                    Friend = friend,
+                                    Details = details
+                                };
+
+                    Assert.Equal(
+@"DECLARE function output(u, _doc_0, _docs_1) {
+	var friend = _doc_0.Name;
+	var details = _docs_1.map(function(x){return x.Number;});
+	return { FullName : u.Name+"" ""+u.LastName, Friend : friend, Details : details };
+}
+FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT output(u, _doc_0, _docs_1)", query.ToString());
+
+                    var queryResult = query.ToList();
+                    Assert.Equal(2, queryResult.Count);
+
+                    Assert.Equal("Jerry Garcia", queryResult[0].FullName);
+                    Assert.Equal("Bob", queryResult[0].Friend);
+
+                    var detailList = queryResult[0].Details.ToList();
+                    Assert.Equal(2, detailList.Count);
+
+                    Assert.Equal(1, detailList[0]);
+                    Assert.Equal(2, detailList[1]);
+
+                    Assert.Equal("Bob Weir", queryResult[1].FullName);
+                    Assert.Equal("Jerry", queryResult[1].Friend);
+
+                    detailList = queryResult[1].Details.ToList();
+                    Assert.Equal(2, detailList.Count);
+
+                    Assert.Equal(3, detailList[0]);
+                    Assert.Equal(4, detailList[1]);
+                }
+            }
+        }
+
+        [Fact]
+        public void Should_Throw_With_Proper_Message_When_Using_Wrong_Load()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Detail { Number = 1 }, "details/1");
+                    session.Store(new Detail { Number = 2 }, "details/2");
+
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia", DetailIds = new List<string> { "details/1", "details/2" } }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from u in session.Query<User>()
+                                let details = session.Load<Detail>(u.DetailIds).Values.Select(x => x.Number)
+                                select new
+                                {
+                                    FullName = u.Name + " " + u.LastName,
+                                    Details = details
+                                };
+
+                    var exception = Assert.Throws<NotSupportedException>(() => query.ToList());
+                    Assert.Equal("Using IDocumentSession.Load(IEnumerable<string> ids) inside a query is not supported. " +
+                                 "You should use RavenQuery.Load(IEnumerable<string> ids) instead", exception.InnerException?.Message);
+
+                }
+            }
+        }
+
         private class User
         {
             public string Name { get; set; }
