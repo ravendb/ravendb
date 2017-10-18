@@ -3,6 +3,7 @@
 class exportDatabaseModel {
 
     includeDocuments = ko.observable(true);
+    includeConflicts = ko.observable(true);
     includeIndexes = ko.observable(true);
     includeIdentities = ko.observable(true);
     includeRevisionDocuments = ko.observable(true);
@@ -28,6 +29,9 @@ class exportDatabaseModel {
         const operateOnTypes: Array<Raven.Client.Documents.Smuggler.DatabaseItemType> = [];
         if (this.includeDocuments()) {
             operateOnTypes.push("Documents");
+        }
+        if (this.includeConflicts()) {
+            operateOnTypes.push("Conflicts");
         }
         if (this.includeIndexes()) {
             operateOnTypes.push("Indexes");

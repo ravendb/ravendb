@@ -456,7 +456,7 @@ namespace Raven.Server.Smuggler.Documents
                 }
             }
 
-            return result.Documents;
+            return result.Tombstones;
         }
 
         private SmugglerProgressBase.Counts ProcessConflicts(SmugglerResult result)
@@ -490,7 +490,7 @@ namespace Raven.Server.Smuggler.Documents
                 }
             }
 
-            return result.Documents;
+            return result.Conflicts;
         }
 
         private static void SkipDocument(DocumentItem item, SmugglerResult result)
