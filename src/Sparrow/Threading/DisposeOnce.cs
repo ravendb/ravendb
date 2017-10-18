@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Runtime.CompilerServices;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -15,12 +12,17 @@ namespace Sparrow.Threading
         where TOperationMode : struct, IDisposeOnceOperationMode
     {
         private readonly Action _action;
-        private readonly MultipleUseFlag _disposeInProgress = new MultipleUseFlag();
-        private TaskCompletionSource<object> _disposeCompleted = new TaskCompletionSource<object>();
+        private Tuple<MultipleUseFlag, TaskCompletionSource<object>> _state 
+            = Tuple.Create(new MultipleUseFlag(), new TaskCompletionSource<object>());
 
         public DisposeOnce(Action action)
         {
             _action = action;
+            if (typeof(TOperationMode) != typeof(ExceptionRetry) &&
+                typeof(TOperationMode) != typeof(SingleAttempt)) 
+            {
+                throw new NotSupportedException("Unknown operation mode: " + typeof(TOperationMode));
+            }
         }
 
         /// <summary>
@@ -41,13 +43,15 @@ namespace Sparrow.Threading
         /// </summary>
         public void Dispose()
         {
-            if (_disposeInProgress.Raise() == false)
+            var localState = _state;
+            var disposeInProgress = localState.Item1;
+            if (disposeInProgress.Raise() == false)
             {
                 // If a dispose is in progress, all other threads
                 // attempting to dispose will stop here and wait until it
                 // is over. This call to Wait may throw with an
                 // AggregateException
-                _disposeCompleted.Task.Wait();
+                localState.Item2.Task.Wait();
                 return;
             }
 
@@ -56,7 +60,7 @@ namespace Sparrow.Threading
                 _action();
 
                 // Let everyone know this run worked out!
-                _disposeCompleted.SetResult(null);
+                localState.Item2.SetResult(null);
             }
             catch (Exception e)
             {
@@ -64,39 +68,26 @@ namespace Sparrow.Threading
                 {
                     // Reset the state for the next attempt. First backup the
                     // current task completion.
-                    var oldDisposeCompleted = _disposeCompleted;
-
-                    // Reset the TSC. All new threads entering the Dispose
-                    // from this point and on will have to wait until the flag
-                    // is set to low and another thread enters the Dispose.
-                    Interlocked.Exchange(ref _disposeCompleted, new TaskCompletionSource<object>());
-
                     // Let everyone waiting know that this run failed
-                    oldDisposeCompleted.SetException(e);
+                    localState.Item2.SetException(e);
 
-                    // The new round starts when _disposeInProgress is lowered.
-                    // Since we are using GC, the threads waiting on the
-                    // completion won't end up with null references.
-                    _disposeInProgress.LowerOrDie();
+                    // atomically replace both the flag and the task to wait, so new 
+                    // callers to the Dispose are either getting the error or can start
+                    // calling this again
+                    Interlocked.CompareExchange(ref _state,
+                        Tuple.Create(new MultipleUseFlag(), new TaskCompletionSource<object>()),
+                        localState
+                    );
 
-                    // NOTICE: There is an interim moment in which the threads
-                    // that enter Dispose will wait on a new TSC those Task is
-                    // not actually in progress. They will wait on it until a
-                    // different thread goes into the Dispose and effectively
-                    // runs the action and sets them free.
                 }
                 else if (typeof(TOperationMode) == typeof(SingleAttempt))
                 {
                     // Let everyone waiting know that this run failed
-                    _disposeCompleted.SetException(e);
+                    localState.Item2.SetException(e);
                 }
                 else
                 {
-                    // This is here to prevent people from writing bad code. 
-                    // It will fail to compile if the operation mode is not
-                    // properly handled in the code.
-                    var configurationGuard = new object[typeof(TOperationMode) != typeof(SingleAttempt) ? -1 : 0];
-                    GC.KeepAlive(configurationGuard);
+                    throw new NotSupportedException("Unknown operation mode: " + typeof(TOperationMode));
                 }
 
                 // Rethrow so that our thread knows it failed
@@ -108,31 +99,23 @@ namespace Sparrow.Threading
         {
             get
             {
-                if (_disposeInProgress == false)
+                var state = _state;
+                if (state.Item1 == false)
                     return false;
 
                 if (typeof(TOperationMode) == typeof(SingleAttempt))
                     return true;
-                // ReSharper disable once RedundantIfElseBlock
-                else if (typeof(TOperationMode) == typeof(ExceptionRetry))
+
+                if (typeof(TOperationMode) == typeof(ExceptionRetry))
                 {
-                    // TODO: this approach may not be very good for this case...
-                    if (_disposeCompleted.Task.IsFaulted || _disposeCompleted.Task.IsCanceled)
+                    if (state.Item2.Task.IsFaulted || state.Item2.Task.IsCanceled)
                         return false;
 
-                    return _disposeCompleted.Task.IsCompleted;
+                    return state.Item2.Task.IsCompleted;
+                }
 
-                }
-                // ReSharper disable once RedundantIfElseBlock
-                else
-                {
-                    // This is here to prevent people from writing bad code. 
-                    // It will fail to compile if the operation mode is not
-                    // properly handled in the code.
-                    var configurationGuard = new object[typeof(TOperationMode) != typeof(SingleAttempt) ? -1 : 0];
-                    GC.KeepAlive(configurationGuard);
-                    return false;
-                }
+
+                throw new NotSupportedException("Unknown operation mode: " + typeof(TOperationMode));
             }
         }
     }

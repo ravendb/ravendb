@@ -99,14 +99,6 @@ namespace Voron.Impl.Journal
                     }
 
                 }
-                else
-                {
-                    foreach (var logFile in _files)
-                    {
-                        GC.SuppressFinalize(logFile);
-                    }
-
-                }
 
                 _files = ImmutableAppendOnlyList<JournalFile>.Empty;
             });
