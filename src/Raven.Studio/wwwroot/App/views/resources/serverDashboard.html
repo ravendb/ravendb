@@ -11,8 +11,6 @@
                         <div title="Node url">
                             <i class="icon-link"></i><span data-bind="text: clusterManager.localNodeUrl"></span>
                         </div>
-                        <button data-bind="click: $root.fakeDraw">Draw FAKE data</button>
-                        <button data-bind="click: $root.handler">Refresh</button>
                         <div>
                             <i class="icon-clock"></i><span>Up for <strong class="text-success">TODO</strong> days</span>
                         </div>
@@ -82,7 +80,7 @@
                         <div class="infogrid-label">
                             <div class="margin-bottom"># Total Requests/s<br/>
                                 <strong data-bind="text: totalRequestsPerSecond().toLocaleString()"></strong></div>
-                            <div># Writes/s<br/> <strong data-bind="text: totalWritesPerSecond().toLocaleString()"></strong></div>
+                            <div class="margin-bottom"># Writes/s<br/> <strong data-bind="text: totalWritesPerSecond().toLocaleString()"></strong></div>
                             <div># Data Writes/s<br /> <strong data-bind="text: $root.sizeFormatter(totalDataWritesPerSecond())"></strong></div>
                         </div>
                         <div class="infogrid-graph">
