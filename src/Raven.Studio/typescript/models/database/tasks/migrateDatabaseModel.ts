@@ -14,7 +14,7 @@ class migrateDatabaseModel {
         if (!this.serverMajorVersion())
             return "-";
 
-        switch (this.serverMajorVersion().toString()) {
+        switch (this.serverMajorVersion()) {
 
             case "Unknown":
                 return "-";

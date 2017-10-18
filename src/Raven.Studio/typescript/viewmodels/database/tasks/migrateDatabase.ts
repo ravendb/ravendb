@@ -50,13 +50,9 @@ class migrateDatabase extends viewModelBase {
                     else {
                         this.model.serverMajorVersion(null);
                     }
-                }).fail(() => this.model.serverMajorVersion(null))
-                .always(() => {
-                    this.spinners.versionDetect(false);
-                    if (url !== this.model.serverUrl())
-                        this.detectServerVersion();
-                });
-
+                })
+                .fail(() => this.model.serverMajorVersion(null))
+                .always(() => this.spinners.versionDetect(false));
         });
                 
     }
