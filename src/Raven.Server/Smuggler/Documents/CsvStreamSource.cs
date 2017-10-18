@@ -150,11 +150,7 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         if (_hasCollection && i == _collectionIndex)
                         {
-                            var metadata = new DynamicJsonValue
-                            {
-                                [nameof(Constants.Documents.Metadata.Collection)] = csvReaderCurrentRecord[_collectionIndex]
-                            };
-                            data[Constants.Documents.Metadata.Key] = metadata;
+                            SetCollectionForDocument(csvReaderCurrentRecord[_collectionIndex], data);
                         }
                         continue;
                     }
@@ -183,6 +179,11 @@ namespace Raven.Server.Smuggler.Documents
                     data[csvReaderFieldHeaders[i]] = ParseValue(csvReaderCurrentRecord[i]);
                 }
 
+                if (_hasCollection == false)
+                {
+                    SetCollectionForDocument(collection, data);
+                }
+
                 return new DocumentItem
                 {
                     Document = new Document
@@ -206,8 +207,19 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
+        private void SetCollectionForDocument(string collection, DynamicJsonValue data)
+        {
+            var metadata = new DynamicJsonValue
+            {
+                [Constants.Documents.Metadata.Collection] = collection
+            };
+            data[Constants.Documents.Metadata.Key] = metadata;
+        }
+
         private object ParseValue(string s)
         {
+            if (string.IsNullOrEmpty(s))
+                return s;
             if (s.StartsWith('\"') && s.EndsWith('\"'))
                 return s.Substring(1, s.Length - 2);
             if (s.StartsWith('[') && s.EndsWith(']'))
@@ -217,6 +229,28 @@ namespace Raven.Server.Smuggler.Documents
                 _disposibales.Add(array);
                 return array;
             }
+            if (char.IsDigit(s[0]) || s[0] == '-')
+            {
+                if (s.IndexOf('.') > 0)
+                {
+                    if (decimal.TryParse(s, out var dec))
+                        return dec;
+                }
+                else
+                {
+                    if (long.TryParse(s, out var l))
+                        return l;
+                }
+            }
+
+            if ((s.Length == 4 && s[0] == 't' || s.Length == 5 && s[0] == 'f') && bool.TryParse(s, out var b))
+            {
+                return b;
+            }
+
+            if (s.Length == 4 && s.Equals("null"))
+                return null;
+
             return s;
         }
 
