@@ -303,7 +303,7 @@ namespace Sparrow.LowMemory
             while (MemByTime.TryPeek(out var existing) && 
                 (now - existing.Item2) > TimeSpan.FromMinutes(5))
             {
-                if (MemByTime.TryDequeue(out _))
+                if (MemByTime.TryDequeue(out _) == false)
                     break;
             }
 
