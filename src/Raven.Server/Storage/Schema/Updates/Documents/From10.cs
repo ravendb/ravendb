@@ -37,7 +37,42 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             // Update tombstones's collection value
             using (documentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                // TODO
+                foreach (var tombstoneCollection in documentsStorage.GetTombstoneCollections(readTx))
+                {
+                    // context.Transaction = new DocumentsTransaction(context, writeTx, new DocumentsChanges());
+
+                    // var collectionName = documentsStorage.ExtractCollectionName(context, "users");
+                    var collectionName = new CollectionName("users");
+                    var tableName = collectionName.GetTableName(CollectionTableType.Tombstones);
+                    var readTable = readTx.OpenTable(TombstonesSchema, tableName);
+                    var writeTable = writeTx.OpenTable(TombstonesSchema, tableName);
+                    foreach (var read in readTable.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
+                    {
+                        var type = *(DocumentTombstone.TombstoneType*)read.Reader.Read((int)TombstoneTable.Type, out int _);
+                        var oldCollection = TableValueToString(context, (int)TombstoneTable.Collection, ref read.Reader);
+                        using (DocumentIdWorker.GetStringPreserveCase(context, oldCollection, out Slice collectionSlice))
+                        using (writeTable.Allocate(out TableValueBuilder write))
+                        {
+                            write.Add(read.Reader.Read((int)TombstoneTable.LowerId, out int size), size);
+                            write.Add(read.Reader.Read((int)TombstoneTable.Etag, out size), size);
+                            write.Add(read.Reader.Read((int)TombstoneTable.DeletedEtag, out size), size);
+                            write.Add(read.Reader.Read((int)TombstoneTable.TransactionMarker, out size), size);
+                            write.Add(read.Reader.Read((int)TombstoneTable.Type, out size), size);
+                            if (type == DocumentTombstone.TombstoneType.Attachment)
+                            {
+                                write.Add(read.Reader.Read((int)TombstoneTable.Collection, out size), size);
+                            }
+                            else
+                            {
+                                write.Add(collectionSlice);
+                            }
+                            write.Add(read.Reader.Read((int)TombstoneTable.Flags, out size), size);
+                            write.Add(read.Reader.Read((int)TombstoneTable.ChangeVector, out size), size);
+                            write.Add(read.Reader.Read((int)TombstoneTable.LastModified, out size), size);
+                            writeTable.Set(write);
+                        }
+                    }
+                }
             }
 
             // Update conflicts' collection value

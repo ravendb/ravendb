@@ -272,78 +272,96 @@ namespace Voron
             Interlocked.Exchange(ref _transactionsCounter, header->TransactionId == 0 ? entry.TransactionId : header->TransactionId);
             var transactionPersistentContext = new TransactionPersistentContext(true);
             using (var tx = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
+            using (var root = Tree.Open(tx, null, Constants.RootTreeNameSlice, header->TransactionId == 0 ? &entry.Root : &header->Root))
+            using (var writeTx = new Transaction(tx))
             {
-                using (var root = Tree.Open(tx, null, Constants.RootTreeNameSlice, header->TransactionId == 0 ? &entry.Root : &header->Root))
+                tx.UpdateRootsIfNeeded(root);
+
+                var metadataTree = writeTx.ReadTree(Constants.MetadataTreeNameSlice);
+                if (metadataTree == null)
+                    VoronUnrecoverableErrorException.Raise(this,
+                        "Could not find metadata tree in database, possible mismatch / corruption?");
+
+                var dbId = metadataTree.Read("db-id");
+                if (dbId == null)
+                    VoronUnrecoverableErrorException.Raise(this,
+                        "Could not find db id in metadata tree, possible mismatch / corruption?");
+
+                var buffer = new byte[16];
+                var dbIdBytes = dbId.Reader.Read(buffer, 0, 16);
+                if (dbIdBytes != 16)
+                    VoronUnrecoverableErrorException.Raise(this,
+                        "The db id value in metadata tree wasn't 16 bytes in size, possible mismatch / corruption?");
+
+                var databseGuidId = _options.GenerateNewDatabaseId == false ? new Guid(buffer) : Guid.NewGuid();
+                DbId = databseGuidId;
+
+                FillBase64Id(databseGuidId);
+
+                if (_options.GenerateNewDatabaseId)
                 {
-                    tx.UpdateRootsIfNeeded(root);
+                    // save the new database id
+                    metadataTree.Add("db-id", DbId.ToByteArray());
+                }
 
-                    using (var writeTx = new Transaction(tx))
-                    {
-                        var metadataTree = writeTx.ReadTree(Constants.MetadataTreeNameSlice);
-                        if (metadataTree == null)
-                            VoronUnrecoverableErrorException.Raise(this,
-                                "Could not find metadata tree in database, possible mismatch / corruption?");
+                tx.Commit();
+            }
 
-                        var dbId = metadataTree.Read("db-id");
-                        if (dbId == null)
-                            VoronUnrecoverableErrorException.Raise(this,
-                                "Could not find db id in metadata tree, possible mismatch / corruption?");
+            UpgradeSchemaIfRequired();
+        }
 
-                        var buffer = new byte[16];
-                        var dbIdBytes = dbId.Reader.Read(buffer, 0, 16);
-                        if (dbIdBytes != 16)
-                            VoronUnrecoverableErrorException.Raise(this,
-                                "The db id value in metadata tree wasn't 16 bytes in size, possible mismatch / corruption?");
+        private void UpgradeSchemaIfRequired()
+        {
+            var readPersistentContext = new TransactionPersistentContext(true);
+            using (var readTxInner = NewLowLevelTransaction(readPersistentContext, TransactionFlags.Read))
+            using (var readTx = new Transaction(readTxInner))
+            {
+                var metadataTree = readTx.ReadTree(Constants.MetadataTreeNameSlice);
 
-                        var databseGuidId = _options.GenerateNewDatabaseId == false ? new Guid(buffer) : Guid.NewGuid();
-                        DbId = databseGuidId;
+                var schemaVersion = metadataTree.Read("schema-version");
+                if (schemaVersion == null)
+                    VoronUnrecoverableErrorException.Raise(this, "Could not find schema version in metadata tree, possible mismatch / corruption?");
 
-                        FillBase64Id(databseGuidId);
+                var schemaVersionVal = schemaVersion.Reader.ReadLittleEndianInt32();
+                if (Options.SchemaVersion != 0 &&
+                    schemaVersionVal != Options.SchemaVersion)
+                {
+                    if (schemaVersionVal > Options.SchemaVersion)
+                        ThrowSchemaUpgradeRequired(schemaVersionVal, "You have a schema version is newer than the current supported version.");
 
-                        if (_options.GenerateNewDatabaseId)
-                        {
-                            // save the new database id
-                            metadataTree.Add("db-id", DbId.ToByteArray());
-                        }
+                    Func<Transaction, Transaction, int, bool> upgrader = Options.SchemaUpgrader;
+                    if (upgrader == null)
+                        ThrowSchemaUpgradeRequired(schemaVersionVal, "You need to upgrade the schema but there is no schema uprader provided.");
 
-                        var schemaVersion = metadataTree.Read("schema-version");
-                        if (schemaVersion == null)
-                            VoronUnrecoverableErrorException.Raise(this,
-                                "Could not find schema version in metadata tree, possible mismatch / corruption?");
-
-                        var schemaVersionVal = schemaVersion.Reader.ReadLittleEndianInt32();
-                        if (Options.SchemaVersion != 0 &&
-                            schemaVersionVal != Options.SchemaVersion)
-                        {
-                            if (schemaVersionVal > Options.SchemaVersion)
-                                ThrowSchemaUpgradeRequired(schemaVersionVal, "You have a schema version is newer than the current supported version.");
-
-                            Func<Transaction, Transaction, int, bool> upgrader = Options.SchemaUpgrader;
-                            if (upgrader == null)
-                                ThrowSchemaUpgradeRequired(schemaVersionVal, "You need to upgrade the schema but there is no schema uprader provided.");
-
-                            while (schemaVersionVal < Options.SchemaVersion)
-                            {
-                                using (var readTxInner = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.Read))
-                                using (var readTx = new Transaction(readTxInner))
-                                {
-                                    // ReSharper disable once PossibleNullReferenceException
-                                    if (upgrader(readTx, writeTx, schemaVersionVal) == false)
-                                        break;
-                                }
-                                    
-                                metadataTree.Increment("schema-version", 1);
-                                schemaVersionVal++;
-                            }
-
-                            if (schemaVersionVal != Options.SchemaVersion)
-                                ThrowSchemaUpgradeRequired(schemaVersionVal, "You need to upgrade the schema.");
-                        }
-
-                        tx.Commit();
-                    }
+                    UpgradeSchema(schemaVersionVal, upgrader);
                 }
             }
+        }
+
+        private void UpgradeSchema(int schemaVersionVal, Func<Transaction, Transaction, int, bool> upgrader)
+        {
+            while (schemaVersionVal < Options.SchemaVersion)
+            {
+                var readPersistentContext = new TransactionPersistentContext(true);
+                var writePersistentContext = new TransactionPersistentContext(true);
+                using (var readTxInner = NewLowLevelTransaction(readPersistentContext, TransactionFlags.Read))
+                using (var readTx = new Transaction(readTxInner))
+                using (var writeTxInner = NewLowLevelTransaction(writePersistentContext, TransactionFlags.ReadWrite))
+                using (var writeTx = new Transaction(writeTxInner))
+                {
+                    // ReSharper disable once PossibleNullReferenceException
+                    if (upgrader(readTx, writeTx, schemaVersionVal) == false)
+                        break;
+
+                    var metadataTree = writeTx.ReadTree(Constants.MetadataTreeNameSlice);
+                    metadataTree.Increment("schema-version", 1);
+                    schemaVersionVal++;
+                    writeTx.Commit();
+                }
+            }
+
+            if (schemaVersionVal != Options.SchemaVersion)
+                ThrowSchemaUpgradeRequired(schemaVersionVal, "You need to upgrade the schema.");
         }
 
         private void ThrowSchemaUpgradeRequired(int schemaVersionVal, string message)
