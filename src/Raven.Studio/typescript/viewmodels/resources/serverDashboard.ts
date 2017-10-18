@@ -176,7 +176,7 @@ class databasesSection {
                 new textColumn<databaseItem>(grid, x => x.alertsCount(), "Alerts #", "12%", {
                     extraClass: item => item.alertsCount() ? 'has-alerts' : ''
                 }), 
-                new textColumn<databaseItem>(grid, x => x.replicaFactor(), "Replica factor", "12%")
+                new textColumn<databaseItem>(grid, x => x.replicationFactor(), "Replica factor", "12%")
             ];
         });
     }
@@ -233,7 +233,8 @@ class trafficSection {
     private gridController = ko.observable<virtualGridController<trafficItem>>();
     
     totalRequestsPerSecond = ko.observable<number>(0);
-    totalTransferPerSecond = ko.observable<number>(0);
+    totalWritesPerSecond = ko.observable<number>(0);
+    totalDataWritesPerSecond = ko.observable<number>(0);
     
     init()  {
         const grid = this.gridController();
@@ -248,13 +249,13 @@ class trafficSection {
                 //TODO: new checkedColumn(true),
                 new hyperlinkColumn<trafficItem>(grid, x => x.database(), x => appUrl.forDocuments(null, x.database()), "Database", "30%"),
                 new textColumn<trafficItem>(grid, x => x.requestsPerSecond(), "Requests / s", "25%"),
-                new textColumn<trafficItem>(grid, x => this.sizeFormatter(x.transferPerSecond()), "Docs data received / s", "25%")
+                new textColumn<trafficItem>(grid, x => x.writesPerSecond(), "Writes / s", "25%")
             ];
         });
         
         this.trafficChart = new dashboardChart("#trafficChart", {
             useSeparateYScales: true,
-            topPaddingProvider: key => key === "requests" ? 20 : 5
+            topPaddingProvider: key => (key === "writes") ? 20 : 5
         });
     }
     
@@ -284,8 +285,8 @@ class trafficSection {
             key: "requests",
             value: this.totalRequestsPerSecond()
         }, {
-            key: "transfer",
-            value: this.totalTransferPerSecond()
+            key: "writes",
+            value: this.totalWritesPerSecond()
         }]);
         
         this.gridController().reset(false);
@@ -293,15 +294,18 @@ class trafficSection {
     
     private updateTotals() {
         let totalRequests = 0;
-        let totalTransfer = 0;
+        let writesPerSecond = 0;
+        let dataWritesPerSecond = 0;
 
         this.table.forEach(item => {
             totalRequests += item.requestsPerSecond();
-            totalTransfer += item.transferPerSecond();
+            writesPerSecond += item.writesPerSecond();
+            dataWritesPerSecond += item.dataWritesPerSecond();
         });
 
         this.totalRequestsPerSecond(totalRequests);
-        this.totalTransferPerSecond(totalTransfer);
+        this.totalWritesPerSecond(writesPerSecond);
+        this.totalDataWritesPerSecond(dataWritesPerSecond);
     }
 }
 
@@ -398,7 +402,7 @@ class serverDashboard extends viewModelBase {
                 IndexesCount: _.random(1, 20),
                 ErroredIndexesCount: 2,
                 DocumentsCount: _.random(1000, 2000),
-                ReplicaFactor: _.random(1, 3)
+                ReplicationFactor: _.random(1, 3)
             } as Raven.Server.Dashboard.DatabaseInfoItem;
 
             fakeDatabases.push(item);
@@ -418,9 +422,10 @@ class serverDashboard extends viewModelBase {
             const item = {
                 Database: "Northwind #" + (i + 1),
                 RequestsPerSecond: _.random(100, 1000000),
-                TransferPerSecond: _.random(100, 100000)
+                WritesPerSecond: _.random(100, 100000),
+                WriteBytesPerSecond: _.random(100, 100000)
             } as Raven.Server.Dashboard.TrafficWatchItem;
-            
+
             fakeTraffic.push(item);
         }
         
@@ -457,7 +462,9 @@ class serverDashboard extends viewModelBase {
         return {
             TotalMemory: 64 * 1024 * 1024 * 1024,
             MemoryUsage: 32 * 1024 * 1024 * 1024,
+            RavenMemoryUsage: 30 * 1024 * 1024 * 1024,
             CpuUsage: 80,
+            RavenCpuUsage: 75,
             Type: "MachineResources",
             Date: moment.utc().toISOString()
         };
@@ -564,7 +571,7 @@ class serverDashboard extends viewModelBase {
             {
                 fakeTraffic.Items.forEach(x => {
                     const dx = _.random(-2000, 2000);
-                    x.TransferPerSecond += dx;
+                    x.WritesPerSecond += dx;
 
                     const dy = _.random(-2000, 2000);
                     x.RequestsPerSecond += dy;

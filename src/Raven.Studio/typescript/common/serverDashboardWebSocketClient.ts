@@ -20,7 +20,7 @@ class serverDashboardWebSocketClient extends abstractWebSocketClient<Raven.Serve
     }
 
     protected webSocketUrlFactory() {
-        return ""; //TODO: use endpoints here
+        return endpoints.global.serverDashboard.serverDashboardWatch;
     }
 
     get autoReconnect() {

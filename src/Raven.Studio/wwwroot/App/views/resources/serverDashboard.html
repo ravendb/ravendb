@@ -46,7 +46,7 @@
                         <div class="infogrid">
                             <div class="infogrid-label" data-bind="with: resources">
                                 <div><i class="icon-processor"></i><span>CPU</span></div>
-                                <div><strong data-bind="text: cpuUsage() + '%', attr: { class: cpuUsageClass() }"></strong></div>
+                                <div><strong data-bind="text: cpuUsage().toFixed(2) + '%', attr: { class: cpuUsageClass() }"></strong></div>
                             </div>
                             <div class="infogrid-graph" >
                                 <div class="graph-container fix-size" id="cpuChart">
@@ -82,7 +82,8 @@
                         <div class="infogrid-label">
                             <div class="margin-bottom"># Total Requests/s<br/>
                                 <strong data-bind="text: totalRequestsPerSecond().toLocaleString()"></strong></div>
-                            <div># Total docs data received/s<br/> <strong data-bind="text: $root.sizeFormatter(totalTransferPerSecond())"></strong></div>
+                            <div># Writes/s<br/> <strong data-bind="text: totalWritesPerSecond().toLocaleString()"></strong></div>
+                            <div># Data Writes/s<br /> <strong data-bind="text: $root.sizeFormatter(totalDataWritesPerSecond())"></strong></div>
                         </div>
                         <div class="infogrid-graph">
                             <div class="graph-container fix-size" id="trafficChart"></div>
