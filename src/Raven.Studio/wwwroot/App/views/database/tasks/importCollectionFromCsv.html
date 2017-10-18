@@ -1,0 +1,29 @@
+<div class="importDatabase ">
+<div class="panel">
+    <div class="panel-body">
+        <form data-bind="submit: importCsv">
+            <h3>Import documents from CSV file into a collection.</h3>
+            <p class="bg-info padding padding-xs small"><i class="icon-info"></i> Note: Each column will be treated as a property.</p>
+            <div class="row">
+                <div class="col-sm-6">
+                    <div class="input-group file-input" data-bind="validationElement: importedFileName">
+                        <input type="file" id="importCsvFilePicker" data-bind="event: { change: _.partial(fileSelected, $element.value) }, disable: isImporting" tabindex="-1">
+                        <span class="static-name form-control" data-bind="text: importedFileName() || 'Select file...'"></span>
+                        <span class="input-group-btn">
+                            <label for="importCsvFilePicker" class="btn btn-default">
+                                <i class="icon-document"></i><span>Browse</span>
+                            </label>
+                        </span>
+                        <p class="help-block" data-bind="validationMessage: importedFileName"></p>
+                    </div>
+                </div>
+            </div>
+            <hr />
+            <div class="progress" data-bind="visible: isUploading()">
+                <div class="progress-bar progress-bar-primary progress-bar-striped" role="progressbar" data-bind="style: { width: uploadStatus() + '%' }"> <span class="sr-only" data-bind="text: uploadStatus() + '%'"></span> </div>
+            </div>
+            <button class="btn btn-primary" type="submit" data-bind="css: { 'btn-spinner': isImporting() }"><span class="icon-import"></span> <span>Import collection</span></button>
+        </form>
+    </div>
+</div>
+</div>

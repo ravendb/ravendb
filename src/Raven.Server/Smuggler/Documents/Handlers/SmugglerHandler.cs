@@ -469,10 +469,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                             return (IOperationResult)result;
                         });
                     }, operationId, token);
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteOperationId(context, operationId);
-                }
+                
+                WriteImportResult(context, result, ResponseBodyStream());
             }
         }
 

@@ -1,0 +1,109 @@
+import viewModelBase = require("viewmodels/viewModelBase");
+import database = require("models/resources/database");
+import messagePublisher = require("common/messagePublisher");
+import importDatabaseModel = require("models/database/tasks/importDatabaseModel");
+import notificationCenter = require("common/notifications/notificationCenter");
+import eventsCollector = require("common/eventsCollector");
+import getNextOperationId = require("commands/database/studio/getNextOperationId");
+import importFromCsvCommand = require("commands/database/studio/importFromCsvCommand");
+import EVENTS = require("common/constants/events");
+
+class importCollectionFromCsv extends viewModelBase {
+
+    private static readonly filePickerTag = "#importCsvFilePicker";
+
+    static isImporting = ko.observable(false);
+    isImporting = importCollectionFromCsv.isImporting;
+
+    hasFileSelected = ko.observable(false);
+    importedFileName = ko.observable<string>();
+
+    isUploading = ko.observable<boolean>(false);
+    uploadStatus = ko.observable<number>();
+
+    validationGroup = ko.validatedObservable({
+        importedFileName: this.importedFileName,
+    });
+
+    constructor() {
+        super();
+
+        this.bindToCurrentInstance("fileSelected");
+
+        this.isUploading.subscribe(v => {
+            if (!v) {
+                this.uploadStatus(0);
+            }
+        });
+
+        this.setupValidation();
+    }
+
+    private setupValidation() {
+        this.importedFileName.extend({
+            required: true
+        });
+    }
+
+    createPostboxSubscriptions(): Array<KnockoutSubscription> {
+        return [
+            ko.postbox.subscribe("UploadProgress", (percentComplete: number) => {
+                const db = this.activeDatabase();
+                if (!db) {
+                    return;
+                }
+
+                if (!this.isUploading()) {
+                    return;
+                }
+
+                if (percentComplete === 100) {
+                    setTimeout(() => this.isUploading(false), 700);
+                }
+
+                this.uploadStatus(percentComplete);
+            }),
+            ko.postbox.subscribe(EVENTS.ChangesApi.Reconnected, (db: database) => {
+                this.isUploading(false);
+            })
+        ];
+    }
+
+    fileSelected(fileName: string) {
+        const isFileSelected = fileName ? !!fileName.trim() : false;
+        this.hasFileSelected(isFileSelected);
+        this.importedFileName(isFileSelected ? fileName.split(/(\\|\/)/g).pop() : null);
+    }
+
+    importCsv() {
+        if (!this.isValid(this.validationGroup)) {
+            return;
+        }
+
+        eventsCollector.default.reportEvent("csv", "import");
+        this.isUploading(true);
+
+        const fileInput = document.querySelector(importCollectionFromCsv.filePickerTag) as HTMLInputElement;
+        const db = this.activeDatabase();
+
+        this.getNextOperationId(db)
+            .done((operationId: number) => {
+                notificationCenter.instance.openDetailsForOperationById(db, operationId);
+
+                new importFromCsvCommand(db, operationId, fileInput.files[0])
+                    .execute()
+                    .always(() => this.isUploading(false));
+            });
+    }
+
+    private getNextOperationId(db: database): JQueryPromise<number> {
+        return new getNextOperationId(db).execute()
+            .fail((qXHR, textStatus, errorThrown) => {
+                messagePublisher.reportError("Could not get next task id.", errorThrown);
+                this.isUploading(false);
+            });
+    }
+
+}
+
+export = importCollectionFromCsv; 

@@ -50,6 +50,7 @@ class appUrl {
         exploration: ko.pureComputed(() => appUrl.forExploration(appUrl.currentDatabase())),
         tasks: ko.pureComputed(() => appUrl.forTasks(appUrl.currentDatabase())),
         importDatabaseFromFileUrl: ko.pureComputed(() => appUrl.forImportDatabaseFromFile(appUrl.currentDatabase())),
+        importCollectionFromCsv: ko.pureComputed(() => appUrl.forImportCollectionFromCsv(appUrl.currentDatabase())),
         exportDatabaseUrl: ko.pureComputed(() => appUrl.forExportDatabase(appUrl.currentDatabase())),
         migrateDatabaseUrl: ko.pureComputed(() => appUrl.forMigrateDatabase(appUrl.currentDatabase())),
         sampleDataUrl: ko.pureComputed(() => appUrl.forSampleData(appUrl.currentDatabase())),
@@ -489,6 +490,11 @@ class appUrl {
     static forImportDatabaseFromFile(db: database | databaseInfo): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/tasks/import/file?" + databasePart;
+    }
+
+    static forImportCollectionFromCsv(db: database | databaseInfo): string {
+        const databasePart = appUrl.getEncodedDbPart(db);
+        return "#databases/tasks/import/csv?" + databasePart;
     }
 
     static forExportDatabase(db: database | databaseInfo): string {

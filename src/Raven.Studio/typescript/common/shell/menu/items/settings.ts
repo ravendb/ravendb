@@ -118,7 +118,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/tasks/import*details',
             moduleId: 'viewmodels/database/tasks/importParent',
-            title: 'Import Database',
+            title: 'Import Data',
             nav: true,
             css: 'icon-import-database',
             dynamicHash: appUrls.importDatabaseFromFileUrl

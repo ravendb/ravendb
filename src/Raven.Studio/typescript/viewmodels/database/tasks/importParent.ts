@@ -26,6 +26,14 @@ class importParent extends viewModelBase {
                     tabName: "From another RavenDB Server",
                     nav: true,
                     hash: appUrl.forCurrentDatabase().migrateDatabaseUrl
+                },
+                {
+                    route: 'databases/tasks/import/csv',
+                    moduleId: 'viewmodels/database/tasks/importCollectionFromCsv',
+                    title: 'Import collection from CSV file',
+                    tabName: "From CSV file",
+                    nav: true,
+                    hash: appUrl.forCurrentDatabase().importCollectionFromCsv
                 }
             ])
             .buildNavigationModel();
