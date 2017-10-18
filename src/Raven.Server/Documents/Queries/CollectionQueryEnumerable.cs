@@ -94,9 +94,6 @@ namespace Raven.Server.Documents.Queries
 
                 _ids = ExtractIdsFromQuery(query);
 
-                if (_ids != null && _ids.Count > BooleanQuery.MaxClauseCount)
-                    throw new BooleanQuery.TooManyClauses();
-
                 _sort = ExtractSortFromQuery(query);
 
                 _resultsRetriever = new MapQueryResultRetriever(database, query, documents, context, fieldsToFetch, includeDocumentsCommand);
