@@ -421,6 +421,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 var token = new OperationCancelToken(Database.DatabaseShutdown);
                 var result = new SmugglerResult();
                 var operationId = GetLongQueryString("operationId");
+                var collection = GetStringQueryString("collection",false);
                 await Database.Operations.AddOperation(Database, "Collection import from CSV", Raven.Server.Documents.Operations.Operations.OperationType.CollectionImportFromCsv,
                     onProgress =>
                     {
@@ -444,7 +445,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                         if (ContentDispositionHeaderValue.TryParse(section.ContentDisposition, out contentDisposition) == false)
                                             continue;
 
-                                        var filename = contentDisposition.FileName.ToString().Trim('\"');
+                                        var filename = collection??contentDisposition.FileName.ToString().Trim('\"');
                                         var options = new DatabaseSmugglerOptionsServerSide();
                                         if (section.Headers.ContainsKey("Content-Encoding") && section.Headers["Content-Encoding"] == "gzip")
                                         {
