@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Sparrow.Logging;
@@ -286,7 +287,7 @@ namespace Sparrow.LowMemory
             }
         }
 
-        private static readonly List<Tuple<long, DateTime>> MemByTime = new List<Tuple<long, DateTime>>();
+        private static readonly ConcurrentQueue<Tuple<long, DateTime>> MemByTime = new ConcurrentQueue<Tuple<long, DateTime>>();
 
         private static void SetMemoryRecords(long availableRamInBytes)
         {
@@ -297,8 +298,14 @@ namespace Sparrow.LowMemory
             if (LowSinceStartup > availableRamInBytes)
                 LowSinceStartup = availableRamInBytes;
 
-            MemByTime.Add(new Tuple<long, DateTime>(availableRamInBytes, now));
-            MemByTime.RemoveAll(x => now - x.Item2 > TimeSpan.FromMinutes(5));
+            MemByTime.Enqueue(new Tuple<long, DateTime>(availableRamInBytes, now));
+
+            while (MemByTime.TryPeek(out var existing) && 
+                (now - existing.Item2) > TimeSpan.FromMinutes(5))
+            {
+                if (MemByTime.TryDequeue(out _))
+                    break;
+            }
 
             long highLastOneMinute = 0;
             long lowLastOneMinute = long.MaxValue;
