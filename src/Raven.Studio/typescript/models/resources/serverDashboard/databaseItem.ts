@@ -7,7 +7,7 @@ class databaseItem {
     indexesCount = ko.observable<number>();
     erroredIndexesCount = ko.observable<number>();
     alertsCount = ko.observable<number>();
-    replicaFactor = ko.observable<number>();
+    replicationFactor = ko.observable<number>();
     online = ko.observable<boolean>();
     
     constructor(dto: Raven.Server.Dashboard.DatabaseInfoItem) {
@@ -20,7 +20,7 @@ class databaseItem {
         this.indexesCount(dto.IndexesCount);
         this.erroredIndexesCount(dto.ErroredIndexesCount);
         this.alertsCount(dto.AlertsCount);
-        this.replicaFactor(dto.ReplicaFactor);
+        this.replicationFactor(dto.ReplicationFactor);
         this.online(dto.Online);
     }
 }

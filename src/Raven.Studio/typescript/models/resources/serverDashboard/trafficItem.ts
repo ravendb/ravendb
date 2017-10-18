@@ -3,7 +3,8 @@
 class trafficItem {
     database = ko.observable<string>();
     requestsPerSecond = ko.observable<number>();
-    transferPerSecond = ko.observable<number>();
+    writesPerSecond = ko.observable<number>();
+    dataWritesPerSecond = ko.observable<number>();
     
     showOnGraph = ko.observable<boolean>();
     
@@ -13,8 +14,9 @@ class trafficItem {
     
     update(dto: Raven.Server.Dashboard.TrafficWatchItem) {
         this.database(dto.Database);
-        this.transferPerSecond(dto.TransferPerSecond);
         this.requestsPerSecond(dto.RequestsPerSecond);
+        this.writesPerSecond(dto.WritesPerSecond);
+        this.dataWritesPerSecond(dto.WriteBytesPerSecond);
     }
 }
 
