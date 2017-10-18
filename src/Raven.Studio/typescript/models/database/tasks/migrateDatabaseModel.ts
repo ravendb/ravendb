@@ -9,6 +9,27 @@ class migrateDatabaseModel {
     authenticationMethod = ko.observable<authenticationMethod>("none");
     
     serverMajorVersion = ko.observable<Raven.Server.Smuggler.Migration.MajorVersion>();
+    serverMajorVersionNumber = ko.pureComputed<string>(() => {
+
+        if (!this.serverMajorVersion())
+            return "-";
+
+        switch (this.serverMajorVersion().toString()) {
+
+            case "Unknown":
+                return "-";
+            case "V2":
+                return "2.0";
+            case "V30":
+                return "3.0";
+            case "V35":
+                return "3.5";
+            case "V4":
+                return "4.0";
+        }
+
+        return "-";
+    })
     
     userName = ko.observable<string>();
     password = ko.observable<string>();
