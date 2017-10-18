@@ -42,6 +42,7 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Memory;
+using Raven.Server.Storage.Schema;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Metrics;
 using Sparrow;
@@ -214,7 +215,8 @@ namespace Raven.Server.Documents.Indexes
                 options.OnNonDurableFileSystemError += documentDatabase.HandleNonDurableFileSystemError;
                 options.OnRecoveryError += documentDatabase.HandleOnRecoveryError;
                 options.CompressTxAboveSizeInBytes = documentDatabase.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
-                options.SchemaVersion = Constants.Schemas.IndexVersion;
+                options.SchemaVersion = SchemaUpgrader.CurrentVersion.IndexVersion;
+                options.SchemaUpgrader = SchemaUpgrader.Upgrader(SchemaUpgrader.StorageType.Index, null, null);
                 options.ForceUsing32BitsPager = documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
                 options.TimeToSyncAfterFlashInSec = (int)documentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
                 options.NumOfConcurrentSyncsPerPhysDrive = documentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
@@ -330,7 +332,8 @@ namespace Raven.Server.Documents.Indexes
                 options.OnNonDurableFileSystemError += documentDatabase.HandleNonDurableFileSystemError;
                 options.OnRecoveryError += documentDatabase.HandleOnRecoveryError;
 
-                options.SchemaVersion = Constants.Schemas.IndexVersion;
+                options.SchemaVersion = SchemaUpgrader.CurrentVersion.IndexVersion;
+                options.SchemaUpgrader = SchemaUpgrader.Upgrader(SchemaUpgrader.StorageType.Index, null, null);
                 options.CompressTxAboveSizeInBytes = documentDatabase.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
                 options.ForceUsing32BitsPager = documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
                 options.TimeToSyncAfterFlashInSec = (int)documentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;

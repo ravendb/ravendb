@@ -10,7 +10,6 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Logging;
-using Sparrow.LowMemory;
 using Sparrow.Platform.Posix;
 using Sparrow.Threading;
 using Sparrow.Utils;
@@ -278,9 +277,9 @@ namespace Voron
                 {
                     tx.UpdateRootsIfNeeded(root);
 
-                    using (var treesTx = new Transaction(tx))
+                    using (var writeTx = new Transaction(tx))
                     {
-                        var metadataTree = treesTx.ReadTree(Constants.MetadataTreeNameSlice);
+                        var metadataTree = writeTx.ReadTree(Constants.MetadataTreeNameSlice);
                         if (metadataTree == null)
                             VoronUnrecoverableErrorException.Raise(this,
                                 "Could not find metadata tree in database, possible mismatch / corruption?");
@@ -316,16 +315,43 @@ namespace Voron
                         if (Options.SchemaVersion != 0 &&
                             schemaVersionVal != Options.SchemaVersion)
                         {
-                            VoronUnrecoverableErrorException.Raise(this,
-                                "The schema version of this database is expected to be " +
-                                Options.SchemaVersion + " but is actually " + schemaVersionVal +
-                                ". You need to upgrade the schema.");
+                            if (schemaVersionVal > Options.SchemaVersion)
+                                ThrowSchemaUpgradeRequired(schemaVersionVal, "You have a schema version is newer than the current supported version.");
+
+                            Func<Transaction, Transaction, int, bool> upgrader = Options.SchemaUpgrader;
+                            if (upgrader == null)
+                                ThrowSchemaUpgradeRequired(schemaVersionVal, "You need to upgrade the schema but there is no schema uprader provided.");
+
+                            while (schemaVersionVal < Options.SchemaVersion)
+                            {
+                                using (var readTxInner = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.Read))
+                                using (var readTx = new Transaction(readTxInner))
+                                {
+                                    // ReSharper disable once PossibleNullReferenceException
+                                    if (upgrader(readTx, writeTx, schemaVersionVal) == false)
+                                        break;
+                                }
+                                    
+                                metadataTree.Increment("schema-version", 1);
+                                schemaVersionVal++;
+                            }
+
+                            if (schemaVersionVal != Options.SchemaVersion)
+                                ThrowSchemaUpgradeRequired(schemaVersionVal, "You need to upgrade the schema.");
                         }
 
                         tx.Commit();
                     }
                 }
             }
+        }
+
+        private void ThrowSchemaUpgradeRequired(int schemaVersionVal, string message)
+        {
+            VoronUnrecoverableErrorException.Raise(this,
+                "The schema version of this database is expected to be " +
+                Options.SchemaVersion + " but is actually " + schemaVersionVal +
+                ". " + message);
         }
 
         private unsafe void FillBase64Id(Guid databseGuidId)

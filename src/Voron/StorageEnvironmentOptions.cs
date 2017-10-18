@@ -12,6 +12,7 @@ using Sparrow.Platform;
 using Sparrow.Utils;
 using Voron.Exceptions;
 using Voron.Global;
+using Voron.Impl;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
@@ -113,6 +114,8 @@ namespace Voron
 
         // if set to a non zero value, will check that the expected schema is there
         public int SchemaVersion { get; set; }
+
+        public Func<Transaction, Transaction, int, bool> SchemaUpgrader { get; set; }
 
         public long MaxScratchBufferSize { get; set; }
 
