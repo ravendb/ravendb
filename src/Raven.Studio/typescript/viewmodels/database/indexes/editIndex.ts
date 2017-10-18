@@ -48,6 +48,9 @@ class editIndex extends viewModelBase {
     queryUrl = ko.observable<string>();
     termsUrl = ko.observable<string>();
     indexesUrl = ko.pureComputed(() => this.appUrls.indexes());
+    
+    selectedSourcePreview = ko.observable<additionalSource>();
+    additionalSourcePreviewHtml: KnockoutComputed<string>;
 
     /* TODO
     canSaveSideBySideIndex: KnockoutComputed<boolean>;
@@ -57,7 +60,13 @@ class editIndex extends viewModelBase {
     constructor() {
         super();
 
-        this.bindToCurrentInstance("removeMap", "removeField", "createFieldNameAutocompleter", "removeConfigurationOption", "formatIndex", "deleteAdditionalSource");
+        this.bindToCurrentInstance("removeMap", 
+            "removeField", 
+            "createFieldNameAutocompleter", 
+            "removeConfigurationOption", 
+            "formatIndex", 
+            "deleteAdditionalSource", 
+            "previewAdditionalSource");
 
         aceEditorBindingHandler.install();
         autoCompleteBindingHandler.install();
@@ -95,6 +104,15 @@ class editIndex extends viewModelBase {
 
             return newName !== oldName;
         });
+        
+        this.additionalSourcePreviewHtml = ko.pureComputed(() => {
+            const source = this.selectedSourcePreview();
+            if (source) {
+                return '<pre class="form-control sourcePreview">' + Prism.highlight(source.code(), (Prism.languages as any).csharp) + '</pre>';
+            } else {
+                return $("#additional-source-template").html();
+            }
+        })
     }
 
     canActivate(unescapedIndexToEditName: string): JQueryPromise<canActivateResultDto> {
@@ -226,10 +244,12 @@ class editIndex extends viewModelBase {
         
         checkedFieldsArray.push(indexDef.numberOfAdditionalSources);
         
-        indexDef.additionalSources().forEach(source => {
-            checkedFieldsArray.push(source.code);
-            checkedFieldsArray.push(source.name);
-        });
+        if (indexDef.additionalSources) {
+            indexDef.additionalSources().forEach(source => {
+                checkedFieldsArray.push(source.code);
+                checkedFieldsArray.push(source.name);
+            });
+        }
 
         const defaultFieldOptions = indexDef.defaultFieldOptions();
         if (defaultFieldOptions)
@@ -278,7 +298,7 @@ class editIndex extends viewModelBase {
     
     addAdditionalSourcesPopover() {
         const html = $("#additional-source-template").html();
-        popoverUtils.longWithHover($("#additionalSources p small"), {
+        popoverUtils.longWithHover($("#additionalSources small.info"), {
             content: html
         });
     }
@@ -573,17 +593,40 @@ class editIndex extends viewModelBase {
     
     private onFileAdded(fileName: string, contents: string) {
         const sources = this.editedIndex().additionalSources;
+        const newItem = additionalSource.create(this.findUniqueNameForAdditionalSource(fileName), contents);
+        this.editedIndex().additionalSources.push(newItem);
+        this.selectedSourcePreview(newItem);
+    }
+    
+    private findUniqueNameForAdditionalSource(fileName: string) {
+        const sources = this.editedIndex().additionalSources;
         const existingItem = sources().find(x => x.name() === fileName);
-        const newItem = additionalSource.create(fileName, contents);
         if (existingItem) {
-            sources.replace(existingItem, newItem);
+            const extensionPosition = fileName.lastIndexOf(".");
+            const fileNameWoExtension = fileName.substr(0, extensionPosition - 1);
+            
+            let idx = 1;
+            while (true) {
+                const suggestedName = fileNameWoExtension + idx + ".cs";
+                if (_.every(sources(), x => x.name() !== suggestedName)) {
+                    return suggestedName;
+                }
+                idx++;
+            }
         } else {
-            this.editedIndex().additionalSources.push(newItem);    
+            return fileName;
         }
     }
 
     deleteAdditionalSource(sourceToDelete: additionalSource) {
+        if (this.selectedSourcePreview() === sourceToDelete) {
+            this.selectedSourcePreview(null);
+        }
         this.editedIndex().additionalSources.remove(sourceToDelete);
+    }
+
+    previewAdditionalSource(source: additionalSource) {
+        this.selectedSourcePreview(source);
     }
 
     /* TODO
