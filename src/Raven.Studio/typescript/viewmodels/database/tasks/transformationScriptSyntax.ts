@@ -3,7 +3,7 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 class transformationScriptSyntax extends dialogViewModelBase {
     
     etlType = ko.observable<Raven.Client.ServerWide.ETL.EtlType>();
-    scriptStr = `var orderData = {
+    static readonly sampleScript = `var orderData = {
     Id: id(this),
     OrderLinesCount: this.Lines.length,
     TotalCost: 0
@@ -24,7 +24,7 @@ orderData.TotalCost = Math.round(orderData.TotalCost  * 100) / 100;
 loadToOrders(orderData);`;
 
     scriptHtml = ko.pureComputed(() => {
-        return Prism.highlight(this.scriptStr, (Prism.languages as any).javascript);
+        return Prism.highlight(transformationScriptSyntax.sampleScript, (Prism.languages as any).javascript);
     });
 
     constructor(etlType: Raven.Client.ServerWide.ETL.EtlType) {        
