@@ -113,6 +113,9 @@ class dashboardChart {
             .domain([minTime, maxTime]);
         
         const yScaleCreator = (maxValue: number, topPadding: number) => {
+            if (!maxValue) {
+                maxValue = 1;
+            }
             return d3.scale.linear()
                 .range([topPadding != null ? topPadding : dashboardChart.defaultTopPadding, this.height])
                 .domain([maxValue, 0]);
