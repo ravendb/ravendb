@@ -1,26 +1,32 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
+import connectionStringModel = require("models/database/settings/connectionStringModel");
 
-class connectionStringRavenEtlModel { 
+class connectionStringRavenEtlModel extends connectionStringModel { 
 
-    connectionStringName = ko.observable<string>(); 
     url = ko.observable<string>();                 
     database = ko.observable<string>();            
 
     validationGroup: KnockoutValidationGroup;
     testConnectionValidationGroup: KnockoutValidationGroup;
 
-    constructor(dto: Raven.Client.ServerWide.ETL.RavenConnectionString) {
-        this.update(dto);
-        this.initValidation();
+    constructor(dto: Raven.Client.ServerWide.ETL.RavenConnectionString, isNew: boolean, tasks: string[]) {
+        super(dto, isNew, tasks);
+        
+        this.update(dto);       
+        this.initValidation();      
     }    
 
     update(dto: Raven.Client.ServerWide.ETL.RavenConnectionString) {
+        super.update(dto);
+        
         this.connectionStringName(dto.Name); 
         this.database(dto.Database);
         this.url(dto.Url);
     }
 
     initValidation() {
+        super.initValidation();
+        
         this.connectionStringName.extend({
             required: true
         });
@@ -52,7 +58,7 @@ class connectionStringRavenEtlModel {
             Name: "", 
             Url: "",
             Database: ""
-        } as Raven.Client.ServerWide.ETL.RavenConnectionString);
+        } as Raven.Client.ServerWide.ETL.RavenConnectionString, true, []);
     }
     
     toDto() {

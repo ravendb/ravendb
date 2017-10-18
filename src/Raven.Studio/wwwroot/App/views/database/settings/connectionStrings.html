@@ -1,4 +1,4 @@
-<div class="flex-vertical absolute-fill content-margin">
+<div class="flex-vertical absolute-fill content-margin" id="connection-strings">
     <div class="row flex-row flex-grow flex-stretch-items">
         <div class="col-sm-12 col-lg-6 flex-vertical">
             <div class="scroll flex-grow">
@@ -14,7 +14,7 @@
                 </div>
                 <div data-bind="foreach: ravenEtlConnectionStringsNames">
                     <div class="panel padding padding-sm flex-horizontal destination-item" 
-                         data-bind="css: { 'panel-info': $root.editedRavenEtlConnectionString() && $data === $root.editedRavenEtlConnectionString().connectionStringName() }">
+                         data-bind="css: { 'active': $root.editedRavenEtlConnectionString() && $data === $root.editedRavenEtlConnectionString().connectionStringName() }">
                         <div class="flex-grow text-elipsis">
                             <a href="#" data-bind="click: $parent.onEditRavenEtl, attr: { title: $data }">
                                 <h4 class="text-elipsis">
@@ -24,7 +24,12 @@
                         </div>
                         <div class="actions">
                             <button class="btn btn-default" data-bind="click: $parent.onEditRavenEtl" title="Edit connection string"><i class="icon-edit"></i></button>
-                            <button class="btn btn-danger" data-bind="click: $parent.confirmDeleteRavenEtl" title="Remove connection string"><i class="icon-trash"></i></button>
+                            <span class="has-disable-reason" data-placement="right" data-bind="attr: { 'data-original-title': $root.isConnectionStringInUse($data) ? 'Connection string is being used by an ongoing task !' : '' }">
+                                <button class="btn btn-danger"
+                                        data-bind="click: $parent.confirmDelete.bind($parent, $data,'Raven'), attr: { 'disabled': $root.isConnectionStringInUse($data), 'title': !$root.isConnectionStringInUse($data) ? 'Remove connection string' : ''}">
+                                        <i class="icon-trash"></i>
+                                </button> 
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -40,17 +45,20 @@
                 </div>
                 <div data-bind="foreach: sqlEtlConnectionStringsNames">
                     <div class="panel padding padding-sm flex-horizontal destination-item" 
-                         data-bind="css: { 'panel-info': $root.editedSqlEtlConnectionString() && $data === $root.editedSqlEtlConnectionString().connectionStringName() }">
+                         data-bind="css: { 'active': $root.editedSqlEtlConnectionString() && $data === $root.editedSqlEtlConnectionString().connectionStringName() }">
                         <div class="flex-grow text-elipsis">
                             <a href="#" data-bind="click: $parent.onEditSqlEtl, attr: { title: $data }">
-                                <h4 class="text-elipsis">
-                                    <span data-bind="text: $data"></span>
-                                </h4>
+                                <h4 class="text-elipsis"><span data-bind="text: $data"></span></h4>
                             </a>
                         </div>
                         <div class="actions">
                             <button class="btn btn-default" data-bind="click: $parent.onEditSqlEtl" title="Edit connection string"><i class="icon-edit"></i></button>
-                            <button class="btn btn-danger" data-bind="click: $parent.confirmDeleteSqlEtl" title="Remove connection string"><i class="icon-trash"></i></button>
+                            <span class="has-disable-reason" data-placement="right" data-bind="attr: { 'data-original-title': $root.isConnectionStringInUse($data) ? 'Connection string is being used by an ongoing task !' : '' }">
+                                <button class="btn btn-danger"
+                                        data-bind="click: $parent.confirmDelete.bind($parent, $data,'Sql'), attr: { 'disabled': $root.isConnectionStringInUse($data), 'title': !$root.isConnectionStringInUse($data) ? 'Remove connection string' : ''}">
+                                        <i class="icon-trash"></i>
+                                </button>   
+                            </span>    
                         </div>
                     </div>
                 </div>
@@ -68,7 +76,7 @@
                         <div class="form-group" data-bind="validationElement: connectionStringName">
                             <label class="control-label">Name</label>
                             <div class="flex-grow">
-                                <input class="form-control" data-bind="textInput: connectionStringName" placeholder="Enter a name for the connection string" title="Any name of your choice for this connection string">
+                                <input class="form-control" data-bind="textInput: connectionStringName, attr: { 'disabled': !isNew()}" placeholder="Enter a name for the connection string" title="Any name of your choice for this connection string">
                             </div>
                         </div>
                         <div class="form-group" data-bind="validationElement: url">
@@ -83,18 +91,34 @@
                                 <input class="form-control" data-bind="textInput: database" placeholder="Enter database for the connection string" title="Destination database">
                             </div>
                         </div>
+                        <div class="form-group" data-bind="if: tasksThatAreUsingThisConnectionString().length > 0">
+                            <label class="control-label">Used in Tasks:</label> 
+                            <div data-bind="foreach: tasksThatAreUsingThisConnectionString">
+                                <div class="task">
+                                    <a href="#" data-bind="click: $root.navigateToTask.bind($root, $data, 'Raven')" title="Click to edit task.."><span class="text-info small" data-bind="text: $data"></span></a>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div data-bind="with: editedSqlEtlConnectionString">
                         <div class="form-group" data-bind="validationElement: connectionStringName">
                             <label class="control-label">Name</label>
                             <div class="flex-grow">
-                                <input class="form-control" data-bind="textInput: connectionStringName" placeholder="Enter a name for the connection string" title="Any name of your choice for this connection string">
+                                <input class="form-control" data-bind="textInput: connectionStringName, attr: { 'disabled': !isNew()}" placeholder="Enter a name for the connection string" title="Any name of your choice for this connection string">
                             </div>
                         </div>
                         <div class="form-group" data-bind="validationElement: connectionString">
                             <label class="control-label">Connection string</label>
                             <div class="flex-grow">
                                 <textarea class="form-control" data-bind="textInput: connectionString" rows="3" title="The connection string for the sql server" placeholder="Enter the complete connection string for the sql server"></textarea>
+                            </div>
+                        </div>
+                        <div class="form-group" data-bind="if: tasksThatAreUsingThisConnectionString().length > 0">
+                            <label class="control-label">Used in Tasks:</label>                           
+                            <div data-bind="foreach: tasksThatAreUsingThisConnectionString"> 
+                                <div class="task">
+                                    <a href="#" data-bind="click: $root.navigateToTask.bind($root, $data, 'Sql')" title="Click to edit task.."><span class="text-info small" data-bind="text: $data"></span></a>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -110,7 +134,7 @@
                         </div>
                         <div>
                             <button class="btn btn-default" data-bind="click: onCloseEdit"><i class="icon-cancel"></i><span>Cancel</span></button>
-                            <button class="btn btn-success" data-bind="click: onOk" title="Click to save this connection string"><i class="icon-check"></i><span>OK</span></button>
+                            <button class="btn btn-success" data-bind="click: onSave" title="Click to save this connection string"><i class="icon-check"></i><span>Save</span></button>
                         </div>
                     </div>
                 </form>

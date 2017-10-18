@@ -112,7 +112,7 @@
                     </div>
                 </div>
 
-                <!-- etl -->
+                <!-- Ravan Etl -->
                 
                 <div data-bind="if: etlTasks().length > 0 && (selectedTaskType() === 'RavenDB ETL' || selectedTaskType() === 'All tasks' )">
                     <div class="hr-title">
@@ -163,7 +163,7 @@
                     </div>
                 </div>
                
-                <!-- sql -->
+                <!-- Sql Etl -->
                 
                 <div data-bind="if: sqlTasks().length > 0 && (selectedTaskType() === 'SQL ETL' || selectedTaskType() === 'All tasks' )">
                     <div class="hr-title">
@@ -214,7 +214,7 @@
                     </div>
                 </div>                               
                
-                <!-- backup -->
+                <!-- Backup -->
             
                 <div data-bind="if: backupTasks().length > 0 && (selectedTaskType() === 'Backup' || selectedTaskType() === 'All tasks' )">
                     <div class="hr-title">
@@ -259,7 +259,7 @@
                     </div>
                 </div>
             
-                <!-- subscription -->
+                <!-- Subscription -->
 
                 <div data-bind="if: subscriptionTasks().length > 0 && (selectedTaskType() === 'Subscription' || selectedTaskType() === 'All tasks')">
                     <div class="hr-title">
