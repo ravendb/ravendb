@@ -1657,17 +1657,19 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 for (int i = 0; i < _loadTokens.Count; i++)
                 {
                     var alias = _loadTokens[i].Alias.EndsWith("[]")
-                        ? _loadTokens[i].Alias.Substring(0, _loadTokens[i].Alias.Length - 3)
+                        ? _loadTokens[i].Alias.Substring(0, _loadTokens[i].Alias.Length - 2)
                         : _loadTokens[i].Alias;
 
                     paramBuilder.Append(", ").Append(alias);
                 }
                 _declareToken = DeclareToken.Create("output", _declareBuilder.ToString(), paramBuilder.ToString());
-                return;
+            }
+            else
+            {
+                _declareToken = DeclareToken.Create("output", _declareBuilder.ToString(), _fromAlias);
             }
 
-            _declareToken = DeclareToken.Create("output", _declareBuilder.ToString(), _fromAlias);
-
+            _jsSelectBody = $"output({_declareToken.Parameters})";
         }
 
         private void VisitLet(NewExpression expression)
@@ -1679,28 +1681,65 @@ The recommended method is to use full text search (mark the field as Analyzed an
             var name = GetSelectPath(expression.Members[1]);
             var parameter = expression?.Arguments[0] as ParameterExpression;
 
-            if (expression.Arguments[1] is MethodCallExpression mce && mce.Method.Name == "Load")
-            {
-                //need to add a LOAD token to the query 
-                var arg = ToJs(mce.Arguments[0]);
+            var loadSupport = new JavascriptConversionExtensions.LoadSupport();
+            var js = expression.Arguments[1].CompileToJavascript(
+                new JavascriptCompilationOptions(
+                    new JavascriptConversionExtensions.MathSupport(),
+                    new JavascriptConversionExtensions.LinqMethodsSupport(),
+                    new JavascriptConversionExtensions.BooleanSupport(),
+                    new JavascriptConversionExtensions.IgnoreTransparentParameter(),
+                    new JavascriptConversionExtensions.InvokeSupport(),
+                    new JavascriptConversionExtensions.DateTimeSupport(),
+                    loadSupport));
 
-                if (mce.Arguments[0].Type.IsArray || JavascriptConversionExtensions.LinqMethodsSupport.IsCollection(mce.Arguments[0].Type))
-                {
-                    name += "[]";
-                }
+            if (_fromAlias == null)
+            {
+                _fromAlias = parameter?.Name;
+            }
+
+            if (loadSupport.HasLoad)
+            {
+                var arg = ToJs(loadSupport.Arg);
 
                 if (_loadTokens == null)
                 {
                     _loadTokens = new List<LoadToken>();
                 }
-                _loadTokens.Add(LoadToken.Create(arg, name));
 
-                if (_fromAlias == null)
+                if (js == string.Empty)
                 {
-                    _fromAlias = parameter?.Name;
+                    if (loadSupport.IsEnumerable)
+                    {
+                        name += "[]";
+                    }
+
+                    _loadTokens.Add(LoadToken.Create(arg, name));
+
+                    return;
                 }
 
-                return;
+                // here we have Load(id).member or Load(id).call, i.e : Load(u.Detail).Name, Load(u.Details).Select(x=>x.Name), etc.. 
+                // so we add 'LOAD id as _doc_i' to the query
+                // then inside the output function, we add 'var name = _doc_i.member;'
+
+                string doc;
+                if (loadSupport.IsEnumerable)
+                {
+                    doc = $"_docs_{_loadTokens.Count}";
+                    _loadTokens.Add(LoadToken.Create(arg, $"{doc}[]"));
+                }
+                else
+                {
+                    doc = $"_doc_{_loadTokens.Count}";
+                    _loadTokens.Add(LoadToken.Create(arg, doc));
+                }
+
+                if (js.StartsWith(".") == false)
+                {
+                    js = "." + js;
+                }
+
+                js = doc + js;
             }
 
             if (_declareBuilder == null)
@@ -1709,13 +1748,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 _jsSelectBody = null;
                 _jsProjectionNames = new List<string>();
                 FieldsToFetch = new HashSet<FieldToFetch>();
-                if (_fromAlias == null)
-                {
-                    _fromAlias = parameter?.Name;
-                }
             }
 
-            var js = ToJs(expression.Arguments[1]);
             _declareBuilder.Append("\t").Append("var ").Append(name).Append(" = ").Append(js).Append(";").Append(Environment.NewLine);           
         }
 
@@ -2137,20 +2171,14 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             _customizeQuery?.Invoke((IDocumentQueryCustomization)_documentQuery);
 
-
-            if (_declareToken != null)
-            {
-                return documentQuery.SelectFields<T>(new QueryData(new[] { $"output({_declareToken.Parameters})" }, _jsProjectionNames, _fromAlias, _declareToken , _loadTokens , true));
-            }
-
             if (_jsSelectBody != null)
             {
-                return documentQuery.SelectFields<T>(new QueryData(new[] { _jsSelectBody }, _jsProjectionNames, _fromAlias, null, _loadTokens , true));
+                return documentQuery.SelectFields<T>(new QueryData(new[] { _jsSelectBody }, _jsProjectionNames, _fromAlias, _declareToken, _loadTokens , true));
             }
 
             var (fields, projections) = GetProjections();
 
-            return documentQuery.SelectFields<T>(new QueryData(fields, projections, _fromAlias, null , _loadTokens));
+            return documentQuery.SelectFields<T>(new QueryData(fields, projections, _fromAlias, null, _loadTokens));
         }
 
         /// <summary>
@@ -2176,19 +2204,14 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             _customizeQuery?.Invoke((IDocumentQueryCustomization)asyncDocumentQuery);
 
-            if (_declareToken != null)
-            {
-                return asyncDocumentQuery.SelectFields<T>(new QueryData(new[] { $"output({_declareToken.Parameters})" }, _jsProjectionNames, _fromAlias, _declareToken, _loadTokens, true));
-            }
-
             if (_jsSelectBody != null)
             {
-                return asyncDocumentQuery.SelectFields<T>(new QueryData(new[] { _jsSelectBody }, _jsProjectionNames, _fromAlias, null , _loadTokens , true));
+                return asyncDocumentQuery.SelectFields<T>(new QueryData(new[] { _jsSelectBody }, _jsProjectionNames, _fromAlias, _declareToken , _loadTokens , true));
             }
 
             var (fields, projections) = GetProjections();
 
-            return asyncDocumentQuery.SelectFields<T>(new QueryData(fields, projections, _fromAlias, null , _loadTokens));
+            return asyncDocumentQuery.SelectFields<T>(new QueryData(fields, projections, _fromAlias, null, _loadTokens));
         }
 
         /// <summary>
