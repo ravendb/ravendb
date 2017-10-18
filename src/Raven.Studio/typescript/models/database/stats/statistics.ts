@@ -11,7 +11,7 @@ class statistics {
     countOfDocuments: string;
     countOfAttachments: string;
     countOfUniqueAttachments: string;
-    countOfConflicts: string;
+    countOfDocumentsConflicts: string;
     is64Bit: boolean;
     indexPerformanceURL: string;
     sizeOnDisk: string;
@@ -28,7 +28,7 @@ class statistics {
         this.countOfIndexes = dbStats.CountOfIndexes.toLocaleString();
         this.countOfAttachments = dbStats.CountOfAttachments.toLocaleString();
         this.countOfUniqueAttachments = dbStats.CountOfUniqueAttachments.toLocaleString();
-        this.countOfConflicts = dbStats.CountOfConflicts.toLocaleString();
+        this.countOfDocumentsConflicts = dbStats.CountOfDocumentsConflicts.toLocaleString();
         this.is64Bit = dbStats.Is64Bit;
         this.sizeOnDisk = generalUtils.formatBytesToSize(dbStats.SizeOnDisk.SizeInBytes);
         
