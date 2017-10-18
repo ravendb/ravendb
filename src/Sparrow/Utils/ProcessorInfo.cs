@@ -1,6 +1,4 @@
 ﻿using System;
-using Sparrow.Platform;
-using Sparrow.Platform.Posix;
 
 namespace Sparrow.Utils
 {

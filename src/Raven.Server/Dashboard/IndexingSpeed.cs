@@ -10,6 +10,11 @@ namespace Raven.Server.Dashboard
         
         public List<IndexingSpeedItem> Items { get; set; }
 
+        public IndexingSpeed()
+        {
+            Items = new List<IndexingSpeedItem>();
+        }
+
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();

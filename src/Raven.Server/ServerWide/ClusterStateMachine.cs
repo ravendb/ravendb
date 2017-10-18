@@ -806,7 +806,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public IEnumerable<Tuple<string, BlittableJsonReaderObject>> ItemsStartingWith(TransactionOperationContext context, string prefix, int start, int take)
+        public IEnumerable<(string ItemName, BlittableJsonReaderObject Value)> ItemsStartingWith(TransactionOperationContext context, string prefix, int start, int take)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
@@ -919,24 +919,6 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public int GetClusterSize(TransactionOperationContext context)
-        {
-            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
-
-            const string dbKey = "db/";
-            var count = 0;
-
-            using (Slice.From(context.Allocator, dbKey, out Slice loweredPrefix))
-            {
-                foreach (var _ in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, 0))
-                {
-                    count++;
-                }
-            }
-
-            return count;
-        }
-
         public IEnumerable<DatabaseRecord> ReadAllDatabases(TransactionOperationContext context, int start = 0, int take = int.MaxValue)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
@@ -963,14 +945,14 @@ namespace Raven.Server.ServerWide
             return Encoding.UTF8.GetString(result.Reader.Read(1, out int size), size);
         }
 
-        private static unsafe Tuple<string, BlittableJsonReaderObject> GetCurrentItem(JsonOperationContext context, Table.TableValueHolder result)
+        private static unsafe (string, BlittableJsonReaderObject) GetCurrentItem(JsonOperationContext context, Table.TableValueHolder result)
         {
             var ptr = result.Reader.Read(2, out int size);
             var doc = new BlittableJsonReaderObject(ptr, size, context);
 
             var key = Encoding.UTF8.GetString(result.Reader.Read(1, out size), size);
 
-            return Tuple.Create(key, doc);
+            return (key, doc);
         }
 
         public DatabaseRecord ReadDatabase(TransactionOperationContext context, string name)

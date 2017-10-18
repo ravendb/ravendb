@@ -11,6 +11,11 @@ namespace Raven.Server.Dashboard
         
         public List<TrafficWatchItem> Items { get; set; }
 
+        public TrafficWatch()
+        {
+            Items = new List<TrafficWatchItem>();
+        }
+
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
@@ -23,17 +28,20 @@ namespace Raven.Server.Dashboard
     {
         public string Database { get; set; }
         
-        public double RequestsPerSecond { get; set; }
-        
-        public double TransferPerSecond { get; set; }
+        public int RequestsPerSecond { get; set; }
+
+        public int WritesPerSecond { get; set; }
+
+        public double WriteBytesPerSecond { get; set; }
 
         public DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue()
+            return new DynamicJsonValue
             {
                 [nameof(Database)] = Database,
                 [nameof(RequestsPerSecond)] = RequestsPerSecond,
-                [nameof(TransferPerSecond)] = TransferPerSecond
+                [nameof(WritesPerSecond)] = WritesPerSecond,
+                [nameof(WriteBytesPerSecond)] = WriteBytesPerSecond
             };
         }
     }
