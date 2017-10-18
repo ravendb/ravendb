@@ -9,9 +9,19 @@ import saveExpirationConfigurationCommand = require("commands/database/documents
 
 class expiration extends viewModelBase {
 
+    static readonly expirationSample = {
+        "Example": "This is an example of a document with @expires flag set",
+        "@metadata": {
+            "@collection": "Foo",
+            "@expires": "2017-10-10T08:00:00.0000000Z"
+        }
+    };
+    
     enabled = ko.observable<boolean>(false);
     specifyDeleteFrequency = ko.observable<boolean>();
     deleteFrequencyInSec = ko.observable<number>();
+    
+    expirationSampleFormatted: string;
 
     isSaveEnabled: KnockoutComputed<boolean>;
     
@@ -34,7 +44,9 @@ class expiration extends viewModelBase {
             if (!enabled) {
                 this.specifyDeleteFrequency(false);
             }
-        })
+        });
+        
+        this.expirationSampleFormatted = Prism.highlight(JSON.stringify(expiration.expirationSample, null, 4), (Prism.languages as any).javascript);
         
     }
     

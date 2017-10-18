@@ -25,7 +25,7 @@
                                     <input id="specifyDeleteFrequency" class="styled" type="checkbox"
                                            data-bind="checked: specifyDeleteFrequency, enable: enabled">
                                     <label for="specifyDeleteFrequency">
-                                        Manually specify delete frequency (in seconds)
+                                        Manually specify delete frequency
                                     </label>
                                 </div>
                             </div>
@@ -41,16 +41,20 @@
                     </div>
                 </div>
                 <div class="col-sm-5">
-                    <div class="bg-info padding flex-horizontal">
-                        <div class="flex-start"><i class="icon-info"></i></div>
-                        <div>
-                            <div> Expiration serves a very simple purpose: it deletes the documents whose time passed. </div>
+                    <div class="bg-info padding">
+                        <div class="flex-horizontal margin-bottom">
+                            <div class="flex-start"><i class="icon-info"></i></div>
                             <div>
-                                All you need to do is to set the <code>@expires</code> property in metadata
-                                for the appropriate date, and, at the specified time, the document will be automatically deleted.
+                                <div> Enabling document expiration will delete documents whose time has passed. </div>
+                                <div>
+                                    To set the deletion time, enter the appropriate date in the <code>@expires</code> property in the document metadata.
+                                    The document will automatically be deleted at that time.
+                                </div>
                             </div>
                         </div>
+                        <pre data-bind="html: expirationSampleFormatted"></pre>
                     </div>
+                    
                 </div>
                 
             </div>
