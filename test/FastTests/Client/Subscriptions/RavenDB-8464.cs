@@ -37,6 +37,14 @@ namespace FastTests.Client.Subscriptions
                 {
                     var amre = new AsyncManualResetEvent();
 
+
+                    subscription.AfterAcknowledgment += batch =>
+                    {
+                        amre.Set();
+
+                        return Task.CompletedTask;
+                    };
+
                     var task = subscription.Run(x => { });
                     
                     using (var session = store.OpenSession())
@@ -47,12 +55,6 @@ namespace FastTests.Client.Subscriptions
                         cv = (string)session.Advanced.GetMetadataFor(entity)[Constants.Documents.Metadata.ChangeVector];
                     }
 
-                    subscription.AfterAcknowledgment += batch =>
-                    {
-                        amre.Set();
-
-                        return Task.CompletedTask;
-                    };
 
                     Assert.True(await amre.WaitAsync(_reasonableWaitTime));
 
