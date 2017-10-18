@@ -10,6 +10,11 @@ namespace Raven.Server.Dashboard
         
         public List<DatabaseInfoItem> Items { get; set; }
 
+        public DatabasesInfo()
+        {
+            Items = new List<DatabaseInfoItem>();
+        }
+
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
@@ -22,28 +27,28 @@ namespace Raven.Server.Dashboard
     {
         public string Database { get; set; }
         
-        public long? DocumentsCount { get; set; }
+        public long DocumentsCount { get; set; }
         
-        public int IndexesCount { get; set; }
+        public long IndexesCount { get; set; }
         
         public int ErroredIndexesCount { get; set; }
         
-        public int AlertsCount { get; set; }
+        public long AlertsCount { get; set; }
         
-        public int ReplicaFactor { get; set; }
+        public int ReplicationFactor { get; set; }
         
         public bool Online { get; set; }
         
         public DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue()
+            return new DynamicJsonValue
             {
                 [nameof(Database)] = Database,
                 [nameof(DocumentsCount)] = DocumentsCount,
                 [nameof(IndexesCount)] = IndexesCount,
                 [nameof(ErroredIndexesCount)] = ErroredIndexesCount,
                 [nameof(AlertsCount)] = AlertsCount,
-                [nameof(ReplicaFactor)] = ReplicaFactor,
+                [nameof(ReplicationFactor)] = ReplicationFactor,
                 [nameof(Online)] = Online
             };
         }

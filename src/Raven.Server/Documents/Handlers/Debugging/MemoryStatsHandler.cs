@@ -105,9 +105,9 @@ namespace Raven.Server.Documents.Handlers.Debugging
             if (Sparrow.Platform.PlatformDetails.RunningOnPosix == false)
                 workingSet = currentProcess.WorkingSet64;
             else
-                workingSet = Sparrow.LowMemory.MemoryInformation.GetRssMemoryUsage(currentProcess.Id);
+                workingSet = MemoryInformation.GetRssMemoryUsage(currentProcess.Id);
             var memInfo = MemoryInformation.GetMemoryInfo();
-            long totalUnmanagedAllocations = 0;
+
             long totalMapping = 0;
             var fileMappingByDir = new Dictionary<string, Dictionary<string, ConcurrentDictionary<IntPtr, long>>>();
             var fileMappingSizesByDir = new Dictionary<string, long>();
@@ -177,6 +177,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 }
             }
 
+            long totalUnmanagedAllocations = 0;
             var threads = new DynamicJsonArray();
             foreach (var stats in NativeMemory.ThreadAllocations.Values
                 .Where(x => x.ThreadInstance.IsAlive)

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Raven.Client.Util;
-using Raven.Server.Background;
 using Raven.Server.Documents;
 using Raven.Server.NotificationCenter.BackgroundWork;
 using Raven.Server.NotificationCenter.Notifications;
@@ -14,16 +13,13 @@ using Sparrow.Logging;
 
 namespace Raven.Server.NotificationCenter
 {
-    public class NotificationCenter : IDisposable
+    public class NotificationCenter : NotificationsBase, IDisposable
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<NotificationCenter>("NotificationCenter");
-        private readonly ConcurrentSet<ConnectedWatcher> _watchers = new ConcurrentSet<ConnectedWatcher>();
-        private readonly List<BackgroundWorkBase> _backgroundWorkers = new List<BackgroundWorkBase>();
         private readonly NotificationsStorage _notificationsStorage;
-        private readonly object _watchersLock = new object();
         private readonly string _resourceName;
         private readonly CancellationToken _shutdown;
-        private PostponedNotificationsSender _postponedNotifications;
+        private PostponedNotificationsSender _postponedNotificationSender;
 
         public NotificationCenter(NotificationsStorage notificationsStorage, string resourceName, CancellationToken shutdown)
         {
@@ -38,11 +34,11 @@ namespace Raven.Server.NotificationCenter
 
         public void Initialize(DocumentDatabase database = null)
         {
-            _postponedNotifications = new PostponedNotificationsSender(_resourceName, _notificationsStorage, _watchers, _shutdown);
-            _backgroundWorkers.Add(_postponedNotifications);
+            _postponedNotificationSender = new PostponedNotificationsSender(_resourceName, _notificationsStorage, Watchers, _shutdown);
+            BackgroundWorkers.Add(_postponedNotificationSender);
 
             if (database != null)
-                _backgroundWorkers.Add(new DatabaseStatsSender(database, this));
+                BackgroundWorkers.Add(new DatabaseStatsSender(database, this));
 
             IsInitialized = true;
         }
@@ -50,50 +46,6 @@ namespace Raven.Server.NotificationCenter
         public readonly Paging Paging;
 
         public readonly NotificationCenterOptions Options;
-
-        private void StartBackgroundWorkers()
-        {
-            foreach (var worker in _backgroundWorkers)
-            {
-                worker.Start();
-            }
-        }
-
-        private void StopBackgroundWorkers()
-        {
-            foreach (var worker in _backgroundWorkers)
-            {
-                worker.Stop();
-            }
-        }
-
-        public IDisposable TrackActions(AsyncQueue<DynamicJsonValue> notificationsQueue, IWebsocketWriter webSockerWriter)
-        {
-            var watcher = new ConnectedWatcher
-            {
-                NotificationsQueue = notificationsQueue,
-                Writer = webSockerWriter
-            };
-
-            lock (_watchersLock)
-            {
-                _watchers.TryAdd(watcher);
-
-                if (_watchers.Count == 1)
-                    StartBackgroundWorkers();
-            }
-
-            return new DisposableAction(() =>
-            {
-                lock (_watchersLock)
-                {
-                    _watchers.TryRemove(watcher);
-
-                    if (_watchers.Count == 0)
-                        StopBackgroundWorkers();
-                }
-            });
-        }
 
         public void Add(Notification notification)
         {
@@ -105,7 +57,7 @@ namespace Raven.Server.NotificationCenter
                         return;
                 }
 
-                if (_watchers.Count == 0)
+                if (Watchers.Count == 0)
                     return;
 
                 using (_notificationsStorage.Read(notification.Id, out NotificationTableValue existing))
@@ -114,8 +66,7 @@ namespace Raven.Server.NotificationCenter
                         return;
                 }
                 
-                 // ReSharper disable once InconsistentlySynchronizedField
-                foreach (var watcher in _watchers)
+                foreach (var watcher in Watchers)
                 {
                     // serialize to avoid race conditions
                     // please notice we call ToJson inside a loop since DynamicJsonValue is not thread-safe
@@ -180,24 +131,21 @@ namespace Raven.Server.NotificationCenter
 
             Add(NotificationUpdated.Create(id, NotificationUpdateType.Postponed));
 
-            _postponedNotifications?.Set();
+            _postponedNotificationSender?.Set();
         }
 
-        public void Dispose()
+        public new void Dispose()
         {
             Paging?.Dispose();
 
-            foreach (var worker in _backgroundWorkers)
-            {
-                worker.Dispose();
-            }
+            base.Dispose();
         }
+    }
 
-        public class ConnectedWatcher
-        {
-            public AsyncQueue<DynamicJsonValue> NotificationsQueue;
+    public class ConnectedWatcher
+    {
+        public AsyncQueue<DynamicJsonValue> NotificationsQueue;
 
-            public IWebsocketWriter Writer;
-        }
+        public IWebsocketWriter Writer;
     }
 }

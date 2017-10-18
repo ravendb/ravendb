@@ -3,7 +3,6 @@ using System.IO;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Collections;
@@ -12,17 +11,17 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.NotificationCenter
 {
-    public class NotificationCenterWebsocketWriter : IWebsocketWriter, IDisposable
+    public class NotificationCenterWebSocketWriter : IWebsocketWriter, IDisposable
     {
         private readonly CancellationToken _resourceShutdown;
-        private readonly NotificationCenter _notificationCenter;
+        private readonly NotificationsBase _notificationsBase;
         private readonly IMemoryContextPool _contextPool;
         private readonly WebSocket _webSocket;
         private readonly MemoryStream _ms = new MemoryStream();
 
-        public NotificationCenterWebsocketWriter(WebSocket webSocket, NotificationCenter notificationCenter, IMemoryContextPool contextPool, CancellationToken resourceShutdown)
+        public NotificationCenterWebSocketWriter(WebSocket webSocket, NotificationsBase notificationsBase, IMemoryContextPool contextPool, CancellationToken resourceShutdown)
         {
-            _notificationCenter = notificationCenter;
+            _notificationsBase = notificationsBase;
             _contextPool = contextPool;
             _resourceShutdown = resourceShutdown;
             _webSocket = webSocket;
@@ -42,7 +41,7 @@ namespace Raven.Server.NotificationCenter
 
             try
             {
-                using (_notificationCenter.TrackActions(asyncQueue, this))
+                using (_notificationsBase.TrackActions(asyncQueue, this))
                 {
                     while (_resourceShutdown.IsCancellationRequested == false)
                     {

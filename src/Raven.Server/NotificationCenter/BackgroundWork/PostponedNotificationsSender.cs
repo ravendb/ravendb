@@ -13,11 +13,11 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
     public class PostponedNotificationsSender : BackgroundWorkBase
     {
         private readonly NotificationsStorage _notificationsStorage;
-        private readonly ConcurrentSet<NotificationCenter.ConnectedWatcher> _watchers;
+        private readonly ConcurrentSet<ConnectedWatcher> _watchers;
         private AsyncManualResetEvent _event;
 
         public PostponedNotificationsSender(string resourceName, NotificationsStorage notificationsStorage,
-            ConcurrentSet<NotificationCenter.ConnectedWatcher> watchers, CancellationToken shutdown)
+            ConcurrentSet<ConnectedWatcher> watchers, CancellationToken shutdown)
             : base(resourceName, shutdown)
         {
             _notificationsStorage = notificationsStorage;

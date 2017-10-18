@@ -10,7 +10,7 @@ namespace Raven.Server.Background
     public abstract class BackgroundWorkBase : IDisposable
     {
         private readonly CancellationToken _shutdown;
-        private CancellationTokenSource _cts;
+        protected CancellationTokenSource Cts;
         private Task _currentTask;
         protected readonly Logger Logger;
 
@@ -18,7 +18,7 @@ namespace Raven.Server.Background
         {
             _shutdown = shutdown;
             Logger = LoggingSource.Instance.GetLogger(resourceName, GetType().FullName);
-            _cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdown);
+            Cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdown);
         }
 
         protected CancellationToken CancellationToken
@@ -27,7 +27,7 @@ namespace Raven.Server.Background
             {
                 try
                 {
-                    return _cts.Token;
+                    return Cts.Token;
                 }
                 catch (ObjectDisposedException)
                 {
@@ -40,9 +40,9 @@ namespace Raven.Server.Background
         public void Start()
         {
             Debug.Assert(_currentTask == null);
-            if (_cts.IsCancellationRequested)
+            if (Cts.IsCancellationRequested)
             {
-                _cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdown);
+                Cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdown);
             }
 
             _currentTask = Task.Run(Run, CancellationToken);
@@ -50,17 +50,17 @@ namespace Raven.Server.Background
 
         public void Stop()
         {
-            if (_cts.IsCancellationRequested)
+            if (Cts.IsCancellationRequested)
                 return;
 
             Debug.Assert(_currentTask != null);
 
-            _cts.Cancel();
+            Cts.Cancel();
 
             try
             {
                 if (_currentTask.Status == TaskStatus.Running)
-                    _currentTask.Wait(_cts.Token);
+                    _currentTask.Wait(Cts.Token);
             }
             catch (AggregateException e)
             {
@@ -72,7 +72,7 @@ namespace Raven.Server.Background
             }
 
             _currentTask = null;
-            _cts.Dispose();
+            Cts.Dispose();
         }
 
         protected async Task WaitOrThrowOperationCanceled(TimeSpan time)
@@ -99,7 +99,7 @@ namespace Raven.Server.Background
 
             try
             {
-                while (_cts.IsCancellationRequested == false)
+                while (Cts.IsCancellationRequested == false)
                 {
                     try
                     {
@@ -133,7 +133,7 @@ namespace Raven.Server.Background
             try
             {
                 Stop();
-                _cts.Dispose();
+                Cts.Dispose();
             }
             catch (ObjectDisposedException) //precaution, shouldn't happen
             {

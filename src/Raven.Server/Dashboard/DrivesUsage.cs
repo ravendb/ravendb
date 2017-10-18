@@ -9,8 +9,12 @@ namespace Raven.Server.Dashboard
         public override DashboardNotificationType Type => DashboardNotificationType.DriveUsage;
         
         public List<MountPointUsage> Items { get; set; }
-       
-        
+
+        public DrivesUsage()
+        {
+            Items = new List<MountPointUsage>();
+        }
+
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
