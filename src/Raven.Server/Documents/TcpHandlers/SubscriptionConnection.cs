@@ -130,6 +130,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 try
                 {
                     DisposeOnDisconnect = await _connectionState.RegisterSubscriptionConnection(this, timeout);
+                    shouldRetry = false;
                 }
                 catch (TimeoutException)
                 {
