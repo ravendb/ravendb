@@ -38,7 +38,7 @@ namespace FastTests.Issues
                 Operations.OperationType.DatabaseCompact,
                 Operations.OperationType.CertificateGeneration,
                 Operations.OperationType.MigrationFromLegacyData,
-                Operations.OperationType.DatabaseImportFromCsv
+                Operations.OperationType.CollectionImportFromCsv
             };
 
             var operationWithoutDetails = new HashSet<Operations.OperationType>

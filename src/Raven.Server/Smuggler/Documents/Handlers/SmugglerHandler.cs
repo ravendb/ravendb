@@ -421,7 +421,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 var token = new OperationCancelToken(Database.DatabaseShutdown);
                 var result = new SmugglerResult();
                 var operationId = GetLongQueryString("operationId");
-                await Database.Operations.AddOperation(Database, "Import from csv file", Raven.Server.Documents.Operations.Operations.OperationType.DatabaseImportFromCsv,
+                await Database.Operations.AddOperation(Database, "Collection import from CSV", Raven.Server.Documents.Operations.Operations.OperationType.CollectionImportFromCsv,
                     onProgress =>
                     {
                         return Task.Run(async () =>
@@ -482,6 +482,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             if (string.IsNullOrEmpty(entity) == false && char.IsLower(entity[0]))
                 entity = char.ToUpper(entity[0]) + entity.Substring(1);
 
+            result.AddMessage($"Import collection:{entity}");
             using (var source = new CsvStreamSource(stream, context, entity))
             {
                 var destination = new DatabaseDestination(Database);
