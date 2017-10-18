@@ -71,11 +71,15 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
                 result.push(this.mapToExportListItem(smugglerDatabaseDetails.extractingDataStageName, migrationCounts));
             }
             
-            result.push(this.mapToExportListItem("Documents", status.Documents, true));
-            result.push(this.mapToExportListItem("Conflicts", status.Conflicts));
-            result.push(this.mapToExportListItem("Revisions", status.RevisionDocuments, true));
-            result.push(this.mapToExportListItem("Indexes", status.Indexes));
-            result.push(this.mapToExportListItem("Identities", status.Identities));
+            if (this.op.taskType() === "DatabaseImportFromCsv") {
+                result.push(this.mapToExportListItem("Documents", status.Documents, false));
+            } else {
+                result.push(this.mapToExportListItem("Documents", status.Documents, true));
+                result.push(this.mapToExportListItem("Conflicts", status.Conflicts));
+                result.push(this.mapToExportListItem("Revisions", status.RevisionDocuments, true));
+                result.push(this.mapToExportListItem("Indexes", status.Indexes));
+                result.push(this.mapToExportListItem("Identities", status.Identities));
+            }
             
             let shouldUpdateToPending = false;
             result.forEach(item => {
@@ -192,7 +196,8 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
             notification.taskType() === "DatabaseImport" ||
             notification.taskType() === "DatabaseMigration" ||
             notification.taskType() === "DatabaseRestore" ||
-            notification.taskType() === "MigrationFromLegacyData"
+            notification.taskType() === "MigrationFromLegacyData" ||
+            notification.taskType() === "DatabaseImportFromCsv"
         );
     }
 
