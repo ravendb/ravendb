@@ -11,30 +11,8 @@
 </div>
 <div data-bind="visible: etlType() === 'Sql'">
 <div>Simple Sql Etl transformation script:</div>
-                <span class="text-warning"> TODO : Format the below script nicely.....</span>
     
-<!-- todo: format the below script nicely... -->    
-    
-<pre>
-var orderData = {
-    Id: id(this),
-    OrderLinesCount: this.Lines.length,
-    TotalCost: 0
-};
+<pre data-bind="html: scriptHtml"></pre>
 
-for (var i = 0; i < this.Lines.length; i++) {
-    var line = this.Lines[i];
-    orderData.TotalCost += line.PricePerUnit;
-    loadToOrderLines({
-        OrderId: id(this),
-        Qty: line.Quantity,
-        Product: line.Product,
-        Cost: line.PricePerUnit
-    });
-}
-orderData.TotalCost = Math.round(orderData.TotalCost  * 100) / 100;
-
-loadToOrders(orderData);
-</pre>    
 </div>    
 </div>
