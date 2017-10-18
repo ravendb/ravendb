@@ -4,6 +4,8 @@ import migrateDatabaseModel = require("models/database/tasks/migrateDatabaseMode
 import notificationCenter = require("common/notifications/notificationCenter");
 import eventsCollector = require("common/eventsCollector");
 import getRemoteServerVersion = require("commands/database/studio/getRemoteServerVersion");
+import recentError = require("common/notifications/models/recentError");
+import generalUtils = require("common/generalUtils");
 
 class migrateDatabase extends viewModelBase {
 
@@ -19,7 +21,12 @@ class migrateDatabase extends viewModelBase {
         
         this.bindToCurrentInstance("detectServerVersion");
 
-        this.model.serverUrl.throttle(500).subscribe(this.detectServerVersion);
+        const debouncedDetection = _.debounce(() => this.detectServerVersion(), 700);
+        
+        this.model.serverUrl.subscribe(() => {
+            this.model.serverMajorVersion(null);
+            debouncedDetection();
+        })
     }
     
     attached() {
@@ -29,32 +36,30 @@ class migrateDatabase extends viewModelBase {
     }
 
     detectServerVersion() {
+        if (!this.isValid(this.model.versionCheckValidationGroup)) {
+            this.model.serverMajorVersion(null);
+            return;
+        }
+        
+        this.spinners.versionDetect(true);
 
-        this.afterAsyncValidationCompleted(this.model.versionCheckValidationGroup, () => {
+        const url = this.model.serverUrl();
 
-            if (!this.isValid(this.model.versionCheckValidationGroup)) {
-                this.model.serverMajorVersion(null);
-                return;
-            }
-
-            this.spinners.versionDetect(true);
-
-            const url = this.model.serverUrl();
-
-            new getRemoteServerVersion(url)
-                .execute()
-                .done(buildInfo => {
-                    if (buildInfo.MajorVersion !== "Unknown") {
-                        this.model.serverMajorVersion(buildInfo.MajorVersion);
-                    }
-                    else {
-                        this.model.serverMajorVersion(null);
-                    }
-                })
-                .fail(() => this.model.serverMajorVersion(null))
-                .always(() => this.spinners.versionDetect(false));
-        });
-                
+        new getRemoteServerVersion(url)
+            .execute()
+            .done(buildInfo => {
+                if (buildInfo.MajorVersion !== "Unknown") {
+                    this.model.serverMajorVersion(buildInfo.MajorVersion);
+                } else {
+                    this.model.serverMajorVersion(null);
+                }
+            })
+            .fail((response: JQueryXHR) => {
+                const messageAndOptionalException = recentError.tryExtractMessageAndException(response.responseText);
+                const message = generalUtils.trimMessage(messageAndOptionalException.message);
+                this.model.serverMajorVersion.setError(message);
+            })
+            .always(() => this.spinners.versionDetect(false));
     }
     
     migrateDb() {
