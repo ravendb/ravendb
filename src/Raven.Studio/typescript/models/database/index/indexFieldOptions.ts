@@ -101,6 +101,9 @@ class indexFieldOptions {
         } else {
             this.spatial(spatialOptions.empty());
         }
+        if (this.indexing() === "Search" && !this.analyzer()) {
+            this.fullTextSearch(true);
+        }
 
         _.bindAll(this, "toggleAdvancedOptions");
 
