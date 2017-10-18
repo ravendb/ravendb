@@ -482,7 +482,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             if (string.IsNullOrEmpty(entity) == false && char.IsLower(entity[0]))
                 entity = char.ToUpper(entity[0]) + entity.Substring(1);
 
-            result.AddMessage($"Import collection:{entity}");
+            result.AddInfo($"Import collection:{entity}");
             using (var source = new CsvStreamSource(stream, context, entity))
             {
                 var destination = new DatabaseDestination(Database);
