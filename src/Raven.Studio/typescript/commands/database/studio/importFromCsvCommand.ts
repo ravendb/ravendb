@@ -4,13 +4,14 @@ import endpoints = require("endpoints");
 
 class importFromCsvCommand extends commandBase {
 
-    constructor(private db: database, private operationId: number, private file: File) {
+    constructor(private db: database, private operationId: number, private file: File, private collectionName: string) {
         super();
     }
 
     execute(): JQueryPromise<operationIdDto> {
         const urlArgs = {
-            operationId: this.operationId
+            operationId: this.operationId,
+            collection: this.collectionName || undefined
         };
 
         const url = endpoints.databases.smuggler.smugglerImportCsv + this.urlEncodeArgs(urlArgs);

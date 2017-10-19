@@ -20,6 +20,8 @@ class importCollectionFromCsv extends viewModelBase {
 
     isUploading = ko.observable<boolean>(false);
     uploadStatus = ko.observable<number>();
+    
+    customCollectionName = ko.observable<string>();
 
     validationGroup = ko.validatedObservable({
         importedFileName: this.importedFileName,
@@ -90,7 +92,7 @@ class importCollectionFromCsv extends viewModelBase {
             .done((operationId: number) => {
                 notificationCenter.instance.openDetailsForOperationById(db, operationId);
 
-                new importFromCsvCommand(db, operationId, fileInput.files[0])
+                new importFromCsvCommand(db, operationId, fileInput.files[0], this.customCollectionName())
                     .execute()
                     .always(() => this.isUploading(false));
             });

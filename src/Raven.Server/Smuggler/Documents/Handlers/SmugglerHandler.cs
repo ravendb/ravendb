@@ -421,8 +421,9 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 var token = new OperationCancelToken(Database.DatabaseShutdown);
                 var result = new SmugglerResult();
                 var operationId = GetLongQueryString("operationId");
-                var collection = GetStringQueryString("collection",false);
-                await Database.Operations.AddOperation(Database, "Collection import from CSV", Raven.Server.Documents.Operations.Operations.OperationType.CollectionImportFromCsv,
+                var collection = GetStringQueryString("collection", false);
+                var operationDescription = collection != null ? "Import collection: " + collection : "Import collection from CSV";
+                await Database.Operations.AddOperation(Database, operationDescription, Raven.Server.Documents.Operations.Operations.OperationType.CollectionImportFromCsv,
                     onProgress =>
                     {
                         return Task.Run(async () =>
@@ -445,18 +446,23 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                         if (ContentDispositionHeaderValue.TryParse(section.ContentDisposition, out contentDisposition) == false)
                                             continue;
 
-                                        var filename = collection??contentDisposition.FileName.ToString().Trim('\"');
+                                        if (string.IsNullOrEmpty(collection))
+                                        {
+                                            var fileName = contentDisposition.FileName.ToString().Trim('\"');
+                                            collection = Inflector.Pluralize(CSharpClassName.ConvertToValidClassName(Path.GetFileNameWithoutExtension(fileName)));
+                                        }
+                                        
                                         var options = new DatabaseSmugglerOptionsServerSide();
                                         if (section.Headers.ContainsKey("Content-Encoding") && section.Headers["Content-Encoding"] == "gzip")
                                         {
                                             using (var gzipStream = new GZipStream(section.Body, CompressionMode.Decompress))
                                             {
-                                                ImportDocumentsFromCsvStream(gzipStream, context, filename, options, result, onProgress, token);
+                                                ImportDocumentsFromCsvStream(gzipStream, context, collection, options, result, onProgress, token);
                                             }
                                         }
                                         else
                                         {
-                                            ImportDocumentsFromCsvStream(section.Body, context, filename, options, result, onProgress, token);
+                                            ImportDocumentsFromCsvStream(section.Body, context, collection, options, result, onProgress, token);
                                         }
                                     }
                                 }
@@ -474,14 +480,12 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
-        private void ImportDocumentsFromCsvStream(Stream stream, DocumentsOperationContext context, string fileName, DatabaseSmugglerOptionsServerSide options, SmugglerResult result, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        private void ImportDocumentsFromCsvStream(Stream stream, DocumentsOperationContext context, string entity, DatabaseSmugglerOptionsServerSide options, SmugglerResult result, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
-            var entity =
-                Inflector.Pluralize(CSharpClassName.ConvertToValidClassName(Path.GetFileNameWithoutExtension(fileName)));
             if (string.IsNullOrEmpty(entity) == false && char.IsLower(entity[0]))
                 entity = char.ToUpper(entity[0]) + entity.Substring(1);
 
-            result.AddInfo($"Import collection:{entity}");
+            result.AddInfo($"Import collection: {entity}");
             using (var source = new CsvStreamSource(stream, context, entity))
             {
                 var destination = new DatabaseDestination(Database);
