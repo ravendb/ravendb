@@ -210,11 +210,13 @@ namespace Raven.Server.ServerWide.Maintenance
             });
         }
 
-        private void RaiseNoLivingNodesAlert(string alertMsg)
+        private const string ThingsToCheck = "Things you may check: verify node is working, check for ports being blocked by firewall or similar software.";
+
+        private void RaiseNoLivingNodesAlert(string alertMsg, string dbName)
         {
             var alert = AlertRaised.Create(
-                "No living nodes in the database topology",
-                alertMsg,
+                $"Could not reach any node of {dbName} database",
+                $"{alertMsg}. {ThingsToCheck}",
                 AlertType.DatabaseTopologyWarning,
                 NotificationSeverity.Warning
             );
@@ -273,15 +275,18 @@ namespace Raven.Server.ServerWide.Maintenance
                     if (FailedDatabaseInstanceOrNode(clusterTopology, rehab, dbName, current) == DatabaseHealth.Good)
                         recoverable.Add(rehab);
                 }
+
                 if (recoverable.Count > 0)
                 {
                     var node = FindMostUpToDateNode(recoverable, dbName, current);
                     topology.Rehabs.Remove(node);
                     topology.Members.Add(node);
-                    RaiseNoLivingNodesAlert($"It appears that all nodes of the {dbName} database are not responding to the supervisor, promoting {node} from rehab to avoid making the database completely unreachable");
-                    return $"All nodes are not responding, promoting {node} from rehab";
+
+                    RaiseNoLivingNodesAlert($"None of {dbName} database nodes are responding to the supervisor, promoting {node} from rehab to avoid making the database completely unreachable.", dbName);
+                    return $"None of {dbName} nodes are responding, promoting {node} from rehab";
                 }
-                RaiseNoLivingNodesAlert($"It appears that all nodes of the {dbName} database are not responding to the supervisor, the database is not reachable");
+
+                RaiseNoLivingNodesAlert($"None of {dbName} database nodes are responding to the supervisor, the database is unreachable.", dbName);
             }
 
             var shouldUpdateTopologyStatus = false;
@@ -406,7 +411,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         {
                             if (pendingDelete.Contains(rehab))
                             {
-                                var msg = $"Node {rehab} was recovered from rehabilitation, but was already replaced by an other node, so it's waiting for deletion.";
+                                var msg = $"Node {rehab} was recovered from rehabilitation, but was already replaced by another node, so it's waiting for deletion.";
                                 if (_logger.IsOperationsEnabled)
                                 {
                                     _logger.Operations(msg);
@@ -416,7 +421,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
                             if (_logger.IsOperationsEnabled)
                             {
-                                _logger.Operations($"The database {dbName} on {rehab} is reachable and update, so we promote it back to member.");
+                                _logger.Operations($"The database {dbName} on {rehab} is reachable and up to date, so we promote it back to member.");
                             }
 
                             topology.Members.Add(rehab);
@@ -469,15 +474,24 @@ namespace Raven.Server.ServerWide.Maintenance
             string reason;
             if (nodeStats == null)
             {
-                reason = "In rehabilitation because it had no status report in the latest cluster stats";
+                reason = "Node in rehabilitation due to no status report in the latest cluster stats";
             }
             else if (nodeStats.Status != ClusterNodeStatusReport.ReportStatus.Ok)
             {
-                reason = $"In rehabilitation because the last report status was \"{nodeStats.Status}\"";
+                switch (nodeStats.Status)
+                {
+                    case ClusterNodeStatusReport.ReportStatus.Timeout:
+                        reason = $"Node in rehabilitation due to timeout reached trying to get stats from node";
+                        break;
+
+                    default:
+                        reason = $"Node in rehabilitation due to last report status being '{nodeStats.Status}'";
+                        break;
+                }
             }
             else if (nodeStats.Report.TryGetValue(dbName, out var stats) && stats.Status == Faulted)
             {
-                reason = "In rehabilitation because the DatabaseStatus for this node is Faulted";
+                reason = $"In rehabilitation because the DatabaseStatus for this node is {nameof(Faulted)}";
             }
             else
             {
