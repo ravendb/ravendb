@@ -83,9 +83,6 @@ namespace Voron.Impl
 
                 tree = Tree.Open(_lowLevelTransaction, this, treeName, header, type, isIndexTree, newPageAllocator);
 
-                if ((tree.State.Flags & TreeFlags.LeafsCompressed) == TreeFlags.LeafsCompressed)
-                    tree.InitializeCompression();
-
                 _trees.Add(treeName, tree);
 
                 return tree;

@@ -82,7 +82,7 @@ namespace Voron.Data.BTrees
         public static Tree Open(LowLevelTransaction llt, Transaction tx, Slice name, TreeRootHeader* header, RootObjectType type = RootObjectType.VariableSizeTree,
             bool isIndexTree = false, NewPageAllocator newPageAllocator = null)
         {
-            return new Tree(llt, tx, header->RootPageNumber, name, isIndexTree, newPageAllocator)
+            var tree = new Tree(llt, tx, header->RootPageNumber, name, isIndexTree, newPageAllocator)
             {
                 _state =
                 {
@@ -96,6 +96,11 @@ namespace Voron.Data.BTrees
                     Flags = header->Flags
                 }
             };
+
+            if ((tree.State.Flags & TreeFlags.LeafsCompressed) == TreeFlags.LeafsCompressed)
+                tree.InitializeCompression();
+
+            return tree;
         }
 
         public static Tree Create(LowLevelTransaction llt, Transaction tx, Slice name, TreeFlags flags = TreeFlags.None, RootObjectType type = RootObjectType.VariableSizeTree,
