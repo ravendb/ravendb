@@ -35,7 +35,7 @@ namespace SlowTests.Server.Documents.ETL
                     }, new RavenConnectionString()
                     {
                         Name = "test",
-                        Url = "http://127.0.0.1:8080",
+                        TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
                         Database = "Northwind",
                     });
 
@@ -78,7 +78,7 @@ namespace SlowTests.Server.Documents.ETL
                     }, new RavenConnectionString()
                     {
                         Name = "test",
-                        Url = "http://127.0.0.1:8080",
+                        TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
                         Database = "Northwind",
                     });
 
@@ -117,7 +117,7 @@ namespace SlowTests.Server.Documents.ETL
                     }, new RavenConnectionString()
                     {
                         Name = "test",
-                        Url = "http://127.0.0.1:8080",
+                        TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
                         Database = "Northwind",
                     });
 
@@ -137,7 +137,7 @@ namespace SlowTests.Server.Documents.ETL
                     }, new RavenConnectionString()
                     {
                         Name = "test",
-                        Url = "http://127.0.0.1:8080",
+                        TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
                         Database = "Northwind",
                     });
 

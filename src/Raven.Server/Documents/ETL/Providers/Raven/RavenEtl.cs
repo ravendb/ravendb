@@ -18,13 +18,15 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         public const string RavenEtlTag = "Raven ETL";
 
         private readonly RequestExecutor _requestExecutor;
+        private string _recentUrl;
+        public string Url => _recentUrl;
 
         private readonly RavenEtlDocumentTransformer.ScriptInput _script;
 
         public RavenEtl(Transformation transformation, RavenEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore) : base(transformation, configuration, database, serverStore, RavenEtlTag)
         {
             Metrics = new EtlMetricsCountersManager();
-            _requestExecutor = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(configuration.Connection.Url, configuration.Connection.Database, serverStore.Server.ClusterCertificateHolder.Certificate, DocumentConventions.Default);
+            _requestExecutor = RequestExecutor.Create(configuration.Connection.TopologyDiscoveryUrls, configuration.Connection.Database, serverStore.Server.ClusterCertificateHolder.Certificate, DocumentConventions.Default);
             _script = new RavenEtlDocumentTransformer.ScriptInput(transformation);
         }
 
@@ -66,6 +68,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             try
             {
                 _requestExecutor.Execute(batchCommand, context, CancellationToken);
+                _recentUrl = _requestExecutor.Url;
             }
             catch (OperationCanceledException e)
             {

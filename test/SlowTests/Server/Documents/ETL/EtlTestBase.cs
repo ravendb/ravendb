@@ -52,7 +52,7 @@ namespace SlowTests.Server.Documents.ETL
                 {
                     Name = connectionStringName,
                     Database = dst.Database,
-                    Url = dst.Urls.First(),
+                    TopologyDiscoveryUrls = dst.Urls,
                 }
             );
         }

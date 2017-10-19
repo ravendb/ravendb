@@ -1223,8 +1223,7 @@ namespace Raven.Server.Web.System
                         result = new RavenConnectionString
                         {
                             Name = ravenConnectionString.Name,
-                            Url = ravenConnectionString.Url,//TODO: delete this and use only TopologyDiscoveryUrls strings
-                            TopologyDiscoveryUrls = new [] { ravenConnectionString.Url },
+                            TopologyDiscoveryUrls = ravenConnectionString.TopologyDiscoveryUrls,
                             Database = ravenConnectionString.Database
                         };
                         break;

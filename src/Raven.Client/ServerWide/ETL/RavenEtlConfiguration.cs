@@ -13,12 +13,19 @@ namespace Raven.Client.ServerWide.ETL
 
         public override string GetDestination()
         {
-            return _destination ?? (_destination = $"{Connection.Database}@{Connection.Url}");
+            return _destination ?? (_destination = $"{Connection.Database}@{string.Join(",",Connection.TopologyDiscoveryUrls)}");
         }
 
         public override bool UsingEncryptedCommunicationChannel()
         {
-            return Connection.Url?.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == true;
+            foreach (var url in Connection.TopologyDiscoveryUrls)
+            {
+                if (url.StartsWith("https:", StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         public override DynamicJsonValue ToJson()

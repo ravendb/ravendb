@@ -44,7 +44,7 @@ namespace SlowTests.Server.Documents.ETL
                 AddEtl(src, configuration, new RavenConnectionString()
                 {
                     Name = "test",
-                    Url = dest.Urls.First(),
+                    TopologyDiscoveryUrls = dest.Urls,
                     Database = dest.Database,
                 });
 

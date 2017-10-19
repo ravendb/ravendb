@@ -28,7 +28,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                 }
             };
 
-            config.Initialize(new RavenConnectionString() { Database = "Foo", Url = "http://localhost:8080" });
+            config.Initialize(new RavenConnectionString() { Database = "Foo", TopologyDiscoveryUrls = new[] { "http://localhost:8080" } });
 
             List<string> errors;
             config.Validate(out errors);
