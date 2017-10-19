@@ -95,7 +95,7 @@
                             <label class="control-label">Used in Tasks:</label> 
                             <div data-bind="foreach: tasksThatAreUsingThisConnectionString">
                                 <div class="task">
-                                    <a href="#" data-bind="click: $root.navigateToTask.bind($root, $data, 'Raven')" title="Click to edit task.."><span class="text-info small" data-bind="text: $data"></span></a>
+                                    <a data-bind="attr: { 'href': $root.taskEditLink($data, 'RavenEtl', $parent.connectionStringName()) }" title="Click to edit task.."><span class="text-info small" data-bind="text: $data"></span></a>
                                 </div>
                             </div>
                         </div>
@@ -116,8 +116,8 @@
                         <div class="form-group" data-bind="if: tasksThatAreUsingThisConnectionString().length > 0">
                             <label class="control-label">Used in Tasks:</label>                           
                             <div data-bind="foreach: tasksThatAreUsingThisConnectionString"> 
-                                <div class="task">
-                                    <a href="#" data-bind="click: $root.navigateToTask.bind($root, $data, 'Sql')" title="Click to edit task.."><span class="text-info small" data-bind="text: $data"></span></a>
+                                <div class="task">                                   
+                                    <a data-bind="attr: { 'href': $root.taskEditLink($data, 'SqlEtl', $parent.connectionStringName()) }" title="Click to edit task.."><span class="text-info small" data-bind="text: $data"></span></a>
                                 </div>
                             </div>
                         </div>

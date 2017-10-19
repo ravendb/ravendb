@@ -6,7 +6,7 @@ abstract class connectionStringModel {
     connectionStringName = ko.observable<string>();   
     tasksThatAreUsingThisConnectionString = ko.observableArray<string>([]);
 
-    constructor(dto: Raven.Client.ServerWide.ConnectionString, isNew: boolean, tasks: string[]) {      
+    constructor(isNew: boolean, tasks: string[]) {      
         this.isNew(isNew);
         this.tasksThatAreUsingThisConnectionString(tasks);
     }    
