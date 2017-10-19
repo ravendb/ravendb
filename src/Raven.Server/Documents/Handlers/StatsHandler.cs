@@ -65,10 +65,22 @@ namespace Raven.Server.Documents.Handlers
                 for (var i = 0; i < indexes.Count; i++)
                 {
                     var index = indexes[i];
+                    bool isStale;
+                    try
+                    {
+                        isStale = index.IsStale(context);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // if the index has just been removed, let us consider it stale
+                        // until it can be safely removed from the list of indexes in the
+                        // database
+                        isStale = true; 
+                    }
                     stats.Indexes[i] = new IndexInformation
                     {
                         State = index.State,
-                        IsStale = index.IsStale(context),
+                        IsStale = isStale,
                         Name = index.Name,
                         Etag = index.Etag,
                         LockMode = index.Definition.LockMode,

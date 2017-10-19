@@ -158,11 +158,27 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 var maxSupercededEtag = 0L;
                 foreach (var supercededIndex in map.SupersededIndexes)
                 {
-                    var etag = supercededIndex.GetLastMappedEtagFor(map.ForCollection);
-                    maxSupercededEtag = Math.Max(etag, maxSupercededEtag);
+                    try
+                    {
+                        var etag = supercededIndex.GetLastMappedEtagFor(map.ForCollection);
+                        maxSupercededEtag = Math.Max(etag, maxSupercededEtag);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // the superceded index was already deleted
+                    }
                 }
 
-                var currentEtag = index.GetLastMappedEtagFor(map.ForCollection);
+                long currentEtag;
+                try
+                {
+                    currentEtag = index.GetLastMappedEtagFor(map.ForCollection);
+                }
+                catch (OperationCanceledException)
+                {
+                    // the index was already disposed by something else
+                    break;
+                }
                 if (currentEtag >= maxSupercededEtag)
                 {
                     // we'll give it a few seconds to drain any pending queries,

@@ -181,9 +181,20 @@ namespace Raven.Server.Documents.Queries.Dynamic
             if (currentBestState == DynamicQueryMatchType.Partial && index.Type.IsStatic()) // we cannot support this because we might extend fields from static index into auto index
                 return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
 
+            long lastMappedEtagFor;
+            try
+            {
+                lastMappedEtagFor = index.GetLastMappedEtagFor(collection);
+            }
+            catch (OperationCanceledException)
+            {
+                // the index was disposed while we were reading it, just ignore it
+                // probably dynamic index that was disposed by the auto cleaner
+                return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
+            }
             return new DynamicQueryMatchResult(indexName, currentBestState)
             {
-                LastMappedEtag = index.GetLastMappedEtagFor(collection),
+                LastMappedEtag = lastMappedEtagFor,
                 NumberOfMappedFields = definition.MapFields.Count
             };
         }
