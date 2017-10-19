@@ -6,40 +6,59 @@ class patchDocument {
 
     name = ko.observable<string>("");
     query = ko.observable<string>("");
-    selectedItem = ko.observable<string>("");
-    patchAll = ko.observable<boolean>(true);
+    recentPatch = ko.observable<boolean>(false);
+    
+    validationGroup: KnockoutValidationGroup;
 
-    toStorageDto(): storedPatchDto {
-
+    constructor(dto: patchDto) {
+        
+        this.name(dto.Name);
+        this.query(dto.Query);
+        this.recentPatch(dto.RecentPatch);
+        
+        this.initValidation();
+    }
+    
+    private initValidation() {
+        this.query.extend({
+            required: true,
+            aceValidation: true
+        });
+        
+        this.validationGroup = ko.validatedObservable({
+            query: this.query
+        })
+    }
+    
+    toDto(): storedPatchDto {
         const name = this.name();
         const query = this.query();
-        const selectedItem = this.selectedItem();
-        const patchAll = this.patchAll();
 
         return {
             Name: name,
             Query: query,
-            SelectedItem: selectedItem,
+            RecentPatch: this.recentPatch(),
             ModificationDate: moment().format("YYYY-MM-DD HH:mm"),
-            PatchAll: patchAll,
             Hash: genUtils.hashCode(
                 (name || "") +
-                query +
-                selectedItem +
-                patchAll
+                query
             )
         } as storedPatchDto;
     }
-
-    private getCurrentTime(): string {
-        return new Date().toLocaleString().replace(/\//g, "-").replace(',', '');
+    
+    copyFrom(dto: patchDto) {
+        this.name(dto.Name);
+        this.query(dto.Query);
+        this.recentPatch(dto.RecentPatch);
     }
 
-    copyFrom(incoming: patchDto) {
-        this.name("");
-        this.selectedItem(incoming.SelectedItem);
-        this.query(incoming.Query);
-        this.patchAll(incoming.PatchAll);
+    static empty() {
+        return new patchDocument({
+            Name: "",
+            Query: "",
+            RecentPatch: false,
+            ModificationDate: null
+        });
     }
 }
 

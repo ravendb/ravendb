@@ -5,11 +5,6 @@ import storageKeyProvider = require("common/storage/storageKeyProvider");
 
 class savedPatchesStorage {
 
-    static getSavedPatchesWithIndexNameCheck(db: database): JQueryPromise<storedPatchDto[]> {
-        const savedPatches = this.getSavedPatches(db);
-        return $.when(savedPatches);
-    }
-
     static getSavedPatches(db: database): storedPatchDto[] {
         const localStorageName = savedPatchesStorage.getLocalStorageKey(db.name);
         let savedPatchesFromLocalStorage: storedPatchDto[] = this.getSavedPatchesFromLocalStorage(localStorageName);

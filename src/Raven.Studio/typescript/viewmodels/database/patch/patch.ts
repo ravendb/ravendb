@@ -84,13 +84,11 @@ class patchList {
     }
 
     loadAll(db: database) {
-        savedPatchesStorage.getSavedPatchesWithIndexNameCheck(db)
-            .done(queries => this.allPatches(queries));
+        this.allPatches(savedPatchesStorage.getSavedPatches(db));
     }     
 
-    append(doc: storedPatchDto, isRecent: boolean) {
-
-        if (isRecent) {
+    append(doc: storedPatchDto) {
+        if (doc.RecentPatch) {
             const existing = this.allPatches().find(patch => patch.Hash === doc.Hash);
             if (existing) {
                 this.allPatches.remove(existing);
@@ -99,8 +97,7 @@ class patchList {
                 this.removeLastRecentPatchIfMoreThanLimit();
                 this.allPatches.unshift(doc);
             }
-        }
-        else {
+        } else {
             const existing = this.allPatches().find(x => x.Name === doc.Name);
             if (existing) {
                 this.allPatches.replace(existing, doc);
@@ -111,27 +108,24 @@ class patchList {
     }
 
     private removeLastRecentPatchIfMoreThanLimit() {
-        let count = 0;
-
-        const dto = this.allPatches().find(x => {
-            if (x.Name.startsWith(patch.recentKeyWord)) {
-                count++;
-                return count >= this.recentPatchLimit;
-            }
-        });
-
-        this.allPatches.remove(dto);
+        this.allPatches()
+            .filter(x => x.RecentPatch)
+            .filter((_, idx) => idx >= this.recentPatchLimit)
+            .forEach(x => this.allPatches.remove(x));
     }
 }
 
 class patch extends viewModelBase {
 
-    static readonly recentKeyWord = 'Recent Patch';
+    static readonly recentKeyword = 'Recent Patch';
 
     static readonly $body = $("body");
     static readonly ContainerSelector = "#patchContainer";
 
     static lastQuery = new Map<string, string>();
+
+    patchSaveName = ko.observable<string>();
+    saveValidationGroup: KnockoutValidationGroup;
 
     inSaveMode = ko.observable<boolean>();
 
@@ -146,10 +140,7 @@ class patch extends viewModelBase {
     private documentsProvider: documentBasedColumnsProvider;
     private fullDocumentsProvider: documentPropertyProvider;
 
-    patchDocument = ko.observable<patchDocument>(new patchDocument());
-
-    runPatchValidationGroup: KnockoutValidationGroup;
-    savePatchValidationGroup: KnockoutValidationGroup;
+    patchDocument = ko.observable<patchDocument>(patchDocument.empty());
 
     savedPatches = new patchList(item => this.usePatch(item), item => this.removePatch(item));
 
@@ -167,29 +158,17 @@ class patch extends viewModelBase {
 
         this.queryCompleter = queryCompleter.remoteCompleter(this.activeDatabase, this.indexes, "Update");
 
-        this.initValidation();
-
+        this.bindToCurrentInstance("savePatch");
         this.initObservables();
     }
 
     private initValidation() {
-        const doc = this.patchDocument();
-
-        doc.query.extend({
-            required: true,
-            aceValidation: true
-        });
-        
-        this.patchDocument().name.extend({
+        this.patchSaveName.extend({
             required: true
         });
-
-        this.runPatchValidationGroup = ko.validatedObservable({
-            query: doc.query,
-        });
-
-        this.savePatchValidationGroup = ko.validatedObservable({
-            patchSaveName: this.patchDocument().name
+        
+        this.saveValidationGroup = ko.validatedObservable({
+            patchSaveName: this.patchSaveName
         });
     }
 
@@ -200,7 +179,7 @@ class patch extends viewModelBase {
                 $input.show();
                 window.addEventListener("click", this.hideSavePatchHandler, true);
             } else {
-                this.savePatchValidationGroup.errors.showAllMessages(false);
+                this.saveValidationGroup.errors.showAllMessages(false);
                 window.removeEventListener("click", this.hideSavePatchHandler, true);
                 setTimeout(() => $input.hide(), 200);
             }
@@ -219,11 +198,11 @@ class patch extends viewModelBase {
     }
 
     private loadLastQuery() {
-
         const myLastQuery = patch.lastQuery.get(this.activeDatabase().name);
 
-        if (myLastQuery)
+        if (myLastQuery) {
             this.patchDocument().query(myLastQuery);
+        }
     }
 
 
@@ -240,6 +219,8 @@ class patch extends viewModelBase {
 
     attached() {
         super.attached();
+
+        this.initValidation();
 
         this.createKeyboardShortcut("ctrl+enter", () => {
             if (this.test.testMode()) {
@@ -287,8 +268,7 @@ class patch extends viewModelBase {
     }
 
     usePatch(item: storedPatchDto) {
-        const patchDoc = this.patchDocument();
-        patchDoc.copyFrom(item);
+        this.patchDocument().copyFrom(item);
     }
 
     removePatch(item: storedPatchDto) {
@@ -303,23 +283,26 @@ class patch extends viewModelBase {
     }
 
     runPatch() {
-        if (this.isValid(this.runPatchValidationGroup)) {
+        if (this.isValid(this.patchDocument().validationGroup)) {
             this.patchOnQuery();
         }
     }
 
     savePatch() {
-
         if (this.inSaveMode()) {
             eventsCollector.default.reportEvent("patch", "save");
 
-            if (this.isValid(this.savePatchValidationGroup)) {
+            if (this.isValid(this.saveValidationGroup) && this.isValid(this.patchDocument().validationGroup)) {
+                this.patchDocument().name(this.patchSaveName());
                 this.savePatchInStorage(false);
-                this.savePatchValidationGroup.errors.showAllMessages(false);
+                this.patchSaveName(null);
+                this.saveValidationGroup.errors.showAllMessages(false);
                 messagePublisher.reportSuccess("Patch saved successfully");
+                
+                this.inSaveMode(false);
             }
         } else {
-            if (this.isValid(this.runPatchValidationGroup)) {
+            if (this.isValid(this.patchDocument().validationGroup)) {
                 this.inSaveMode(true);    
             }
         }
@@ -332,7 +315,9 @@ class patch extends viewModelBase {
     }
 
     private savePatchInStorage(isRecent: boolean) {
-        this.savedPatches.append(this.patchDocument().toStorageDto(), isRecent);
+        const dto = this.patchDocument().toDto();
+        dto.RecentPatch = isRecent;
+        this.savedPatches.append(dto);
         savedPatchesStorage.storeSavedPatches(this.activeDatabase(), this.savedPatches.allPatches());
 
         this.patchDocument().name("");
@@ -340,10 +325,9 @@ class patch extends viewModelBase {
     }
 
     private getRecentPatchName(): string {
-
         const collectionIndexName = queryUtil.getCollectionOrIndexName(this.patchDocument().query());
 
-        return patch.recentKeyWord + " (" + collectionIndexName + ")";
+        return patch.recentKeyword + " (" + collectionIndexName + ")";
     }
 
     private patchOnQuery() {

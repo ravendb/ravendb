@@ -43,7 +43,7 @@ type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<doc
 class query extends viewModelBase {
 
     static readonly recentQueryLimit = 6;
-    static readonly recentKeyWord = 'Recent Query';
+    static readonly recentKeyword = 'Recent Query';
 
     static readonly ContainerSelector = "#queryContainer";
     static readonly $body = $("body");
@@ -84,7 +84,8 @@ class query extends viewModelBase {
     });
 
     inSaveMode = ko.observable<boolean>();
-
+    
+    querySaveName = ko.observable<string>();
     saveQueryValidationGroup: KnockoutValidationGroup;
 
     private gridController = ko.observable<virtualGridController<any>>();
@@ -327,9 +328,12 @@ class query extends viewModelBase {
     }
 
     private initValidation() {
-
+        this.querySaveName.extend({
+            required: true
+        });
+        
         this.saveQueryValidationGroup = ko.validatedObservable({
-            querySaveName: this.criteria().name
+            querySaveName: this.querySaveName
         });
     }
 
@@ -433,9 +437,8 @@ class query extends viewModelBase {
 
         const db = this.activeDatabase();
 
-        savedQueriesStorage.getSavedQueriesWithIndexNameCheck(db)
-            .done(queries => this.savedQueries(queries));
-
+        this.savedQueries(savedQueriesStorage.getSavedQueries(db));
+        
         const myLastQuery = query.lastQuery.get(db.name);
 
         if (myLastQuery) {
@@ -569,7 +572,9 @@ class query extends viewModelBase {
             eventsCollector.default.reportEvent("query", "save");
 
             if (this.isValid(this.saveQueryValidationGroup)) {
+                this.criteria().name(this.querySaveName());
                 this.saveQueryInStorage(false);
+                this.querySaveName(null);
                 this.saveQueryValidationGroup.errors.showAllMessages(false);
                 messagePublisher.reportSuccess("Query saved successfully");
             }
@@ -587,16 +592,17 @@ class query extends viewModelBase {
     }
 
     private saveQueryInStorage(isRecent: boolean) {
-        this.appendQuery(this.criteria().toStorageDto(), isRecent);
+        const dto = this.criteria().toStorageDto();
+        dto.recentQuery = isRecent;
+        this.appendQuery(dto);
         savedQueriesStorage.storeSavedQueries(this.activeDatabase(), this.savedQueries());
 
         this.criteria().name("");
         this.loadSavedQueries();
     }
 
-    appendQuery(doc: storedQueryDto, isRecent: boolean) {
-
-        if (isRecent) {
+    appendQuery(doc: storedQueryDto) {
+        if (doc.recentQuery) {
             const existing = this.savedQueries().find(query => query.hash === doc.hash);
             if (existing) {
                 this.savedQueries.remove(existing);
@@ -605,8 +611,7 @@ class query extends viewModelBase {
                 this.removeLastRecentQueryIfMoreThanLimit();
                 this.savedQueries.unshift(doc);
             }
-        }
-        else {
+        } else {
             const existing = this.savedQueries().find(x => x.name === doc.name);
             if (existing) {
                 this.savedQueries.replace(existing, doc);
@@ -617,22 +622,17 @@ class query extends viewModelBase {
     }
 
     private removeLastRecentQueryIfMoreThanLimit() {
-        let count = 0;
-
-        const dto = this.savedQueries().find(x => {
-            if (x.name.startsWith(query.recentKeyWord)) {
-                count++;
-                return count >= query.recentQueryLimit;
-            }
-        });
-        this.savedQueries.remove(dto);
+        this.savedQueries()
+            .filter(x => x.recentQuery)
+            .filter((_, idx) => idx >= query.recentQueryLimit)
+            .forEach(x => this.savedQueries.remove(x));
     }
 
     private getRecentQueryName(): string {
 
         const collectionIndexName = queryUtil.getCollectionOrIndexName(this.criteria().queryText());
 
-        return query.recentKeyWord + " (" + collectionIndexName + ")";
+        return query.recentKeyword + " (" + collectionIndexName + ")";
     }
 
     previewQuery(item: storedQueryDto) {
@@ -646,7 +646,6 @@ class query extends viewModelBase {
     }
 
     removeQuery(item: storedQueryDto) {
-
         this.confirmationMessage("Query", `Are you sure you want to delete query '${item.name}'?`, ["Cancel", "Delete"])
             .done(result => {
                 if (result.can) {

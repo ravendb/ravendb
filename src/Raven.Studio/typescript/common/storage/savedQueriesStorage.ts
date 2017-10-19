@@ -5,11 +5,6 @@ import storageKeyProvider = require("common/storage/storageKeyProvider");
 
 class savedQueriesStorage {
 
-    static getSavedQueriesWithIndexNameCheck(db: database): JQueryPromise<storedQueryDto[]> {
-        const saved = this.getSavedQueries(db);
-        return $.when(saved);
-    }
-
     static getSavedQueries(db: database): storedQueryDto[] {
         const localStorageName = savedQueriesStorage.getLocalStorageKey(db.name);
         let savedQueriesFromLocalStorage: storedQueryDto[] = this.getSavedQueriesFromLocalStorage(localStorageName);

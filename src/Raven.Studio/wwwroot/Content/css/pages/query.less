@@ -4,6 +4,19 @@
     width: @controls-width;
 }
 
+.query-save {
+    .form-control {
+        margin-right: -30px;
+        opacity: 0;
+        transition: opacity .2s cubic-bezier(0, 0.5, 0.5, 1), margin .2s cubic-bezier(0, 0.5, 0.5, 0.99);
+    }
+
+    &.active .form-control {
+        opacity: 1;
+        margin-right: 0px;
+    }
+}
+
 .query-container {
     display: flex;
 
@@ -21,7 +34,7 @@
     }
 
     .query-controls {
-        margin-top: 30px;
+        margin-top: 83px;
         margin-left: @line-height-computed/2;
         flex-basis: @controls-width;
         flex-shrink: 0;

@@ -204,6 +204,7 @@ interface queryDto {
     showFields: boolean;
     indexEntries: boolean;
     modificationDate: string;
+    recentQuery: boolean;
 }
 
 interface storedQueryDto extends queryDto {
@@ -296,9 +297,8 @@ type subscriptionStartType = 'Beginning of Time' | 'Latest Document' | 'Change V
 interface patchDto {
     Name: string;
     Query: string;
-    SelectedItem: string;
+    RecentPatch: boolean;
     ModificationDate: string;
-    PatchAll: boolean;
 }
 
 interface storedPatchDto extends patchDto {

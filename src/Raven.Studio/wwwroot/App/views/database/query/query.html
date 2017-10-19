@@ -1,56 +1,62 @@
 <div class="flex-window stretch query content-margin" id="queryContainer">
     <div class="flex-window-head">
-       
-        <!-- TODO
-            <div class="dropdown">
-            <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-                <i class="icon-settings"></i><span>Settings</span>
-                <span class="caret"></span>
-            </button>
-            <div class="dropdown-menu settings-menu" data-bind="dropdownPanel: true, template: { name: 'settings-template' }">
+        <div class="row">
+           
+        </div>
+        <div class="row margin-bottom">
+            <div class="col-sm-2">
+                <h2 class="query-title">Query </h2>
+                <div><a href="#" data-bind="click: syntaxHelp"><small>Syntax help</small></a></div>
             </div>
-        </div>-->
+            <div class="col-sm-10">
+                <div class="query-container">
+                    <div class="query-main">
+                        <div class="has-warning query-error" data-bind="visible: containsAsterixQuery">
+                            <div class="help-block">
+                                <i class="icon-warning"></i> <span>The Query contains <strong>*.*</strong>. Did you intend to use <strong>*:*</strong> ?</span>
+                            </div>
+                        </div>
 
-        <div id="patch-target">
-            <div class="clearfix toolbar">
-                <div class="pull-right-sm flex-horizontal">
-                    <div class="input-group query-save" data-bind="css: { active: inSaveMode }, validationOptions: { insertMessages: false }, validationElement: criteria().name">
-                        <input class="form-control" style="display: none" placeholder="Query name" data-bind="textInput: criteria().name">
-                        <span class="input-group-btn">
-                            <button class="btn btn-success" data-class="active" type="button" data-bind="click: saveQuery()" title="Save query under given name">
+                        <div class="clearfix toolbar">
+                            <div class="pull-right-sm flex-horizontal">
+                                <div class="input-group query-save" data-bind="css: { active: inSaveMode }, validationOptions: { insertMessages: false }, validationElement: querySaveName">
+                                    <input class="form-control" style="display: none" placeholder="Query name" data-bind="textInput: querySaveName">
+                                    <span class="input-group-btn">
+                            <button class="btn btn-success" data-class="active" type="button" data-bind="click: saveQuery" title="Save query under given name">
                                 <i class="icon-save"></i> <span data-bind="text: inSaveMode() ? 'Save' : 'Save...'"></span>
                             </button>
                         </span>
-                    </div>
-                    <div class="dropdown dropdown-right loadpatch" data-bind="template: { name: 'saved-queries-dialog' }">
-                    </div>
-                </div>
-            </div>
-            <div class="form-horizontal">
-                <div class="row">
-                    <div class="col-sm-3 col-lg-2">
-                        <h2 class="query-label">
-                            Query
-                        </h2>
-                        <a href="#" data-bind="click: syntaxHelp">Syntax help</a>
-                    </div>
-                    <div class="col-sm-9 col-lg-10 margin-bottom">
-                        <div class="patch-container">
-                            <pre class="form-control editor query-source"
-                                 data-bind="aceEditor: { code: criteria().queryText, allowResize: false, minHeight: 180, maxHeight: 180, lang:'ace/mode/rql', completer: queryCompleter.complete, hasFocus: queryHasFocus }, validationOptions: { errorsAsTitle: false }, validationElement: criteria().queryText"></pre>
-
-                            <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: criteria().queryText">
-                                <div class="help-block" data-bind="validationMessage: criteria().queryText"></div>
-                            </div>
-                            <div class="patch-controls">
-                                <button class="btn btn-primary btn-block btn-lg text-center" data-bind="click: runQuery" title="Execute query">
-                                    <i class="icon-play2 icon-lg"></i><br />
-                                    <small class="kbd"><kbd>ctrl</kbd> <strong>+</strong> <kbd>enter</kbd></small>
-                                </button>
+                                </div>
+                                <div class="dropdown dropdown-right loadpatch" data-bind="template: { name: 'saved-queries-dialog' }">
+                                </div>
                             </div>
                         </div>
+
+                        <div class="btn-group btn-group-sm pull-right" role="group">
+                            <div class="dropdown">
+                                <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                    <i class="icon-settings"></i><span>Settings</span>
+                                    <span class="caret"></span>
+                                </button>
+                                <div class="dropdown-menu settings-menu" data-bind="dropdownPanel: true, template: { name: 'settings-template' }">
+                                </div>
+                            </div>
+                        </div>
+                        <pre class="form-control editor query-source"
+                             data-bind="aceEditor: { code: criteria().queryText, allowResize: false, minHeight: 180, maxHeight: 180, lang:'ace/mode/rql', completer: queryCompleter.complete, hasFocus: queryHasFocus }, validationOptions: { errorsAsTitle: false }, validationElement: criteria().queryText"></pre>
+
+                        <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: criteria().queryText">
+                            <div class="help-block" data-bind="validationMessage: criteria().queryText"></div>
+                        </div>
+                    </div>
+                    <div class="query-controls">
+                        <button class="btn btn-primary btn-block btn-lg text-center run-query" data-bind="click: runQuery, css: { 'btn-spinner': isLoading }">
+                            <i class="icon-play2 icon-lg"></i><br />
+                            <small class="kbd"><kbd>ctrl</kbd> <strong>+</strong> <kbd>enter</kbd></small>
+                        </button>
                     </div>
                 </div>
+
             </div>
         </div>
 
@@ -276,12 +282,11 @@
                     </div>
                 </div>
             </div>
-                <div class="flex-footer">
-                    <div class="text-right">
-                        <button title="Load saved query" class="btn btn-success btn-sm close-panel" data-bind="click: useQuery, enable: previewItem()">Load</button>
-                    </div>
+            <div class="flex-footer">
+                <div class="text-right">
+                    <button title="Load saved query" class="btn btn-success btn-sm close-panel" data-bind="click: useQuery, enable: previewItem()">Load</button>
                 </div>
-            
+            </div>
         </div>
     </div>
 </script>
