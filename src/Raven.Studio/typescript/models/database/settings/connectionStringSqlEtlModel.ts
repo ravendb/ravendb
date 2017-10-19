@@ -9,7 +9,7 @@ class connectionStringSqlEtlModel extends connectionStringModel {
     testConnectionValidationGroup: KnockoutValidationGroup;  
 
     constructor(dto: Raven.Client.ServerWide.ETL.SqlConnectionString, isNew: boolean, tasks: string[]) {
-        super(dto, isNew, tasks);
+        super(isNew, tasks);
         
         this.update(dto);
         this.initValidation();
