@@ -8,6 +8,7 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Voron.Impl;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -28,14 +29,27 @@ namespace Raven.Server.Documents.Handlers
                 {
                     foreach (var environment in storageEnvironments)
                     {
-                        using (var tx = environment?.Environment.ReadTransaction())
+                        Transaction tx = null;
+                        try
                         {
+                            try
+                            {
+                                tx = environment?.Environment.ReadTransaction();
+                            }
+                            catch (OperationCanceledException)
+                            {
+                                continue;
+                            }
                             var storageReport = environment?.Environment.GenerateReport(tx);
-                            if(storageReport == null)
+                            if (storageReport == null)
                                 continue;
 
                             var journalSize = storageReport.Journals.Sum(j => j.AllocatedSpaceInBytes);
                             sizeOnDiskInBytes += storageReport.DataFile.AllocatedSpaceInBytes + journalSize;
+                        }
+                        finally
+                        {
+                            tx?.Dispose();
                         }
                     }
                 }
