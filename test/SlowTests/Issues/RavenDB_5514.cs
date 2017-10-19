@@ -26,13 +26,16 @@ namespace SlowTests.Issues
                     {
                         var id = "orders/" + i+ "-A";
                         l.Add(id);
-                        bulk.Store(new Order(), id);
+                        bulk.Store(new Order
+                        {
+                            Name = id
+                        }, id);
                     }
                 }
                 WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
-                    var e = Assert.Throws<RavenException>(() => session.Query<Order>().Where(x => x.Id.In(l)).ToList());
+                    var e = Assert.Throws<RavenException>(() => session.Query<Order>().Where(x => x.Name.In(l)).ToList());
                     Assert.Contains("maxClauseCount is set to", e.Message);
                 }
             }
@@ -40,7 +43,7 @@ namespace SlowTests.Issues
 
         private class Order
         {
-            public string Id { get; set; }
+            public string Name { get; set; }
 
         }
     }
