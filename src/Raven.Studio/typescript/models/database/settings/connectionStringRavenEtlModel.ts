@@ -3,7 +3,7 @@ import connectionStringModel = require("models/database/settings/connectionStrin
 
 class connectionStringRavenEtlModel extends connectionStringModel { 
 
-    url = ko.observable<string>();                 
+    topologyDiscoveryUrls = ko.observable<string[]>();                 
     database = ko.observable<string>();            
 
     validationGroup: KnockoutValidationGroup;
@@ -21,7 +21,7 @@ class connectionStringRavenEtlModel extends connectionStringModel {
         
         this.connectionStringName(dto.Name); 
         this.database(dto.Database);
-        this.url(dto.Url);
+        this.topologyDiscoveryUrls(dto.TopologyDiscoveryUrls);
     }
 
     initValidation() {
@@ -36,7 +36,7 @@ class connectionStringRavenEtlModel extends connectionStringModel {
             validDatabaseName: true            
         });
 
-        this.url.extend({
+        this.topologyDiscoveryUrls.extend({
             required: true,
             validUrl: true
         });
@@ -44,11 +44,11 @@ class connectionStringRavenEtlModel extends connectionStringModel {
         this.validationGroup = ko.validatedObservable({
             connectionStringName: this.connectionStringName,
             database: this.database,
-            url: this.url
+            topologyDiscoveryUrls: this.topologyDiscoveryUrls
         });
         
         this.testConnectionValidationGroup = ko.validatedObservable({
-            url: this.url
+            topologyDiscoveryUrls: this.topologyDiscoveryUrls
         })
     }
 
@@ -56,7 +56,7 @@ class connectionStringRavenEtlModel extends connectionStringModel {
         return new connectionStringRavenEtlModel({
             Type: "Raven",
             Name: "", 
-            Url: "",
+            TopologyDiscoveryUrls: null,
             Database: ""
         } as Raven.Client.ServerWide.ETL.RavenConnectionString, true, []);
     }
@@ -65,7 +65,7 @@ class connectionStringRavenEtlModel extends connectionStringModel {
         return {
             Type: "Raven",
             Name: this.connectionStringName(),
-            Url: this.url(),
+            TopologyDiscoveryUrls: this.topologyDiscoveryUrls(),
             Database: this.database()
         };
     }
