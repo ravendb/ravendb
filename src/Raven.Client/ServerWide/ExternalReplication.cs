@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Replication;
+using Raven.Client.ServerWide.ETL;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -11,24 +12,18 @@ namespace Raven.Client.ServerWide
     {
         public long TaskId;
         public string Name;
-        public string[] TopologyDiscoveryUrls;
+        public string ConnectionStringName;
         public string MentorNode;
+
+        [JsonIgnore]
+        public RavenConnectionString ConnectionString; // this is in memory only
 
         public ExternalReplication() { }
 
-        public ExternalReplication(string database, string[] urls)
+        public ExternalReplication(string database, string connectionStringName)
         {
-            if(urls == null || urls.Length == 0)
-                throw new ArgumentNullException(nameof(TopologyDiscoveryUrls));
             Database = database;
-            TopologyDiscoveryUrls = urls;
-            for (int i = 0; i < TopologyDiscoveryUrls.Length; i++)
-            {
-                if (TopologyDiscoveryUrls[i] == null)
-                    throw new ArgumentNullException(nameof(TopologyDiscoveryUrls));
-
-                TopologyDiscoveryUrls[i] = TopologyDiscoveryUrls[i].Trim();
-            }
+            ConnectionStringName = connectionStringName;
         }
 
         public static void RemoveWatcher(ref List<ExternalReplication> watchers, long taskId)
@@ -42,13 +37,13 @@ namespace Raven.Client.ServerWide
             }
         }
         
-        public static void EnsureUniqueDbAndUrl(List<ExternalReplication> watchers, ExternalReplication watcher)
+        public static void EnsureUniqueDbAndConnectionString(List<ExternalReplication> watchers, ExternalReplication watcher)
         {
             var dbName = watcher.Database;
-            var url = watcher.Url;
+            var connecitonString = watcher.ConnectionStringName;
             foreach (var w in watchers)
             {
-                if (w.Database != dbName || w.Url != url)
+                if (w.Database != dbName || w.ConnectionStringName != connecitonString)
                     continue;
                 watchers.Remove(watcher);
                 return;
@@ -76,7 +71,7 @@ namespace Raven.Client.ServerWide
             json[nameof(TaskId)] = TaskId;
             json[nameof(Name)] = Name;
             json[nameof(MentorNode)] = MentorNode;
-            json[nameof(TopologyDiscoveryUrls)] = new DynamicJsonArray(TopologyDiscoveryUrls);
+            json[nameof(ConnectionStringName)] = ConnectionStringName;
             return json;
         }
 
@@ -88,8 +83,8 @@ namespace Raven.Client.ServerWide
         public ulong GetTaskKey()
         {
             var hashCode = CalculateStringHash(Database);
-            hashCode = (hashCode * 397) ^ CalculateStringHash(string.Join(",", TopologyDiscoveryUrls));
-            return hashCode;
+            hashCode = (hashCode * 397) ^ CalculateStringHash(ConnectionStringName);
+            return (hashCode * 397) ^ (ulong)TaskId;
         }
 
         public override int GetHashCode()
@@ -97,10 +92,9 @@ namespace Raven.Client.ServerWide
             unchecked
             {
                 var hashCode = CalculateStringHash(Database);
-                hashCode = (hashCode * 397) ^ CalculateStringHash(string.Join(",",TopologyDiscoveryUrls));
+                hashCode = (hashCode * 397) ^ CalculateStringHash(ConnectionStringName);
                 hashCode = (hashCode * 397) ^ (ulong)TaskId;
                 hashCode = (hashCode * 397) ^ CalculateStringHash(MentorNode);
-                hashCode = (hashCode * 397) ^ CalculateStringHash(Name);
                 return (int)hashCode;
             }
         }

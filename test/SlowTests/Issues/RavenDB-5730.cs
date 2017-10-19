@@ -48,9 +48,9 @@ namespace SlowTests.Issues
 
         private void DoReplicationTest(DocumentStore storeA, DocumentStore storeB, string url)
         {
-            var watcher = new ExternalReplication(storeB.Database, new[] {url});
+            var watcher = new ExternalReplication(storeB.Database, "Connection");
 
-            AddWatcherToReplicationTopology(storeA, watcher).ConfigureAwait(false);
+            AddWatcherToReplicationTopology(storeA, watcher, new[] { url }).ConfigureAwait(false);
             
             using (var session = storeA.OpenSession())
             {

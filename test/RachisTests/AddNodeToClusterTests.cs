@@ -61,7 +61,7 @@ namespace RachisTests
                 Conventions = conventions
             }.Initialize();
 
-            var watcher = new ExternalReplication("WatcherDB", new[] {watcherDb.Item2.Single().WebUrl});
+            var watcher = new ExternalReplication("WatcherDB", "Connection");
 
             var watcherRes = await AddWatcherToReplicationTopology((DocumentStore)leaderStore, watcher);
             var tasks = new List<Task>();

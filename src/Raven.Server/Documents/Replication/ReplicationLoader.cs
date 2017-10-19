@@ -410,6 +410,20 @@ namespace Raven.Server.Documents.Replication
 
             DropOutgoingConnections(changes.RemovedDestiantions, ref instancesToDispose);
             var newDestinations = changes.AddedDestinations.Where(o => newRecord.Topology.WhoseTaskIsIt(o, false) == _server.NodeTag).ToList();
+            foreach (var externalReplication in newDestinations.ToList())
+            {
+                if (newRecord.RavenConnectionStrings.TryGetValue(externalReplication.ConnectionStringName, out var connectionString) == false)
+                {
+                    if (_log.IsInfoEnabled)
+                    {
+                        _log.Info($"Could not find connection string with name {externalReplication.ConnectionStringName} " +
+                                  $"for the external replication task '{externalReplication.Name}' to '{externalReplication.Database}'.");
+                    }
+                    newDestinations.Remove(externalReplication);
+                    continue;
+                }
+                externalReplication.ConnectionString = connectionString;
+            }
             StartOutgoingConnections(newDestinations, external: true);
 
             _externalDestinations.RemoveAll(changes.RemovedDestiantions.Contains);
@@ -534,7 +548,7 @@ namespace Raven.Server.Documents.Replication
             {
                 if (node is ExternalReplication exNode)
                 {
-                    using (var requestExecutor = RequestExecutor.Create(exNode.TopologyDiscoveryUrls, exNode.Database,
+                    using (var requestExecutor = RequestExecutor.Create(exNode.ConnectionString.TopologyDiscoveryUrls, exNode.Database,
                         _server.Server.ClusterCertificateHolder.Certificate,
                         DocumentConventions.Default))
                     using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
