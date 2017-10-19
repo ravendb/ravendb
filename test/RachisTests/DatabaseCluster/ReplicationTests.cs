@@ -10,9 +10,12 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.ETL;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Client.ServerWide.Operations.ConnectionStrings;
 using Raven.Server.Documents.Replication;
+using Raven.Server.ServerWide.Commands.ConnectionStrings;
 using Raven.Server.Utils;
 using Raven.Server.Web.System;
 using Raven.Tests.Core.Utils.Entities;
@@ -144,6 +147,7 @@ namespace RachisTests.DatabaseCluster
                 adminCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader);
             }
 
+            var watcherUrls = new Dictionary<string, string[]>();
 
             using (var store = new DocumentStore()
             {
@@ -179,20 +183,19 @@ namespace RachisTests.DatabaseCluster
                     u => u.Name.Equals("Karmel"),
                     TimeSpan.FromSeconds(clusterSize + 5),
                     adminCertificate));
-
                 for (var i = 0; i < 5; i++)
                 {
-                    doc = new DatabaseRecord($"Watcher{i}");
+                    var dbName = $"Watcher{i}";
+                    doc = new DatabaseRecord(dbName);
                     var res = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc));
+                    watcherUrls.Add(dbName,res.NodesAddedTo.ToArray());
                     var server = Servers.Single(x => x.WebUrl == res.NodesAddedTo[0]);
                     await server.ServerStore.Cluster.WaitForIndexNotification(res.RaftCommandIndex);
-                    await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore($"Watcher{i}");
+                    await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName);
 
-                    var watcher = new ExternalReplication($"Watcher{i}", res.NodesAddedTo.ToArray());
-                    watchers.Add(watcher);
-
+                    var watcher = new ExternalReplication(dbName, $"{dbName}-Connection");
                     await AddWatcherToReplicationTopology((DocumentStore)store, watcher);
-
+                    watchers.Add(watcher);
                 }
             }
 
@@ -200,7 +203,7 @@ namespace RachisTests.DatabaseCluster
             {
                 using (var store = new DocumentStore
                 {
-                    Urls = watcher.TopologyDiscoveryUrls ,
+                    Urls = watcherUrls[watcher.Database],
                     Database = watcher.Database,
                     Certificate = adminCertificate,
                     Conventions =
@@ -227,6 +230,8 @@ namespace RachisTests.DatabaseCluster
             var databaseName = GetDatabaseName();
             var leader = await CreateRaftClusterAndGetLeader(clusterSize);
             var watchers = new List<ExternalReplication>();
+
+            var watcherUrls = new Dictionary<string, string[]>();
 
             using (var store = new DocumentStore()
             {
@@ -259,13 +264,14 @@ namespace RachisTests.DatabaseCluster
 
                 for (var i = 0; i < 5; i++)
                 {
-                    doc = new DatabaseRecord($"Watcher{i}");
+                    var dbName = $"Watcher{i}";
+                    doc = new DatabaseRecord(dbName);
                     var res = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc));
                     var server = Servers.Single(x => x.WebUrl == res.NodesAddedTo[0]);
                     await server.ServerStore.Cluster.WaitForIndexNotification(res.RaftCommandIndex);
-                    await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore($"Watcher{i}");
-
-                    var watcher = new ExternalReplication($"Watcher{i}", res.NodesAddedTo.ToArray())
+                    await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName);
+                    watcherUrls.Add(dbName,res.NodesAddedTo.ToArray());
+                    var watcher = new ExternalReplication(dbName, $"{dbName}-Connection")
                     {
                         MentorNode = "C"
                     };
@@ -281,7 +287,7 @@ namespace RachisTests.DatabaseCluster
             {
                 using (var store = new DocumentStore
                 {
-                    Urls = watcher.TopologyDiscoveryUrls,
+                    Urls = watcherUrls[watcher.Database],
                     Database = watcher.Database,
                 }.Initialize())
                 {
@@ -299,6 +305,7 @@ namespace RachisTests.DatabaseCluster
             var leader = await CreateRaftClusterAndGetLeader(clusterSize);
             ExternalReplication watcher;
 
+            string[] watcherUrls;
             using (var store = new DocumentStore()
             {
                 Urls = new[] {leader.WebUrl},
@@ -335,11 +342,12 @@ namespace RachisTests.DatabaseCluster
 
                 doc = new DatabaseRecord("Watcher");
                 var res = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc));
+                watcherUrls = res.NodesAddedTo.ToArray();
                 var node = Servers.Single(x => x.WebUrl == res.NodesAddedTo[0]);
                 await node.ServerStore.Cluster.WaitForIndexNotification(res.RaftCommandIndex);
                 await node.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore("Watcher");
 
-                watcher = new ExternalReplication("Watcher", res.NodesAddedTo.ToArray())
+                watcher = new ExternalReplication("Watcher", "Watcher-Connection")
                 {
                     Name = "MyExternalReplication1",
                     MentorNode = leader.ServerStore.NodeTag
@@ -359,7 +367,7 @@ namespace RachisTests.DatabaseCluster
 
             using (var store = new DocumentStore
             {
-                Urls = watcher.TopologyDiscoveryUrls,
+                Urls = watcherUrls,
                 Database = watcher.Database,
                 Conventions =
                 {
@@ -385,10 +393,9 @@ namespace RachisTests.DatabaseCluster
                 var node = Servers.Single(x => x.WebUrl == res.NodesAddedTo[0]);
                 await node.ServerStore.Cluster.WaitForIndexNotification(res.RaftCommandIndex);
                 await node.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore("Watcher2");
-
+                watcherUrls = res.NodesAddedTo.ToArray();
                 //modify watcher
                 watcher.Database = "Watcher2";
-                watcher.TopologyDiscoveryUrls = res.NodesAddedTo.ToArray();
                 watcher.Name = "MyExternalReplication2";
 
                 await AddWatcherToReplicationTopology((DocumentStore)store, watcher);
@@ -403,7 +410,7 @@ namespace RachisTests.DatabaseCluster
 
             using (var store = new DocumentStore
             {
-                Urls = watcher.TopologyDiscoveryUrls,
+                Urls = watcherUrls,
                 Database = watcher.Database,
                 Conventions =
                 {
@@ -610,7 +617,7 @@ namespace RachisTests.DatabaseCluster
                 CreateDatabase = false
             }))
             {
-                var watcher2 = new ExternalReplication(store2.Database, store2.Urls);
+                var watcher2 = new ExternalReplication(store2.Database, "ConnectionString");
                 
                 await AddWatcherToReplicationTopology(store1, watcher2);
 
@@ -653,7 +660,7 @@ namespace RachisTests.DatabaseCluster
                 CreateDatabase = false
             }))
             {
-                var watcher2 = new ExternalReplication(store2.Database, store2.Urls);
+                var watcher2 = new ExternalReplication(store2.Database, "ConnectionString");
                 
                 await AddWatcherToReplicationTopology(store1, watcher2);
 
@@ -698,8 +705,8 @@ namespace RachisTests.DatabaseCluster
             }
 
             // add watcher with invalid url to test the failover on database topology discovery
-            var watcher = new ExternalReplication(dstDB, new[] {"http://127.0.0.1:1234", dstLeader.WebUrl});
-            var res = await AddWatcherToReplicationTopology((DocumentStore)srcStore, watcher);
+            var watcher = new ExternalReplication(dstDB, "connection");
+            var res = await AddWatcherToReplicationTopology((DocumentStore)srcStore, watcher, new[] { "http://127.0.0.1:1234", dstLeader.WebUrl });
 
             var dstStore = new DocumentStore
             {

@@ -9,7 +9,9 @@ using Raven.Client.Documents.Replication;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.ETL;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.ConnectionStrings;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
@@ -167,8 +169,16 @@ namespace FastTests.Server.Replication
 
         protected static async Task<ModifyOngoingTaskResult> AddWatcherToReplicationTopology(
             DocumentStore store,
-            ExternalReplication watcher)
+            ExternalReplication watcher,
+            string[] urls = null)
         {
+            await store.Admin.Server.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+            {
+                Name = watcher.ConnectionStringName,
+                Database = watcher.Database,
+                TopologyDiscoveryUrls = urls ?? store.Urls
+            }, store.Database));
+
             var op = new UpdateExternalReplicationOperation(store.Database, watcher);
             return await store.Admin.Server.SendAsync(op);
         }
@@ -202,7 +212,7 @@ namespace FastTests.Server.Replication
             var resList = new List<ModifyOngoingTaskResult>();
             foreach (var store in toStores)
             {
-                var databaseWatcher = new ExternalReplication(store.Database, store.Urls);
+                var databaseWatcher = new ExternalReplication(store.Database, "ConnectionString");
                 ModifyReplicationDestination(databaseWatcher);
                 tasks.Add(AddWatcherToReplicationTopology(fromStore, databaseWatcher));
             }
@@ -247,8 +257,8 @@ namespace FastTests.Server.Replication
         {
             foreach (var node in toNodes)
             {
-                var databaseWatcher = new ExternalReplication(node.Database, new[] {node.Url});
-                await AddWatcherToReplicationTopology(fromStore, databaseWatcher);
+                var databaseWatcher = new ExternalReplication(node.Database, "connectin");
+                await AddWatcherToReplicationTopology(fromStore, databaseWatcher, new[] { node.Url });
             }
         }
 

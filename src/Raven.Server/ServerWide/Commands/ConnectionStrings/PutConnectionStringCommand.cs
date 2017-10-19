@@ -21,7 +21,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
 
         public override void FillJson(DynamicJsonValue json)
         {
-            json[nameof(ConnectionString)] = TypeConverter.ToBlittableSupportedType(ConnectionString);
+            json[nameof(ConnectionString)] = ConnectionString.ToJson();
         }
     }
 
