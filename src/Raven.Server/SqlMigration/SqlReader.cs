@@ -16,7 +16,7 @@ namespace Raven.Server.SqlMigration
 
         private static readonly List<SqlReader> AllReaders = new List<SqlReader>();
 
-        public SqlReader(IDbConnection connection, string query, bool oneTimeConnection = false)
+        public SqlReader(IDbConnection connection, string query, bool oneTimeConnection = false) //oneTimeConnection means the connection can be closed after use.
         {
             _oneTimeConnection = oneTimeConnection;
 
