@@ -5,15 +5,8 @@ namespace Raven.Client.ServerWide.ETL
 {
     public class RavenConnectionString : ConnectionString
     {
-        private string _url;
         public string Database { get; set; }
         public string[] TopologyDiscoveryUrls;
-
-        public string Url
-        {
-            get => _url;
-            set => _url = value?.TrimEnd('/');        
-        }
 
         public override ConnectionStringType Type => ConnectionStringType.Raven;
 
@@ -42,7 +35,6 @@ namespace Raven.Client.ServerWide.ETL
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
-            json[nameof(Url)] = Url;
             json[nameof(Database)] = Database;
             json[nameof(TopologyDiscoveryUrls)] = new DynamicJsonArray(TopologyDiscoveryUrls);
             return json;

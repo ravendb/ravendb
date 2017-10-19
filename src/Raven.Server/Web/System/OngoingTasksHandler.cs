@@ -14,6 +14,8 @@ using Raven.Client.ServerWide.ETL.SQL;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.PeriodicBackup;
 using Raven.Server.Documents;
+using Raven.Server.Documents.ETL;
+using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
@@ -248,6 +250,21 @@ namespace Raven.Server.Web.System
                         throw new InvalidOperationException(
                             $"Could not find connection string named '{ravenEtl.ConnectionStringName}' in the database record for '{ravenEtl.Name}' ETL");
 
+                    string url = null;
+                    string error = null;
+                    if (tag == store.NodeTag)
+                    {
+                        try
+                        {
+                            store.DatabasesLandlord.DatabasesCache.TryGetValue(databaseRecord.DatabaseName, out var task);
+                            url = ((RavenEtl)task.Result.EtlLoader.Processes.First(p=> p is RavenEtl etl && etl.Name == ravenEtl.Name)).Url;
+                        }
+                        catch (Exception e)
+                        {
+                            error = "failed to retrive the etl destination url due: \n" +e;
+                        }
+                    }
+
                     yield return new OngoingTaskRavenEtlListView()
                     {
                         TaskId = ravenEtl.TaskId,
@@ -259,9 +276,10 @@ namespace Raven.Server.Web.System
                             NodeTag = tag,
                             NodeUrl = clusterTopology.GetUrlFromTag(tag)
                         },
-                        DestinationUrl = connection.Url,
+                        DestinationUrl = url,
                         DestinationDatabase = connection.Database,
-                        ConnectionStringName = ravenEtl.ConnectionStringName
+                        ConnectionStringName = ravenEtl.ConnectionStringName,
+                        Error = error
                     };
                 }
             }

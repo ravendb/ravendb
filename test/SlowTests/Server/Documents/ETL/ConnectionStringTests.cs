@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.ETL;
 using Raven.Client.ServerWide.Operations.ConnectionStrings;
@@ -18,7 +19,7 @@ namespace SlowTests.Server.Documents.ETL
                 var ravenConnectionString = new RavenConnectionString()
                 {
                     Name = "RavenConnectionString",
-                    Url = "http://127.0.0.1:8080",
+                    TopologyDiscoveryUrls = new[] { "http://localhost:8080" },
                     Database = "Northwind",
                 };
                 store.Admin.Server.Send(new PutConnectionStringOperation<RavenConnectionString>(ravenConnectionString, store.Database));
@@ -40,7 +41,7 @@ namespace SlowTests.Server.Documents.ETL
 
                 Assert.True(record.RavenConnectionStrings.ContainsKey("RavenConnectionString"));
                 Assert.Equal(ravenConnectionString.Name , record.RavenConnectionStrings["RavenConnectionString"].Name);
-                Assert.Equal(ravenConnectionString.Url, record.RavenConnectionStrings["RavenConnectionString"].Url);
+                Assert.Equal(ravenConnectionString.TopologyDiscoveryUrls, record.RavenConnectionStrings["RavenConnectionString"].TopologyDiscoveryUrls);
                 Assert.Equal(ravenConnectionString.Database, record.RavenConnectionStrings["RavenConnectionString"].Database);
 
                 Assert.True(record.SqlConnectionStrings.ContainsKey("SqlConnectionString"));
@@ -70,7 +71,7 @@ namespace SlowTests.Server.Documents.ETL
                 var ravenConnectionString = new RavenConnectionString()
                 {
                     Name = "RavenConnectionString",
-                    Url = "http://127.0.0.1:8080",
+                    TopologyDiscoveryUrls = new[]{"http://127.0.0.1:8080" },
                     Database = "Northwind",
                 };
                 store.Admin.Server.Send(new PutConnectionStringOperation<RavenConnectionString>(ravenConnectionString, store.Database));
@@ -84,7 +85,7 @@ namespace SlowTests.Server.Documents.ETL
                 store.Admin.Server.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString, store.Database));
 
                 //update url
-                ravenConnectionString.Url = "http://127.0.0.1:8081";
+                ravenConnectionString.TopologyDiscoveryUrls = new[]{"http://127.0.0.1:8081"};
                 store.Admin.Server.Send(new PutConnectionStringOperation<RavenConnectionString>(ravenConnectionString, store.Database));
                 
                 //update name : need to remove the old entry
@@ -100,7 +101,7 @@ namespace SlowTests.Server.Documents.ETL
                 }
 
                 Assert.True(record.RavenConnectionStrings.ContainsKey("RavenConnectionString"));
-                Assert.Equal("http://127.0.0.1:8081", record.RavenConnectionStrings["RavenConnectionString"].Url);
+                Assert.Equal("http://127.0.0.1:8081", record.RavenConnectionStrings["RavenConnectionString"].TopologyDiscoveryUrls.First());
 
                 Assert.False(record.SqlConnectionStrings.ContainsKey("SqlConnectionString"));
                 Assert.True(record.SqlConnectionStrings.ContainsKey("New-Name"));
@@ -120,7 +121,7 @@ namespace SlowTests.Server.Documents.ETL
                     var ravenConnectionStr = new RavenConnectionString()
                     {
                         Name = $"RavenConnectionString{i}",
-                        Url = $"http://127.0.0.1:808{i}",
+                        TopologyDiscoveryUrls = new []{$"http://127.0.0.1:808{i}"},
                         Database = "Northwind",
                     };
                     var sqlConnectionStr = new SqlConnectionString
@@ -146,7 +147,7 @@ namespace SlowTests.Server.Documents.ETL
                     Assert.Equal(sql?.ConnectionString, sqlConnectionStrings[i].ConnectionString);
 
                     result.RavenConnectionStrings.TryGetValue($"RavenConnectionString{i}", out var raven);
-                    Assert.Equal(raven?.Url, ravenConnectionStrings[i].Url);
+                    Assert.Equal(raven?.TopologyDiscoveryUrls, ravenConnectionStrings[i].TopologyDiscoveryUrls);
                     Assert.Equal(raven?.Database, ravenConnectionStrings[i].Database);
                 }
             }

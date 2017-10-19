@@ -148,7 +148,7 @@ namespace SlowTests.Authentication
                 var ravenConnectionStr = new RavenConnectionString()
                 {
                     Name = $"RavenConnectionString",
-                    Url = $"http://127.0.0.1:8080",
+                    TopologyDiscoveryUrls = new []{$"http://127.0.0.1:8080" },
                     Database = dbName,
                 };
 
@@ -179,7 +179,7 @@ namespace SlowTests.Authentication
                 var ravenConnectionStr = new RavenConnectionString()
                 {
                     Name = $"RavenConnectionString",
-                    Url = $"http://127.0.0.1:8080",
+                    TopologyDiscoveryUrls = new[] { $"http://127.0.0.1:8080" },
                     Database = dbName,
                 };
 
