@@ -99,7 +99,7 @@ namespace Raven.Client.Util
                 var methodName = methodCallExpression?
                     .Method.Name;
 
-                if (methodName == null)
+                if (methodName == null || methodCallExpression.Method.DeclaringType != typeof(Enumerable))
                     return;
 
                 string newName;
@@ -120,9 +120,13 @@ namespace Raven.Client.Util
                     case "Contains":
                         newName = "indexOf";
                         break;
+                    case "ToList":
+                    case "ToArray":
+                        context.PreventDefault();
+                        context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                        return;
                     default:
                         return;
-
                 }
                 var javascriptWriter = context.GetWriter();
 
@@ -198,7 +202,6 @@ namespace Raven.Client.Util
                 
             }
         }
-
 
         public class MathSupport : JavascriptConversionExtension
         {
