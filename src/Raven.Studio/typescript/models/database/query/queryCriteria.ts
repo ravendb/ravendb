@@ -1,7 +1,6 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 
 import genUtils = require("common/generalUtils");
-import querySort = require("models/database/query/querySort");
 import queryUtil = require("common/queryUtil");
 
 class queryCriteria {
@@ -11,6 +10,7 @@ class queryCriteria {
     indexEntries = ko.observable<boolean>(false);
     queryText = ko.observable<string>("");
     metadataOnly = ko.observable<boolean>(false);
+    recentQuery = ko.observable<boolean>(false);
     
     validationGroup: KnockoutValidationGroup;
 
@@ -53,10 +53,10 @@ class queryCriteria {
         this.queryText(storedQuery.queryText);
         this.showFields(storedQuery.showFields);
         this.indexEntries(storedQuery.indexEntries);
+        this.recentQuery(storedQuery.recentQuery);
     }
 
     toStorageDto(): storedQueryDto {
-
         const name = this.name();
         const indexEntries = this.indexEntries();
         const queryText = this.queryText();
@@ -66,6 +66,7 @@ class queryCriteria {
             name: name,
             indexEntries: indexEntries,
             queryText: queryText,
+            recentQuery: this.recentQuery(),
             showFields: showFields,
             modificationDate: moment().format("YYYY-MM-DD HH:mm"),
             hash: genUtils.hashCode(
@@ -93,6 +94,7 @@ class queryCriteria {
         this.showFields(incoming.showFields);
         this.indexEntries(incoming.indexEntries);
         this.queryText(incoming.queryText);
+        this.recentQuery(incoming.recentQuery);
     }
 }
 

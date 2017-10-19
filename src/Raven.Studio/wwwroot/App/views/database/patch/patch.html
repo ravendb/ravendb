@@ -3,10 +3,10 @@
         <div id="patch-target" >
             <div class="clearfix toolbar">
                 <div class="pull-right-sm flex-horizontal">
-                    <div class="input-group patch-save" data-bind="css: { active: inSaveMode }, validationOptions: { insertMessages: false }, validationElement: patchDocument().name">
-                        <input class="form-control" style="display: none" placeholder="Patch name" data-bind="textInput: patchDocument().name">
+                    <div class="input-group patch-save" data-bind="css: { active: inSaveMode }, validationOptions: { insertMessages: false }, validationElement: patchSaveName">
+                        <input class="form-control" style="display: none" placeholder="Patch name" data-bind="textInput: patchSaveName">
                         <span class="input-group-btn">
-                            <button class="btn btn-success" data-class="active" type="button" data-bind="click: savePatch(), css: { 'btn-spinner': spinners.save }" title="Save patch under given name">
+                            <button class="btn btn-success" data-class="active" type="button" data-bind="click: savePatch, css: { 'btn-spinner': spinners.save }" title="Save patch under given name">
                                 <i class="icon-save"></i> <span data-bind="text: inSaveMode() ? 'Save' : 'Save...'"></span>
                             </button>
                         </span>
@@ -17,36 +17,6 @@
             </div>
 
             <div class="form-horizontal">
-                <!-- TODO
-                <div class="row">
-                    <label class="control-label col-sm-3 col-lg-2">Type</label>
-
-                    <div class="col-sm-9 col-lg-4 margin-bottom">
-                        <div class="dropdown btn-block">
-                            <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
-                                <span data-bind="text: patchDocument().patchOnOption"></span>
-                                <span class="caret"></span>
-                            </button>
-                            <ul class="dropdown-menu" data-bind="foreach: patchDocument().constructor.allPatchOptions">
-                                <li><a href="#" data-bind="text: $data, click: _.partial($parent.usePatchOption, $data)"></a></li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-                -->
-
-                <!-- TODO
-                <div class="row" data-bind="visible: isQueryMode">
-                    <div class="col-sm-9 col-lg-4 col-sm-offset-3 col-lg-offset-2 margin-bottom">
-                        <div class="checkbox">
-                            <input id="checkbox2" class="styled" type="checkbox" data-bind="checked: patchDocument().patchAll">
-                            <label for="checkbox2">
-                                <span>Patch all documents matching query</span>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-                 -->
                 <div class="row">
                     <div class="col-sm-3 col-lg-2">
                         <h2 class="query-label">Patch
@@ -84,74 +54,11 @@
                                     <i class="icon-check"></i><span>Done</span>
                                 </button>
                             </div>
-                            <!-- TODO
-                            <div class="query-controls">
-                                <button class="btn btn-default btn-block text-center" data-bind="click: runQuery">
-                                    <i class="icon-search"></i><span>Run</span>
-                                </button>
-                            </div> -->
                         </div>
                     </div>
                 </div>
-                <!-- TODO
-                <div class="row margin-bottom" data-bind="visible: !isDocumentMode()">
-                    <label class="control-label col-sm-3 col-lg-2">Matching documents</label>
-                    <div class="col-sm-9 col-lg-10 patch-table-container">
-                        <div class="clearfix">
-                            <div class="pull-right">
-                                <div class="btn-group dropdown-right">
-                                    <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-                                        <i class="icon-table"></i><span>Display</span>
-                                        <span class="caret"></span>
-                                    </button>
-                                    <div class="dropdown-menu colselect-dropdown slidein-style" role="menu" data-bind="dropdownPanel: true">
-                                        <div data-bind="compose: $root.columnsSelector"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div style="height: 300px; position:relative;">
-                            <virtual-grid class="resizable patch-grid" params="controller: $root.gridController"></virtual-grid>
-                        </div>
-                    </div>
-                </div> -->
             </div>
         </div>
-
-        <!-- TODO
-        <div class="row form-horizontal" id="patch-script">
-            <div class="col-sm-3 col-lg-2 patch-title">
-                <h3>Patch script <small><i class="icon-info text-info"></i></small></h3>
-            </div>
-            <div class="col-sm-9 col-lg-10">
-                <div class="patch-container">
-                    <div class="patch-main">
-                        <pre class="form-control patch-source" data-bind="aceEditor: { code: patchDocument().script, lang:'ace/mode/javascript', completer: jsCompleter }, validationOptions: { errorsAsTitle: false }, validationElement: patchDocument().script" style="height: 160px;"></pre>
-
-                        <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: patchDocument().script">
-                            <div class="help-block" data-bind="validationMessage: patchDocument().script"></div>
-                        </div>
-                    </div>
-                    <div class="patch-controls">
-                       
-                        <div class="flex-separator"></div>
-                        <button class="btn btn-default btn-block text-center margin-top" data-bind="click: enterTestMode" title="Dry patch run. It doesn't modify any data">
-                            <i class="icon-rocket"></i><span>Test</span>
-                        </button>
-                    </div>
-                    <div class="test-controls">
-                        <button class="btn btn-primary btn-block btn-lg text-center" data-bind="click: test.runTest, css: { 'btn-spinner' : test.spinners.testing }, disable: test.spinners.testing" ttile="Dry patch run. It doesn't modify any data">
-                            <i class="icon-rocket"></i><span>Test</span><br />
-                            <small class="kbd"><kbd>ctrl</kbd> <strong>+</strong> <kbd>enter</kbd></small>
-                        </button>
-                        <div class="flex-separator"></div>
-                        <button class="btn btn-default btn-block text-center test-close" data-bind="click: test.closeTestMode" title="Leave test mode">
-                            <i class="icon-check"></i><span>Done</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>-->
     </div>
     <div id="test-container" data-bind="template: { name: 'test-component' }, collapse: test.testMode()"></div>
 </div>
@@ -189,21 +96,6 @@
                         </button>
 
                     </div>
-                    <!--<div class="input-group" data-bind="validationElement: documentId">
-                        <input class="form-control" id="testDocumentId" data-bind="textInput: documentId">
-                        <ul class="dropdown-menu autocomplete-list" role="menu" style="display: none;" data-bind="autoComplete: '#testDocumentId', foreach: documentIdSearchResults">
-                            <li role="presentation" data-bind="click: _.partial($parent.onAutocompleteOptionSelected, $data)">
-                                <a role="menuitem" tabindex="-1" href="#">
-                                    <span data-bind="text: $data"></span>
-                                </a>
-                            </li>
-                        </ul>
-                        <span class="input-group-btn">
-                            <button class="btn btn-default" type="button" data-bind="click: loadDocument, css: { 'btn-spinner': spinners.loadingDocument }, disable: spinners.loadingDocument() || !documentId()">
-                                <i class="icon-import"></i> <span>Load</span>
-                            </button>
-                        </span>
-                    </div>-->
                 </div>
                 <div class="col-sm-6">
                     <!-- TODO: <small class="text-info"><i class="icon-info"></i> You can also paste your own document JSON to test</small>-->
