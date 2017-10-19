@@ -1451,6 +1451,52 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
             }
         }
 
+        [Fact]
+        public void Custom_Functions_With_ToList_And_ToArray()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia", Roles = new []{"Grateful", "Dead"}}, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from u in session.Query<User>()
+                                select new
+                                {
+                                    RolesList = u.Roles.Select(a=> new
+                                    {
+                                        Id = a
+                                    }).ToList(),
+
+                                    RolesArray = u.Roles.Select(a => new
+                                    {
+                                        Id = a
+                                    }).ToArray()
+                                };
+
+                    Assert.Equal("FROM Users as u SELECT { RolesList : u.Roles.map(function(a){return {Id:a};}), " +
+                                 "RolesArray : u.Roles.map(function(a){return {Id:a};}) }", query.ToString());
+
+                    var queryResult = query.ToList();
+
+                    Assert.Equal(1, queryResult.Count);
+
+                    Assert.Equal(2, queryResult[0].RolesList.Count);
+                    Assert.Equal("Grateful", queryResult[0].RolesList[0].Id);
+                    Assert.Equal("Dead", queryResult[0].RolesList[1].Id);
+
+                    Assert.Equal(2, queryResult[0].RolesArray.Length);
+                    Assert.Equal("Grateful", queryResult[0].RolesArray[0].Id);
+                    Assert.Equal("Dead", queryResult[0].RolesArray[1].Id);
+
+                }
+            }
+        }
+
         private class User
         {
             public string Name { get; set; }
