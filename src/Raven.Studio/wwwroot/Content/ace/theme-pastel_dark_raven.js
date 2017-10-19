@@ -56,6 +56,12 @@ color: #4FB7C5\
 .ace-pastel-dark-raven .ace_keyword.ace_operator {\
 color: #797878\
 }\
+.ace-pastel-dark-raven .ace_operator {\
+color: #ff6461\
+}\
+.ace-pastel-dark-raven .ace_name {\
+color: #2cb495\
+}\
 .ace-pastel-dark-raven .ace_constant.ace_character {\
 color: #AFA472\
 }\
