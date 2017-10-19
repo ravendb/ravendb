@@ -71,7 +71,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
                 result.push(this.mapToExportListItem(smugglerDatabaseDetails.extractingDataStageName, migrationCounts));
             }
             
-            if (this.op.taskType() === "DatabaseImportFromCsv") {
+            if (this.op.taskType() === "CollectionImportFromCsv") {
                 result.push(this.mapToExportListItem("Documents", status.Documents, false));
             } else {
                 result.push(this.mapToExportListItem("Documents", status.Documents, true));
@@ -197,7 +197,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
             notification.taskType() === "DatabaseMigration" ||
             notification.taskType() === "DatabaseRestore" ||
             notification.taskType() === "MigrationFromLegacyData" ||
-            notification.taskType() === "DatabaseImportFromCsv"
+            notification.taskType() === "CollectionImportFromCsv"
         );
     }
 
