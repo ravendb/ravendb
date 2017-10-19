@@ -134,7 +134,7 @@ class connectionStrings extends viewModelBase {
     
     onAddRavenEtl() {
         this.editedRavenEtlConnectionString(connectionStringRavenEtlModel.empty());
-        this.editedRavenEtlConnectionString().url.subscribe(() => this.clearTestResult());
+        this.editedRavenEtlConnectionString().topologyDiscoveryUrls.subscribe(() => this.clearTestResult());
 
         this.editedSqlEtlConnectionString(null);
         this.clearTestResult();
@@ -155,7 +155,7 @@ class connectionStrings extends viewModelBase {
             .execute()
             .done((result: Raven.Client.ServerWide.ETL.RavenConnectionString) => {
                 this.editedRavenEtlConnectionString(new connectionStringRavenEtlModel(result, false, this.getTasksThatUseThisString(connectionStringName, 'RavenEtl')));
-                this.editedRavenEtlConnectionString().url.subscribe(() => this.clearTestResult());
+                this.editedRavenEtlConnectionString().topologyDiscoveryUrls.subscribe(() => this.clearTestResult());
                 this.editedSqlEtlConnectionString(null);
             });
     }
@@ -184,7 +184,7 @@ class connectionStrings extends viewModelBase {
 
                 this.spinners.test(true);
 
-                new testClusterNodeConnectionCommand(this.editedRavenEtlConnectionString().url())
+                new testClusterNodeConnectionCommand(this.editedRavenEtlConnectionString().topologyDiscoveryUrls()[0])
                     .execute()
                     .done(result => this.testConnectionResult(result))
                     .always(() => this.spinners.test(false));

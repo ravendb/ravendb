@@ -125,7 +125,7 @@ class editRavenEtlTask extends viewModelBase {
         getConnectionStringInfoCommand.forRavenEtl(this.activeDatabase(), this.editedRavenEtl().connectionStringName())
             .execute()
             .done((result: Raven.Client.ServerWide.ETL.RavenConnectionString) => {
-                new testClusterNodeConnectionCommand(result.Url)
+                new testClusterNodeConnectionCommand(result.TopologyDiscoveryUrls[0])
                     .execute()
                     .done(result => this.testConnectionResult(result))
                     .always(() => this.spinners.test(false));
