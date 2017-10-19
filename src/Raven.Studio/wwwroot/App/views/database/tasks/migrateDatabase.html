@@ -3,7 +3,7 @@
         <div class="panel-body">
             <form class="flex-form" data-bind="submit: migrateDb">
                 <h3>Migrate data from another RavenDB Server</h3>
-                <p class="bg-warning padding padding-xs small"><i class="icon-warning"></i> Note: Migration will overwrite any existing documents and indexes.</p>
+                <div class="bg-warning padding padding-xs"><small><i class="icon-warning"></i> Note: Migration will overwrite any existing documents and indexes.</small></div>
                 <div class="row" data-bind="with: model">
                     <div class="col-sm-8 col-lg-6 margin-top">
                         <div class="form-group" data-bind="validationElement: serverUrl">
@@ -16,9 +16,11 @@
                         <div class="form-group" data-bind="validationElement: serverMajorVersion">
                             <label class="control-label">Server Version</label>
                             <div class="flex-grow">
-                                <div class="form-control-static" data-bind="text: serverMajorVersionNumber, visible: !$root.spinners.versionDetect() && serverMajorVersionNumber()" ></div>
-                                <div data-bind="visible: $root.spinners.versionDetect">
-                                    <i class="global-spinner spinner-sm"></i>
+                                <div class="form-control-static">
+                                    <div data-bind="text: serverMajorVersionNumber, visible: !$root.spinners.versionDetect() && serverMajorVersionNumber()"></div>
+                                    <div data-bind="visible: $root.spinners.versionDetect">
+                                        <i class="global-spinner spinner-sm"></i>
+                                    </div>
                                 </div>
                                 <div>
                                     <div class="help-block" data-bind="validationMessage: serverMajorVersion"></div>
