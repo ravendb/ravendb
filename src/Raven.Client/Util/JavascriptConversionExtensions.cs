@@ -482,5 +482,28 @@ namespace Raven.Client.Util
                 }
             }
         }
+
+        public class NullCoalescingSupport : JavascriptConversionExtension
+        {
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                if (context.Node.NodeType != ExpressionType.Coalesce || !(context.Node is BinaryExpression binaryExpression))
+                    return;
+
+                context.PreventDefault();
+                var writer = context.GetWriter();
+
+                using (writer.Operation(binaryExpression))
+                {
+                    context.Visitor.Visit(binaryExpression.Left);
+                    writer.Write(" !== null && ");
+                    context.Visitor.Visit(binaryExpression.Left);
+                    writer.Write(" !== undefined ? ");
+                    context.Visitor.Visit(binaryExpression.Left);
+                    writer.Write(" : ");
+                    context.Visitor.Visit(binaryExpression.Right);
+                }
+            }
+        }
     }
 }

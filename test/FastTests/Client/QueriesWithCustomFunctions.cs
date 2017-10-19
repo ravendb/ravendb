@@ -1497,6 +1497,48 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
             }
         }
 
+        [Fact]
+        public void Custom_Functions_Null_Coalescing_Support()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia" }, "users/1");
+                    session.Store(new User { Name = "Phil", LastName = "" }, "users/2");
+                    session.Store(new User { Name = "Pigpen" }, "users/3");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from u in session.Query<User>()
+                        select new
+                        {
+                            FirstName = u.Name,
+                            LastName = u.LastName ?? "Has no last name"
+                        };
+
+                    Assert.Equal("FROM Users as u SELECT { FirstName : u.Name, " +
+                                 "LastName : u.LastName !== null && u.LastName !== undefined ? u.LastName : \"Has no last name\" }"
+                        , query.ToString());
+
+                    var queryResult = query.ToList();
+                    Assert.Equal(3, queryResult.Count);
+
+                    Assert.Equal("Jerry", queryResult[0].FirstName);
+                    Assert.Equal("Garcia", queryResult[0].LastName);
+
+                    Assert.Equal("Phil", queryResult[1].FirstName);
+                    Assert.Equal("", queryResult[1].LastName);
+
+                    Assert.Equal("Pigpen", queryResult[2].FirstName);
+                    Assert.Equal("Has no last name", queryResult[2].LastName);
+
+                }
+            }
+        }
+
         private class User
         {
             public string Name { get; set; }

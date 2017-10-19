@@ -11,7 +11,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Runtime.Serialization;
 using System.Text;
 using System.Text.RegularExpressions;
 using Lambda2Js;
@@ -1690,6 +1689,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     new JavascriptConversionExtensions.IgnoreTransparentParameter(),
                     new JavascriptConversionExtensions.InvokeSupport(),
                     new JavascriptConversionExtensions.DateTimeSupport(),
+                    new JavascriptConversionExtensions.NullCoalescingSupport(),
                     loadSupport));
 
             if (_fromAlias == null)
@@ -1820,7 +1820,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     new JavascriptConversionExtensions.BooleanSupport(),
                     new JavascriptConversionExtensions.IgnoreTransparentParameter(),
                     new JavascriptConversionExtensions.InvokeSupport(),
-                    new JavascriptConversionExtensions.DateTimeSupport()));
+                    new JavascriptConversionExtensions.DateTimeSupport(),
+                    new JavascriptConversionExtensions.NullCoalescingSupport()));
 
             if (expression.Type == typeof(TimeSpan) && expression.NodeType != ExpressionType.MemberAccess)
             {
