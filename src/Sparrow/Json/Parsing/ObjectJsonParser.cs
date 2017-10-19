@@ -23,7 +23,6 @@ namespace Sparrow.Json.Parsing
 
         public readonly Queue<(string Name, object Value)> Properties = new Queue<(string Name, object Value)>();
         public HashSet<int> Removals;
-        public int AlreadySeenBy = -1;
         internal readonly BlittableJsonReaderObject _source;
 
         public DynamicJsonValue()
@@ -106,7 +105,6 @@ namespace Sparrow.Json.Parsing
         public int SourceIndex = -1;
         public readonly Queue<object> Items;
         public List<int> Removals;
-        public int AlreadySeenBy = -1;
 
         public DynamicJsonArray()
         {
@@ -157,28 +155,20 @@ namespace Sparrow.Json.Parsing
         private bool _disposed;
         private AllocatedMemoryData _currentStateBuffer;
 
-        // ThreadLocalSeenIndex and _seenIndex added for making sure that we seen this element in the 
-        //current instance and not in another read
-        [ThreadStatic]
-        private static int ThreadLocalSeenIndex;
-
-        private int _seenIndex; 
+        private readonly HashSet<object> _seenValues = new HashSet<object>(ReferenceEqualityComparer<object>.Default);
 
         public void Reset(object root)
         {
-            _seenIndex = ++ThreadLocalSeenIndex;
-            if (ThreadLocalSeenIndex > short.MaxValue)
-                ThreadLocalSeenIndex = 1;
-
             if (_currentStateBuffer != null)
             {
                 _ctx.ReturnMemory(_currentStateBuffer);
                 _currentStateBuffer = null;
             }
 
-            _elements.Clear();   
-            
-            if(root != null)         
+            _elements.Clear();
+            _seenValues.Clear();
+
+            if (root != null)
                 _elements.Push(root);
         }
 
@@ -193,7 +183,7 @@ namespace Sparrow.Json.Parsing
             if (_disposed)
                 return;
             _disposed = true;
-            if(_currentStateBuffer != null)
+            if (_currentStateBuffer != null)
                 _ctx.ReturnMemory(_currentStateBuffer);
         }
 
@@ -209,22 +199,19 @@ namespace Sparrow.Json.Parsing
 
             while (true)
             {
-                var idj = current as IDynamicJson;
-                if (idj != null)
+                if (current is IDynamicJson idj)
                 {
                     current = idj.ToJson();
                 }
 
-                var value = current as DynamicJsonValue;
-                if (value != null)
+                if (current is DynamicJsonValue value)
                 {
-                    if (value.AlreadySeenBy != _seenIndex)
+                    if (_seenValues.Add(value))
                     {
 #if DEBUG
-                        if(value._source != null)
+                        if (value._source != null)
                             throw new InvalidOperationException("Trying to directly modify a DynamicJsonValue with a source, but you need to place the source (blittable), not the json value in the parent.");
 #endif
-                        value.AlreadySeenBy = _seenIndex;
                         value.SourceIndex = -1;
                         _state.CurrentTokenType = JsonParserToken.StartObject;
                         _elements.Push(value);
@@ -240,12 +227,10 @@ namespace Sparrow.Json.Parsing
                     continue;
                 }
 
-                var array = current as DynamicJsonArray;
-                if (array != null)
+                if (current is DynamicJsonArray array)
                 {
-                    if (array.AlreadySeenBy != _seenIndex)
+                    if (_seenValues.Add(array))
                     {
-                        array.AlreadySeenBy = _seenIndex;
                         array.SourceIndex = -1;
                         _state.CurrentTokenType = JsonParserToken.StartArray;
                         _elements.Push(array);
@@ -268,15 +253,13 @@ namespace Sparrow.Json.Parsing
                     continue;
                 }
 
-                var bjro = current as BlittableJsonReaderObject;
-                if (bjro != null)
+                if (current is BlittableJsonReaderObject bjro)
                 {
                     if (bjro.Modifications == null)
                         bjro.Modifications = new DynamicJsonValue();
-                    if (bjro.Modifications.AlreadySeenBy != _seenIndex)
+                    if (_seenValues.Add(bjro.Modifications))
                     {
                         _elements.Push(bjro);
-                        bjro.Modifications.AlreadySeenBy = _seenIndex;
                         bjro.Modifications.SourceIndex = -1;
                         bjro.Modifications.SourceProperties = bjro.GetPropertiesByInsertionOrder();
                         _state.CurrentTokenType = JsonParserToken.StartObject;
@@ -303,15 +286,14 @@ namespace Sparrow.Json.Parsing
                     continue;
                 }
 
-                var bjra = current as BlittableJsonReaderArray;
-                if (bjra != null)
+                if (current is BlittableJsonReaderArray bjra)
                 {
                     if (bjra.Modifications == null)
                         bjra.Modifications = new DynamicJsonArray();
-                    if (bjra.Modifications.AlreadySeenBy != _seenIndex)
+
+                    if (_seenValues.Add(bjra.Modifications))
                     {
                         _elements.Push(bjra);
-                        bjra.Modifications.AlreadySeenBy = _seenIndex;
                         bjra.Modifications.SourceIndex = -1;
                         _state.CurrentTokenType = JsonParserToken.StartArray;
                         return true;
@@ -334,15 +316,13 @@ namespace Sparrow.Json.Parsing
 
                 }
 
-                var dbj = current as IBlittableJsonContainer;
-                if (dbj != null)
+                if (current is IBlittableJsonContainer dbj)
                 {
                     current = dbj.BlittableJson;
                     continue;
                 }
-                
-                var enumerable = current as IEnumerable<object>;
-                if (enumerable != null)
+
+                if (current is IEnumerable<object> enumerable)
                 {
                     current = new DynamicJsonArray(enumerable);
                     continue;
