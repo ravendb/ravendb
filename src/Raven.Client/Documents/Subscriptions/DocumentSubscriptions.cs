@@ -47,8 +47,18 @@ namespace Raven.Client.Documents.Subscriptions
         }
 
         public Task<string> CreateAsync<T>(
+            SubscriptionCreationOptions<T> options, string database = null)
+        {
+            return CreateAsync(EnsureCriteria(new SubscriptionCreationOptions
+            {
+                Name = options.Name,
+                ChangeVector = options.ChangeVector
+            }, options.Filter, options.Project), database);
+        }
+
+        public Task<string> CreateAsync<T>(
             Expression<Func<T, bool>> predicate = null,
-            SubscriptionCreationOptions options = null, 
+            SubscriptionCreationOptions options = null,
             string database = null)
         {
             return CreateAsync(EnsureCriteria(options, predicate, null), database);
