@@ -76,8 +76,6 @@ namespace Raven.Server.SqlMigration
                     continue;
                 }
 
-                var isNullOrEmpty = value is DBNull || string.IsNullOrWhiteSpace(value.ToString());
-
                 if (isPrimaryKey)
                 {
                     id += $"/{value}";
@@ -85,6 +83,8 @@ namespace Raven.Server.SqlMigration
                     if (isForeignKey == false && table.IsEmbedded == false)
                         continue;
                 }
+
+                var isNullOrEmpty = value is DBNull || string.IsNullOrWhiteSpace(value.ToString());
 
                 if (Options.BinaryToAttachment && reader.GetFieldType(i) == typeof(byte[]))
                 {
@@ -113,14 +113,14 @@ namespace Raven.Server.SqlMigration
         {
             foreach (var childTable in parentTable.EmbeddedTables)
             {
-                var parentValues = GetValuesFromColumns(parentTable.GetReader(), parentTable.PrimaryKeys);
+                var parentValues = GetValuesFromColumns(parentTable.GetReader(), parentTable.PrimaryKeys); // values of referenced columns
 
-                var childColumns = childTable.GetColumnsReferencingParentTable();
+                var childColumns = childTable.GetColumnsReferencingParentTable(); // values of referencing columns
 
                 SqlReader childReader;
 
                 if (childColumns.Count > parentTable.PrimaryKeys.Count || parentTable.IsEmbedded)
-                    childReader = childTable.GetReaderWhere(parentValues);
+                    childReader = childTable.GetReaderWhere(parentValues); // This happens in a case when we can not iterate the embedded table only once and have to use multiple queries.
 
                 else
                     childReader = childTable.GetReader();
@@ -134,7 +134,7 @@ namespace Raven.Server.SqlMigration
                 {
                     if (isBigger == false && childReader.Read()) continue;
 
-                    continueLoop = true; // If parent value is greater than child value => childReader move to next, otherwise, parentReader move to next
+                    continueLoop = true; // If parent value is greater than child value => childReader move to next. Otherwise => parentReader move to next
                     break;
                 }
 

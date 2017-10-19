@@ -23,6 +23,7 @@ namespace Raven.Server.SqlMigration
             return string.Format(DefaultTableQuery, TableQuote(tableName));
         }
 
+        //TODO: Different for each SQL server.
         private static string TableQuote(string s)
         {
             s = $"[{s}]";
