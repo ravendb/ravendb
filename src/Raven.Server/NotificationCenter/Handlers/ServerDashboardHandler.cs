@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Util;
 using Raven.Server.Dashboard;
@@ -24,7 +25,10 @@ namespace Raven.Server.NotificationCenter.Handlers
                             await writer.WriteToWebSocket(info.ToJson());
                         }
                     }
-                    
+
+                    var machineResources = MachineResourcesNotificationSender.GetMachineResources();
+                    await writer.WriteToWebSocket(machineResources.ToJson());
+
                     await writer.WriteNotifications();
                 }
             }
