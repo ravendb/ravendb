@@ -249,7 +249,7 @@ class trafficSection {
                 new hyperlinkColumn<trafficItem>(grid, x => x.database(), x => appUrl.forDocuments(null, x.database()), "Database", "30%"),
                 new textColumn<trafficItem>(grid, x => x.requestsPerSecond(), "Requests / s", "20%"),
                 new textColumn<trafficItem>(grid, x => x.writesPerSecond(), "Writes / s", "25%"),
-                new textColumn<trafficItem>(grid, x => x.dataWritesPerSecond(), "Data writes / s", "25%")
+                new textColumn<trafficItem>(grid, x => this.sizeFormatter(x.dataWritesPerSecond()), "Data writes / s", "25%")
             ];
         });
         
