@@ -135,6 +135,7 @@ namespace Raven.Server.Dashboard
                             usage = new MountPointUsage
                             {
                                 MountPoint = mountPointUsage.Drive.Name,
+                                VolumeLabel = mountPointUsage.Drive.VolumeLabel,
                                 FreeSpace = mountPointUsage.Drive.AvailableFreeSpace,
                                 TotalCapacity = mountPointUsage.Drive.TotalSize
                             };

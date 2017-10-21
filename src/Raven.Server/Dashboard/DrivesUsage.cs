@@ -26,7 +26,9 @@ namespace Raven.Server.Dashboard
     public class MountPointUsage : IDynamicJson
     {
         public string MountPoint { get; set; }
-        
+
+        public string VolumeLabel { get; set; }
+
         public long TotalCapacity { get; set; }
         
         public long FreeSpace { get; set; }
@@ -34,7 +36,7 @@ namespace Raven.Server.Dashboard
         public FreeSpaceLevel FreeSpaceLevel { get; set; }
         
         public List<DatabaseDiskUsage> Items { get; set; }
-
+        
         public MountPointUsage()
         {
             Items = new List<DatabaseDiskUsage>();
@@ -45,6 +47,7 @@ namespace Raven.Server.Dashboard
             return new DynamicJsonValue
             {
                 [nameof(MountPoint)] = MountPoint,
+                [nameof(VolumeLabel)] = VolumeLabel,
                 [nameof(TotalCapacity)] = TotalCapacity,
                 [nameof(FreeSpace)] = FreeSpace,
                 [nameof(FreeSpaceLevel)] = FreeSpaceLevel,
