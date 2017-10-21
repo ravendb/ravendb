@@ -21,7 +21,7 @@ class serverDashboardWebSocketClient extends abstractWebSocketClient<Raven.Serve
     }
 
     get autoReconnect() {
-        return false;
+        return true;
     }
 
     protected onHeartBeat() {
