@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -125,6 +126,33 @@ namespace Raven.Server.Dashboard
                         WriteBytesPerSecond = database.Metrics.Docs.BytesPutsPerSec.OneMinuteRate
                     };
                     trafficWatch.Items.Add(trafficWatchItem);
+
+                    foreach (var mountPointUsage in database.GetMountPointsUsage())
+                    {
+                        var usage = drivesUsage.Items.FirstOrDefault(x => x.MountPoint == mountPointUsage.Drive.Name);
+                        if (usage == null)
+                        {
+                            usage = new MountPointUsage
+                            {
+                                MountPoint = mountPointUsage.Drive.Name,
+                                FreeSpace = mountPointUsage.Drive.AvailableFreeSpace,
+                                TotalCapacity = mountPointUsage.Drive.TotalFreeSpace
+                            };
+                            drivesUsage.Items.Add(usage);
+                        }
+
+                        var existingDatabaseUsage = usage.Items.FirstOrDefault(x => x.Database == databaseName);
+                        if (existingDatabaseUsage == null)
+                        {
+                            existingDatabaseUsage = new DatabaseDiskUsage
+                            {
+                                Database = databaseName
+                            };
+                            usage.Items.Add(existingDatabaseUsage);
+                        }
+
+                        existingDatabaseUsage.Size += mountPointUsage.UsedSpace;
+                    }
                 }
             }
 

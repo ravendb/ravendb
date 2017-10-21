@@ -34,6 +34,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron;
 using Voron.Exceptions;
+using Voron.Impl;
 using Voron.Impl.Backup;
 using DatabaseInfo = Raven.Client.ServerWide.Operations.DatabaseInfo;
 using Size = Raven.Client.Util.Size;
@@ -808,6 +809,90 @@ namespace Raven.Server.Documents
             var actual = Hashing.Combine(_lastClientConfigurationIndex, ServerStore.LastClientConfigurationIndex);
 
             return index != actual;
+        }
+
+        public long GetSizeOnDiskInBytes()
+        {
+            var storageEnvironments = GetAllStoragesEnvironment();
+            if (storageEnvironments == null)
+                return 0;
+
+            long sizeOnDiskInBytes = 0;
+            foreach (var environment in storageEnvironments)
+            {
+                Transaction tx = null;
+                try
+                {
+                    try
+                    {
+                        tx = environment?.Environment.ReadTransaction();
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        continue;
+                    }
+
+                    sizeOnDiskInBytes += GetSizeOnDisk(environment, tx);
+                }
+                finally
+                {
+                    tx?.Dispose();
+                }
+            }
+
+            return sizeOnDiskInBytes;
+        }
+
+        public IEnumerable<(DriveInfo Drive, long UsedSpace)> GetMountPointsUsage()
+        {
+            var storageEnvironments = GetAllStoragesEnvironment();
+            if (storageEnvironments == null)
+                yield break;
+
+            var drives = DriveInfo.GetDrives();
+            foreach (var environment in storageEnvironments)
+            {
+                Transaction tx = null;
+                try
+                {
+                    try
+                    {
+                        tx = environment?.Environment.ReadTransaction();
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        continue;
+                    }
+
+                    var fullPath = environment?.Environment.Options.BasePath.FullPath;
+                    if (fullPath == null)
+                        continue;
+
+                    var drive = drives.FirstOrDefault(x => fullPath.StartsWith(x.Name, StringComparison.OrdinalIgnoreCase));
+                    if (drive == null)
+                        continue;
+
+                    var sizeOnDiskInBytes = GetSizeOnDisk(environment, tx);
+                    if (sizeOnDiskInBytes == 0)
+                        continue;
+
+                    yield return (drive, sizeOnDiskInBytes);
+                }
+                finally
+                {
+                    tx?.Dispose();
+                }
+            }
+        }
+
+        private static long GetSizeOnDisk(StorageEnvironmentWithType environment, Transaction tx)
+        {
+            var storageReport = environment.Environment.GenerateReport(tx);
+            if (storageReport == null)
+                return 0;
+
+            var journalSize = storageReport.Journals.Sum(j => j.AllocatedSpaceInBytes);
+            return storageReport.DataFile.AllocatedSpaceInBytes + journalSize;
         }
     }
 
