@@ -176,7 +176,7 @@
                         </div>
                         <div class="flex-grow flex-vertical fix-size" data-bind="foreach: table">
                             <div class="flex-horizontal">
-                                <div data-bind="text: mountPoint"></div>
+                                <div data-bind="text: mountPointLabel"></div>
                                 <div class="flex-separator"></div>
                                 <div><small> <span data-bind="text: $root.sizeFormatter(totalDocumentsSpaceUsed()) + ' used'"></span> / <span data-bind="text: $root.sizeFormatter(freeSpace()) + ' free', attr: { class: freeSpaceLevelClass }"></span> </small></div>
                                 <div class="progress">

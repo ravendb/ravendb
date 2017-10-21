@@ -11,6 +11,7 @@ class driveUsage {
     private sizeFormatter = generalUtils.formatBytesToSize;
     
     mountPoint = ko.observable<string>();
+    volumeLabel = ko.observable<string>();
     totalCapacity = ko.observable<number>(0);
     freeSpace = ko.observable<number>(0);
     freeSpaceLevel = ko.observable<Raven.Server.Dashboard.FreeSpaceLevel>();
@@ -20,6 +21,7 @@ class driveUsage {
     
     items = ko.observableArray<driveUsageDetails>([]);
     totalDocumentsSpaceUsed: KnockoutComputed<number>;
+    mountPointLabel: KnockoutComputed<string>;
 
     gridController = ko.observable<virtualGridController<driveUsageDetails>>();
     
@@ -67,10 +69,21 @@ class driveUsage {
             
             gridInitialization.dispose();
         });
+
+        this.mountPointLabel = ko.pureComputed(() => {
+            let mountPoint = this.mountPoint();
+            const mountPointLabel = this.volumeLabel();
+            if (mountPointLabel) {
+                mountPoint += ` (${mountPointLabel})`;
+            }
+
+            return mountPoint;
+        });
     }
     
     update(dto: Raven.Server.Dashboard.MountPointUsage) {
         this.mountPoint(dto.MountPoint);
+        this.volumeLabel(dto.VolumeLabel);
         this.totalCapacity(dto.TotalCapacity);
         this.freeSpace(dto.FreeSpace);
         this.freeSpaceLevel(dto.FreeSpaceLevel);
