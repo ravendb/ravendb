@@ -17,6 +17,12 @@ namespace Raven.Server.NotificationCenter.Handlers
             {
                 using (var writer = new NotificationCenterWebSocketWriter(webSocket, ServerStore.ServerDashboardNotifications, ServerStore.ContextPool, ServerStore.ServerShutdown))
                 {
+                    var serverInfo = new ServerInfo
+                    {
+                        StartUpTime = ServerStore.Server.Statistics.StartUpTime
+                    };
+                    await writer.WriteToWebSocket(serverInfo.ToJson());
+
                     using (var cts = CancellationTokenSource.CreateLinkedTokenSource(ServerStore.ServerShutdown))
                     {
                         var databasesInfo = DatabasesInfoNotificationSender.FetchDatabasesInfo(ServerStore, cts);

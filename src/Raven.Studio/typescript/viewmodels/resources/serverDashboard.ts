@@ -14,6 +14,7 @@ import appUrl = require("common/appUrl");
 import dashboardChart = require("models/resources/serverDashboard/dashboardChart");
 import storagePieChart = require("models/resources/serverDashboard/storagePieChart");
 import serverDashboardWebSocketClient = require("common/serverDashboardWebSocketClient");
+import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
 
 class machineResourcesSection {
 
@@ -376,10 +377,11 @@ class driveUsageSection {
 }
 
 class serverDashboard extends viewModelBase {
-
     liveClient = ko.observable<serverDashboardWebSocketClient>();
     
     clusterManager = clusterTopologyManager.default;
+    startUpTime = ko.observable<moment.Moment>();
+    formattedUpTime: KnockoutComputed<string>;
     sizeFormatter = generalUtils.formatBytesToSize;
 
     usingHttps = location.protocol === "https:";
@@ -391,7 +393,51 @@ class serverDashboard extends viewModelBase {
     indexingSpeedSection = new indexingSpeedSection();
     machineResourcesSection = new machineResourcesSection();
     driveUsageSection = new driveUsageSection();
-    
+
+    constructor() {
+        super();
+
+        this.formattedUpTime = ko.pureComputed(() => {
+            var startUpTime = this.startUpTime();
+            if (!startUpTime) {
+                return "a few seconds";
+            }
+
+            const now = moment.utc();
+            const diff = moment.duration(now.diff(startUpTime));
+
+            const results: string[] = [];
+            const diffDays = diff.days();
+            if (diffDays > 0) {
+                results.push(diffDays + pluralizeHelpers.pluralize(diffDays, " day", " days", true));
+            }
+
+            const diffHours = diff.hours();
+            if (diffHours > 0) {
+                results.push(diffHours + pluralizeHelpers.pluralize(diffHours, " hour", " hours", true));
+            }
+
+            const diffMinutes = diff.minutes();
+            if (diffMinutes > 0) {
+                results.push(diffMinutes + pluralizeHelpers.pluralize(diffMinutes, " minute", " minutes", true));
+            }
+
+            const diffSeconds = diff.seconds();
+            if (diffSeconds > 0) {
+                results.push(diffSeconds + pluralizeHelpers.pluralize(diffSeconds, " second", " seconds", true));
+            }
+
+            if (results.length === 0) {
+                return "a few seconds";
+            }
+
+            return results.slice(0, 2).join(" and ");
+        });
+
+        // refresh the uptime
+        this.refreshUpTime();
+    }
+
     compositionComplete() {
         super.compositionComplete();
         
@@ -399,7 +445,15 @@ class serverDashboard extends viewModelBase {
         
         this.enableLiveView();
     }
-    
+
+    private refreshUpTime() {
+        const random = Math.random() * 30;
+        setTimeout(() => {
+            this.startUpTime.valueHasMutated();
+            this.refreshUpTime();
+        }, random * 1000);
+    }
+
     private initSections() {
         this.trafficSection.init();
         this.databasesSection.init();
@@ -414,6 +468,10 @@ class serverDashboard extends viewModelBase {
     
     private onData(data: Raven.Server.Dashboard.AbstractDashboardNotification) {
         switch (data.Type) {
+            case "ServerInfo":
+                const serverInfoDto = data as Raven.Server.Dashboard.ServerInfo;
+                this.startUpTime(moment.utc(serverInfoDto.StartUpTime));
+                break;
             case "DriveUsage":
                 this.driveUsageSection.onData(data as Raven.Server.Dashboard.DrivesUsage);
                 break;
