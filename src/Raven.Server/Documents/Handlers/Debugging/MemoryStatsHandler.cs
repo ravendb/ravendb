@@ -11,6 +11,7 @@ using Sparrow.Collections.LockFree;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.LowMemory;
+using Sparrow.Platform;
 using Sparrow.Utils;
 using Size = Raven.Client.Util.Size;
 
@@ -101,11 +102,10 @@ namespace Raven.Server.Documents.Handlers.Debugging
         public static DynamicJsonValue MemoryStatsInternal()
         {
             var currentProcess = Process.GetCurrentProcess();
-            long workingSet;
-            if (Sparrow.Platform.PlatformDetails.RunningOnPosix == false)
-                workingSet = currentProcess.WorkingSet64;
-            else
-                workingSet = MemoryInformation.GetRssMemoryUsage(currentProcess.Id);
+            var workingSet =
+                PlatformDetails.RunningOnPosix == false || PlatformDetails.RunningOnMacOsx
+                    ? currentProcess.WorkingSet64
+                    : MemoryInformation.GetRssMemoryUsage(currentProcess.Id);
             var memInfo = MemoryInformation.GetMemoryInfo();
 
             long totalMapping = 0;
