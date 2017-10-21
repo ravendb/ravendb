@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Sparrow.Logging;
 using Sparrow.Platform;
@@ -72,12 +73,12 @@ namespace Sparrow.LowMemory
         /// </summary>
         public static int MemoryLimit { get; set; }
 
-        public static long GetRssMemoryUsage(int procId)
+        public static long GetRssMemoryUsage(int processId)
         {
             // currently Process.GetCurrentProcess().WorkingSet64 doesn't give the real RSS number
             // getting it from /proc/self/stat or statm can be also problematic because in some distros the number is in page size, in other pages, and position is not always guarenteed
             // however /proc/self/status gives the real number in humenly format. We extract this here:
-            var path = $"/proc/{procId}/status";
+            var path = $"/proc/{processId}/status";
             var vmRssString = KernelVirtualFileSystemUtils.ReadLineFromFile(path, "VmRSS");
             if (vmRssString == null)
             {
