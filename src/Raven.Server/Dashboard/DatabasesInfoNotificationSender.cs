@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -48,7 +49,16 @@ namespace Raven.Server.Dashboard
                 if (_watchers.Count == 0)
                     return;
 
-                FetchDatabasesInfo();
+                var databasesInfo = FetchDatabasesInfo(_serverStore, Cts).ToList();
+                foreach (var watcher in _watchers)
+                {
+                    foreach (var info in databasesInfo)
+                    {
+                        // serialize to avoid race conditions
+                        // please notice we call ToJson inside a loop since DynamicJsonValue is not thread-safe
+                        watcher.NotificationsQueue.Enqueue(info.ToJson());
+                    }
+                }
             }
             finally
             {
@@ -56,23 +66,23 @@ namespace Raven.Server.Dashboard
             }
         }
 
-        private void FetchDatabasesInfo()
+        public static IEnumerable<AbstractDashboardNotification> FetchDatabasesInfo(ServerStore serverStore, CancellationTokenSource cts)
         {
             var databasesInfo = new DatabasesInfo();
             var indexingSpeed = new IndexingSpeed();
             var trafficWatch = new TrafficWatch();
             var drivesUsage = new DrivesUsage();
 
-            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionContext))
+            using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionContext))
             using (transactionContext.OpenReadTransaction())
             {
-                foreach (var databaseTuple in _serverStore.Cluster.ItemsStartingWith(transactionContext, Constants.Documents.Prefix, 0, int.MaxValue))
+                foreach (var databaseTuple in serverStore.Cluster.ItemsStartingWith(transactionContext, Constants.Documents.Prefix, 0, int.MaxValue))
                 {
                     var databaseName = databaseTuple.ItemName.Substring(3);
-                    if (Cts.IsCancellationRequested)
-                        return;
+                    if (cts.IsCancellationRequested)
+                        yield break;
 
-                    if (_serverStore.DatabasesLandlord.DatabasesCache.TryGetValue(databaseName, out var databaseTask) == false)
+                    if (serverStore.DatabasesLandlord.DatabasesCache.TryGetValue(databaseName, out var databaseTask) == false)
                     {
                         // database does not exist in this server or disabled
                         continue;
@@ -129,6 +139,9 @@ namespace Raven.Server.Dashboard
 
                     foreach (var mountPointUsage in database.GetMountPointsUsage())
                     {
+                        if (cts.IsCancellationRequested)
+                            yield break;
+
                         var usage = drivesUsage.Items.FirstOrDefault(x => x.MountPoint == mountPointUsage.Drive.Name);
                         if (usage == null)
                         {
@@ -157,19 +170,11 @@ namespace Raven.Server.Dashboard
                 }
             }
 
-            foreach (var watcher in _watchers)
-            {
-                // serialize to avoid race conditions
-                // please notice we call ToJson inside a loop since DynamicJsonValue is not thread-safe
-                if (databasesInfo.Items.Count > 0)
-                    watcher.NotificationsQueue.Enqueue(databasesInfo.ToJson());
-                if (indexingSpeed.Items.Count > 0)
-                    watcher.NotificationsQueue.Enqueue(indexingSpeed.ToJson());
-                if (trafficWatch.Items.Count > 0)
-                    watcher.NotificationsQueue.Enqueue(trafficWatch.ToJson());
-                if (drivesUsage.Items.Count > 0)
-                    watcher.NotificationsQueue.Enqueue(drivesUsage.ToJson());
-            }
+            yield return databasesInfo;
+            yield return indexingSpeed;
+            yield return trafficWatch;
+            yield return drivesUsage;
+            
         }
 
         private static int GetReplicationFactor(BlittableJsonReaderObject databaseRecordBlittable)
