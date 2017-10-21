@@ -1,4 +1,7 @@
-﻿using System.Threading.Tasks;
+﻿using System.Threading;
+using System.Threading.Tasks;
+using Raven.Client.Util;
+using Raven.Server.Dashboard;
 using Raven.Server.Routing;
 using Raven.Server.Web;
 
@@ -13,6 +16,15 @@ namespace Raven.Server.NotificationCenter.Handlers
             {
                 using (var writer = new NotificationCenterWebSocketWriter(webSocket, ServerStore.ServerDashboardNotifications, ServerStore.ContextPool, ServerStore.ServerShutdown))
                 {
+                    using (var cts = CancellationTokenSource.CreateLinkedTokenSource(ServerStore.ServerShutdown))
+                    {
+                        var databasesInfo = DatabasesInfoNotificationSender.FetchDatabasesInfo(ServerStore, cts);
+                        foreach (var info in databasesInfo)
+                        {
+                            await writer.WriteToWebSocket(info.ToJson());
+                        }
+                    }
+                    
                     await writer.WriteNotifications();
                 }
             }
