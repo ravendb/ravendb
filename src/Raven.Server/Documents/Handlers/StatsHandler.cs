@@ -23,36 +23,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 var indexes = Database.IndexStore.GetIndexes().ToList();
 
-                long sizeOnDiskInBytes = 0;
-                var storageEnvironments = Database.GetAllStoragesEnvironment();
-                if (storageEnvironments != null)
-                {
-                    foreach (var environment in storageEnvironments)
-                    {
-                        Transaction tx = null;
-                        try
-                        {
-                            try
-                            {
-                                tx = environment?.Environment.ReadTransaction();
-                            }
-                            catch (OperationCanceledException)
-                            {
-                                continue;
-                            }
-                            var storageReport = environment?.Environment.GenerateReport(tx);
-                            if (storageReport == null)
-                                continue;
-
-                            var journalSize = storageReport.Journals.Sum(j => j.AllocatedSpaceInBytes);
-                            sizeOnDiskInBytes += storageReport.DataFile.AllocatedSpaceInBytes + journalSize;
-                        }
-                        finally
-                        {
-                            tx?.Dispose();
-                        }
-                    }
-                }
+                var sizeOnDiskInBytes = Database.GetSizeOnDiskInBytes();
 
                 var stats = new DatabaseStatistics
                 {

@@ -34,7 +34,12 @@ namespace Raven.Server.Dashboard
         public FreeSpaceLevel FreeSpaceLevel { get; set; }
         
         public List<DatabaseDiskUsage> Items { get; set; }
-        
+
+        public MountPointUsage()
+        {
+            Items = new List<DatabaseDiskUsage>();
+        }
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
