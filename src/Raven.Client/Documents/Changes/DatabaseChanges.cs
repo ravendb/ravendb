@@ -94,6 +94,16 @@ namespace Raven.Client.Documents.Changes
             return taskedObservable;
         }
 
+        public Exception GetLastConnectionStateException(string database)
+        {
+            if (_counters.TryGetValue(database, out DatabaseConnectionState databaseConnectionState))
+            {
+                return databaseConnectionState.LastException;
+            }
+
+            return null;
+        }
+
         public IChangesObservable<DocumentChange> ForDocument(string docId)
         {
             var counter = GetOrAddConnectionState("docs/" + docId, "watch-doc", "unwatch-doc", docId);
@@ -337,8 +347,9 @@ namespace Raven.Client.Documents.Changes
             {
                 await _requestExecutor.GetPreferredNode().ConfigureAwait(false);
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException e)
             {
+                NotifyAboutError(e);
                 return;
             }
             catch (ChangeProcessingException e)
@@ -370,8 +381,9 @@ namespace Raven.Client.Documents.Changes
 
                     await ProcessChanges().ConfigureAwait(false);
                 }
-                catch (OperationCanceledException)
+                catch (OperationCanceledException e)
                 {
+                    NotifyAboutError(e);
                     return;
                 }
                 catch (ChangeProcessingException e)
@@ -459,6 +471,7 @@ namespace Raven.Client.Documents.Changes
                             }
                             catch (Exception e)
                             {
+                                NotifyAboutError(e);
                                 throw new ChangeProcessingException(e);
                             }
                         }
