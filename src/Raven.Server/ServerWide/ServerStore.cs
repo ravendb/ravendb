@@ -1213,6 +1213,17 @@ namespace Raven.Server.ServerWide
             return (etag, id.Substring(0, id.Length - 1) + '/' + result);
         }
 
+        public async Task<long> UpdateClusterIdentityAsync(string id, string databaseName, long identity)
+        {
+            var identities = new Dictionary<string, long>
+            {
+                [id] = identity
+            };
+            (var index, var _) = await SendToLeaderAsync(new UpdateClusterIdentityCommand(databaseName, identities));
+
+            return index;
+        }
+
         public License LoadLicense()
         {
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
