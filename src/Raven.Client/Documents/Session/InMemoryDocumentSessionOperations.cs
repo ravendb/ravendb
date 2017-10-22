@@ -819,11 +819,19 @@ more responsive application.
 
                 entity.Value.Document = document;
 
-                var changeVector = UseOptimisticConcurrency &&
-                                   entity.Value.ConcurrencyCheckMode != ConcurrencyCheckMode.Disabled ||
-                           entity.Value.ConcurrencyCheckMode == ConcurrencyCheckMode.Forced
-                    ? entity.Value.ChangeVector
-                    : null;
+                string changeVector;
+                if (UseOptimisticConcurrency)
+                {
+                    if (entity.Value.ConcurrencyCheckMode != ConcurrencyCheckMode.Disabled)
+                        // if the user didn't provide a change vector, we'll test for an empty one
+                        changeVector = entity.Value.ChangeVector ?? string.Empty;
+                    else
+                        changeVector = null;
+                }
+                else if(entity.Value.ConcurrencyCheckMode == ConcurrencyCheckMode.Forced) 
+                    changeVector = entity.Value.ChangeVector;
+                else 
+                    changeVector = null;
 
                 result.SessionCommands.Add(new PutCommandDataWithBlittableJson(entity.Value.Id, changeVector, document));
             }
