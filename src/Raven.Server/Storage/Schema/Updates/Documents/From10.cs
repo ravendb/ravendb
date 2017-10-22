@@ -64,7 +64,9 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                         continue;
 
                     var writeTable = writeTx.OpenTable(TombstonesSchema, tableName);
-                    foreach (var read in readTable.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
+                    // We seek by an index instead the PK because 
+                    // we weed to ensure that we aren't accessing an IsGlobal key
+                    foreach (var read in readTable.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice], 0, 0))
                     {
                         CopyReadMemory(context, read);
 

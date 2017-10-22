@@ -27,7 +27,7 @@ namespace Raven.Server.Documents
     public unsafe class DocumentsStorage : IDisposable
     {
         private static readonly Slice DocsSlice;
-        private static readonly Slice CollectionEtagsSlice;
+        public static readonly Slice CollectionEtagsSlice;
         private static readonly Slice AllDocsEtagsSlice;
         private static readonly Slice TombstonesSlice;
         public static readonly Slice CollectionsSlice;
