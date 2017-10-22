@@ -351,6 +351,10 @@ namespace Raven.Server.Web.System
                     {
                         throw new DatabaseLoadFailureException("Database task is faulted.", task.Exception);
                     }
+                    if (task.Wait(TimeSpan.FromSeconds(15)) == false)
+                    {
+                        throw new TimeoutException($"Waited too long for the database to load");
+                    }
                     db = task.Result;
                 }
                 DatabaseDoesNotExistException.Throw(name);
