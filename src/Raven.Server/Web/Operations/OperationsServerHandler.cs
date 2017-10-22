@@ -25,7 +25,17 @@ namespace Raven.Server.Web.Operations
 
             return Task.CompletedTask;
         }
-        
+
+        [RavenAction("/admin/operations/kill", "POST", AuthorizationStatus.Operator)]
+        public Task Kill()
+        {
+            var id = GetLongQueryString("id");
+            // ReSharper disable once PossibleInvalidOperationException
+            ServerStore.Operations.KillOperation(id);
+
+            return NoContent();
+        }
+
         [RavenAction("/operations/state", "GET", AuthorizationStatus.ValidUser)]
         public Task State()
         {
