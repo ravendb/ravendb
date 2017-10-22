@@ -1,3 +1,47 @@
-<div>
-    <!-- TODO... will be done with issue 8825-->
+<div class="form-group" data-bind="validationElement: connectionStringName">
+    <label class="control-label">Name</label>
+    <div class="flex-grow">
+        <input class="form-control" data-bind="textInput: connectionStringName, attr: { 'disabled': !isNew()}" placeholder="Enter a name for the connection string" title="Any name of your choice for this connection string">
+    </div>
+</div>
+<div class="form-group" data-bind="validationElement: database">
+    <label class="control-label">Database</label>
+    <div class="flex-grow">
+        <input class="form-control" data-bind="textInput: database" placeholder="Enter database for the connection string" title="Destination database">
+    </div>
+</div>
+<div class="form-group" data-bind="validationElement: topologyDiscoveryUrls"> 
+    <label class="control-label">Discovery URLs:</label>    
+    <div class="flex-grow"> 
+        <input class="form-control" placeholder="Enter discovery url to add" data-bind="textInput: inputUrl" />                              
+    </div>        
+    <div>
+        <button class="btn btn-info" data-bind="click: addDiscoveryUrlWithBlink, attr: { 'disabled': !inputUrl() }"><i class="icon-plus"></i><span>Add Url</span></button>
+    </div>  
+</div>
+<div class="form-group" data-bind="if: topologyDiscoveryUrls.error()">
+    <label class="control-label">&nbsp;</label>
+    <span data-bind="validationElement: topologyDiscoveryUrls">
+        <span class="help-block" data-bind="validationMessage: topologyDiscoveryUrls"></span>
+    </span>
+</div>
+<div class="form-group" data-bind="visible: topologyDiscoveryUrls().length">
+    <label class="control-label">&nbsp;</label>
+    <div class="flex-grow">
+        <ul class="well collection-list">          
+            <!-- ko foreach: topologyDiscoveryUrls -->
+            <li>
+                <div class="name" data-bind="text: $data"></div>
+                <a title="Remove url" href="#" 
+                   data-bind="click: $parent.removeDiscoveryUrl.bind($parent, $data)">
+                   <i class="icon-trash"></i>
+                </a>
+                <a class="btn btn-info" title="Test url connection" href="#" 
+                   data-bind="click: $root.onTestConnectionRaven.bind($root, $data), disable: $root.spinners.test, css: { 'btn-spinner': $root.spinners.test() && $parent.selectedUrlToTest() === $data }">
+                   <i class="icon-rocket"></i>
+                </a>                                           
+            </li>
+            <!-- /ko -->
+        </ul>
+    </div>
 </div>

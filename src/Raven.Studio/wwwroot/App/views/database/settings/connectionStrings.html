@@ -73,24 +73,7 @@
                 </div>
                 <form class="flex-form padding">
                     <div data-bind="with: editedRavenEtlConnectionString">
-                        <div class="form-group" data-bind="validationElement: connectionStringName">
-                            <label class="control-label">Name</label>
-                            <div class="flex-grow">
-                                <input class="form-control" data-bind="textInput: connectionStringName, attr: { 'disabled': !isNew()}" placeholder="Enter a name for the connection string" title="Any name of your choice for this connection string">
-                            </div>
-                        </div>
-                        <div class="form-group" data-bind="validationElement: url">
-                            <label class="control-label">URL</label>
-                            <div class="flex-grow" >
-                                <input type="text" class="form-control" data-bind="textInput: url" placeholder="Enter url for the connection string" title="Destination url">
-                            </div>
-                        </div>
-                        <div class="form-group" data-bind="validationElement: database">
-                            <label class="control-label">Database</label>
-                            <div class="flex-grow">
-                                <input class="form-control" data-bind="textInput: database" placeholder="Enter database for the connection string" title="Destination database">
-                            </div>
-                        </div>
+                        <div data-bind="compose: 'database/settings/connectionStringRaven.html'"></div>
                         <div class="form-group" data-bind="if: tasksThatAreUsingThisConnectionString().length > 0">
                             <label class="control-label">Used in Tasks:</label> 
                             <div data-bind="foreach: tasksThatAreUsingThisConnectionString">
@@ -112,19 +95,16 @@
                         </div>
                     </div>
                     <div class="flex-horizontal">
-                        <div class="flex-grow">
+                        <div class="flex-grow"></div>
+                        <span data-bind="if: editedSqlEtlConnectionString">
                             <button type="submit" class="btn btn-info" title="Test url connection"
-                                    data-bind="click: onTestConnection, disable: $root.spinners.test, css: { 'btn-spinner': $root.spinners.test }" >
+                                    data-bind="click: onTestConnectionSql, disable: $root.spinners.test, css: { 'btn-spinner': $root.spinners.test }" >
                                 <i class="icon-rocket"></i>
                                 <span>Test Connection</span>
                             </button>
-                        </div>
-                        <div class="flex-grow">
-                        </div>
-                        <div>
-                            <button class="btn btn-default" data-bind="click: onCloseEdit"><i class="icon-cancel"></i><span>Cancel</span></button>
-                            <button class="btn btn-success" data-bind="click: onSave" title="Click to save this connection string"><i class="icon-check"></i><span>Save</span></button>
-                        </div>
+                        </span>                            
+                        <button class="btn btn-default" data-bind="click: onCloseEdit"><i class="icon-cancel"></i><span>Cancel</span></button>
+                        <button class="btn btn-success" data-bind="click: onSave" title="Click to save this connection string"><i class="icon-check"></i><span>Save</span></button>                            
                     </div>
                 </form>
                 <div class="panel-addon" data-bind="with: $root.testConnectionResult">

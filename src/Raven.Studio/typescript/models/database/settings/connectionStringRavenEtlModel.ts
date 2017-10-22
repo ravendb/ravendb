@@ -1,14 +1,17 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 import connectionStringModel = require("models/database/settings/connectionStringModel");
+import testClusterNodeConnectionCommand = require("commands/database/cluster/testClusterNodeConnectionCommand");
 
 class connectionStringRavenEtlModel extends connectionStringModel { 
 
-    topologyDiscoveryUrls = ko.observable<string[]>();                 
-    database = ko.observable<string>();            
+    database = ko.observable<string>();
+    topologyDiscoveryUrls = ko.observableArray<string>([]);     
+    
+    inputUrl = ko.observable<string>();
+    selectedUrlToTest = ko.observable<string>();
 
     validationGroup: KnockoutValidationGroup;
-    testConnectionValidationGroup: KnockoutValidationGroup;
-
+    
     constructor(dto: Raven.Client.ServerWide.ETL.RavenConnectionString, isNew: boolean, tasks: string[]) {
         super(isNew, tasks);
         
@@ -36,27 +39,27 @@ class connectionStringRavenEtlModel extends connectionStringModel {
             validDatabaseName: true            
         });
 
-        this.topologyDiscoveryUrls.extend({
-            required: true,
-            validUrl: true
-        });
-
+        this.topologyDiscoveryUrls.extend({            
+            validation: [
+                {
+                    validator: () => this.topologyDiscoveryUrls().length > 0,
+                    message: "All least one discovery url is required"
+                }
+            ]
+        });      // TODO: How to validate each url in the list with 'ValidUrl' ?      
+       
         this.validationGroup = ko.validatedObservable({
             connectionStringName: this.connectionStringName,
             database: this.database,
             topologyDiscoveryUrls: this.topologyDiscoveryUrls
         });
-        
-        this.testConnectionValidationGroup = ko.validatedObservable({
-            topologyDiscoveryUrls: this.topologyDiscoveryUrls
-        })
     }
 
     static empty(): connectionStringRavenEtlModel {
         return new connectionStringRavenEtlModel({
             Type: "Raven",
             Name: "", 
-            TopologyDiscoveryUrls: null,
+            TopologyDiscoveryUrls: [],
             Database: ""
         } as Raven.Client.ServerWide.ETL.RavenConnectionString, true, []);
     }
@@ -68,6 +71,24 @@ class connectionStringRavenEtlModel extends connectionStringModel {
             TopologyDiscoveryUrls: this.topologyDiscoveryUrls(),
             Database: this.database()
         };
+    }
+    
+    removeDiscoveryUrl(url: string) {
+        this.topologyDiscoveryUrls.remove(url);
+    }   
+
+    addDiscoveryUrlWithBlink() {
+        if ( !_.includes(this.topologyDiscoveryUrls(), this.inputUrl())) {
+            this.topologyDiscoveryUrls.unshift(this.inputUrl());
+            this.inputUrl("");
+
+            $(".collection-list li").first().addClass("blink-style");
+        }
+    }
+
+    testConnection(urlToTest: string) : JQueryPromise<Raven.Server.Web.System.NodeConnectionTestResult> {       
+        return new testClusterNodeConnectionCommand(urlToTest)
+            .execute();
     }
 }
 
