@@ -1,5 +1,6 @@
 ﻿using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Impl;
@@ -19,6 +20,8 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                 var writeTable = writeTx.OpenTable(CollectionsSchema, CollectionsSlice);
                 foreach (var read in readTable.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
                 {
+                    CopyReadMemory(context, read);
+
                     var collection = TableValueToString(context, (int)CollectionsTable.Name, ref read.Reader);
                     using (DocumentIdWorker.GetStringPreserveCase(context, collection, out Slice collectionSlice))
                     using (writeTable.Allocate(out TableValueBuilder write))
@@ -48,6 +51,8 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                     var writeTable = writeTx.OpenTable(TombstonesSchema, tableName);
                     foreach (var read in readTable.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
                     {
+                        CopyReadMemory(context, read);
+
                         var type = *(DocumentTombstone.TombstoneType*)read.Reader.Read((int)TombstoneTable.Type, out int _);
                         var oldCollection = TableValueToString(context, (int)TombstoneTable.Collection, ref read.Reader);
                         using (DocumentIdWorker.GetStringPreserveCase(context, oldCollection, out Slice collectionSlice))
@@ -82,6 +87,8 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                 var writeTable = writeTx.OpenTable(ConflictsSchema, ConflictsSlice);
                 foreach (var read in readTable.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
                 {
+                    CopyReadMemory(context, read);
+
                     var oldCollection = TableValueToString(context, (int)ConflictsTable.Collection, ref read.Reader);
                     using (DocumentIdWorker.GetStringPreserveCase(context, oldCollection, out Slice collectionSlice))
                     using (writeTable.Allocate(out TableValueBuilder write))
@@ -101,6 +108,16 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             }
 
             return true;
+        }
+
+        private void CopyReadMemory(DocumentsOperationContext context, Table.TableValueHolder read)
+        {
+            // We copy the memory of the read so AssertNoReferenceToOldData won't throw.
+            // This is done instead of moving AssertNoReferenceToOldData to assert later 
+            // after we allocate the new write memory.
+            var copyReadMemory = context.GetMemory(read.Reader.Size);
+            Memory.Copy(copyReadMemory.Address, read.Reader.Pointer, read.Reader.Size);
+            read.Reader = new TableValueReader(copyReadMemory.Address, read.Reader.Size);
         }
     }
 }
