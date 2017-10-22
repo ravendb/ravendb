@@ -1,7 +1,6 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import connectionStringRavenEtlModel = require("models/database/settings/connectionStringRavenEtlModel");
 import connectionStringSqlEtlModel = require("models/database/settings/connectionStringSqlEtlModel");
-import testClusterNodeConnectionCommand = require("commands/database/cluster/testClusterNodeConnectionCommand");
 import saveConnectionStringCommand = require("commands/database/settings/saveConnectionStringCommand");
 import getConnectionStringsCommand = require("commands/database/settings/getConnectionStringsCommand");
 import getConnectionStringInfoCommand = require("commands/database/settings/getConnectionStringInfoCommand");
@@ -179,23 +178,10 @@ class connectionStrings extends viewModelBase {
         const tasksData = this.connectionStringsTasksInfo[connectionStringName];             
         return tasksData ? _.sortBy(tasksData.map((task) => { return task.TaskName; }), x => x.toUpperCase()) : [];    
     }
-    
-    onTestConnection() {
-        if (this.editedRavenEtlConnectionString()) {
-            if (this.isValid(this.editedRavenEtlConnectionString().testConnectionValidationGroup)) {
-                eventsCollector.default.reportEvent("ravenDB-ETL-connection-string", "test-connection");
 
-                this.spinners.test(true);
-
-                new testClusterNodeConnectionCommand(this.editedRavenEtlConnectionString().topologyDiscoveryUrls()[0])
-                    .execute()
-                    .done(result => this.testConnectionResult(result))
-                    .always(() => this.spinners.test(false));
-            } 
-        }
-        
+    onTestConnectionSql() { 
         const sqlConnectionString = this.editedSqlEtlConnectionString();
-        
+
         if (sqlConnectionString) {
             if (this.isValid(sqlConnectionString.testConnectionValidationGroup)) {
                 eventsCollector.default.reportEvent("ravenDB-SQL-connection-string", "test-connection");
@@ -206,6 +192,21 @@ class connectionStrings extends viewModelBase {
                     .always(() => this.spinners.test(false));           
             }
         }
+    }  
+    
+    onTestConnectionRaven(urlToTest: string) {                     
+        const ravenConnectionString = this.editedRavenEtlConnectionString();
+        eventsCollector.default.reportEvent("ravenDB-ETL-connection-string", "test-connection");
+        
+        this.spinners.test(true);
+        ravenConnectionString.selectedUrlToTest(urlToTest);
+
+        ravenConnectionString.testConnection(urlToTest)
+             .done((testResult) => this.testConnectionResult(testResult))
+             .always(() => {
+                              this.spinners.test(false);
+                              ravenConnectionString.selectedUrlToTest("");
+             });
     }
     
     onCloseEdit() {
