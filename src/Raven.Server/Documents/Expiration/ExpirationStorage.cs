@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using Raven.Client;
 using Raven.Client.Exceptions.Documents;
@@ -32,7 +33,17 @@ namespace Raven.Server.Documents.Expiration
             tx.CreateTree(DocumentsByExpiration);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Put(DocumentsOperationContext context, Slice lowerId, BlittableJsonReaderObject document)
+        {
+            if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
+                metadata.TryGet(Constants.Documents.Metadata.Expires, out string expirationDate) == false)
+                return;
+
+            PutInternal(context, lowerId, document);
+        }
+
+        private void PutInternal(DocumentsOperationContext context, Slice lowerId, BlittableJsonReaderObject document)
         {
             if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
                 metadata.TryGet(Constants.Documents.Metadata.Expires, out string expirationDate) == false)
