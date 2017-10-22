@@ -87,19 +87,21 @@ namespace Raven.Server.Documents.Expiration
                 if (Logger.IsInfoEnabled)
                     Logger.Info("Trying to find expired documents to delete");
 
+                Dictionary<Slice, List<(Slice LowerId, LazyStringValue Id)>> expired;
+                Stopwatch duration;
                 using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var expired = _database.DocumentsStorage.ExpirationStorage.GetExpiredDocuments(context, currentTime, CancellationToken, out Stopwatch duration);
+                    expired = _database.DocumentsStorage.ExpirationStorage.GetExpiredDocuments(context, currentTime, CancellationToken, out duration);
                     if (expired == null)
                         return;
-
-                    var command = new DeleteExpiredDocumentsCommand(expired, _database, Logger);
-                    await _database.TxMerger.Enqueue(command);
-
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Successfully deleted {command.DeletionCount:#,#;;0} documents in {duration.ElapsedMilliseconds:#,#;;0} ms.");
                 }
+
+                var command = new DeleteExpiredDocumentsCommand(expired, _database, Logger);
+                await _database.TxMerger.Enqueue(command);
+
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Successfully deleted {command.DeletionCount:#,#;;0} documents in {duration.ElapsedMilliseconds:#,#;;0} ms.");
             }
             catch (Exception e)
             {
