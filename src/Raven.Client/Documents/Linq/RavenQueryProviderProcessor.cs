@@ -1796,7 +1796,17 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 && mce.Method.DeclaringType == typeof(RavenQuery)
                 && mce.Method.Name == "Raw")
             {
-                js = (mce.Arguments[0] as ConstantExpression)?.Value.ToString();
+                if (mce.Arguments.Count == 1)
+                {
+                    js = (mce.Arguments[0] as ConstantExpression)?.Value.ToString();
+                }
+                else
+                {
+                    var path = ToJs(mce.Arguments[0]);
+                    var raw = (mce.Arguments[1] as ConstantExpression)?.Value.ToString();
+
+                    js = $"{path}.{raw}";
+                }
             }
             else
             {
