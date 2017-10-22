@@ -53,7 +53,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
             subscription.ChangeVectorForNextBatchStartingPoint = ChangeVector;
 
-            subscription.LastTimeServerMadeProgressWithDocuments = LastTimeServerMadeProgressWithDocuments;
+            subscription.LastBatchAckTime = LastTimeServerMadeProgressWithDocuments;
 
             return context.ReadObject(subscription.ToJson(), subscriptionName);
         }

@@ -81,10 +81,10 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                     ChangeVectorForNextBatchStartingPoint = InitialChangeVector,
                     SubscriptionId = subscriptionId,
                     SubscriptionName = SubscriptionName,
-                    LastTimeServerMadeProgressWithDocuments = DateTime.UtcNow,
+                    LastBatchAckTime = null,
                     Disabled = Disabled,
                     MentorNode = MentorNode,
-                    LastClientConnectionTime = DateTime.Now
+                    LastClientConnectionTime = null
                 }.ToJson(), SubscriptionName))
                 {
                     ClusterStateMachine.UpdateValue(subscriptionId, items, valueNameLowered, valueName, receivedSubscriptionState);
