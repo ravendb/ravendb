@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -36,6 +37,56 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
 
             return Task.CompletedTask;
+        }
+
+
+        [RavenAction("/databases/*/identity/next", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
+        public async Task NextIdentityFor()
+        {
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+
+            if (name[name.Length - 1] != '|')
+                name += '|';
+            
+            (var clusterEtag, var clusterId) = await Database.ServerStore.GenerateClusterIdentityAsync(name, Database.Name);
+
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteStartObject();
+
+                writer.WritePropertyName("ClusterEtag");
+                writer.WriteInteger(clusterEtag);
+                writer.WriteComma();
+                writer.WritePropertyName("ClusterId");
+                writer.WriteString(clusterId);
+
+                writer.WriteEndObject();
+            }            
+        }
+
+        [RavenAction("/databases/*/identity/seed", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
+        public async Task SeedIdentityFor()
+        {
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            var value = GetLongQueryString("value", true);
+            if (value == null)
+                throw new ArgumentException("Query string value 'value' must have a non empty value");
+
+            if (name[name.Length - 1] != '|')
+                name += '|';
+
+            var index = await Database.ServerStore.UpdateClusterIdentityAsync(name, Database.Name, value.Value);
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteStartObject();
+
+                writer.WritePropertyName("Index");
+                writer.WriteInteger(index);
+
+                writer.WriteEndObject();
+            }
         }
     }
 }
