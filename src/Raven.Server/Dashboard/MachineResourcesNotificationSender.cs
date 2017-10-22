@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -25,7 +27,8 @@ namespace Raven.Server.Dashboard
         private static WindowsInfo _previousWindowsInfo;
         private static LinuxInfo _previousLinuxInfo;
         private static MacInfo _previousMacInfo;
-        private static readonly (double, double) EmptyCpuInfo = (0, 0);
+        private static (double CpuUsage, double RavenCpuUsage)? _lastCpuInfo;
+        private static readonly (double, double) EmptyCpuUsage = (0, 0);
         private DateTime _lastSentNotification = DateTime.MinValue;
 
         public MachineResourcesNotificationSender(string resourceName,
@@ -37,7 +40,7 @@ namespace Raven.Server.Dashboard
             Initialize();
         }
 
-        private void Initialize()
+        private static void Initialize()
         {
             if (PlatformDetails.RunningOnPosix == false)
             {
@@ -97,6 +100,7 @@ namespace Raven.Server.Dashboard
             var availableMemory = memoryInfoResult.AvailableMemory.GetValue(SizeUnit.Bytes);
 
             var cpuInfo = GetCpuInformation();
+            _lastCpuInfo = cpuInfo;
             var machineResources = new MachineResources
             {
                 TotalMemory = installedMemory,
@@ -127,11 +131,11 @@ namespace Raven.Server.Dashboard
         private static (double CpuUsage, double RavenCpuUsage) CalculateWindowsCpuUsage()
         {
             if (_previousWindowsInfo == null)
-                return EmptyCpuInfo;
+                return EmptyCpuUsage;
 
             var windowsInfo = GetWindowsInfo();
             if (windowsInfo == null)
-                return EmptyCpuInfo;
+                return EmptyCpuUsage;
 
             var systemIdleDiff = windowsInfo.SystemIdleTime - _previousWindowsInfo.SystemIdleTime;
             var systemKernelDiff = windowsInfo.SystemKernelTime - _previousWindowsInfo.SystemKernelTime;
@@ -158,24 +162,60 @@ namespace Raven.Server.Dashboard
         private static (double CpuUsage, double RavenCpuUsage) CalculateLinuxCpuUsage()
         {
             if (_previousLinuxInfo == null)
-                return EmptyCpuInfo;
+                return EmptyCpuUsage;
 
             var linuxInfo = GetLinuxInfo();
             if (linuxInfo == null)
-                return EmptyCpuInfo;
+                return EmptyCpuUsage;
 
+            double cpuUsage = 0;
+            if (linuxInfo.TotalUserTime >= _previousLinuxInfo.TotalUserTime &&
+                linuxInfo.TotalUserLowTime >= _previousLinuxInfo.TotalUserLowTime &&
+                linuxInfo.TotalSystemTime >= _previousLinuxInfo.TotalSystemTime &&
+                linuxInfo.TotalIdleTime >= _previousLinuxInfo.TotalIdleTime)
+            {
+                var userTimeDiff = linuxInfo.TotalUserTime - _previousLinuxInfo.TotalUserTime;
+                var userLowTimeDiff = linuxInfo.TotalUserLowTime - _previousLinuxInfo.TotalUserLowTime;
+                var systemTimeDiff = linuxInfo.TotalSystemTime - _previousLinuxInfo.TotalSystemTime;
+                var idleTimeDiff = linuxInfo.TotalIdleTime - _previousLinuxInfo.TotalIdleTime;
 
-            throw new NotImplementedException();
+                var totalUsed = userTimeDiff + userLowTimeDiff + systemTimeDiff;
+                cpuUsage = (totalUsed * 100.0) / (totalUsed + idleTimeDiff);
+            }
+            else if (_lastCpuInfo != null)
+            {
+                // overflow
+                cpuUsage = _lastCpuInfo.Value.CpuUsage;
+            }
+
+            double ravenCpuUsage = 0;
+            if (linuxInfo.Time > _previousLinuxInfo.Time &&
+                linuxInfo.LastSystemCpu >= _previousLinuxInfo.LastSystemCpu &&
+                linuxInfo.LastUserCpu >= _previousLinuxInfo.LastUserCpu)
+            {
+                var lastSystemCpuDiff = linuxInfo.LastSystemCpu - _previousLinuxInfo.LastSystemCpu;
+                var lastUserCpuDiff = linuxInfo.LastUserCpu - _previousLinuxInfo.LastUserCpu;
+                var totalCpuTime = lastSystemCpuDiff + lastUserCpuDiff;
+                ravenCpuUsage = (totalCpuTime * 100.0 / (linuxInfo.Time - _previousLinuxInfo.Time)) / ProcessorInfo.ProcessorCount;
+            }
+            else if (_lastCpuInfo != null)
+            {
+                // overflow
+                ravenCpuUsage = _lastCpuInfo.Value.RavenCpuUsage;
+            }
+
+            _previousLinuxInfo = linuxInfo;
+            return (cpuUsage, ravenCpuUsage);
         }
 
         private static (double CpuUsage, double RavenCpuUsage) CalculateMacOsCpuUsage()
         {
             if (_previousMacInfo == null)
-                return EmptyCpuInfo;
+                return EmptyCpuUsage;
 
             var macInfo = GetMacInfo();
             if (macInfo == null)
-                return EmptyCpuInfo;
+                return EmptyCpuUsage;
 
             var totalTicksSinceLastTime = macInfo.TotalTicks - _previousMacInfo.TotalTicks;
             var idleTicksSinceLastTime = macInfo.IdleTicks - _previousMacInfo.IdleTicks;
@@ -237,7 +277,39 @@ namespace Raven.Server.Dashboard
 
         private static LinuxInfo GetLinuxInfo()
         {
-            throw new NotImplementedException();
+            var lines = File.ReadAllLines("/proc/stat");
+            foreach (var line in lines)
+            {
+                if (line.StartsWith("cpu", StringComparison.OrdinalIgnoreCase) == false)
+                    continue;
+
+                var items = System.Text.RegularExpressions.Regex.Split(line, @"\s+").Where(s => s != string.Empty).ToArray();
+                if (items.Length == 0)
+                    continue;
+
+                var timeSample = new TimeSample();
+
+                var time = Syscall.times(ref timeSample);
+                if (time == -1)
+                {
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info("Got overflow time using the times system call " + Marshal.GetLastWin32Error());
+                    return null;
+                }
+
+                return new LinuxInfo
+                {
+                    TotalUserTime = ulong.Parse(items[1]),
+                    TotalUserLowTime = ulong.Parse(items[2]),
+                    TotalSystemTime = ulong.Parse(items[3]),
+                    TotalIdleTime = ulong.Parse(items[4]),
+                    Time = time,
+                    LastSystemCpu = timeSample.tms_stime,
+                    LastUserCpu = timeSample.tms_utime,
+                };
+            }
+
+            return null;
         }
 
         private static unsafe MacInfo GetMacInfo()
@@ -302,7 +374,19 @@ namespace Raven.Server.Dashboard
 
         private class LinuxInfo
         {
-            
+            public ulong TotalUserTime { get; set; }
+
+            public ulong TotalUserLowTime { get; set; }
+
+            public ulong TotalSystemTime { get; set; }
+
+            public ulong TotalIdleTime { get; set; }
+
+            public long Time { get; set; }
+
+            public long LastSystemCpu { get; set; }
+
+            public long LastUserCpu { get; set; }
         }
 
         private class MacInfo
