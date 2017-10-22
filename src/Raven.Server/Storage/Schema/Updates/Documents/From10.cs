@@ -3,7 +3,6 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Voron;
 using Voron.Data.Tables;
-using Voron.Impl;
 using static Raven.Server.Documents.AttachmentsStorage;
 using static Raven.Server.Documents.ConflictsStorage;
 using static Raven.Server.Documents.DocumentsStorage;
@@ -13,15 +12,15 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 {
     public unsafe class From10 : ISchemaUpdate
     {
-        public bool Update(Transaction readTx, Transaction writeTx, ConfigurationStorage configurationStorage, DocumentsStorage documentsStorage)
+        public bool Update(UpdateStep step)
         {
             // Update collections
-            using (documentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (step.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                var readTable = readTx.OpenTable(CollectionsSchema, CollectionsSlice);
+                var readTable = step.ReadTx.OpenTable(CollectionsSchema, CollectionsSlice);
                 if (readTable != null)
                 {
-                    var writeTable = writeTx.OpenTable(CollectionsSchema, CollectionsSlice);
+                    var writeTable = step.WriteTx.OpenTable(CollectionsSchema, CollectionsSlice);
                     foreach (var read in readTable.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
                     {
                         CopyReadMemory(context, read);
@@ -43,9 +42,9 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             }
 
             // Update tombstones's collection value
-            using (documentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (step.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                foreach (var collection in documentsStorage.GetTombstoneCollections(readTx))
+                foreach (var collection in step.DocumentsStorage.GetTombstoneCollections(step.ReadTx))
                 {
                     string tableName;
                     if (collection == AttachmentsTombstones ||
@@ -59,11 +58,11 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                         tableName = collectionName.GetTableName(CollectionTableType.Tombstones);
                     }
 
-                    var readTable = readTx.OpenTable(TombstonesSchema, tableName);
+                    var readTable = step.ReadTx.OpenTable(TombstonesSchema, tableName);
                     if (readTable == null)
                         continue;
 
-                    var writeTable = writeTx.OpenTable(TombstonesSchema, tableName);
+                    var writeTable = step.WriteTx.OpenTable(TombstonesSchema, tableName);
                     // We seek by an index instead the PK because 
                     // we weed to ensure that we aren't accessing an IsGlobal key
                     foreach (var read in readTable.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice], 0, 0))
@@ -98,12 +97,12 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             }
 
             // Update conflicts' collection value
-            using (documentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (step.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                var readTable = readTx.OpenTable(ConflictsSchema, ConflictsSlice);
+                var readTable = step.ReadTx.OpenTable(ConflictsSchema, ConflictsSlice);
                 if (readTable != null)
                 {
-                    var writeTable = writeTx.OpenTable(ConflictsSchema, ConflictsSlice);
+                    var writeTable = step.WriteTx.OpenTable(ConflictsSchema, ConflictsSlice);
                     foreach (var read in readTable.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
                     {
                         CopyReadMemory(context, read);
