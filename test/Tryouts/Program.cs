@@ -1,15 +1,18 @@
 using Raven.Client.Documents;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Blittable;
 using FastTests.Client.Attachments;
+using FastTests.Server.Documents.Indexing.Static;
 using FastTests.Smuggler;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Identity;
 using SlowTests.Client.Attachments;
+using SlowTests.Server.Documents.Indexing;
 
 namespace RavenDB4RCTests
 {
@@ -17,7 +20,12 @@ namespace RavenDB4RCTests
     {
         static void Main(string[] args)
         {
-            new SmugglerConflicts().ToDatabaseWithDifferentConflicts_AndTheImportedConflictsInAdditionToTheExistingConflicts().Wait();
+            for (int i = 0; i < 10; i++)
+            {
+                var sp = Stopwatch.StartNew();
+                new IndexCompilationTests().Sum_of_elements();
+                Console.WriteLine(sp.Elapsed);
+            }
         }
 
         static async Task MainAsync()

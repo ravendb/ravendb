@@ -211,62 +211,6 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [Fact]
-        public void AllClientsWith_WaitForFree_StrategyShouldGetAccessToSubscription()
-        {
-            using (var store = GetDocumentStore())
-            {
-                var id = store.Subscriptions.Create<User>();
-
-                const int numberOfClients = 4;
-
-                var subscriptions = new Subscription<User>[numberOfClients];
-                var processed = new bool[numberOfClients];
-
-                int? processedClient = null;
-
-                for (int i = 0; i < numberOfClients; i++)
-                {
-                    var clientNumber = i;
-
-                    subscriptions[clientNumber] = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(id)
-                    {
-                        Strategy = SubscriptionOpeningStrategy.WaitForFree
-                    });
-
-                    subscriptions[clientNumber].AfterAcknowledgment += x =>
-                    {
-                        processed[clientNumber] = true;
-                        return Task.CompletedTask;
-                    };
-
-                    subscriptions[clientNumber].Run(x =>
-                    {
-                        processedClient = clientNumber;
-                    });
-                }
-
-                for (int i = 0; i < numberOfClients; i++)
-                {
-                    using (var s = store.OpenSession())
-                    {
-                        s.Store(new User());
-                        s.SaveChanges();
-                    }
-
-                    Assert.True(SpinWait.SpinUntil(() => processedClient != null, waitForDocTimeout));
-                    Assert.True(SpinWait.SpinUntil(() => processed[processedClient.Value], waitForDocTimeout));
-
-                    subscriptions[processedClient.Value].Dispose();
-
-                    processedClient = null;
-                }
-
-                for (int i = 0; i < numberOfClients; i++)
-                {
-                    Assert.True(processed[i]);
-                }
-            }
-        }
+     
     }
 }

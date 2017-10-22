@@ -224,7 +224,7 @@ namespace FastTests.Client.Subscriptions
 
                     Assert.True(nodes.TryTake(out var node, 5000));
                     Assert.Equal("Node2", node.Name);
-                    Assert.False(nodes.TryTake(out node, 5000));
+                    Assert.False(nodes.TryTake(out node, 5));
                 }
             }
         }

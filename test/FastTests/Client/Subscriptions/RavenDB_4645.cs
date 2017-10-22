@@ -33,11 +33,14 @@ namespace FastTests.Client.Subscriptions
                     MaxDocsPerBatch =  5 
                 });
 
-                var docs = new List<dynamic>();
+                var docs = new CountdownEvent(10);
 
-                subscription.Run(batch=> batch.Items.ForEach(x=>docs.Add(x.Result)));
+                subscription.Run(batch=> batch.Items.ForEach(x =>
+                {
+                    docs.Signal();
+                }));
 
-                Assert.True(SpinWait.SpinUntil(() => docs.Count == 10, TimeSpan.FromSeconds(60)));
+                Assert.True(docs.Wait(TimeSpan.FromSeconds(15)));
 
                 // all documents were fetched - time to delete subscription
 
@@ -45,6 +48,8 @@ namespace FastTests.Client.Subscriptions
 
                 // verify if we don't get new items
 
+                docs.Reset(1);
+                
                 using (var session = store.OpenSession())
                 {
                     for (int i = 0; i < 2; i++)
@@ -55,8 +60,8 @@ namespace FastTests.Client.Subscriptions
                     session.SaveChanges();
                 }
 
-                // wait 3 seconds for new documents - we shouldn't get any
-                Assert.False(SpinWait.SpinUntil(() => docs.Count != 10, TimeSpan.FromSeconds(3)));
+                // wait a bit for new documents - we shouldn't get any
+                Assert.False(docs.Wait(50));
             }
         }
     }

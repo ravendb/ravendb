@@ -1,8 +1,9 @@
-﻿using Raven.Client.Documents.Indexes;
+﻿using FastTests;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
 using Xunit;
 
-namespace FastTests.Server.Documents.Indexing.Static
+namespace SlowTests.Server.Documents.Indexing
 {
     public class IndexCompilationTests : NoDisposalNeeded
     {

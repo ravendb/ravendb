@@ -16,18 +16,10 @@ namespace FastTests.Issues
             var ids = Enumerable.Range(0, numOfIds).Select(x => x.ToString()).ToArray();
             using (var store = GetDocumentStore())
             {
+              
                 using (var session = store.OpenSession())
                 {
-                    foreach (var id in ids)
-                    {
-                        session.Store(new Document { Id = id });
-                    }  
-                    session.SaveChanges();
-                }
-
-                using (var session = store.OpenSession())
-                {
-                    Assert.Equal(numOfIds, session.Query<Document>()
+                    Assert.Equal(0, session.Query<Document>()
                         .Where(x => x.Id.In(ids))
                         .Select(x => new
                         {
