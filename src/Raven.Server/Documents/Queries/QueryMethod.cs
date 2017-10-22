@@ -17,6 +17,9 @@ namespace Raven.Server.Documents.Queries
             if (string.Equals(methodName, "boost", StringComparison.OrdinalIgnoreCase))
                 return MethodType.Boost;
 
+            if(string.Equals(methodName,"regex",StringComparison.OrdinalIgnoreCase))
+                return MethodType.Regex;
+
             if (string.Equals(methodName, "startsWith", StringComparison.OrdinalIgnoreCase))
                 return MethodType.StartsWith;
 
