@@ -1358,6 +1358,38 @@ FROM Users as u SELECT output(u)", query.ToString());
         }
 
         [Fact]
+        public void Custom_Functions_Escape_Hatch_With_Path()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia"}, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<User>()
+                        .Where(u => u.Name == "Jerry")
+                        .Select(a => new
+                        {
+                            Name = RavenQuery.Raw<string>(a.Name, "substr(0,3)")
+                        });
+
+                    Assert.Equal("FROM Users as a WHERE Name = $p0 SELECT { Name : a.Name.substr(0,3) }",
+                        query.ToString());
+
+                    var queryResult = query.ToList();
+
+                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal("Jer", queryResult[0].Name);
+
+                }
+            }
+        }
+
+        [Fact]
         public void Custom_Function_With_Complex_Loads()
         {
             using (var store = GetDocumentStore())
