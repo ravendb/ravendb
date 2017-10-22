@@ -1623,6 +1623,50 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
             }
         }
 
+        [Fact]
+        public void Custom_Functions_String_Support()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia", IdNumber = 19420801, Roles = new []{"The", "Grateful", "Dead"}}, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from u in session.Query<User>()
+                                select new
+                                {
+                                    //padStart(), padEnd() are not supporeted in jint
+                                    //https://github.com/sebastienros/jint/issues/429
+
+                                    //PadLeft = u.Name.PadLeft(10, 'z'),
+                                    //PadRight = u.Name.PadRight(10, 'z'),
+
+                                    Substr = u.Name.Substring(0, 3),
+                                    Join = string.Join(", ", u.Name, u.LastName, u.IdNumber),
+                                    ArrayJoin = string.Join("-", u.Roles)
+                                };
+
+                    Assert.Equal("FROM Users as u SELECT { Substr : u.Name.substr(0, 3), " +
+                                 "Join : [u.Name,u.LastName,u.IdNumber].join(\", \"), " +
+                                 "ArrayJoin : u.Roles.join(\"-\") }"
+                                , query.ToString());
+
+                    var queryResult = query.ToList();
+
+                    Assert.Equal(1, queryResult.Count);
+
+                    Assert.Equal("Jer", queryResult[0].Substr);
+                    Assert.Equal("Jerry, Garcia, 19420801", queryResult[0].Join);
+                    Assert.Equal("The-Grateful-Dead", queryResult[0].ArrayJoin);
+
+                }
+            }
+        }
+
 
         private class User
         {
