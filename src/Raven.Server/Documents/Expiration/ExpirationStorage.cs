@@ -83,7 +83,7 @@ namespace Raven.Server.Documents.Expiration
                 do
                 {
                     var entryTicks = it.CurrentKey.CreateReader().ReadBigEndianInt64();
-                    if (entryTicks >= currentTicks)
+                    if (entryTicks > currentTicks)
                         break;
 
                     var ticksAsSlice = it.CurrentKey.Clone(context.Transaction.InnerTransaction.Allocator);
