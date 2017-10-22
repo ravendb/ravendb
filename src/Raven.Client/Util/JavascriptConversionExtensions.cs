@@ -248,14 +248,20 @@ namespace Raven.Client.Util
             }
         }
 
-        public class ReplaceParameterWithThis : JavascriptConversionExtension
+        public class ReplaceParameterWithNewName : JavascriptConversionExtension
         {
-            public ParameterExpression Parameter;
+            private readonly string _newName;
+            private readonly ParameterExpression _parameter;
 
+            public ReplaceParameterWithNewName(ParameterExpression parameter, string newName )
+            {
+                _newName = newName;
+                _parameter = parameter;
+            }
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
                 var parameter = context.Node as ParameterExpression;
-                if (parameter == null || parameter != Parameter)
+                if (parameter == null || parameter != _parameter)
                     return;
 
                 context.PreventDefault();
@@ -263,7 +269,7 @@ namespace Raven.Client.Util
 
                 using (writer.Operation(parameter))
                 {
-                    writer.Write("this");
+                    writer.Write(_newName);
                 }
             }
         }

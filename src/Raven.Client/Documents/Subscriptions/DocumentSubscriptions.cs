@@ -83,7 +83,8 @@ namespace Raven.Client.Documents.Subscriptions
                 if(includeRevisions)
                     criteria.Query = "from " + collectionName +" (Revisions = true)";
                 else
-                    criteria.Query = "from " + collectionName;
+                    criteria.Query = "from " + collectionName ;
+                criteria.Query += " as doc";
             }
             if (predicate != null)
             {
@@ -93,15 +94,16 @@ namespace Raven.Client.Documents.Subscriptions
                         new JavascriptConversionExtensions.MathSupport(),
                         new JavascriptConversionExtensions.LinqMethodsSupport(),
                         new JavascriptConversionExtensions.BooleanSupport(),
-                        new JavascriptConversionExtensions.ReplaceParameterWithThis { Parameter = predicate.Parameters[0] },
+                        new JavascriptConversionExtensions.ReplaceParameterWithNewName(predicate.Parameters[0],"this"),
                         new JavascriptConversionExtensions.DateTimeSupport(),
                         new JavascriptConversionExtensions.InvokeSupport(),
                         new JavascriptConversionExtensions.NullCoalescingSupport(),
                         new JavascriptConversionExtensions.NestedConditionalSupport()
                     ));
+                
                 criteria.Query = "declare function predicate () {\r\n\t return " + 
                     script + "\r\n}\r\n" + criteria.Query + "\r\n" + 
-                    "where predicate.call(this)";
+                    "where predicate.call(doc)";
             }
             if (project != null)
             {
@@ -114,7 +116,8 @@ namespace Raven.Client.Documents.Subscriptions
                         new JavascriptConversionExtensions.DateTimeSupport(),
                         new JavascriptConversionExtensions.InvokeSupport(),
                         new JavascriptConversionExtensions.NullCoalescingSupport(),
-                        new JavascriptConversionExtensions.NestedConditionalSupport()
+                        new JavascriptConversionExtensions.NestedConditionalSupport(),
+                        new JavascriptConversionExtensions.ReplaceParameterWithNewName(project.Parameters[0], "doc")
                     ));
                 criteria.Query += Environment.NewLine + "select " + script;
             }
