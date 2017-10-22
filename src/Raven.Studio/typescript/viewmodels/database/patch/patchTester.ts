@@ -152,7 +152,10 @@ class patchTester extends viewModelBase {
             .execute()
             .done((doc: document) => {
                 if (doc) {
-                    this.beforeDoc(doc.toDto(true));
+                    const docDto = doc.toDto(true);
+                    const metaDto = docDto["@metadata"];
+                    documentMetadata.filterMetadata(metaDto);
+                    this.beforeDoc(docDto);
                 }
             })
             .fail((xhr: JQueryXHR) => {
@@ -184,8 +187,10 @@ class patchTester extends viewModelBase {
                 new patchCommand(query, this.db(), { test: true, documentId: this.documentId() })
                     .execute()
                     .done((result: any) => {
-                        this.beforeDoc(result.OriginalDocument);
-                        this.afterDoc(result.ModifiedDocument);
+                        const modifiedDocument = new document(result.ModifiedDocument).toDto(true);
+                        const originalDocument = new document(result.OriginalDocument).toDto(true);
+                        this.beforeDoc(originalDocument);
+                        this.afterDoc(modifiedDocument);
                         const debug = result.Debug;
                         const actions = debug.Actions as Raven.Server.Documents.Patch.PatchDebugActions;
                         this.actions.loadDocument(actions.LoadDocument);
