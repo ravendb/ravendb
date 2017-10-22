@@ -35,6 +35,7 @@ namespace SlowTests.Tests.Linq
                 using (var session = store.OpenSession())
                 {
                     var lastPosition = session.Query<Section>()
+                        .Customize(x=>x.WaitForNonStaleResults())
                         .OrderByDescending(x => x.Position)
                         .Select(x => x.Position)
                         .FirstOrDefault();
@@ -66,6 +67,7 @@ namespace SlowTests.Tests.Linq
                 using (var session = store.OpenSession())
                 {
                     var lastPosition = session.Query<Section>()
+                        .Customize(x=>x.WaitForNonStaleResults())
                         .OrderBy(x => x.Position)
                         .Select(x => x.Position)
                         .FirstOrDefault();

@@ -37,7 +37,7 @@ namespace SlowTests.MailingList
                 session.Store(catalog);
                 session.SaveChanges();
 
-                var catalogs = session.Advanced.DocumentQuery<Catalog>().WhereEquals("Type", "Waterfront").Select(c => c.PropertyId);
+                var catalogs = session.Advanced.DocumentQuery<Catalog>().WaitForNonStaleResults().WhereEquals("Type", "Waterfront").Select(c => c.PropertyId);
                 var properties = session.Advanced.DocumentQuery<Property>();
                 properties.OpenSubclause();
                 var first = true;

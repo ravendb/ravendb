@@ -85,7 +85,7 @@ namespace SlowTests.Queries
                             documentQuery.AddParameter(parameter.Key, parameter.Value);
                         }
                     }
-                    return documentQuery
+                    return documentQuery.WaitForNonStaleResults()
                         .ToList();
                 }
             }

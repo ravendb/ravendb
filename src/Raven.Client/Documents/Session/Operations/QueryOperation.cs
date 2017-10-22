@@ -163,8 +163,8 @@ namespace Raven.Client.Documents.Session.Operations
 
             if (_waitForNonStaleResults && result.IsStale)
             {
-                _sp.Stop();
-                var msg = $"Waited for {_sp.ElapsedMilliseconds:#,#;;0}ms for the query to return non stale result.";
+                _sp?.Stop();
+                var msg = $"Waited for {_sp?.ElapsedMilliseconds:#,#;;0} ms for the query to return non stale result.";
 
 #if TESTING_HANGS
                 // this code is here because slow tests sometimes how impossible situation
