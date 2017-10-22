@@ -128,7 +128,8 @@ namespace SlowTests.Server.Documents.Indexing
                 }
                 Assert.Equal("Users/ByName", usersStats.Name);
 
-                Assert.True(usersStats.Performance.Select(x => x.InputCount).Sum() == 2, $"Can\'t find indexing performance stats, after {dequeueCount} tries");
+                var sum = usersStats.Performance.Select(x => x.InputCount).Sum();
+                Assert.True(sum == 2, $"Can\'t find indexing performance stats, after {dequeueCount} tries. Sum was: {sum}");
             }
         }
     }

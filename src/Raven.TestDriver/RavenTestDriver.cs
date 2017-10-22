@@ -326,7 +326,13 @@ namespace Raven.TestDriver
                 throw new ArgumentNullException(nameof(e));
 
             var msg = $"{DateTime.Now}: {e}\r\n";
-            File.AppendAllText("raven_testdriver.log", msg);
+            try
+            {
+                File.AppendAllText("raven_testdriver.log", msg);
+            }
+            catch (Exception)
+            {
+            }
             Console.WriteLine(msg);
         }
 
@@ -334,12 +340,19 @@ namespace Raven.TestDriver
         {
             if (Debug == false)
                 return;
-
+            
             if (string.IsNullOrWhiteSpace(message))
                 throw new ArgumentNullException(nameof(message));
 
             var msg = $"{DateTime.Now}: {message}\r\n";
-            File.AppendAllText("raven_testdriver.log", msg);
+            try
+            {
+                File.AppendAllText("raven_testdriver.log", msg);
+
+            }
+            catch (Exception)
+            {
+            }
             Console.WriteLine(msg);
         }
 

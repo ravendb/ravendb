@@ -166,6 +166,18 @@ namespace Raven.Client.Documents.Session.Operations
                 _sp.Stop();
                 var msg = $"Waited for {_sp.ElapsedMilliseconds:#,#;;0}ms for the query to return non stale result.";
 
+#if TESTING_HANGS
+                // this code is here because slow tests sometimes how impossible situation
+                // with thread pauses that are very long, likely because of so much work
+                // on the system
+
+                Console.WriteLine(msg);
+                Console.WriteLine(_session.DocumentStore.Database);
+
+                Process.Start(new ProcessStartInfo("cmd", $"/c start \"Stop & look at studio\" \"{_session.DocumentStore.Urls[0]}\"")); // Works ok on windows
+
+                Console.ReadLine();
+#endif
                 throw new TimeoutException(msg);
             }
 

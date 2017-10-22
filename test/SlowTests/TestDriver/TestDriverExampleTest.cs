@@ -45,10 +45,10 @@ namespace SlowTests.TestDriver
 
         private const string DocFromDumpId = "Test/1";
 
-        public TestDriverExampleTest()
-        {
-            Debug = true;
-        }
+        //public TestDriverExampleTest()
+        //{
+        //    Debug = true;
+        //}
 
         private class TestDoc
         {
