@@ -158,6 +158,19 @@ namespace Voron.Data.BTrees
         /// <summary>
         /// This is using little endian
         /// </summary>
+        public long? ReadLong(Slice key)
+        {
+            long? currentValue = null;
+            var read = Read(key);
+            if (read != null)
+                currentValue = *(long*)read.Reader.Base;
+
+            return currentValue;
+        }
+
+        /// <summary>
+        /// This is using little endian
+        /// </summary>
         public bool AddMax(Slice key, long value)
         {
             var read = Read(key);

@@ -9,6 +9,7 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Session;
@@ -126,6 +127,26 @@ namespace FastTests
                     throw new ArgumentNullException(nameof(id));
 
                 var command = new DeleteDocumentCommand(id, changeVector);
+
+                await RequestExecutor.ExecuteAsync(command, Context);
+            }
+
+            public async Task GenerateNextIdentity(string id)
+            {
+                if (id == null)
+                    throw new ArgumentNullException(nameof(id));
+
+                var command = new GenerateNextIdentityCommand(id);
+
+                await RequestExecutor.ExecuteAsync(command, Context);
+            }
+
+            public async Task UpdateNextIdentity(string id, long seed)
+            {
+                if (id == null)
+                    throw new ArgumentNullException(nameof(id));
+
+                var command = new UpdateNextIdentityCommand(id, seed);
 
                 await RequestExecutor.ExecuteAsync(command, Context);
             }

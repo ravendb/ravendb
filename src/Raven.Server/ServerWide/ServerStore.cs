@@ -1206,7 +1206,7 @@ namespace Raven.Server.ServerWide
             return _engine.GetClusterErrorsFromLeader();
         }
 
-        public async Task<(long ClusterEtag, string ClusterId)> GenerateClusterIdentityAsync(string id, string databaseName)
+        public async Task<(long ClusterEtag, string ClusterId, long Index)> GenerateClusterIdentityAsync(string id, string databaseName)
         {
             var (etag, result) = await SendToLeaderAsync(new IncrementClusterIdentityCommand(databaseName, id.ToLower()));
 
@@ -1216,7 +1216,7 @@ namespace Raven.Server.ServerWide
                     $"Expected to get result from raft command that should generate a cluster-wide identity, but didn't. Leader is {LeaderTag}, Current node tag is {NodeTag}.");
             }
 
-            return (etag, id.Substring(0, id.Length - 1) + '/' + result);
+            return (etag, id.Substring(0, id.Length - 1) + '/' + result, (long)result);
         }
 
         public async Task<long> UpdateClusterIdentityAsync(string id, string databaseName, long identity)
@@ -1225,9 +1225,34 @@ namespace Raven.Server.ServerWide
             {
                 [id] = identity
             };
-            (var index, var _) = await SendToLeaderAsync(new UpdateClusterIdentityCommand(databaseName, identities));
 
-            return index;
+            var (_, result) = await SendToLeaderAsync(new UpdateClusterIdentityCommand(databaseName, identities));
+
+            if (result == null)
+            {
+                throw new InvalidOperationException(
+                    $"Expected to get result from raft command that should update a cluster-wide identity, but didn't. Leader is {LeaderTag}, Current node tag is {NodeTag}.");
+            }
+
+            var resultDict = result as Dictionary<string, long> ?? throw new InvalidOperationException(
+                                 $"Expected to get result from raft command that should update a cluster-wide identity, but got invalid result structure for {id}. Leader is {LeaderTag}, Current node tag is {NodeTag}.");
+
+            var fullId = $"db/{databaseName}/Identities/{id}".ToLowerInvariant();
+            if (resultDict.ContainsKey(fullId) == false)
+            {
+                throw new InvalidOperationException(
+                    $"Expected to get result from raft command that should update a cluster-wide identity, but {id} was not in the result list. Leader is {LeaderTag}, Current node tag is {NodeTag}.");
+            }
+
+            var rc = resultDict[fullId];
+
+            if (rc == -1)
+            {
+                throw new InvalidOperationException(
+                    $"Expected to get result from raft command that should update a cluster-wide identity, but {id} was set but not able to be read. shouldn't reach here. Leader is {LeaderTag}, Current node tag is {NodeTag}.");
+            }
+
+            return resultDict[fullId];
         }
 
         public License LoadLicense()

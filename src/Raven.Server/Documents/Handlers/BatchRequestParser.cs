@@ -124,7 +124,7 @@ namespace Raven.Server.Documents.Handlers
 
                     if (commandData.Type == CommandType.PUT && string.IsNullOrEmpty(commandData.Id) == false && commandData.Id[commandData.Id.Length - 1] == '|')
                     {
-                        var (_, id) = await serverStore.GenerateClusterIdentityAsync(commandData.Id, database.Name);
+                        var (_, id, _) = await serverStore.GenerateClusterIdentityAsync(commandData.Id, database.Name);
                         commandData.Id = id;
                     }
 

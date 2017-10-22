@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         }
 
 
-        [RavenAction("/databases/*/identity/next", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
+        [RavenAction("/databases/*/identity/next", "GET", AuthorizationStatus.ValidUser)]
         public async Task NextIdentityFor()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -48,18 +48,15 @@ namespace Raven.Server.Documents.Handlers.Debugging
             if (name[name.Length - 1] != '|')
                 name += '|';
             
-            (var clusterEtag, var clusterId) = await Database.ServerStore.GenerateClusterIdentityAsync(name, Database.Name);
+            var (_, _, id) = await Database.ServerStore.GenerateClusterIdentityAsync(name, Database.Name);
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
 
-                writer.WritePropertyName("ClusterEtag");
-                writer.WriteInteger(clusterEtag);
-                writer.WriteComma();
-                writer.WritePropertyName("ClusterId");
-                writer.WriteString(clusterId);
+                writer.WritePropertyName("Index");
+                writer.WriteInteger(id);
 
                 writer.WriteEndObject();
             }            
