@@ -1,9 +1,8 @@
 //-----------------------------------------------------------------------
-// <copyright file="Expiration.cs" company="Hibernating Rhinos LTD">
+// <copyright file="ExpirationTests.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -63,7 +62,6 @@ namespace FastTests.Server.Documents.Expiration
                 var database = await GetDocumentDatabaseInstanceFor(store);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
                 var expiredDocumentsCleaner = database.ExpiredDocumentsCleaner;
-
                 await expiredDocumentsCleaner.CleanupExpiredDocs();
 
                 using (var session = store.OpenAsyncSession())
@@ -117,6 +115,38 @@ namespace FastTests.Server.Documents.Expiration
 
                 var stats = await store.Admin.SendAsync(new GetStatisticsOperation());
                 Assert.Equal(0, stats.CountOfDocuments);
+            }
+        }
+
+        [Fact]
+        public async Task CanAddEntityWithExpiry_BeforeActivatingExpirtaion_WillNotBeAbleToReadItAfterExpiry()
+        {
+            using (var store = GetDocumentStore())
+            {
+                // Insert document with expiration before activating the expiration
+                var company = new Company { Name = "Company Name" };
+                var expires = SystemTime.UtcNow.AddMinutes(5);
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(company);
+                    var metadata = session.Advanced.GetMetadataFor(company);
+                    metadata[Constants.Documents.Metadata.Expires] = expires.ToString(Default.DateTimeOffsetFormatsToWrite);
+                    await session.SaveChangesAsync();
+                }
+
+                // Activate the expiration
+                await SetupExpiration(store);
+
+                var database = await GetDocumentDatabaseInstanceFor(store);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                var expiredDocumentsCleaner = database.ExpiredDocumentsCleaner;
+                await expiredDocumentsCleaner.CleanupExpiredDocs();
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var company2 = await session.LoadAsync<Company>(company.Id);
+                    Assert.Null(company2);
+                }
             }
         }
     }

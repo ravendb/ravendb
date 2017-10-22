@@ -177,7 +177,7 @@ namespace Raven.Server.Documents
 
                 if (collectionName.IsHiLo == false)
                 {
-                    _documentDatabase.ExpiredDocumentsCleaner?.Put(context, lowerId, document);
+                    _documentsStorage.ExpirationStorage.Put(context, lowerId, document);
                 }
 
                 context.LastDatabaseChangeVector = changeVector;

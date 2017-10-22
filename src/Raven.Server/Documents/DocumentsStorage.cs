@@ -7,6 +7,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Server.Documents.Replication;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.Config;
+using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Storage.Schema;
@@ -177,6 +178,7 @@ namespace Raven.Server.Documents
         public StorageEnvironment Environment { get; private set; }
 
         public RevisionsStorage RevisionsStorage;
+        public ExpirationStorage ExpirationStorage;
         public ConflictsStorage ConflictsStorage;
         public AttachmentsStorage AttachmentsStorage;
         public IdentitiesStorage Identities;
@@ -283,6 +285,7 @@ namespace Raven.Server.Documents
                     CollectionsSchema.Create(tx, CollectionsSlice, 32);
 
                     RevisionsStorage = new RevisionsStorage(_documentDatabase, tx);
+                    ExpirationStorage = new ExpirationStorage(_documentDatabase, tx);
                     Identities = new IdentitiesStorage(_documentDatabase, tx);
                     ConflictsStorage = new ConflictsStorage(_documentDatabase, tx);
                     AttachmentsStorage = new AttachmentsStorage(_documentDatabase, tx);

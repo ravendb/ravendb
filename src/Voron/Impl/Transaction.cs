@@ -355,8 +355,7 @@ namespace Voron.Impl
             tree = Tree.Create(_lowLevelTransaction, this, name, flags);
             tree.State.RootObjectType = type;
 
-            byte* ptr;
-            using (_lowLevelTransaction.RootObjects.DirectAdd(name, sizeof(TreeRootHeader), out ptr))
+            using (_lowLevelTransaction.RootObjects.DirectAdd(name, sizeof(TreeRootHeader), out byte* ptr))
                 tree.State.CopyTo((TreeRootHeader*)ptr);
 
             tree.State.IsModified = true;
