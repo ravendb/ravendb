@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Blittable;
 using FastTests.Client.Attachments;
+using FastTests.Server.Documents.Expiration;
 using FastTests.Server.Documents.Indexing.Static;
 using FastTests.Smuggler;
 using Raven.Client.Documents.Conventions;
@@ -20,10 +21,9 @@ namespace RavenDB4RCTests
     {
         static void Main(string[] args)
         {
-            for (int i = 0; i < 10; i++)
             {
                 var sp = Stopwatch.StartNew();
-                new IndexCompilationTests().Sum_of_elements();
+                new ExpirationTests().CanAddEntityWithExpiry_BeforeActivatingExpirtaion_WillNotBeAbleToReadItAfterExpiry().Wait();
                 Console.WriteLine(sp.Elapsed);
             }
         }
