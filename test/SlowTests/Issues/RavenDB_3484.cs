@@ -22,13 +22,12 @@ namespace SlowTests.Issues
                 const int numberOfClients = 4;
 
                 var subscriptions = new Subscription<User>[numberOfClients];
-                var processed = new ManualResetEventSlim[numberOfClients];
+                var processed = new ManualResetEvent[numberOfClients];
+                var done = new bool[numberOfClients];
                 for (int i = 0; i < numberOfClients; i++)
                 {
-                    processed[i] = new ManualResetEventSlim();
+                    processed[i] = new ManualResetEvent(false);
                 }
-                int? processedClient = null;
-                var done = new ManualResetEventSlim();
 
                 for (int i = 0; i < numberOfClients; i++)
                 {
@@ -47,8 +46,6 @@ namespace SlowTests.Issues
 
                     subscriptions[clientNumber].Run(x =>
                     {
-                        processedClient = clientNumber;
-                        done.Set();
                     });
                 }
 
@@ -60,19 +57,22 @@ namespace SlowTests.Issues
                         s.SaveChanges();
                     }
 
-                    Assert.True(done.Wait(waitForDocTimeout));
 
-                    Assert.True(processed[processedClient.Value].Wait(waitForDocTimeout));
+                    var index = WaitHandle.WaitAny(processed, waitForDocTimeout);
+                    
+                    Assert.NotEqual(WaitHandle.WaitTimeout, index);
+                    
 
-                    subscriptions[processedClient.Value].Dispose();
+                    subscriptions[index].Dispose();
 
-                    processedClient = null;
-                    done.Reset();
+                    done[index] = true;
+
+                    processed[index].Reset();
                 }
 
                 for (int i = 0; i < numberOfClients; i++)
                 {
-                    Assert.True(processed[i].IsSet);
+                    Assert.True(done[i]);
                 }
             }
         }
