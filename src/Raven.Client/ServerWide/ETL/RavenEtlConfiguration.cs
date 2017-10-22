@@ -20,12 +20,12 @@ namespace Raven.Client.ServerWide.ETL
         {
             foreach (var url in Connection.TopologyDiscoveryUrls)
             {
-                if (url.StartsWith("https:", StringComparison.OrdinalIgnoreCase))
+                if (url.StartsWith("http:", StringComparison.OrdinalIgnoreCase))
                 {
-                    return true;
+                    return false;
                 }
             }
-            return false;
+            return true;
         }
 
         public override DynamicJsonValue ToJson()
