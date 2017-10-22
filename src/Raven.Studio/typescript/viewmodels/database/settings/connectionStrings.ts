@@ -6,7 +6,7 @@ import saveConnectionStringCommand = require("commands/database/settings/saveCon
 import getConnectionStringsCommand = require("commands/database/settings/getConnectionStringsCommand");
 import getConnectionStringInfoCommand = require("commands/database/settings/getConnectionStringInfoCommand");
 import deleteConnectionStringCommand = require("commands/database/settings/deleteConnectionStringCommand");
-import testSqlConnectionStringCommand = require("commands/database/cluster/testSqlConnectionStringCommand");
+import ongoingTaskModel = require("models/database/tasks/ongoingTaskModel");
 import ongoingTasksCommand = require("commands/database/tasks/getOngoingTasksCommand");
 import eventsCollector = require("common/eventsCollector");
 import generalUtils = require("common/generalUtils");
@@ -76,7 +76,10 @@ class connectionStrings extends viewModelBase {
         
         for (let i = 0; i < tasksThatUseConnectionStrings.length; i++) {
             const task = tasksThatUseConnectionStrings[i];
-            const taskData = { TaskId: task.TaskId, TaskName: task.TaskName, TaskType: task.TaskType };     
+            
+            let taskData = { TaskId: task.TaskId,
+                TaskName: !task.TaskName ? ongoingTaskModel.generateTaskName(task): task.TaskName,
+                TaskType: task.TaskType };
             let stringName: string;
             
             switch (task.TaskType) {                
