@@ -5,6 +5,7 @@
         Id,
         Search,
         Boost,
+        Regex,
         StartsWith,
         EndsWith,
         Lucene,
@@ -22,6 +23,6 @@
         Disjoint,
         Intersects,
 
-        Unknown
+        Unknown,
     }
 }

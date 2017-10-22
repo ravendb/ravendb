@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Lucene.Net.Analysis;
+using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Spatial.Queries;
 using Microsoft.Extensions.Primitives;
@@ -228,6 +229,8 @@ namespace Raven.Server.Documents.Queries
                         return HandleSearch(query, me, metadata, parameters, analyzer);
                     case MethodType.Boost:
                         return HandleBoost(context, query, me, metadata, parameters, analyzer, getSpatialField, exact);
+                    case MethodType.Regex:
+                        return HandleRegex(query, me, metadata, parameters);
                     case MethodType.StartsWith:
                         return HandleStartsWith(query, me, metadata, parameters);
                     case MethodType.EndsWith:
@@ -422,6 +425,23 @@ namespace Raven.Server.Documents.Queries
             q.Boost = boost;
 
             return q;
+        }
+
+        private static Lucene.Net.Search.Query HandleRegex(Query query, MethodExpression expression, QueryMetadata metadata,
+            BlittableJsonReaderObject parameters)
+        {
+
+            var regex = ((ValueExpression)expression.Arguments[1]).Token.Value;
+
+            var fieldName = ExtractIndexFieldName(query, parameters, expression.Arguments[0], metadata);
+            var (value, valueType) = GetValue(fieldName, query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
+
+            if (valueType != ValueTokenType.String)
+                ThrowMethodExpectsArgumentOfTheFollowingType("regex", ValueTokenType.String, valueType, metadata.QueryText, parameters);
+
+            var valueAsString = GetValueAsString(value);
+            //TODO: return always false query if string is empty or null
+            return new RegexQuery(new Term(fieldName, valueAsString));            
         }
 
         private static Lucene.Net.Search.Query HandleSearch(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters,

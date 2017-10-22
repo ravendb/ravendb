@@ -926,6 +926,7 @@ namespace Raven.Server.Documents.Queries
                     case MethodType.StartsWith:
                     case MethodType.EndsWith:
                     case MethodType.Search:
+                    case MethodType.Regex:
                     case MethodType.Lucene:
                         fieldName = _metadata.ExtractFieldNameFromFirstArgument(arguments, methodName, parameters);
 
