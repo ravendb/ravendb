@@ -255,16 +255,5 @@ namespace Raven.Client
                 public const string DatabasesMappingKey = "monitoring/snmp/databases/mapping";
             }
         }
-
-        internal class Schemas
-        {
-            public const int ServerVersion = 10;
-
-            public const int ConfigurationVersion = 10;
-
-            public const int DocumentsVersion = 11;
-
-            public const int IndexVersion = 10;
-        }
     }
 }

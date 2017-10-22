@@ -42,6 +42,7 @@ using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
+using Raven.Server.Storage.Schema;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
@@ -355,7 +356,8 @@ namespace Raven.Server.ServerWide
                     Logger.Info("An error occurred while trying to determine Is Swapping On Hdd Instead Of Ssd", e);
             }
 
-            options.SchemaVersion = Constants.Schemas.ServerVersion;
+            options.SchemaVersion = SchemaUpgrader.CurrentVersion.ServerVersion;
+            options.SchemaUpgrader = SchemaUpgrader.Upgrader(SchemaUpgrader.StorageType.Server, null, null);
             options.ForceUsing32BitsPager = Configuration.Storage.ForceUsing32BitsPager;
             try
             {

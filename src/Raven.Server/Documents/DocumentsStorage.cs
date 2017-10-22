@@ -3,14 +3,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
-using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Server.Documents.Replication;
 using Raven.Client.Exceptions.Documents;
-using Raven.Client.ServerWide.Revisions;
 using Raven.Server.Config;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Storage.Schema;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Voron;
@@ -28,10 +27,10 @@ namespace Raven.Server.Documents
     public unsafe class DocumentsStorage : IDisposable
     {
         private static readonly Slice DocsSlice;
-        private static readonly Slice CollectionEtagsSlice;
+        public static readonly Slice CollectionEtagsSlice;
         private static readonly Slice AllDocsEtagsSlice;
         private static readonly Slice TombstonesSlice;
-        private static readonly Slice CollectionsSlice;
+        public static readonly Slice CollectionsSlice;
         private static readonly Slice LastReplicatedEtagsSlice;
         private static readonly Slice EtagsSlice;
         private static readonly Slice LastEtagSlice;
@@ -48,7 +47,7 @@ namespace Raven.Server.Documents
         };
 
         public static readonly TableSchema TombstonesSchema = new TableSchema();
-        private static readonly TableSchema CollectionsSchema = new TableSchema();
+        public static readonly TableSchema CollectionsSchema = new TableSchema();
 
         private readonly DocumentDatabase _documentDatabase;
 
@@ -264,11 +263,12 @@ namespace Raven.Server.Documents
 
         public void Initialize(StorageEnvironmentOptions options)
         {
-            options.SchemaVersion = Constants.Schemas.DocumentsVersion;
+            options.SchemaVersion = SchemaUpgrader.CurrentVersion.DocumentsVersion;
+            options.SchemaUpgrader = SchemaUpgrader.Upgrader(SchemaUpgrader.StorageType.Documents, null, this);
             try
             {
-                Environment = new StorageEnvironment(options);
                 ContextPool = new DocumentsContextPool(_documentDatabase);
+                Environment = new StorageEnvironment(options);
 
                 using (var tx = Environment.WriteTransaction())
                 {

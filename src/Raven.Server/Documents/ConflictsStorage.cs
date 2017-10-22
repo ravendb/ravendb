@@ -43,7 +43,7 @@ namespace Raven.Server.Documents
 
         public long ConflictsCount;
 
-        private enum ConflictsTable
+        public enum ConflictsTable
         {
             LowerId = 0,
             RecordSeparator = 1,
