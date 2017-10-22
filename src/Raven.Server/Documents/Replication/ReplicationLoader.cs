@@ -577,20 +577,19 @@ namespace Raven.Server.Documents.Replication
             return null;
         }
 
-        public (string Url, OngoingTaskReplication.ReplicationStatus Status) GetExternalReplicationDestination(long taskId)
+        public (string Url, OngoingTaskConnectionStatus Status) GetExternalReplicationDestination(long taskId)
         {
-            // this is thread-safe because OutgoingConnections and ReconnectQueue getting a snapshot of the collections
-            foreach (var outgoing in OutgoingConnections) 
+            foreach (var outgoing in OutgoingConnections)
             {
                 if (outgoing is ExternalReplication ex && ex.TaskId == taskId)
-                    return (ex.Url, OngoingTaskReplication.ReplicationStatus.Active);
+                    return (ex.Url, OngoingTaskConnectionStatus.Active);
             }
             foreach (var reconnect in ReconnectQueue)
             {
                 if (reconnect is ExternalReplication ex && ex.TaskId == taskId)
-                    return (ex.Url, OngoingTaskReplication.ReplicationStatus.Reconnect);
+                    return (ex.Url, OngoingTaskConnectionStatus.Reconnect);
             }
-            return (null, OngoingTaskReplication.ReplicationStatus.None);
+            return (null, OngoingTaskConnectionStatus.NotActive);
         }
 
         private void OnIncomingReceiveFailed(IncomingReplicationHandler instance, Exception e)

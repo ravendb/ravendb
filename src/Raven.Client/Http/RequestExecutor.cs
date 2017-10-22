@@ -481,7 +481,7 @@ namespace Raven.Client.Http
                 var url = initialUrls[index];
                 if (Uri.TryCreate(url, UriKind.Absolute, out var uri) == false)
                     throw new InvalidOperationException("The url '" + url + "' is not valid");
-                cleanUrls[index] = uri.ToString().TrimEnd('/');
+                cleanUrls[index] = uri.ToString().TrimEnd('/', ' ');
                 requireHttps |= string.Equals(uri.Scheme, "https", StringComparison.OrdinalIgnoreCase);
             }
 
