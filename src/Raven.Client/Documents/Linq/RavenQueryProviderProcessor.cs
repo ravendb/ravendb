@@ -1691,6 +1691,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     new JavascriptConversionExtensions.DateTimeSupport(),
                     new JavascriptConversionExtensions.NullCoalescingSupport(),
                     new JavascriptConversionExtensions.NestedConditionalSupport(),
+                    new JavascriptConversionExtensions.StringSupport(),
+                    new JavascriptConversionExtensions.CharSupport(),
                     loadSupport));
 
             if (_fromAlias == null)
@@ -1833,7 +1835,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     new JavascriptConversionExtensions.InvokeSupport(),
                     new JavascriptConversionExtensions.DateTimeSupport(),
                     new JavascriptConversionExtensions.NullCoalescingSupport(),
-                    new JavascriptConversionExtensions.NestedConditionalSupport()
+                    new JavascriptConversionExtensions.NestedConditionalSupport(),
+                    new JavascriptConversionExtensions.StringSupport(),
+                    new JavascriptConversionExtensions.CharSupport()
                     ));
 
             if (expression.Type == typeof(TimeSpan) && expression.NodeType != ExpressionType.MemberAccess)

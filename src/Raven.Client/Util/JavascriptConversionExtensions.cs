@@ -483,6 +483,26 @@ namespace Raven.Client.Util
             }
         }
 
+        public class CharSupport : JavascriptConversionExtension
+        {
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                if (!(context.Node is ConstantExpression nodeAsConst) ||
+                    nodeAsConst.Type != typeof(char))
+                    return;
+
+                context.PreventDefault();
+                var writer = context.GetWriter();
+
+                using (writer.Operation(nodeAsConst))
+                {
+                    writer.Write("\"");
+                    writer.Write(nodeAsConst.Value);
+                    writer.Write("\"");
+                }
+            }
+        }
+
         public class NullCoalescingSupport : JavascriptConversionExtension
         {
             public override void ConvertToJavascript(JavascriptConversionContext context)
@@ -527,5 +547,78 @@ namespace Raven.Client.Util
                 }
             }
         }
+
+        public class StringSupport : JavascriptConversionExtension
+        {
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                if (!(context.Node is MethodCallExpression mce) || mce.Method.DeclaringType != typeof(string))
+                    return;
+
+                string newName;
+                switch (mce.Method.Name)
+                {
+                    case "PadLeft":
+                        newName = "padStart";
+                        break;
+                    case "PadRight":
+                        newName = "padEnd";
+                        break;
+                    case "Substring":
+                        newName = "substr";
+                        break;
+                    case "Join":
+                        newName = "join";
+                        break;
+                    default:
+                        return;
+
+                }
+
+                var writer = context.GetWriter();
+                context.PreventDefault();
+
+                using (writer.Operation(mce))
+                {
+                    if (newName == "join")
+                    {
+                        if (mce.Arguments.Count > 2)
+                        {
+                            writer.Write("[");
+
+                            for (int i = 1; i < mce.Arguments.Count; i++)
+                            {
+                                if (i != 1)
+                                {
+                                    writer.Write(", ");
+                                }
+                                context.Visitor.Visit(mce.Arguments[i]);
+                            }
+
+                            writer.Write("]");
+                        }
+                        else
+                        {
+                            context.Visitor.Visit(mce.Arguments[1]);
+                        }
+                    }
+                    else
+                    {
+                        context.Visitor.Visit(mce.Object);
+                    }
+                    writer.Write($".{newName}(");
+                    context.Visitor.Visit(mce.Arguments[0]);
+
+                    if (mce.Arguments.Count > 1 && newName != "join")
+                    {
+                        writer.Write(", ");
+                        context.Visitor.Visit(mce.Arguments[1]);
+                    }
+
+                    writer.Write(")");
+                }
+            }
+        }
+
     }
 }
