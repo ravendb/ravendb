@@ -2,16 +2,14 @@
     <div class="row flex-row absolute-fill">
         <div class="col-xs-12 col-lg-6 flex-vertical">
             <form class="flex-form" data-bind="submit: saveSqlEtl">
-                
                 <div class="flex-header">
-                    <button type="submit" class="btn btn-primary" data-bind="enable: $root.dirtyFlag().isDirty">
+                    <button type="submit" class="btn btn-primary" data-bind="enable: $root.dirtyFlag().isDirty, disable: $root.spinners.save(), css: { 'btn-spinner': $root.spinners.save }">
                         <i class="icon-save"></i><span>Save</span>
                     </button>
                     <button data-bind="click: cancelOperation" class="btn btn-default">
                         <i class="icon-cancel"></i><span>Cancel</span>
                     </button>
                 </div>
-            
                 <div class="panel">
                     <div data-bind="with: editedSqlEtl">
                         <div class="panel-body">                       
@@ -25,27 +23,41 @@
                             </div>
                             <div class="form-group">
                                 <label class="control-label">&nbsp;</label>
-                                <div class="toggle" data-placement="left" data-toggle="tooltip" title="Mentor node is responsible for given ongoing task">
+                                <div class="toggle" data-placement="left" data-toggle="tooltip" title="Mentor node is responsible for the ongoing task">
                                     <input id="manualMentorSelection" type="checkbox" data-bind="checked: manualChooseMentor">
                                     <label for="manualMentorSelection">Choose preferred mentor node manually</label>
                                 </div>
-                            </div>
-                            <div class="form-group" data-bind="validationElement: preferredMentor, visible: manualChooseMentor">
-                                <div>
-                                    <label class="control-label">Preferred mentor</label>
+                            </div>                            
+                            <div data-bind="validationElement: preferredMentor, collapse: manualChooseMentor"> 
+                                <div class="form-group">
+                                    <div>
+                                        <label class="control-label">Preferred mentor</label>
+                                    </div>
+                                    <div class="flex-grow"> 
+                                        <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
+                                            <span data-bind="text: preferredMentor() ? 'Node ' + preferredMentor() : 'Select preferred mentor'"></span>
+                                            <span class="caret"></span>
+                                        </button>
+                                        <ul class="dropdown-menu" data-bind="foreach: $root.possibleMentors">
+                                            <li><a href="#" data-bind="text: 'Node ' + $data, click: $parent.preferredMentor.bind($parent.preferredMentor, $data)"></a></li>
+                                        </ul>
+                                        <span class="help-block" data-bind="validationMessage: preferredMentor"></span>
+                                    </div>
                                 </div>
-                                <div class="flex-grow">
-                                    <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
-                                        <span data-bind="text: preferredMentor() ? 'Node ' + preferredMentor() : 'Select preferred mentor'"></span>
-                                        <span class="caret"></span>
-                                    </button>
-                                    <ul class="dropdown-menu" data-bind="foreach: $root.possibleMentors">
-                                        <li><a href="#" data-bind="text: 'Node ' + $data, click: $parent.preferredMentor.bind($parent.preferredMentor, $data)"></a></li>
-                                    </ul>
-                                    <span class="help-block" data-bind="validationMessage: preferredMentor"></span>
+                            </div>
+                            <div class="form-group">
+                                <label class="control-label">&nbsp;</label>
+                                <div class="toggle">
+                                    <input id="createNewString" type="checkbox" data-bind="checked: $root.createNewConnectionString">
+                                    <label for="createNewString">Create new SQL connection string</label>
+                                </div>                               
+                            </div>
+                            <div data-bind="collapse: $root.createNewConnectionString, with: $root.newConnectionString"> <!-- validation element ??? --> 
+                                <div class="form-group">
+                                    <div class="flex-grow" data-bind="compose: 'database/settings/connectionStringSql.html'"></div>                                    
                                 </div>
                             </div>
-                            <div class="form-group" data-bind="validationOptions: { insertMessages: false }, validationElement: connectionStringName">
+                            <div class="form-group" data-bind="validationOptions: { insertMessages: false }, validationElement: connectionStringName, visible: !$root.createNewConnectionString()">
                                 <label class="control-label">Connection String</label>
                                 <div class="flex-grow">
                                     <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown"
@@ -69,8 +81,10 @@
                                     </button>
                                 </div>
                                 <div>
-                                    <button class="btn btn-default btn-info" title="Test the connection string connection"
-                                            data-bind="click: $root.testConnection, disable: !connectionStringName() || $root.spinners.test(), css: { 'btn-spinner': $root.spinners.test }">
+                                    <button class="btn btn-default btn-info" title="Test the New connection string connection"
+                                            data-bind="click: $root.testConnection, disable: (!$root.createNewConnectionString() && !connectionStringName()) || 
+                                                                                              ($root.createNewConnectionString() && !$root.newConnectionString().connectionString()) ||
+                                                                                               $root.spinners.test(), css: { 'btn-spinner': $root.spinners.test }">
                                         <i class="icon-rocket"></i>
                                         <span>Test Connection</span>
                                     </button>
@@ -154,7 +168,7 @@
                         <div class="padding padding-sm flex-horizontal item">
                             <div class="row flex-grow">
                                 <div class="col-sm-4">
-                                    <div class="widthlabel"><label class="superscript">Table</label><strong data-bind="text: tableName"></strong><span class="text-warning" data-bind="visible: dirtyFlag().isDirty">*</span></div>
+                                    <div class="widthlabel"><label class="superscript">Table</label><strong data-bind="text: tableName"></strong><span class="text-warning" data-bind="visible: dirtyFlag().isDirty">&nbsp;*</span></div>
                                 </div>
                                 <div class="col-sm-4">
                                     <div class="widthlabel"><label class="superscript">Document Id Column</label><strong data-bind="text: documentIdColumn"></strong></div>

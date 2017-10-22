@@ -1,5 +1,8 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 import connectionStringModel = require("models/database/settings/connectionStringModel");
+import database = require("models/resources/database");
+import testSqlConnectionStringCommand = require("commands/database/cluster/testSqlConnectionStringCommand");
+import saveConnectionStringCommand = require("commands/database/settings/saveConnectionStringCommand");
 
 class connectionStringSqlEtlModel extends connectionStringModel {
     
@@ -57,6 +60,16 @@ class connectionStringSqlEtlModel extends connectionStringModel {
             Name: this.connectionStringName(),
             ConnectionString: this.connectionString()
         };
+    }
+    
+    testConnection(db: database) : JQueryPromise<Raven.Server.Web.System.NodeConnectionTestResult> {
+        return new testSqlConnectionStringCommand(db, this.connectionString())
+            .execute();
+    }
+
+    saveConnectionString(db: database) : JQueryPromise<void> {
+        return new saveConnectionStringCommand(db, this)
+            .execute();
     }
 }
 

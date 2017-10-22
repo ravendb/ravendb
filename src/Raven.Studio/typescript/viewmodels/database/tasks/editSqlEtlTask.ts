@@ -13,7 +13,7 @@ import ongoingTaskSqlEtlTransformationModel = require("models/database/tasks/ong
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import transformationScriptSyntax = require("viewmodels/database/tasks/transformationScriptSyntax");
 import ongoingTaskSqlEtlTableModel = require("models/database/tasks/ongoingTaskSqlEtlTableModel");
-import testSqlConnectionStringCommand = require("commands/database/cluster/testSqlConnectionStringCommand");
+import connectionStringSqlEtlModel = require("models/database/settings/connectionStringSqlEtlModel");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
 import jsonUtil = require("common/jsonUtil");
@@ -35,7 +35,8 @@ class editSqlEtlTask extends viewModelBase {
     testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
     
     spinners = {
-        test: ko.observable<boolean>(false)
+        test: ko.observable<boolean>(false),
+        save: ko.observable<boolean>(false)
     };
     
     fullErrorDetailsVisible = ko.observable<boolean>(false);
@@ -46,6 +47,9 @@ class editSqlEtlTask extends viewModelBase {
     showAdvancedOptions = ko.observable<boolean>(false);
     showEditTransformationArea: KnockoutComputed<boolean>;
     showEditSqlTableArea: KnockoutComputed<boolean>;
+
+    createNewConnectionString = ko.observable<boolean>(false);
+    newConnectionString = ko.observable<connectionStringSqlEtlModel>(); 
 
     constructor() {
         super();
@@ -145,6 +149,14 @@ class editSqlEtlTask extends viewModelBase {
         this.showEditTransformationArea = ko.pureComputed(() => !!this.editedTransformationScriptSandbox());
         
         this.initDirtyFlag();
+        
+        this.createNewConnectionString.subscribe((createNew) => {
+            if (createNew) {
+                this.dirtyFlag().forceDirty();
+            }
+        });
+
+        this.newConnectionString(connectionStringSqlEtlModel.empty());
     }
     
     private initDirtyFlag() {
@@ -196,50 +208,82 @@ class editSqlEtlTask extends viewModelBase {
     testConnection() {
         eventsCollector.default.reportEvent("SQL-ETL-connection-string", "test-connection");
         this.spinners.test(true);
-
-        getConnectionStringInfoCommand.forSqlEtl(this.activeDatabase(), this.editedSqlEtl().connectionStringName())
-            .execute()
-            .done((result: Raven.Client.ServerWide.ETL.SqlConnectionString) => {
-                new testSqlConnectionStringCommand(this.activeDatabase(), result.ConnectionString)
-                    .execute()
-                    .done(result => this.testConnectionResult(result))
-                    .always(() => this.spinners.test(false));
-            });
+        
+        // New connection string
+        if (this.createNewConnectionString()) {
+            this.newConnectionString()
+                .testConnection(this.activeDatabase())
+                .done((testResult) => this.testConnectionResult(testResult))
+                .always(()=> this.spinners.test(false));
+        }
+        else {
+            // Existing connection string
+            getConnectionStringInfoCommand.forSqlEtl(this.activeDatabase(), this.editedSqlEtl().connectionStringName())
+                .execute()
+                .done((result: Raven.Client.ServerWide.ETL.SqlConnectionString) => {                       
+                       new connectionStringSqlEtlModel(result, true, [])
+                            .testConnection(this.activeDatabase())
+                            .done((testResult) => this.testConnectionResult(testResult))
+                            .always(() => this.spinners.test(false));
+                });                        
+        }    
     }
 
     saveSqlEtl() {
         let hasAnyErrors = false;
-
+        this.spinners.save(true);
+        
+        // 1. Validate *edited sql table*
         if (this.showEditSqlTableArea()) {
-            if (!this.isValid(this.editedSqlTable().validationGroup)) {
-                // we have some errors in edited sql table
+            if (!this.isValid(this.editedSqlTable().validationGroup)) {                
                 hasAnyErrors = true;
             } else {
                 this.saveEditedSqlTable();
             }
         }
         
+        // 2. Validate *edited transformation script*
         if (this.showEditTransformationArea()) {
             if (!this.isValid(this.editedTransformationScriptSandbox().validationGroup)) {
-                // we have some errors in edited transformation script
-                hasAnyErrors = true;
+                hasAnyErrors = true;  
             } else {
                 this.saveEditedTransformation();
             }
         }
         
-        if (!this.isValid(this.editedSqlEtl().validationGroup)) {
-            // we have some error in general form
-            hasAnyErrors = true;
-        }
+        // 2.5 Validate *new connection string* (if relevant..)
+        let savingNewStringAction = $.Deferred<void>();        
+        if (this.createNewConnectionString()) {
+            if (!this.isValid(this.newConnectionString().validationGroup)) {
+                hasAnyErrors = true;  
+            } 
+            else {               
+                // Save & use the new connection string
+                this.newConnectionString()
+                    .saveConnectionString(this.activeDatabase())
+                    .done(() => { 
+                        this.editedSqlEtl().connectionStringName(this.newConnectionString().connectionStringName());
+                        savingNewStringAction.resolve();
+                     });   
+            } 
+        } 
+        else {
+            savingNewStringAction.resolve();
+        }       
+        
+        // 3. Validate *general form*
+        savingNewStringAction.done(() => {
+            if (!this.isValid(this.editedSqlEtl().validationGroup)) {
+                hasAnyErrors = true;
+            }
+        });
         
         if (hasAnyErrors) {
-            // at least one section contains errors 
+            this.spinners.save(false);
             return false;
         }
 
-        // validation completed - try to save opened sections (if any)
-        
+        // 4. Validation is OK - Save opened sections (if any)        
         if (this.showEditTransformationArea()) {
             this.saveEditedTransformation();
         }
@@ -248,14 +292,17 @@ class editSqlEtlTask extends viewModelBase {
             this.saveEditedSqlTable();
         }
         
-        // convert form to dto and send collected data to server 
-        const dto = this.editedSqlEtl().toDto();
-        saveEtlTaskCommand.forSqlEtl(this.activeDatabase(), dto)
-            .execute()
-            .done(() => {
-                this.dirtyFlag().reset();
-                this.goToOngoingTasksView();
-            });
+        // 5. Convert form to dto and send collected data to server
+        savingNewStringAction.done(()=> {
+            const dto = this.editedSqlEtl().toDto();
+            saveEtlTaskCommand.forSqlEtl(this.activeDatabase(), dto)
+                .execute()
+                .done(() => {
+                    this.dirtyFlag().reset();
+                    this.goToOngoingTasksView();
+                 })    
+                .always(() => this.spinners.save(false));
+        });      
     }
 
     cancelOperation() {

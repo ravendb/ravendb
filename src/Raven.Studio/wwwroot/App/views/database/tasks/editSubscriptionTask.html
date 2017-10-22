@@ -37,7 +37,6 @@
                                 <input type="text" class="form-control" id="taskName" placeholder="Enter a descriptive name for the subscription task (optional)" title="Note: if no name is supplied then server will create one for you"
                                        data-bind="textInput: taskName, attr: { disabled: !$root.isAddingNewSubscriptionTask() }" autocomplete="off" >
                             </div>
-    
                             <label>Subscription RQL:</label>
                             <div class="pull-right"><a href="#" data-bind="click: $root.syntaxHelp"><small>Syntax help</small></a></div>
                             <pre class="form-control margin-top" placeholder="Enter transform script" 
@@ -54,25 +53,27 @@
                                     <label for="use-starting-point">Use defined starting point</label>
                                 </div>
                             </div>
-                            <div class="form-group" data-bind="visible: setStartingPoint">
-                                <label class="control-label">Send Documents From :</label>
-                                <div class="flex-grow">
-                                    <div title="Set the starting point for the subscription task">
-                                        <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
-                                            <span data-bind="text: startingPointType"></span>
-                                            <span class="caret"></span>
-                                        </button>
-                                        <ul class="dropdown-menu max-height">
-                                            <li title="Documents will be sent from the very first document in the collection">
-                                                <a href="#" data-bind="click: _.partial($root.setStartingPointType, 'Beginning of Time')">Begining of Time</a>
-                                            </li>
-                                            <li title="Documents will be sent from the latest document in the collection">
-                                                <a href="#" data-bind="click: _.partial($root.setStartingPointType, 'Latest Document')">Latest Document</a>
-                                            </li>
-                                            <li title="Documents will be sent from the specified change vector related document">
-                                                <a href="#" data-bind="click: _.partial($root.setStartingPointType, 'Change Vector')">Change Vector</a>
-                                            </li>
-                                        </ul>
+                            <div data-bind="collapse: setStartingPoint">
+                                <div class="form-group">
+                                    <label class="control-label">Send Documents From :</label>
+                                    <div class="flex-grow">
+                                        <div title="Set the starting point for the subscription task">
+                                            <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
+                                                <span data-bind="text: startingPointType"></span>
+                                                <span class="caret"></span>
+                                            </button>
+                                            <ul class="dropdown-menu max-height">
+                                                <li title="Documents will be sent from the very first document in the collection">
+                                                    <a href="#" data-bind="click: _.partial($root.setStartingPointType, 'Beginning of Time')">Begining of Time</a>
+                                                </li>
+                                                <li title="Documents will be sent from the latest document in the collection">
+                                                    <a href="#" data-bind="click: _.partial($root.setStartingPointType, 'Latest Document')">Latest Document</a>
+                                                </li>
+                                                <li title="Documents will be sent from the specified change vector related document">
+                                                    <a href="#" data-bind="click: _.partial($root.setStartingPointType, 'Change Vector')">Change Vector</a>
+                                                </li>
+                                            </ul>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -85,25 +86,26 @@
                                 </div>
                             </div>
                             <div class="form-group">
-                                <div class="toggle" data-placement="top" data-toggle="tooltip" title="Mentor node is responsible for given ongoing task">
+                                <div class="toggle" data-placement="top" data-toggle="tooltip" title="Mentor node is responsible for the ongoing task">
                                     <input id="toggle3" type="checkbox" data-bind="checked: manualChooseMentor">
                                     <label for="toggle3">Choose preferred mentor node manually</label>
                                 </div>
                             </div>
-    
-                            <div class="form-group" data-bind="validationElement: preferredMentor, visible: manualChooseMentor">
-                                <div>
-                                    <label class="control-label">Preferred mentor</label>
-                                </div>
-                                <div class="flex-grow">
-                                    <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
-                                        <span data-bind="text: preferredMentor() ? 'Node ' + preferredMentor() : 'Select preferred mentor'"></span>
-                                        <span class="caret"></span>
-                                    </button>
-                                    <ul class="dropdown-menu" data-bind="foreach: $root.possibleMentors">
-                                        <li><a href="#" data-bind="text: 'Node ' + $data, click: $parent.preferredMentor.bind($parent.preferredMentor, $data)"></a></li>
-                                    </ul>
-                                    <span class="help-block" data-bind="validationMessage: preferredMentor"></span>
+                            <div data-bind="validationElement: preferredMentor, collapse: manualChooseMentor">
+                                <div class="for-group">
+                                    <div>
+                                        <label class="control-label">Preferred mentor</label>
+                                    </div>
+                                    <div class="flex-grow">
+                                        <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
+                                            <span data-bind="text: preferredMentor() ? 'Node ' + preferredMentor() : 'Select preferred mentor'"></span>
+                                            <span class="caret"></span>
+                                        </button>
+                                        <ul class="dropdown-menu" data-bind="foreach: $root.possibleMentors">
+                                            <li><a href="#" data-bind="text: 'Node ' + $data, click: $parent.preferredMentor.bind($parent.preferredMentor, $data)"></a></li>
+                                        </ul>
+                                        <span class="help-block" data-bind="validationMessage: preferredMentor"></span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -137,7 +139,6 @@
                             </div>
                         </div>
                     </div>
-                    
                     <div class="clearfix">
                         <div class="pull-right">
                             <div class="btn-group dropdown-right open">
@@ -151,7 +152,6 @@
                             </div>
                         </div>
                     </div>
-
                     <div class="flex-grow scroll">
                         <div class="objects-list-container">
                             <virtual-grid class="resizable" params="controller: gridController, emptyTemplate: 'empty-test-results-template'"></virtual-grid>
