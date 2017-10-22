@@ -312,6 +312,8 @@ namespace Voron
 
         private void UpgradeSchemaIfRequired()
         {
+            int schemaVersionVal;
+
             var readPersistentContext = new TransactionPersistentContext(true);
             using (var readTxInner = NewLowLevelTransaction(readPersistentContext, TransactionFlags.Read))
             using (var readTx = new Transaction(readTxInner))
@@ -322,19 +324,20 @@ namespace Voron
                 if (schemaVersion == null)
                     VoronUnrecoverableErrorException.Raise(this, "Could not find schema version in metadata tree, possible mismatch / corruption?");
 
-                var schemaVersionVal = schemaVersion.Reader.ReadLittleEndianInt32();
-                if (Options.SchemaVersion != 0 &&
-                    schemaVersionVal != Options.SchemaVersion)
-                {
-                    if (schemaVersionVal > Options.SchemaVersion)
-                        ThrowSchemaUpgradeRequired(schemaVersionVal, "You have a schema version is newer than the current supported version.");
+                schemaVersionVal = schemaVersion.Reader.ReadLittleEndianInt32();
+            }
 
-                    Func<Transaction, Transaction, int, bool> upgrader = Options.SchemaUpgrader;
-                    if (upgrader == null)
-                        ThrowSchemaUpgradeRequired(schemaVersionVal, "You need to upgrade the schema but there is no schema uprader provided.");
+            if (Options.SchemaVersion != 0 &&
+                schemaVersionVal != Options.SchemaVersion)
+            {
+                if (schemaVersionVal > Options.SchemaVersion)
+                    ThrowSchemaUpgradeRequired(schemaVersionVal, "You have a schema version is newer than the current supported version.");
 
-                    UpgradeSchema(schemaVersionVal, upgrader);
-                }
+                Func<Transaction, Transaction, int, bool> upgrader = Options.SchemaUpgrader;
+                if (upgrader == null)
+                    ThrowSchemaUpgradeRequired(schemaVersionVal, "You need to upgrade the schema but there is no schema uprader provided.");
+
+                UpgradeSchema(schemaVersionVal, upgrader);
             }
         }
 
