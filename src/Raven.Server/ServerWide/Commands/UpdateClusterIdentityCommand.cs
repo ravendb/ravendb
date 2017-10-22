@@ -37,7 +37,7 @@ namespace Raven.Server.ServerWide.Commands
 
         public override void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, bool isPassive, out object result)
         {
-            result = null;
+            var resultDict = new Dictionary<string, long>();
             var identities = context.Transaction.InnerTransaction.ReadTree(ClusterStateMachine.Identities);
 
             foreach (var kvp in Identities)
@@ -46,9 +46,28 @@ namespace Raven.Server.ServerWide.Commands
 
                 using (Slice.From(context.Allocator, itemKey, out var key))
                 {
-                    identities.AddMax(key, kvp.Value);
+                    var isSet = identities.AddMax(key, kvp.Value);
+                    long val;
+                    if (isSet)
+                    {
+                        val = kvp.Value;
+                    }
+                    else
+                    {
+                        var rc = identities.ReadLong(key);
+                        val = rc ?? -1;
+                    }
+
+                    var keyString = key.ToString().ToLowerInvariant();
+                    if (resultDict.TryAdd(keyString, val) == false)
+                    {
+                        if (val > resultDict[keyString])
+                            resultDict[keyString] = val;
+                    }
                 }
             }
+
+            result = resultDict;
         }
 
         public override void FillJson(DynamicJsonValue json)

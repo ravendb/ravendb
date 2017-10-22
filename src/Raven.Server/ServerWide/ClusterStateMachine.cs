@@ -155,7 +155,8 @@ namespace Raven.Server.ServerWide
                             return;
                         }
 
-                        SetValueForTypedDatabaseCommand(context, type, cmd, index, leader, out _);
+                        SetValueForTypedDatabaseCommand(context, type, cmd, index, leader, out result);
+                        leader?.SetStateOf(index, result);
                         break;
                     case nameof(PutIndexCommand):
                     case nameof(PutAutoIndexCommand):
