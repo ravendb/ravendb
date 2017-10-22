@@ -96,7 +96,8 @@ namespace Raven.Client.Documents.Subscriptions
                         new JavascriptConversionExtensions.ReplaceParameterWithThis { Parameter = predicate.Parameters[0] },
                         new JavascriptConversionExtensions.DateTimeSupport(),
                         new JavascriptConversionExtensions.InvokeSupport(),
-                        new JavascriptConversionExtensions.NullCoalescingSupport()
+                        new JavascriptConversionExtensions.NullCoalescingSupport(),
+                        new JavascriptConversionExtensions.NestedConditionalSupport()
                     ));
                 criteria.Query = "declare function predicate () {\r\n\t return " + 
                     script + "\r\n}\r\n" + criteria.Query + "\r\n" + 
@@ -112,7 +113,8 @@ namespace Raven.Client.Documents.Subscriptions
                         new JavascriptConversionExtensions.BooleanSupport(),
                         new JavascriptConversionExtensions.DateTimeSupport(),
                         new JavascriptConversionExtensions.InvokeSupport(),
-                        new JavascriptConversionExtensions.NullCoalescingSupport()
+                        new JavascriptConversionExtensions.NullCoalescingSupport(),
+                        new JavascriptConversionExtensions.NestedConditionalSupport()
                     ));
                 criteria.Query += Environment.NewLine + "select " + script;
             }

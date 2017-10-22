@@ -1690,6 +1690,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     new JavascriptConversionExtensions.InvokeSupport(),
                     new JavascriptConversionExtensions.DateTimeSupport(),
                     new JavascriptConversionExtensions.NullCoalescingSupport(),
+                    new JavascriptConversionExtensions.NestedConditionalSupport(),
                     loadSupport));
 
             if (_fromAlias == null)
@@ -1831,7 +1832,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     new JavascriptConversionExtensions.IgnoreTransparentParameter(),
                     new JavascriptConversionExtensions.InvokeSupport(),
                     new JavascriptConversionExtensions.DateTimeSupport(),
-                    new JavascriptConversionExtensions.NullCoalescingSupport()));
+                    new JavascriptConversionExtensions.NullCoalescingSupport(),
+                    new JavascriptConversionExtensions.NestedConditionalSupport()
+                    ));
 
             if (expression.Type == typeof(TimeSpan) && expression.NodeType != ExpressionType.MemberAccess)
             {
