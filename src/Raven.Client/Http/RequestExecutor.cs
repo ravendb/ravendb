@@ -1200,7 +1200,7 @@ namespace Raven.Client.Http
 
         private async Task EnsureNodeSelector()
         {
-            if (_firstTopologyUpdate.Status != TaskStatus.RanToCompletion)
+            if (_firstTopologyUpdate != null && _firstTopologyUpdate.Status != TaskStatus.RanToCompletion)
                 await _firstTopologyUpdate.ConfigureAwait(false);
 
             if (_nodeSelector == null)

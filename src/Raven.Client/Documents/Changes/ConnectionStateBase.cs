@@ -14,6 +14,7 @@ namespace Raven.Client.Documents.Changes
         private readonly Func<Task<bool>> _onConnect;
         private int _value;
         private TaskCompletionSource<object> _tcs;
+        public Exception LastException;
 
         protected ConnectionStateBase(IDatabaseChanges changes, Func<Task<bool>> onConnect, Func<Task> onDisconnect)
         {
@@ -103,6 +104,7 @@ namespace Raven.Client.Documents.Changes
 
         public void Error(Exception e)
         {
+            LastException = e;
             OnError?.Invoke(e);
         }
 
