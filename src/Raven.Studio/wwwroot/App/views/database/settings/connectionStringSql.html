@@ -1,0 +1,12 @@
+<div class="form-group" data-bind="validationElement: connectionStringName">
+    <label class="control-label">Name</label>
+    <div class="flex-grow">
+        <input class="form-control" data-bind="textInput: connectionStringName, attr: { 'disabled': !isNew()}" placeholder="Enter a name for the connection string" title="Any name of your choice for this connection string">
+    </div>
+</div>
+<div class="form-group" data-bind="validationElement: connectionString">
+    <label class="control-label">Connection string</label>
+    <div class="flex-grow">
+        <textarea class="form-control" data-bind="textInput: connectionString" rows="3" title="The connection string for the sql server" placeholder="Enter the complete connection string for the sql server"></textarea>
+    </div>
+</div>

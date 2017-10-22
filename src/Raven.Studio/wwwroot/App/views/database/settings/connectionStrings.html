@@ -67,8 +67,8 @@
         <div class="col-sm-12 col-lg-6 flex-vertical" data-bind="visible: editedRavenEtlConnectionString() || editedSqlEtlConnectionString()">
             <div class="panel slidein-style">
                 <div class="flex-horizontal padding">
-                    <h3 class="flex-grow" data-bind="visible: editedRavenEtlConnectionString">RavenDB ETL Connection String</h3>
-                    <h3 class="flex-grow" data-bind="visible: editedSqlEtlConnectionString">SQL ETL Connection String</h3>
+                    <h3 class="flex-grow" data-bind="visible: editedRavenEtlConnectionString">RavenDB Connection String</h3>
+                    <h3 class="flex-grow" data-bind="visible: editedSqlEtlConnectionString">SQL Connection String</h3>
                     <button class="close flex-start" data-bind="click: onCloseEdit"><i class="icon-cancel"></i></button>
                 </div>
                 <form class="flex-form padding">
@@ -100,19 +100,8 @@
                             </div>
                         </div>
                     </div>
-                    <div data-bind="with: editedSqlEtlConnectionString">
-                        <div class="form-group" data-bind="validationElement: connectionStringName">
-                            <label class="control-label">Name</label>
-                            <div class="flex-grow">
-                                <input class="form-control" data-bind="textInput: connectionStringName, attr: { 'disabled': !isNew()}" placeholder="Enter a name for the connection string" title="Any name of your choice for this connection string">
-                            </div>
-                        </div>
-                        <div class="form-group" data-bind="validationElement: connectionString">
-                            <label class="control-label">Connection string</label>
-                            <div class="flex-grow">
-                                <textarea class="form-control" data-bind="textInput: connectionString" rows="3" title="The connection string for the sql server" placeholder="Enter the complete connection string for the sql server"></textarea>
-                            </div>
-                        </div>
+                    <div data-bind="with: editedSqlEtlConnectionString">                        
+                        <div data-bind="compose: 'database/settings/connectionStringSql.html'"></div>    
                         <div class="form-group" data-bind="if: tasksThatAreUsingThisConnectionString().length > 0">
                             <label class="control-label">Used in Tasks:</label>                           
                             <div data-bind="foreach: tasksThatAreUsingThisConnectionString"> 
@@ -140,11 +129,11 @@
                 </form>
                 <div class="panel-addon" data-bind="with: $root.testConnectionResult">
                     <div class="padding bg-success small" data-bind="visible: Success">
-                        <div>Successfully connected to node</div>
+                        <div data-bind="visible: $root.editedRavenEtlConnectionString()">Successfully connected to node</div>
+                        <div data-bind="visible: $root.editedSqlEtlConnectionString()">Successfully connected to SQL Sever</div>
                     </div>
                     <div class="padding bg-danger small" data-bind="visible: !Success">
                         Connection test failed: <span data-bind="text: $root.fullErrorDetailsVisible() ? Error : $root.shortErrorText()"></span>
-
                         <div>
                             <a href="#" data-bind="click: $root.fullErrorDetailsVisible.toggle.bind($root.fullErrorDetailsVisible), text: $root.fullErrorDetailsVisible() ? 'hide details' : 'show details'"></a>
                         </div>

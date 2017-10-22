@@ -198,11 +198,9 @@ class connectionStrings extends viewModelBase {
                 eventsCollector.default.reportEvent("ravenDB-SQL-connection-string", "test-connection");
 
                 this.spinners.test(true);
-
-                new testSqlConnectionStringCommand(this.activeDatabase(), sqlConnectionString.connectionString())
-                    .execute()
-                    .done(result => this.testConnectionResult(result))
-                    .always(() => this.spinners.test(false));
+                sqlConnectionString.testConnection(this.activeDatabase())
+                    .done((testResult) => this.testConnectionResult(testResult))
+                    .always(() => this.spinners.test(false));           
             }
         }
     }
@@ -229,6 +227,8 @@ class connectionStrings extends viewModelBase {
         }
 
         // 2. Create/add the new connection string
+        // TODO: change to model.testConnection() instead of calling the command directly when issue 8825 is done
+        
         new saveConnectionStringCommand(this.activeDatabase(), model)
             .execute()
             .done(() => {
