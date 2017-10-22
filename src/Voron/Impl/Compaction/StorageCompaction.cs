@@ -388,7 +388,12 @@ namespace Voron.Impl.Compaction
                         {
                             // We have a variable size index, use it
 
-                            foreach (var tvr in inputTable.SeekForwardFrom(variableSizeIndex, lastSlice, 0))
+                            // In case we continue an existing compaction, skip to the next slice
+                            var skip = 0;
+                            if (SliceComparer.Compare(lastSlice, Slices.BeforeAllKeys) != 0)
+                                skip = 1;
+
+                            foreach (var tvr in inputTable.SeekForwardFrom(variableSizeIndex, lastSlice, skip))
                             {
                                 // The table will take care of reconstructing indexes automatically
                                 outputTable.Insert(ref tvr.Result.Reader);
@@ -411,8 +416,8 @@ namespace Voron.Impl.Compaction
 
                             if (fixedSizeIndex == null)
                                 throw new InvalidOperationException("Cannot compact table " + inputTable.Name + " because is has no local indexes, only global ones");
-
-                            foreach (var entry in inputTable.SeekForwardFrom(fixedSizeIndex, lastFixedIndex, 0))
+                              
+                            foreach (var entry in inputTable.SeekForwardFrom(fixedSizeIndex, lastFixedIndex, lastFixedIndex > 0 ? 1 : 0))
                             {
 
                                 token.ThrowIfCancellationRequested();
