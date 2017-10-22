@@ -36,7 +36,13 @@ namespace Raven.Server.Storage.Schema
                     return false;
 
                 var schemaUpdate = (ISchemaUpdate)Activator.CreateInstance(schemaUpdateType);
-                return schemaUpdate.Update(readTx, writeTx, configurationStorage, documentsStorage);
+                return schemaUpdate.Update(new UpdateStep
+                {
+                    ReadTx = readTx,
+                    WriteTx = writeTx,
+                    ConfigurationStorage = configurationStorage,
+                    DocumentsStorage = documentsStorage,
+                });
             };
         }
     }
