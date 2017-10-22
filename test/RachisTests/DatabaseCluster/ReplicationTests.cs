@@ -218,7 +218,7 @@ namespace RachisTests.DatabaseCluster
             var count = 0;
             foreach (var server in Servers)
             {
-                count += OngoingTasksHandler.GetOngoingTasksFor(databaseName, server.ServerStore).OngoingTasksList.Count(t => t is OngoingTaskReplication rep && rep.Status != OngoingTaskReplication.ReplicationStatus.NotOnThisNode);
+                count += OngoingTasksHandler.GetOngoingTasksFor(databaseName, server.ServerStore).OngoingTasksList.Count(t => t is OngoingTaskReplication rep && rep.Status != OngoingTaskReplication.TaskStatus.NotOnThisNode);
             }
             Assert.Equal(5, count);
         }

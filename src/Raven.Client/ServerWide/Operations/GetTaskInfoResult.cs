@@ -24,8 +24,11 @@ namespace Raven.Client.ServerWide.Operations
 
     public enum OngoingTaskConnectionStatus
     {
+        None,
         Active,
-        NotActive
+        NotActive,
+        Reconnect,
+        NotOnThisNode
     }
 
     public abstract class OngoingTask : IDynamicJson // Common info for all tasks types - used for Ongoing Tasks List View in studio
@@ -72,14 +75,7 @@ namespace Raven.Client.ServerWide.Operations
 
     public class OngoingTaskReplication : OngoingTask
     {
-        public enum ReplicationStatus
-        {
-            None,
-            Active,
-            Reconnect,
-            NotOnThisNode
-        }
-
+       
         public OngoingTaskReplication()
         {
             TaskType = OngoingTaskType.Replication;
@@ -88,13 +84,11 @@ namespace Raven.Client.ServerWide.Operations
         public string DestinationUrl { get; set; }
         public string DestinationDatabase { get; set; }
         public string MentorNode { get; set; }
-        public ReplicationStatus Status { get; set; }
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
             json[nameof(DestinationUrl)] = DestinationUrl;
             json[nameof(DestinationDatabase)] = DestinationDatabase;
-            json[nameof(Status)] = Status;
             json[nameof(MentorNode)] = MentorNode;
             return json;
         }

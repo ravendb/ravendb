@@ -6,6 +6,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.Json.Converters;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
@@ -135,24 +136,19 @@ namespace Raven.Server.Web.System
                 };
             }
 
-            (string Url, OngoingTaskReplication.ReplicationStatus Status) res = (null, OngoingTaskReplication.ReplicationStatus.None);
+            (string Url, OngoingTaskConnectionStatus Status) res = (null, OngoingTaskConnectionStatus.None);
             string error = null;
             if (tag == store.NodeTag)
             {
-                try
+                error =  GetDatabase(name, store, out var db);
+                if (db != null)
                 {
-                    store.DatabasesLandlord.DatabasesCache.TryGetValue(name, out var task);
-                    res = task.Result.ReplicationLoader.GetExternalReplicationDestination(watcher.TaskId);
-                }
-                catch (Exception e)
-                {
-                    // failed to retrive the destination url
-                    error = e.ToString();
+                    res = db.ReplicationLoader.GetExternalReplicationDestination(watcher.TaskId);
                 }
             }
             else
             {
-                res.Status = OngoingTaskReplication.ReplicationStatus.NotOnThisNode;
+                res.Status = OngoingTaskConnectionStatus.NotOnThisNode;
             }
 
             var taskInfo = new OngoingTaskReplication
@@ -163,13 +159,13 @@ namespace Raven.Server.Web.System
                 DestinationDatabase = watcher.Database,
                 TaskState = watcher.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
                 DestinationUrl = res.Url,
-                Status = res.Status,
+                TaskConnectionStatus = res.Status,
                 Error = error
             };
             
             return taskInfo;
         }
-
+        
         private static IEnumerable<OngoingTask> CollectBackupTasks(
             DatabaseRecord databaseRecord,
             DatabaseTopology dbTopology,
@@ -250,19 +246,35 @@ namespace Raven.Server.Web.System
                         throw new InvalidOperationException(
                             $"Could not find connection string named '{ravenEtl.ConnectionStringName}' in the database record for '{ravenEtl.Name}' ETL");
 
-                    string url = null;
+
+                    (string Url, OngoingTaskConnectionStatus Status) res = (null, OngoingTaskConnectionStatus.None);
                     string error = null;
                     if (tag == store.NodeTag)
                     {
-                        try
+                        error = GetDatabase(databaseRecord.DatabaseName, store, out var db);
+                        if (db != null)
                         {
-                            store.DatabasesLandlord.DatabasesCache.TryGetValue(databaseRecord.DatabaseName, out var task);
-                            url = ((RavenEtl)task.Result.EtlLoader.Processes.First(p=> p is RavenEtl etl && etl.Name == ravenEtl.Name)).Url;
+                            foreach (var process in db.EtlLoader.Processes)
+                            {
+                                if (process is RavenEtl etlProcess)
+                                {
+                                    if (etlProcess.Name == ravenEtl.Name)
+                                    {
+                                        res.Url = etlProcess.Url;
+                                        res.Status = OngoingTaskConnectionStatus.Active;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (res.Status == OngoingTaskConnectionStatus.None)
+                            {
+                                error = $"The raven etl process'{ravenEtl.Name}' was not found.";
+                            }
                         }
-                        catch (Exception e)
-                        {
-                            error = "failed to retrive the etl destination url due: \n" +e;
-                        }
+                    }
+                    else
+                    {
+                        res.Status = OngoingTaskConnectionStatus.NotOnThisNode;
                     }
 
                     yield return new OngoingTaskRavenEtlListView()
@@ -276,7 +288,8 @@ namespace Raven.Server.Web.System
                             NodeTag = tag,
                             NodeUrl = clusterTopology.GetUrlFromTag(tag)
                         },
-                        DestinationUrl = url,
+                        DestinationUrl = res.Url,
+                        TaskConnectionStatus = res.Status,
                         DestinationDatabase = connection.Database,
                         ConnectionStringName = ravenEtl.ConnectionStringName,
                         Error = error
@@ -316,6 +329,37 @@ namespace Raven.Server.Web.System
                     };
                 }
             }
+        }
+
+        private static string GetDatabase(string name, ServerStore store, out DocumentDatabase db)
+        {
+            string error = null;
+            db = null;
+            try
+            {
+                if (store.DatabasesLandlord.DatabasesCache.TryGetValue(name, out var task))
+                {
+                    if (task == null)
+                    {
+                        throw new DatabaseLoadFailureException("Database task is 'null'.");
+                    }
+                    if (task.IsCanceled)
+                    {
+                        throw new TaskCanceledException("Database task was canceled.");
+                    }
+                    if (task.IsFaulted)
+                    {
+                        throw new DatabaseLoadFailureException("Database task is faulted.", task.Exception);
+                    }
+                    db = task.Result;
+                }
+                DatabaseDoesNotExistException.Throw(name);
+            }
+            catch (Exception e)
+            {
+                error = $"Failed to load database '{name}' due to: \n {e}";
+            }
+            return error;
         }
 
         // Get Info about a specific task - For Edit View in studio - Each task should return its own specific object
