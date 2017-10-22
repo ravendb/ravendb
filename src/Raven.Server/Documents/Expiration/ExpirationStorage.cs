@@ -12,7 +12,6 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Voron;
 using Voron.Impl;
-using static Raven.Server.Documents.DocumentsStorage;
 
 namespace Raven.Server.Documents.Expiration
 {
@@ -106,14 +105,12 @@ namespace Raven.Server.Documents.Expiration
                                 try
                                 {
                                     var document = _database.DocumentsStorage.Get(context, clonedId);
-                                    if (document == null)
+                                    if (document == null ||
+                                        HasExpired(document.Data, currentTime) == false)
                                     {
                                         expiredDocs.Add((clonedId, null));
                                         continue;
                                     }
-
-                                    if (HasExpired(document.Data, currentTime) == false)
-                                        continue;
 
                                     expiredDocs.Add((clonedId, document.Id));
                                 }
@@ -122,18 +119,18 @@ namespace Raven.Server.Documents.Expiration
                                     LazyStringValue id = null;
                                     var allExpired = true;
                                     var conflicts = _database.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, clonedId);
-                                    if (conflicts.Count == 0)
-                                        continue;
-
-                                    foreach (var conflict in conflicts)
+                                    if (conflicts.Count > 0)
                                     {
-                                        id = conflict.Id;
+                                        foreach (var conflict in conflicts)
+                                        {
+                                            id = conflict.Id;
 
-                                        if (HasExpired(conflict.Doc, currentTime))
-                                            continue;
+                                            if (HasExpired(conflict.Doc, currentTime))
+                                                continue;
 
-                                        allExpired = false;
-                                        break;
+                                            allExpired = false;
+                                            break;
+                                        }
                                     }
 
                                     if (allExpired)
@@ -165,12 +162,12 @@ namespace Raven.Server.Documents.Expiration
             return true;
         }
 
-        public int DeleteExpiredDocuments(DocumentsOperationContext context, Dictionary<Slice, List<(Slice LowerId, LazyStringValue Id)>> _expired)
+        public int DeleteExpiredDocuments(DocumentsOperationContext context, Dictionary<Slice, List<(Slice LowerId, LazyStringValue Id)>> expired)
         {
             var deletionCount = 0;
             var expirationTree = context.Transaction.InnerTransaction.ReadTree(DocumentsByExpiration);
 
-            foreach (var pair in _expired)
+            foreach (var pair in expired)
             {
                 foreach (var ids in pair.Value)
                 {
