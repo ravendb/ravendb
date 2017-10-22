@@ -4,8 +4,10 @@ using Sparrow;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Impl;
+using static Raven.Server.Documents.AttachmentsStorage;
 using static Raven.Server.Documents.ConflictsStorage;
 using static Raven.Server.Documents.DocumentsStorage;
+using static Raven.Server.Documents.Revisions.RevisionsStorage;
 
 namespace Raven.Server.Storage.Schema.Updates.Documents
 {
@@ -17,22 +19,25 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             using (documentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var readTable = readTx.OpenTable(CollectionsSchema, CollectionsSlice);
-                var writeTable = writeTx.OpenTable(CollectionsSchema, CollectionsSlice);
-                foreach (var read in readTable.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
+                if (readTable != null)
                 {
-                    CopyReadMemory(context, read);
-
-                    var collection = TableValueToString(context, (int)CollectionsTable.Name, ref read.Reader);
-                    using (DocumentIdWorker.GetStringPreserveCase(context, collection, out Slice collectionSlice))
-                    using (writeTable.Allocate(out TableValueBuilder write))
+                    var writeTable = writeTx.OpenTable(CollectionsSchema, CollectionsSlice);
+                    foreach (var read in readTable.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
                     {
-                        write.Add(collectionSlice);
-                        var pk = read.Reader.Read((int)CollectionsTable.Name, out int size);
-                        using (Slice.External(context.Allocator, pk, size, out var pkSlice))
-                        {   
-                            writeTable.DeleteByKey(pkSlice);
+                        CopyReadMemory(context, read);
+
+                        var collection = TableValueToString(context, (int)CollectionsTable.Name, ref read.Reader);
+                        using (DocumentIdWorker.GetStringPreserveCase(context, collection, out Slice collectionSlice))
+                        using (writeTable.Allocate(out TableValueBuilder write))
+                        {
+                            write.Add(collectionSlice);
+                            var pk = read.Reader.Read((int)CollectionsTable.Name, out int size);
+                            using (Slice.External(context.Allocator, pk, size, out var pkSlice))
+                            {
+                                writeTable.DeleteByKey(pkSlice);
+                            }
+                            writeTable.Insert(write);
                         }
-                        writeTable.Insert(write);
                     }
                 }
             }
@@ -40,20 +45,30 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             // Update tombstones's collection value
             using (documentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                foreach (var tombstoneCollection in documentsStorage.GetTombstoneCollections(readTx))
+                foreach (var collection in documentsStorage.GetTombstoneCollections(readTx))
                 {
-                    // context.Transaction = new DocumentsTransaction(context, writeTx, new DocumentsChanges());
+                    string tableName;
+                    if (collection == AttachmentsTombstones ||
+                        collection == RevisionsTombstones)
+                    {
+                        tableName = collection;
+                    }
+                    else
+                    {
+                        var collectionName = new CollectionName(collection);
+                        tableName = collectionName.GetTableName(CollectionTableType.Tombstones);
+                    }
 
-                    // var collectionName = documentsStorage.ExtractCollectionName(context, "users");
-                    var collectionName = new CollectionName("users");
-                    var tableName = collectionName.GetTableName(CollectionTableType.Tombstones);
                     var readTable = readTx.OpenTable(TombstonesSchema, tableName);
+                    if (readTable == null)
+                        continue;
+
                     var writeTable = writeTx.OpenTable(TombstonesSchema, tableName);
                     foreach (var read in readTable.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
                     {
                         CopyReadMemory(context, read);
 
-                        var type = *(DocumentTombstone.TombstoneType*)read.Reader.Read((int)TombstoneTable.Type, out int _);
+                        var type = *(DocumentTombstone.TombstoneType*)read.Reader.Read((int)TombstoneTable.Type, out _);
                         var oldCollection = TableValueToString(context, (int)TombstoneTable.Collection, ref read.Reader);
                         using (DocumentIdWorker.GetStringPreserveCase(context, oldCollection, out Slice collectionSlice))
                         using (writeTable.Allocate(out TableValueBuilder write))
@@ -84,25 +99,28 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             using (documentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var readTable = readTx.OpenTable(ConflictsSchema, ConflictsSlice);
-                var writeTable = writeTx.OpenTable(ConflictsSchema, ConflictsSlice);
-                foreach (var read in readTable.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
+                if (readTable != null)
                 {
-                    CopyReadMemory(context, read);
-
-                    var oldCollection = TableValueToString(context, (int)ConflictsTable.Collection, ref read.Reader);
-                    using (DocumentIdWorker.GetStringPreserveCase(context, oldCollection, out Slice collectionSlice))
-                    using (writeTable.Allocate(out TableValueBuilder write))
+                    var writeTable = writeTx.OpenTable(ConflictsSchema, ConflictsSlice);
+                    foreach (var read in readTable.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
                     {
-                        write.Add(read.Reader.Read((int)ConflictsTable.LowerId, out int size), size);
-                        write.Add(read.Reader.Read((int)ConflictsTable.RecordSeparator, out size), size);
-                        write.Add(read.Reader.Read((int)ConflictsTable.ChangeVector, out size), size);
-                        write.Add(read.Reader.Read((int)ConflictsTable.Id, out size), size);
-                        write.Add(read.Reader.Read((int)ConflictsTable.Data, out size), size);
-                        write.Add(read.Reader.Read((int)ConflictsTable.Etag, out size), size);
-                        write.Add(collectionSlice);
-                        write.Add(read.Reader.Read((int)ConflictsTable.LastModified, out size), size);
-                        write.Add(read.Reader.Read((int)ConflictsTable.Flags, out size), size);
-                        writeTable.Set(write);
+                        CopyReadMemory(context, read);
+
+                        var oldCollection = TableValueToString(context, (int)ConflictsTable.Collection, ref read.Reader);
+                        using (DocumentIdWorker.GetStringPreserveCase(context, oldCollection, out Slice collectionSlice))
+                        using (writeTable.Allocate(out TableValueBuilder write))
+                        {
+                            write.Add(read.Reader.Read((int)ConflictsTable.LowerId, out int size), size);
+                            write.Add(read.Reader.Read((int)ConflictsTable.RecordSeparator, out size), size);
+                            write.Add(read.Reader.Read((int)ConflictsTable.ChangeVector, out size), size);
+                            write.Add(read.Reader.Read((int)ConflictsTable.Id, out size), size);
+                            write.Add(read.Reader.Read((int)ConflictsTable.Data, out size), size);
+                            write.Add(read.Reader.Read((int)ConflictsTable.Etag, out size), size);
+                            write.Add(collectionSlice);
+                            write.Add(read.Reader.Read((int)ConflictsTable.LastModified, out size), size);
+                            write.Add(read.Reader.Read((int)ConflictsTable.Flags, out size), size);
+                            writeTable.Set(write);
+                        }
                     }
                 }
             }
