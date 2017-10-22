@@ -1571,6 +1571,59 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
             }
         }
 
+        [Fact]
+        public void Custom_Functions_Nested_Conditional_Support()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia" }, "users/1");
+                    session.Store(new User { Name = "Bob", LastName = "Weir" }, "users/2");
+                    session.Store(new User { Name = "Phil", LastName = "Lesh" }, "users/3");
+                    session.Store(new User { Name = "Bill", LastName = "Kreutzmann" }, "users/4");
+                    session.Store(new User { Name = "Jon", LastName = "Doe" }, "users/5");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from u in session.Query<User>()
+                                select new
+                                {
+                                    u.Name,
+                                    Role = u.Name == "Jerry" || u.Name == "Bob" ? "Guitar" :
+                                        (u.Name == "Phil" ? "Bass" : (u.Name == "Bill" ? "Drums" : "Unknown"))
+                                };
+
+                    Assert.Equal("FROM Users as u SELECT { Name : u.Name, Role : u.Name===\"Jerry\"||u.Name===\"Bob\" ? \"Guitar\" : " +
+                                 "(u.Name===\"Phil\" ? \"Bass\" : (u.Name===\"Bill\"?\"Drums\":\"Unknown\")) }"
+                    , query.ToString());
+
+                    var queryResult = query.ToList();
+                    Assert.Equal(5, queryResult.Count);
+
+                    Assert.Equal("Jerry", queryResult[0].Name);
+                    Assert.Equal("Guitar", queryResult[0].Role);
+
+                    Assert.Equal("Bob", queryResult[1].Name);
+                    Assert.Equal("Guitar", queryResult[1].Role);
+
+                    Assert.Equal("Phil", queryResult[2].Name);
+                    Assert.Equal("Bass", queryResult[2].Role);
+
+                    Assert.Equal("Bill", queryResult[3].Name);
+                    Assert.Equal("Drums", queryResult[3].Role);
+
+                    Assert.Equal("Jon", queryResult[4].Name);
+                    Assert.Equal("Unknown", queryResult[4].Role);
+
+                }
+            }
+        }
+
+
         private class User
         {
             public string Name { get; set; }

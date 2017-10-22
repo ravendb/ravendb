@@ -505,5 +505,27 @@ namespace Raven.Client.Util
                 }
             }
         }
+
+        public class NestedConditionalSupport : JavascriptConversionExtension
+        {
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                var cond = context.Node as ConditionalExpression;
+                if (cond?.IfTrue is ConditionalExpression || cond?.IfFalse is ConditionalExpression == false)
+                    return;
+
+                var writer = context.GetWriter();
+                context.PreventDefault();
+
+                using (writer.Operation(cond))
+                {
+                    context.Visitor.Visit(cond.Test);
+                    writer.Write(" ? ");
+                    context.Visitor.Visit(cond.IfTrue);
+                    writer.Write(" : ");
+                    context.Visitor.Visit(cond.IfFalse);
+                }
+            }
+        }
     }
 }
