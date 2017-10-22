@@ -1,6 +1,8 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System;
+using System.Runtime.CompilerServices;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -67,7 +69,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public unsafe bool TryWriteOfflineDatabaseStatusToRequest(TransactionOperationContext ctx, BlittableJsonTextWriter writer, string databaseName, bool disabled, IndexRunningStatus indexingStatus, NodesTopology topology)
+        public unsafe bool TryGet(string databaseName, Action<BlittableJsonReaderObject> action)
         {
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenReadTransaction())
@@ -80,20 +82,14 @@ namespace Raven.Server.Documents
                     if (table.ReadByKey(databaseNameAsSlice, out infoTvr) == false)
                         return false;
                 }
-                //It seems like the database was shutdown rudely and never wrote it stats onto the disk
+
+                //it seems like the database was shutdown rudely and never wrote it stats onto the disk
                 if (infoTvr.Pointer == null)
                     return false;
 
                 using (var databaseInfoJson = Read(context, ref infoTvr))
                 {
-                    databaseInfoJson.Modifications = new DynamicJsonValue(databaseInfoJson)
-                    {
-                        [nameof(DatabaseInfo.Disabled)] = disabled,
-                        [nameof(DatabaseInfo.IndexingStatus)] = indexingStatus.ToString(),
-                        [nameof(DatabaseInfo.NodesTopology)] = topology.ToJson()
-                    };
-
-                    ctx.Write(writer, databaseInfoJson);
+                    action(databaseInfoJson);
                     return true;
                 }
             }

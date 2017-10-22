@@ -1,12 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.Background;
 using Raven.Server.Documents;
+using Raven.Server.Json;
 using Raven.Server.NotificationCenter;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -91,11 +94,31 @@ namespace Raven.Server.Dashboard
                     var databaseOnline = IsDatabaseOnline(databaseTask, out var database);
                     if (databaseOnline == false)
                     {
+                        var databaseRecord = serverStore.LoadDatabaseRecord(databaseName, out var _);
+                        if (databaseRecord == null)
+                        {
+                            // database doesn't exist
+                            continue;
+                        }
+
                         var databaseInfoItem = new DatabaseInfoItem
                         {
                             Database = databaseName,
                             Online = false
                         };
+
+                        DatabaseInfo databaseInfo = null;
+                        if (serverStore.DatabaseInfoCache.TryGet(databaseName, 
+                            databaseInfoJson => databaseInfo = JsonDeserializationServer.DatabaseInfo(databaseInfoJson)))
+                        {
+                            Debug.Assert(databaseInfo != null);
+
+                            databaseInfoItem.DocumentsCount = databaseInfo.DocumentsCount ?? 0;
+                            databaseInfoItem.IndexesCount = databaseInfo.IndexesCount ?? databaseRecord.Indexes.Count;
+                            databaseInfoItem.ReplicationFactor = databaseRecord.Topology?.ReplicationFactor ?? databaseInfo.ReplicationFactor;
+                            databaseInfoItem.ErroredIndexesCount = databaseInfo.IndexingErrors ?? 0;
+                        }
+
                         databasesInfo.Items.Add(databaseInfoItem);
                         continue;
                     }
