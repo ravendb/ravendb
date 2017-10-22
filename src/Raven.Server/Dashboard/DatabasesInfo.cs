@@ -31,7 +31,7 @@ namespace Raven.Server.Dashboard
         
         public long IndexesCount { get; set; }
         
-        public int ErroredIndexesCount { get; set; }
+        public long ErroredIndexesCount { get; set; }
         
         public long AlertsCount { get; set; }
         
