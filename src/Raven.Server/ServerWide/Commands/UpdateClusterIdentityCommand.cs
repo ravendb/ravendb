@@ -60,20 +60,8 @@ namespace Raven.Server.ServerWide.Commands
 
                     var keyString = key.ToString().ToLowerInvariant();
 
-                    if (resultDict.TryAdd(keyString, newVal) == false)
-                    {
-                        if (newVal > resultDict[keyString])
-                            resultDict[keyString] = newVal;
-                    }
-
-                    if (resultDict.TryGetValue(keyString, out var oldVal) == false)
-                    {
-                        resultDict.Add(keyString, newVal);
-                    }
-                    else if (newVal > oldVal)
-                    {
-                        resultDict[keyString] = newVal;
-                    }
+                    resultDict.TryGetValue(keyString, out var oldVal);
+                    resultDict[keyString] = Math.Max(oldVal, newVal);
                 }
             }
 
