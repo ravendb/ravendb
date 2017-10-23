@@ -14,6 +14,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Identity;
 using SlowTests.Client.Attachments;
 using SlowTests.Server.Documents.Indexing;
+using SlowTests.Smuggler;
 
 namespace RavenDB4RCTests
 {
@@ -23,7 +24,7 @@ namespace RavenDB4RCTests
         {
             {
                 var sp = Stopwatch.StartNew();
-                new ExpirationTests().CanAddEntityWithExpiry_ThenReadItBeforeItExpires_ButWillNotBeAbleToReadItAfterExpiry().Wait();
+                new LegacySmugglerTests().CanImportRevisions("SlowTests.Smuggler.Revisions_3.5.35220.ravendbdump").Wait();
                 Console.WriteLine(sp.Elapsed);
             }
         }
