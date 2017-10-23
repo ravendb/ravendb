@@ -10,6 +10,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Documents;
+using Sparrow;
 using Xunit;
 
 namespace SlowTests.Smuggler
@@ -150,16 +151,29 @@ namespace SlowTests.Smuggler
 
                 using (var session = store.OpenSession())
                 {
+                    var user = session.Load<Order>("users/1");
+                    Assert.NotNull(user);
+
+                    var metadata = session.Advanced.GetMetadataFor(user);
+                    Assert.Equal(5, metadata.Count);
+                    Assert.Equal("Users", metadata.GetString(Constants.Documents.Metadata.Collection));
+                    Assert.StartsWith("A:6-", metadata.GetString(Constants.Documents.Metadata.ChangeVector));
+                    Assert.Equal(DocumentFlags.HasRevisions.ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
+                    Assert.Equal("users/1", metadata.GetString(Constants.Documents.Metadata.Id));
+                    Assert.NotEqual(DateTime.MinValue.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite), metadata.GetString(Constants.Documents.Metadata.LastModified));
+
                     var revisions = session.Advanced.GetRevisionsFor<User>("users/1");
                     Assert.Equal(4, revisions.Count);
 
                     for (int i = 0; i <= 3; i++)
                     {
-                        var metadata = session.Advanced.GetMetadataFor(revisions[i]);
+                        metadata = session.Advanced.GetMetadataFor(revisions[i]);
+                        Assert.Equal(5, metadata.Count);
                         Assert.Equal("Users", metadata.GetString(Constants.Documents.Metadata.Collection));
                         Assert.Equal($"RV:{4 - i}-AAAAAQAAAQAAAAAAAAAAAw", metadata.GetString(Constants.Documents.Metadata.ChangeVector));
                         Assert.Equal(DocumentFlags.Revision.ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
                         Assert.Equal("users/1", metadata.GetString(Constants.Documents.Metadata.Id));
+                        Assert.NotEqual(DateTime.MinValue.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite), metadata.GetString(Constants.Documents.Metadata.LastModified));
                     }
                 }
             }

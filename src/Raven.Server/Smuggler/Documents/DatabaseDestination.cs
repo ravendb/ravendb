@@ -293,6 +293,8 @@ namespace Raven.Server.Smuggler.Documents
                 if (_log.IsInfoEnabled)
                     _log.Info($"Importing {Documents.Count:#,#0} documents");
 
+                var modifiedTicks = _database.Time.GetUtcNow().Ticks;
+
                 foreach (var documentType in Documents)
                 {
                     var tombstone = documentType.Tombstone;
@@ -322,7 +324,6 @@ namespace Raven.Server.Smuggler.Documents
                     var conflict = documentType.Conflict;
                     if (conflict != null)
                     {
-                        var modifiedTicks = _database.Time.GetUtcNow().Ticks;
                         _database.DocumentsStorage.ConflictsStorage.AddConflict(context, conflict.Id, modifiedTicks, conflict.Doc, conflict.ChangeVector, 
                             conflict.Collection, conflict.Flags, NonPersistentDocumentFlags.FromSmuggler);
 
@@ -352,7 +353,7 @@ namespace Raven.Server.Smuggler.Documents
 
                             PutAttachments(context, document);
                             _database.DocumentsStorage.RevisionsStorage.Put(context, id, document.Data, document.Flags, 
-                                document.NonPersistentFlags, document.ChangeVector, document.LastModified.Ticks);
+                                document.NonPersistentFlags, document.ChangeVector, modifiedTicks);
                             continue;
                         }
 
@@ -365,12 +366,13 @@ namespace Raven.Server.Smuggler.Documents
                             var endIndex = id.IndexOf(PreV4RevisionsDocumentId, StringComparison.OrdinalIgnoreCase);
                             var newId = id.Substring(0, endIndex);
 
-                            _database.DocumentsStorage.RevisionsStorage.Put(context, newId, document.Data, document.Flags, document.NonPersistentFlags, document.ChangeVector, document.LastModified.Ticks);
+                            _database.DocumentsStorage.RevisionsStorage.Put(context, newId, document.Data, document.Flags, 
+                                document.NonPersistentFlags, document.ChangeVector, modifiedTicks);
                             continue;
                         }
 
                         PutAttachments(context, document);
-                        _database.DocumentsStorage.Put(context, id, null, document.Data, null, null, document.Flags, document.NonPersistentFlags);
+                        _database.DocumentsStorage.Put(context, id, null, document.Data, modifiedTicks, null, document.Flags, document.NonPersistentFlags);
                     }
                 }
 
