@@ -11,7 +11,10 @@ namespace Raven.Server.Documents
         {
         }
 
-        public string Message => "Compaction finished.";
+        public long SizeBeforeCompactionInMb;
+        public long SizeAfterCompactionInMb;
+
+        public string Message => $"Compaction finished. Reduced storage size from {SizeBeforeCompactionInMb} MB to {SizeAfterCompactionInMb} MB (-{(int)((double)(SizeBeforeCompactionInMb - SizeAfterCompactionInMb) / SizeBeforeCompactionInMb * 100)}%).";
 
         public DynamicJsonValue ToJson()
         {
