@@ -32,6 +32,8 @@ using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Platform;
+using Sparrow.Platform.Posix;
 using Voron;
 using Voron.Exceptions;
 using Voron.Impl;
@@ -843,7 +845,7 @@ namespace Raven.Server.Documents
             return sizeOnDiskInBytes;
         }
 
-        public IEnumerable<(DriveInfo Drive, long UsedSpace)> GetMountPointsUsage()
+        public IEnumerable<(DiskSpaceResult DiskSpaceResult, long UsedSpace)> GetMountPointsUsage()
         {
             var storageEnvironments = GetAllStoragesEnvironment();
             if (storageEnvironments == null)
@@ -868,15 +870,15 @@ namespace Raven.Server.Documents
                     if (fullPath == null)
                         continue;
 
-                    var drive = drives.FirstOrDefault(x => fullPath.StartsWith(x.Name, StringComparison.OrdinalIgnoreCase));
-                    if (drive == null)
+                    var diskSpaceResult = DiskSpaceChecker.GetFreeDiskSpace(fullPath, drives);
+                    if (diskSpaceResult == null)
                         continue;
 
                     var sizeOnDiskInBytes = GetSizeOnDisk(environment, tx);
                     if (sizeOnDiskInBytes == 0)
                         continue;
 
-                    yield return (drive, sizeOnDiskInBytes);
+                    yield return (diskSpaceResult, sizeOnDiskInBytes);
                 }
                 finally
                 {

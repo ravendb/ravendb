@@ -13,6 +13,7 @@ using Raven.Server.Json;
 using Raven.Server.NotificationCenter;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -165,15 +166,16 @@ namespace Raven.Server.Dashboard
                         if (cts.IsCancellationRequested)
                             yield break;
 
-                        var usage = drivesUsage.Items.FirstOrDefault(x => x.MountPoint == mountPointUsage.Drive.Name);
+                        var mountPoint = mountPointUsage.DiskSpaceResult.DriveName;
+                        var usage = drivesUsage.Items.FirstOrDefault(x => x.MountPoint == mountPoint);
                         if (usage == null)
                         {
                             usage = new MountPointUsage
                             {
-                                MountPoint = mountPointUsage.Drive.Name,
-                                VolumeLabel = mountPointUsage.Drive.VolumeLabel,
-                                FreeSpace = mountPointUsage.Drive.AvailableFreeSpace,
-                                TotalCapacity = mountPointUsage.Drive.TotalSize
+                                MountPoint = mountPoint,
+                                VolumeLabel = mountPointUsage.DiskSpaceResult.VolumeLabel,
+                                FreeSpace = mountPointUsage.DiskSpaceResult.TotalFreeSpace.GetValue(SizeUnit.Bytes),
+                                TotalCapacity = mountPointUsage.DiskSpaceResult.TotalSize.GetValue(SizeUnit.Bytes)
                             };
                             drivesUsage.Items.Add(usage);
                         }

@@ -357,23 +357,24 @@ namespace Sparrow.Platform.Posix
             return close(fd);
         }
 
-        public static string GetRootMountString(string filepath)
+        public static string GetRootMountString(DriveInfo[] drivesInfo, string filePath)
         {
             string root = null;
-            var allMounts = DriveInfo.GetDrives();
             var matchSize = 0;
-            foreach (var m in allMounts)
+
+            foreach (var driveInfo in drivesInfo)
             {
-                var mountNameSize = m.Name.Length;
-                if (filepath.StartsWith(m.Name))
-                {
-                    if (matchSize < mountNameSize)
-                    {
-                        matchSize = mountNameSize;
-                        root = m.Name;
-                    }
-                }
+                var mountNameSize = driveInfo.Name.Length;
+                if (filePath.StartsWith(driveInfo.Name) == false)
+                    continue;
+
+                if (matchSize >= mountNameSize)
+                    continue;
+
+                matchSize = mountNameSize;
+                root = driveInfo.Name;
             }
+
             return root;
         }
     }
