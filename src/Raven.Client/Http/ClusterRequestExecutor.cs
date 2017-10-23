@@ -82,14 +82,14 @@ namespace Raven.Client.Http
 
         public override async Task<bool> UpdateTopologyAsync(ServerNode node, int timeout, bool forceUpdate = false)
         {
-            if (_disposed)
+            if (Disposed)
                 return false;
             var lockTaken = await _clusterTopologySemaphore.WaitAsync(timeout).ConfigureAwait(false);
             if (lockTaken == false)
                 return false;
             try
             {
-                if (_disposed)
+                if (Disposed)
                     return false;
 
                 using (ContextPool.AllocateOperationContext(out JsonOperationContext context))

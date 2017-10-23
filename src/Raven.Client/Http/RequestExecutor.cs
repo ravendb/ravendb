@@ -30,6 +30,7 @@ using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using Sparrow.Threading;
 
 namespace Raven.Client.Http
 {
@@ -122,6 +123,16 @@ namespace Raven.Client.Http
 
         protected RequestExecutor(string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
         {
+            _disposeOnceRunner = new DisposeOnce<ExceptionRetry>(() =>
+            {
+                Cache.Dispose();
+                ContextPool.Dispose();
+                _updateTopologyTimer?.Dispose();
+                DisposeAllFailedNodesTimers();
+                // shared instance, cannot dispose!
+                //_httpClient.Dispose();
+            });
+
             _readBalanceBehavior = conventions.ReadBalanceBehavior;
             _databaseName = databaseName;
             Certificate = certificate;
@@ -186,7 +197,7 @@ namespace Raven.Client.Http
 
         protected virtual async Task UpdateClientConfigurationAsync()
         {
-            if (_disposed)
+            if (Disposed)
                 return;
 
             await _updateClientConfigurationSemaphore.WaitAsync().ConfigureAwait(false);
@@ -196,7 +207,7 @@ namespace Raven.Client.Http
 
             try
             {
-                if (_disposed)
+                if (Disposed)
                     return;
 
                 using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -224,7 +235,7 @@ namespace Raven.Client.Http
 
         public virtual async Task<bool> UpdateTopologyAsync(ServerNode node, int timeout, bool forceUpdate = false)
         {
-            if (_disposed)
+            if (Disposed)
                 return false;
 
             //prevent double topology updates if execution takes too much time
@@ -235,7 +246,7 @@ namespace Raven.Client.Http
 
             try
             {
-                if (_disposed)
+                if (Disposed)
                     return false;
 
                 using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -1054,26 +1065,18 @@ namespace Raven.Client.Http
             }, HttpStatusCode.InternalServerError));
         }
 
-        protected bool _disposed;
         protected Task _firstTopologyUpdate;
         protected string[] _lastKnownUrls;
+        private readonly DisposeOnce<ExceptionRetry> _disposeOnceRunner;
+        protected bool Disposed => _disposeOnceRunner.Disposed;
 
         public virtual void Dispose()
         {
-            if (_disposed)
+            if (_disposeOnceRunner.Disposed)
                 return;
 
             _updateTopologySemaphore.Wait();
-
-            if (_disposed)
-                return;
-            _disposed = true;
-            Cache.Dispose();
-            ContextPool.Dispose();
-            _updateTopologyTimer?.Dispose();
-            DisposeAllFailedNodesTimers();
-            // shared instance, cannot dispose!
-            //_httpClient.Dispose();
+            _disposeOnceRunner.Dispose();
         }
 
         private HttpClient CreateClient()

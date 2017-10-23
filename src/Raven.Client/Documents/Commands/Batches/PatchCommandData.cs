@@ -34,7 +34,7 @@ namespace Raven.Client.Documents.Commands.Batches
             };
 
             if (PatchIfMissing != null)
-                json[nameof(PatchIfMissing)] = PatchIfMissing?.ToJson(conventions, context);
+                json[nameof(PatchIfMissing)] = PatchIfMissing.ToJson(conventions, context);
 
             return json;
         }

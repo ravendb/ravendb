@@ -230,7 +230,7 @@ namespace Raven.Client.Documents
         /// </summary>
         protected virtual void AssertValidConfiguration()
         {
-            if (Urls == null || Urls?.Length == 0)
+            if (Urls == null || Urls.Length == 0)
             {
                 throw new ArgumentException("Document store URLs cannot be empty", nameof(Urls));
             }
