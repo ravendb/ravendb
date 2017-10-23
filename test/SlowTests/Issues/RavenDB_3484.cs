@@ -28,6 +28,13 @@ namespace SlowTests.Issues
                 {
                     processed[i] = new ManualResetEvent(false);
                 }
+                var userShouldnotexist = "user/shouldNotExist";
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(),userShouldnotexist);
+                    session.SaveChanges();
+                    //session.Delete(userShouldnotexist);
+                }
 
                 for (int i = 0; i < numberOfClients; i++)
                 {
@@ -47,6 +54,8 @@ namespace SlowTests.Issues
                     subscriptions[clientNumber].Run(x =>
                     {
                     });
+
+                    Thread.Sleep(200);
                 }
 
                 for (int i = 0; i < numberOfClients; i++)
@@ -57,11 +66,9 @@ namespace SlowTests.Issues
                         s.SaveChanges();
                     }
 
-
                     var index = WaitHandle.WaitAny(processed, waitForDocTimeout);
                     
                     Assert.NotEqual(WaitHandle.WaitTimeout, index);
-                    
 
                     subscriptions[index].Dispose();
 

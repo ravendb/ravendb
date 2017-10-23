@@ -61,9 +61,11 @@ namespace RachisTests
             {
                 var usersCount = new List<User>();
                 var reachedMaxDocCountMre = new AsyncManualResetEvent();
-                var subscription = await CreateAndInitiateSubscription(store, defaultDatabase, usersCount, reachedMaxDocCountMre, batchSize);
 
                 await GenerateDocuments(store);
+
+                var subscription = await CreateAndInitiateSubscription(store, defaultDatabase, usersCount, reachedMaxDocCountMre, batchSize);
+                
 
                 Assert.True(await reachedMaxDocCountMre.WaitAsync(_reasonableWaitTime), $"Reached {usersCount.Count}/10");
 
@@ -215,10 +217,11 @@ namespace RachisTests
             {
                 var usersCount = new List<User>();
                 var reachedMaxDocCountMre = new AsyncManualResetEvent();
-                var subscription = await CreateAndInitiateSubscription(store, defaultDatabase, usersCount, reachedMaxDocCountMre, 20, mentor: mentor);
 
                 await GenerateDocuments(store);
 
+                var subscription = await CreateAndInitiateSubscription(store, defaultDatabase, usersCount, reachedMaxDocCountMre, 20, mentor: mentor);
+                
                 Assert.True(await reachedMaxDocCountMre.WaitAsync(_reasonableWaitTime), $"Reached {usersCount.Count}/10");
 
                 usersCount.Clear();

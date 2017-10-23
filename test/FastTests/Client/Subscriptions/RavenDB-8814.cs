@@ -39,13 +39,6 @@ namespace FastTests.Client.Subscriptions
                 var mre = new AsyncManualResetEvent();
                 int resultsCount = 0;
                 
-                _ = subscription.Run(x =>
-                {
-                    foo = x.Items.First().Result.Foo;
-                    resultsCount = x.Items.Count;
-                    mre.Set();
-                });
-                
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User
@@ -61,6 +54,13 @@ namespace FastTests.Client.Subscriptions
                     });
                     await session.SaveChangesAsync();
                 }
+
+                _ = subscription.Run(x =>
+                {
+                    foo = x.Items.First().Result.Foo;
+                    resultsCount = x.Items.Count;
+                    mre.Set();
+                });
 
                 Assert.True(await mre.WaitAsync(_reasonableWaitTime));
                 Assert.Equal("Bar",foo);

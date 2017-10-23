@@ -42,6 +42,16 @@ select project(d)
 
                 var mre = new ManualResetEvent(false);
                 var receivedItem = new SubscriptionBatch<User>.Item();
+                var userId = string.Empty;
+
+                using (var session = store.OpenSession())
+                {
+                    var newUser = new User();
+                    session.Store(newUser);
+                    session.SaveChanges();
+                    userId = session.Advanced.GetDocumentId(newUser);
+                }
+
                 subscription.Run(x =>
                 {
                     foreach (var item in x.Items)
@@ -59,15 +69,7 @@ select project(d)
                     mre.Set();
                 });
 
-                var userId = string.Empty;
-
-                using (var session = store.OpenSession())
-                {
-                    var newUser = new User();
-                    session.Store(newUser);
-                    session.SaveChanges();
-                    userId = session.Advanced.GetDocumentId(newUser);
-                }
+                
 
                 Assert.True(mre.WaitOne(_reasonableWaitTime));
                 Assert.NotNull(receivedItem);
@@ -129,6 +131,17 @@ select project(d)
 
                 var mre = new ManualResetEvent(false);
                 var receivedItem = new SubscriptionBatch<User>.Item();
+
+                var userId = string.Empty;
+
+                using (var session = store.OpenSession())
+                {
+                    var newUser = new User();
+                    session.Store(newUser);
+                    session.SaveChanges();
+                    userId = session.Advanced.GetDocumentId(newUser);
+                }
+
                 subscription.Run(x =>
                 {
                     foreach (var item in x.Items)
@@ -146,15 +159,7 @@ select project(d)
                     mre.Set();
                 });
 
-                var userId = string.Empty;
-
-                using (var session = store.OpenSession())
-                {
-                    var newUser = new User();
-                    session.Store(newUser);
-                    session.SaveChanges();
-                    userId = session.Advanced.GetDocumentId(newUser);
-                }
+              
 
                 Assert.True(mre.WaitOne(_reasonableWaitTime));
                 Assert.NotNull(receivedItem);
