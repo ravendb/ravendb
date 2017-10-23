@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Debugging
@@ -42,7 +43,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     writer.WriteComma();
 
                     writer.WritePropertyName("LastAccess");
-                    writer.WriteString(pair.Key.Item2.ToString("o", CultureInfo.InvariantCulture));
+                    writer.WriteString(pair.Key.Item2.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite, CultureInfo.InvariantCulture));
 
                     writer.WriteEndObject();
                 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Session;
+using Sparrow;
 using Sparrow.Extensions;
 using Sparrow.Json;
 
@@ -271,7 +272,7 @@ namespace Raven.Client.Json
 
         public override void WriteValue(DateTimeOffset value)
         {
-            var s = value.ToString(Default.DateTimeOffsetFormatsToWrite);
+            var s = value.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
             _manualBlittableJsonDocumentBuilder.WriteValue(s);
         }
 
@@ -353,7 +354,7 @@ namespace Raven.Client.Json
         public override void WriteValue(DateTimeOffset? value)
         {
             if (value != null)
-                _manualBlittableJsonDocumentBuilder.WriteValue(value.Value.ToString(Default.DateTimeOffsetFormatsToWrite));
+                _manualBlittableJsonDocumentBuilder.WriteValue(value.Value.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite));
             else
                 _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }

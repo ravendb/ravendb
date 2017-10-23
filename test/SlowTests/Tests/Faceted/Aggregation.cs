@@ -8,11 +8,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using SlowTests.Core.Utils.Entities.Faceted;
+using Sparrow;
 using Xunit;
 
 namespace SlowTests.Tests.Faceted
@@ -359,7 +359,7 @@ namespace SlowTests.Tests.Faceted
                     var facetResult = r.Results["At"];
                     Assert.Equal(2, facetResult.Values.Count);
 
-                    Assert.Equal(1, facetResult.Values.Count(x => x.Range == DateTime.Today.ToString(Default.DateTimeFormatsToWrite)));
+                    Assert.Equal(1, facetResult.Values.Count(x => x.Range == DateTime.Today.ToString(DefaultFormat.DateTimeFormatsToWrite)));
                 }
             }
         }

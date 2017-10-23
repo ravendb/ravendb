@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Reflection;
 using Newtonsoft.Json;
+using Sparrow;
 using Sparrow.Extensions;
 
 namespace Raven.Client.Json.Converters
@@ -44,7 +45,7 @@ namespace Raven.Client.Json.Converters
                     var dateTimeOffset = (DateTimeOffset)key;
                     writer.WritePropertyName(dateTimeOffset.Offset == TimeSpan.Zero
                         ? dateTimeOffset.UtcDateTime.GetDefaultRavenFormat(true)
-                        : dateTimeOffset.ToString(Default.DateTimeOffsetFormatsToWrite, CultureInfo.InvariantCulture));
+                        : dateTimeOffset.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite, CultureInfo.InvariantCulture));
                 }
                 else
                     throw new ArgumentException(string.Format("Not idea how to process argument: '{0}'", value));
@@ -73,7 +74,7 @@ namespace Raven.Client.Json.Converters
                     if (typeof(TKey) == typeof(DateTime) || typeof(TKey) == typeof(DateTime?))
                     {
                         DateTime time;
-                        if (DateTime.TryParseExact(s, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
+                        if (DateTime.TryParseExact(s, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
                                                    DateTimeStyles.RoundtripKind, out time))
                         {
                             key = time.Kind == DateTimeKind.Unspecified ? DateTime.SpecifyKind(time, DateTimeKind.Local) : time;
@@ -86,7 +87,7 @@ namespace Raven.Client.Json.Converters
                     else if (typeof(TKey) == typeof(DateTimeOffset) || typeof(TKey) == typeof(DateTimeOffset?))
                     {
                         DateTimeOffset time;
-                        if (DateTimeOffset.TryParseExact(s, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
+                        if (DateTimeOffset.TryParseExact(s, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
                                                          DateTimeStyles.RoundtripKind, out time))
                         {
                             key = time;

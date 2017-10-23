@@ -123,14 +123,14 @@ namespace Raven.Server.ServerWide.Context
             base.Renew();
         }
 
-        protected override void Renew()
+        protected internal override void Renew()
         {
             base.Renew();
             if (Allocator == null)
                 Allocator = new ByteStringContext(LowMemoryFlag);
         }
 
-        protected override void Reset(bool forceResetLongLivedAllocator = false)
+        protected internal override void Reset(bool forceResetLongLivedAllocator = false)
         {
             base.Reset(forceResetLongLivedAllocator);
 

@@ -154,9 +154,8 @@ namespace Raven.Client.Documents.Session.Operations
                 streamQueryStatistics.TotalResults = totalResults;
                 streamQueryStatistics.ResultEtag = resultEtag;
 
-                DateTime timeStamp;
                 if (DateTime.TryParseExact(indexTimestamp, "o", CultureInfo.InvariantCulture,
-                    DateTimeStyles.RoundtripKind, out timeStamp) == false)
+                    DateTimeStyles.RoundtripKind, out DateTime timeStamp) == false)
                     UnmanagedJsonParserHelper.ThrowInvalidJson(peepingTomStream);
                 streamQueryStatistics.IndexTimestamp = timeStamp;
             }

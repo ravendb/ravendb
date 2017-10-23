@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Raven.Client.Exceptions.Documents.BulkInsert;
 using Raven.Client;
+using Raven.Client.Exceptions.Documents.BulkInsert;
 using Raven.Client.Json;
+using Sparrow;
 using Xunit;
 
 namespace FastTests.Client.BulkInsert
@@ -125,7 +126,7 @@ namespace FastTests.Client.BulkInsert
         [Fact]
         public void CanModifyMetadataWithBulkInsert()
         {
-            var expirationDate = DateTime.Today.AddYears(1).ToString("O");
+            var expirationDate = DateTime.Today.AddYears(1).ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
             using (var store = GetDocumentStore())
             {
                 using (var bulkInsert = store.BulkInsert())

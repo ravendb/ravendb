@@ -6,9 +6,9 @@ using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using Lucene.Net.Documents;
-using Raven.Client;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Extensions;
@@ -254,7 +254,7 @@ namespace Raven.Server.Utils
 
                 if (s != null)
                 {
-                    if (DateTime.TryParseExact(s, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
+                    if (DateTime.TryParseExact(s, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
                         DateTimeStyles.RoundtripKind, out DateTime dateTime))
                         return (T)(object)dateTime;
 
@@ -269,7 +269,7 @@ namespace Raven.Server.Utils
 
                 if (s != null)
                 {
-                    if (DateTimeOffset.TryParseExact(s, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
+                    if (DateTimeOffset.TryParseExact(s, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
                         DateTimeStyles.RoundtripKind, out DateTimeOffset dateTimeOffset))
                         return (T)(object)dateTimeOffset;
 

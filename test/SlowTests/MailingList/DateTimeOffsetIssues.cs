@@ -1,6 +1,6 @@
 using System;
 using FastTests;
-using Raven.Client;
+using Sparrow;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -40,7 +40,7 @@ namespace SlowTests.MailingList
                 {
                     var book = session.Load<Book>(bookId);
                     var metadata = session.Advanced.GetMetadataFor(book);
-                    metadata.Add("DateTime-ToCheck", expectedDateTime.ToString(Default.DateTimeOffsetFormatsToWrite));
+                    metadata.Add("DateTime-ToCheck", expectedDateTime.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite));
                     session.SaveChanges();
                 }
 
@@ -105,7 +105,7 @@ namespace SlowTests.MailingList
                 {
                     var book = session.Load<Book>(bookId);
                     var metadata = session.Advanced.GetMetadataFor(book);
-                    metadata.Add("DateTime-ToCheck", expectedDateTime.ToString(Default.DateTimeOffsetFormatsToWrite));
+                    metadata.Add("DateTime-ToCheck", expectedDateTime.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite));
                     session.SaveChanges();
                 }
 

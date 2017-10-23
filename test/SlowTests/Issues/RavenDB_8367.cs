@@ -5,6 +5,7 @@ using FastTests;
 using Orders;
 using Raven.Client;
 using Raven.Client.Documents.Smuggler;
+using Sparrow;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -18,7 +19,7 @@ namespace SlowTests.Issues
 
             var exportPath = NewDataPath(forceCreateDir: true);
             var exportFile = Path.Combine(exportPath, "export.ravendbdump");
-            var expires = DateTime.UtcNow.ToString(Default.DateTimeOffsetFormatsToWrite);
+            var expires = DateTime.UtcNow.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
 
             using (var store = GetDocumentStore())
             {

@@ -23,7 +23,7 @@ namespace RavenDB4RCTests
         {
             {
                 var sp = Stopwatch.StartNew();
-                new ExpirationTests().CanAddEntityWithExpiry_BeforeActivatingExpirtaion_WillNotBeAbleToReadItAfterExpiry().Wait();
+                new ExpirationTests().CanAddEntityWithExpiry_ThenReadItBeforeItExpires_ButWillNotBeAbleToReadItAfterExpiry().Wait();
                 Console.WriteLine(sp.Elapsed);
             }
         }

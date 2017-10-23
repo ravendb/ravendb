@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using System.Linq;
 using FastTests;
+using Sparrow;
 using Xunit;
 
 namespace SlowTests.Bugs.Queries
@@ -13,7 +14,7 @@ namespace SlowTests.Bugs.Queries
         {
             using (var store = GetDocumentStore())
             {
-                var dateTime1 = DateTime.ParseExact("2011-04-08T22:00:00.0000000+02:00", new[] { "r", "o" }, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+                var dateTime1 = DateTime.ParseExact("2011-04-08T22:00:00.0000000+02:00", DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
                 var dateTime2 = dateTime1.AddHours(-2);
                 using (var s = store.OpenSession())
                 {

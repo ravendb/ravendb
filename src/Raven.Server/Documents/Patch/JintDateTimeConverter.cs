@@ -1,6 +1,7 @@
 ﻿using System;
 using Jint.Native;
 using Jint.Runtime.Interop;
+using Sparrow;
 
 namespace Raven.Server.Documents.Patch
 {
@@ -10,12 +11,12 @@ namespace Raven.Server.Documents.Patch
         {
             if (value is DateTime dateTime)
             {
-                result = new JsValue(dateTime.ToString("O"));
+                result = new JsValue(dateTime.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite));
                 return true;
             }
             if (value is DateTimeOffset dateTimeOffset)
             {
-                result = new JsValue(dateTimeOffset.ToString("O"));
+                result = new JsValue(dateTimeOffset.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite));
                 return true;
             }
 
