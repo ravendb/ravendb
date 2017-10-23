@@ -163,7 +163,10 @@ namespace Voron.Data.BTrees
             long? currentValue = null;
             var read = Read(key);
             if (read != null)
+            {
+                Debug.Assert(read.Reader.Length == sizeof(long));
                 currentValue = *(long*)read.Reader.Base;
+            }
 
             return currentValue;
         }

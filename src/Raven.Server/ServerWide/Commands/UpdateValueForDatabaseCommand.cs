@@ -1,4 +1,5 @@
-﻿using Raven.Client.ServerWide;
+﻿using Raven.Client;
+using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -17,6 +18,11 @@ namespace Raven.Server.ServerWide.Commands
 
         protected abstract BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context,
             BlittableJsonReaderObject existingValue, bool isPassive);
+
+        public static string GetStorageKey(string databaseName, string prefix)
+        {
+            return $"{Constants.Documents.Prefix}{databaseName.ToLowerInvariant()}/identities/{prefix?.ToLowerInvariant()}";
+        }
 
         public virtual unsafe void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, bool isPassive, out object result)
         {

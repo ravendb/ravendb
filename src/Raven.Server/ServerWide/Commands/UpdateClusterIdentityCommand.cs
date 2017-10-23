@@ -42,7 +42,7 @@ namespace Raven.Server.ServerWide.Commands
 
             foreach (var kvp in Identities)
             {
-                var itemKey = IncrementClusterIdentityCommand.GetStorageKey(DatabaseName, kvp.Key);
+                var itemKey = GetStorageKey(DatabaseName, kvp.Key);
 
                 using (Slice.From(context.Allocator, itemKey, out var key))
                 {
@@ -55,7 +55,7 @@ namespace Raven.Server.ServerWide.Commands
                     else
                     {
                         var rc = identities.ReadLong(key);
-                        val = rc ?? -1;
+                        val = rc ?? -1; // '-1' should not happen
                     }
 
                     var keyString = key.ToString().ToLowerInvariant();

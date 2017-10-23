@@ -31,7 +31,7 @@ namespace Raven.Client.Documents.Commands
 
         public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
         {
-            if (response == null || response.TryGet("Index", out long results) == false)
+            if (response == null || response.TryGet("NewIdentityValue", out long results) == false)
             {
                 ThrowInvalidResponse();
                 return; // never hit
