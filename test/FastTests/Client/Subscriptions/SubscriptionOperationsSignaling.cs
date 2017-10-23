@@ -28,6 +28,12 @@ namespace FastTests.Client.Subscriptions
 
                 var users = new BlockingCollection<User>();
 
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User());
+                    session.SaveChanges();
+                }
+
                 var subscirptionLifetimeTask = subscription.Run(u =>
                 {
                     foreach (var item in u.Items)
@@ -35,12 +41,6 @@ namespace FastTests.Client.Subscriptions
                         users.Add(item.Result);
                     }
                 });
-
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new User());
-                    session.SaveChanges();
-                }
 
                 User user;
                 Assert.True(users.TryTake(out user, 1000000));
@@ -61,6 +61,12 @@ namespace FastTests.Client.Subscriptions
                 var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
 
                 var users = new BlockingCollection<User>();
+                
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User());
+                    session.SaveChanges();
+                }
 
                 var subscirptionLifetimeTask = subscription.Run(u =>
                 {
@@ -69,12 +75,6 @@ namespace FastTests.Client.Subscriptions
                         users.Add(item.Result);
                     }
                 });
-
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new User());
-                    session.SaveChanges();
-                }
 
                 User user;
                 Assert.True(users.TryTake(out user, _reasonableWaitTime));
@@ -137,6 +137,13 @@ namespace FastTests.Client.Subscriptions
                 var beforeAckMre = new ManualResetEvent(false);
                 var users = new BlockingCollection<User>();
                 subscription.AfterAcknowledgment += b => { beforeAckMre.WaitOne(); return Task.CompletedTask; };
+               
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User());
+                    session.SaveChanges();
+                }
+
                 var subscriptionLifetimeTask = subscription.Run(u =>
                 {
                     foreach (var item in u.Items)
@@ -144,11 +151,6 @@ namespace FastTests.Client.Subscriptions
                         users.Add(item.Result);
                     }
                 });
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new User());
-                    session.SaveChanges();
-                }
 
                 Assert.True(users.TryTake(out var _, _reasonableWaitTime));
 
@@ -169,6 +171,12 @@ namespace FastTests.Client.Subscriptions
                 var subscriptionId = store.Subscriptions.Create<User>();
                 var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
                 var users = new BlockingCollection<User>();
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User());
+                    session.SaveChanges();
+                }
+
                 var subscriptionLifetimeTask = subscription.Run(u =>
                 {
                     foreach (var item in u.Items)
@@ -176,11 +184,6 @@ namespace FastTests.Client.Subscriptions
                         users.Add(item.Result);
                     }
                 });
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new User());
-                    session.SaveChanges();
-                }
 
                 User user;
                 Assert.True(users.TryTake(out user, _reasonableWaitTime));
@@ -203,14 +206,14 @@ namespace FastTests.Client.Subscriptions
             {
                 var subscriptionId = store.Subscriptions.Create<User>();
                 var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
-
-                var task = subscription.Run(_ => throw new InvalidCastException());
-
+                
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User());
                     session.SaveChanges();
                 }
+
+                var task = subscription.Run(_ => throw new InvalidCastException());
 
                 var innerException = Assert.Throws<AggregateException>(()=> task .Wait()).InnerException;
                 Assert.IsType<SubscriberErrorException>(innerException);

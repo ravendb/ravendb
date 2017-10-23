@@ -44,8 +44,6 @@ namespace FastTests.Client.Subscriptions
 
                         return Task.CompletedTask;
                     };
-
-                    var task = subscription.Run(x => { });
                     
                     using (var session = store.OpenSession())
                     {
@@ -54,6 +52,8 @@ namespace FastTests.Client.Subscriptions
                         session.SaveChanges();
                         cv = (string)session.Advanced.GetMetadataFor(entity)[Constants.Documents.Metadata.ChangeVector];
                     }
+
+                    var task = subscription.Run(x => { });
 
 
                     Assert.True(await amre.WaitAsync(_reasonableWaitTime));

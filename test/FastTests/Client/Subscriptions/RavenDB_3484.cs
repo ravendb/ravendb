@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -9,6 +10,7 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Extensions;
 
@@ -16,7 +18,7 @@ namespace FastTests.Client.Subscriptions
 {
     public class RavenDB_3484 : RavenTestBase
     {
-        private readonly TimeSpan waitForDocTimeout = TimeSpan.FromSeconds(20);
+        private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(60 * 10) : TimeSpan.FromSeconds(50);
 
         [Fact]
         public void OpenIfFree_ShouldBeDefaultStrategy()
@@ -62,6 +64,15 @@ namespace FastTests.Client.Subscriptions
 
                 var subscriptions = new (Subscription<User> Subscription, Task Task, BlockingCollection<User> Items)[numberOfClients];
 
+                using (var s = store.OpenSession())
+                {
+                    var usersShouldnotexist = "users/ShouldNotExist";
+                    s.Store(new User(),usersShouldnotexist);
+                    s.SaveChanges();
+                    s.Delete(usersShouldnotexist);
+                    s.SaveChanges();
+                }
+
                 try
                 {
                     for (int i = 0; i < numberOfClients; i++)
@@ -73,8 +84,16 @@ namespace FastTests.Client.Subscriptions
                         });
 
                         var items = new BlockingCollection<User>();
-                    
-                        var subscriptionRunningTask = subscription.Run(x=>
+                        
+                        var batchAcknowledgedMre = new AsyncManualResetEvent();
+
+                        subscription.AfterAcknowledgment += x =>
+                        {
+                            batchAcknowledgedMre.Set();
+                            return Task.CompletedTask;
+                        };
+
+                        var subscriptionRunningTask = subscription.Run(x =>
                         {
                             foreach (var item in x.Items)
                             {
@@ -84,19 +103,9 @@ namespace FastTests.Client.Subscriptions
 
                         if (i > 0)
                         {
-                            Assert.True(SpinWait.SpinUntil(() => subscriptions[i - 1].Task.IsCompleted, TimeSpan.FromSeconds(60)));
-                            await Assert.ThrowsAsync<SubscriptionInUseException>(()=>subscriptions[i - 1].Task);
+                            Assert.True(await subscriptions[i - 1].Task.WaitAsync(TimeSpan.FromSeconds(60)));
+                            await Assert.ThrowsAsync<SubscriptionInUseException>(() => subscriptions[i - 1].Task);
                         }
-
-                        subscriptions[i] = (subscription,subscriptionRunningTask, items);
-
-                        var batchAcknowledged = false;
-
-                        subscription.AfterAcknowledgment += x =>
-                        {
-                            batchAcknowledged = true;
-                            return Task.CompletedTask;
-                        };
 
                         using (var s = store.OpenSession())
                         {
@@ -106,10 +115,12 @@ namespace FastTests.Client.Subscriptions
                             s.SaveChanges();
                         }
 
-                        Assert.True(subscriptions[i].Items.TryTake(out _, waitForDocTimeout));
-                        Assert.True(subscriptions[i].Items.TryTake(out _, waitForDocTimeout));
+                        subscriptions[i] = (subscription, subscriptionRunningTask, items);
 
-                        SpinWait.SpinUntil(() => batchAcknowledged, TimeSpan.FromSeconds(5)); // let it acknowledge the processed batch before we open another subscription
+                        Assert.True(subscriptions[i].Items.TryTake(out _, _reasonableWaitTime));
+                        Assert.True(subscriptions[i].Items.TryTake(out _, _reasonableWaitTime));
+
+                        Assert.True(await batchAcknowledgedMre.WaitAsync(TimeSpan.FromSeconds(10))); // let it acknowledge the processed batch before we open another subscription
 
                         if (i > 0)
                         {
@@ -139,9 +150,7 @@ namespace FastTests.Client.Subscriptions
                 });
 
                 var items = new BlockingCollection<User>();
-
-                subscription.Run(batch => batch.Items.ForEach(x => items.Add(x.Result)));
-
+                
                 using (var s = store.OpenSession())
                 {
                     s.Store(new User());
@@ -150,13 +159,15 @@ namespace FastTests.Client.Subscriptions
                     s.SaveChanges();
                 }
 
-                Assert.True(items.TryTake(out _, waitForDocTimeout));
-                Assert.True(items.TryTake(out _, waitForDocTimeout));
+                subscription.Run(batch => batch.Items.ForEach(x => items.Add(x.Result)));
+
+                Assert.True(items.TryTake(out _, _reasonableWaitTime));
+                Assert.True(items.TryTake(out _, _reasonableWaitTime));
             }
         }
 
         [Fact]
-        public void ShouldProcessSubscriptionAfterItGetsReleasedWhen_WaitForFree_StrategyIsSet()
+        public async Task ShouldProcessSubscriptionAfterItGetsReleasedWhen_WaitForFree_StrategyIsSet()
         {
             using (var store = GetDocumentStore())
             {
@@ -166,6 +177,7 @@ namespace FastTests.Client.Subscriptions
 
                 foreach (var activeClientStrategy in new[] { SubscriptionOpeningStrategy.OpenIfFree, SubscriptionOpeningStrategy.TakeOver})
                 {
+                    var activeSubscriptionMre = new AsyncManualResetEvent();
                     var activeSubscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(id)
                     {
                         Strategy = activeClientStrategy
@@ -176,16 +188,39 @@ namespace FastTests.Client.Subscriptions
                         Strategy = SubscriptionOpeningStrategy.WaitForFree
                     });
 
-                    bool batchAcknowledged = false;
+                    var pendingBatchAcknowledgedMre = new AsyncManualResetEvent();
                     pendingSubscription.AfterAcknowledgment += x =>
                     {
-                        batchAcknowledged = true;
+                        pendingBatchAcknowledgedMre.Set();
                         return Task.CompletedTask;
                     };
 
                     var items = new BlockingCollection<User>();
+                    
+                    using (var s = store.OpenSession())
+                    {
+                        s.Store(new User(), "users/" + userId++);
+                        s.Store(new User(), "users/" + userId++);
 
-                    pendingSubscription.Run(batch => batch.Items.ForEach(i => items.Add(i.Result)));
+                        s.SaveChanges();
+                    }
+
+                    activeSubscription.AfterAcknowledgment += async x => activeSubscriptionMre.Set();
+
+                    _ = activeSubscription.Run(x => { });
+                    Assert.True(await activeSubscriptionMre.WaitAsync(_reasonableWaitTime));
+                    _ = pendingSubscription.Run(batch => batch.Items.ForEach(i => items.Add(i.Result)));
+                    activeSubscriptionMre.Reset();
+
+                    using (var s = store.OpenSession())
+                    {
+                        s.Store(new User(), "users/" + userId++);
+                        s.Store(new User(), "users/" + userId++);
+
+                        s.SaveChanges();
+                    }
+
+                    Assert.True(await activeSubscriptionMre.WaitAsync(_reasonableWaitTime));
 
                     activeSubscription.Dispose(); // disconnect the active client, the pending one should be notified the the subscription is free and retry to open it
 
@@ -199,12 +234,12 @@ namespace FastTests.Client.Subscriptions
 
                     User user;
 
-                    Assert.True(items.TryTake(out user, waitForDocTimeout));
-                    Assert.Equal("users/" + (userId - 2), user.Id);
-                    Assert.True(items.TryTake(out user, waitForDocTimeout));
-                    Assert.Equal("users/" + (userId - 1), user.Id);
+                    Assert.True(items.TryTake(out user, _reasonableWaitTime));
+                    Assert.Equal("users/" + (userId - 4), user.Id);
+                    Assert.True(items.TryTake(out user, _reasonableWaitTime));
+                    Assert.Equal("users/" + (userId - 3), user.Id);
 
-                    Assert.True(SpinWait.SpinUntil(() => batchAcknowledged, TimeSpan.FromSeconds(5))); // let it acknowledge the processed batch before we open another subscription
+                    Assert.True(await pendingBatchAcknowledgedMre.WaitAsync(_reasonableWaitTime)); // let it acknowledge the processed batch before we open another subscription
 
                     pendingSubscription.Dispose();
                 }

@@ -158,9 +158,7 @@ namespace FastTests.Client.Subscriptions
                 using (var subscription = store.Subscriptions.Open(new SubscriptionConnectionOptions(id)))
                 {
                     var names = new BlockingCollection<string>();
-
-                    subscription.Run(batch => batch.Items.ForEach(x => names.Add(x.Result.Name)));
-
+                    
                     using (var session = store.OpenSession())
                     {
                         session.Store(new User
@@ -169,6 +167,8 @@ namespace FastTests.Client.Subscriptions
                         }, "users/1");
                         session.SaveChanges();
                     }
+
+                    subscription.Run(batch => batch.Items.ForEach(x => names.Add(x.Result.Name)));
 
                     string name;
                     Assert.True(names.TryTake(out name, _reasonableWaitTime));
@@ -346,13 +346,14 @@ namespace FastTests.Client.Subscriptions
                     new SubscriptionConnectionOptions(subscriptionDocuments[0].SubscriptionName));
 
                 var docs = new CountdownEvent(1);
-                subscription.Run(x => docs.Signal(x.NumberOfItemsInBatch));
-
+                
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User());
                     session.SaveChanges();
                 }
+
+                subscription.Run(x => docs.Signal(x.NumberOfItemsInBatch));
 
                 Assert.True(docs.Wait(_reasonableWaitTime));
             }
@@ -371,7 +372,7 @@ namespace FastTests.Client.Subscriptions
                 using (var allSubscription = store.Subscriptions.Open(allId))
                 {
                     var allDocs = new CountdownEvent(500);
-                    allSubscription.Run(x => allDocs.Signal(x.NumberOfItemsInBatch));
+                    
 
                     var filteredUsersId = store.Subscriptions.Create(new SubscriptionCreationOptions
                     {
@@ -380,14 +381,17 @@ namespace FastTests.Client.Subscriptions
                     using (var filteredUsersSubscription = store.Subscriptions.Open(new SubscriptionConnectionOptions(filteredUsersId)))
                     {
                         var usersDocs = new CountdownEvent(1);
-                        filteredUsersSubscription.Run(x => usersDocs.Signal(x.NumberOfItemsInBatch));
-
+                        
                         using (var session = store.OpenSession())
                         {
                             for (int i = 0; i < 500; i++)
                                 session.Store(new User(), "another/");
                             session.SaveChanges();
                         }
+
+                        allSubscription.Run(x => allDocs.Signal(x.NumberOfItemsInBatch));
+
+                        filteredUsersSubscription.Run(x => usersDocs.Signal(x.NumberOfItemsInBatch));
 
                         Assert.True(allDocs.Wait(_reasonableWaitTime));
                         Assert.False(usersDocs.Wait(0));
@@ -564,14 +568,15 @@ namespace FastTests.Client.Subscriptions
                 {
 
                     var docs = new BlockingCollection<User>();
-                    subscription.Run(x => x.Items.ForEach(i => docs.Add(i.Result)));
-
+                    
                     using (var bulk = store.BulkInsert())
                     {
                         bulk.Store(new User());
                         bulk.Store(new User());
                         bulk.Store(new User());
                     }
+
+                    subscription.Run(x => x.Items.ForEach(i => docs.Add(i.Result)));
 
                     Assert.True(docs.TryTake(out _, _reasonableWaitTime));
                     Assert.True(docs.TryTake(out _, _reasonableWaitTime));
@@ -587,8 +592,8 @@ namespace FastTests.Client.Subscriptions
                 var id = store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
                 using (var subscription = store.Subscriptions.Open(new SubscriptionConnectionOptions(id)))
                 {
-                    var subscriptionTask = subscription.Run(x => throw new Exception("Fake exception"));
                     PutUserDoc(store);
+                    var subscriptionTask = subscription.Run(x => throw new Exception("Fake exception"));
 
                     await subscriptionTask.WaitAsync(_reasonableWaitTime);
                     Assert.True(await Assert.ThrowsAsync<SubscriberErrorException>(() => subscriptionTask).WaitAsync(_reasonableWaitTime));
@@ -611,16 +616,16 @@ namespace FastTests.Client.Subscriptions
                     IgnoreSubscriberErrors = true
                 }))
                 {
-
                     var docs = new BlockingCollection<User>();
+                    
+                    PutUserDoc(store);
+                    PutUserDoc(store);
+
                     var subscriptionTask = subscription.Run(x =>
                     {
                         x.Items.ForEach(i => docs.Add(i.Result));
                         throw new Exception("Fake exception");
                     });
-
-                    PutUserDoc(store);
-                    PutUserDoc(store);
 
                     Assert.True(docs.TryTake(out _, _reasonableWaitTime));
                     Assert.True(docs.TryTake(out _, _reasonableWaitTime));
@@ -760,11 +765,8 @@ namespace FastTests.Client.Subscriptions
                 var id = store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
                 using (var subscription = store.Subscriptions.Open<User>(id))
                 {
-
                     var users = new BlockingCollection<User>();
-
-                    subscription.Run(x => x.Items.ForEach(i => users.Add(i.Result)));
-
+                    
                     using (var session = store.OpenSession())
                     {
                         session.Store(new User
@@ -782,6 +784,8 @@ namespace FastTests.Client.Subscriptions
 
                         session.SaveChanges();
                     }
+
+                    subscription.Run(x => x.Items.ForEach(i => users.Add(i.Result)));
 
                     User user;
                     Assert.True(users.TryTake(out user, _reasonableWaitTime));
@@ -810,6 +814,13 @@ namespace FastTests.Client.Subscriptions
                 var id1 = store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
                 var id2 = store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
 
+                using (var s = store.OpenSession())
+                {
+                    s.Store(new User(), "users/1");
+                    s.Store(new User(), "users/2");
+                    s.SaveChanges();
+                }
+
                 subscription1 = store.Subscriptions.Open<User>(id1);
                 var items1 = new BlockingCollection<User>();
                 subscription1.Run(x => x.Items.ForEach(i => items1.Add(i.Result)));
@@ -818,13 +829,7 @@ namespace FastTests.Client.Subscriptions
                 var items2 = new BlockingCollection<User>();
                 subscription2.Run(x => x.Items.ForEach(i => items2.Add(i.Result)));
 
-                using (var s = store.OpenSession())
-                {
-                    s.Store(new User(), "users/1");
-                    s.Store(new User(), "users/2");
-                    s.SaveChanges();
-                }
-
+                
                 Assert.True(items1.TryTake(out var user, _reasonableWaitTime));
                 Assert.Equal("users/1", user.Id);
                 Assert.True(items1.TryTake(out user, _reasonableWaitTime));
