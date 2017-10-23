@@ -340,7 +340,7 @@ namespace FastTests.Client.Subscriptions
                 subscriptionDocuments = store.Subscriptions.GetSubscriptions(0, 10);
 
                 Assert.Equal(1, subscriptionDocuments.Count);
-                Assert.Equal("from Users", subscriptionDocuments[0].Query);
+                Assert.Equal("from Users as doc", subscriptionDocuments[0].Query);
 
                 var subscription = store.Subscriptions.Open(
                     new SubscriptionConnectionOptions(subscriptionDocuments[0].SubscriptionName));

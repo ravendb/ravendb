@@ -495,7 +495,7 @@ namespace Raven.Server.Web.System
                                 ChangeVectorForNextBatchStartingPoint = subscriptionState.ChangeVectorForNextBatchStartingPoint,
                                 SubscriptionId = subscriptionState.SubscriptionId,
                                 SubscriptionName = subscriptionState.SubscriptionName,
-                                LastTimeServerMadeProgressWithDocuments = subscriptionState.LastTimeServerMadeProgressWithDocuments,
+                                LastBatchAckTime = subscriptionState.LastBatchAckTime,
                                 Disabled = subscriptionState.Disabled,
                                 LastClientConnectionTime = subscriptionState.LastClientConnectionTime,
                                 MentorNode = subscriptionState.MentorNode,

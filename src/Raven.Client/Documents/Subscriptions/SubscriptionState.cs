@@ -18,8 +18,8 @@ namespace Raven.Client.Documents.Subscriptions
         public long SubscriptionId { get; set; }
         public string SubscriptionName { get; set; }
         public string MentorNode { get; set; }
-        public DateTime LastTimeServerMadeProgressWithDocuments { get; set; }  // Last time server made some progress with the subscriptions docs  
-        public DateTime LastClientConnectionTime { get; set; } // Last time any client has connected to server (connection dead or alive)
+        public DateTime? LastBatchAckTime { get; set; }  // Last time server made some progress with the subscriptions docs  
+        public DateTime? LastClientConnectionTime { get; set; } // Last time any client has connected to server (connection dead or alive)
         public bool Disabled { get; set; }
 
         public ulong GetTaskKey()
@@ -41,7 +41,7 @@ namespace Raven.Client.Documents.Subscriptions
                 [nameof(SubscriptionId)] = SubscriptionId,
                 [nameof(SubscriptionName)] = SubscriptionName,
                 [nameof(MentorNode)] = MentorNode,
-                [nameof(LastTimeServerMadeProgressWithDocuments)] = LastTimeServerMadeProgressWithDocuments,
+                [nameof(LastBatchAckTime)] = LastBatchAckTime,
                 [nameof(LastClientConnectionTime)] = LastClientConnectionTime,
                 [nameof(Disabled)] = Disabled
             };

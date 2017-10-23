@@ -57,6 +57,12 @@ namespace Raven.Client.Documents.Subscriptions
         Task<string> CreateAsync(SubscriptionCreationOptions options, string database = null);
 
         /// <summary>
+        /// It creates a data subscription in a database. The subscription will expose all documents that match the specified subscription options.
+        /// </summary>
+        /// <returns>Created subscription name.</returns>
+        Task<string> CreateAsync<T>(SubscriptionCreationOptions<T> options, string database = null);
+
+        /// <summary>
         /// It opens a subscription and starts pulling documents since a last processed document for that subscription.
         /// The connection options determine client and server cooperation rules like document batch sizes or a timeout in a matter of which a client
         /// needs to acknowledge that batch has been processed. The acknowledgment is sent after all documents are processed by subscription's handlers.  

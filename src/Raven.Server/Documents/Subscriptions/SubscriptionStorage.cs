@@ -323,7 +323,7 @@ namespace Raven.Server.Documents.Subscriptions
                 Query = @base.Query;
                 ChangeVectorForNextBatchStartingPoint = @base.ChangeVectorForNextBatchStartingPoint;
                 SubscriptionId = @base.SubscriptionId;
-                LastTimeServerMadeProgressWithDocuments = @base.LastTimeServerMadeProgressWithDocuments;
+                LastBatchAckTime = @base.LastBatchAckTime;
                 SubscriptionName = @base.SubscriptionName;
                 MentorNode = @base.MentorNode;
             }

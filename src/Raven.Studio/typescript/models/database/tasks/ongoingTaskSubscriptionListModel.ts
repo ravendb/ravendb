@@ -61,9 +61,10 @@ class ongoingTaskSubscriptionListModel extends ongoingTask {
                 this.taskState(result.Disabled ? 'Disabled' : 'Enabled');
                 
                 const dateFormat = "YYYY MMMM Do, h:mm A";
-                const lastServerTime = moment.utc(result.LastTimeServerMadeProgressWithDocuments).local().format(dateFormat);
+
+                const lastServerTime = (!!result.LastBatchAckTime) ? moment.utc(result.LastBatchAckTime).local().format(dateFormat):"N/A";
                 this.lastTimeServerMadeProgressWithDocuments(lastServerTime);
-                const lastClientTime = moment.utc(result.LastClientConnectionTime).local().format(dateFormat);
+                const lastClientTime = (!!result.LastClientConnectionTime)?moment.utc(result.LastClientConnectionTime).local().format(dateFormat):"N/A";
                 this.lastClientConnectionTime(lastClientTime);
 
                 // 2. Get connection details info
