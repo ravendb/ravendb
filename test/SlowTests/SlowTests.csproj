@@ -35,6 +35,7 @@
     <EmbeddedResource Include="MailingList\Everett\DocumentWithBytes.txt" />
     <EmbeddedResource Include="Smuggler\Indexes_And_Transformers_3.5.ravendbdump" />
     <EmbeddedResource Include="Smuggler\Northwind_3.5.35168.ravendbdump" />
+    <EmbeddedResource Include="Smuggler\Revisions_3.5.35220.ravendbdump" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Raven.TestDriver\Raven.TestDriver.csproj" />
