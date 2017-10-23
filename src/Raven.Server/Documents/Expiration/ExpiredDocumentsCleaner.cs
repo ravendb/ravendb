@@ -97,7 +97,7 @@ namespace Raven.Server.Documents.Expiration
                         return;
                 }
 
-                var command = new DeleteExpiredDocumentsCommand(expired, _database, Logger);
+                var command = new DeleteExpiredDocumentsCommand(expired, _database);
                 await _database.TxMerger.Enqueue(command);
 
                 if (Logger.IsInfoEnabled)
@@ -117,7 +117,7 @@ namespace Raven.Server.Documents.Expiration
 
             public int DeletionCount;
 
-            public DeleteExpiredDocumentsCommand(Dictionary<Slice, List<(Slice LowerId, LazyStringValue Id)>> expired, DocumentDatabase database, Logger logger)
+            public DeleteExpiredDocumentsCommand(Dictionary<Slice, List<(Slice LowerId, LazyStringValue Id)>> expired, DocumentDatabase database)
             {
                 _expired = expired;
                 _database = database;
