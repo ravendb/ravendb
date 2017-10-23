@@ -1,4 +1,4 @@
-<div id="dashboard" class="content-margin">
+<div id="dashboard-container" class="content-margin">
     <div class="dashboard-items">
         <div class="flex-vertical dashboard-nodecpu">
 
@@ -11,7 +11,7 @@
                         <div title="Node url">
                             <i class="icon-link"></i><span data-bind="text: clusterManager.localNodeUrl"></span>
                         </div>
-                        <div>
+                        <div data-bind="attr: { title: 'Server start time: ' + formattedStartTime() }">
                             <i class="icon-clock"></i><span>Up for <strong data-bind="text: formattedUpTime" class="text-success"></strong></span>
                         </div>
                         <div data-bind="visible: usingHttps">
@@ -57,7 +57,9 @@
                                     <strong data-bind="text: $root.sizeFormatter(memoryUsage()), attr: { class: memoryUsageClass }"></strong> / 
                                     <span data-bind="text: $root.sizeFormatter(totalMemory())"></span>
                                 </div>
+                                <!-- TODO
                                 <div><small><a href="#">see details</a></small></div>
+                                 -->
                             </div>
                             <div class="infogrid-graph">
                                 <div class="graph-container fix-size" id="memoryChart">
@@ -81,7 +83,7 @@
                             <div class="margin-bottom"># Total Requests/s<br/>
                                 <strong data-bind="text: totalRequestsPerSecond().toLocaleString()"></strong></div>
                             <div class="margin-bottom"># Writes/s<br/> <strong data-bind="text: totalWritesPerSecond().toLocaleString()"></strong></div>
-                            <div># Data Writes/s<br /> <strong data-bind="text: $root.sizeFormatter(totalDataWritesPerSecond())"></strong></div>
+                            <div># Data Written/s<br /> <strong data-bind="text: $root.sizeFormatter(totalDataWritesPerSecond())"></strong></div>
                         </div>
                         <div class="infogrid-graph">
                             <div class="graph-container fix-size" id="trafficChart"></div>
