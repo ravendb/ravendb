@@ -11,11 +11,6 @@ namespace Raven.Server.ServerWide.Commands
 {
     public class IncrementClusterIdentityCommand : UpdateValueForDatabaseCommand
     {
-        public static string GetStorageKey(string databaseName, string prefix)
-        {
-            return $"{Constants.Documents.Prefix}{databaseName.ToLowerInvariant()}/identities/{prefix?.ToLowerInvariant()}";
-        }
-
         private string _itemId;
 
         public string Prefix { get; set; }
