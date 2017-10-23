@@ -4,7 +4,7 @@ export = getDatabasesMenuItem;
 
 function getDatabasesMenuItem(appUrls: computedAppUrls) {
     return new leafMenuItem({
-        route: ["", "databases"],
+        route: "databases",
         title: "Databases",
         moduleId: "viewmodels/resources/databases",
         nav: true,

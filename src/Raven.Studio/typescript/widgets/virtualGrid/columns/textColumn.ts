@@ -6,6 +6,7 @@ import utils = require("widgets/virtualGrid/virtualGridUtils");
 
 type textColumnOpts<T> = {
     extraClass?: (item: T) => string;
+    useRawValue?: (item: T) => boolean
 }
 
 type preparedValue = {
@@ -44,7 +45,7 @@ class textColumn<T> implements virtualColumn {
         const cellValue = this.getCellValue(item);
 
         if (_.isString(cellValue)) {
-            const rawText = utils.escape(cellValue);
+            const rawText = this.opts.useRawValue && this.opts.useRawValue(item) ? cellValue : utils.escape(cellValue);
             return {
                 rawText: rawText,
                 typeCssClass: "token string"

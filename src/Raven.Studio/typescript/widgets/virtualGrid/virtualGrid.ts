@@ -42,6 +42,9 @@ class virtualGrid<T> {
     private settings = new virtualGridConfig();
     private controller: virtualGridController<T>;
     private previousScroll: [number, number] = [0, 0];
+    private previousWindowSize: [number, number] = [0, 0];
+    private condensed = false;
+    private rowHeight: number;
 
     private static readonly minItemFetchCount = 100;
     private static readonly viewportSelector = ".viewport";
@@ -49,7 +52,7 @@ class virtualGrid<T> {
     private static readonly viewportScrollerSelector = ".viewport-scroller";
     private static readonly minColumnWidth = 20;
 
-    constructor(params: { controller: KnockoutObservable<virtualGridController<T>>, emptyTemplate: string }) {
+    constructor(params: { controller: KnockoutObservable<virtualGridController<T>>, emptyTemplate: string , condensed: boolean}) {
         this.gridId = _.uniqueId("vg_");
 
         this.refreshSelection();
@@ -62,6 +65,13 @@ class virtualGrid<T> {
 
         if (params.emptyTemplate) {
             this.emptyTemplate = params.emptyTemplate;
+        }
+        
+        if (params.condensed) {
+            this.condensed = true;
+            this.rowHeight = 24;
+        } else {
+            this.rowHeight = 36;
         }
     }
 
@@ -183,12 +193,12 @@ class virtualGrid<T> {
 
     private createVirtualRows(): virtualRow[] {
         const height = Math.max(100, this.gridElementHeight);
-        const rowsNeededToCoverViewport = Math.ceil(height / virtualRow.height);
+        const rowsNeededToCoverViewport = Math.ceil(height / this.rowHeight);
         const desiredRowCount = rowsNeededToCoverViewport * 2;
         const rows: virtualRow[] = [];
         rows.length = desiredRowCount;
         for (let i = 0; i < desiredRowCount; i++) {
-            rows[i] = new virtualRow();
+            rows[i] = new virtualRow(this.rowHeight);
         }
 
         return rows;
@@ -301,6 +311,17 @@ class virtualGrid<T> {
     }
 
     private checkForUpdatedGridHeight(): number {
+        const windowWidth = window.innerWidth || document.body.clientWidth;
+        const windowHeight = window.innerHeight || document.body.clientHeight;
+        
+        const [prevWidth, prevHeight] = this.previousWindowSize;
+        
+        if (prevWidth === windowWidth && prevHeight === windowHeight) {
+            return this.gridElementHeight;
+        }
+        
+        this.previousWindowSize = [windowWidth, windowHeight];
+        
         const oldHeight = this.gridElementHeight;
         const newHeight = this.$gridElement.height();
         this.gridElementHeight = newHeight;
@@ -356,7 +377,7 @@ class virtualGrid<T> {
         const scrollBottom = scrollTop + this.gridElementHeight;
         let positionCheck = scrollTop;
         const columns = this.columns();
-        const lastPossibleRowY = this.virtualHeight() - virtualRow.height; // Find out the last possible row in the grid so that we don't place virtual rows beneath this.
+        const lastPossibleRowY = this.virtualHeight() - this.rowHeight; // Find out the last possible row in the grid so that we don't place virtual rows beneath this.
 
         while (positionCheck < scrollBottom && positionCheck <= lastPossibleRowY) {
             let rowAtPosition = this.findRowAtY(positionCheck);
@@ -365,12 +386,12 @@ class virtualGrid<T> {
                 rowAtPosition = this.getOffscreenRow(scrollTop, scrollBottom);
 
                 // Populate it with data.
-                const rowIndex = Math.floor(positionCheck / virtualRow.height);
+                const rowIndex = Math.floor(positionCheck / this.rowHeight);
                 const isChecked = this.isSelected(rowIndex);
                 rowAtPosition.populate(this.items.get(rowIndex), rowIndex, isChecked, columns);
             }
 
-            const newPositionCheck = rowAtPosition.top + virtualRow.height;
+            const newPositionCheck = rowAtPosition.top + this.rowHeight;
             if (newPositionCheck <= positionCheck) {
                 throw new Error("Virtual grid defect: next position check was smaller or equal to last check, resulting in potentially infinite loop.");
             }
@@ -425,7 +446,7 @@ class virtualGrid<T> {
         for (let i = 0; i < this.virtualRows.length; i++) {
             const vRow = this.virtualRows[i];
             const vRowTop = vRow.top;
-            const vRowBottom = vRowTop + virtualRow.height;
+            const vRowBottom = vRowTop + this.rowHeight;
             if (vRowTop <= y && vRowBottom > y) {
                 return vRow;
             }
@@ -491,7 +512,7 @@ class virtualGrid<T> {
         // Add these results to the .items array as necessary.
         const oldTotalCount = this.items.size;
         this.totalItemCount = results.totalResultCount;
-        this.virtualHeight(results.totalResultCount * virtualRow.height);
+        this.virtualHeight(results.totalResultCount * this.rowHeight);
         const endIndex = skip + results.items.length;
         for (let i = 0; i < results.items.length; i++) {
             const rowIndex = i + skip;
@@ -819,9 +840,9 @@ class virtualGrid<T> {
             ko.components.register(componentName, {
                 viewModel: virtualGrid,
                 template: `
-<div class="virtual-grid flex-window stretch" data-bind="attr: { id: gridId }">
+<div class="virtual-grid flex-window stretch" data-bind="attr: { id: gridId }, css: { condensed : condensed }">
     <div class="absolute-center loading" data-bind="visible: isLoading"><div class="global-spinner"></div></div>
-    <div class="column-container flex-window-head" data-bind="foreach: columns, visible: settings.showHeader"><div class="column" data-bind="style: { width: $data.width }"><strong data-bind="html: $data.header"></strong></div></div>    
+    <div class="column-container flex-window-head" data-bind="foreach: columns, visible: settings.showHeader"><div class="column" data-bind="style: { width: $data.width }, attr: { title: $data.header }"><strong data-bind="html: $data.header"></strong></div></div>    
     <div class="viewport flex-window-scroll" data-bind="css: { 'header-visible': settings.showHeader }">
         <div class="viewport-scroller" data-bind="style: { height: virtualHeight() + 'px', width: virtualWidth() + 'px' }, template: { afterRender: afterRender.bind($data) }">
         </div>

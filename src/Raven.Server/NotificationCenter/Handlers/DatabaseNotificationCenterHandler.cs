@@ -16,7 +16,7 @@ namespace Raven.Server.NotificationCenter.Handlers
         {
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
             {
-                using (var writer = new NotificationCenterWebsocketWriter(webSocket, Database.NotificationCenter, ContextPool, Database.DatabaseShutdown))
+                using (var writer = new NotificationCenterWebSocketWriter(webSocket, Database.NotificationCenter, ContextPool, Database.DatabaseShutdown))
                 {
                     using (Database.NotificationCenter.GetStored(out IEnumerable<NotificationTableValue> storedNotifications, postponed: false))
                     {

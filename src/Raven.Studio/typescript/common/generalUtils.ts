@@ -283,6 +283,7 @@ class genUtils {
         const textLines = htmlText.split(lineSeparator);
         return textLines.length;
     }
+    
 } 
 
 export = genUtils;

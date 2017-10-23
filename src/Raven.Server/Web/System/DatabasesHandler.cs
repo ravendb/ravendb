@@ -393,13 +393,24 @@ namespace Raven.Server.Web.System
 
             if (online == false)
             {
-                // If state of database is found in the cache we can continue
-                if (ServerStore.DatabaseInfoCache.TryWriteOfflineDatabaseStatusToRequest(
-                    context, writer, databaseName, disabled, indexingStatus, nodesTopology))
+                // if state of database is found in the cache we can continue
+                if (ServerStore.DatabaseInfoCache.TryGet(databaseName, databaseInfoJson =>
+                {
+                    databaseInfoJson.Modifications = new DynamicJsonValue(databaseInfoJson)
+                    {
+                        [nameof(DatabaseInfo.Disabled)] = disabled,
+                        [nameof(DatabaseInfo.IndexingStatus)] = indexingStatus.ToString(),
+                        [nameof(DatabaseInfo.NodesTopology)] = topology?.ToJson()
+                    };
+
+                    context.Write(writer, databaseInfoJson);
+                }))
                 {
                     return;
                 }
-                // We won't find it if it is a new database or after a dirty shutdown, so just report empty values then
+
+                // we won't find it if it is a new database or after a dirty shutdown, 
+                // so just report empty values then
             }
 
             var size = new Size(GetTotalSize(db));

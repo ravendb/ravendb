@@ -125,6 +125,8 @@ namespace Raven.Server.Json
         
         public static readonly Func<BlittableJsonReaderObject, SqlMigrationImportOperation.SqlMigrationTable> SqlMigrationTable = SqlMigrationImportOperation.SqlMigrationTable.ManualDeserializationFunc;
 
+        public static readonly Func<BlittableJsonReaderObject, DatabaseInfo> DatabaseInfo = GenerateJsonDeserializationRoutine<DatabaseInfo>();
+
         public class Parameters
         {
             private Parameters()

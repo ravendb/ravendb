@@ -15,7 +15,7 @@ namespace Raven.Server.Utils
             out ulong lpTotalNumberOfBytes,
             out ulong lpTotalNumberOfFreeBytes);
 
-        public static DiskSpaceResult GetFreeDiskSpace(string pathToCheck, DriveInfo[] driveInfo)
+        public static DiskSpaceResult GetFreeDiskSpace(string pathToCheck, DriveInfo[] drivesInfo)
         {
             if (string.IsNullOrEmpty(pathToCheck))
                 return null;
@@ -28,7 +28,7 @@ namespace Raven.Server.Utils
 
                 return new DiskSpaceResult
                 {
-                    DriveName = Syscall.GetRootMountString(pathToCheck),
+                    DriveName = Syscall.GetRootMountString(drivesInfo, pathToCheck),
                     TotalFreeSpace = new Size((long)(statvfs.f_bsize * statvfs.f_bfree), SizeUnit.Bytes),
                     TotalSize = new Size((long)(statvfs.f_bsize * statvfs.f_blocks), SizeUnit.Bytes)
                 };
@@ -38,7 +38,7 @@ namespace Raven.Server.Utils
             {
                 var root = Path.GetPathRoot(pathToCheck);
 
-                foreach (var drive in driveInfo)
+                foreach (var drive in drivesInfo)
                 {
                     if (root.Contains(drive.Name) == false)
                         continue;
@@ -46,6 +46,7 @@ namespace Raven.Server.Utils
                     return new DiskSpaceResult
                     {
                         DriveName = root,
+                        VolumeLabel = drive.VolumeLabel,
                         TotalFreeSpace = new Size(drive.TotalFreeSpace, SizeUnit.Bytes),
                         TotalSize = new Size(drive.TotalSize, SizeUnit.Bytes)
                     };
@@ -73,14 +74,16 @@ namespace Raven.Server.Utils
 
             return null;
         }
+    }
 
-        public class DiskSpaceResult
-        {
-            public string DriveName { get; set; }
+    public class DiskSpaceResult
+    {
+        public string DriveName { get; set; }
 
-            public Size TotalFreeSpace { get; set; }
+        public string VolumeLabel { get; set; }
 
-            public Size TotalSize { get; set; }
-        }
+        public Size TotalFreeSpace { get; set; }
+
+        public Size TotalSize { get; set; }
     }
 }

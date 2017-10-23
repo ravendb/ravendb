@@ -27,6 +27,7 @@ class appUrl {
         adminSettings: ko.pureComputed(() => appUrl.forAdminSettings()),
         adminSettingsCluster: ko.pureComputed(() => appUrl.forCluster()),
 
+        serverDashboard: ko.pureComputed(() => appUrl.forServerDashboard()),
         databases: ko.pureComputed(() => appUrl.forDatabases()),
         manageDatabaseGroup: ko.pureComputed(() => appUrl.forManageDatabaseGroup(appUrl.currentDatabase())),
         clientConfiguration: ko.pureComputed(() => appUrl.forClientConfiguration(appUrl.currentDatabase())),
@@ -190,6 +191,10 @@ class appUrl {
 
     static forAbout(): string {
         return "#about";
+    }
+    
+    static forServerDashboard(): string {
+        return "#dashboard";
     }
 
     static forEditDoc(id: string, db: database | databaseInfo, collection?: string): string {
@@ -391,12 +396,12 @@ class appUrl {
         return "#databases/settings/clientConfiguration?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forDocuments(collectionName: string, db: database | databaseInfo): string {
+    static forDocuments(collectionName: string, db: database | databaseInfo | string): string {
         if (collectionName === "All Documents")
             collectionName = null;
 
         const collectionPart = collectionName ? "collection=" + encodeURIComponent(collectionName) : "";
-        const  databasePart = appUrl.getEncodedDbPart(db);
+        const databasePart = _.isString(db) ? "&database=" + encodeURIComponent(db) : appUrl.getEncodedDbPart(db);
         return "#databases/documents?" + collectionPart + databasePart;
     }
 

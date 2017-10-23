@@ -12,10 +12,11 @@ class virtualRow {
     private _index = -1;
     private _even: boolean | null = null;
 
-    static readonly height = 36;
-
-    constructor() {
-        this.element = $(`<div class="virtual-row" style="height: ${virtualRow.height}px; top: ${this.top}px"></div>`);
+    private _height: number;
+    
+    constructor(height: number) {
+        this._height = height;
+        this.element = $(`<div class="virtual-row" style="height: ${this._height}px; top: ${this.top}px"></div>`);
     }
 
     get top(): number {
@@ -39,7 +40,7 @@ class virtualRow {
 
     isOffscreen(scrollTop: number, scrollBottom: number) {
         const top = this.top;
-        const bottom = top + virtualRow.height;
+        const bottom = top + this._height;
         return top > scrollBottom || bottom < scrollTop;
     }
 
@@ -82,7 +83,7 @@ class virtualRow {
             }
 
             // Move it to its proper position.
-            const desiredNewRowY = rowIndex * virtualRow.height;
+            const desiredNewRowY = rowIndex * this._height;
             this.setElementTop(desiredNewRowY);
         }
     }

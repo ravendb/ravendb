@@ -8,6 +8,7 @@ import getSettingsMenuItem = require("common/shell/menu/items/settings");
 import getStatsMenuItem = require("common/shell/menu/items/stats");
 import getIndexesMenuItem = require("common/shell/menu/items/indexes");
 import getDocumentsMenuItem = require("common/shell/menu/items/documents");
+import rootItems = require("common/shell/menu/items/rootItems");
 
 export = getRouterConfiguration();
 
@@ -60,15 +61,8 @@ function generateAllMenuItems() {
         getStatsMenuItem(appUrls),
         getDatabasesMenuItem(appUrls),
         getManageServerMenuItem(),
-        new leafMenuItem({
-            route: 'about',
-            moduleId: 'viewmodels/shell/about',
-            title: 'About',
-            tooltip: "About",
-            nav: true,
-            css: 'icon-info',
-            dynamicHash: appUrl.forAbout
-        })
+        rootItems.about(),
+        rootItems.dashboard()
     ];
 }
 

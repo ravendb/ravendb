@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -384,14 +385,14 @@ namespace Raven.Server.Web.Authentication
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var certificates = new List<Tuple<string, BlittableJsonReaderObject>>();
+                var certificates = new List<(string ItemName, BlittableJsonReaderObject Value)>();
                 try
                 {
                     if (string.IsNullOrEmpty(thumbprint))
                     {
                         foreach (var item in ServerStore.Cluster.ItemsStartingWith(context, Constants.Certificates.Prefix, start, pageSize))
                         {
-                            var def = JsonDeserializationServer.CertificateDefinition(item.Item2);
+                            var def = JsonDeserializationServer.CertificateDefinition(item.Value);
 
                             if (showSecondary || string.IsNullOrEmpty(def.CollectionPrimaryKey))
                                 certificates.Add(item);
@@ -418,7 +419,7 @@ namespace Raven.Server.Web.Authentication
                             }
                         }
 
-                        certificates.Add(new Tuple<string, BlittableJsonReaderObject>(key, certificate));
+                        certificates.Add((key, certificate));
                     }
 
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -426,7 +427,7 @@ namespace Raven.Server.Web.Authentication
                         writer.WriteStartObject();
                         writer.WriteArray(context, "Results", certificates.ToArray(), (w, c, cert) =>
                         {
-                            c.Write(w, cert.Item2);
+                            c.Write(w, cert.Value);
                         });
                         writer.WriteEndObject();
                     }
@@ -434,7 +435,7 @@ namespace Raven.Server.Web.Authentication
                 finally
                 {
                     foreach (var cert in certificates)
-                        cert.Item2?.Dispose();
+                        cert.Value?.Dispose();
                 }
             }
 
@@ -532,11 +533,11 @@ namespace Raven.Server.Web.Authentication
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var allItems = new List<Tuple<string, BlittableJsonReaderObject>>();
+                List<(string ItemName, BlittableJsonReaderObject Value)> allItems = null;
                 try
                 {
                     allItems = ServerStore.Cluster.ItemsStartingWith(context, Constants.Certificates.Prefix, 0, int.MaxValue).ToList();
-                    var clusterNodes = allItems.Select(item => JsonDeserializationServer.CertificateDefinition(item.Item2))
+                    var clusterNodes = allItems.Select(item => JsonDeserializationServer.CertificateDefinition(item.Value))
                         .Where(certificateDef => certificateDef.SecurityClearance == SecurityClearance.ClusterNode)
                         .ToList();
 
@@ -551,8 +552,11 @@ namespace Raven.Server.Web.Authentication
                 }
                 finally
                 {
-                    foreach (var cert in allItems)
-                        cert.Item2?.Dispose();
+                    if (allItems != null)
+                    {
+                        foreach (var cert in allItems)
+                            cert.Value?.Dispose();
+                    }
                 }
             }
 
