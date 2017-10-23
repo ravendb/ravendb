@@ -31,7 +31,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/tasks", "GET", AuthorizationStatus.ValidUser)]
         public Task GetOngoingTasks()
         {
-            var result = GetOngoingTasksFor(Database.Name, ServerStore);
+            var result = GetOngoingTasksInternal();
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -42,10 +42,10 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-        public static OngoingTasksResult GetOngoingTasksFor(string dbName, ServerStore store)
+        public OngoingTasksResult GetOngoingTasksInternal()
         {
             var ongoingTasksResult = new OngoingTasksResult();
-            using (store.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 DatabaseTopology dbTopology;
                 ClusterTopology clusterTopology;
@@ -53,7 +53,7 @@ namespace Raven.Server.Web.System
 
                 using (context.OpenReadTransaction())
                 {
-                    databaseRecord = store.Cluster.ReadDatabase(context, dbName);
+                    databaseRecord = ServerStore.Cluster.ReadDatabase(context, Database.Name);
 
                     if (databaseRecord == null)
                     {
@@ -61,36 +61,32 @@ namespace Raven.Server.Web.System
                     }
 
                     dbTopology = databaseRecord.Topology;
-                    clusterTopology = store.GetClusterTopology(context);
-
-                    ongoingTasksResult.OngoingTasksList.AddRange(CollectSubscriptionTasks(context, databaseRecord, clusterTopology, store));
+                    clusterTopology = ServerStore.GetClusterTopology(context);
+                    ongoingTasksResult.OngoingTasksList.AddRange(CollectSubscriptionTasks(context, databaseRecord, clusterTopology));
                 }
 
                 foreach (var tasks in new[]
                 {
-                    CollectExternalReplicationTasks(databaseRecord.DatabaseName, databaseRecord.ExternalReplication, dbTopology,clusterTopology, store),
-                    CollectEtlTasks(databaseRecord, dbTopology, clusterTopology, store),
-                    CollectBackupTasks(databaseRecord, dbTopology, clusterTopology, store)
+                    CollectExternalReplicationTasks(databaseRecord.ExternalReplication, dbTopology,clusterTopology),
+                    CollectEtlTasks(databaseRecord, dbTopology, clusterTopology),
+                    CollectBackupTasks(databaseRecord, dbTopology, clusterTopology)
                 })
                 {
                     ongoingTasksResult.OngoingTasksList.AddRange(tasks);
                 }
 
-                if (store.DatabasesLandlord.DatabasesCache.TryGetValue(dbName, out var database) && database.Status == TaskStatus.RanToCompletion)
-                {
-                    ongoingTasksResult.SubscriptionsCount = (int)database.Result.SubscriptionStorage.GetAllSubscriptionsCount();
-                }
+                ongoingTasksResult.SubscriptionsCount = (int)Database.SubscriptionStorage.GetAllSubscriptionsCount();
 
                 return ongoingTasksResult;
             }
         }
 
-        private static IEnumerable<OngoingTask> CollectSubscriptionTasks(TransactionOperationContext context, DatabaseRecord databaseRecord, ClusterTopology clusterTopology, ServerStore store)
+        private IEnumerable<OngoingTask> CollectSubscriptionTasks(TransactionOperationContext context, DatabaseRecord databaseRecord, ClusterTopology clusterTopology)
         {
             foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(context, SubscriptionState.SubscriptionPrefix(databaseRecord.DatabaseName)))
             {
                 var subscriptionState = JsonDeserializationClient.SubscriptionState(keyValue.Value);
-                var tag = databaseRecord.Topology.WhoseTaskIsIt(subscriptionState, store.IsPassive());
+                var tag = databaseRecord.Topology.WhoseTaskIsIt(subscriptionState, ServerStore.IsPassive());
 
                 yield return new OngoingTaskSubscription
                 {
@@ -108,25 +104,24 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private static IEnumerable<OngoingTask> CollectExternalReplicationTasks(string name, List<ExternalReplication> watchers, DatabaseTopology dbTopology, ClusterTopology clusterTopology, ServerStore store)
+        private IEnumerable<OngoingTask> CollectExternalReplicationTasks(List<ExternalReplication> watchers, DatabaseTopology dbTopology, ClusterTopology clusterTopology)
         {
             if (dbTopology == null)
                 yield break;
 
             foreach (var watcher in watchers)
             {
-                var taskInfo = GetExternalReplicationInfo(name, dbTopology, clusterTopology, store, watcher);
-
+                var taskInfo = GetExternalReplicationInfo(dbTopology, clusterTopology, watcher);
                 yield return taskInfo;
             }
         }
 
-        private static OngoingTaskReplication GetExternalReplicationInfo(string name, DatabaseTopology dbTopology, ClusterTopology clusterTopology, ServerStore store,
+        private OngoingTaskReplication GetExternalReplicationInfo(DatabaseTopology dbTopology, ClusterTopology clusterTopology,
             ExternalReplication watcher)
         {
             NodeId responsibale = null;
 
-            var tag = dbTopology.WhoseTaskIsIt(watcher, store.IsPassive());
+            var tag = dbTopology.WhoseTaskIsIt(watcher, ServerStore.IsPassive());
             if (tag != null)
             {
                 responsibale = new NodeId
@@ -137,14 +132,9 @@ namespace Raven.Server.Web.System
             }
 
             (string Url, OngoingTaskConnectionStatus Status) res = (null, OngoingTaskConnectionStatus.None);
-            string error = null;
-            if (tag == store.NodeTag)
+            if (tag == ServerStore.NodeTag)
             {
-                error =  GetDatabase(name, store, out var db);
-                if (db != null)
-                {
-                    res = db.ReplicationLoader.GetExternalReplicationDestination(watcher.TaskId);
-                }
+                res = Database.ReplicationLoader.GetExternalReplicationDestination(watcher.TaskId);
             }
             else
             {
@@ -160,17 +150,15 @@ namespace Raven.Server.Web.System
                 TaskState = watcher.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
                 DestinationUrl = res.Url,
                 TaskConnectionStatus = res.Status,
-                Error = error
             };
             
             return taskInfo;
         }
         
-        private static IEnumerable<OngoingTask> CollectBackupTasks(
+        private IEnumerable<OngoingTask> CollectBackupTasks(
             DatabaseRecord databaseRecord,
             DatabaseTopology dbTopology,
-            ClusterTopology clusterTopology,
-            ServerStore store)
+            ClusterTopology clusterTopology)
         {
             if (dbTopology == null)
                 yield break;
@@ -181,16 +169,14 @@ namespace Raven.Server.Web.System
             if (databaseRecord.PeriodicBackups.Count == 0)
                 yield break;
 
-            var database = store.DatabasesLandlord.TryGetOrCreateResourceStore(databaseRecord.DatabaseName).Result;
-
             foreach (var backupConfiguration in databaseRecord.PeriodicBackups)
             {
-                var tag = dbTopology.WhoseTaskIsIt(backupConfiguration, store.IsPassive());
+                var tag = dbTopology.WhoseTaskIsIt(backupConfiguration, ServerStore.IsPassive());
 
                 var backupDestinations = GetBackupDestinations(backupConfiguration);
 
-                var backupStatus = database.PeriodicBackupRunner.GetBackupStatus(backupConfiguration.TaskId);
-                var nextBackup = database.PeriodicBackupRunner.GetNextBackupDetails(databaseRecord, backupConfiguration, backupStatus);
+                var backupStatus = Database.PeriodicBackupRunner.GetBackupStatus(backupConfiguration.TaskId);
+                var nextBackup = Database.PeriodicBackupRunner.GetNextBackupDetails(databaseRecord, backupConfiguration, backupStatus);
 
                 yield return new OngoingTaskBackup
                 {
@@ -229,7 +215,7 @@ namespace Raven.Server.Web.System
             return backupDestinations;
         }
 
-        private static IEnumerable<OngoingTask> CollectEtlTasks(DatabaseRecord databaseRecord, DatabaseTopology dbTopology, ClusterTopology clusterTopology, ServerStore store)
+        private IEnumerable<OngoingTask> CollectEtlTasks(DatabaseRecord databaseRecord, DatabaseTopology dbTopology, ClusterTopology clusterTopology)
         {
             if (dbTopology == null)
                 yield break;
@@ -238,7 +224,7 @@ namespace Raven.Server.Web.System
             {
                 foreach (var ravenEtl in databaseRecord.RavenEtls)
                 {
-                    var tag = dbTopology.WhoseTaskIsIt(ravenEtl, store.IsPassive());
+                    var tag = dbTopology.WhoseTaskIsIt(ravenEtl, ServerStore.IsPassive());
 
                     var taskState = GetEtlTaskState(ravenEtl);
 
@@ -249,27 +235,23 @@ namespace Raven.Server.Web.System
 
                     (string Url, OngoingTaskConnectionStatus Status) res = (null, OngoingTaskConnectionStatus.None);
                     string error = null;
-                    if (tag == store.NodeTag)
+                    if (tag == ServerStore.NodeTag)
                     {
-                        error = GetDatabase(databaseRecord.DatabaseName, store, out var db);
-                        if (db != null)
+                        foreach (var process in Database.EtlLoader.Processes)
                         {
-                            foreach (var process in db.EtlLoader.Processes)
+                            if (process is RavenEtl etlProcess)
                             {
-                                if (process is RavenEtl etlProcess)
+                                if (etlProcess.Name == ravenEtl.Name)
                                 {
-                                    if (etlProcess.Name == ravenEtl.Name)
-                                    {
-                                        res.Url = etlProcess.Url;
-                                        res.Status = OngoingTaskConnectionStatus.Active;
-                                        break;
-                                    }
+                                    res.Url = etlProcess.Url;
+                                    res.Status = OngoingTaskConnectionStatus.Active;
+                                    break;
                                 }
                             }
-                            if (res.Status == OngoingTaskConnectionStatus.None)
-                            {
-                                error = $"The raven etl process'{ravenEtl.Name}' was not found.";
-                            }
+                        }
+                        if (res.Status == OngoingTaskConnectionStatus.None)
+                        {
+                            error = $"The raven etl process'{ravenEtl.Name}' was not found.";
                         }
                     }
                     else
@@ -301,7 +283,7 @@ namespace Raven.Server.Web.System
             {
                 foreach (var sqlEtl in databaseRecord.SqlEtls)
                 {
-                    var tag = dbTopology.WhoseTaskIsIt(sqlEtl, store.IsPassive());
+                    var tag = dbTopology.WhoseTaskIsIt(sqlEtl, ServerStore.IsPassive());
 
                     var taskState = GetEtlTaskState(sqlEtl);
 
@@ -329,41 +311,6 @@ namespace Raven.Server.Web.System
                     };
                 }
             }
-        }
-
-        private static string GetDatabase(string name, ServerStore store, out DocumentDatabase db)
-        {
-            string error = null;
-            db = null;
-            try
-            {
-                if (store.DatabasesLandlord.DatabasesCache.TryGetValue(name, out var task))
-                {
-                    if (task == null)
-                    {
-                        throw new DatabaseLoadFailureException("Database task is 'null'.");
-                    }
-                    if (task.IsCanceled)
-                    {
-                        throw new TaskCanceledException("Database task was canceled.");
-                    }
-                    if (task.IsFaulted)
-                    {
-                        throw new DatabaseLoadFailureException("Database task is faulted.", task.Exception);
-                    }
-                    if (task.Wait(TimeSpan.FromSeconds(15)) == false)
-                    {
-                        throw new TimeoutException($"Waited too long for the database to load");
-                    }
-                    db = task.Result;
-                }
-                DatabaseDoesNotExistException.Throw(name);
-            }
-            catch (Exception e)
-            {
-                error = $"Failed to load database '{name}' due to: \n {e}";
-            }
-            return error;
         }
 
         // Get Info about a specific task - For Edit View in studio - Each task should return its own specific object
@@ -399,7 +346,7 @@ namespace Raven.Server.Web.System
                                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                                 break;
                             }
-                            var taskInfo = GetExternalReplicationInfo(Database.Name, dbTopology, clusterTopology, ServerStore, watcher);
+                            var taskInfo = GetExternalReplicationInfo(dbTopology, clusterTopology, watcher);
 
                             WriteResult(context, taskInfo);
 

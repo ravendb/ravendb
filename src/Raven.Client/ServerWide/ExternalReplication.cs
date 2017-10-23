@@ -22,6 +22,12 @@ namespace Raven.Client.ServerWide
 
         public ExternalReplication(string database, string connectionStringName)
         {
+            if(string.IsNullOrEmpty(connectionStringName))
+                throw new ArgumentNullException(nameof(connectionStringName));
+
+            if (string.IsNullOrEmpty(database))
+                throw new ArgumentNullException(nameof(database));
+
             Database = database;
             ConnectionStringName = connectionStringName;
         }
