@@ -32,22 +32,17 @@ namespace Raven.Server.Documents.Expiration
             tx.CreateTree(DocumentsByExpiration);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Put(DocumentsOperationContext context, Slice lowerId, BlittableJsonReaderObject document)
         {
             if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
                 metadata.TryGet(Constants.Documents.Metadata.Expires, out string expirationDate) == false)
                 return;
 
-            PutInternal(context, lowerId, document);
+            PutInternal(context, lowerId, expirationDate);
         }
 
-        private void PutInternal(DocumentsOperationContext context, Slice lowerId, BlittableJsonReaderObject document)
+        private void PutInternal(DocumentsOperationContext context, Slice lowerId, string expirationDate)
         {
-            if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
-                metadata.TryGet(Constants.Documents.Metadata.Expires, out string expirationDate) == false)
-                return;
-
             if (DateTime.TryParseExact(expirationDate, "O", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime date) == false)
                 throw new InvalidOperationException($"The expiration date format is not valid: '{expirationDate}'. Use the following format: {_database.Time.GetUtcNow():O}");
 
