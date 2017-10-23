@@ -1200,7 +1200,7 @@ namespace Raven.Server.ServerWide
             return _engine.GetClusterErrorsFromLeader();
         }
 
-        public async Task<(long ClusterEtag, string ClusterId, long Index)> GenerateClusterIdentityAsync(string id, string databaseName)
+        public async Task<(long ClusterEtag, string ClusterId, long newIdentityValue)> GenerateClusterIdentityAsync(string id, string databaseName)
         {
             var (etag, result) = await SendToLeaderAsync(new IncrementClusterIdentityCommand(databaseName, id.ToLower()));
 
@@ -1213,11 +1213,11 @@ namespace Raven.Server.ServerWide
             return (etag, id.Substring(0, id.Length - 1) + '/' + result, (long)result);
         }
 
-        public async Task<long> UpdateClusterIdentityAsync(string id, string databaseName, long identity)
+        public async Task<long> UpdateClusterIdentityAsync(string id, string databaseName, long newIdentity)
         {
             var identities = new Dictionary<string, long>
             {
-                [id] = identity
+                [id] = newIdentity
             };
 
             var (_, result) = await SendToLeaderAsync(new UpdateClusterIdentityCommand(databaseName, identities));
@@ -1228,25 +1228,22 @@ namespace Raven.Server.ServerWide
                     $"Expected to get result from raft command that should update a cluster-wide identity, but didn't. Leader is {LeaderTag}, Current node tag is {NodeTag}.");
             }
 
-            var resultDict = result as Dictionary<string, long> ?? throw new InvalidOperationException(
+            var newIdentitiesResult = result as Dictionary<string, long> ?? throw new InvalidOperationException(
                                  $"Expected to get result from raft command that should update a cluster-wide identity, but got invalid result structure for {id}. Leader is {LeaderTag}, Current node tag is {NodeTag}.");
 
-            var fullId = $"db/{databaseName}/Identities/{id}".ToLowerInvariant();
-            if (resultDict.ContainsKey(fullId) == false)
+            if (newIdentitiesResult.TryGetValue($"db/{databaseName}/Identities/{id}".ToLowerInvariant(), out long newIdentityValue) == false)
             {
                 throw new InvalidOperationException(
                     $"Expected to get result from raft command that should update a cluster-wide identity, but {id} was not in the result list. Leader is {LeaderTag}, Current node tag is {NodeTag}.");
             }
 
-            var rc = resultDict[fullId];
-
-            if (rc == -1)
+            if (newIdentityValue == -1)
             {
                 throw new InvalidOperationException(
                     $"Expected to get result from raft command that should update a cluster-wide identity, but {id} was set but not able to be read. shouldn't reach here. Leader is {LeaderTag}, Current node tag is {NodeTag}.");
             }
 
-            return resultDict[fullId];
+            return newIdentityValue;
         }
 
         public License LoadLicense()
