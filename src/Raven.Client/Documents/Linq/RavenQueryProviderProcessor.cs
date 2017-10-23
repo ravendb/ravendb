@@ -1685,14 +1685,14 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 new JavascriptCompilationOptions(
                     new JavascriptConversionExtensions.MathSupport(),
                     new JavascriptConversionExtensions.LinqMethodsSupport(),
-                    new JavascriptConversionExtensions.BooleanSupport(),
                     new JavascriptConversionExtensions.IgnoreTransparentParameter(),
                     new JavascriptConversionExtensions.InvokeSupport(),
                     new JavascriptConversionExtensions.DateTimeSupport(),
                     new JavascriptConversionExtensions.NullCoalescingSupport(),
                     new JavascriptConversionExtensions.NestedConditionalSupport(),
                     new JavascriptConversionExtensions.StringSupport(),
-                    new JavascriptConversionExtensions.CharSupport(),
+                    new JavascriptConversionExtensions.ConstSupport(),
+                    MemberInitAsJson.ForAllTypes,
                     loadSupport));
 
             if (_fromAlias == null)
@@ -1830,15 +1830,14 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 new JavascriptCompilationOptions(
                     new JavascriptConversionExtensions.MathSupport(),
                     new JavascriptConversionExtensions.LinqMethodsSupport(),
-                    new JavascriptConversionExtensions.BooleanSupport(),
                     new JavascriptConversionExtensions.IgnoreTransparentParameter(),
                     new JavascriptConversionExtensions.InvokeSupport(),
                     new JavascriptConversionExtensions.DateTimeSupport(),
                     new JavascriptConversionExtensions.NullCoalescingSupport(),
                     new JavascriptConversionExtensions.NestedConditionalSupport(),
                     new JavascriptConversionExtensions.StringSupport(),
-                    new JavascriptConversionExtensions.CharSupport()
-                    ));
+                    new JavascriptConversionExtensions.ConstSupport(),
+                    MemberInitAsJson.ForAllTypes));
 
             if (expression.Type == typeof(TimeSpan) && expression.NodeType != ExpressionType.MemberAccess)
             {
