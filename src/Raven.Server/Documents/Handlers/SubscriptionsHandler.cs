@@ -40,14 +40,14 @@ namespace Raven.Server.Documents.Handlers
 
                 var pageSize = GetIntValueQueryString("pageSize") ?? 1;
 
-                var fetcher = new SubscriptionDocumentsFetcher(Database, pageSize, -0x42,
-                    new IPEndPoint(HttpContext.Connection.RemoteIpAddress, HttpContext.Connection.RemotePort));
-
                 var state = new SubscriptionState
                 {
                     ChangeVectorForNextBatchStartingPoint = tryout.ChangeVector,
                     Query = tryout.Query
                 };
+
+                var fetcher = new SubscriptionDocumentsFetcher(Database, pageSize, -0x42,
+                    new IPEndPoint(HttpContext.Connection.RemoteIpAddress, HttpContext.Connection.RemotePort), collection, revisions, state, patch);
 
                 if (Enum.TryParse(
                     tryout.ChangeVector,
@@ -75,7 +75,7 @@ namespace Raven.Server.Documents.Handlers
                     {
                         var first = true;
 
-                        foreach (var itemDetails in fetcher.GetDataToSend(context, collection, revisions, state, patch, 0))
+                        foreach (var itemDetails in fetcher.GetDataToSend(context, 0))
                         {
                             if (itemDetails.Doc.Data == null)
                                 continue;

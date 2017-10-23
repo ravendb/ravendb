@@ -21,58 +21,63 @@ namespace Raven.Server.Documents.TcpHandlers
         private readonly int _maxBatchSize;
         private readonly long _subscriptionId;
         private readonly EndPoint _remoteEndpoint;
+        private readonly string _collection;
+        private readonly bool _revisions;
+        private readonly SubscriptionState _subscription;
+        private readonly SubscriptionPatchDocument _patch;
 
-        public SubscriptionDocumentsFetcher(DocumentDatabase db, int maxBatchSize, long subscriptionId, EndPoint remoteEndpoint)
+        public SubscriptionDocumentsFetcher(DocumentDatabase db, int maxBatchSize, long subscriptionId, EndPoint remoteEndpoint, string collection,
+            bool revisions,
+            SubscriptionState subscription,
+            SubscriptionPatchDocument patch)
         {
             _db = db;
             _logger = LoggingSource.Instance.GetLogger<SubscriptionDocumentsFetcher>(db.Name);
             _maxBatchSize = maxBatchSize;
             _subscriptionId = subscriptionId;
             _remoteEndpoint = remoteEndpoint;
+            _collection = collection;
+            _revisions = revisions;
+            _subscription = subscription;
+            _patch = patch;
         }
 
         public IEnumerable<(Document Doc, Exception Exception)> GetDataToSend(
             DocumentsOperationContext docsContext, 
-            string collection,
-            bool revisions,
-            SubscriptionState subscription, 
-            SubscriptionPatchDocument patch, 
             long startEtag)
         {
-            if (string.IsNullOrEmpty(collection))
+            if (string.IsNullOrEmpty(_collection))
                 throw new ArgumentException("The collection name must be specified");
 
-            if (revisions)
+            if (_revisions)
             {
                 if (_db.DocumentsStorage.RevisionsStorage.Configuration == null ||
-                    _db.DocumentsStorage.RevisionsStorage.GetRevisionsConfiguration(collection).Active == false)
+                    _db.DocumentsStorage.RevisionsStorage.GetRevisionsConfiguration(_collection).Active == false)
                     throw new SubscriptionInvalidStateException($"Cannot use a revisions subscription, database {_db.Name} does not have revisions configuration.");
 
-                return GetRevisionsToSend(docsContext, collection, subscription, startEtag, patch);
+                return GetRevisionsToSend(docsContext, startEtag);
             }
 
 
-            return GetDocumentsToSend(docsContext, collection, subscription, startEtag, patch);
+            return GetDocumentsToSend(docsContext, startEtag);
         }
 
         private IEnumerable<(Document Doc, Exception Exception)> GetDocumentsToSend(DocumentsOperationContext docsContext, 
-            string collection,
-            SubscriptionState subscription,
-            long startEtag, SubscriptionPatchDocument patch)
+            long startEtag)
         {
             int size = 0;
-            using (_db.Scripts.GetScriptRunner(patch,true, out var run))
+            using (_db.Scripts.GetScriptRunner(_patch,true, out var run))
             {
                 foreach (var doc in _db.DocumentsStorage.GetDocumentsFrom(
                     docsContext,
-                    collection,
+                    _collection,
                     startEtag + 1,
                     0,
                     int.MaxValue))
                 {
                     using (doc.Data)
                     {
-                        if (ShouldSendDocument(subscription, run, patch, docsContext, doc, out BlittableJsonReaderObject transformResult, out var exception) == false)
+                        if (ShouldSendDocument(_subscription, run, _patch, docsContext, doc, out BlittableJsonReaderObject transformResult, out var exception) == false)
                         {
                             if (exception != null)
                             {
@@ -118,22 +123,19 @@ namespace Raven.Server.Documents.TcpHandlers
 
         private IEnumerable<(Document Doc, Exception Exception)> GetRevisionsToSend(
             DocumentsOperationContext docsContext, 
-            string collection,
-            SubscriptionState subscription,
-            long startEtag, 
-            SubscriptionPatchDocument patch)
+            long startEtag)
         {
             int size = 0;
             
-            var collectionName = new CollectionName(collection);
-            using (_db.Scripts.GetScriptRunner(patch, true, out var run))
+            var collectionName = new CollectionName(_collection);
+            using (_db.Scripts.GetScriptRunner(_patch, true, out var run))
             {
                 foreach (var revisionTuple in _db.DocumentsStorage.RevisionsStorage.GetRevisionsFrom(docsContext, collectionName, startEtag + 1, int.MaxValue))
                 {
                     var item = (revisionTuple.current ?? revisionTuple.previous);
                     Debug.Assert(item != null);
 
-                    if (ShouldSendDocumentWithRevisions(subscription, run, patch, docsContext, item, revisionTuple, out var transformResult, out var exception) == false)
+                    if (ShouldSendDocumentWithRevisions(_subscription, run, _patch, docsContext, item, revisionTuple, out var transformResult, out var exception) == false)
                     {
                         if (exception != null)
                         {
