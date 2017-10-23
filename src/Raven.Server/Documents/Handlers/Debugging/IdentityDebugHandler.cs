@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         }
 
 
-        [RavenAction("/databases/*/identity/next", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/identity/next", "POST", AuthorizationStatus.ValidUser)]
         public async Task NextIdentityFor()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -48,21 +48,21 @@ namespace Raven.Server.Documents.Handlers.Debugging
             if (name[name.Length - 1] != '|')
                 name += '|';
             
-            var (_, _, id) = await Database.ServerStore.GenerateClusterIdentityAsync(name, Database.Name);
+            var (_, _, newIdentityValue) = await Database.ServerStore.GenerateClusterIdentityAsync(name, Database.Name);
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
 
-                writer.WritePropertyName("Index");
-                writer.WriteInteger(id);
+                writer.WritePropertyName("NewIdentityValue");
+                writer.WriteInteger(newIdentityValue);
 
                 writer.WriteEndObject();
             }            
         }
 
-        [RavenAction("/databases/*/identity/seed", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
+        [RavenAction("/databases/*/identity/seed", "POST", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
         public async Task SeedIdentityFor()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -73,14 +73,14 @@ namespace Raven.Server.Documents.Handlers.Debugging
             if (name[name.Length - 1] != '|')
                 name += '|';
 
-            var index = await Database.ServerStore.UpdateClusterIdentityAsync(name, Database.Name, value.Value);
+            var newIdentityValue = await Database.ServerStore.UpdateClusterIdentityAsync(name, Database.Name, value.Value);
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
 
-                writer.WritePropertyName("Index");
-                writer.WriteInteger(index);
+                writer.WritePropertyName("NewIdentityValue");
+                writer.WriteInteger(newIdentityValue);
 
                 writer.WriteEndObject();
             }
