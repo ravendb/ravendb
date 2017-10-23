@@ -79,12 +79,11 @@ namespace FastTests.Client
                 {
                     var command = new SeedIdentityForCommand("users", 1990);
 
-                    commands.RequestExecutor.ExecuteAsync(command, commands.Context).Wait();
+                    await commands.RequestExecutor.ExecuteAsync(command, commands.Context);
 
                     var result = command.Result;
 
-                    Assert.Equal(1, result.Count);
-                    Assert.Equal(1990, result["users"]);
+                    Assert.Equal(1990, result);
                 }
 
                 using (var s = store.OpenSession())
@@ -114,6 +113,17 @@ namespace FastTests.Client
 
                     Assert.Equal("Adi", entityWithId1.LastName);
                     Assert.Equal("Avivi", entityWithId1991.LastName);
+                }
+
+                using (var commands = store.Commands())
+                {
+                    var command = new SeedIdentityForCommand("users", 1975);
+
+                    await commands.RequestExecutor.ExecuteAsync(command, commands.Context);
+
+                    var result = command.Result;
+
+                    Assert.Equal(1991, result);
                 }
             }
         }

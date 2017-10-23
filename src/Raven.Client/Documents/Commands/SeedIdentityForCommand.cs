@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    public class SeedIdentityForCommand : RavenCommand<Dictionary<string, long>>
+    public class SeedIdentityForCommand : RavenCommand<long>
     {
         private readonly string _id;
         private readonly long _value;
@@ -34,19 +34,14 @@ namespace Raven.Client.Documents.Commands
 
         public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
         {
-            if (response == null || response.TryGet("NewIdentityValue", out long result) == false)
+            if (response == null || response.TryGet("NewSeedValue", out long result) == false)
             {
                 ThrowInvalidResponse();
                 return; // never hit
             }
 
 
-            var resultDict = new Dictionary<string, long>
-            {
-                [_id] = result
-            };
-
-            Result = resultDict;
+            Result = result;
         }
     }
 }

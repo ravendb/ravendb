@@ -1231,7 +1231,7 @@ namespace Raven.Server.ServerWide
             var newIdentitiesResult = result as Dictionary<string, long> ?? throw new InvalidOperationException(
                                  $"Expected to get result from raft command that should update a cluster-wide identity, but got invalid result structure for {id}. Leader is {LeaderTag}, Current node tag is {NodeTag}.");
 
-            if (newIdentitiesResult.TryGetValue($"db/{databaseName}/Identities/{id}".ToLowerInvariant(), out long newIdentityValue) == false)
+            if (newIdentitiesResult.TryGetValue(UpdateValueForDatabaseCommand.GetStorageKey(databaseName, id), out long newIdentityValue) == false)
             {
                 throw new InvalidOperationException(
                     $"Expected to get result from raft command that should update a cluster-wide identity, but {id} was not in the result list. Leader is {LeaderTag}, Current node tag is {NodeTag}.");

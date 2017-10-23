@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         }
 
 
-        [RavenAction("/databases/*/identity/next", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/identity/next", "POST", AuthorizationStatus.Operator)]
         public async Task NextIdentityFor()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }            
         }
 
-        [RavenAction("/databases/*/identity/seed", "POST", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
+        [RavenAction("/databases/*/identity/seed", "POST", AuthorizationStatus.Operator)]
         public async Task SeedIdentityFor()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -79,7 +79,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             {
                 writer.WriteStartObject();
 
-                writer.WritePropertyName("NewIdentityValue");
+                writer.WritePropertyName("NewSeedValue");
                 writer.WriteInteger(newIdentityValue);
 
                 writer.WriteEndObject();

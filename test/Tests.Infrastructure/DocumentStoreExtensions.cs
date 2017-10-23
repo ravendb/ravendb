@@ -131,26 +131,6 @@ namespace FastTests
                 await RequestExecutor.ExecuteAsync(command, Context);
             }
 
-            public async Task NextIdentityFor(string id)
-            {
-                if (id == null)
-                    throw new ArgumentNullException(nameof(id));
-
-                var command = new NextIdentityForCommand(id);
-
-                await RequestExecutor.ExecuteAsync(command, Context);
-            }
-
-            public async Task SeedIdentityFor(string id, long seed)
-            {
-                if (id == null)
-                    throw new ArgumentNullException(nameof(id));
-
-                var command = new SeedIdentityForCommand(id, seed);
-
-                await RequestExecutor.ExecuteAsync(command, Context);
-            }
-
             public string Head(string id)
             {
                 return AsyncHelpers.RunSync(() => HeadAsync(id));
