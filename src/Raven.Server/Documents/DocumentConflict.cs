@@ -16,6 +16,22 @@ namespace Raven.Server.Documents
         public DocumentFlags Flags;
         public long Etag; // the etag of the current db when this conflict was added
 
+        public DocumentConflict Clone()
+        {
+            return new DocumentConflict
+            {
+                LowerId = LowerId,
+                Id = Id,
+                Doc = Doc,
+                StorageId = StorageId,
+                ChangeVector = ChangeVector,
+                Collection = Collection,
+                LastModified = LastModified,
+                Flags = Flags,
+                Etag = Etag
+            };
+        }
+
         public static DocumentConflict From(JsonOperationContext ctx,Document doc)
         {
             if (doc == null)
