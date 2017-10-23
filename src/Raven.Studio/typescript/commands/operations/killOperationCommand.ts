@@ -12,9 +12,10 @@ class killOperationCommand extends commandBase {
         const args = {
             id: this.taskId
         }
-        const url = endpoints.databases.operations.operationsKill + this.urlEncodeArgs(args);
+        const url = this.db ? endpoints.databases.operations.operationsKill :
+            endpoints.global.operationsServer.adminOperationsKill;
 
-        return this.post(url, null, this.db, { dataType: undefined });
+        return this.post(url + this.urlEncodeArgs(args), null, this.db, { dataType: undefined });
     }
 }
 
