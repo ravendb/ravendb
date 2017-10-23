@@ -47,22 +47,32 @@ namespace Raven.Server.ServerWide.Commands
                 using (Slice.From(context.Allocator, itemKey, out var key))
                 {
                     var isSet = identities.AddMax(key, kvp.Value);
-                    long val;
+                    long newVal;
                     if (isSet)
                     {
-                        val = kvp.Value;
+                        newVal = kvp.Value;
                     }
                     else
                     {
                         var rc = identities.ReadLong(key);
-                        val = rc ?? -1; // '-1' should not happen
+                        newVal = rc ?? -1; // '-1' should not happen
                     }
 
                     var keyString = key.ToString().ToLowerInvariant();
-                    if (resultDict.TryAdd(keyString, val) == false)
+
+                    if (resultDict.TryAdd(keyString, newVal) == false)
                     {
-                        if (val > resultDict[keyString])
-                            resultDict[keyString] = val;
+                        if (newVal > resultDict[keyString])
+                            resultDict[keyString] = newVal;
+                    }
+
+                    if (resultDict.TryGetValue(keyString, out var oldVal) == false)
+                    {
+                        resultDict.Add(keyString, newVal);
+                    }
+                    else if (newVal > oldVal)
+                    {
+                        resultDict[keyString] = newVal;
                     }
                 }
             }
