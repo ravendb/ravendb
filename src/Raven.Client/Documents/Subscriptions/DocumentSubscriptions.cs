@@ -119,7 +119,7 @@ namespace Raven.Client.Documents.Subscriptions
                         new JavascriptConversionExtensions.InvokeSupport(),
                         new JavascriptConversionExtensions.NullCoalescingSupport(),
                         new JavascriptConversionExtensions.StringSupport(),
-                        new JavascriptConversionExtensions.CharSupport()
+                        new JavascriptConversionExtensions.CharSupport(),
                         new JavascriptConversionExtensions.NestedConditionalSupport(),
                         new JavascriptConversionExtensions.ReplaceParameterWithNewName(project.Parameters[0], "doc")
                     ));
