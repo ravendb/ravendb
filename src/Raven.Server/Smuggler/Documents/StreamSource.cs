@@ -394,7 +394,10 @@ namespace Raven.Server.Smuggler.Documents
                 UnmanagedJsonParserHelper.ThrowInvalidJson("Expected start array, but got " + _state.CurrentTokenType, _peepingTomStream, _parser);
 
             var context = _context;
-            var modifier = new BlittableMetadataModifier(context);
+            var modifier = new BlittableMetadataModifier(context)
+            {
+                ReadFirstEtagOfLegacyRevision = _buildVersionType == BuildVersionType.V3,
+            };
             var builder = CreateBuilder(context, modifier);
             try
             {

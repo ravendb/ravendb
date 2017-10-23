@@ -249,6 +249,7 @@ namespace Raven.Server.Documents.Revisions
             RevisionsCollectionConfiguration configuration = null, CollectionName collectionName = null)
         {
             Debug.Assert(changeVector != null, "Change vector must be set");
+            Debug.Assert(lastModifiedTicks != DateTime.MinValue.Ticks, "last modified ticks must be set");
 
             BlittableJsonReaderObject.AssertNoModifications(document, id, assertChildren: true);
 

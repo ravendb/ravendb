@@ -25,6 +25,11 @@ namespace SlowTests.Issues
 
                 var mre = new AsyncManualResetEvent();
                 subscription.AfterAcknowledgment += b => { mre.Set(); return Task.CompletedTask; };
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User());
+                    session.SaveChanges();
+                }
                 var task = subscription.Run(user => { });
 
                 await mre.WaitAsync(TimeSpan.FromSeconds(20));

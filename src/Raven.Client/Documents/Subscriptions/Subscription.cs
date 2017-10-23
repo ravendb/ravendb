@@ -175,7 +175,7 @@ namespace Raven.Client.Documents.Subscriptions
         private readonly Logger _logger;
         private readonly IDocumentStore _store;
         private readonly string _dbName;
-        private readonly CancellationTokenSource _processingCts = new CancellationTokenSource();
+        private CancellationTokenSource _processingCts = new CancellationTokenSource();
         private readonly SubscriptionConnectionOptions _options;
         private (Func<SubscriptionBatch<T>, Task> Async, Action<SubscriptionBatch<T>> Sync) _subscriber;
         private TcpClient _tcpClient;
@@ -257,25 +257,30 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
-        public Task Run(Action<SubscriptionBatch<T>> processDocuments)
+        public Task Run(Action<SubscriptionBatch<T>> processDocuments, CancellationToken ct = default(CancellationToken))
         {
             if (processDocuments == null) throw new ArgumentNullException(nameof(processDocuments));
             _subscriber = (null, processDocuments);
-            return Run();
+            return Run(ct);
         }
 
-        public Task Run(Func<SubscriptionBatch<T>, Task> processDocuments)
+        public Task Run(Func<SubscriptionBatch<T>, Task> processDocuments, CancellationToken ct = default(CancellationToken))
         {
             if (processDocuments == null) throw new ArgumentNullException(nameof(processDocuments));
             _subscriber = (processDocuments, null);
-            return Run();
+            return Run(ct);
         }
 
-        private Task Run()
+        private Task Run(CancellationToken ct)
         {
             if (_subscriptionTask != null)
                 throw new InvalidOperationException("The subscription is already running");
 
+            if (ct != default(CancellationToken))
+            {
+                _processingCts = CancellationTokenSource.CreateLinkedTokenSource(ct);    
+            }
+            
             return _subscriptionTask = RunSubscriptionAsync();
 
         }

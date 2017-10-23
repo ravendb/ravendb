@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Raven.Client.ServerWide;
+using Raven.Server.Documents.Includes;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -48,11 +49,22 @@ namespace Raven.Server.Documents.Replication
                 changeVector))
                 return;
 
+            var conflictedDoc = new DocumentConflict
+            {
+                Doc = doc,
+                Collection = documentsContext.GetLazyStringForFieldWithCaching(
+                    collection ??
+                    CollectionName.GetCollectionName(doc)
+                ),
+                LastModified = new DateTime(lastModifiedTicks),
+                LowerId = documentsContext.GetLazyString(id),
+                Id = documentsContext.GetLazyString(id),
+                ChangeVector = changeVector
+            };
+
             if (TryResolveConflictByScript(
                 documentsContext,
-                id,
-                changeVector,
-                doc))
+                conflictedDoc))
                 return;
 
             if (_conflictResolver.ConflictSolver?.ResolveToLatest == true)
@@ -63,17 +75,7 @@ namespace Raven.Server.Documents.Replication
 
                 var conflicts = new List<DocumentConflict>
                 {
-                    new DocumentConflict
-                    {
-                        Doc = doc,
-                        Collection = documentsContext.GetLazyStringForFieldWithCaching(
-                            collection ??
-                            CollectionName.GetCollectionName(doc)
-                        ),
-                        LastModified = new DateTime(lastModifiedTicks),
-                        LowerId = documentsContext.GetLazyString(id),
-                        ChangeVector = changeVector
-                    }
+                    conflictedDoc.Clone()
                 };
                 conflicts.AddRange(documentsContext.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(
                     documentsContext, id));
@@ -85,7 +87,7 @@ namespace Raven.Server.Documents.Replication
                     conflicts.Add(local);
 
                 var resolved = _conflictResolver.ResolveToLatest(documentsContext, conflicts);
-                _conflictResolver.PutResolvedDocument(documentsContext, resolved);
+                _conflictResolver.PutResolvedDocument(documentsContext, resolved, conflictedDoc);
 
                 return;
             }
@@ -96,11 +98,9 @@ namespace Raven.Server.Documents.Replication
 
         private bool TryResolveConflictByScript(
             DocumentsOperationContext documentsContext,
-            string id,
-            string incomingChangeVector,
-            BlittableJsonReaderObject doc)
+            DocumentConflict conflict)
         {
-            var collection = CollectionName.GetCollectionName(doc);
+            var collection = conflict.Collection;
 
             var hasScript = _conflictResolver.ScriptConflictResolversCache.TryGetValue(collection, out ScriptResolver scriptResolver);
             if (!hasScript || scriptResolver == null)
@@ -110,14 +110,14 @@ namespace Raven.Server.Documents.Replication
                 return false;
             }
 
-            var conflictedDocs = new List<DocumentConflict>(documentsContext.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(documentsContext, id));
+            var conflictedDocs = new List<DocumentConflict>(documentsContext.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(documentsContext, conflict.Id));
 
             if (conflictedDocs.Count == 0)
             {
                 var relevantLocalDoc = documentsContext.DocumentDatabase.DocumentsStorage
                     .GetDocumentOrTombstone(
                         documentsContext,
-                        id);
+                        conflict.Id);
                 if (relevantLocalDoc.Document != null)
                 {
                     conflictedDocs.Add(DocumentConflict.From(documentsContext, relevantLocalDoc.Document));
@@ -129,16 +129,9 @@ namespace Raven.Server.Documents.Replication
             }
 
             if (conflictedDocs.Count == 0)
-                InvalidConflictWhenThereIsNone(id);
+                InvalidConflictWhenThereIsNone(conflict.Id);
 
-            conflictedDocs.Add(new DocumentConflict
-            {
-                LowerId = conflictedDocs[0].LowerId,
-                Id = conflictedDocs[0].Id,
-                Collection = documentsContext.GetLazyStringForFieldWithCaching(collection),
-                ChangeVector = incomingChangeVector,
-                Doc = doc
-            });
+            conflictedDocs.Add(conflict.Clone());
 
             if (_conflictResolver.TryResolveConflictByScriptInternal(
                 documentsContext,
@@ -146,7 +139,7 @@ namespace Raven.Server.Documents.Replication
                 conflictedDocs,
                 documentsContext.GetLazyString(collection), out var resolved))
             {
-                _conflictResolver.PutResolvedDocument(documentsContext, resolved);
+                _conflictResolver.PutResolvedDocument(documentsContext, resolved, conflict);
                 return true;
             }
 

@@ -121,6 +121,16 @@ namespace Raven.Server.Documents.TcpHandlers
 
             (Collection, (Script, Functions), Revisions) = ParseSubscriptionQuery(SubscriptionState.Query);
 
+
+            using (this.TcpConnection.DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                var collectionStats = this.TcpConnection.DocumentDatabase.DocumentsStorage.GetCollection(Collection,false);
+                if (collectionStats == null)
+                {
+                    throw new SubscriptionInvalidStateException($"Collection {Collection} could not be found. Subscription can't be opened on non existant collection");
+                }    
+            }
+            
             _connectionState = TcpConnection.DocumentDatabase.SubscriptionStorage.OpenSubscription(this);
             var timeout = TimeSpan.FromMilliseconds(16);
 
@@ -365,14 +375,14 @@ namespace Raven.Server.Documents.TcpHandlers
             try
             {
                 using (TcpConnection.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-                using (var reader = await context.ParseToMemoryAsync(
+                using (var blittable = await context.ParseToMemoryAsync(
                     TcpConnection.Stream,
                     "Reply from subscription client",
                     BlittableJsonDocumentBuilder.UsageMode.None,
                     TcpConnection.PinnedBuffer))
                 {
-                    TcpConnection.RegisterBytesReceived(reader.Size);
-                    return JsonDeserializationServer.SubscriptionConnectionClientMessage(reader);
+                    TcpConnection.RegisterBytesReceived(blittable.Size);
+                    return JsonDeserializationServer.SubscriptionConnectionClientMessage(blittable);
                 }
             }
             catch (IOException)
@@ -395,6 +405,10 @@ namespace Raven.Server.Documents.TcpHandlers
                 };
             }
         }
+        string _lastChangeVector = null;
+        private long _startEtag;
+        private SubscriptionPatchDocument _filterAndProjectionScript;
+        private SubscriptionDocumentsFetcher _documentsFetcher;
 
         private async Task ProcessSubscriptionAsync()
         {
@@ -405,199 +419,223 @@ namespace Raven.Server.Documents.TcpHandlers
             }
 
             using (DisposeOnDisconnect)
-            using (TcpConnection.DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext docsContext))
             using (RegisterForNotificationOnNewDocuments())
             {
                 var replyFromClientTask = GetReplyFromClientAsync();
-
-                string lastChangeVector = null;
+                
                 string subscriptionChangeVectorBeforeCurrentBatch = SubscriptionState.ChangeVectorForNextBatchStartingPoint;
-                var startEtag = GetStartEtagForSubscription(docsContext, SubscriptionState);
-                var patch = SetupFilterScript();
-                var fetcher = new SubscriptionDocumentsFetcher(TcpConnection.DocumentDatabase, _options.MaxDocsPerBatch, SubscriptionId, TcpConnection.TcpClient.Client.RemoteEndPoint);
+
+                _startEtag = GetStartEtagForSubscription(SubscriptionState);
+                _filterAndProjectionScript = SetupFilterAndProjectionScript();
+                _documentsFetcher = new SubscriptionDocumentsFetcher(TcpConnection.DocumentDatabase, _options.MaxDocsPerBatch, SubscriptionId, TcpConnection.TcpClient.Client.RemoteEndPoint, Collection, Revisions, SubscriptionState, _filterAndProjectionScript);
+
                 while (CancellationTokenSource.IsCancellationRequested == false)
                 {
-                    bool anyDocumentsSentInCurrentIteration = false;
-
-                    var sendingCurrentBatchStopwatch = Stopwatch.StartNew();
-
                     _buffer.SetLength(0);
 
-                    var docsToFlush = 0;
-
-                    using (TcpConnection.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-                    using (var writer = new BlittableJsonTextWriter(context, _buffer))
+                    using (TcpConnection.DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext docsContext))
                     {
-                        using (docsContext.OpenReadTransaction())
+                        var sendingCurrentBatchStopwatch = Stopwatch.StartNew();
+
+                        var anyDocumentsSentInCurrentIteration = await TrySendingBatchToClient(docsContext, sendingCurrentBatchStopwatch);
+
+                        if (anyDocumentsSentInCurrentIteration == false)
                         {
-                            foreach (var result in fetcher.GetDataToSend(docsContext, Collection, Revisions, SubscriptionState, patch, startEtag))
-                            {
-                                startEtag = result.Doc.Etag;
-                                lastChangeVector = string.IsNullOrEmpty(SubscriptionState.ChangeVectorForNextBatchStartingPoint)
-                                    ? result.Doc.ChangeVector
-                                    : ChangeVectorUtils.MergeVectors(result.Doc.ChangeVector, SubscriptionState.ChangeVectorForNextBatchStartingPoint);
-
-                                if (result.Doc.Data == null)
-                                {
-                                    if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
-                                    {
-                                        await SendHeartBeat();
-                                        sendingCurrentBatchStopwatch.Restart();
-                                    }
-
-                                    continue;
-                                }
-
-                                anyDocumentsSentInCurrentIteration = true;
-                                writer.WriteStartObject();
-
-                                writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(TypeSegment));
-                                writer.WriteValue(BlittableJsonToken.String, context.GetLazyStringForFieldWithCaching(DataSegment));
-                                writer.WriteComma();
-                                writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(DataSegment));
-                                result.Doc.EnsureMetadata();
-
-                                if (result.Exception != null)
-                                {
-                                    var metadata = result.Doc.Data[Client.Constants.Documents.Metadata.Key];
-                                    writer.WriteValue(BlittableJsonToken.StartObject,
-                                        docsContext.ReadObject(new DynamicJsonValue
-                                        {
-                                            [Client.Constants.Documents.Metadata.Key] = metadata
-                                        }, result.Doc.Id)
-                                    );
-                                    writer.WriteComma();
-                                    writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(ExceptionSegment));
-                                    writer.WriteValue(BlittableJsonToken.String, context.GetLazyStringForFieldWithCaching(result.Exception.ToString()));
-                                }
-                                else
-                                {
-                                    writer.WriteDocument(docsContext, result.Doc, metadataOnly: false);
-                                }
-
-                                writer.WriteEndObject();
-                                docsToFlush++;
-
-                                // perform flush for current batch after 1000ms of running or 1 MB
-                                if (_buffer.Length > Constants.Size.Megabyte ||
-                                    sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
-                                {
-                                    if (docsToFlush > 0)
-                                    {
-                                        await FlushDocsToClient(writer, docsToFlush);
-                                        docsToFlush = 0;
-                                        sendingCurrentBatchStopwatch.Restart();
-                                    }
-                                    else
-                                    {
-                                        await SendHeartBeat();
-                                    }
-                                }
-                            }
-                        }
-
-                        if (anyDocumentsSentInCurrentIteration)
-                        {
-                            context.Write(writer, new DynamicJsonValue
-                            {
-                                [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.EndOfBatch)
-                            });
-
-                            await FlushDocsToClient(writer, docsToFlush, true);
                             if (_logger.IsInfoEnabled)
                             {
                                 _logger.Info(
-                                    $"Finished sending a batch with {docsToFlush} documents for subscription {Options.SubscriptionName}");
+                                    $"Did not find any documents to send for subscription {Options.SubscriptionName}");
                             }
-                        }
-                    }
+                            await TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(SubscriptionId,
+                                Options.SubscriptionName,
+                                _lastChangeVector,
+                                subscriptionChangeVectorBeforeCurrentBatch);
+                            subscriptionChangeVectorBeforeCurrentBatch = _lastChangeVector;
 
-                    if (anyDocumentsSentInCurrentIteration == false)
-                    {
-                        if (_logger.IsInfoEnabled)
-                        {
-                            _logger.Info(
-                                $"Finished sending a batch with {docsToFlush} documents for subscription {Options.SubscriptionName}");
-                        }
-                        await TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(SubscriptionId,
-                            Options.SubscriptionName, 
-                            lastChangeVector, 
-                            subscriptionChangeVectorBeforeCurrentBatch);
-                        subscriptionChangeVectorBeforeCurrentBatch = lastChangeVector;
+                            if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
+                                await SendHeartBeat();
 
-                        if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
-                            await SendHeartBeat();
+                            using (docsContext.OpenReadTransaction())
+                            {
+                                long globalEtag = TcpConnection.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(docsContext, Collection);
 
-                        using (docsContext.OpenReadTransaction())
-                        {
-                            long globalEtag = TcpConnection.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(docsContext, Collection);
+                                if (globalEtag > _startEtag)
+                                    continue;
+                            }
 
-                            if (globalEtag > startEtag)
+                            if (await WaitForChangedDocuments(replyFromClientTask))
                                 continue;
                         }
-
-                        if (await WaitForChangedDocuments(replyFromClientTask))
-                            continue;
                     }
 
                     SubscriptionConnectionClientMessage clientReply;
 
-                    while (true)
-                    {
-                        var result = await Task.WhenAny(replyFromClientTask,
-                                TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(5000), CancellationTokenSource.Token)).ConfigureAwait(false);
-                        CancellationTokenSource.Token.ThrowIfCancellationRequested();
-                        if (result == replyFromClientTask)
-                        {
-                            clientReply = await replyFromClientTask;
-                            if (clientReply.Type == SubscriptionConnectionClientMessage.MessageType.DisposedNotification)
-                            {
-                                CancellationTokenSource.Cancel();
-                                break;
-                            }
-                            replyFromClientTask = GetReplyFromClientAsync();
-                            break;
-                        }
-                        await SendHeartBeat();
-                        await SendNoopAck();
-                    }
-
-                    CancellationTokenSource.Token.ThrowIfCancellationRequested();
-
-                    switch (clientReply.Type)
-                    {
-                        case SubscriptionConnectionClientMessage.MessageType.Acknowledge:
-                            await TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(
-                                SubscriptionId,
-                                Options.SubscriptionName,
-                                lastChangeVector,
-                                subscriptionChangeVectorBeforeCurrentBatch);
-                            subscriptionChangeVectorBeforeCurrentBatch = lastChangeVector;
-                            Stats.LastAckReceivedAt = DateTime.UtcNow;
-                            Stats.AckRate.Mark();
-                            await WriteJsonAsync(new DynamicJsonValue
-                            {
-                                [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.Confirm)
-                            });
-
-                            break;
-
-                        //precaution, should not reach this case...
-                        case SubscriptionConnectionClientMessage.MessageType.DisposedNotification:
-                            CancellationTokenSource.Cancel();
-                            break;
-                        default:
-                            throw new ArgumentException("Unknown message type from client " +
-                                                        clientReply.Type);
-                    }
+                    (replyFromClientTask, subscriptionChangeVectorBeforeCurrentBatch) = 
+                        await WaitForClientAck(replyFromClientTask, subscriptionChangeVectorBeforeCurrentBatch);
                 }
 
                 CancellationTokenSource.Token.ThrowIfCancellationRequested();
             }
         }
 
-        private long GetStartEtagForSubscription(DocumentsOperationContext docsContext, SubscriptionState subscription)
+        private async Task<(Task<SubscriptionConnectionClientMessage> ReplyFromClientTask, string SubscriptionChangeVectorBeforeCurrentBatch)> WaitForClientAck(
+            Task<SubscriptionConnectionClientMessage> replyFromClientTask, 
+            string subscriptionChangeVectorBeforeCurrentBatch)
         {
+            SubscriptionConnectionClientMessage clientReply;
+            while (true)
+            {
+                var result = await Task.WhenAny(replyFromClientTask,
+                    TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(5000), CancellationTokenSource.Token)).ConfigureAwait(false);
+                CancellationTokenSource.Token.ThrowIfCancellationRequested();
+                if (result == replyFromClientTask)
+                {
+                    clientReply = await replyFromClientTask;
+                    if (clientReply.Type == SubscriptionConnectionClientMessage.MessageType.DisposedNotification)
+                    {
+                        CancellationTokenSource.Cancel();
+                        break;
+                    }
+                    replyFromClientTask = GetReplyFromClientAsync();
+                    break;
+                }
+                await SendHeartBeat();
+                await SendNoopAck();
+            }
+
+            CancellationTokenSource.Token.ThrowIfCancellationRequested();
+
+            switch (clientReply.Type)
+            {
+                case SubscriptionConnectionClientMessage.MessageType.Acknowledge:
+                    await TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(
+                        SubscriptionId,
+                        Options.SubscriptionName,
+                        _lastChangeVector,
+                        subscriptionChangeVectorBeforeCurrentBatch);
+                    subscriptionChangeVectorBeforeCurrentBatch = _lastChangeVector;
+                    Stats.LastAckReceivedAt = DateTime.UtcNow;
+                    Stats.AckRate.Mark();
+                    await WriteJsonAsync(new DynamicJsonValue
+                    {
+                        [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.Confirm)
+                    });
+
+                    break;
+
+                //precaution, should not reach this case...
+                case SubscriptionConnectionClientMessage.MessageType.DisposedNotification:
+                    CancellationTokenSource.Cancel();
+                    break;
+                default:
+                    throw new ArgumentException("Unknown message type from client " +
+                                                clientReply.Type);
+            }
+
+            return (replyFromClientTask,subscriptionChangeVectorBeforeCurrentBatch);
+        }
+
+        /// <summary>
+        /// Iterates on a batch in document collection, process it and send documents if found any match
+        /// </summary>
+        /// <param name="docsContext"></param>
+        /// <param name="sendingCurrentBatchStopwatch"></param>
+        /// <returns>Whether succeeded finding any documents to send</returns>
+        private async Task<bool> TrySendingBatchToClient(DocumentsOperationContext docsContext, Stopwatch sendingCurrentBatchStopwatch)
+        {
+            bool anyDocumentsSentInCurrentIteration = false;
+            int docsToFlush = 0;
+            using (var writer = new BlittableJsonTextWriter(docsContext, _buffer))
+            {
+                using (docsContext.OpenReadTransaction())
+                {
+                    foreach (var result in _documentsFetcher.GetDataToSend(docsContext, _startEtag))
+                    {
+                        _startEtag = result.Doc.Etag;
+                        _lastChangeVector = string.IsNullOrEmpty(SubscriptionState.ChangeVectorForNextBatchStartingPoint)
+                            ? result.Doc.ChangeVector
+                            : ChangeVectorUtils.MergeVectors(result.Doc.ChangeVector, SubscriptionState.ChangeVectorForNextBatchStartingPoint);
+
+                        if (result.Doc.Data == null)
+                        {
+                            if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
+                            {
+                                await SendHeartBeat();
+                                sendingCurrentBatchStopwatch.Restart();
+                            }
+
+                            continue;
+                        }
+
+                        anyDocumentsSentInCurrentIteration = true;
+                        writer.WriteStartObject();
+
+                        writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(TypeSegment));
+                        writer.WriteValue(BlittableJsonToken.String, docsContext.GetLazyStringForFieldWithCaching(DataSegment));
+                        writer.WriteComma();
+                        writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(DataSegment));
+                        result.Doc.EnsureMetadata();
+
+                        if (result.Exception != null)
+                        {
+                            var metadata = result.Doc.Data[Client.Constants.Documents.Metadata.Key];
+                            writer.WriteValue(BlittableJsonToken.StartObject,
+                                docsContext.ReadObject(new DynamicJsonValue
+                                {
+                                    [Client.Constants.Documents.Metadata.Key] = metadata
+                                }, result.Doc.Id)
+                            );
+                            writer.WriteComma();
+                            writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(ExceptionSegment));
+                            writer.WriteValue(BlittableJsonToken.String, docsContext.GetLazyStringForFieldWithCaching(result.Exception.ToString()));
+                        }
+                        else
+                        {
+                            writer.WriteDocument(docsContext, result.Doc, metadataOnly: false);
+                        }
+
+                        writer.WriteEndObject();
+                        docsToFlush++;
+
+                        // perform flush for current batch after 1000ms of running or 1 MB
+                        if (_buffer.Length > Constants.Size.Megabyte ||
+                            sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
+                        {
+                            if (docsToFlush > 0)
+                            {
+                                await FlushDocsToClient(writer, docsToFlush);
+                                docsToFlush = 0;
+                                sendingCurrentBatchStopwatch.Restart();
+                            }
+                            else
+                            {
+                                await SendHeartBeat();
+                            }
+                        }
+                    }
+                }
+
+                if (anyDocumentsSentInCurrentIteration)
+                {
+                    docsContext.Write(writer, new DynamicJsonValue
+                    {
+                        [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.EndOfBatch)
+                    });
+
+                    await FlushDocsToClient(writer, docsToFlush, true);
+                    if (_logger.IsInfoEnabled)
+                    {
+                        _logger.Info(
+                            $"Finished sending a batch with {docsToFlush} documents for subscription {Options.SubscriptionName}");
+                    }
+                }
+            }
+            return anyDocumentsSentInCurrentIteration;
+        }
+
+        private long GetStartEtagForSubscription(SubscriptionState subscription)
+        {
+            using (TcpConnection.DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext docsContext))
             using (docsContext.OpenReadTransaction())
             {
                 long startEtag = 0;
@@ -682,7 +720,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange));
         }
 
-        private SubscriptionPatchDocument SetupFilterScript()
+        private SubscriptionPatchDocument SetupFilterAndProjectionScript()
         {
             SubscriptionPatchDocument patch = null;
 

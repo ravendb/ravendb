@@ -99,7 +99,7 @@ namespace Raven.Client.Util
                 var methodName = methodCallExpression?
                     .Method.Name;
 
-                if (methodName == null || methodCallExpression.Method.DeclaringType != typeof(Enumerable))
+                if (methodName == null || IsCollection(methodCallExpression.Method.DeclaringType) == false)
                     return;
 
                 string newName;
@@ -128,33 +128,33 @@ namespace Raven.Client.Util
                     default:
                         return;
                 }
+
                 var javascriptWriter = context.GetWriter();
 
-                var obj = methodCallExpression.Arguments[0] as MemberExpression;
-                if (obj == null)
+                if (methodCallExpression.Object != null)
                 {
-                    if (methodCallExpression.Arguments[0] is MethodCallExpression innerMethodCall)
-                    {
-                        context.PreventDefault();
-                        context.Visitor.Visit(innerMethodCall);
-                        javascriptWriter.Write($".{newName}");
-                    }
-                    else
-                        return;
+                    context.PreventDefault();
+
+                    context.Visitor.Visit(methodCallExpression.Object);
+                    javascriptWriter.Write($".{newName}");
+                    javascriptWriter.Write("(");
+                    context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                    javascriptWriter.Write(")");
                 }
                 else
                 {
                     context.PreventDefault();
-                    context.Visitor.Visit(obj.Expression);
-                    javascriptWriter.Write($".{obj.Member.Name}.{newName}");
+
+                    context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                    javascriptWriter.Write($".{newName}");
+
+                    if (methodCallExpression.Arguments.Count < 2)
+                        return;
+
+                    javascriptWriter.Write("(");
+                    context.Visitor.Visit(methodCallExpression.Arguments[1]);
+                    javascriptWriter.Write(")");
                 }
-
-                if (methodCallExpression.Arguments.Count < 2)
-                    return;
-
-                javascriptWriter.Write("(");
-                context.Visitor.Visit(methodCallExpression.Arguments[1]);
-                javascriptWriter.Write(")");
 
                 if (newName == "indexOf")
                 {
@@ -165,7 +165,7 @@ namespace Raven.Client.Util
             public static bool IsCollection(Type type)
             {
                 if (type.GetGenericArguments().Length == 0)
-                    return false;
+                    return type == typeof(Enumerable);
 
                 return typeof(IEnumerable).IsAssignableFrom(type.GetGenericTypeDefinition());
             }
@@ -470,41 +470,79 @@ namespace Raven.Client.Util
             }
         }
 
-        public class BooleanSupport : JavascriptConversionExtension
+        public class ConstSupport : JavascriptConversionExtension
         {
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
-                if (!(context.Node is ConstantExpression nodeAsConst) ||
-                    nodeAsConst.Type != typeof(bool))
+                if (!(context.Node is ConstantExpression nodeAsConst))
                     return;
 
-                context.PreventDefault();
                 var writer = context.GetWriter();
-                var val = (bool)nodeAsConst.Value ? "true" : "false";
-
                 using (writer.Operation(nodeAsConst))
                 {
-                    writer.Write(val);
-                }
-            }
-        }
+                    if (nodeAsConst.Value == null)
+                    {
+                        context.PreventDefault();
+                        writer.Write("null");
+                        return;
+                    }
 
-        public class CharSupport : JavascriptConversionExtension
-        {
-            public override void ConvertToJavascript(JavascriptConversionContext context)
-            {
-                if (!(context.Node is ConstantExpression nodeAsConst) ||
-                    nodeAsConst.Type != typeof(char))
-                    return;
+                    if (nodeAsConst.Type == typeof(bool))
+                    {
+                        context.PreventDefault();
 
-                context.PreventDefault();
-                var writer = context.GetWriter();
+                        var val = (bool)nodeAsConst.Value ? "true" : "false";
 
-                using (writer.Operation(nodeAsConst))
-                {
-                    writer.Write("\"");
-                    writer.Write(nodeAsConst.Value);
-                    writer.Write("\"");
+                        using (writer.Operation(nodeAsConst))
+                        {
+                            writer.Write(val);
+                        }
+
+                        return;
+                    }
+
+                    if (nodeAsConst.Type == typeof(char))
+                    {
+                        context.PreventDefault();
+
+                        writer.Write("\"");
+                        writer.Write(nodeAsConst.Value);
+                        writer.Write("\"");
+
+                        return;
+
+                    }
+
+                    if (nodeAsConst.Type.IsArray || LinqMethodsSupport.IsCollection(nodeAsConst.Type))
+                    {
+                        var arr = nodeAsConst.Value as object[] ?? (nodeAsConst.Value as IEnumerable<object>)?.ToArray();
+                        if (arr == null)
+                            return;
+
+                        context.PreventDefault();
+
+                        writer.Write("[");
+
+                        for (var i = 0; i < arr.Length; i++)
+                        {
+                            if (i != 0)
+                                writer.Write(", ");
+                            if (arr[i] is string || arr[i] is char)
+                            {
+                                writer.Write("\"");
+                                writer.Write(arr[i]);
+                                writer.Write("\"");
+                            }
+
+                            else
+                            {
+                                writer.Write(arr[i]);
+                            }
+
+                        }
+                        writer.Write("]");
+
+                    }
                 }
             }
         }

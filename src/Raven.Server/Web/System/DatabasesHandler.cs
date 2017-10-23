@@ -400,7 +400,7 @@ namespace Raven.Server.Web.System
                     {
                         [nameof(DatabaseInfo.Disabled)] = disabled,
                         [nameof(DatabaseInfo.IndexingStatus)] = indexingStatus.ToString(),
-                        [nameof(DatabaseInfo.NodesTopology)] = topology?.ToJson()
+                        [nameof(DatabaseInfo.NodesTopology)] = nodesTopology.ToJson()
                     };
 
                     context.Write(writer, databaseInfoJson);

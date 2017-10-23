@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using Raven.Client;
+using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Json;
@@ -23,9 +24,15 @@ namespace Raven.Server.Documents
         }
 
         public LazyStringValue Id;
-        public LazyStringValue ChangeVector;
+        public string ChangeVector;
         public DocumentFlags Flags;
         public NonPersistentDocumentFlags NonPersistentFlags;
+
+        // Change vector is null when importing from v3.5.
+        // We'll generate a new change vector in this format: "RV:{revisionsCount}-{firstEtagOfLegacyRevision}"
+        public bool ReadFirstEtagOfLegacyRevision;
+        private string _firstEtagOfLegacyRevision;
+        private long _legacyRevisionsCount;
 
         private JsonOperationContext _ctx;
         private LazyStringValue _metadataCollections;
@@ -68,6 +75,7 @@ namespace Raven.Server.Documents
             ReadingId,
             ReadingFlags,
             ReadingChangeVector,
+            ReadingFirstEtagOfLegacyRevision,
             IgnoreProperty,
             IgnoreArray,
             IgnoreRevisionStatusProperty
@@ -257,8 +265,30 @@ namespace Raven.Server.Documents
                         return true;
                     }
 
-                    goto case -1;
+                    if (ReadFirstEtagOfLegacyRevision &&
+                        (NonPersistentFlags & NonPersistentDocumentFlags.LegacyRevision) == NonPersistentDocumentFlags.LegacyRevision)
+                    {
+                        if (_firstEtagOfLegacyRevision == null)
+                        {
+                            if (reader.Read() == false)
+                            {
+                                _state = State.ReadingFirstEtagOfLegacyRevision;
+                                {
+                                    aboutToReadPropertyName = false;
+                                    return true;
+                                }
+                            }
+                            if (state.CurrentTokenType != JsonParserToken.String)
+                                ThrowExpectedFieldTypeOfString("@etag", state);
+                            _firstEtagOfLegacyRevision = CreateLazyStringValueFromParserState(state);
+                            ChangeVector = ChangeVectorUtils.NewChangeVector("RV", ++_legacyRevisionsCount, new Guid(_firstEtagOfLegacyRevision));
+                            break;
+                        }
 
+                        ChangeVector = ChangeVectorUtils.NewChangeVector("RV", ++_legacyRevisionsCount, new Guid(_firstEtagOfLegacyRevision));
+                    }
+
+                    goto case -1;
                 case 6: // @flags
                     if (state.StringBuffer[0] != (byte)'@' ||
                         *(int*)(state.StringBuffer + 1) != 1734437990 ||
@@ -614,6 +644,16 @@ namespace Raven.Server.Documents
                     if (state.CurrentTokenType != JsonParserToken.String)
                         ThrowExpectedFieldTypeOfString(Constants.Documents.Metadata.ChangeVector, state);
                     ChangeVector = CreateLazyStringValueFromParserState(state);
+
+                    break;
+                case State.ReadingFirstEtagOfLegacyRevision:
+                    if (reader.Read() == false)
+                        return false;
+
+                    if (state.CurrentTokenType != JsonParserToken.String)
+                        ThrowExpectedFieldTypeOfString("@etag", state);
+                    _firstEtagOfLegacyRevision = CreateLazyStringValueFromParserState(state);
+                    ChangeVector = ChangeVectorUtils.NewChangeVector("RV", ++_legacyRevisionsCount, new Guid(_firstEtagOfLegacyRevision));
 
                     break;
             }

@@ -93,14 +93,13 @@ namespace Raven.Client.Documents.Subscriptions
                         JsCompilationFlags.BodyOnly,
                         new JavascriptConversionExtensions.MathSupport(),
                         new JavascriptConversionExtensions.LinqMethodsSupport(),
-                        new JavascriptConversionExtensions.BooleanSupport(),
+                        new JavascriptConversionExtensions.ConstSupport(),
                         new JavascriptConversionExtensions.ReplaceParameterWithNewName(predicate.Parameters[0],"this"),
                         new JavascriptConversionExtensions.DateTimeSupport(),
                         new JavascriptConversionExtensions.InvokeSupport(),
                         new JavascriptConversionExtensions.NullCoalescingSupport(),
                         new JavascriptConversionExtensions.NestedConditionalSupport(),
-                        new JavascriptConversionExtensions.StringSupport(),
-                        new JavascriptConversionExtensions.CharSupport()
+                        new JavascriptConversionExtensions.StringSupport()
                     ));
                 
                 criteria.Query = "declare function predicate () {\r\n\t return " + 
@@ -114,12 +113,11 @@ namespace Raven.Client.Documents.Subscriptions
                         JsCompilationFlags.BodyOnly,
                         new JavascriptConversionExtensions.MathSupport(),
                         new JavascriptConversionExtensions.LinqMethodsSupport(),
-                        new JavascriptConversionExtensions.BooleanSupport(),
+                        new JavascriptConversionExtensions.ConstSupport(),
                         new JavascriptConversionExtensions.DateTimeSupport(),
                         new JavascriptConversionExtensions.InvokeSupport(),
                         new JavascriptConversionExtensions.NullCoalescingSupport(),
                         new JavascriptConversionExtensions.StringSupport(),
-                        new JavascriptConversionExtensions.CharSupport(),
                         new JavascriptConversionExtensions.NestedConditionalSupport(),
                         new JavascriptConversionExtensions.ReplaceParameterWithNewName(project.Parameters[0], "doc")
                     ));

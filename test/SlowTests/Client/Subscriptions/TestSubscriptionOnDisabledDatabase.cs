@@ -29,6 +29,14 @@ namespace SlowTests.Client.Subscriptions
                 });
 
                 var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions("Subs1"));
+
+                using (var session = store.OpenSession())
+                {
+                    for (var i = 0; i < 30; i++)
+                        session.Store(new User { Name = i.ToString() });
+                    session.SaveChanges();
+                }
+
                 List<string> names = new List<string>();
                 var subscriptionTask = subscription.Run(x =>
                 {
@@ -46,15 +54,7 @@ namespace SlowTests.Client.Subscriptions
                         mre.Set();
                     return Task.CompletedTask;
                 };
-
-
-                using (var session = store.OpenSession())
-                {
-                    for (var i = 0; i < 30; i++)
-                        session.Store(new User { Name = i.ToString() });
-                    session.SaveChanges();
-                }
-               
+              
                 Assert.True(mre.WaitOne(_reasonableWaitTime));
                 mre.Reset();
 
@@ -74,6 +74,13 @@ namespace SlowTests.Client.Subscriptions
                     return Task.CompletedTask;
                 };
 
+                using (var session = store.OpenSession())
+                {
+                    for (var i = 0; i < 30; i++)
+                        session.Store(new User { Name = i.ToString() });
+                    session.SaveChanges();
+                }
+
                 var t = subscription.Run(x =>
                 {
                     foreach (var item in x.Items)
@@ -81,13 +88,7 @@ namespace SlowTests.Client.Subscriptions
                         names.Add(item.Result.Name);
                     }
                 });
-
-                using (var session = store.OpenSession())
-                {
-                    for (var i = 0; i < 30; i++)
-                        session.Store(new User { Name = i.ToString() });
-                    session.SaveChanges();
-                }
+               
                 try
                 {
                     Assert.True(mre.WaitOne(_reasonableWaitTime));

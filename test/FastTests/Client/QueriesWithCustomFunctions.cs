@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Linq;
 using Xunit;
 
 namespace FastTests.Client
@@ -1667,7 +1668,230 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
             }
         }
 
+        public class ProjectionParameters : RavenTestBase
+        {
+            public class Document
+            {
+                public string Id { get; set; }
+                public string TargetId { get; set; }
+                public decimal TargetValue { get; set; }
+                public bool Deleted { get; set; }
+                public IEnumerable<Document> SubDocuments { get; set; }
+            }
 
+            public class Result
+            {
+                public string TargetId { get; set; }
+                public decimal TargetValue { get; set; }
+            }
+
+            Document doc1;
+            Document doc2;
+            Document doc3;
+
+            private void SetUp(IDocumentStore store)
+            {
+                using (var session = store.OpenSession())
+                {
+                    doc1 = new Document
+                    {
+                        Deleted = false,
+                        SubDocuments = new List<Document>
+                    {
+                        new Document
+                        {
+                            TargetId = "id1"
+                        },
+                        new Document
+                        {
+                            TargetId = "id2"
+                        }
+                    }
+                    };
+                    doc2 = new Document
+                    {
+                        Deleted = false,
+                        SubDocuments = new List<Document>
+                    {
+                        new Document
+                        {
+                            TargetId = "id4"
+                        },
+                        new Document
+                        {
+                            TargetId = "id5"
+                        }
+                    }
+                    };
+                    doc3 = new Document
+                    {
+                        Deleted = true
+                    };
+
+                    session.Store(doc1);
+                    session.Store(doc2);
+                    session.Store(doc3);
+                    session.SaveChanges();
+                }
+            }
+
+            [Fact]
+            public void CanProjectWithArrayParameters()
+            {
+                using (var store = GetDocumentStore())
+                {
+                    SetUp(store);
+
+                    using (var session = store.OpenSession())
+                    {
+                        var ids = new[] { doc1.Id, doc2.Id, doc3.Id };
+                        string[] targetIds = { "id2" };
+
+                        var projection =
+                            from d in session.Query<Document>().Where(x => x.Id.In(ids))
+                            where d.Deleted == false
+                            select new
+                            {
+                                Id = d.Id,
+                                Deleted = d.Deleted,
+                                Values = d.SubDocuments
+                                        .Where(x => targetIds.Length == 0 || targetIds.Contains(x.TargetId))
+
+                                          .Select(x => new Result
+                                          {
+                                                  TargetId = x.TargetId,
+                                                  TargetValue = x.TargetValue
+                                          })
+                            };
+
+                        Assert.Equal("FROM Documents as d WHERE (id() IN ($p0)) AND (Deleted = $p1) " +
+                                     "SELECT { Id : d.Id, Deleted : d.Deleted, " +
+                                     "Values : d.SubDocuments.filter(function(x){return ([\"id2\"]).length===0||[\"id2\"].indexOf(x.TargetId)>=0;}).map(function(x){return {TargetId:x.TargetId,TargetValue:x.TargetValue};}) }"
+                                     , projection.ToString());
+
+                        var result = projection.ToList();
+
+                        Assert.Equal(2, result.Count);
+
+                        Assert.Equal(doc1.Id, result[0].Id);
+
+                        var values = result[0].Values.ToList();
+                        Assert.Equal(1, values.Count);
+                        Assert.Equal("id2", values[0].TargetId);
+
+                        Assert.Equal(doc2.Id, result[1].Id);
+
+                        values = result[1].Values.ToList();
+                        Assert.Equal(0, values.Count);
+
+                    }
+                }
+            }
+
+            [Fact]
+            public void CanProjectWithListParameters()
+            {
+                using (var store = GetDocumentStore())
+                {
+                    SetUp(store);
+
+                    using (var session = store.OpenSession())
+                    {
+                        var ids = new[] {doc1.Id, doc2.Id, doc3.Id};
+                        var targetIds = new List<string>
+                        {
+                            "id2"
+                        };
+
+                        var projection =
+                            from d in session.Query<Document>().Where(x => x.Id.In(ids))
+                            where d.Deleted == false
+                            select new
+                            {
+                                Id = d.Id,
+                                Deleted = d.Deleted,
+                                Values = d.SubDocuments
+                                    .Where(x => targetIds.Count == 0 || targetIds.Contains(x.TargetId))
+                                    .Select(x => new Result
+                                    {
+                                        TargetId = x.TargetId,
+                                        TargetValue = x.TargetValue
+                                    })
+                            };
+
+                        Assert.Equal("FROM Documents as d WHERE (id() IN ($p0)) AND (Deleted = $p1) " +
+                                     "SELECT { Id : d.Id, Deleted : d.Deleted, " +
+                                     "Values : d.SubDocuments.filter(function(x){return [\"id2\"].length===0||[\"id2\"].indexOf(x.TargetId)>=0;}).map(function(x){return {TargetId:x.TargetId,TargetValue:x.TargetValue};}) }"
+                            , projection.ToString());
+
+                        var result = projection.ToList();
+                        Assert.Equal(2, result.Count);
+
+                        Assert.Equal(doc1.Id, result[0].Id);
+
+                        var values = result[0].Values.ToList();
+                        Assert.Equal(1, values.Count);
+                        Assert.Equal("id2", values[0].TargetId);
+
+                        Assert.Equal(doc2.Id, result[1].Id);
+
+                        values = result[1].Values.ToList();
+                        Assert.Equal(0, values.Count);
+                    }
+                }
+            }
+
+            [Fact]
+            public void CanProjectWithStringParameter()
+            {
+                using (var store = GetDocumentStore())
+                {
+                    SetUp(store);
+
+                    using (var session = store.OpenSession())
+                    {
+                        var ids = new[] { doc1.Id, doc2.Id, doc3.Id };
+                        var targetId = "id2";
+
+                        var projection =
+                            from d in session.Query<Document>().Where(x => x.Id.In(ids))
+                            where d.Deleted == false
+                            select new
+                            {
+                                Id = d.Id,
+                                Deleted = d.Deleted,
+                                Values = d.SubDocuments
+                                    .Where(x => targetId == null || x.TargetId == targetId)
+                                    .Select(x => new Result
+                                    {
+                                        TargetId = x.TargetId,
+                                        TargetValue = x.TargetValue
+                                    })
+                            };
+
+                        Assert.Equal("FROM Documents as d WHERE (id() IN ($p0)) AND (Deleted = $p1) " +
+                                     "SELECT { Id : d.Id, Deleted : d.Deleted, " +
+                                     "Values : d.SubDocuments.filter(function(x){return \"id2\"===null||x.TargetId===\"id2\";}).map(function(x){return {TargetId:x.TargetId,TargetValue:x.TargetValue};}) }"
+                            , projection.ToString());
+
+                        var result = projection.ToList();
+                        Assert.Equal(2, result.Count);
+
+                        Assert.Equal(doc1.Id, result[0].Id);
+
+                        var values = result[0].Values.ToList();
+                        Assert.Equal(1, values.Count);
+                        Assert.Equal("id2", values[0].TargetId);
+
+                        Assert.Equal(doc2.Id, result[1].Id);
+
+                        values = result[1].Values.ToList();
+                        Assert.Equal(0, values.Count);
+                    }
+                }
+            }
+        }
+    
         private class User
         {
             public string Name { get; set; }
@@ -1679,7 +1903,6 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
             public string DetailId { get; set; }
             public string FriendId { get; set; }
             public IEnumerable<string> DetailIds { get; set; }
-
         }
         private class Detail
         {
