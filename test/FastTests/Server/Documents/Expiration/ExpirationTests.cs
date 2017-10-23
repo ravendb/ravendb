@@ -40,14 +40,12 @@ namespace FastTests.Server.Documents.Expiration
                 {DefaultFormat.DateTimeFormatsToRead[1], DateTimeKind.Unspecified},
                 {DefaultFormat.DateTimeFormatsToRead[2], DateTimeKind.Local},
                 {DefaultFormat.DateTimeFormatsToRead[3], DateTimeKind.Utc},
-                {DefaultFormat.DateTimeFormatsToRead[4], DateTimeKind.Utc},
+                {DefaultFormat.DateTimeFormatsToRead[4], DateTimeKind.Unspecified},
                 {DefaultFormat.DateTimeFormatsToRead[5], DateTimeKind.Utc},
                 {DefaultFormat.DateTimeFormatsToRead[6], DateTimeKind.Utc},
             };
             foreach (var dateTimeFormat in DefaultFormat.DateTimeFormatsToRead)
             {
-                Console.WriteLine("DateTimeFormat: " + dateTimeFormat);
-
                 using (var store = GetDocumentStore())
                 {
                     await SetupExpiration(store);
