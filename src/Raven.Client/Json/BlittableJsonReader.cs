@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using Newtonsoft.Json;
+using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Client.Json
@@ -227,7 +228,7 @@ namespace Raven.Client.Json
             var str = ReadAsString();
             if (str == null)
                 return null;
-            return DateTime.ParseExact(str, "o", CultureInfo.InvariantCulture);
+            return DateTime.ParseExact(str, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
         }
 
         public override DateTimeOffset? ReadAsDateTimeOffset()
@@ -235,7 +236,7 @@ namespace Raven.Client.Json
             var str = ReadAsString();
             if (str == null)
                 return null;
-            return DateTimeOffset.ParseExact(str, "o", CultureInfo.InvariantCulture);
+            return DateTimeOffset.ParseExact(str, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
         }
     }
 

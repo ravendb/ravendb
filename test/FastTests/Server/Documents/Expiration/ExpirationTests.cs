@@ -14,6 +14,7 @@ using Raven.Client.ServerWide.Expiration;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow;
 using Xunit;
 
 namespace FastTests.Server.Documents.Expiration
@@ -33,41 +34,59 @@ namespace FastTests.Server.Documents.Expiration
         [Fact]
         public async Task CanAddEntityWithExpiry_ThenReadItBeforeItExpires_ButWillNotBeAbleToReadItAfterExpiry()
         {
-            using (var store = GetDocumentStore())
+            var utcFormats = new Dictionary<string, DateTimeKind>
             {
-                await SetupExpiration(store);
+                {DefaultFormat.DateTimeFormatsToRead[0], DateTimeKind.Utc},
+                {DefaultFormat.DateTimeFormatsToRead[1], DateTimeKind.Unspecified},
+                {DefaultFormat.DateTimeFormatsToRead[2], DateTimeKind.Local},
+                {DefaultFormat.DateTimeFormatsToRead[3], DateTimeKind.Utc},
+                {DefaultFormat.DateTimeFormatsToRead[4], DateTimeKind.Utc},
+                {DefaultFormat.DateTimeFormatsToRead[5], DateTimeKind.Utc},
+                {DefaultFormat.DateTimeFormatsToRead[6], DateTimeKind.Utc},
+            };
+            foreach (var dateTimeFormat in DefaultFormat.DateTimeFormatsToRead)
+            {
+                Console.WriteLine("DateTimeFormat: " + dateTimeFormat);
 
-                var company = new Company { Name = "Company Name" };
-                var expiry = SystemTime.UtcNow.AddMinutes(5);
-                using (var session = store.OpenAsyncSession())
+                using (var store = GetDocumentStore())
                 {
-                    await session.StoreAsync(company);
-                    var metadata = session.Advanced.GetMetadataFor(company);
-                    metadata[Constants.Documents.Metadata.Expires] = expiry.ToString(Default.DateTimeOffsetFormatsToWrite);
-                    await session.SaveChangesAsync();
-                }
+                    await SetupExpiration(store);
 
-                using (var session = store.OpenAsyncSession())
-                {
-                    var company2 = await session.LoadAsync<Company>(company.Id);
-                    Assert.NotNull(company2);
-                    var metadata = session.Advanced.GetMetadataFor(company2);
-                    var expirationDate = metadata.GetString(Constants.Documents.Metadata.Expires);
-                    Assert.NotNull(expirationDate);
-                    var dateTime = DateTime.ParseExact(expirationDate, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
-                    Assert.Equal(DateTimeKind.Utc, dateTime.Kind);
-                    Assert.Equal(expiry.ToString("O"), expirationDate);
-                }
+                    var company = new Company
+                    {
+                        Name = "Company Name"
+                    };
+                    var expiry = SystemTime.UtcNow.AddMinutes(5);
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(company);
+                        var metadata = session.Advanced.GetMetadataFor(company);
+                        metadata[Constants.Documents.Metadata.Expires] = expiry.ToString(dateTimeFormat);
+                        await session.SaveChangesAsync();
+                    }
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
-                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
-                var expiredDocumentsCleaner = database.ExpiredDocumentsCleaner;
-                await expiredDocumentsCleaner.CleanupExpiredDocs();
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var company2 = await session.LoadAsync<Company>(company.Id);
+                        Assert.NotNull(company2);
+                        var metadata = session.Advanced.GetMetadataFor(company2);
+                        var expirationDate = metadata.GetString(Constants.Documents.Metadata.Expires);
+                        Assert.NotNull(expirationDate);
+                        var dateTime = DateTime.ParseExact(expirationDate, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+                        Assert.Equal(utcFormats[dateTimeFormat], dateTime.Kind);
+                        Assert.Equal(expiry.ToString(dateTimeFormat), expirationDate);
+                    }
 
-                using (var session = store.OpenAsyncSession())
-                {
-                    var company2 = await session.LoadAsync<Company>(company.Id);
-                    Assert.Null(company2);
+                    var database = await GetDocumentDatabaseInstanceFor(store);
+                    database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                    var expiredDocumentsCleaner = database.ExpiredDocumentsCleaner;
+                    await expiredDocumentsCleaner.CleanupExpiredDocs();
+
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var company2 = await session.LoadAsync<Company>(company.Id);
+                        Assert.Null(company2);
+                    }
                 }
             }
         }
@@ -86,11 +105,11 @@ namespace FastTests.Server.Documents.Expiration
                 var expiry = SystemTime.UtcNow.AddMinutes(5);
                 var metadata = new Dictionary<string, object>
                 {
-                    [Constants.Documents.Metadata.Expires] = expiry.ToString(Default.DateTimeOffsetFormatsToWrite)
+                    [Constants.Documents.Metadata.Expires] = expiry.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite)
                 };
                 var metadata2 = new Dictionary<string, object>
                 {
-                    [Constants.Documents.Metadata.Expires] = expiry.AddMinutes(1).ToString(Default.DateTimeOffsetFormatsToWrite)
+                    [Constants.Documents.Metadata.Expires] = expiry.AddMinutes(1).ToString(DefaultFormat.DateTimeOffsetFormatsToWrite)
                 };
 
                 using (var commands = store.Commands())
@@ -130,7 +149,7 @@ namespace FastTests.Server.Documents.Expiration
                 {
                     await session.StoreAsync(company);
                     var metadata = session.Advanced.GetMetadataFor(company);
-                    metadata[Constants.Documents.Metadata.Expires] = expires.ToString(Default.DateTimeOffsetFormatsToWrite);
+                    metadata[Constants.Documents.Metadata.Expires] = expires.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
                     await session.SaveChangesAsync();
                 }
 

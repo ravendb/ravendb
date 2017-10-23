@@ -13,6 +13,7 @@ using Raven.Client;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -24,7 +25,7 @@ namespace Raven.Server.Documents.Handlers
 
         private static long CalculateCapacity(long lastSize, string lastRangeAtStr)
         {
-            if (DateTime.TryParseExact(lastRangeAtStr, "o", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime lastRangeAt) == false)
+            if (DateTime.TryParseExact(lastRangeAtStr, DefaultFormat.DateTimeOffsetFormatsToWrite, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime lastRangeAt) == false)
                 return Math.Max(32, lastSize);
 
             var span = DateTime.UtcNow - lastRangeAt;
@@ -77,7 +78,7 @@ namespace Raven.Server.Documents.Handlers
                         ["High"] = cmd.OldMax + capacity,
                         ["LastSize"] = capacity,
                         ["ServerTag"] = ServerStore.NodeTag,
-                        ["LastRangeAt"] = DateTime.UtcNow.ToString("o")
+                        ["LastRangeAt"] = DateTime.UtcNow.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite)
                     });
                 }
             }

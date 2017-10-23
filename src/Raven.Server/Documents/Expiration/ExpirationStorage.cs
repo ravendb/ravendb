@@ -2,11 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using Raven.Client;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Expiration
 
         private void PutInternal(DocumentsOperationContext context, Slice lowerId, string expirationDate)
         {
-            if (DateTime.TryParseExact(expirationDate, "O", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime date) == false)
+            if (DateTime.TryParseExact(expirationDate, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime date) == false)
                 throw new InvalidOperationException($"The expiration date format is not valid: '{expirationDate}'. Use the following format: {_database.Time.GetUtcNow():O}");
 
             // We explicitly enable adding documents that have already been expired, we have to, because if the time lag is short, it is possible
@@ -140,7 +140,7 @@ namespace Raven.Server.Documents.Expiration
             }
         }
 
-        private static bool HasExpired(BlittableJsonReaderObject data, DateTime currentTime)
+        public static bool HasExpired(BlittableJsonReaderObject data, DateTime currentTime)
         {
             // Validate that the expiration value in metadata is still the same.
             // We have to check this as the user can update this value.
@@ -148,7 +148,7 @@ namespace Raven.Server.Documents.Expiration
                 metadata.TryGet(Constants.Documents.Metadata.Expires, out string expirationDate) == false)
                 return false;
 
-            if (DateTime.TryParseExact(expirationDate, "O", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var date) == false)
+            if (DateTime.TryParseExact(expirationDate, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var date) == false)
                 return false;
 
             if (currentTime < date)

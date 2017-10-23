@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Globalization;
 using System.Text;
-using Raven.Client;
+using Sparrow;
 using Sparrow.Json;
 using Xunit;
 
@@ -15,7 +15,7 @@ namespace FastTests.Utils
         [InlineData("2016-10-05T21:07:32")]
         public void CanParseValidDates(string dt)
         {
-            var expected = DateTime.ParseExact(dt, Default.OnlyDateTimeFormat, CultureInfo.InvariantCulture,
+            var expected = DateTime.ParseExact(dt, DefaultFormat.OnlyDateTimeFormat, CultureInfo.InvariantCulture,
                 DateTimeStyles.RoundtripKind);
 
             var bytes = Encoding.UTF8.GetBytes(dt);
@@ -73,7 +73,7 @@ namespace FastTests.Utils
         [InlineData("2016-10-05T21:17:32.2082285+01:00")]
         public void CanParseValidDatesTimeOffset(string dt)
         {
-            var expected = DateTimeOffset.ParseExact(dt, "o", CultureInfo.InvariantCulture,
+            var expected = DateTimeOffset.ParseExact(dt, DefaultFormat.DateTimeOffsetFormatsToWrite, CultureInfo.InvariantCulture,
                 DateTimeStyles.RoundtripKind);
 
             var bytes = Encoding.UTF8.GetBytes(dt);

@@ -85,11 +85,11 @@ namespace Raven.Server.Json
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(result.IndexTimestamp));
-            writer.WriteString(result.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite));
+            writer.WriteString(result.IndexTimestamp.ToString(DefaultFormat.DateTimeFormatsToWrite));
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(result.LastQueryTime));
-            writer.WriteString(result.LastQueryTime.ToString(Default.DateTimeFormatsToWrite));
+            writer.WriteString(result.LastQueryTime.ToString(DefaultFormat.DateTimeFormatsToWrite));
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(result.IsStale));
@@ -278,11 +278,11 @@ namespace Raven.Server.Json
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(result.IndexTimestamp));
-            writer.WriteString(result.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite));
+            writer.WriteString(result.IndexTimestamp.ToString(DefaultFormat.DateTimeFormatsToWrite));
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(result.LastQueryTime));
-            writer.WriteString(result.LastQueryTime.ToString(Default.DateTimeFormatsToWrite));
+            writer.WriteString(result.LastQueryTime.ToString(DefaultFormat.DateTimeFormatsToWrite));
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(result.IsStale));
@@ -341,11 +341,11 @@ namespace Raven.Server.Json
                 throw new NotSupportedException($"Cannot write query includes of '{typeof(TInclude)}' type in '{result.GetType()}'.");
 
             writer.WritePropertyName(nameof(result.IndexTimestamp));
-            writer.WriteString(result.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite));
+            writer.WriteString(result.IndexTimestamp.ToString(DefaultFormat.DateTimeFormatsToWrite));
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(result.LastQueryTime));
-            writer.WriteString(result.LastQueryTime.ToString(Default.DateTimeFormatsToWrite));
+            writer.WriteString(result.LastQueryTime.ToString(DefaultFormat.DateTimeFormatsToWrite));
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(result.IsStale));

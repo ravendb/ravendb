@@ -20,6 +20,7 @@ using Raven.Server.Commercial;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Server.Web
@@ -300,7 +301,7 @@ namespace Raven.Server.Web
 
             dataAsString = Uri.UnescapeDataString(dataAsString);
 
-            if (DateTime.TryParseExact(dataAsString, "o", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime result))
+            if (DateTime.TryParseExact(dataAsString, DefaultFormat.DateTimeOffsetFormatsToWrite, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime result))
                 return result;
 
             ThrowInvalidDateTime(name, dataAsString);

@@ -15,6 +15,7 @@ using Jint.Runtime.Descriptors;
 using Jint.Runtime.Descriptors.Specialized;
 using Jint.Runtime.Interop;
 using Raven.Client;
+using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Patch
@@ -66,7 +67,7 @@ namespace Raven.Server.Documents.Patch
                 else if (js.IsString())
                     _writer.WriteValue(js.AsString());
                 else if (js.IsDate())
-                    _writer.WriteValue(js.AsDate().ToDateTime().ToString("O"));
+                    _writer.WriteValue(js.AsDate().ToDateTime().ToString(DefaultFormat.DateTimeOffsetFormatsToWrite));
                 else if (js.IsNumber())
                     WriteNumber(parent, propName, js.AsNumber());
                 else if (js.IsArray())

@@ -8,6 +8,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Util;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Smuggler.Documents.Data;
@@ -374,7 +375,8 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
                     }
 
-                    if (_options.IncludeExpired == false && item.Document.Expired(_time.GetUtcNow()))
+                    if (_options.IncludeExpired == false && 
+                        ExpirationStorage.HasExpired(item.Document.Data, _time.GetUtcNow()))
                     {
                         SkipDocument(item, result);
                         continue;

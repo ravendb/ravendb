@@ -8,11 +8,11 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
-using Raven.Client;
 using Raven.Client.Extensions.Streams;
 using Raven.Client.ServerWide.ETL;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 
@@ -486,7 +486,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                 {
                     if (char.IsDigit(value[0]))
                     {
-                        if (DateTime.TryParseExact(value, Default.OnlyDateTimeFormat, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime dateTime))
+                        if (DateTime.TryParseExact(value, DefaultFormat.OnlyDateTimeFormat, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime dateTime))
                         {
                             switch (_providerFactory.GetType().Name)
                             {
@@ -506,7 +506,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                 {
                     if (char.IsDigit(value[0]))
                     {
-                        if (DateTimeOffset.TryParseExact(value, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
+                        if (DateTimeOffset.TryParseExact(value, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
                             DateTimeStyles.RoundtripKind, out DateTimeOffset dateTimeOffset))
                         {
                             switch (_providerFactory.GetType().Name)

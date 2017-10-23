@@ -11,6 +11,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide.Expiration;
 using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow;
 using Xunit;
 
 namespace FastTests.Smuggler
@@ -193,7 +194,7 @@ namespace FastTests.Smuggler
                         var person1 = new Person { Name = "Name1" };
                         await session.StoreAsync(person1).ConfigureAwait(false);
                         var metadata = session.Advanced.GetMetadataFor(person1);
-                        metadata[Constants.Documents.Metadata.Expires] = database.Time.GetUtcNow().AddSeconds(10).ToString(Default.DateTimeOffsetFormatsToWrite);
+                        metadata[Constants.Documents.Metadata.Expires] = database.Time.GetUtcNow().AddSeconds(10).ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
 
                         await session.SaveChangesAsync().ConfigureAwait(false);
                     }
