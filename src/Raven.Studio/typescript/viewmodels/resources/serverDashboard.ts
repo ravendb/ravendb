@@ -15,6 +15,7 @@ import dashboardChart = require("models/resources/serverDashboard/dashboardChart
 import storagePieChart = require("models/resources/serverDashboard/storagePieChart");
 import serverDashboardWebSocketClient = require("common/serverDashboardWebSocketClient");
 import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
+import timeHelpers = require("common/timeHelpers");
 
 class machineResourcesSection {
 
@@ -250,7 +251,7 @@ class trafficSection {
                 new hyperlinkColumn<trafficItem>(grid, x => x.database(), x => appUrl.forDocuments(null, x.database()), "Database", "30%"),
                 new textColumn<trafficItem>(grid, x => x.requestsPerSecond(), "Requests / s", "20%"),
                 new textColumn<trafficItem>(grid, x => x.writesPerSecond(), "Writes / s", "25%"),
-                new textColumn<trafficItem>(grid, x => this.sizeFormatter(x.dataWritesPerSecond()), "Data writes / s", "25%")
+                new textColumn<trafficItem>(grid, x => this.sizeFormatter(x.dataWritesPerSecond()), "Data written / s", "25%")
             ];
         });
         
@@ -382,6 +383,7 @@ class serverDashboard extends viewModelBase {
     clusterManager = clusterTopologyManager.default;
     startUpTime = ko.observable<moment.Moment>();
     formattedUpTime: KnockoutComputed<string>;
+    formattedStartTime: KnockoutComputed<string>;
     sizeFormatter = generalUtils.formatBytesToSize;
 
     usingHttps = location.protocol === "https:";
@@ -398,44 +400,21 @@ class serverDashboard extends viewModelBase {
         super();
 
         this.formattedUpTime = ko.pureComputed(() => {
-            var startUpTime = this.startUpTime();
-            if (!startUpTime) {
+            const now = timeHelpers.utcNowWithSecondPrecision();
+            const startTime = this.startUpTime();
+            if (!startTime) {
                 return "a few seconds";
             }
-
-            const now = moment.utc();
-            const diff = moment.duration(now.diff(startUpTime));
-
-            const results: string[] = [];
-            const diffDays = diff.days();
-            if (diffDays > 0) {
-                results.push(diffDays + pluralizeHelpers.pluralize(diffDays, " day", " days", true));
-            }
-
-            const diffHours = diff.hours();
-            if (diffHours > 0) {
-                results.push(diffHours + pluralizeHelpers.pluralize(diffHours, " hour", " hours", true));
-            }
-
-            const diffMinutes = diff.minutes();
-            if (diffMinutes > 0) {
-                results.push(diffMinutes + pluralizeHelpers.pluralize(diffMinutes, " minute", " minutes", true));
-            }
-
-            const diffSeconds = diff.seconds();
-            if (diffSeconds > 0) {
-                results.push(diffSeconds + pluralizeHelpers.pluralize(diffSeconds, " second", " seconds", true));
-            }
-
-            if (results.length === 0) {
-                return "a few seconds";
-            }
-
-            return results.slice(0, 2).join(" and ");
+            
+            const diff = now.diff(startTime);
+            return generalUtils.formatDuration(moment.duration(diff), true, 2);
         });
-
-        // refresh the uptime
-        this.refreshUpTime();
+        
+        this.formattedStartTime = ko.pureComputed(() => {
+            const start = this.startUpTime();
+            const dateFormat = "YYYY MMMM Do, h:mm A";
+            return start ? start.local().format(dateFormat) : "";
+        })
     }
 
     compositionComplete() {
@@ -444,14 +423,6 @@ class serverDashboard extends viewModelBase {
         this.initSections();
         
         this.enableLiveView();
-    }
-
-    private refreshUpTime() {
-        const random = Math.random() * 30;
-        setTimeout(() => {
-            this.startUpTime.valueHasMutated();
-            this.refreshUpTime();
-        }, random * 1000);
     }
 
     private initSections() {

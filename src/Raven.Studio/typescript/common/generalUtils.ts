@@ -14,37 +14,39 @@ class genUtils {
         return moment.duration("-" + input).humanize(withSuffix);
     }
 
-    static formatDuration(duration: moment.Duration, longFormat = false) {
-        let timeStr = "";
+    static formatDuration(duration: moment.Duration, longFormat = false, desiredAccuracy = 5) {
+        const timeTokens = [] as Array<string>;
         if (duration.asDays() >= 1) {
-            timeStr += longFormat ?
+            timeTokens.push(longFormat ?
                 pluralizeHelpers.pluralize(Math.floor(duration.asDays()), " day ", " days ") :
-                Math.floor(duration.asDays()) + " d ";
+                Math.floor(duration.asDays()) + " d ");
         }
         if (duration.hours() > 0) {
-            timeStr += longFormat ?
+            timeTokens.push(longFormat ?
                 pluralizeHelpers.pluralize(duration.hours(), " hour ", " hours ") :
-                duration.hours() + " h ";
+                duration.hours() + " h ");
         }
         if (duration.minutes() > 0) {
-            timeStr += longFormat ?
+            timeTokens.push(longFormat ?
                 pluralizeHelpers.pluralize(duration.minutes(), " minute ", " minutes ") :
-                duration.minutes() + " m ";
+                duration.minutes() + " m ");
         }
         if (duration.seconds() > 0) {
-            timeStr += longFormat ?
+            timeTokens.push(longFormat ?
                 pluralizeHelpers.pluralize(duration.seconds(), " second ", " seconds ") :
-                duration.seconds() + " s ";
+                duration.seconds() + " s ");
         }
         if (duration.milliseconds() > 0) {
             const millis = duration.milliseconds();
 
             const atLeastOneSecond = duration.asSeconds() >= 1;
-
-            timeStr += atLeastOneSecond ? Math.floor(millis) : Math.floor(millis * 100) / 100;
-            timeStr += " ms";
+            timeTokens.push((atLeastOneSecond ? Math.floor(millis) : Math.floor(millis * 100) / 100) + " ms");
         }
-        return timeStr;
+        
+        if (timeTokens.length > desiredAccuracy) {
+            timeTokens.length = desiredAccuracy;
+        }
+        return timeTokens.join(" ");
     }
 
     static formatMillis(input: number) {
