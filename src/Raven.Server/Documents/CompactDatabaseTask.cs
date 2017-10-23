@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
@@ -8,6 +9,7 @@ using Raven.Server.Utils;
 using Sparrow;
 using Voron;
 using Voron.Exceptions;
+using Voron.Impl;
 using Voron.Impl.Compaction;
 
 namespace Raven.Server.Documents
@@ -32,6 +34,7 @@ namespace Raven.Server.Documents
                 Message = $"Started database compaction for {_database}"
             };
             onProgress?.Invoke(progress);
+            DatabaseCompactionResult.Instance.SizeBeforeCompactionInMb = await CalculateStorageSizeInBytes(_database) / 1024 / 1024;
 
             using (await _serverStore.DatabasesLandlord.UnloadAndLockDatabase(_database))
             {
@@ -79,7 +82,45 @@ namespace Raven.Server.Documents
                 }
             }
 
+            DatabaseCompactionResult.Instance.SizeAfterCompactionInMb = await CalculateStorageSizeInBytes(_database) / 1024 / 1024;
             return DatabaseCompactionResult.Instance;
+        }
+
+        public async Task<long> CalculateStorageSizeInBytes(string databaseName)
+        {
+            long sizeOnDiskInBytes = 0;
+
+            var database = await _serverStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
+            var storageEnvironments = database?.GetAllStoragesEnvironment();
+            if (storageEnvironments != null)
+            {
+                foreach (var environment in storageEnvironments)
+                {
+                    Transaction tx = null;
+                    try
+                    {
+                        try
+                        {
+                            tx = environment?.Environment.ReadTransaction();
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            continue;
+                        }
+                        var storageReport = environment?.Environment.GenerateReport(tx);
+                        if (storageReport == null)
+                            continue;
+
+                        var journalSize = storageReport.Journals.Sum(j => j.AllocatedSpaceInBytes);
+                        sizeOnDiskInBytes += storageReport.DataFile.AllocatedSpaceInBytes + journalSize;
+                    }
+                    finally
+                    {
+                        tx?.Dispose();
+                    }
+                }
+            }
+            return sizeOnDiskInBytes;
         }
     }
 }
