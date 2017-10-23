@@ -49,6 +49,13 @@ namespace SlowTests.Server.Replication
 
                 var tombstoneIDs = WaitUntilHasTombstones(slave);
                 Assert.Equal(1, tombstoneIDs.Count);
+
+                using (var session = slave.OpenSession())
+                {
+                    Assert.Equal(3, session.Advanced.GetRevisionsFor<User>("users/1").Count);
+                    session.SaveChanges();
+                }
+                
             }
         }
 
@@ -113,6 +120,7 @@ return out;
                         var item = session.Load<User>("users/1");
                         Assert.Equal("Karmel", item.Name);
                         Assert.Equal(123, item.Age);
+                        Assert.Equal(3, session.Advanced.GetRevisionsFor<User>("users/1").Count);
                     }
                     catch (ConflictException)
                     {
@@ -241,6 +249,7 @@ return out;
                     //this shouldn't throw
                     var item = session.Load<User>("users/1");
                     Assert.Equal(item.Name, "Karmeli123");
+                    Assert.Equal(3, session.Advanced.GetRevisionsFor<User>("users/1").Count);
                 }
             }
         }
@@ -308,7 +317,6 @@ return out;
                 }
 
                 Assert.True(WaitForDocument(slave, "marker2"));
-
                 using (var session = slave.OpenSession())
                 {
                     var user1 = session.Load<User>("users/1");
@@ -316,6 +324,8 @@ return out;
 
                     Assert.Equal("2nd", user1.Name);
                     Assert.Equal("2nd", user2.Name);
+
+                    Assert.Equal(3, session.Advanced.GetRevisionsFor<User>("users/1").Count);
                 }
             }
         }
@@ -355,6 +365,7 @@ return out;
 
                 using (var session = master.OpenSession())
                 {
+
                     session.Store(new
                     {
                         Foo = "marker"
@@ -374,7 +385,8 @@ return out;
                 {
                     var user = session.Load<User>("users/1");
                     Assert.Null(user);
-                    //Assert.Equal("1st", user.Name);
+                    WaitForUserToContinueTheTest(slave);
+                    Assert.Equal(3, session.Advanced.GetRevisionsFor<User>("users/1").Count);
                 }
             }
         }

@@ -965,7 +965,7 @@ namespace Raven.Server.Documents
 
         public DeleteOperationResult? Delete(DocumentsOperationContext context, Slice lowerId, string id,
             LazyStringValue expectedChangeVector, long? lastModifiedTicks = null, string changeVector = null,
-            CollectionName collectionName = null, NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None)
+            CollectionName collectionName = null, NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None, DocumentFlags documentFlags = DocumentFlags.None)
         {
             if (ConflictsStorage.ConflictsCount != 0)
             {
@@ -989,6 +989,19 @@ namespace Raven.Server.Documents
                     collectionName.GetTableName(CollectionTableType.Tombstones));
                 tombstoneTable.Delete(local.Tombstone.StorageId);
 
+                var flags = local.Tombstone.Flags | documentFlags;
+
+                if (collectionName.IsHiLo == false &&
+                    (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
+                {
+                    var revisionsStorage = _documentDatabase.DocumentsStorage.RevisionsStorage;
+                    if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false &&
+                        (revisionsStorage.Configuration != null || flags.Contain(DocumentFlags.Resolved)))
+                    {
+                        revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector, modifiedTicks, nonPersistentFlags, flags);
+                    }
+                }
+
                 // we update the tombstone
                 var etag = CreateTombstone(context,
                     lowerId,
@@ -997,7 +1010,7 @@ namespace Raven.Server.Documents
                     local.Tombstone.ChangeVector,
                     modifiedTicks,
                     changeVector,
-                    DocumentFlags.None).Etag;
+                    local.Tombstone.Flags | documentFlags ).Etag;
 
                 // We have to raise the notification here because even though we have deleted
                 // a deleted value, we changed the change vector. And maybe we need to replicate 
@@ -1042,7 +1055,7 @@ namespace Raven.Server.Documents
 
                 var ptr = table.DirectRead(doc.StorageId, out int size);
                 var tvr = new TableValueReader(ptr, size);
-                var flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr);
+                var flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr) | documentFlags;
 
                 long etag;
                 using (TableValueToSlice(context, (int)DocumentsTable.LowerId, ref tvr, out Slice tombstone))

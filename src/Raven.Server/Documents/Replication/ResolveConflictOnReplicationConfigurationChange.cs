@@ -222,14 +222,52 @@ namespace Raven.Server.Documents.Replication
 
         public void PutResolvedDocument(
            DocumentsOperationContext context,
-           DocumentConflict conflict)
+           DocumentConflict resolved,
+           DocumentConflict incoming = null)
         {
-            if (conflict.Doc == null)
+            if (incoming != null)
             {
-                using (Slice.External(context.Allocator, conflict.LowerId, out Slice lowerId))
+                // we resolved the conflict on the fly, so we save the remote documents as revisions
+                if (incoming.Doc != null)
                 {
-                    _database.DocumentsStorage.Delete(context, lowerId, conflict.Id, null,
-                        _database.Time.GetUtcNow().Ticks, conflict.ChangeVector, new CollectionName(conflict.Collection));
+                    _database.DocumentsStorage.RevisionsStorage.Put(context, incoming.Id, incoming.Doc, incoming.Flags | DocumentFlags.Conflicted | DocumentFlags.HasRevisions,
+                        NonPersistentDocumentFlags.None, incoming.ChangeVector, incoming.LastModified.Ticks);
+                }
+                else
+                {
+                    using (Slice.External(context.Allocator, incoming.LowerId, out var key))
+                    {
+                        _database.DocumentsStorage.RevisionsStorage.Delete(context, incoming.Id, key, new CollectionName(incoming.Collection), incoming.ChangeVector,
+                            incoming.LastModified.Ticks, NonPersistentDocumentFlags.None, incoming.Flags | DocumentFlags.Conflicted | DocumentFlags.HasRevisions);
+                    }
+                }
+            }
+
+            if (_database.DocumentsStorage.ConflictsStorage.ConflictsCount == 0)
+            {
+                var existing = _database.DocumentsStorage.GetDocumentOrTombstone(context, resolved.Id, throwOnConflict: false);
+                if (existing.Document != null)
+                {
+                    _database.DocumentsStorage.RevisionsStorage.Put(context, existing.Document.Id, existing.Document.Data,
+                        existing.Document.Flags | DocumentFlags.Conflicted | DocumentFlags.HasRevisions,
+                        NonPersistentDocumentFlags.None, existing.Document.ChangeVector, existing.Document.LastModified.Ticks);
+                }
+                else if(existing.Tombstone != null)
+                {
+                    using (Slice.External(context.Allocator, existing.Tombstone.LowerId, out var key))
+                    {
+                        _database.DocumentsStorage.RevisionsStorage.Delete(context, existing.Tombstone.LowerId, key, new CollectionName(existing.Tombstone.Collection), existing.Tombstone.ChangeVector,
+                            existing.Tombstone.LastModified.Ticks, NonPersistentDocumentFlags.None, existing.Tombstone.Flags | DocumentFlags.Conflicted | DocumentFlags.HasRevisions);
+                    }
+                }
+            }
+
+            if (resolved.Doc == null)
+            {
+                using (Slice.External(context.Allocator, resolved.LowerId, out Slice lowerId))
+                {
+                    _database.DocumentsStorage.Delete(context, lowerId, resolved.Id, null,
+                        _database.Time.GetUtcNow().Ticks, resolved.ChangeVector, new CollectionName(resolved.Collection), documentFlags: DocumentFlags.Resolved | DocumentFlags.HasRevisions);
                     return;
                 }
             }
@@ -240,13 +278,13 @@ namespace Raven.Server.Documents.Replication
             // we are saving it
 
             // the resolved document could be an update of the existing document, so it's a good idea to clone it also before updating.
-            using (var clone = conflict.Doc.Clone(context))
+            using (var clone = resolved.Doc.Clone(context))
             {
                 // handle the case where we resolve a conflict for a document from a different collection
-                DeleteDocumentFromDifferentCollectionIfNeeded(context, conflict);
+                DeleteDocumentFromDifferentCollectionIfNeeded(context, resolved);
 
-                ReplicationUtils.EnsureCollectionTag(clone, conflict.Collection);
-                _database.DocumentsStorage.Put(context, conflict.LowerId, null, clone, null, conflict.ChangeVector, DocumentFlags.Resolved);
+                ReplicationUtils.EnsureCollectionTag(clone, resolved.Collection);
+                _database.DocumentsStorage.Put(context, resolved.LowerId, null, clone, null, resolved.ChangeVector, DocumentFlags.Resolved);
             }
         }
 
