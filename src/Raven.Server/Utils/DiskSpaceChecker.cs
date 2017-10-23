@@ -40,7 +40,7 @@ namespace Raven.Server.Utils
 
                 foreach (var drive in drivesInfo)
                 {
-                    if (root.Contains(drive.Name) == false)
+                    if (root.IndexOf(drive.Name, StringComparison.OrdinalIgnoreCase) < 0)
                         continue;
 
                     return new DiskSpaceResult
