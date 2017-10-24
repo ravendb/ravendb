@@ -150,6 +150,19 @@ namespace Raven.Client.ServerWide
                 }
             }
         }
+
+        public int GetIndexesCount()
+        {
+            var count = 0;
+
+            if (Indexes != null)
+                count += Indexes.Count;
+
+            if (AutoIndexes != null)
+                count += AutoIndexes.Count;
+
+            return count;
+        }
     }
 
     public enum DeletionInProgressStatus
