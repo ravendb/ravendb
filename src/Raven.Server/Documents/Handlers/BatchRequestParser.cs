@@ -128,15 +128,13 @@ namespace Raven.Server.Documents.Handlers
 
                     if (commandData.Type == CommandType.PUT && string.IsNullOrEmpty(commandData.Id) == false && commandData.Id[commandData.Id.Length - 1] == '|')
                     {
+                        // queue identities requests in order to send them at once to the leader (using List for simplicity)
                         identities.Add(commandData.Id);
                     }
 
                     cmds[index] = commandData;
                 }
 
-                // send { 'users': 20, 'workers': 10 }
-                // recv { 'users': 1000, 'workers': 2000 }
-                // rslt users=1000-1019, workers=2000-2009
                 var newIds = await serverStore.GenerateClusterIdentitiesBatchAsync(database.Name, identities);
                 Debug.Assert(newIds.Count == identities.Count);
 
