@@ -46,7 +46,7 @@ namespace Raven.Server.Smuggler.Migration
         public override async Task Execute()
         {
             var state = GetLastMigrationState();
-            const ItemType types = ItemType.Documents | ItemType.Indexes | ItemType.Transformers | ItemType.Attachments;
+            const ItemType types = ItemType.Documents | ItemType.Indexes | ItemType.Attachments;
 
             var databaseMigrationOptions = new DatabaseMigrationOptions
             {

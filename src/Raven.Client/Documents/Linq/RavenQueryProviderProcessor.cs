@@ -43,8 +43,6 @@ namespace Raven.Client.Documents.Linq
         private Type _newExpressionType;
         private string _currentPath = string.Empty;
         private int _subClauseDepth;
-        private readonly string _resultsTransformer;
-        private readonly Parameters _transformerParameters;
         private Expression _groupByElementSelector;
         private string _jsSelectBody;
         private List<string> _jsProjectionNames;
@@ -77,12 +75,9 @@ namespace Raven.Client.Documents.Linq
         /// <param name="collectionName">The name of the collection the query is executed against.</param>
         /// <param name="fieldsToFetch">The fields to fetch in this query</param>
         /// <param name="isMapReduce"></param>
-        /// <param name="resultsTransformer"></param>
-        /// <param name="transformerParameters"></param>
         /// /// <param name ="originalType" >the original type of the query if TransformWith is called otherwise null</param>
         public RavenQueryProviderProcessor(IDocumentQueryGenerator queryGenerator, Action<IDocumentQueryCustomization> customizeQuery, Action<QueryResult> afterQueryExecuted,
-             string indexName, string collectionName, HashSet<FieldToFetch> fieldsToFetch, bool isMapReduce, string resultsTransformer,
-            Parameters transformerParameters, Type originalType)
+             string indexName, string collectionName, HashSet<FieldToFetch> fieldsToFetch, bool isMapReduce, Type originalType)
         {
             FieldsToFetch = fieldsToFetch;
             _newExpressionType = typeof(T);
@@ -92,8 +87,6 @@ namespace Raven.Client.Documents.Linq
             _isMapReduce = isMapReduce;
             _afterQueryExecuted = afterQueryExecuted;
             _customizeQuery = customizeQuery;
-            _resultsTransformer = resultsTransformer;
-            _transformerParameters = transformerParameters;
             _originalQueryType = originalType ?? throw new ArgumentNullException(nameof(originalType));
             _linqPathProvider = new LinqPathProvider(queryGenerator.Conventions);
         }
@@ -2271,11 +2264,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
             var (fields, projections) = GetProjections();
 
             var finalQuery = ((IDocumentQuery<T>)_documentQuery).SelectFields<TProjection>(new QueryData(fields, projections, _fromAlias, _declareToken , _loadTokens , _declareToken !=null || _jsSelectBody !=null));
-
-            //no reason to override a value that may or may not exist there
-            if (!String.IsNullOrEmpty(_resultsTransformer))
-            {
-            }
 
             var executeQuery = GetQueryResult(finalQuery);
 

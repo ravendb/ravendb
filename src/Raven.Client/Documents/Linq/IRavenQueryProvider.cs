@@ -32,12 +32,6 @@ namespace Raven.Client.Documents.Linq
         void Customize(Action<IDocumentQueryCustomization> action);
 
         /// <summary>
-        /// The name of the transformer to use with this query
-        /// </summary>
-        /// <param name="transformerName"></param>
-        void TransformWith(string transformerName);
-
-        /// <summary>
         /// Gets the name of the index.
         /// </summary>
         /// <value>The name of the index.</value>
@@ -94,25 +88,6 @@ namespace Raven.Client.Documents.Linq
         /// Set the fields to fetch
         /// </summary>
         HashSet<FieldToFetch> FieldsToFetch { get; }
-
-        /// <summary>
-        /// The result transformer to use
-        /// </summary>
-        string ResultTransformer { get; }
-
-        /// <summary>
-        /// Gets the query inputs being supplied to
-        /// </summary>
-        Parameters TransformerParameters { get; }
-
-        /// <summary>
-        /// Adds input to transformer via a key/value pair
-        /// </summary>
-        /// <param name="input"></param>
-        /// <param name="value"></param>
-        void AddTransformerParameter(string input, object value);
-
-        void AddTransformerParameter(string input, DateTime value);
 
         Type OriginalQueryType { get; }
     }

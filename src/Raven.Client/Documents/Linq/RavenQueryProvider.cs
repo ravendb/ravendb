@@ -32,7 +32,6 @@ namespace Raven.Client.Documents.Linq
         private readonly QueryStatistics _queryStatistics;
         private readonly QueryHighlightings _highlightings;
         private readonly bool _isMapReduce;
-        private readonly Parameters _transformerParameters = new Parameters();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenQueryProvider{T}"/> class.
@@ -84,23 +83,6 @@ namespace Raven.Client.Documents.Linq
         /// </summary>
         public HashSet<FieldToFetch> FieldsToFetch { get; }
 
-        /// <summary>
-        /// Gets the results transformer to use
-        /// </summary>
-        public string ResultTransformer { get; private set; }
-
-        public Parameters TransformerParameters => _transformerParameters;
-
-        public void AddTransformerParameter(string name, object value)
-        {
-            _transformerParameters[name] = value;
-        }
-
-        public void AddTransformerParameter(string name, DateTime value)
-        {
-            TransformerParameters[name] = value.GetDefaultRavenFormat(isUtc: value.Kind == DateTimeKind.Utc);
-        }
-
         public Type OriginalQueryType { get; }
 
         /// <summary>
@@ -111,16 +93,11 @@ namespace Raven.Client.Documents.Linq
             if (typeof(T) == typeof(TS))
                 return this;
 
-            var ravenQueryProvider = new RavenQueryProvider<TS>(_queryGenerator, _indexName, _collectionName, OriginalQueryType, _queryStatistics, _highlightings, _isMapReduce)
-            {
-                ResultTransformer = ResultTransformer
-            };
+            var ravenQueryProvider =
+                new RavenQueryProvider<TS>(_queryGenerator, _indexName, _collectionName, OriginalQueryType, _queryStatistics, _highlightings, _isMapReduce);
 
             ravenQueryProvider.Customize(_customizeQuery);
-            foreach (var transformerParam in _transformerParameters)
-            {
-                ravenQueryProvider.AddTransformerParameter(transformerParam.Key, transformerParam.Value);
-            }
+
             return ravenQueryProvider;
         }
 
@@ -206,11 +183,6 @@ namespace Raven.Client.Documents.Linq
             if (action == null)
                 return;
             _customizeQuery += action;
-        }
-
-        public void TransformWith(string transformerName)
-        {
-            ResultTransformer = transformerName;
         }
 
         /// <summary>
@@ -301,7 +273,7 @@ namespace Raven.Client.Documents.Linq
         {
             return new RavenQueryProviderProcessor<TS>(_queryGenerator, _customizeQuery, _afterQueryExecuted, _indexName, _collectionName,
                 FieldsToFetch,
-                _isMapReduce, ResultTransformer, _transformerParameters, OriginalQueryType);
+                _isMapReduce, OriginalQueryType);
         }
 
         /// <summary>

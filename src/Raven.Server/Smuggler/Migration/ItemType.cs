@@ -8,7 +8,6 @@ namespace Raven.Server.Smuggler.Migration
         Documents = 1,
         Indexes = 2,
         Attachments = 4,
-        Transformers = 8,
         RemoveAnalyzers = 32768
     }
 }

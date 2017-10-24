@@ -23,7 +23,7 @@ namespace Raven.Client.Documents.Indexes
     /// The naming convention is that underscores in the inherited class names are replaced by slashed
     /// For example: Posts_ByName will be saved to Posts/ByName
     /// </remarks>
-    public abstract class AbstractIndexCreationTask : AbstractCommonApiForIndexesAndTransformers
+    public abstract class AbstractIndexCreationTask : AbstractCommonApiForIndexes
     {
         /// <summary>
         /// Creates the index definition.
@@ -206,7 +206,7 @@ namespace Raven.Client.Documents.Indexes
         protected Expression<Func<IEnumerable<TDocument>, IEnumerable>> Map { get; set; }
     }
 
-    public abstract class AbstractCommonApiForIndexesAndTransformers
+    public abstract class AbstractCommonApiForIndexes
     {
         /// <summary>
         /// Allows to use lambdas recursively

@@ -102,15 +102,6 @@ namespace Raven.Client.Exceptions
                 if (typeof(RavenException).IsAssignableFrom(type) == false)
                     throw new RavenException(schema.Error, exception);
 
-                if (type == typeof(TransformerCompilationException))
-                {
-                    var transformerCompilationException = (TransformerCompilationException)exception;
-                    json.TryGet(nameof(TransformerCompilationException.TransformerDefinitionProperty), out transformerCompilationException.TransformerDefinitionProperty);
-                    json.TryGet(nameof(TransformerCompilationException.ProblematicText), out transformerCompilationException.ProblematicText);
-
-                    throw transformerCompilationException;
-                }
-
                 if (type == typeof(IndexCompilationException))
                 {
                     var indexCompilationException = (IndexCompilationException)exception;

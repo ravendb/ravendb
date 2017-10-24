@@ -12,10 +12,6 @@ namespace Raven.Client.Documents.Operations
     {
     }
 
-    internal class GetTransformerNamesResponse : ResultsResponse<string>
-    {
-    }
-
     internal class PutIndexesResponse : ResultsResponse<PutIndexResult>
     {
     }

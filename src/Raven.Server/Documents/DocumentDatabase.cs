@@ -52,7 +52,7 @@ namespace Raven.Server.Documents
 
         private readonly object _idleLocker = new object();
         /// <summary>
-        /// The current lock, used to make sure indexes/transformers have a unique names
+        /// The current lock, used to make sure indexes have a unique names
         /// </summary>
         private Task _indexStoreTask;
         private long _usages;

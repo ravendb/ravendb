@@ -242,14 +242,6 @@ namespace Raven.Server
                 return;
             }
 
-            var transformerCompilationException = exception as TransformerCompilationException;
-            if (transformerCompilationException != null)
-            {
-                djv[nameof(TransformerCompilationException.TransformerDefinitionProperty)] = transformerCompilationException.TransformerDefinitionProperty;
-                djv[nameof(TransformerCompilationException.ProblematicText)] = transformerCompilationException.ProblematicText;
-                return;
-            }
-
             var documentConflictException = exception as DocumentConflictException;
             if (documentConflictException != null)
             {

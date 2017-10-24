@@ -7,7 +7,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 {
     public class MethodDetectorRewriter : CSharpSyntaxRewriter
     {
-        public readonly IndexCompiler.IndexAndTransformerMethods Methods = new IndexCompiler.IndexAndTransformerMethods();
+        public readonly IndexCompiler.IndexMethods Methods = new IndexCompiler.IndexMethods();
 
         public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
         {
