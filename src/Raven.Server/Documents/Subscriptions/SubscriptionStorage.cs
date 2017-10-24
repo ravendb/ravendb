@@ -169,31 +169,24 @@ namespace Raven.Server.Documents.Subscriptions
             if (_subscriptionConnectionStates.TryGetValue(subscriptionId, out SubscriptionConnectionState subscriptionConnectionState) == false)
                 return false;
 
-            if (subscriptionConnectionState.Connection != null)
+            var subscriptionConnection = subscriptionConnectionState.Connection;
+
+            if (subscriptionConnection != null)
             {
-                subscriptionConnectionState.RegisterRejectedConnection(subscriptionConnectionState.Connection, ex);
-                subscriptionConnectionState.Connection.ConnectionException = ex;
-                subscriptionConnectionState.Connection.CancellationTokenSource.Cancel();
+                subscriptionConnectionState.RegisterRejectedConnection(subscriptionConnection, ex);
+                subscriptionConnection.ConnectionException = ex;
+                try
+                {
+                    subscriptionConnection.CancellationTokenSource.Cancel();
+                }
+                catch
+                {
+                    // ignored
+                }
             }
 
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Subscription with id {subscriptionId} connection was dropped. Reason: {ex.Message}");
-
-            return true;
-        }
-
-
-        public bool RedirectSubscriptionConnection(long subscriptionId, string reason)
-        {
-            if (_subscriptionConnectionStates.TryGetValue(subscriptionId, out SubscriptionConnectionState subscriptionConnectionState) == false)
-                return false;
-
-            subscriptionConnectionState.Connection.ConnectionException = new SubscriptionDoesNotBelongToNodeException(reason);
-            subscriptionConnectionState.RegisterRejectedConnection(subscriptionConnectionState.Connection, new SubscriptionDoesNotBelongToNodeException(reason));
-            subscriptionConnectionState.Connection.CancellationTokenSource.Cancel();
-
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"Subscription with id {subscriptionId} connection was dropped. Reason: {reason}");
 
             return true;
         }
@@ -217,7 +210,9 @@ namespace Raven.Server.Documents.Subscriptions
             {
                 var subscriptionState = kvp.Value;
 
-                if (subscriptionState?.Connection == null)
+                var subscriptionStateConnection = subscriptionState.Connection;
+
+                if (subscriptionStateConnection == null)
                     continue;
 
                 if (start > 0)
@@ -228,8 +223,8 @@ namespace Raven.Server.Documents.Subscriptions
 
                 if (take-- <= 0)
                     yield break;
-
-                var subscriptionData = GetSubscriptionFromServerStore(context, subscriptionState.Connection.Options.SubscriptionName);
+                
+                var subscriptionData = GetSubscriptionFromServerStore(context, subscriptionStateConnection.Options.SubscriptionName);
                 GetRunningSubscriptionInternal(history, subscriptionData, subscriptionState);
                 yield return subscriptionData;
             }
@@ -338,8 +333,8 @@ namespace Raven.Server.Documents.Subscriptions
             if (subscriptionConnection == null)
                 return null;
 
-            var subscriptionData = GetSubscriptionFromServerStore(context, subscriptionConnectionState.Connection.Options.SubscriptionName);
-            subscriptionData.Connection = subscriptionConnectionState.Connection;
+            var subscriptionData = GetSubscriptionFromServerStore(context, subscriptionConnection.Options.SubscriptionName);
+            subscriptionData.Connection = subscriptionConnection;
             SetSubscriptionHistory(subscriptionConnectionState, subscriptionData);
 
             return subscriptionData;
@@ -411,13 +406,13 @@ namespace Raven.Server.Documents.Subscriptions
                     if (subscriptionState.Query != subscriptionStateKvp.Value.Connection?.SubscriptionState.Query)
                     {
                         DropSubscriptionConnection(subscriptionStateKvp.Key, new SubscriptionClosedException($"The subscription {subscriptionName} query has been modified, connection must be restarted"));
+                        continue;
                     }
 
                     if (databaseRecord.Topology.WhoseTaskIsIt(subscriptionState, _serverStore.Engine.CurrentState) != _serverStore.NodeTag)
                     {
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info($"Disconnected subscription with id {subscriptionStateKvp.Key}, because it was is no longer managed by this node ({_serverStore.NodeTag})");
-                        RedirectSubscriptionConnection(subscriptionStateKvp.Key, "Subscription operation was stopped, because it's now under different server's responsibility");
+                        DropSubscriptionConnection(subscriptionStateKvp.Key,
+                            new SubscriptionDoesNotBelongToNodeException("Subscription operation was stopped, because it's now under different server's responsibility"));
                     }
                 }
             }
