@@ -84,15 +84,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 return;
 
             var collections = index.Maps.Keys.ToArray();
-
             if (collections.Contains(Constants.Documents.Collections.AllDocumentsCollection, StringComparer.OrdinalIgnoreCase))
-            {
-                throw new IndexInvalidException($"Cannot output documents from index ({definition.Name}) to the collection name ({outputReduceToCollection}) because the index is mapping all documents and this will result in an infinite loop.");
-            }
+                throw new IndexInvalidException($"Cannot output documents from index ({definition.Name}) " +
+                                                $"to the collection name ({outputReduceToCollection}) " +
+                                                $"because the index is mapping all documents and this will result in an infinite loop.");
             if (collections.Contains(outputReduceToCollection, StringComparer.OrdinalIgnoreCase))
-            {
-                throw new IndexInvalidException($"The collection name ({outputReduceToCollection}) cannot be used as this index ({definition.Name}) is mapping this collection and this will result in an infinite loop.");
-            }
+                throw new IndexInvalidException($"The collection name ({outputReduceToCollection}) " +
+                                                $"cannot be used as this index ({definition.Name}) is mapping this collection " +
+                                                $"and this will result in an infinite loop.");
 
             var indexes = database.IndexStore.GetIndexes()
                 .Where(x => x.Type == IndexType.MapReduce)
@@ -104,13 +103,39 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             foreach (var otherIndex in indexes)
             {
                 if (otherIndex.Definition.OutputReduceToCollection.Equals(outputReduceToCollection, StringComparison.OrdinalIgnoreCase))
-                    throw new IndexInvalidException($"The collection name ({outputReduceToCollection}) which will be used to output documents results should be unique to only one index but it is already used by another index ({otherIndex.Name}).");
+                {
+                    var sideBySideIndex = definition.Name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix, StringComparison.OrdinalIgnoreCase);
+                    if (sideBySideIndex)
+                    {
+                        throw new IndexInvalidException($"In order to create the '{definition.Name}' side by side index " +
+                                                        $"you firstly need to set {nameof(IndexDefinition.OutputReduceToCollection)} to be null " +
+                                                        $"on the '{otherIndex.Name}' index " +
+                                                        $"and than delete all of the documents in the '{otherIndex.Definition.OutputReduceToCollection}' collection.");
+                    }
+
+                    throw new IndexInvalidException($"The collection name ({outputReduceToCollection}) " +
+                                                    $"which will be used to output documents results must be unique to only one index " +
+                                                    $"but it is already used by another index ({otherIndex.Name}).");
+                }
 
                 if (otherIndex.Collections.Contains(outputReduceToCollection, StringComparer.OrdinalIgnoreCase) &&
-    CheckIfThereIsAnIndexWhichWillOutputReduceDocumentsWhichWillBeUsedAsMapOnTheSpecifiedIndex(otherIndex, collections, indexes, out string description))
+                    CheckIfThereIsAnIndexWhichWillOutputReduceDocumentsWhichWillBeUsedAsMapOnTheSpecifiedIndex(otherIndex, collections, indexes, out string description))
                 {
                     description += Environment.NewLine + $"--> {definition.Name}: {string.Join(",", collections)} => *{outputReduceToCollection}*";
                     throw new IndexInvalidException($"The collection name ({outputReduceToCollection}) cannot be used to output documents results as it is consumed by other index that will also output results which will lead to an infinite loop:" + Environment.NewLine + description);
+                }
+            }
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var stats = database.DocumentsStorage.GetCollection(definition.OutputReduceToCollection, context);
+                if (stats.Count > 0)
+                {
+                    throw new IndexInvalidException($"In order to create the '{definition.Name}' index " +
+                                                    $"which would output reduce results to documents in the '{definition.OutputReduceToCollection}' collection, " +
+                                                    $"you firstly need to delete all of the documents in the '{stats.Name}' collection " +
+                                                    $"(currenlty have {stats.Count} document{(stats.Count == 1 ? "" : "s")}).");
                 }
             }
         }
