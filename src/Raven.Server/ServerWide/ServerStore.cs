@@ -1254,11 +1254,11 @@ namespace Raven.Server.ServerWide
             return newIdentityValue;
         }
 
-        public async Task<LinkedList<long>> GenerateClusterIdentitiesBatchAsync(string databaseName, List<string> ids)
+        public async Task<List<long>> GenerateClusterIdentitiesBatchAsync(string databaseName, List<string> ids)
         {
             var (_, identityInfoResult) = await SendToLeaderAsync(new IncrementClusterIdentitiesBatchCommand(databaseName, ids));
 
-            var identityInfo = identityInfoResult as LinkedList<long> ?? throw new InvalidOperationException(
+            var identityInfo = identityInfoResult as List<long> ?? throw new InvalidOperationException(
                                    $"Expected to get result from raft command that should generate a cluster-wide batch identity, but didn't. Leader is {LeaderTag}, Current node tag is {NodeTag}.");
 
             return identityInfo;

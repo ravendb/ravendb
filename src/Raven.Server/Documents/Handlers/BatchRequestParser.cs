@@ -69,7 +69,7 @@ namespace Raven.Server.Documents.Handlers
         {
             CommandData[] cmds = Empty;
             var identities = new List<string>();
-            
+            var positionInListToCommandIndex = new Dictionary<int, int>();
 
             int index = -1;
             var state = new JsonParserState();
@@ -125,11 +125,12 @@ namespace Raven.Server.Documents.Handlers
                                 false
                             );
                     }
-
+                    
                     if (commandData.Type == CommandType.PUT && string.IsNullOrEmpty(commandData.Id) == false && commandData.Id[commandData.Id.Length - 1] == '|')
                     {
                         // queue identities requests in order to send them at once to the leader (using List for simplicity)
                         identities.Add(commandData.Id);
+                        positionInListToCommandIndex[identities.Count - 1] = index;
                     }
 
                     cmds[index] = commandData;
@@ -138,14 +139,18 @@ namespace Raven.Server.Documents.Handlers
                 var newIds = await serverStore.GenerateClusterIdentitiesBatchAsync(database.Name, identities);
                 Debug.Assert(newIds.Count == identities.Count);
 
-                for (var i = 0; i < cmds.Length; i++)
+                foreach (var item in positionInListToCommandIndex)
                 {
-                    if (cmds[i].Type == CommandType.PUT && string.IsNullOrEmpty(cmds[i].Id) == false && cmds[i].Id[cmds[i].Id.Length - 1] == '|')
-                    {
-                        cmds[i].Id = cmds[i].Id.Substring(0, cmds[i].Id.Length - 1) + "/" + newIds.First.Value;
-                        newIds.RemoveFirst();
-                    }
+                    cmds[item.Value].Id = cmds[item.Value].Id.Substring(0, cmds[item.Value].Id.Length - 1) + "/" + newIds[item.Key];
                 }
+                //for (var i = 0; i < cmds.Length; i++)
+                //{
+                //    if (cmds[i].Type == CommandType.PUT && string.IsNullOrEmpty(cmds[i].Id) == false && cmds[i].Id[cmds[i].Id.Length - 1] == '|')
+                //    {
+                //        cmds[i].Id = cmds[i].Id.Substring(0, cmds[i].Id.Length - 1) + "/" + newIds.First.Value;
+                //        newIds.RemoveFirst();
+                //    }
+                //}
                 Debug.Assert(newIds.Count == 0);
             }
             return new ArraySegment<CommandData>(cmds, 0, index + 1);
