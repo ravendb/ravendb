@@ -197,6 +197,11 @@ namespace Raven.Server.Documents.Indexes
                 HandleAllDocs = true;
 
             _storageOperation = new StorageOperationWrapper(this);
+            QueryBuilderFactories = new QueryBuilderFactories
+            {
+                GetSpatialFieldFactory = GetOrAddSpatialField,
+                GetRegexFactory = GetOrAddRegex
+            };
         }
 
         public static Index Open(long etag, string path, DocumentDatabase documentDatabase)
@@ -2596,13 +2601,9 @@ namespace Raven.Server.Documents.Indexes
         {
         }
 
-        internal QueryBuilderFactories GetQueryBuilderFactories()
+        internal QueryBuilderFactories QueryBuilderFactories
         {
-            return new QueryBuilderFactories
-            {
-                GetSpatialFieldFactory = GetOrAddSpatialField,
-                GetRegexFactory = GetOrAddRegex
-            };
+            get; private set;
         }
 
         private Regex GetOrAddRegex(string arg)
