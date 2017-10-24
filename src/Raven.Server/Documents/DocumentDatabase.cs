@@ -489,17 +489,13 @@ namespace Raven.Server.Documents
         public DatabaseSummary GetDatabaseSummary()
         {
             using (DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
-            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (documentsContext.OpenReadTransaction())
-            using (context.OpenReadTransaction())
             {
                 return new DatabaseSummary
                 {
                     DocumentsCount = DocumentsStorage.GetNumberOfDocuments(),
                     AttachmentsCount = DocumentsStorage.AttachmentsStorage.GetNumberOfAttachments(documentsContext).AttachmentCount,
-                    RevisionsCount = DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(documentsContext),
-                    IndexesCount = IndexStore.GetIndexes().Count(),
-                    IdentitiesCount = _serverStore.Cluster.GetIdentitiesCount(context)
+                    RevisionsCount = DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(documentsContext)
                 };
             }
         }

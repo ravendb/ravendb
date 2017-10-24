@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
@@ -105,8 +104,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                             // we only have a smuggler restore
                             // use the encryption key to encrypt the database
                             Encrypted = _hasEncryptionKey
-                        },
-                        Identities = new Dictionary<string, long>()
+                        }
                     };
 
                     DatabaseHelper.Validate(databaseName, restoreSettings.DatabaseRecord);
@@ -151,8 +149,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                         result.Documents.ReadCount += summary.DocumentsCount;
                         result.Documents.Attachments.ReadCount += summary.AttachmentsCount;
                         result.RevisionDocuments.ReadCount += summary.RevisionsCount;
-                        result.Indexes.ReadCount += summary.IndexesCount;
-                        result.Identities.ReadCount += summary.IdentitiesCount;
+                        result.Indexes.ReadCount += databaseRecord.GetIndexesCount();
+                        result.Identities.ReadCount += restoreSettings.Identities.Count;
                         result.AddInfo($"Successfully restored {result.SnapshotRestore.ReadCount} " +
                                        $"files during snapshot restore, took: {sw.ElapsedMilliseconds:#,#;;0}ms");
                         onProgress.Invoke(result.Progress);
