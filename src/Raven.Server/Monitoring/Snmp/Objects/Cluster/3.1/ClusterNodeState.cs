@@ -19,7 +19,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Cluster
             if (string.IsNullOrWhiteSpace(tag))
                 return null;
 
-            return new OctetString(_store.CurrentState.ToString());
+            return new OctetString(_store.CurrentRachisState.ToString());
         }
     }
 }

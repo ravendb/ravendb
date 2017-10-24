@@ -335,7 +335,7 @@ namespace Raven.Server.ServerWide
 
                 try
                 {
-                    updateCommand.Execute(context, items, index, record, _parent.CurrentState == RachisConsensus.State.Passive, out result);
+                    updateCommand.Execute(context, items, index, record, _parent.CurrentState, out result);
                 }
                 catch (Exception e)
                 {

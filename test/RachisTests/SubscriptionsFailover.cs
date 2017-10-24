@@ -16,6 +16,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
+using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Revisions;
 using Raven.Client.Util;
@@ -508,7 +509,7 @@ namespace RachisTests
 
             if (mentor != null)
             {
-                Assert.Equal(mentor, record.Topology.WhoseTaskIsIt(subscripitonState, false));
+                Assert.Equal(mentor, record.Topology.WhoseTaskIsIt(subscripitonState, RachisState.Follower));
             }
 
             var task = subscription.Run(a =>
@@ -556,7 +557,7 @@ namespace RachisTests
                 var databaseRecord = someServer.ServerStore.Cluster.ReadDatabase(context, defaultDatabase);
                 var db = await someServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(defaultDatabase).ConfigureAwait(false);
                 var subscriptionState = db.SubscriptionStorage.GetSubscriptionFromServerStore(subscriptionName);
-                tag = databaseRecord.Topology.WhoseTaskIsIt(subscriptionState, someServer.ServerStore.IsPassive());
+                tag = databaseRecord.Topology.WhoseTaskIsIt(subscriptionState, someServer.ServerStore.Engine.CurrentState);
             }
             Assert.NotNull(tag);
             DisposeServerAndWaitForFinishOfDisposal(Servers.First(x => x.ServerStore.NodeTag == tag));
@@ -615,7 +616,7 @@ namespace RachisTests
 
                 if (mentor != null)
                 {
-                    Assert.Equal(mentor, record.Topology.WhoseTaskIsIt(subscripitonState, false));
+                    Assert.Equal(mentor, record.Topology.WhoseTaskIsIt(subscripitonState, RachisState.Follower));
                 }
 
                 await DisposeServerAndWaitForFinishOfDisposalAsync(leader);
@@ -666,7 +667,7 @@ namespace RachisTests
 
                 if (mentor != null)
                 {
-                    Assert.Equal(mentor, record.Topology.WhoseTaskIsIt(subscripitonState, false));
+                    Assert.Equal(mentor, record.Topology.WhoseTaskIsIt(subscripitonState, RachisState.Follower));
                 }
 
                 using (var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionName)
@@ -730,7 +731,7 @@ namespace RachisTests
 
                 if (mentor != null)
                 {
-                    Assert.Equal(mentor, record.Topology.WhoseTaskIsIt(subscripitonState, false));
+                    Assert.Equal(mentor, record.Topology.WhoseTaskIsIt(subscripitonState, RachisState.Follower));
                 }
 
                 using (var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionName)

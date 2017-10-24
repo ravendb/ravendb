@@ -95,7 +95,7 @@ namespace Raven.Client.ServerWide
                    Promotables.Contains(nodeTag);
         }
 
-        public List<ReplicationNode> GetDestinations(string nodeTag, string databaseName, ClusterTopology clusterTopology, bool isPassive)
+        public List<ReplicationNode> GetDestinations(string nodeTag, string databaseName, ClusterTopology clusterTopology, RachisState state)
         {
             var list = new List<string>();
             var destinations = new List<ReplicationNode>();
@@ -113,7 +113,7 @@ namespace Raven.Client.ServerWide
             {
                 var url = clusterTopology.GetUrlFromTag(promotable);
                 PredefinedMentors.TryGetValue(promotable, out var mentor);
-                if (WhoseTaskIsIt(new PromotableTask(promotable, url, databaseName, mentor), isPassive) == nodeTag)
+                if (WhoseTaskIsIt(new PromotableTask(promotable, url, databaseName, mentor), state) == nodeTag)
                 {
                     list.Add(url);
                 }
@@ -207,9 +207,9 @@ namespace Raven.Client.ServerWide
             Rehabs.RemoveAll(r => r == delDbFromNode);
         }
 
-        public string WhoseTaskIsIt(IDatabaseTask task, bool inPassiveState)
+        public string WhoseTaskIsIt(IDatabaseTask task, RachisState state)
         {
-            if (inPassiveState)
+            if (state == RachisState.Candidate || state == RachisState.Passive)
                 return null;
 
             var mentorNode = task.GetMentorNode();

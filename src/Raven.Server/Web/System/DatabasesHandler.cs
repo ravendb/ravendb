@@ -377,7 +377,7 @@ namespace Raven.Server.Web.System
                 {
                     topology.PredefinedMentors.TryGetValue(promotable, out var mentorCandidate);
                     var node = GetNode(databaseName, clusterTopology, promotable, mentorCandidate, out var promotableTask);
-                    var mentor = topology.WhoseTaskIsIt(promotableTask, ServerStore.IsPassive());
+                    var mentor = topology.WhoseTaskIsIt(promotableTask, ServerStore.Engine.CurrentState);
                     nodesTopology.Promotables.Add(GetNodeId(node, mentor));
                     SetNodeStatus(topology, promotable, nodesTopology);
                 }
@@ -385,7 +385,7 @@ namespace Raven.Server.Web.System
                 foreach (var rehab in topology.Rehabs)
                 {
                     var node = GetNode(databaseName, clusterTopology, rehab, null, out var promotableTask);
-                    var mentor = topology.WhoseTaskIsIt(promotableTask, ServerStore.IsPassive());
+                    var mentor = topology.WhoseTaskIsIt(promotableTask, ServerStore.Engine.CurrentState);
                     nodesTopology.Rehabs.Add(GetNodeId(node, mentor));
                     SetNodeStatus(topology, rehab, nodesTopology);
                 }

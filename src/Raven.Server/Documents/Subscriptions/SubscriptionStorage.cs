@@ -136,7 +136,7 @@ namespace Raven.Server.Documents.Subscriptions
             {
                 var subscription = GetSubscriptionFromServerStore(serverStoreContext, name);
                 var dbRecord = _serverStore.Cluster.ReadDatabase(serverStoreContext, _db.Name, out var _);
-                var whoseTaskIsIt = dbRecord.Topology.WhoseTaskIsIt(subscription, _serverStore.IsPassive());
+                var whoseTaskIsIt = dbRecord.Topology.WhoseTaskIsIt(subscription, _serverStore.Engine.CurrentState);
                 if (whoseTaskIsIt != _serverStore.NodeTag)
                 {
                     throw new SubscriptionDoesNotBelongToNodeException($"Subscripition with id {id} can't be proccessed on current node ({_serverStore.NodeTag}), because it belongs to {whoseTaskIsIt}")
@@ -413,7 +413,7 @@ namespace Raven.Server.Documents.Subscriptions
                         DropSubscriptionConnection(subscriptionStateKvp.Key, new SubscriptionClosedException($"The subscription {subscriptionName} query has been modified, connection must be restarted"));
                     }
 
-                    if (databaseRecord.Topology.WhoseTaskIsIt(subscriptionState, _serverStore.IsPassive()) != _serverStore.NodeTag)
+                    if (databaseRecord.Topology.WhoseTaskIsIt(subscriptionState, _serverStore.Engine.CurrentState) != _serverStore.NodeTag)
                     {
                         if (_logger.IsInfoEnabled)
                             _logger.Info($"Disconnected subscription with id {subscriptionStateKvp.Key}, because it was is no longer managed by this node ({_serverStore.NodeTag})");

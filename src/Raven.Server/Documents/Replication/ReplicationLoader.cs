@@ -409,7 +409,7 @@ namespace Raven.Server.Documents.Replication
             var changes = ExternalReplication.FindChanges(_externalDestinations, newRecord.ExternalReplication);
 
             DropOutgoingConnections(changes.RemovedDestiantions, ref instancesToDispose);
-            var newDestinations = changes.AddedDestinations.Where(o => newRecord.Topology.WhoseTaskIsIt(o, false) == _server.NodeTag).ToList();
+            var newDestinations = changes.AddedDestinations.Where(o => newRecord.Topology.WhoseTaskIsIt(o, _server.Engine.CurrentState) == _server.NodeTag).ToList();
             foreach (var externalReplication in newDestinations.ToList())
             {
                 if (newRecord.RavenConnectionStrings.TryGetValue(externalReplication.ConnectionStringName, out var connectionString) == false)
@@ -433,7 +433,7 @@ namespace Raven.Server.Documents.Replication
         private void HandleInternalReplication(DatabaseRecord newRecord, ref List<OutgoingReplicationHandler> instancesToDispose)
         {
             var clusterTopology = GetClusterTopology();
-            var newInternalDestinations = newRecord.Topology?.GetDestinations(_server.NodeTag, Database.Name, clusterTopology, _server.IsPassive());
+            var newInternalDestinations = newRecord.Topology?.GetDestinations(_server.NodeTag, Database.Name, clusterTopology, _server.Engine.CurrentState);
             var internalConnections = DatabaseTopology.FindChanges(_internalDestinations, newInternalDestinations);
 
             if (internalConnections.RemovedDestiantions.Count > 0)

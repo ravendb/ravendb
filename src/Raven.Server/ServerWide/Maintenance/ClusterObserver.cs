@@ -529,7 +529,7 @@ namespace Raven.Server.ServerWide.Maintenance
             var url = clusterTopology.GetUrlFromTag(promotable);
             topology.PredefinedMentors.TryGetValue(promotable, out var mentor);
             var task = new PromotableTask(promotable, url, dbName, mentor);
-            mentorNode = topology.WhoseTaskIsIt(task, _server.IsPassive());
+            mentorNode = topology.WhoseTaskIsIt(task, _server.Engine.CurrentState);
 
             if (mentorNode == null)
             {

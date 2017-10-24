@@ -1012,7 +1012,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 return TaskStatus.Disabled;
             }
 
-            var whoseTaskIsIt = databaseRecord.Topology.WhoseTaskIsIt(configuration, _serverStore.IsPassive());
+            var whoseTaskIsIt = databaseRecord.Topology.WhoseTaskIsIt(configuration, _serverStore.Engine.CurrentState);
             if (whoseTaskIsIt == null)
                 return TaskStatus.Disabled;
 

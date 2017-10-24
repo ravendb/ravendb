@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Http;
+using Raven.Client.ServerWide;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Commands;
@@ -400,7 +400,7 @@ namespace Raven.Server.Rachis
                 if (clusterTopology.Contains(_engine.LeaderTag) == false)
                 {
                     TaskExecutor.CompleteAndReplace(ref _newEntriesArrived);
-                    _engine.SetNewState(RachisConsensus.State.Passive, this, _engine.CurrentTerm,
+                    _engine.SetNewState(RachisState.Passive, this, _engine.CurrentTerm,
                         "I was kicked out of the cluster and moved to passive mode");
                     return;
                 }

@@ -38,26 +38,26 @@ namespace Raven.Server.ServerWide.Commands.ETL
             return EtlProcessState.GenerateItemName(DatabaseName, ConfigurationName, TransformationName);
         }
 
-        protected override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue, bool isPassive)
+        protected override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue, RachisState state)
         {
-            EtlProcessState state;
+            EtlProcessState etlState;
 
             if (existingValue != null)
-                state = JsonDeserializationClient.EtlProcessState(existingValue);
+                etlState = JsonDeserializationClient.EtlProcessState(existingValue);
             else
             {
-                state = new EtlProcessState
+                etlState = new EtlProcessState
                 {
                     ConfigurationName = ConfigurationName,
                     TransformationName = TransformationName
                 };
             }
 
-            state.LastProcessedEtagPerNode[NodeTag] = LastProcessedEtag;
-            state.ChangeVector = ChangeVector;
+            etlState.LastProcessedEtagPerNode[NodeTag] = LastProcessedEtag;
+            etlState.ChangeVector = ChangeVector;
 
 
-            return context.ReadObject(state.ToJson(), GetItemId());
+            return context.ReadObject(etlState.ToJson(), GetItemId());
         }
 
         public override void FillJson(DynamicJsonValue json)

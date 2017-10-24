@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client.ServerWide;
 using Raven.Server.Rachis;
-using Sparrow.Logging;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -16,9 +16,9 @@ namespace RachisTests
         {
             var node = SetupServer(true);
             var nodeCurrentState = node.CurrentState;
-            Assert.True(nodeCurrentState == RachisConsensus.State.LeaderElect ||
-                        nodeCurrentState == RachisConsensus.State.Leader);
-            var waitForState = node.WaitForState(RachisConsensus.State.Leader);
+            Assert.True(nodeCurrentState == RachisState.LeaderElect ||
+                        nodeCurrentState == RachisState.Leader);
+            var waitForState = node.WaitForState(RachisState.Leader);
             var condition = await waitForState.WaitAsync(node.ElectionTimeout);
             
             Assert.True(condition, $"Node is in state {node.CurrentState} and didn't become leader although he is alone in his cluster.");
@@ -51,7 +51,7 @@ namespace RachisTests
             {
                 foreach (var follower in followers)
                 {
-                    waitingList.Add(follower.WaitForState(RachisConsensus.State.Leader));
+                    waitingList.Add(follower.WaitForState(RachisState.Leader));
                 }
                 if (Log.IsInfoEnabled)
                 {
@@ -70,14 +70,14 @@ namespace RachisTests
             }
 
 
-            var newLeader = followers.First(f => f.CurrentState == RachisConsensus.State.Leader);
+            var newLeader = followers.First(f => f.CurrentState == RachisState.Leader);
             var newLeaderLastIndex = await IssueCommandsAndWaitForCommit(newLeader, 5, "test", 1);
             if (Log.IsInfoEnabled)
             {
                 Log.Info("Reconnect old leader");
             }
             ReconnectToNode(firstLeader);
-            Assert.True(await firstLeader.WaitForState(RachisConsensus.State.Follower).WaitAsync(timeToWait), "Old leader didn't become follower after two election timeouts");
+            Assert.True(await firstLeader.WaitForState(RachisState.Follower).WaitAsync(timeToWait), "Old leader didn't become follower after two election timeouts");
             var waitForCommitIndexChange = firstLeader.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newLeaderLastIndex);
             Assert.True(await waitForCommitIndexChange.WaitAsync(timeToWait), "Old leader didn't rollback his log to the new leader log");
             Assert.Equal(numberOfNodes, RachisConsensuses.Count);
