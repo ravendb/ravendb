@@ -3,6 +3,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Xunit;
 
@@ -13,30 +15,9 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
         [Fact]
         public async Task ReduceResultsBackAsDocuments()
         {
-            var date = new DateTime(2017, 1, 1);
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenAsyncSession())
-                {
-                    for (int i = 0; i < 30; i++)
-                    {
-                        await session.StoreAsync(new Invoice {Amount = 1, IssuedAt = date.AddHours(i * 6)});
-                    }
-                    date = date.AddYears(1);
-                    for (int i = 0; i < 30; i++)
-                    {
-                        await session.StoreAsync(new Invoice { Amount = 1, IssuedAt = date.AddMonths(i).AddHours(i * 6) });
-                        await session.StoreAsync(new Invoice { Amount = 1, IssuedAt = date.AddMonths(i).AddHours(i * 12) });
-                        await session.StoreAsync(new Invoice { Amount = 1, IssuedAt = date.AddMonths(i).AddHours(i * 18) });
-                    }
-                    await session.SaveChangesAsync();
-                }
-
-                await store.ExecuteIndexAsync(new DailyInvoicesIndex());
-                await store.ExecuteIndexAsync(new MonthlyInvoicesIndex());
-                await store.ExecuteIndexAsync(new YearlyInvoicesIndex());
-
-                WaitForIndexing(store);
+                await CreateDataAndIndexes(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -49,7 +30,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
         }
 
         [Fact]
-        public async Task ShouldNotAllowOutputReduceDocumentsOnTheDocumentsWeMap()
+        public async Task ForbidOutputReduceDocumentsOnTheDocumentsWeMap()
         {
             using (var store = GetDocumentStore())
             {
@@ -59,15 +40,105 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
         }
 
         [Fact]
-        public async Task ShouldNotAllowOutputReduceDocumentsInAInfiniteLoop()
+        public async Task ForbidOutputReduceDocumentsInAInfiniteLoop()
         {
             using (var store = GetDocumentStore())
             {
                 await store.ExecuteIndexAsync(new DailyInvoicesIndex());
                 await store.ExecuteIndexAsync(new MonthlyInvoicesIndex());
                 var exception = await Assert.ThrowsAsync<IndexInvalidException>(async () => await store.ExecuteIndexAsync(new YearlyToDailyInfiniteLoopIndex()));
-                Assert.Contains($"DailyInvoicesIndex: Invoices => DailyInvoices{Environment.NewLine}MonthlyInvoicesIndex: DailyInvoices => MonthlyInvoices{Environment.NewLine}--> YearlyToDailyInfiniteLoopIndex: MonthlyInvoices => *Invoices*", exception.Message);
+                Assert.Contains($"DailyInvoicesIndex: Invoices => DailyInvoices{Environment.NewLine}" +
+                                $"MonthlyInvoicesIndex: DailyInvoices => MonthlyInvoices{Environment.NewLine}" +
+                                $"--> YearlyToDailyInfiniteLoopIndex: MonthlyInvoices => *Invoices*", exception.Message);
             }
+        }
+
+        [Fact]
+        public async Task ForbidOutputReduceDocumentsToExistingCollectionWhichHaveDocuments()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new DailyInvoice
+                    {
+                        Amount = 1,
+                        Date = new DateTime(2017, 1, 1)
+                    });
+                    await session.SaveChangesAsync();
+                }
+
+                var exception = await Assert.ThrowsAsync<IndexInvalidException>(async () => await CreateDataAndIndexes(store));
+                Assert.Contains("In order to create the 'DailyInvoicesIndex' index " +
+                                "which would output reduce results to documents in the 'DailyInvoices' collection, " +
+                                "you firstly need to delete all of the documents in the 'DailyInvoices' collection" +
+                                " (currenlty have 1 document).", exception.Message);
+            }
+        }
+
+        [Fact]
+        public async Task ForbidSideBySideIndexingWithoutClearingTheOutputReduceToCollectionValueFirst()
+        {
+            using (var store = GetDocumentStore())
+            {
+                await store.ExecuteIndexAsync(new DailyInvoicesIndex());
+                var exception = await Assert.ThrowsAsync<IndexInvalidException>(async () => await store.ExecuteIndexAsync(new Replacement.DailyInvoicesIndex()));
+                Assert.Contains("In order to create the 'ReplacementOf/DailyInvoicesIndex' side by side index " +
+                                "you firstly need to set OutputReduceToCollection to be null on the 'DailyInvoicesIndex' index " +
+                                "and than delete all of the documents in the 'DailyInvoices' collection.", exception.Message);
+            }
+        }
+
+        [Fact]
+        public async Task LetTheUserModifyTheIndex()
+        {
+            using (var store = GetDocumentStore())
+            {
+                await CreateDataAndIndexes(store);
+
+                await store.ExecuteIndexAsync(new Reset.DailyInvoicesIndex());
+                store.Operations.Send(new DeleteByQueryOperation(new IndexQuery { Query = "FROM DailyInvoices" })).WaitForCompletion(TimeSpan.FromSeconds(60));
+                // We need to wait for the cluster to update the index before overwriting the index again
+                WaitForIndexing(store);
+
+                await store.ExecuteIndexAsync(new Replacement.DailyInvoicesIndex());
+                WaitForIndexing(store);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    Assert.Equal(120, await session.Query<Invoice>().CountAsync());
+                    Assert.Equal(93, await session.Query<DailyInvoice>().CountAsync());
+                    Assert.Equal(31, await session.Query<MonthlyInvoice>().CountAsync());
+                    Assert.Equal(4, await session.Query<YearlyInvoice>().CountAsync());
+                }
+            }
+        }
+
+        private async Task CreateDataAndIndexes(DocumentStore store)
+        {
+            var date = new DateTime(2017, 1, 1);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                for (int i = 0; i < 30; i++)
+                {
+                    await session.StoreAsync(new Invoice { Amount = 1, IssuedAt = date.AddHours(i * 6) });
+                }
+                date = date.AddYears(1);
+                for (int i = 0; i < 30; i++)
+                {
+                    await session.StoreAsync(new Invoice { Amount = 1, IssuedAt = date.AddMonths(i).AddHours(i * 6) });
+                    await session.StoreAsync(new Invoice { Amount = 1, IssuedAt = date.AddMonths(i).AddHours(i * 12) });
+                    await session.StoreAsync(new Invoice { Amount = 1, IssuedAt = date.AddMonths(i).AddHours(i * 18) });
+                }
+                await session.SaveChangesAsync();
+            }
+
+            await store.ExecuteIndexAsync(new DailyInvoicesIndex());
+            await store.ExecuteIndexAsync(new MonthlyInvoicesIndex());
+            await store.ExecuteIndexAsync(new YearlyInvoicesIndex());
+
+            WaitForIndexing(store);
         }
 
         public class Marker
@@ -86,6 +157,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
         {
             public DateTime Date { get; set; }
             public decimal Amount { get; set; }
+            public decimal Average { get; set; }
         }
 
         public class MonthlyInvoice
@@ -126,7 +198,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        public class MonthlyInvoicesIndex : AbstractIndexCreationTask<DailyInvoice, MonthlyInvoice>
+        private class MonthlyInvoicesIndex : AbstractIndexCreationTask<DailyInvoice, MonthlyInvoice>
         {
             public MonthlyInvoicesIndex()
             {
@@ -152,7 +224,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        public class YearlyInvoicesIndex : AbstractIndexCreationTask<MonthlyInvoice, YearlyInvoice>
+        private class YearlyInvoicesIndex : AbstractIndexCreationTask<MonthlyInvoice, YearlyInvoice>
         {
             public YearlyInvoicesIndex()
             {
@@ -178,7 +250,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        public class MonthlySelfReduceIndex : AbstractIndexCreationTask<DailyInvoice, DailyInvoice>
+        private class MonthlySelfReduceIndex : AbstractIndexCreationTask<DailyInvoice, DailyInvoice>
         {
             public MonthlySelfReduceIndex()
             {
@@ -204,7 +276,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        public class YearlyToDailyInfiniteLoopIndex : AbstractIndexCreationTask<MonthlyInvoice, Invoice>
+        private class YearlyToDailyInfiniteLoopIndex : AbstractIndexCreationTask<MonthlyInvoice, Invoice>
         {
             public YearlyToDailyInfiniteLoopIndex()
             {
@@ -227,6 +299,66 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                     };
 
                 OutputReduceToCollection = "Invoices";
+            }
+        }
+
+        private static class Reset
+        {
+            public class DailyInvoicesIndex : AbstractIndexCreationTask<Invoice, DailyInvoice>
+            {
+                public DailyInvoicesIndex()
+                {
+                    Map = invoices =>
+                        from invoice in invoices
+                        select new DailyInvoice
+                        {
+                            Date = invoice.IssuedAt.Date,
+                            Amount = invoice.Amount,
+                        };
+
+                    Reduce = results =>
+                        from r in results
+                        group r by r.Date
+                        into g
+                        select new DailyInvoice
+                        {
+                            Date = g.Key,
+                            Amount = g.Sum(x => x.Amount),
+                        };
+
+                    OutputReduceToCollection = null;
+                }
+            }
+        }
+
+        private static class Replacement
+        {
+            public class DailyInvoicesIndex : AbstractIndexCreationTask<Invoice, DailyInvoice>
+            {
+                public DailyInvoicesIndex()
+                {
+                    Map = invoices =>
+                        from invoice in invoices
+                        select new DailyInvoice
+                        {
+                            Date = invoice.IssuedAt.Date,
+                            Amount = invoice.Amount,
+                            Average = invoice.Amount,
+                        };
+
+                    Reduce = results =>
+                        from r in results
+                        group r by r.Date
+                        into g
+                        select new DailyInvoice
+                        {
+                            Date = g.Key,
+                            Amount = g.Sum(x => x.Amount),
+                            Average = g.Average(x => x.Amount)
+                        };
+
+                    OutputReduceToCollection = "DailyInvoices";
+                }
             }
         }
     }
