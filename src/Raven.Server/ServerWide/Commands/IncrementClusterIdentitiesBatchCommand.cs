@@ -27,7 +27,7 @@ namespace Raven.Server.ServerWide.Commands
             DatabaseName = databaseName;
         }
      
-        public override void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, bool isPassive, out object result)
+        public override void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, RachisState state, out object result)
         {
             var identitiesTree = context.Transaction.InnerTransaction.ReadTree(ClusterStateMachine.Identities);
             var results = new LinkedList<long>();
@@ -56,7 +56,8 @@ namespace Raven.Server.ServerWide.Commands
             json[nameof(Identities)] = new DynamicJsonArray(Identities);
         }
 
-        protected override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue, bool isPassive)
+        protected override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context,
+            BlittableJsonReaderObject existingValue, RachisState state)
         {
             throw new NotImplementedException();
         }
