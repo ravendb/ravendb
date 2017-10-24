@@ -72,20 +72,24 @@ namespace Raven.Database.Raft
 
             if (replicationStateDoc == null)
             {
-                //This is a case of a node loading for the first time and just never got any replication state.
-                //If we prevent this than a cluster will be non-respnosive when loaded (mostly a test senario but could be a real issue)
+                // this is a case of a node loading for the first time and just never got any replication state.
+                // if we prevent this than a cluster will be non-respnosive when loaded (mostly a test scenario but could be a real issue)
                 if (clusterManagerStartTime + maxReplicationLatency + maxReplicationLatency < DateTime.UtcNow)
                 {
+                    const string message = "Could not find replication state document";
+                    Log.Info(message);
                     e.VetoCandidacy = true;
-                    e.Reason = "Could not find replication state document";                    
+                    e.Reason = message;                    
                 }
                 return;
             }
             var replicationState = replicationStateDoc.DataAsJson.ToObject<ReplicationState>();
             if (replicationState == null)
             {
+                const string message = "Could not deserialize replication state document";
+                Log.Info(message);
                 e.VetoCandidacy = true;
-                e.Reason = "Could not deserialize replication state document";
+                e.Reason = message;
                 return;
             }
 
@@ -110,7 +114,29 @@ namespace Raven.Database.Raft
                 var doc = database.Documents.Get(docKey, null);
                 var sourceInformation = doc?.DataAsJson.JsonDeserialization<SourceReplicationInformation>();
                 if (sourceInformation == null)
+                {
+                    // the source document doesn't exist, 
+                    // that means that we didn't receive any documents for that database from the leader
+                    var databaseDocument = DatabasesLandlord.SystemDatabase.Documents.Get($"{Constants.Database.Prefix}{database.Name}", null);
+                    if (databaseDocument == null)
+                    {
+                        // database doesn't exist, deleted?
+                        databasesCount--;
+                    }
+                    else if (databaseDocument.LastModified == null)
+                    {
+                        // shouldn't happen
+                    }
+                    else if (databaseDocument.LastModified.Value + maxReplicationLatency + maxReplicationLatency >= DateTime.UtcNow)
+                    {
+                        Log.Info($"Didn't receive the Replication Source document " +
+                                 $"for database {database.Name} from database id: {modification.DatabaseId}, " +
+                                 $"but we detected that it as new database and is considered as up to date");
+                        anyDatabaseUpToDate = true;
+                    }
+
                     return;
+                }
 
                 var lastUpdate = sourceInformation.LastModifiedAtSource ?? DateTime.MaxValue;
                 if (lastUpdate == DateTime.MaxValue ||
@@ -123,8 +149,11 @@ namespace Raven.Database.Raft
 
             if (anyDatabaseUpToDate == false && databasesCount > 0 && databasesCount != missingModification)
             {
+                var message = "None of the active databases are up to date with the leader last replication state, ";
+                message += $"databases count: {databasesCount}, replication state doc: {replicationStateDoc}";
+                Log.Info(message);
                 e.VetoCandidacy = true;
-                e.Reason = "None of the active databases are up to date with the leader last replication state";
+                e.Reason = message;
             }
         }
 
