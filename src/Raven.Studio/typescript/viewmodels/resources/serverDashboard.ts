@@ -14,7 +14,6 @@ import appUrl = require("common/appUrl");
 import dashboardChart = require("models/resources/serverDashboard/dashboardChart");
 import storagePieChart = require("models/resources/serverDashboard/storagePieChart");
 import serverDashboardWebSocketClient = require("common/serverDashboardWebSocketClient");
-import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
 import timeHelpers = require("common/timeHelpers");
 
 class machineResourcesSection {
@@ -93,6 +92,7 @@ class indexingSpeedSection {
 
     onData(data: Raven.Server.Dashboard.IndexingSpeed) {
         const items = data.Items;
+        items.sort((a, b) => generalUtils.sortAlphaNumeric(a.Database, b.Database));
 
         const newDbs = items.map(x => x.Database);
         const oldDbs = this.table.map(x => x.database());
@@ -184,6 +184,7 @@ class databasesSection {
     
     onData(data: Raven.Server.Dashboard.DatabasesInfo) {
         const items = data.Items;
+        items.sort((a, b) => generalUtils.sortAlphaNumeric(a.Database, b.Database));
 
         const newDbs = items.map(x => x.Database);
         const oldDbs = this.table.map(x => x.database());
@@ -263,6 +264,8 @@ class trafficSection {
     
     onData(data: Raven.Server.Dashboard.TrafficWatch) {
         const items = data.Items;
+        items.sort((a, b) => generalUtils.sortAlphaNumeric(a.Database, b.Database));
+
         const newDbs = items.map(x => x.Database);
         const oldDbs = this.table.map(x => x.database());
         
@@ -323,6 +326,7 @@ class driveUsageSection {
     
     onData(data: Raven.Server.Dashboard.DrivesUsage) {
         const items = data.Items;
+
         const newMountPoints = items.map(x => x.MountPoint);
         const oldMountPoints = this.table().map(x => x.mountPoint());
 
@@ -348,7 +352,7 @@ class driveUsageSection {
     
     private updateChart(data: Raven.Server.Dashboard.DrivesUsage) {
         const cache = new Map<string, number>();
-        
+
         // group by database size
         data.Items.forEach(mountPointUsage => {
             mountPointUsage.Items.forEach(item => {
@@ -368,7 +372,7 @@ class driveUsageSection {
                 Size: value
             });
         });
-        
+
         this.storageChart.onData(result);
     }
     

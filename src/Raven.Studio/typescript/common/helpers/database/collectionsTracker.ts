@@ -3,6 +3,7 @@ import collection = require("models/database/documents/collection");
 import database = require("models/resources/database");
 import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
 import collectionsStats = require("models/database/documents/collectionsStats");
+import generalUtils = require("common/generalUtils");
 
 class collectionsTracker {
 
@@ -45,10 +46,10 @@ class collectionsTracker {
     }
 
     private collectionsLoaded(collectionsStats: collectionsStats, db: database) {
-        let collections = collectionsStats.collections;
+        const collections = collectionsStats.collections;
 
         _.remove(collections, c => !c.documentCount());
-        collections = _.sortBy(collections, x => x.name.toLocaleLowerCase());
+        collections.sort((a, b) => this.sortAlphaNumericCollection(a.name, b.name));
 
         //TODO: starred
         const allDocsCollection = collection.createAllDocumentsCollection(db, collectionsStats.numberOfDocuments());
@@ -148,10 +149,22 @@ class collectionsTracker {
 
     private onCollectionCreated(incomingItem: Raven.Server.NotificationCenter.Notifications.DatabaseStatsChanged.ModifiedCollection, db: database) {
         const newCollection = new collection(incomingItem.Name, db, incomingItem.Count);
-        const insertIndex = _.sortedIndexBy<collection>(this.collections().slice(1), newCollection, x => x.name.toLocaleLowerCase()) + 1;
-        this.collections.splice(insertIndex, 0, newCollection);
+        this.collections.push(newCollection);
+        this.collections.sort((a, b) => this.sortAlphaNumericCollection(a.name, b.name));
 
         this.events.created.forEach(handler => handler(newCollection));
+    }
+
+    private sortAlphaNumericCollection(a: string, b: string) {
+        if (a.toLowerCase() === "@empty") {
+            return -1;
+        }
+
+        if (b.toLowerCase() === "@empty") {
+            return 1;
+        }
+
+        return generalUtils.sortAlphaNumeric(a, b);
     }
 
     private onCollectionRemoved(item: collection) {

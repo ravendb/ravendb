@@ -2,7 +2,6 @@
 import EVENTS = require("common/constants/events");
 import database = require("models/resources/database");
 import changesContext = require("common/changesContext");
-import changeSubscription = require("common/changeSubscription");
 import getDatabasesCommand = require("commands/resources/getDatabasesCommand");
 import getDatabaseCommand = require("commands/resources/getDatabaseCommand");
 import appUrl = require("common/appUrl");
@@ -13,6 +12,7 @@ import recentQueriesStorage = require("common/storage/savedQueriesStorage");
 import starredDocumentsStorage = require("common/storage/starredDocumentsStorage");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import savedPatchesStorage = require("common/storage/savedPatchesStorage");
+import generalUtils = require("common/generalUtils");
 
 class databasesManager {
 
@@ -188,8 +188,8 @@ class databasesManager {
             return matchedExistingRs;
         } else {
             const newDatabase = this.createDatabase(incomingDatabase);
-            let locationToInsert = _.sortedIndexBy(this.databases(), newDatabase, (item: database) => item.name);
-            this.databases.splice(locationToInsert, 0, newDatabase);
+            this.databases.push(newDatabase);
+            this.databases.sort((a, b) => generalUtils.sortAlphaNumeric(a.name, b.name));
             return newDatabase;
         }
     }
