@@ -7,16 +7,18 @@ namespace Sparrow.Collections
     public class ConcurrentLruSet<T>
     {
         private readonly int maxCapacity;
-        private readonly Action<T> onDrop;        
+        private readonly Action<T> onDrop;
+        private readonly Action<T> onInsert;
         private readonly object syncRoot = new object();
 
         private LinkedList<T> items = new LinkedList<T>();
         private Dictionary<T, LinkedListNode<T>> itemsLookupTable = new Dictionary<T, LinkedListNode<T>>();
 
-        public ConcurrentLruSet(int maxCapacity, Action<T> onDrop = null)
+        public ConcurrentLruSet(int maxCapacity, Action<T> onDrop = null, Action<T> onInsert = null)
         {
             this.maxCapacity = maxCapacity;
             this.onDrop = onDrop;
+            this.onInsert = onInsert;
         }
 
         public T FirstOrDefault(Func<T, bool> predicate)
@@ -54,6 +56,8 @@ namespace Sparrow.Collections
                     items.RemoveFirst();
                     itemsLookupTable.Remove(droppedNode.Value);
                 }
+
+                onInsert?.Invoke(item);
             }
 
             if (onDrop != null && droppedNode != null)

@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
@@ -2179,6 +2180,9 @@ namespace Raven.Server.Documents.Indexes
 
         private static readonly TimeSpan DefaultWaitForNonStaleResultsTimeout = TimeSpan.FromSeconds(15); // this matches default timeout from client
 
+        private QueryBuilderFactories _queryBuilderFactories;
+        private readonly ConcurrentLruRegexCache _regexCache = new ConcurrentLruRegexCache(1024);
+
         private static bool WillResultBeAcceptable(bool isStale, IndexQueryBase<BlittableJsonReaderObject> query, AsyncWaitForIndexing wait)
         {
             if (isStale == false)
@@ -2593,7 +2597,26 @@ namespace Raven.Server.Documents.Indexes
         {
         }
 
-        internal SpatialField GetOrAddSpatialField(string name)
+        internal QueryBuilderFactories GetQueryBuilderFactories()
+        {
+            //We don't want to always generate this object but if we generate it mutiple times at startup it isn't really importent.
+            if (_queryBuilderFactories == null)
+            {
+                _queryBuilderFactories = new QueryBuilderFactories
+                {
+                    GetSpatialFieldFactory = GetOrAddSpatialField,
+                    GetRegexFactory = GetOrAddRegex
+                };
+            }
+            return _queryBuilderFactories;
+        }
+
+        private Regex GetOrAddRegex(string arg)
+        {
+            return _regexCache.Get(arg);
+        }
+
+        private SpatialField GetOrAddSpatialField(string name)
         {
             return _spatialFields.GetOrAdd(name, n =>
             {
@@ -2745,5 +2768,7 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
         }
+
+       
     }
 }
