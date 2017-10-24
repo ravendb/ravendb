@@ -14,7 +14,7 @@ using Xunit;
 
 namespace SlowTests.Server.Documents.Indexing.MapReduce
 {
-    public class RavenDB_4323_Replication : ReplicationTestBase, IDocumentTombstoneAware
+    public class OutputReduceToCollectionReplicationTests : ReplicationTestBase, IDocumentTombstoneAware
     {
         [Fact]
         public async Task ReduceOutputShouldNotBeReplicated()
@@ -24,13 +24,13 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             using (var store2 = GetDocumentStore())
             {
                 await SetupReplicationAsync(store1, store2);
-                await store1.ExecuteIndexAsync(new RavenDB_4323.DailyInvoicesIndex());
+                await store1.ExecuteIndexAsync(new OutputReduceToCollectionTests.DailyInvoicesIndex());
 
                 using (var session = store1.OpenAsyncSession())
                 {
                     for (int i = 0; i < 30; i++)
                     {
-                        await session.StoreAsync(new RavenDB_4323.Invoice { Amount = 1, IssuedAt = date.AddHours(i * 6) });
+                        await session.StoreAsync(new OutputReduceToCollectionTests.Invoice { Amount = 1, IssuedAt = date.AddHours(i * 6) });
                     }
                     await session.SaveChangesAsync();
                 }
@@ -39,7 +39,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                 using (var session = store1.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new RavenDB_4323.Marker { Name = "Marker" }, "marker");
+                    await session.StoreAsync(new OutputReduceToCollectionTests.Marker { Name = "Marker" }, "marker");
                     await session.SaveChangesAsync();
                 }
                 Assert.True(WaitForDocument(store2, "marker"));
@@ -63,7 +63,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 await operation.WaitForCompletionAsync();
                 using (var session = store1.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new RavenDB_4323.Marker { Name = "Marker 2" }, "marker2");
+                    await session.StoreAsync(new OutputReduceToCollectionTests.Marker { Name = "Marker 2" }, "marker2");
                     await session.SaveChangesAsync();
                 }
                 WaitForIndexing(store1);
