@@ -44,7 +44,7 @@ namespace FastTests.Issues
                     using (documentStore.AggressivelyCache())
                     using (var session = documentStore.OpenSession())
                     {
-                        documentStore.Changes().ForAllIndexes().EnsureSubscribedNow().Wait();
+                        documentStore.Changes().ForAllDocuments().EnsureSubscribedNow().Wait();
 
                         var user = session.Load<User>("users/1");
                         user.Name = "Shalom";

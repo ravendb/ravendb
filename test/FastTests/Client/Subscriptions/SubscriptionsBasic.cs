@@ -878,8 +878,8 @@ namespace FastTests.Client.Subscriptions
                     string cvBigger = null;
                     var database = await GetDatabase(store.Database);
 
-                    var ackFirstCV = new ManualResetEventSlim();
-                    var ackUserPast = new ManualResetEventSlim();
+                    var ackFirstCV = new AsyncManualResetEvent();
+                    var ackUserPast = new AsyncManualResetEvent();
                     var items = new ConcurrentBag<User>();
                     subscription.AfterAcknowledgment += batch =>
                     {
@@ -916,7 +916,7 @@ namespace FastTests.Client.Subscriptions
                     firstItemchangeVector[0].Etag += 10;
                     cvBigger = firstItemchangeVector.SerializeVector();
 
-                    Assert.True(ackFirstCV.Wait(_reasonableWaitTime));
+                    Assert.True(await ackFirstCV.WaitAsync(_reasonableWaitTime));
 
                     SubscriptionStorage.SubscriptionGeneralDataAndStats subscriptionState;
                     using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -948,7 +948,7 @@ namespace FastTests.Client.Subscriptions
                         session.SaveChanges();
                     }
 
-                    Assert.True(ackUserPast.Wait(_reasonableWaitTime));
+                    Assert.True(await ackUserPast.WaitAsync(_reasonableWaitTime));
 
                     foreach (var item in items)
                     {

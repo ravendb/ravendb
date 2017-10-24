@@ -261,14 +261,14 @@ namespace FastTests.Client
 
         private static void ConcurrencyTester(Func<long> generate, int threadCount, int generatedIdCount)
         {
-            var waitingThreadCount = 0;
+            var waitingThreadCount = new CountdownEvent(threadCount);
             var starterGun = new ManualResetEvent(false);
 
             var results = new long[generatedIdCount];
             var threads = Enumerable.Range(0, threadCount).Select(threadNumber => new Thread(() =>
             {
                 // Wait for all threads to be ready
-                Interlocked.Increment(ref waitingThreadCount);
+                waitingThreadCount.Signal();
                 starterGun.WaitOne();
 
                 for (var i = threadNumber; i < generatedIdCount; i += threadCount)
@@ -279,9 +279,7 @@ namespace FastTests.Client
                 t.Start();
 
             // Wait for all tasks to reach the waiting stage
-            var wait = new SpinWait();
-            while (waitingThreadCount < threadCount)
-                wait.SpinOnce();
+            waitingThreadCount.Wait(5000);
 
             // Start all the threads at the same time
             starterGun.Set();

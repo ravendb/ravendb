@@ -36,7 +36,7 @@ namespace FastTests.Client.Subscriptions
                     MaxDocsPerBatch = 31
                 });
 
-                var docs = new List<dynamic>();
+                var docs = new CountdownEvent(100);
 
                 subscription.Run(x=>
                 {
@@ -44,11 +44,11 @@ namespace FastTests.Client.Subscriptions
                     {
                         var collection = item.Metadata[Raven.Client.Constants.Documents.Metadata.Collection];
                         if (collection.Equals("Users"))
-                            docs.Add(item.Result);
+                            docs.Signal();
                     }
                 });
 
-                Assert.True(SpinWait.SpinUntil(() => docs.Count >= 100, TimeSpan.FromSeconds(60)));                 
+                Assert.True(docs.Wait(TimeSpan.FromSeconds(60)));                 
             }
         }
     }
