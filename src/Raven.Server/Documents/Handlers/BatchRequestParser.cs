@@ -144,7 +144,6 @@ namespace Raven.Server.Documents.Handlers
                     cmds[item.Value].Id = cmds[item.Value].Id.Substring(0, cmds[item.Value].Id.Length - 1) + "/" + newIds[item.Key];
                 }
                 
-                Debug.Assert(newIds.Count == 0);
             }
             return new ArraySegment<CommandData>(cmds, 0, index + 1);
         }
