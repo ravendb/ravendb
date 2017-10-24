@@ -10,6 +10,7 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
+using Raven.Client.ServerWide;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
@@ -68,8 +69,8 @@ namespace Tests.Infrastructure
                 Assert.True(done, "Waited for node to become a follower for too long");
             }
             var currentState = RachisConsensuses[leaderIndex + initialCount].CurrentState;
-            Assert.True(currentState == RachisConsensus.State.Leader ||
-                        currentState == RachisConsensus.State.LeaderElect,
+            Assert.True(currentState == RachisState.Leader ||
+                        currentState == RachisState.LeaderElect,
                 "The leader has changed while waiting for cluster to become stable, it is now " + currentState + " Beacuse: " + leader.LastStateChangeReason);
             return leader;
         }
@@ -84,8 +85,8 @@ namespace Tests.Infrastructure
         protected List<RachisConsensus<CountingStateMachine>> GetFollowers()
         {
             return RachisConsensuses.Where(
-                     x => x.CurrentState != RachisConsensus.State.Leader &&
-                     x.CurrentState != RachisConsensus.State.LeaderElect).ToList();
+                     x => x.CurrentState != RachisState.Leader &&
+                     x.CurrentState != RachisState.LeaderElect).ToList();
         }
 
 
@@ -111,10 +112,10 @@ namespace Tests.Infrastructure
 
             foreach (var node in nodes)
             {
-                waitingTasks.Add(node.WaitForState(RachisConsensus.State.Leader));
+                waitingTasks.Add(node.WaitForState(RachisState.Leader));
             }
             Assert.True(Task.WhenAny(waitingTasks).Wait(3000 * nodes.Count()), "Waited too long for a node to become a leader but no leader was elected.");
-            return nodes.FirstOrDefault(x => x.CurrentState == RachisConsensus.State.Leader);
+            return nodes.FirstOrDefault(x => x.CurrentState == RachisState.Leader);
         }
 
         protected RachisConsensus<CountingStateMachine> SetupServer(bool bootstrap = false, int port = 0, [CallerMemberName] string caller = null)
@@ -230,7 +231,7 @@ namespace Tests.Infrastructure
 
         protected async Task<long> IssueCommandsAndWaitForCommit(RachisConsensus<CountingStateMachine> leader, int numberOfCommands, string name, int value)
         {
-            Assert.True(leader.CurrentState == RachisConsensus.State.Leader || leader.CurrentState == RachisConsensus.State.LeaderElect, "Can't append commands from non leader");
+            Assert.True(leader.CurrentState == RachisState.Leader || leader.CurrentState == RachisState.LeaderElect, "Can't append commands from non leader");
             using (leader.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 for (var i = 0; i < 3; i++)
@@ -245,7 +246,7 @@ namespace Tests.Infrastructure
 
         protected List<Task> IssueCommandsWithoutWaitingForCommits(RachisConsensus<CountingStateMachine> leader, int numberOfCommands, string name, int value)
         {
-            Assert.True(leader.CurrentState == RachisConsensus.State.Leader, "Can't append commands from non leader");
+            Assert.True(leader.CurrentState == RachisState.Leader, "Can't append commands from non leader");
             TransactionOperationContext context;
             List<Task> waitingList = new List<Task>();
             using (leader.ContextPool.AllocateOperationContext(out context))

@@ -213,12 +213,12 @@ namespace RachisTests.DatabaseCluster
                 }
                 // bring the node back to live and ensure that he moves to passive state
                 Servers[1] = GetNewServer(new Dictionary<string, string> { { RavenConfiguration.GetKey(x => x.Core.PublicServerUrl), urls[0] }, { RavenConfiguration.GetKey(x => x.Core.ServerUrl), urls[0] } }, runInMemory: false, deletePrevious: false, partialPath: dataDir);
-                await Servers[1].ServerStore.WaitForState(RachisConsensus.State.Passive).WaitAsync(TimeSpan.FromSeconds(30));
-                Assert.Equal(RachisConsensus.State.Passive, Servers[1].ServerStore.CurrentState);
+                await Servers[1].ServerStore.WaitForState(RachisState.Passive).WaitAsync(TimeSpan.FromSeconds(30));
+                Assert.Equal(RachisState.Passive, Servers[1].ServerStore.CurrentRachisState);
                 // rejoin the node to the cluster
                 await leader.ServerStore.AddNodeToClusterAsync(urls[0], nodeTag);
-                await Servers[1].ServerStore.WaitForState(RachisConsensus.State.Follower).WaitAsync(TimeSpan.FromSeconds(300));
-                Assert.Equal(RachisConsensus.State.Follower, Servers[1].ServerStore.CurrentState);
+                await Servers[1].ServerStore.WaitForState(RachisState.Follower).WaitAsync(TimeSpan.FromSeconds(300));
+                Assert.Equal(RachisState.Follower, Servers[1].ServerStore.CurrentRachisState);
             }
         }
 
@@ -464,7 +464,7 @@ namespace RachisTests.DatabaseCluster
                 // remove and rejoin to change the url
                 await leader.ServerStore.RemoveFromClusterAsync(nodeTag);
                 await leader.ServerStore.AddNodeToClusterAsync(Servers[1].ServerStore.NodeHttpServerUrl, nodeTag);
-                await Servers[1].ServerStore.WaitForState(RachisConsensus.State.Follower);
+                await Servers[1].ServerStore.WaitForState(RachisState.Follower);
                 await Task.Delay(TimeSpan.FromSeconds(5)); // wait for the observer to update the status
                 dbToplogy = (await leaderStore.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
                 Assert.Equal(groupSize, dbToplogy.Members.Count);

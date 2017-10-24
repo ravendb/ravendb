@@ -23,7 +23,7 @@ namespace Raven.Server.ServerWide.Commands.PeriodicBackup
             return PeriodicBackupStatus.GenerateItemName(DatabaseName, PeriodicBackupStatus.TaskId);
         }
 
-        protected override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue, bool isPassive)
+        protected override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue, RachisState state)
         {
             return context.ReadObject(PeriodicBackupStatus.ToJson(), GetItemId());
         }

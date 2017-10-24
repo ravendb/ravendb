@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Raven.Server.ServerWide.Context;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
+using Raven.Client.ServerWide;
 using Sparrow.Threading;
 
 namespace Raven.Server.Rachis
@@ -130,7 +131,7 @@ namespace Raven.Server.Rachis
                                 _engine.Log.Info($"Candidate {_engine.Tag}: A leader node has indicated that I'm not in their topology, I was probably kicked out. Moving to passive mode");
                             }
                             var engineCurrentTerm = _engine.CurrentTerm;
-                            _engine.SetNewState(RachisConsensus.State.Passive, this, engineCurrentTerm,
+                            _engine.SetNewState(RachisState.Passive, this, engineCurrentTerm,
                                 "I just learned from the leader that I\'m not in their topology, moving to passive state");
                             break;
                         }

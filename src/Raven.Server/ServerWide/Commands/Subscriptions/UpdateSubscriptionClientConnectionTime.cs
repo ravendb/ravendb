@@ -19,7 +19,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
         public override string GetItemId() => SubscriptionState.GenerateSubscriptionItemKeyName(DatabaseName, SubscriptionName);
 
-        protected override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue, bool isPassive)
+        protected override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue, RachisState state)
         {
             var itemId = GetItemId();
             if (existingValue == null)
@@ -27,7 +27,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
             var subscription = JsonDeserializationCluster.SubscriptionState(existingValue);
 
-            if (record.Topology.WhoseTaskIsIt(subscription, isPassive) != NodeTag)
+            if (record.Topology.WhoseTaskIsIt(subscription, state) != NodeTag)
                 throw new InvalidOperationException($"Can't update subscription with name {itemId} by node {NodeTag}, because it's not it's task to update this subscription");
 
 

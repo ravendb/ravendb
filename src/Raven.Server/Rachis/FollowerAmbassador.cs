@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
+using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
@@ -600,7 +601,7 @@ namespace Raven.Server.Rachis
                     {
                         // we need to abort the current leadership
                         var msg = $"Follower ambassador {_engine.Tag}: found election term {llr.CurrentTerm} that is higher than ours {engineCurrentTerm}";
-                        _engine.SetNewState(RachisConsensus.State.Follower, null, engineCurrentTerm,
+                        _engine.SetNewState(RachisState.Follower, null, engineCurrentTerm,
                             msg);
                         _engine.FoundAboutHigherTerm(llr.CurrentTerm);
                         throw new InvalidOperationException(msg);

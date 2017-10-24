@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using Raven.Client.Http;
+using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Rachis
@@ -63,7 +64,7 @@ namespace Raven.Server.Rachis
                                 VoteGranted = false,
                                 // we only report to the node asking for our vote if we are the leader, this gives
                                 // the oust node a authorotative confirmation that they were removed from the cluster
-                                NotInTopology = _engine.CurrentState == RachisConsensus.State.Leader,
+                                NotInTopology = _engine.CurrentState == RachisState.Leader,
                                 Message = $"Node {rv.Source} is not in my topology, cannot vote for it"
                             });
                             _connection.Dispose();
@@ -98,8 +99,8 @@ namespace Raven.Server.Rachis
 
                         if (rv.IsForcedElection == false &&
                             (
-                                _engine.CurrentState == RachisConsensus.State.Leader ||
-                                _engine.CurrentState == RachisConsensus.State.LeaderElect
+                                _engine.CurrentState == RachisState.Leader ||
+                                _engine.CurrentState == RachisState.LeaderElect
                             )
                         )
                         {

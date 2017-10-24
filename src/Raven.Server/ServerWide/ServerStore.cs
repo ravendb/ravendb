@@ -146,7 +146,7 @@ namespace Raven.Server.ServerWide
 
         public ClusterStateMachine Cluster => _engine?.StateMachine;
         public string LeaderTag => _engine.LeaderTag;
-        public RachisConsensus.State CurrentState => _engine.CurrentState;
+        public RachisState CurrentRachisState => _engine.CurrentState;
         public string NodeTag => _engine.Tag;
 
         public bool Disposed => _disposed;
@@ -175,7 +175,7 @@ namespace Raven.Server.ServerWide
                 {
                     if (_engine.LeaderTag != NodeTag)
                     {
-                        await _engine.WaitForState(RachisConsensus.State.Leader)
+                        await _engine.WaitForState(RachisState.Leader)
                             .WithCancellation(_shutdownNotification.Token);
                         continue;
                     }
@@ -204,7 +204,7 @@ namespace Raven.Server.ServerWide
                                 ClusterMaintenanceSupervisor.AddToCluster(node.Key, clusterTopology.GetUrlFromTag(node.Key));
                             }
 
-                            var leaderChanged = _engine.WaitForLeaveState(RachisConsensus.State.Leader);
+                            var leaderChanged = _engine.WaitForLeaveState(RachisState.Leader);
                             if (await Task.WhenAny(topologyChangedTask, leaderChanged)
                                     .WithCancellation(_shutdownNotification.Token) == leaderChanged)
                                 break;
@@ -453,13 +453,14 @@ namespace Raven.Server.ServerWide
             {
                 OnTopologyChanged(null, GetClusterTopology(context));
 
-                // if we are in passive state, we prevent from tasks to be performed by this node.
-                if (state.From == RachisConsensus.State.Passive || state.To == RachisConsensus.State.Passive)
+                // if we are in passive/candidate state, we prevent from tasks to be performed by this node.
+                if (state.From == RachisState.Passive || state.To == RachisState.Passive || 
+                    state.From == RachisState.Candidate || state.To == RachisState.Candidate)
                 {
                     RefreshOutgoingTasks();
                 }
 
-                if (state.To == RachisConsensus.State.LeaderElect)
+                if (state.To == RachisState.LeaderElect)
                 {
                     _engine.CurrentLeader.OnNodeStatusChange += OnTopologyChanged;
                 }
@@ -507,17 +508,17 @@ namespace Raven.Server.ServerWide
         {
             Dictionary<string, NodeStatus> nodesStatuses = null;
 
-            switch (CurrentState)
+            switch (CurrentRachisState)
             {
-                case RachisConsensus.State.Leader:
+                case RachisState.Leader:
                     nodesStatuses = _engine.CurrentLeader?.GetStatus();
 
                     break;
-                case RachisConsensus.State.Candidate:
+                case RachisState.Candidate:
                     nodesStatuses = _engine.Candidate?.GetStatus();
 
                     break;
-                case RachisConsensus.State.Follower:
+                case RachisState.Follower:
                     var leaderTag = _engine.LeaderTag;
                     if (leaderTag != null)
                     {
@@ -1146,7 +1147,7 @@ namespace Raven.Server.ServerWide
 
         public void EnsureNotPassive()
         {
-            if (_engine.CurrentState != RachisConsensus.State.Passive)
+            if (_engine.CurrentState != RachisState.Passive)
                 return;
 
             _engine.Bootstrap(_server.ServerStore.NodeHttpServerUrl);
@@ -1188,12 +1189,12 @@ namespace Raven.Server.ServerWide
 
         public bool IsLeader()
         {
-            return _engine.CurrentState == RachisConsensus.State.Leader;
+            return _engine.CurrentState == RachisState.Leader;
         }
 
         public bool IsPassive()
         {
-            return _engine.CurrentState == RachisConsensus.State.Passive;
+            return _engine.CurrentState == RachisState.Passive;
         }
 
         public Task<(long Index, object Result)> SendToLeaderAsync(CommandBase cmd)
@@ -1345,11 +1346,11 @@ namespace Raven.Server.ServerWide
             {
                 ServerShutdown.ThrowIfCancellationRequested();
 
-                if (_engine.CurrentState == RachisConsensus.State.Leader)
+                if (_engine.CurrentState == RachisState.Leader)
                 {
                     return await _engine.PutAsync(cmd);
                 }
-                if (_engine.CurrentState == RachisConsensus.State.Passive)
+                if (_engine.CurrentState == RachisState.Passive)
                 {
                     ThrowInvalidEngineState(cmd);
                 }
@@ -1496,9 +1497,9 @@ namespace Raven.Server.ServerWide
             return _engine.WaitForTopology(state);
         }
 
-        public Task WaitForState(RachisConsensus.State state)
+        public Task WaitForState(RachisState rachisState)
         {
-            return _engine.WaitForState(state);
+            return _engine.WaitForState(rachisState);
         }
 
         public void ClusterAcceptNewConnection(Stream client)

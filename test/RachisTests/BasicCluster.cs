@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client.ServerWide;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -30,7 +31,7 @@ namespace RachisTests
                 await follower.WaitForTopology(Leader.TopologyModification.Voter);
             }
 
-            var leaderSelected = followers.Select(x => x.WaitForState(RachisConsensus.State.Leader).ContinueWith(_ => x)).ToArray();
+            var leaderSelected = followers.Select(x => x.WaitForState(RachisState.Leader).ContinueWith(_ => x)).ToArray();
 
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
@@ -60,7 +61,7 @@ namespace RachisTests
 
             followers = followers.Except(new[] { leader }).ToArray();
 
-            leaderSelected = followers.Select(x => x.WaitForState(RachisConsensus.State.Leader).ContinueWith(_ => x)).ToArray();
+            leaderSelected = followers.Select(x => x.WaitForState(RachisState.Leader).ContinueWith(_ => x)).ToArray();
 
             foreach (var follower in followers)
             {
@@ -107,8 +108,8 @@ namespace RachisTests
             await bUpgraded;
             await cUpgraded;
 
-            var bLeader = b.WaitForState(RachisConsensus.State.Leader);
-            var cLeader = c.WaitForState(RachisConsensus.State.Leader);
+            var bLeader = b.WaitForState(RachisState.Leader);
+            var cLeader = c.WaitForState(RachisState.Leader);
 
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
