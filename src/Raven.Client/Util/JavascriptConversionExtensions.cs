@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -125,6 +126,22 @@ namespace Raven.Client.Util
                         context.PreventDefault();
                         context.Visitor.Visit(methodCallExpression.Arguments[0]);
                         return;
+                    case "FirstOrDefault":
+                    case "First":
+                        context.PreventDefault();
+                        context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                        var writer = context.GetWriter();
+                        using (writer.Operation(methodCallExpression))
+                        {
+                            if (methodCallExpression.Arguments.Count > 1)
+                            {
+                                writer.Write(".filter");
+                                context.Visitor.Visit(methodCallExpression.Arguments[1]);
+
+                            }
+                            writer.Write("[0]");
+                        }
+                        return;
                     default:
                         return;
                 }
@@ -176,6 +193,7 @@ namespace Raven.Client.Util
             public bool HasLoad { get; set; }
             public Expression Arg { get; set; }
             public bool IsEnumerable { get; set; }
+            public bool DoNotTranslate { get; set; }
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
@@ -199,7 +217,18 @@ namespace Raven.Client.Util
                 }
 
                 context.PreventDefault();
-                
+
+                if (DoNotTranslate)
+                    return;
+               
+                var writer = context.GetWriter();
+                using (writer.Operation(methodCallExpression))
+                {
+                    writer.Write("load(");
+                    context.Visitor.Visit(Arg);
+                    writer.Write(")");
+                }
+                               
             }
         }
 
@@ -274,10 +303,34 @@ namespace Raven.Client.Util
             }
         }
 
-        public class IgnoreTransparentParameter : JavascriptConversionExtension
+        public class TransparentIdentifierSupport : JavascriptConversionExtension
         {
+            public bool DoNotIgnore { get; set; }
+
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
+                if (context.Node is LambdaExpression lambdaExpression
+                    && lambdaExpression.Parameters.Count > 0 
+                    && lambdaExpression.Parameters[0].Name.StartsWith("<>h__TransparentIdentifier"))
+                {
+                    DoNotIgnore = true;
+
+                    context.PreventDefault();
+
+                    var writer = context.GetWriter();
+                    using (writer.Operation(lambdaExpression))
+                    {
+                        writer.Write("function(");
+                        writer.Write(lambdaExpression.Parameters[0].Name.Substring(2));
+                        writer.Write("){return ");
+                        context.Visitor.Visit(lambdaExpression.Body);
+                        writer.Write(";}");
+
+                    }
+
+                    return;
+                }
+
                 if (!(context.Node is MemberExpression member))
                     return;
 
@@ -289,6 +342,8 @@ namespace Raven.Client.Util
                     var writer = context.GetWriter();
                     using (writer.Operation(innerMember))
                     {
+                        if (DoNotIgnore)
+                            context.Visitor.Visit(member.Expression);
                         writer.Write($"{member.Member.Name}");
                     }
 
@@ -298,13 +353,15 @@ namespace Raven.Client.Util
                 {
                     context.PreventDefault();
 
-                    if (member.Member.Name.StartsWith("<>h__TransparentIdentifier"))
-                        return;
-
                     var writer = context.GetWriter();
-
                     using (writer.Operation(parameter))
                     {
+                        if (DoNotIgnore)
+                        {
+                            writer.Write(parameter.Name.Substring(2));
+                            writer.Write(".");
+                        }
+
                         writer.Write($"{member.Member.Name}");
                     }
                 }
@@ -610,6 +667,12 @@ namespace Raven.Client.Util
                         break;
                     case "Substring":
                         newName = "substr";
+                        break;
+                    case "StartsWith":
+                        newName = "startsWith";
+                        break;
+                    case "EndsWith":
+                        newName = "endsWith";
                         break;
                     case "Join":
                         newName = "join";

@@ -1543,7 +1543,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     {
                         VisitLet(newExpression);
                         _insideLet--;
-                        return;
+                        break;
                     }
 
                     if (_declareBuilder != null)
@@ -1554,13 +1554,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                     for (int index = 0; index < newExpression.Arguments.Count; index++)
                     {
-                        var field = newExpression.Arguments[index] as MemberExpression;
-                        if (field == null)
+                        if (newExpression.Arguments[index] is MemberExpression == false)
                         {
-                            if (newExpression.Arguments[index] is ParameterExpression parameter 
-                                && parameter.Name == lambdaExpression?.Parameters[0].Name)
-                                continue;
-
                             //lambda 2 js
 
                             if (_fromAlias == null)
@@ -1569,7 +1564,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                             }
 
                             _jsProjectionNames = new List<string>();
-                            FieldsToFetch = new HashSet<FieldToFetch>();
+                            FieldsToFetch.Clear();
 
                             _jsSelectBody = TranslateSelectBodyToJs(newExpression);
 
@@ -1577,7 +1572,27 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         }
 
                         var expression = _linqPathProvider.GetMemberExpression(newExpression.Arguments[index]);
-                        AddToFieldsToFetch(GetSelectPath(expression), GetSelectPath(newExpression.Members[index]));
+
+                        try
+                        {
+                            AddToFieldsToFetch(GetSelectPath(expression), GetSelectPath(newExpression.Members[index]));
+                        }
+                        catch (Exception)
+                        {
+                            //lambda 2 js
+
+                            if (_fromAlias == null)
+                            {
+                                _fromAlias = lambdaExpression?.Parameters[0].Name;
+                            }
+
+                            _jsProjectionNames = new List<string>();
+                            FieldsToFetch.Clear();
+
+                            _jsSelectBody = TranslateSelectBodyToJs(newExpression);
+
+                            break;
+                        }
                     }
                     break;
                 //for example .Select(x => new SomeType { x.Cost } ), it's member init because it's using the object initializer
@@ -1609,7 +1624,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                             }
 
                             _jsProjectionNames = new List<string>();
-                            FieldsToFetch = new HashSet<FieldToFetch>();
+                            FieldsToFetch.Clear();
 
                             _jsSelectBody = TranslateSelectBodyToJs(memberInitExpression);
 
@@ -1617,9 +1632,28 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         }
 
                         var expression = _linqPathProvider.GetMemberExpression(field.Expression);
-                        var renamedField = GetSelectPath(expression);
+                        try
+                        {
+                            var renamedField = GetSelectPath(expression);
+                            AddToFieldsToFetch(renamedField, GetSelectPath(field.Member));
+                        }
+                        catch (Exception)
+                        {
+                            //lambda 2 js
 
-                        AddToFieldsToFetch(renamedField, GetSelectPath(field.Member));
+                            if (_fromAlias == null)
+                            {
+                                _fromAlias = lambdaExpression?.Parameters[0].Name;
+                            }
+
+                            _jsProjectionNames = new List<string>();
+                            FieldsToFetch.Clear();
+
+                            _jsSelectBody = TranslateSelectBodyToJs(memberInitExpression);
+
+                            break;
+                        }
+
                     }
                     break;
                 case ExpressionType.Parameter: // want the full thing, so just pass it on.
@@ -1673,12 +1707,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
             var name = GetSelectPath(expression.Members[1]);
             var parameter = expression?.Arguments[0] as ParameterExpression;
 
-            var loadSupport = new JavascriptConversionExtensions.LoadSupport();
+            var loadSupport = new JavascriptConversionExtensions.LoadSupport{ DoNotTranslate = true };
             var js = expression.Arguments[1].CompileToJavascript(
                 new JavascriptCompilationOptions(
                     new JavascriptConversionExtensions.MathSupport(),
                     new JavascriptConversionExtensions.LinqMethodsSupport(),
-                    new JavascriptConversionExtensions.IgnoreTransparentParameter(),
+                    new JavascriptConversionExtensions.TransparentIdentifierSupport(),
                     new JavascriptConversionExtensions.InvokeSupport(),
                     new JavascriptConversionExtensions.DateTimeSupport(),
                     new JavascriptConversionExtensions.NullCoalescingSupport(),
@@ -1743,7 +1777,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 _declareBuilder = new StringBuilder();
                 _jsSelectBody = null;
                 _jsProjectionNames = new List<string>();
-                FieldsToFetch = new HashSet<FieldToFetch>();
+                FieldsToFetch.Clear();
             }
 
             _declareBuilder.Append("\t").Append("var ").Append(name).Append(" = ").Append(js).Append(";").Append(Environment.NewLine);           
@@ -1823,13 +1857,14 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 new JavascriptCompilationOptions(
                     new JavascriptConversionExtensions.MathSupport(),
                     new JavascriptConversionExtensions.LinqMethodsSupport(),
-                    new JavascriptConversionExtensions.IgnoreTransparentParameter(),
+                    new JavascriptConversionExtensions.TransparentIdentifierSupport(),
                     new JavascriptConversionExtensions.InvokeSupport(),
                     new JavascriptConversionExtensions.DateTimeSupport(),
                     new JavascriptConversionExtensions.NullCoalescingSupport(),
                     new JavascriptConversionExtensions.NestedConditionalSupport(),
                     new JavascriptConversionExtensions.StringSupport(),
                     new JavascriptConversionExtensions.ConstSupport(),
+                    new JavascriptConversionExtensions.LoadSupport(),
                     MemberInitAsJson.ForAllTypes));
 
             if (expression.Type == typeof(TimeSpan) && expression.NodeType != ExpressionType.MemberAccess)

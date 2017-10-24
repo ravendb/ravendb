@@ -1640,7 +1640,7 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
                     var query = from u in session.Query<User>()
                                 select new
                                 {
-                                    //padStart(), padEnd() are not supporeted in jint
+                                    //padStart(), padEnd(), startsWith(), endsWith() are not supporeted in jint
                                     //https://github.com/sebastienros/jint/issues/429
 
                                     //PadLeft = u.Name.PadLeft(10, 'z'),
@@ -1663,6 +1663,112 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
                     Assert.Equal("Jer", queryResult[0].Substr);
                     Assert.Equal("Jerry, Garcia, 19420801", queryResult[0].Join);
                     Assert.Equal("The-Grateful-Dead", queryResult[0].ArrayJoin);
+
+                }
+            }
+        }
+
+        [Fact]
+        public void Custom_Function_First_And_FirstOrDefault_Support()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Detail { Number = 1 }, "details/1");
+                    session.Store(new Detail { Number = 2 }, "details/2");
+                    session.Store(new Detail { Number = 3 }, "details/3");
+                    session.Store(new Detail { Number = 4 }, "details/4");
+
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia", DetailIds = new List<string> { "details/1", "details/2" }}, "users/1");
+                    session.Store(new User { Name = "Bob", LastName = "Weir", DetailIds = new List<string> { "details/3", "details/4" } }, "users/2");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from u in session.Query<User>()
+                                let details = RavenQuery.Load<Detail>(u.DetailIds)
+                                select new 
+                                {
+                                    Name = u.Name,
+                                    First = details.First(x=>x.Number > 1).Number,
+                                    FirstOrDefault = details.FirstOrDefault(x => x.Number < 3)
+                                };
+
+                    Assert.Equal("FROM Users as u LOAD u.DetailIds as details[] " +
+                                 "SELECT { Name : u.Name, First : details.filter(function(x){return x.Number>1;})[0].Number, " +
+                                          "FirstOrDefault : details.filter(function(x){return x.Number<3;})[0] }", query.ToString());
+
+                    var queryResult = query.ToList();
+                    Assert.Equal(2, queryResult.Count);
+
+                    Assert.Equal("Jerry", queryResult[0].Name);
+                    Assert.Equal(2, queryResult[0].First);
+                    Assert.Equal(1, queryResult[0].FirstOrDefault.Number);
+
+                    Assert.Equal("Bob", queryResult[1].Name);
+                    Assert.Equal(3, queryResult[1].First);
+                    Assert.Null(queryResult[1].FirstOrDefault);
+                }
+            }
+        }
+
+        [Fact]
+        public void Custom_Function_With_Nested_Query()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Detail { Number = 1 }, "details/1");
+                    session.Store(new Detail { Number = 2 }, "details/2");
+                    session.Store(new Detail { Number = 3 }, "details/3");
+                    session.Store(new Detail { Number = 4 }, "details/4");
+
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia", DetailIds = new List<string> { "details/1", "details/2" } }, "users/1");
+                    session.Store(new User { Name = "Bob", LastName = "Weir", DetailIds = new List<string> { "details/3", "details/4" } }, "users/2");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from u in session.Query<User>()
+                                select new
+                                {
+                                    Name = u.Name,
+                                    DetailNumbers = from detailId in u.DetailIds
+                                                    let detail = RavenQuery.Load<Detail>(detailId)
+                                                    select new
+                                                    {
+                                                        Number = detail.Number
+                                                    }
+                                };
+
+                    Assert.Equal("FROM Users as u SELECT { Name : u.Name, " +
+                                 "DetailNumbers : u.DetailIds.map(function(detailId){return {detailId:detailId,detail:load(detailId)};})" +
+                                                            ".map(function(h__TransparentIdentifier0){return {Number:h__TransparentIdentifier0.detail.Number};}) }"
+                                ,query.ToString());
+
+                    var queryResult = query.ToList();
+                    Assert.Equal(2, queryResult.Count);
+
+                    Assert.Equal("Jerry", queryResult[0].Name);
+
+                    var details = queryResult[0].DetailNumbers.ToList();
+
+                    Assert.Equal(2, details.Count);
+                    Assert.Equal(1, details[0].Number);
+                    Assert.Equal(2, details[1].Number);
+
+                    Assert.Equal("Bob", queryResult[1].Name);
+                    details = queryResult[1].DetailNumbers.ToList();
+
+                    Assert.Equal(2, details.Count);
+                    Assert.Equal(3, details[0].Number);
+                    Assert.Equal(4, details[1].Number);
 
                 }
             }
@@ -1903,6 +2009,7 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
             public string DetailId { get; set; }
             public string FriendId { get; set; }
             public IEnumerable<string> DetailIds { get; set; }
+            public List<User> SubUsers { get; set; }
         }
         private class Detail
         {
