@@ -79,12 +79,8 @@ namespace FastTests
             };
 #endif
 
-            //TODO: When this method become available, update to call directly
-            var setMinThreads = (Func<int, int, bool>)typeof(ThreadPool).GetTypeInfo().GetMethod("SetMinThreads")
-                .CreateDelegate(typeof(Func<int, int, bool>));
+            ThreadPool.SetMinThreads(250, 250);
 
-            setMinThreads(250, 250);
-            
             var maxNumberOfConcurrentTests = Math.Max(ProcessorInfo.ProcessorCount / 2, 2);
 
             var fileInfo = new FileInfo(XunitConfigurationFile);
