@@ -8,7 +8,7 @@ using Xunit;
 
 namespace FastTests.Server.Documents.Indexing.MapReduce
 {
-    public class RavenDB_4323 : RavenTestBase
+    public class OutputReduceToCollectionTests : RavenTestBase
     {
         [Fact]
         public async Task ReduceResultsBackAsDocuments()
