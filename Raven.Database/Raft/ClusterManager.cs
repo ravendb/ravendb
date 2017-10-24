@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -54,7 +53,7 @@ namespace Raven.Database.Raft
         private readonly DateTime clusterManagerStartTime;
         private void OnProposingCandidacy(object sender, ProposingCandidacyResult e)
         {
-            var clusterConfigurationsDoc = DatabasesLandlord.SystemDatabase.Documents.Get(Constants.Cluster.ClusterConfigurationDocumentKey,null);
+            var clusterConfigurationsDoc = DatabasesLandlord.SystemDatabase.Documents.Get(Constants.Cluster.ClusterConfigurationDocumentKey, null);
             if (clusterConfigurationsDoc == null)
             {
                 return;
@@ -68,24 +67,28 @@ namespace Raven.Database.Raft
             {
                 return;
             }
-            var replicationStateDoc = DatabasesLandlord.SystemDatabase.Documents.Get(Constants.Cluster.ClusterReplicationStateDocumentKey,null);
+            var replicationStateDoc = DatabasesLandlord.SystemDatabase.Documents.Get(Constants.Cluster.ClusterReplicationStateDocumentKey, null);
 
             if (replicationStateDoc == null)
             {
-                //This is a case of a node loading for the first time and just never got any replication state.
-                //If we prevent this than a cluster will be non-respnosive when loaded (mostly a test senario but could be a real issue)
+                // this is a case of a node loading for the first time and just never got any replication state.
+                // if we prevent this than a cluster will be non-respnosive when loaded (mostly a test scenario but could be a real issue)
                 if (clusterManagerStartTime + maxReplicationLatency + maxReplicationLatency < DateTime.UtcNow)
                 {
+                    const string message = "Could not find replication state document";
+                    Log.Info(message);
                     e.VetoCandidacy = true;
-                    e.Reason = "Could not find replication state document";                    
+                    e.Reason = message;
                 }
                 return;
             }
             var replicationState = replicationStateDoc.DataAsJson.ToObject<ReplicationState>();
             if (replicationState == null)
             {
+                const string message = "Could not deserialize replication state document";
+                Log.Info(message);
                 e.VetoCandidacy = true;
-                e.Reason = "Could not deserialize replication state document";
+                e.Reason = message;
                 return;
             }
 
@@ -110,7 +113,29 @@ namespace Raven.Database.Raft
                 var doc = database.Documents.Get(docKey, null);
                 var sourceInformation = doc?.DataAsJson.JsonDeserialization<SourceReplicationInformation>();
                 if (sourceInformation == null)
+                {
+                    // the source document doesn't exist, 
+                    // that means that we didn't receive any documents for that database from the leader
+                    var databaseDocument = DatabasesLandlord.SystemDatabase.Documents.Get($"{Constants.Database.Prefix}{database.Name}", null);
+                    if (databaseDocument == null)
+                    {
+                        // database doesn't exist, deleted?
+                        databasesCount--;
+                    }
+                    else if (databaseDocument.LastModified == null)
+                    {
+                        // shouldn't happen
+                    }
+                    else if (databaseDocument.LastModified.Value + maxReplicationLatency + maxReplicationLatency >= DateTime.UtcNow)
+                    {
+                        Log.Info($"Didn't receive the Replication Source document " +
+                                 $"for database {database.Name} from database id: {modification.DatabaseId}, " +
+                                 $"but we detected that it as new database and is considered as up to date");
+                        anyDatabaseUpToDate = true;
+                    }
+
                     return;
+                }
 
                 var lastUpdate = sourceInformation.LastModifiedAtSource ?? DateTime.MaxValue;
                 if (lastUpdate == DateTime.MaxValue ||
@@ -123,8 +148,11 @@ namespace Raven.Database.Raft
 
             if (anyDatabaseUpToDate == false && databasesCount > 0 && databasesCount != missingModification)
             {
+                var message = "None of the active databases are up to date with the leader last replication state, ";
+                message += $"databases count: {databasesCount}, replication state doc: {replicationStateDoc}";
+                Log.Info(message);
                 e.VetoCandidacy = true;
-                e.Reason = "None of the active databases are up to date with the leader last replication state";
+                e.Reason = message;
             }
         }
 
@@ -136,7 +164,7 @@ namespace Raven.Database.Raft
             {
                 //timer should be null 
                 SaflyDisposeOfTimer();
-                timer = new Timer(NewLeaderTimerCallback,null, maxReplicationLatency, maxReplicationLatency); 
+                timer = new Timer(NewLeaderTimerCallback, null, maxReplicationLatency, maxReplicationLatency);
             }
             else
             {
@@ -165,12 +193,12 @@ namespace Raven.Database.Raft
                 //Might happen if the timer and the state change event happen at the same time.
                 if (Engine.State != RaftEngineState.Leader)
                 {
-                    if(Log.IsDebugEnabled)
+                    if (Log.IsDebugEnabled)
                         Log.Debug($"NewLeaderTimerCallback invoked from non-leader node, actual state:{Engine.State}");
                     return;
                 }
                 var databaseToLastModified = new Dictionary<string, LastModificationTimeAndTransactionalId>();
-                DatabasesLandlord.ForAllDatabases(db => 
+                DatabasesLandlord.ForAllDatabases(db =>
                 {
                     try
                     {
@@ -178,7 +206,7 @@ namespace Raven.Database.Raft
                         JsonDocument lastDoc = null;
                         db.TransactionalStorage.Batch(action =>
                         {
-                            lastDoc = action.Documents.GetDocumentsByReverseUpdateOrder(0, 1).FirstOrDefault();                        
+                            lastDoc = action.Documents.GetDocumentsByReverseUpdateOrder(0, 1).FirstOrDefault();
 
                         });
                         var lastModified = lastDoc?.LastModified ?? DateTime.MinValue;
@@ -190,11 +218,11 @@ namespace Raven.Database.Raft
                     }
                     catch (Exception e)
                     {
-                        if(Log.IsWarnEnabled)
-                            Log.WarnException($"Failed to get database: {db.Name} while generating replication state",e);
+                        if (Log.IsWarnEnabled)
+                            Log.WarnException($"Failed to get database: {db.Name} while generating replication state", e);
                     }
 
-                },true);
+                }, true);
                 Client.SendReplicationStateAsync(new ReplicationState(databaseToLastModified));
             }
             finally
@@ -233,7 +261,7 @@ namespace Raven.Database.Raft
             Engine.PersistentState.SetCurrentTopology(tcc.Requested, 0);
             Engine.StartTopologyChange(tcc);
             Engine.CommitTopologyChange(tcc);
-            
+
             if (isPartOfExistingCluster || forceCandidateState)
                 Engine.ForceCandidateState();
             else
@@ -290,7 +318,7 @@ namespace Raven.Database.Raft
                 }
             }
             //deleting the replication state from the system database
-            DatabasesLandlord.SystemDatabase.Documents.Delete(Constants.Cluster.ClusterReplicationStateDocumentKey, null,null);
+            DatabasesLandlord.SystemDatabase.Documents.Delete(Constants.Cluster.ClusterReplicationStateDocumentKey, null, null);
 
         }
 
@@ -299,11 +327,11 @@ namespace Raven.Database.Raft
             var aggregator = new ExceptionAggregator("ClusterManager disposal error.");
 
             aggregator.Execute(SaflyDisposeOfTimer);
-             aggregator.Execute(() =>
-             {
-                 if (Engine != null && disableReplicationStateChecks == false)
-                     Engine.StateChanged -= OnRaftEngineStateChanged;
-             });
+            aggregator.Execute(() =>
+            {
+                if (Engine != null && disableReplicationStateChecks == false)
+                    Engine.StateChanged -= OnRaftEngineStateChanged;
+            });
             aggregator.Execute(() =>
             {
                 Client?.Dispose();
