@@ -143,14 +143,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     cmds[item.Value].Id = cmds[item.Value].Id.Substring(0, cmds[item.Value].Id.Length - 1) + "/" + newIds[item.Key];
                 }
-                //for (var i = 0; i < cmds.Length; i++)
-                //{
-                //    if (cmds[i].Type == CommandType.PUT && string.IsNullOrEmpty(cmds[i].Id) == false && cmds[i].Id[cmds[i].Id.Length - 1] == '|')
-                //    {
-                //        cmds[i].Id = cmds[i].Id.Substring(0, cmds[i].Id.Length - 1) + "/" + newIds.First.Value;
-                //        newIds.RemoveFirst();
-                //    }
-                //}
+                
                 Debug.Assert(newIds.Count == 0);
             }
             return new ArraySegment<CommandData>(cmds, 0, index + 1);
