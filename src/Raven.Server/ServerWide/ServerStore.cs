@@ -52,6 +52,7 @@ using Voron;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Utils;
+using static Raven.Server.Documents.Handlers.BatchRequestParser;
 
 namespace Raven.Server.ServerWide
 {
@@ -1250,6 +1251,16 @@ namespace Raven.Server.ServerWide
             }
 
             return newIdentityValue;
+        }
+
+        public async Task<LinkedList<long>> GenerateClusterIdentitiesBatchAsync(string databaseName, List<string> ids)
+        {
+            var (_, identityInfoResult) = await SendToLeaderAsync(new IncrementClusterIdentitiesBatchCommand(databaseName, ids));
+
+            var identityInfo = identityInfoResult as LinkedList<long> ?? throw new InvalidOperationException(
+                                   $"Expected to get result from raft command that should generate a cluster-wide batch identity, but didn't. Leader is {LeaderTag}, Current node tag is {NodeTag}.");
+
+            return identityInfo;
         }
 
         public License LoadLicense()
