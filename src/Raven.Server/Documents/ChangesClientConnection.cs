@@ -50,7 +50,6 @@ namespace Raven.Server.Documents
         private int _watchAllDocuments;
         private int _watchAllOperations;
         private int _watchAllIndexes;
-        private int _watchAllTransformers;
 
         public class ChangeValue
         {
@@ -139,17 +138,6 @@ namespace Raven.Server.Documents
         {
             _matchingIndexes.TryRemove(name);
         }
-
-        public void WatchAllTransformers()
-        {
-            Interlocked.Increment(ref _watchAllTransformers);
-        }
-
-        public void UnwatchAllTransformers()
-        {
-            Interlocked.Decrement(ref _watchAllTransformers);
-        }
-
 
         private static bool HasItemStartingWith(ConcurrentSet<string> set, string value)
         {
@@ -443,14 +431,6 @@ namespace Raven.Server.Documents
             {
                 UnwatchAllIndexes();
             }
-            else if (Match(command, "watch-transformers"))
-            {
-                WatchAllTransformers();
-            }
-            else if (Match(command, "unwatch-transformers"))
-            {
-                UnwatchAllTransformers();
-            }
             else if (Match(command, "watch-doc"))
             {
                 WatchDocument(commandParameter);
@@ -530,7 +510,6 @@ namespace Raven.Server.Documents
                 ["Age"] = Age,
                 ["WatchAllDocuments"] = _watchAllDocuments > 0,
                 ["WatchAllIndexes"] = false,
-                ["WatchAllTransformers"] = false,
                 /*["WatchConfig"] = _watchConfig > 0,
                 ["WatchConflicts"] = _watchConflicts > 0,
                 ["WatchSync"] = _watchSync > 0,*/

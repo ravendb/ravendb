@@ -27,7 +27,6 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/streams/docs", "GET", AuthorizationStatus.ValidUser)]
         public Task StreamDocsGet()
         {
-            var transformerName = GetStringQueryString("transformer", required: false);
             var start = GetStart();
             var pageSize = GetPageSize();
 

@@ -55,7 +55,7 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                Assert.Throws<IndexOrTransformerAlreadyExistException>(() => index.Execute(store));
+                Assert.Throws<IndexAlreadyExistException>(() => index.Execute(store));
             }
         }
 
@@ -83,7 +83,7 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                await Assert.ThrowsAsync<IndexOrTransformerAlreadyExistException>(() => index.ExecuteAsync(store));
+                await Assert.ThrowsAsync<IndexAlreadyExistException>(() => index.ExecuteAsync(store));
             }
         }
     }

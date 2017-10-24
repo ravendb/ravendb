@@ -30,11 +30,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private const string IndexNamespace = "Raven.Server.Documents.Indexes.Static.Generated";
 
-        private const string TransformerNamespace = "Raven.Server.Documents.Transformers.Generated";
-
         private const string IndexExtension = ".index";
-
-        private const string TransformerExtension = ".transformer";
 
         private static readonly UsingDirectiveSyntax[] Usings =
         {
@@ -71,11 +67,11 @@ namespace Raven.Server.Documents.Indexes.Static
      
         public static StaticIndexBase Compile(IndexDefinition definition)
         {
-            var cSharpSafeName = GetCSharpSafeName(definition.Name, isIndex: true);
+            var cSharpSafeName = GetCSharpSafeName(definition.Name);
 
             var @class = CreateClass(cSharpSafeName, definition);
 
-            var compilationResult = CompileInternal(definition.Name, cSharpSafeName, @class, isIndex: true, extentions: definition.AdditionalSources);
+            var compilationResult = CompileInternal(definition.Name, cSharpSafeName, @class, extentions: definition.AdditionalSources);
             var type = compilationResult.Type;
 
             var index = (StaticIndexBase)Activator.CreateInstance(type);
@@ -84,11 +80,11 @@ namespace Raven.Server.Documents.Indexes.Static
             return index;
         }
 
-        private static CompilationResult CompileInternal(string originalName, string cSharpSafeName, MemberDeclarationSyntax @class, bool isIndex, Dictionary<string, string> extentions = null)
+        private static CompilationResult CompileInternal(string originalName, string cSharpSafeName, MemberDeclarationSyntax @class, Dictionary<string, string> extentions = null)
         {
-            var name = cSharpSafeName + "." + Guid.NewGuid() + (isIndex ? IndexExtension : TransformerExtension);
+            var name = cSharpSafeName + "." + Guid.NewGuid() + IndexExtension;
 
-            var @namespace = RoslynHelper.CreateNamespace(isIndex ? IndexNamespace : TransformerNamespace)
+            var @namespace = RoslynHelper.CreateNamespace(IndexNamespace)
                 .WithMembers(SyntaxFactory.SingletonList(@class));
 
             var res = GetUsingDirectiveAndSyntaxTreesAndRefrences(extentions);
@@ -140,7 +136,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     .Where(diagnostic => diagnostic.IsWarningAsError || diagnostic.Severity == DiagnosticSeverity.Error);
 
                 var sb = new StringBuilder();
-                sb.AppendLine($"Failed to compile {(isIndex ? "index" : "transformer")} {originalName}");
+                sb.AppendLine($"Failed to compile index {originalName}");
                 sb.AppendLine();
                 sb.AppendLine(code);
                 sb.AppendLine();
@@ -148,10 +144,9 @@ namespace Raven.Server.Documents.Indexes.Static
                 foreach (var diagnostic in failures)
                     sb.AppendLine(diagnostic.ToString());
 
-                if (isIndex)
-                    throw new IndexCompilationException(sb.ToString());
 
-                throw new TransformerCompilationException(sb.ToString());
+                throw new IndexCompilationException(sb.ToString());
+
             }
 
             asm.Position = 0;
@@ -171,7 +166,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return new CompilationResult
             {
                 Code = code,
-                Type = assembly.GetType($"{(isIndex ? IndexNamespace : TransformerNamespace)}.{cSharpSafeName}")
+                Type = assembly.GetType($"{IndexNamespace}.{cSharpSafeName}")
             };
         }
 
@@ -483,9 +478,9 @@ namespace Raven.Server.Documents.Indexes.Static
                     .WithCloseBraceToken(SyntaxFactory.Token(SyntaxKind.CloseBraceToken)));
         }
 
-        private static string GetCSharpSafeName(string name, bool isIndex)
+        private static string GetCSharpSafeName(string name)
         {
-            return $"{(isIndex ? "Index" : "Transformer")}_{Regex.Replace(name, @"[^\w\d]", "_")}";
+            return $"Index_{Regex.Replace(name, @"[^\w\d]", "_")}";
         }
 
         private static string NormalizeFunction(string function)
@@ -499,7 +494,7 @@ namespace Raven.Server.Documents.Indexes.Static
             public string Code { get; set; }
         }
 
-        public class IndexAndTransformerMethods
+        public class IndexMethods
         {
             public bool HasLoadDocument { get; set; }
 

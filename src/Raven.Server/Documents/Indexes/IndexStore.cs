@@ -41,7 +41,7 @@ namespace Raven.Server.Documents.Indexes
         private readonly CollectionOfIndexes _indexes = new CollectionOfIndexes();
 
         /// <summary>
-        /// The current lock, used to make sure indexes/transformers have a unique names
+        /// The current lock, used to make sure indexes have a unique names
         /// </summary>
         private readonly object _locker = new object();
 
