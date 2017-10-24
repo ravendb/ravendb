@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly IState _state;
 
         public IndexReadOperation(Index index, LuceneVoronDirectory directory, IndexSearcherHolder searcherHolder, Transaction readTransaction)
-            : base(index.Name, LoggingSource.Instance.GetLogger<IndexReadOperation>(index._indexStorage.DocumentDatabase.Name))
+            : base(index, LoggingSource.Instance.GetLogger<IndexReadOperation>(index._indexStorage.DocumentDatabase.Name))
         {
             try
             {
@@ -479,7 +479,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             if (query.Metadata.WhereFields.Count > 0)
             {
-                var additionalQuery = QueryBuilder.BuildQuery(context, query.Metadata, query.Metadata.Query.Where, null, _analyzer, getSpatialField);
+                var additionalQuery = QueryBuilder.BuildQuery(context, query.Metadata, query.Metadata.Query.Where, null, _analyzer, _index.GetQueryBuilderFactories());
 
                 mltQuery = new BooleanQuery
                     {

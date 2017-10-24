@@ -33,13 +33,13 @@ namespace Lucene.Net.Search
     {
         private string _sField;
         private bool _bEndEnum;
-        private readonly string _pattern;
+        private Regex _regex;
 
-        public RegexTermEnum(IndexReader reader, Term term, IState state)
+        public RegexTermEnum(IndexReader reader, Term term, IState state, Regex regex)
         {
             _sField = term.Field;
 
-            _pattern = term.Text;
+            _regex = regex;
 
             SetEnum(reader.Terms(new Term(term.Field, string.Empty), state), state);
         }
@@ -49,7 +49,7 @@ namespace Lucene.Net.Search
         {
             if (_sField == term.Field)
             {
-                return Regex.IsMatch(term.Text, _pattern);
+                return _regex.IsMatch(term.Text);
             } //eif
 
             _bEndEnum = true;
