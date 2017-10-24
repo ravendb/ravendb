@@ -65,6 +65,12 @@ function GetImageTags($version, $platform) {
 
     throw "Platform not supported."
 }
+
+function RemoveImages($tags) {
+    foreach ($tag in $tags) {
+        docker image rm $tag
+    }
+}
 function GetBuildCommand() {
     param ($DockerDir, $Platform, $ImageTags)
     
@@ -135,6 +141,7 @@ try {
     CheckLastExitCode
 
     PushImages $ubuntuImageTags
+    RemoveImages $ubuntuImageTags
 
     # switch daemon to windows engine
     SwitchDaemon
@@ -151,6 +158,7 @@ try {
     CheckLastExitCode
 
     PushImages $windowsImageTags
+    RemoveImages $windowsImageTags
 
 } finally {
     Pop-Location

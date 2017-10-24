@@ -334,7 +334,7 @@ namespace Raven.Client.Documents.Conventions
         }
 
         /// <summary>
-        ///     Attempts to prettify the generated linq expressions for indexes and transformers
+        ///     Attempts to prettify the generated linq expressions for indexes 
         /// </summary>
         public bool PrettifyGeneratedLinqExpressions
         {

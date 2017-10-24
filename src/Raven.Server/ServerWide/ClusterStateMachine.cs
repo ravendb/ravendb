@@ -148,6 +148,16 @@ namespace Raven.Server.ServerWide
                         SetValueForTypedDatabaseCommand(context, type, cmd, index, leader, out object result);
                         leader?.SetStateOf(index, result);
                         break;
+                    case nameof(IncrementClusterIdentitiesBatchCommand):
+                        if (ValidatePropertyExistence(cmd, nameof(IncrementClusterIdentitiesBatchCommand), nameof(IncrementClusterIdentitiesBatchCommand.DatabaseName), out errorMessage) == false)
+                        {
+                            NotifyLeaderAboutError(index, leader, new InvalidDataException(errorMessage));
+                            return;
+                        }
+
+                        SetValueForTypedDatabaseCommand(context, type, cmd, index, leader, out result);
+                        leader?.SetStateOf(index, result);
+                        break;
                     case nameof(UpdateClusterIdentityCommand):
                         if (ValidatePropertyExistence(cmd, nameof(UpdateClusterIdentityCommand), nameof(UpdateClusterIdentityCommand.Identities), out errorMessage) == false)
                         {
@@ -325,7 +335,7 @@ namespace Raven.Server.ServerWide
 
                 try
                 {
-                    updateCommand.Execute(context, items, index, record, _parent.CurrentState == RachisConsensus.State.Passive, out result);
+                    updateCommand.Execute(context, items, index, record, _parent.CurrentState, out result);
                 }
                 catch (Exception e)
                 {
@@ -976,7 +986,7 @@ namespace Raven.Server.ServerWide
         {
             var identities = context.Transaction.InnerTransaction.ReadTree(Identities);
 
-            var prefixString = IncrementClusterIdentityCommand.GetStorageKey(databaseName, null);
+            var prefixString = UpdateValueForDatabaseCommand.GetStorageKey(databaseName, null);
             using (Slice.From(context.Allocator, prefixString, out var prefix))
             {
                 using (var it = identities.Iterate(prefetch: false))
@@ -1008,7 +1018,7 @@ namespace Raven.Server.ServerWide
             const int batchSize = 1024;
             var identities = context.Transaction.InnerTransaction.ReadTree(Identities);
 
-            var prefixString = IncrementClusterIdentityCommand.GetStorageKey(name, null);
+            var prefixString = UpdateValueForDatabaseCommand.GetStorageKey(name, null);
             using (Slice.From(context.Allocator, prefixString, out var prefix))
             {
                 var toRemove = new List<Slice>();
@@ -1091,12 +1101,6 @@ namespace Raven.Server.ServerWide
                     yield return (holder.Key, doc);
                 }
             }
-        }
-
-        public long GetIdentitiesCount(TransactionOperationContext context)
-        {
-            var identities = context.Transaction.InnerTransaction.ReadTree(Identities);
-            return identities.State.NumberOfEntries;
         }
 
         private static unsafe int GetDataAndEtagTupleFromReader(JsonOperationContext context, TableValueReader reader, out BlittableJsonReaderObject doc,

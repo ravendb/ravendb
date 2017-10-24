@@ -3,8 +3,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
-using Raven.Client.Exceptions;
 using Raven.Client.Http;
+using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Rachis
@@ -150,7 +150,7 @@ namespace Raven.Server.Rachis
                                     {
                                         var message = $"Candidate ambassador {_engine.Tag}: found election term {rvr.Term} that is higher than ours {currentElectionTerm}";
                                         // we need to abort the current elections
-                                        _engine.SetNewState(RachisConsensus.State.Follower, null, engineCurrentTerm, message);
+                                        _engine.SetNewState(RachisState.Follower, null, engineCurrentTerm, message);
                                         if (_engine.Log.IsInfoEnabled)
                                         {
                                             _engine.Log.Info($"CandidateAmbassador {_engine.Tag}: {message}");
@@ -196,7 +196,7 @@ namespace Raven.Server.Rachis
                                         _engine.Log.Info($"CandidateAmbassador {_engine.Tag}: {message}");
                                     }
                                     // we need to abort the current elections
-                                    _engine.SetNewState(RachisConsensus.State.Follower, null, engineCurrentTerm, message);
+                                    _engine.SetNewState(RachisState.Follower, null, engineCurrentTerm, message);
                                     _engine.FoundAboutHigherTerm(rvr.Term);
                                     throw new InvalidOperationException(message);
                                 }

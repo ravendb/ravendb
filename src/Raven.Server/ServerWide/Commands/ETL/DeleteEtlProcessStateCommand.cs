@@ -28,7 +28,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
         }
 
         protected override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context,
-            BlittableJsonReaderObject existingValue, bool isPassive)
+            BlittableJsonReaderObject existingValue, RachisState state)
         {
             return null; // it's going to delete the value
         }

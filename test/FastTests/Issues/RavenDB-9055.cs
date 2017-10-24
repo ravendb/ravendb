@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using Raven.Client.Documents;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
@@ -30,7 +31,6 @@ namespace FastTests.Issues
                     var operation = new CreateDatabaseOperation(new DatabaseRecord(documentStore.Database));
                     documentStore.Admin.Server.Send(operation);
 
-                    using (documentStore.AggressivelyCache())
                     using (var session = documentStore.OpenSession())
                     {
                         session.Store(new User
@@ -44,6 +44,8 @@ namespace FastTests.Issues
                     using (documentStore.AggressivelyCache())
                     using (var session = documentStore.OpenSession())
                     {
+                        documentStore.Changes().ForAllIndexes().EnsureSubscribedNow().Wait();
+
                         var user = session.Load<User>("users/1");
                         user.Name = "Shalom";
                         session.SaveChanges();

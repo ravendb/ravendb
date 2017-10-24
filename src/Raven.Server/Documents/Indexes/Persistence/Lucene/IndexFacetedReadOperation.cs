@@ -32,13 +32,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private readonly IState _state;
 
-        public IndexFacetedReadOperation(string indexName,
+        public IndexFacetedReadOperation(Index index,
             Dictionary<string, IndexField> fields,
             LuceneVoronDirectory directory,
             IndexSearcherHolder searcherHolder,
             Transaction readTransaction,
             DocumentDatabase documentDatabase)
-            : base(indexName, LoggingSource.Instance.GetLogger<IndexFacetedReadOperation>(documentDatabase.Name))
+            : base(index, LoggingSource.Instance.GetLogger<IndexFacetedReadOperation>(documentDatabase.Name))
         {
             try
             {

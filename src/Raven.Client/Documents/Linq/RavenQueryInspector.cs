@@ -107,18 +107,6 @@ namespace Raven.Client.Documents.Linq
             _provider.Customize(action);
             return this;
         }
-        public IRavenQueryable<TResult> TransformWith<TResult>(string transformerName)
-        {
-            _provider.TransformWith(transformerName);
-            var res = (IRavenQueryable<TResult>)this.As<TResult>();
-            return res;
-        }
-
-        public IRavenQueryable<T> AddTransformerParameter(string input, object value)
-        {
-            _provider.AddTransformerParameter(input, value);
-            return this;
-        }
 
         /// <summary>
         /// Returns a <see cref="System.String"/> that represents this instance.
@@ -210,8 +198,6 @@ namespace Raven.Client.Documents.Linq
                 _collectionName,
                 new HashSet<FieldToFetch>(),
                 _isMapReduce,
-                _provider.ResultTransformer,
-                _provider.TransformerParameters,
                 _provider.OriginalQueryType);
         }
 
@@ -232,8 +218,6 @@ namespace Raven.Client.Documents.Linq
                 _collectionName,
                 new HashSet<FieldToFetch>(),
                 _isMapReduce,
-                _provider.ResultTransformer,
-                _provider.TransformerParameters,
                 _provider.OriginalQueryType);
 
             if (isAsync)

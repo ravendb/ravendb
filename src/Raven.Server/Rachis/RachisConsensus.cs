@@ -22,6 +22,7 @@ using Voron.Data;
 using Voron.Data.Tables;
 using Voron.Impl;
 using Raven.Client.Http;
+using Raven.Client.ServerWide;
 using Raven.Server.Config;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
@@ -53,7 +54,7 @@ namespace Raven.Server.Rachis
 
         public override void Dispose()
         {
-            SetNewState(State.Follower, new NullDisposable(), -1, "Disposing Rachis");
+            SetNewState(RachisState.Follower, new NullDisposable(), -1, "Disposing Rachis");
             StateMachine?.Dispose();
             base.Dispose();
         }
@@ -114,20 +115,11 @@ namespace Raven.Server.Rachis
 
     public abstract class RachisConsensus : IDisposable
     {
-        public enum State
-        {
-            Passive,
-            Candidate,
-            Follower,
-            LeaderElect,
-            Leader
-        }
-
         internal abstract RachisStateMachine GetStateMachine();
 
         public const string InitialTag = "?";
 
-        public State CurrentState { get; private set; }
+        public RachisState CurrentState { get; private set; }
 
         public string LastStateChangeReason => _lastStateChangeReason;
 
@@ -297,11 +289,11 @@ namespace Raven.Server.Rachis
                 if (topology.TopologyId == null ||
                     topology.Members.ContainsKey(_tag) == false)
                 {
-                    CurrentState = State.Passive;
+                    CurrentState = RachisState.Passive;
                     return;
                 }
 
-                CurrentState = State.Follower;
+                CurrentState = RachisState.Follower;
                 if (topology.Members.Count == 1)
                 {
                     using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
@@ -334,7 +326,7 @@ namespace Raven.Server.Rachis
                 Log.Info("Switching to leader state");
             }
             var leader = new Leader(this);
-            SetNewStateInTx(context, State.LeaderElect, leader, electionTerm, "I'm the only one in the cluster, so I'm the leader" , () => _currentLeader = leader);
+            SetNewStateInTx(context, RachisState.LeaderElect, leader, electionTerm, "I'm the only one in the cluster, so I'm the leader" , () => _currentLeader = leader);
             Candidate = null;
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
             {
@@ -347,28 +339,28 @@ namespace Raven.Server.Rachis
 
         protected abstract void InitializeState(TransactionOperationContext context);
 
-        public async Task WaitForState(State state)
+        public async Task WaitForState(RachisState rachisState)
         {
             while (true)
             {
                 // we setup the wait _before_ checking the state
                 var task = _stateChanged.Task;
 
-                if (CurrentState == state)
+                if (CurrentState == rachisState)
                     return;
 
                 await task;
             }
         }
 
-        public async Task WaitForLeaveState(State state)
+        public async Task WaitForLeaveState(RachisState rachisState)
         {
             while (true)
             {
                 // we setup the wait _before_ checking the state
                 var task = _stateChanged.Task;
 
-                if (CurrentState != state)
+                if (CurrentState != rachisState)
                     return;
 
                 await task;
@@ -425,12 +417,12 @@ namespace Raven.Server.Rachis
             AnyChange
         }
 
-        public void SetNewState(State state, IDisposable disposable, long expectedTerm, string stateChangedReason, Action beforeStateChangedEvent = null)
+        public void SetNewState(RachisState rachisState, IDisposable disposable, long expectedTerm, string stateChangedReason, Action beforeStateChangedEvent = null)
         {
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenWriteTransaction()) // we use the write transaction lock here
             {
-                SetNewStateInTx(context, state, disposable, expectedTerm, stateChangedReason , beforeStateChangedEvent);
+                SetNewStateInTx(context, rachisState, disposable, expectedTerm, stateChangedReason , beforeStateChangedEvent);
                 context.Transaction.Commit();
             }
             _leadershipTimeChanged.SetAndResetAtomically();
@@ -438,15 +430,15 @@ namespace Raven.Server.Rachis
 
         public class StateTransition
         {
-            public State From;
-            public State To;
+            public RachisState From;
+            public RachisState To;
             public string Reason;
             public long CurrentTerm;
             public DateTime When;
         }
 
         private void SetNewStateInTx(TransactionOperationContext context,
-            State state,
+            RachisState rachisState,
             IDisposable disposable,
             long expectedTerm,
             string stateChangedReason,
@@ -454,7 +446,7 @@ namespace Raven.Server.Rachis
         {
             if (expectedTerm != CurrentTerm && expectedTerm != -1)
                 throw new ConcurrencyException(
-                    $"Attempted to switch state to {state} on expected term {expectedTerm} but the real term is {CurrentTerm}");
+                    $"Attempted to switch state to {rachisState} on expected term {expectedTerm} but the real term is {CurrentTerm}");
 
             _currentLeader = null;
             _lastStateChangeReason = stateChangedReason;
@@ -464,13 +456,13 @@ namespace Raven.Server.Rachis
 
             if (disposable != null)
                 _disposables.Add(disposable);
-            else if (state != State.Passive)
+            else if (rachisState != RachisState.Passive)
             {
                 // if we are back to null state, wait to become candidate if no one talks to us
                 Timeout.Start(SwitchToCandidateStateOnTimeout);
             } 
 
-            if (state == State.Passive)
+            if (rachisState == RachisState.Passive)
             {
                 DeleteTopology(context);
             }
@@ -479,14 +471,14 @@ namespace Raven.Server.Rachis
             {
                 CurrentTerm = expectedTerm,
                 From = CurrentState,
-                To = state,
+                To = rachisState,
                 Reason = stateChangedReason,
                 When = DateTime.UtcNow
             };
 
             PrevStates.LimitedSizeEnqueue(transition, 5);
 
-            CurrentState = state;
+            CurrentState = rachisState;
 
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
             {
@@ -545,10 +537,10 @@ namespace Raven.Server.Rachis
 
         public bool TakeOffice()
         {
-            if (CurrentState != State.LeaderElect)
+            if (CurrentState != RachisState.LeaderElect)
                 return false;
 
-            CurrentState = State.Leader;
+            CurrentState = RachisState.Leader;
             TaskExecutor.CompleteAndReplace(ref _stateChanged);
             return true;
         }
@@ -572,7 +564,7 @@ namespace Raven.Server.Rachis
                 Log.Info("Switching to leader state");
             }
             var leader = new Leader(this);
-            SetNewState(State.LeaderElect, leader, electionTerm, reason, () => _currentLeader = leader);
+            SetNewState(RachisState.LeaderElect, leader, electionTerm, reason, () => _currentLeader = leader);
             leader.Start(connections);
         }
 
@@ -632,7 +624,7 @@ namespace Raven.Server.Rachis
             };
 
             Candidate = candidate;
-            SetNewState(State.Candidate, candidate, CurrentTerm, reason);
+            SetNewState(RachisState.Candidate, candidate, CurrentTerm, reason);
             candidate.Start();
         }
 
@@ -1332,7 +1324,7 @@ namespace Raven.Server.Rachis
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (var tx = ctx.OpenWriteTransaction())
             {
-                if (CurrentState != State.Passive && forNewCluster == false)
+                if (CurrentState != RachisState.Passive && forNewCluster == false)
                     return;
 
                 var lastNode = _tag == InitialTag ? "A" : GetTopology(ctx).LastNodeId;
@@ -1393,14 +1385,14 @@ namespace Raven.Server.Rachis
             {
                 switch (CurrentState)
                 {
-                    case State.Passive:
+                    case RachisState.Passive:
                         return null;
-                    case State.Candidate:
+                    case RachisState.Candidate:
                         return null;
-                    case State.Follower:
+                    case RachisState.Follower:
                         return _leaderTag;
-                    case State.LeaderElect:
-                    case State.Leader:
+                    case RachisState.LeaderElect:
+                    case RachisState.Leader:
                         return _tag;
                     default:
                         throw new ArgumentOutOfRangeException();

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using Raven.Client.Http;
+using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Voron;
@@ -156,7 +157,7 @@ namespace Raven.Server.Rachis
                             {
                                 _engine.Log.Info("Was notified that I was removed from the node topoloyg, will be moving to passive mode now.");
                             }
-                            _engine.SetNewState(RachisConsensus.State.Passive, null, appendEntries.Term,
+                            _engine.SetNewState(RachisState.Passive, null, appendEntries.Term,
                                                "I was kicked out of the cluster and moved to passive mode");
                             return;
                         }
@@ -624,7 +625,7 @@ namespace Raven.Server.Rachis
             }
             // if leader / candidate, this remove them from play and revert to follower mode
             var engineCurrentTerm = _engine.CurrentTerm;
-            _engine.SetNewState(RachisConsensus.State.Follower, this, engineCurrentTerm,
+            _engine.SetNewState(RachisState.Follower, this, engineCurrentTerm,
                 $"Accepted a new connection from {_connection.Source} in term {negotiation.Term}");
             _engine.LeaderTag = _connection.Source;
             _engine.Timeout.Start(_engine.SwitchToCandidateStateOnTimeout);

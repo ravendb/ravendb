@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 
@@ -6,10 +7,20 @@ using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Documents;
+using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
+using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Indexes.Workers;
+using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.Results;
+using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 using Sparrow.Logging;
+using Voron;
 using Xunit;
 
 namespace FastTests.Server.Documents.Indexing
@@ -77,7 +88,7 @@ namespace FastTests.Server.Documents.Indexing
 
         private class TestOperation : IndexOperationBase
         {
-            public TestOperation(string indexName, Logger logger) : base(indexName, logger)
+            public TestOperation(string indexName, Logger logger) : base(new TestIndex(), logger)
             {
             }
 
@@ -98,6 +109,76 @@ namespace FastTests.Server.Documents.Indexing
             {
                 throw new System.NotImplementedException();
             }
+        }
+    }
+
+    internal class TestIndex : Index
+    {
+        public TestIndex() : base(1,IndexType.None, new TestIndexDefinitions())
+        {
+        }
+
+        protected override IIndexingWork[] CreateIndexWorkExecutors()
+        {
+            throw new NotImplementedException();
+        }
+
+        public override IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void HandleDelete(DocumentTombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override int HandleMap(LazyStringValue lowerId, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override IQueryResultRetriever GetQueryResultRetriever(IndexQueryServerSide query, DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch,
+            IncludeDocumentsCommand includeDocumentsCommand)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    internal class TestIndexDefinitions : IndexDefinitionBase
+    {
+        public TestIndexDefinitions()
+        {
+            Collections = new HashSet<string>{Constants.Documents.Collections.AllDocumentsCollection};
+        }
+        public override void Persist(TransactionOperationContext context, StorageEnvironmentOptions options)
+        {
+            throw new NotImplementedException();
+        }
+
+        protected override void PersistMapFields(JsonOperationContext context, BlittableJsonTextWriter writer)
+        {
+            throw new NotImplementedException();
+        }
+
+        protected override void PersistFields(JsonOperationContext context, BlittableJsonTextWriter writer)
+        {
+            throw new NotImplementedException();
+        }
+
+        protected internal override IndexDefinition GetOrCreateIndexDefinitionInternal()
+        {
+            throw new NotImplementedException();
+        }
+
+        public override IndexDefinitionCompareDifferences Compare(IndexDefinitionBase indexDefinition)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override IndexDefinitionCompareDifferences Compare(IndexDefinition indexDefinition)
+        {
+            throw new NotImplementedException();
         }
     }
 }

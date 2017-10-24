@@ -2,20 +2,20 @@
 using System.IO;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
+using Raven.Server.Documents;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Voron.Compaction;
-using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Server.Documents
 {
+    // TODO Add more tests for compacting documents + indexes, documents alone and indexes alone
     public class CompactDatabaseTest : RavenTestBase
     {
-        [Fact(Skip = "RavenDB-8161")]
+        [Fact]
         public async Task CanCompactDatabase()
         {
             var path = NewDataPath();
@@ -42,13 +42,17 @@ namespace SlowTests.Server.Documents
 
                 var oldSize = StorageCompactionTestsSlow.GetDirSize(new DirectoryInfo(path));
 
-                var requestExecutor = store.GetRequestExecutor();
-                var compactOperation = store.Operations.Send(new CompactDatabaseOperation(store.Database));
+                var compactOperation = store.Operations.Send(new CompactDatabaseOperation(new CompactSettings
+                {
+                    DatabaseName = store.Database,
+                    Documents = true,
+                    Indexes = new[] { "Orders/ByCompany", "Orders/Totals" }
+                }), isServerOperation: true);
                 await compactOperation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
 
                 var newSize = StorageCompactionTestsSlow.GetDirSize(new DirectoryInfo(path));
 
-                Assert.True(oldSize < newSize);
+                Assert.True(oldSize > newSize);
             }
         }
 
@@ -84,8 +88,11 @@ namespace SlowTests.Server.Documents
 
                 var oldSize = StorageCompactionTestsSlow.GetDirSize(new DirectoryInfo(path));
 
-                var requestExecutor = store.GetRequestExecutor();
-                var operation = await store.Operations.SendAsync(new CompactDatabaseOperation(store.Database), isServerOperation: true);
+                var operation = await store.Operations.SendAsync(new CompactDatabaseOperation(new CompactSettings
+                {
+                    DatabaseName = store.Database,
+                    Documents = true
+                }), isServerOperation: true);
                 await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
 
                 var newSize = StorageCompactionTestsSlow.GetDirSize(new DirectoryInfo(path));

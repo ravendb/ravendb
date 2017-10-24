@@ -272,7 +272,7 @@ namespace Raven.Client.Documents
         {
             if (_databaseChanges.TryGetValue(database ?? Database, out IDatabaseChanges databaseChanges))
             {
-                return ((DatabaseChanges)databaseChanges).GetLastConnectionStateException(database);
+                return ((DatabaseChanges)databaseChanges).GetLastConnectionStateException();
             }
 
             return null;

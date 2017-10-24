@@ -30,24 +30,19 @@ namespace Lucene.Net.Search
     /// <remarks>http://www.java2s.com/Open-Source/Java-Document/Net/lucene-connector/org/apache/lucene/search/regex/RegexQuery.java.htm</remarks>
     public class RegexQuery : MultiTermQuery, IEquatable<RegexQuery>
     {
+        private Regex _regex;
         public Term Term { get; }
 
-        //Increasing .net regex cache size if not modified by another code path
-        static RegexQuery()
-        {
-            Regex.CacheSize = Regex.CacheSize == 15 ? 50 : Regex.CacheSize;
-
-        }
-
-        public RegexQuery(Term term)
+        public RegexQuery(Term term, Regex regex)
         {
             Term = term;
+            _regex = regex;
         }
 
         /// <summary>Construct the enumeration to be used, expanding the pattern term. </summary>
         protected override FilteredTermEnum GetEnum(IndexReader reader, IState state)
         {
-            return new RegexTermEnum(reader, Term, state);
+            return new RegexTermEnum(reader, Term, state, _regex);
         }
 
         public override string ToString(string field)

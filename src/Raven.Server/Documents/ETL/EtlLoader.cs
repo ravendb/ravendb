@@ -128,7 +128,7 @@ namespace Raven.Server.Documents.ETL
                 if (config.Disabled)
                     continue;
 
-                if (_databaseRecord.Topology.WhoseTaskIsIt(config, _serverStore.IsPassive()) != _serverStore.NodeTag)
+                if (_databaseRecord.Topology.WhoseTaskIsIt(config, _serverStore.Engine.CurrentState) != _serverStore.NodeTag)
                     continue;
 
                 foreach (var transform in config.Transforms)

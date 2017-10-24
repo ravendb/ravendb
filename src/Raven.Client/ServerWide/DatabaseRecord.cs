@@ -97,7 +97,7 @@ namespace Raven.Client.ServerWide
 
             if (lockMode == IndexLockMode.LockedError)
             {
-                throw new IndexOrTransformerAlreadyExistException($"Cannot edit existing index {definition.Name} with lock mode {lockMode}");
+                throw new IndexAlreadyExistException($"Cannot edit existing index {definition.Name} with lock mode {lockMode}");
             }
 
             Indexes[definition.Name] = definition;
@@ -149,6 +149,19 @@ namespace Raven.Client.ServerWide
                     break;
                 }
             }
+        }
+
+        public int GetIndexesCount()
+        {
+            var count = 0;
+
+            if (Indexes != null)
+                count += Indexes.Count;
+
+            if (AutoIndexes != null)
+                count += AutoIndexes.Count;
+
+            return count;
         }
     }
 

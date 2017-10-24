@@ -1383,7 +1383,7 @@ namespace Raven.Client.Documents.Indexes
             if (constantExpression != null && node.Type == typeof(Delegate))
             {
                 var methodInfo = constantExpression.Value as MethodInfo;
-                if (methodInfo != null && methodInfo.DeclaringType == typeof(AbstractCommonApiForIndexesAndTransformers))// a delegate call
+                if (methodInfo != null && methodInfo.DeclaringType == typeof(AbstractCommonApiForIndexes))// a delegate call
                 {
                     Out("((Func<");
                     for (int i = 0; i < methodInfo.GetParameters().Length; i++)
@@ -1422,7 +1422,7 @@ namespace Raven.Client.Documents.Indexes
             }
             if (expression != null)
             {
-                if (typeof(AbstractCommonApiForIndexesAndTransformers).IsAssignableFrom(expression.Type))
+                if (typeof(AbstractCommonApiForIndexes).IsAssignableFrom(expression.Type))
                 {
                     // this is a method that
                     // exists on both the server side and the client side

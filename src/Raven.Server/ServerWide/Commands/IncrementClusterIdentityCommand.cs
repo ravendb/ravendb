@@ -32,12 +32,12 @@ namespace Raven.Server.ServerWide.Commands
             return _itemId ?? (_itemId = GetStorageKey(DatabaseName, Prefix));
         }
 
-        protected override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue, bool isPassive)
+        protected override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue, RachisState state)
         {
             throw new NotImplementedException();
         }
 
-        public override void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, bool isPassive, out object result)
+        public override void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, RachisState state, out object result)
         {
             var identities = context.Transaction.InnerTransaction.ReadTree(ClusterStateMachine.Identities);
             var itemKey = GetItemId();

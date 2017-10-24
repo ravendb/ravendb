@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using Lucene.Net.Analysis;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
@@ -16,6 +17,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Utils;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static.Spatial;
+using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.LuceneIntegration;
 using Sparrow.Json;
@@ -28,11 +30,11 @@ namespace Raven.Server.Documents.Queries
     public static class QueryBuilder
     {
         public static Lucene.Net.Search.Query BuildQuery(JsonOperationContext context, QueryMetadata metadata, QueryExpression whereExpression,
-            BlittableJsonReaderObject parameters, Analyzer analyzer, Func<string, SpatialField> getSpatialField)
+            BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories)
         {
             using (CultureHelper.EnsureInvariantCulture())
             {
-                var luceneQuery = ToLuceneQuery(context, metadata.Query, whereExpression, metadata, parameters, analyzer, getSpatialField);
+                var luceneQuery = ToLuceneQuery(context, metadata.Query, whereExpression, metadata, parameters, analyzer, factories);
 
                 // The parser already throws parse exception if there is a syntax error.
                 // We now return null in the case of a term query that has been fully analyzed, so we need to return a valid query.
@@ -41,7 +43,7 @@ namespace Raven.Server.Documents.Queries
         }
 
         private static Lucene.Net.Search.Query ToLuceneQuery(JsonOperationContext context, Query query, QueryExpression expression, QueryMetadata metadata,
-            BlittableJsonReaderObject parameters, Analyzer analyzer, Func<string, SpatialField> getSpatialField, bool exact = false)
+            BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories, bool exact = false)
         {
             if (expression == null)
                 return new MatchAllDocsQuery();
@@ -135,17 +137,17 @@ namespace Raven.Server.Documents.Queries
                     case OperatorType.AndNot:
                         var andPrefix = where.Operator == OperatorType.AndNot ? LucenePrefixOperator.Minus : LucenePrefixOperator.None;
                         return LuceneQueryHelper.And(
-                            ToLuceneQuery(context, query, where.Left, metadata, parameters, analyzer, getSpatialField, exact),
+                            ToLuceneQuery(context, query, where.Left, metadata, parameters, analyzer, factories, exact),
                             LucenePrefixOperator.None,
-                            ToLuceneQuery(context, query, where.Right, metadata, parameters, analyzer, getSpatialField, exact),
+                            ToLuceneQuery(context, query, where.Right, metadata, parameters, analyzer, factories, exact),
                             andPrefix);
                     case OperatorType.Or:
                     case OperatorType.OrNot:
                         var orPrefix = where.Operator == OperatorType.OrNot ? LucenePrefixOperator.Minus : LucenePrefixOperator.None;
                         return LuceneQueryHelper.Or(
-                            ToLuceneQuery(context, query, where.Left, metadata, parameters, analyzer, getSpatialField, exact),
+                            ToLuceneQuery(context, query, where.Left, metadata, parameters, analyzer, factories, exact),
                             LucenePrefixOperator.None,
-                            ToLuceneQuery(context, query, where.Right, metadata, parameters, analyzer, getSpatialField, exact),
+                            ToLuceneQuery(context, query, where.Right, metadata, parameters, analyzer, factories, exact),
                             orPrefix);
                 }
             }
@@ -228,9 +230,9 @@ namespace Raven.Server.Documents.Queries
                     case MethodType.Search:
                         return HandleSearch(query, me, metadata, parameters, analyzer);
                     case MethodType.Boost:
-                        return HandleBoost(context, query, me, metadata, parameters, analyzer, getSpatialField, exact);
+                        return HandleBoost(context, query, me, metadata, parameters, analyzer, factories, exact);
                     case MethodType.Regex:
-                        return HandleRegex(query, me, metadata, parameters);
+                        return HandleRegex(query, me, metadata, parameters, factories);
                     case MethodType.StartsWith:
                         return HandleStartsWith(query, me, metadata, parameters);
                     case MethodType.EndsWith:
@@ -240,12 +242,12 @@ namespace Raven.Server.Documents.Queries
                     case MethodType.Exists:
                         return HandleExists(query, parameters, me, metadata);
                     case MethodType.Exact:
-                        return HandleExact(context, query, me, metadata, parameters, analyzer, getSpatialField);
+                        return HandleExact(context, query, me, metadata, parameters, analyzer, factories);
                     case MethodType.Within:
                     case MethodType.Contains:
                     case MethodType.Disjoint:
                     case MethodType.Intersects:
-                        return HandleSpatial(query, me, metadata, parameters, methodType, getSpatialField);
+                        return HandleSpatial(query, me, metadata, parameters, methodType, factories.GetSpatialFieldFactory);
                     default:
                         QueryMethod.ThrowMethodNotSupported(methodType, metadata.QueryText, parameters);
                         return null; // never hit
@@ -417,31 +419,35 @@ namespace Raven.Server.Documents.Queries
         }
 
         private static Lucene.Net.Search.Query HandleBoost(JsonOperationContext context, Query query, MethodExpression expression, QueryMetadata metadata,
-            BlittableJsonReaderObject parameters, Analyzer analyzer, Func<string, SpatialField> getSpatialField, bool exact)
+            BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories, bool exact)
         {
             var boost = float.Parse(((ValueExpression)expression.Arguments[1]).Token.Value);
 
-            var q = ToLuceneQuery(context, query, expression.Arguments[0], metadata, parameters, analyzer, getSpatialField, exact);
+            var q = ToLuceneQuery(context, query, expression.Arguments[0], metadata, parameters, analyzer, factories, exact);
             q.Boost = boost;
 
             return q;
         }
 
         private static Lucene.Net.Search.Query HandleRegex(Query query, MethodExpression expression, QueryMetadata metadata,
-            BlittableJsonReaderObject parameters)
+            BlittableJsonReaderObject parameters, QueryBuilderFactories factories)
         {
-
-            var regex = ((ValueExpression)expression.Arguments[1]).Token.Value;
+            if (expression.Arguments.Count != 2)
+                throw new ArgumentException(
+                    $"Regex method was invoked with {expression.Arguments.Count} arguments ({expression})" +
+                    " while it should be invoked with 2 arguments e.g. Regex(foo.Name,\"^[a-z]+?\")");
 
             var fieldName = ExtractIndexFieldName(query, parameters, expression.Arguments[0], metadata);
             var (value, valueType) = GetValue(fieldName, query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
-
-            if (valueType != ValueTokenType.String)
+            if (valueType != ValueTokenType.String && !(valueType == ValueTokenType.Parameter && IsStringFamily(value)))
                 ThrowMethodExpectsArgumentOfTheFollowingType("regex", ValueTokenType.String, valueType, metadata.QueryText, parameters);
-
             var valueAsString = GetValueAsString(value);
-            //TODO: return always false query if string is empty or null
-            return new RegexQuery(new Term(fieldName, valueAsString));            
+            return new RegexQuery(new Term(fieldName, valueAsString), factories.GetRegexFactory(valueAsString));            
+        }
+
+        private static bool IsStringFamily(object value)
+        {
+            return value is string || value is StringSegment || value is LazyStringValue;
         }
 
         private static Lucene.Net.Search.Query HandleSearch(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters,
@@ -637,9 +643,9 @@ namespace Raven.Server.Documents.Queries
         }
 
         private static Lucene.Net.Search.Query HandleExact(JsonOperationContext context, Query query, MethodExpression expression, QueryMetadata metadata,
-            BlittableJsonReaderObject parameters, Analyzer analyzer, Func<string, SpatialField> getSpatialField)
+            BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories)
         {
-            return ToLuceneQuery(context, query, expression.Arguments[0], metadata, parameters, analyzer, getSpatialField, exact: true);
+            return ToLuceneQuery(context, query, expression.Arguments[0], metadata, parameters, analyzer, factories, exact: true);
         }
 
         public static IEnumerable<(object Value, ValueTokenType Type)> GetValues(string fieldName, Query query, QueryMetadata metadata,

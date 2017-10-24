@@ -195,6 +195,34 @@ class genUtils {
 
         return message.substr(0, 256) + "...";
     }
+
+    static sortAlphaNumeric(a: string, b: string): number {
+        const aInt = parseInt(a, 10);
+        const bInt = parseInt(b, 10);
+
+        const aIsNan = isNaN(aInt);
+        const bIsNan = isNaN(bInt);
+        if (aIsNan && bIsNan) {
+            const reA = /[0-9]+$/g;
+            const aA = a.replace(reA, "");
+            const bA = b.replace(reA, "");
+            if (aA.toLowerCase() === bA.toLowerCase()) {
+                const reN = /[^0-9]/g;
+                const aN = parseInt(a.replace(reN, ""), 10);
+                const bN = parseInt(b.replace(reN, ""), 10);
+                return aN === bN ? 0 : aN > bN ? 1 : -1;
+            }
+
+            return a.toLowerCase() > b.toLowerCase() ? 1 : -1;
+
+        } else if (aIsNan) { // a is not a number
+            return 1;
+        } else if (bIsNan) { // b is not a number
+            return -1;
+        }
+
+        return aInt > bInt ? 1 : -1;
+    }
     
     static formatAsCommaSeperatedString(input: number, digitsAfterDecimalPoint: number) {
         const parts = input.toString().split(".");

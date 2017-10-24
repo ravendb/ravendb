@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 using Lucene.Net.Analysis;
 using Lucene.Net.Search;
 using Raven.Client;
@@ -26,10 +27,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         protected readonly string _indexName;
 
         protected readonly Logger _logger;
+        internal Index _index;
 
-        protected IndexOperationBase(string indexName, Logger logger)
+        protected IndexOperationBase(Index index, Logger logger)
         {
-            _indexName = indexName;
+            _index = index;
+            _indexName = index.Name;
             _logger = logger;
         }
 
@@ -138,8 +141,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     //    }
                     //    return parent.CreateAnalyzer(newAnalyzer, toDispose, true);
                     //});
-
-                    documentQuery = QueryBuilder.BuildQuery(context, metadata, whereExpression, parameters, analyzer, getSpatialField);
+                    documentQuery = QueryBuilder.BuildQuery(context, metadata, whereExpression, parameters, analyzer, _index.GetQueryBuilderFactories());
                 }
                 finally
                 {

@@ -30,12 +30,12 @@ namespace Raven.Server.ServerWide.Commands
             throw new NotSupportedException();
         }
 
-        protected override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue, bool isPassive)
+        protected override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue, RachisState state)
         {
             throw new NotSupportedException();
         }
 
-        public override void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, bool isPassive, out object result)
+        public override void Execute(TransactionOperationContext context, Table items, long index, DatabaseRecord record, RachisState state, out object result)
         {
             var resultDict = new Dictionary<string, long>();
             var identities = context.Transaction.InnerTransaction.ReadTree(ClusterStateMachine.Identities);

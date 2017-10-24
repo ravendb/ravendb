@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -62,10 +63,13 @@ namespace Raven.Server.Documents.Handlers
                 return;
             _cache.Push(cmds);
         }
+        
 
         public static async Task<ArraySegment<CommandData>> BuildCommandsAsync(JsonOperationContext ctx, Stream stream, DocumentDatabase database, ServerStore serverStore)
         {
             CommandData[] cmds = Empty;
+            var identities = new List<string>();
+            var positionInListToCommandIndex = new Dictionary<int, int>();
 
             int index = -1;
             var state = new JsonParserState();
@@ -121,15 +125,25 @@ namespace Raven.Server.Documents.Handlers
                                 false
                             );
                     }
-
+                    
                     if (commandData.Type == CommandType.PUT && string.IsNullOrEmpty(commandData.Id) == false && commandData.Id[commandData.Id.Length - 1] == '|')
                     {
-                        var (_, id, _) = await serverStore.GenerateClusterIdentityAsync(commandData.Id, database.Name);
-                        commandData.Id = id;
+                        // queue identities requests in order to send them at once to the leader (using List for simplicity)
+                        identities.Add(commandData.Id);
+                        positionInListToCommandIndex[identities.Count - 1] = index;
                     }
 
                     cmds[index] = commandData;
                 }
+
+                var newIds = await serverStore.GenerateClusterIdentitiesBatchAsync(database.Name, identities);
+                Debug.Assert(newIds.Count == identities.Count);
+
+                foreach (var item in positionInListToCommandIndex)
+                {
+                    cmds[item.Value].Id = cmds[item.Value].Id.Substring(0, cmds[item.Value].Id.Length - 1) + "/" + newIds[item.Key];
+                }
+                
             }
             return new ArraySegment<CommandData>(cmds, 0, index + 1);
         }

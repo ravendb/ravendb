@@ -86,7 +86,7 @@ namespace Raven.Server.Web.System
             foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(context, SubscriptionState.SubscriptionPrefix(databaseRecord.DatabaseName)))
             {
                 var subscriptionState = JsonDeserializationClient.SubscriptionState(keyValue.Value);
-                var tag = databaseRecord.Topology.WhoseTaskIsIt(subscriptionState, ServerStore.IsPassive());
+                var tag = databaseRecord.Topology.WhoseTaskIsIt(subscriptionState, ServerStore.Engine.CurrentState);
 
                 yield return new OngoingTaskSubscription
                 {
@@ -121,7 +121,7 @@ namespace Raven.Server.Web.System
         {
             NodeId responsibale = null;
 
-            var tag = dbTopology.WhoseTaskIsIt(watcher, ServerStore.IsPassive());
+            var tag = dbTopology.WhoseTaskIsIt(watcher, ServerStore.Engine.CurrentState);
             if (tag != null)
             {
                 responsibale = new NodeId
@@ -171,7 +171,7 @@ namespace Raven.Server.Web.System
 
             foreach (var backupConfiguration in databaseRecord.PeriodicBackups)
             {
-                var tag = dbTopology.WhoseTaskIsIt(backupConfiguration, ServerStore.IsPassive());
+                var tag = dbTopology.WhoseTaskIsIt(backupConfiguration, ServerStore.Engine.CurrentState);
 
                 var backupDestinations = GetBackupDestinations(backupConfiguration);
 
@@ -224,7 +224,7 @@ namespace Raven.Server.Web.System
             {
                 foreach (var ravenEtl in databaseRecord.RavenEtls)
                 {
-                    var tag = dbTopology.WhoseTaskIsIt(ravenEtl, ServerStore.IsPassive());
+                    var tag = dbTopology.WhoseTaskIsIt(ravenEtl, ServerStore.Engine.CurrentState);
 
                     var taskState = GetEtlTaskState(ravenEtl);
 
@@ -283,7 +283,7 @@ namespace Raven.Server.Web.System
             {
                 foreach (var sqlEtl in databaseRecord.SqlEtls)
                 {
-                    var tag = dbTopology.WhoseTaskIsIt(sqlEtl, ServerStore.IsPassive());
+                    var tag = dbTopology.WhoseTaskIsIt(sqlEtl, ServerStore.Engine.CurrentState);
 
                     var taskState = GetEtlTaskState(sqlEtl);
 
@@ -361,7 +361,7 @@ namespace Raven.Server.Web.System
                                 break;
                             }
 
-                            tag = dbTopology?.WhoseTaskIsIt(backupConfiguration, ServerStore.IsPassive());
+                            tag = dbTopology?.WhoseTaskIsIt(backupConfiguration, ServerStore.Engine.CurrentState);
                             var backupDestinations = GetBackupDestinations(backupConfiguration);
                             var backupStatus = Database.PeriodicBackupRunner.GetBackupStatus(key);
                             var nextBackup = Database.PeriodicBackupRunner.GetNextBackupDetails(record, backupConfiguration, backupStatus);
@@ -434,7 +434,7 @@ namespace Raven.Server.Web.System
                             }
 
                             var subscriptionState = JsonDeserializationClient.SubscriptionState(doc);
-                            tag = dbTopology?.WhoseTaskIsIt(subscriptionState, ServerStore.IsPassive());
+                            tag = dbTopology?.WhoseTaskIsIt(subscriptionState, ServerStore.Engine.CurrentState);
 
                             var subscriptionStateInfo = new SubscriptionStateWithNodeDetails
                             {
@@ -564,7 +564,7 @@ namespace Raven.Server.Web.System
                 using (context.OpenReadTransaction())
                 {
                     var record = ServerStore.Cluster.ReadDatabase(context, Database.Name);
-                    responsibleNode = record.Topology.WhoseTaskIsIt(watcher, ServerStore.IsPassive());
+                    responsibleNode = record.Topology.WhoseTaskIsIt(watcher, ServerStore.Engine.CurrentState);
                 }
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;

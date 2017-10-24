@@ -1,6 +1,7 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 
 import databaseInfo = require("models/resources/info/databaseInfo");
+import generalUtils = require("common/generalUtils");
 
 class databasesInfo {
 
@@ -13,7 +14,7 @@ class databasesInfo {
         const databases = dto.Databases.map(db => new databaseInfo(db));
 
         const dbs = [...databases];
-        dbs.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+        dbs.sort((a, b) => generalUtils.sortAlphaNumeric(a.name, b.name));
 
         this.sortedDatabases(dbs);
 
@@ -30,11 +31,10 @@ class databasesInfo {
         if (databaseToUpdate) {
             databaseToUpdate.update(newDatabaseInfo);
         } else { // new database - create instance of it
-            let dto = newDatabaseInfo as Raven.Client.ServerWide.Operations.DatabaseInfo;
-            let databaseToAdd = new databaseInfo(dto);
-
-            let locationToInsert = _.sortedIndexBy(this.sortedDatabases(), databaseToAdd, function (item) { return item.name.toLowerCase() });
-            this.sortedDatabases.splice(locationToInsert, 0, databaseToAdd);
+            const dto = newDatabaseInfo as Raven.Client.ServerWide.Operations.DatabaseInfo;
+            const databaseToAdd = new databaseInfo(dto);
+            this.sortedDatabases.push(databaseToAdd);
+            this.sortedDatabases.sort((a, b) => generalUtils.sortAlphaNumeric(a.name, b.name));
         }
     }
 
