@@ -2180,7 +2180,6 @@ namespace Raven.Server.Documents.Indexes
 
         private static readonly TimeSpan DefaultWaitForNonStaleResultsTimeout = TimeSpan.FromSeconds(15); // this matches default timeout from client
 
-        private QueryBuilderFactories _queryBuilderFactories;
         private readonly ConcurrentLruRegexCache _regexCache = new ConcurrentLruRegexCache(1024);
 
         private static bool WillResultBeAcceptable(bool isStale, IndexQueryBase<BlittableJsonReaderObject> query, AsyncWaitForIndexing wait)
@@ -2599,16 +2598,11 @@ namespace Raven.Server.Documents.Indexes
 
         internal QueryBuilderFactories GetQueryBuilderFactories()
         {
-            //We don't want to always generate this object but if we generate it mutiple times at startup it isn't really importent.
-            if (_queryBuilderFactories == null)
+            return new QueryBuilderFactories
             {
-                _queryBuilderFactories = new QueryBuilderFactories
-                {
-                    GetSpatialFieldFactory = GetOrAddSpatialField,
-                    GetRegexFactory = GetOrAddRegex
-                };
-            }
-            return _queryBuilderFactories;
+                GetSpatialFieldFactory = GetOrAddSpatialField,
+                GetRegexFactory = GetOrAddRegex
+            };
         }
 
         private Regex GetOrAddRegex(string arg)

@@ -45,8 +45,11 @@ namespace Raven.Server.Documents.Indexes
             // here we want to avoid updating this using Interlocked on a highly
             // used query, so we limit it to once per 10,000 ticks, which should
             // still be good enough if we need to start evicting
-            while (resultTimestamp - timestamp > 10_000)
-                resultTimestamp = Interlocked.CompareExchange(ref result.Timestamp, timestamp, resultTimestamp);
+            if (timestamp - resultTimestamp > 10_000)//if our snapshot is over 10,000 ticks old
+            {
+                //If we fail this interlocked operation, it means that some other thread already updated the timestamp
+                Interlocked.CompareExchange(ref result.Timestamp, timestamp, resultTimestamp);
+            }
         }
 
         private Regex GetUnlikely(string pattern)
