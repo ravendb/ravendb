@@ -17,6 +17,7 @@ import computeIndexingProgressCommand = require("commands/database/index/compute
 import observableMap = require("common/helpers/observableMap");
 import indexProgress = require("models/database/index/indexProgress");
 import indexStalenessReasons = require("viewmodels/database/indexes/indexStalenessReasons");
+import generalUtils = require("common/generalUtils");
 
 type indexGroup = {
     entityName: string;
@@ -94,10 +95,10 @@ class indexes extends viewModelBase {
         this.searchText.throttle(200).subscribe(() => this.filterIndexes());
 
         this.sortedGroups = ko.pureComputed<indexGroup[]>(() => {
-            const groups = this.indexGroups().slice(0).sort((l, r) => l.entityName.toLowerCase() > r.entityName.toLowerCase() ? 1 : -1);
+            const groups = this.indexGroups().slice(0).sort((l, r) => generalUtils.sortAlphaNumeric(l.entityName, r.entityName));
 
             groups.forEach((group: { entityName: string; indexes: KnockoutObservableArray<index> }) => {
-                group.indexes(group.indexes().slice(0).sort((l: index, r: index) => l.name.toLowerCase() > r.name.toLowerCase() ? 1 : -1));
+                group.indexes(group.indexes().slice(0).sort((l, r) => generalUtils.sortAlphaNumeric(l.name, r.name)));
             });
 
             return groups;

@@ -105,7 +105,9 @@ class driveUsage {
                 this.items.push(new driveUsageDetails(incomingItem));
             }
         });
-        
+
+        this.items.sort((a, b) => generalUtils.sortAlphaNumeric(a.database(), b.database()));
+
         if (this.gridController()) {
             this.gridController().reset(false);
         }
