@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -62,10 +63,13 @@ namespace Raven.Server.Documents.Handlers
                 return;
             _cache.Push(cmds);
         }
+        
 
         public static async Task<ArraySegment<CommandData>> BuildCommandsAsync(JsonOperationContext ctx, Stream stream, DocumentDatabase database, ServerStore serverStore)
         {
             CommandData[] cmds = Empty;
+            var identities = new List<string>();
+            
 
             int index = -1;
             var state = new JsonParserState();
@@ -124,12 +128,27 @@ namespace Raven.Server.Documents.Handlers
 
                     if (commandData.Type == CommandType.PUT && string.IsNullOrEmpty(commandData.Id) == false && commandData.Id[commandData.Id.Length - 1] == '|')
                     {
-                        var (_, id, _) = await serverStore.GenerateClusterIdentityAsync(commandData.Id, database.Name);
-                        commandData.Id = id;
+                        identities.Add(commandData.Id);
                     }
 
                     cmds[index] = commandData;
                 }
+
+                // send { 'users': 20, 'workers': 10 }
+                // recv { 'users': 1000, 'workers': 2000 }
+                // rslt users=1000-1019, workers=2000-2009
+                var newIds = await serverStore.GenerateClusterIdentitiesBatchAsync(database.Name, identities);
+                Debug.Assert(newIds.Count == identities.Count);
+
+                for (var i = 0; i < cmds.Length; i++)
+                {
+                    if (cmds[i].Type == CommandType.PUT && string.IsNullOrEmpty(cmds[i].Id) == false && cmds[i].Id[cmds[i].Id.Length - 1] == '|')
+                    {
+                        cmds[i].Id = cmds[i].Id.Substring(0, cmds[i].Id.Length - 1) + "/" + newIds.First.Value;
+                        newIds.RemoveFirst();
+                    }
+                }
+                Debug.Assert(newIds.Count == 0);
             }
             return new ArraySegment<CommandData>(cmds, 0, index + 1);
         }

@@ -57,5 +57,67 @@ namespace SlowTests.Core.Commands
                 }
             }
         }
+
+        [Fact]
+        public async Task CanDoBatchOperationsWithBatchIdentityRequest()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var commands = store.Commands())
+                {
+                    await commands.BatchAsync(new List<ICommandData>
+                    {
+                        // identities: users/1 users/2
+                        new PutCommandData("users|", null, new DynamicJsonValue
+                        {
+                            ["Name"] = "James1"
+                        }),
+                        new PutCommandData("users|", null, new DynamicJsonValue
+                        {
+                            ["Name"] = "James2"
+                        }),
+                        // mix some regular docs:
+                        new PutCommandData("users/123", null, new DynamicJsonValue
+                        {
+                            ["Name"] = "James123"
+                        }),
+                        new PatchCommandData("users/1-A", null, new PatchRequest
+                        {
+                            Script = "this.Name = 'Nhoj';"
+                        }, null),
+                        new DeleteCommandData("users/2-A", null),
+
+                        // identities: users/3 users/4
+                        new PutCommandData("users|", null, new DynamicJsonValue
+                        {
+                            ["Name"] = "James3"
+                        }),
+                        new PutCommandData("users|", null, new DynamicJsonValue
+                        {
+                            ["Name"] = "James4"
+                        }),
+                    });
+
+                    dynamic multiLoadResult = await commands.GetAsync(0, 25);
+
+                    Assert.Equal(5, multiLoadResult.Count);
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var user1 = await session.LoadAsync<User>("users/1");
+                    var user2 = await session.LoadAsync<User>("users/2");
+                    var user3 = await session.LoadAsync<User>("users/3");
+                    var user4 = await session.LoadAsync<User>("users/4");
+                    var user123 = await session.LoadAsync<User>("users/123");
+
+                    Assert.Equal("James1", user1.Name);
+                    Assert.Equal("James2", user2.Name);
+                    Assert.Equal("James3", user3.Name);
+                    Assert.Equal("James4", user4.Name);
+                    Assert.Equal("James123", user123.Name);
+                }
+            }
+        }  
     }
 }

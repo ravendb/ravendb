@@ -148,6 +148,16 @@ namespace Raven.Server.ServerWide
                         SetValueForTypedDatabaseCommand(context, type, cmd, index, leader, out object result);
                         leader?.SetStateOf(index, result);
                         break;
+                    case nameof(IncrementClusterIdentitiesBatchCommand):
+                        if (ValidatePropertyExistence(cmd, nameof(IncrementClusterIdentitiesBatchCommand), nameof(IncrementClusterIdentitiesBatchCommand.DatabaseName), out errorMessage) == false)
+                        {
+                            NotifyLeaderAboutError(index, leader, new InvalidDataException(errorMessage));
+                            return;
+                        }
+
+                        SetValueForTypedDatabaseCommand(context, type, cmd, index, leader, out result);
+                        leader?.SetStateOf(index, result);
+                        break;
                     case nameof(UpdateClusterIdentityCommand):
                         if (ValidatePropertyExistence(cmd, nameof(UpdateClusterIdentityCommand), nameof(UpdateClusterIdentityCommand.Identities), out errorMessage) == false)
                         {
