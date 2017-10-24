@@ -94,11 +94,13 @@ namespace Raven.Client.Documents.Changes
             return taskedObservable;
         }
 
-        public Exception GetLastConnectionStateException(string database)
+        public Exception GetLastConnectionStateException()
         {
-            if (_counters.TryGetValue(database, out DatabaseConnectionState databaseConnectionState))
+            foreach (var counter in _counters)
             {
-                return databaseConnectionState.LastException;
+                var valueLastException = counter.Value.LastException;
+                if (valueLastException != null)
+                    return valueLastException;
             }
 
             return null;
