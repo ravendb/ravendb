@@ -68,8 +68,8 @@ namespace Raven.Server.Documents.Handlers
         public static async Task<ArraySegment<CommandData>> BuildCommandsAsync(JsonOperationContext ctx, Stream stream, DocumentDatabase database, ServerStore serverStore)
         {
             CommandData[] cmds = Empty;
-            var identities = new List<string>();
-            var positionInListToCommandIndex = new Dictionary<int, int>();
+            List<string> identities = null;
+            List<int> positionInListToCommandIndex = null;
 
             int index = -1;
             var state = new JsonParserState();
@@ -128,6 +128,11 @@ namespace Raven.Server.Documents.Handlers
                     
                     if (commandData.Type == CommandType.PUT && string.IsNullOrEmpty(commandData.Id) == false && commandData.Id[commandData.Id.Length - 1] == '|')
                     {
+                        if (identities == null)
+                        {
+                            identities = new List<string>();
+                            positionInListToCommandIndex = new List<int>();
+                        }
                         // queue identities requests in order to send them at once to the leader (using List for simplicity)
                         identities.Add(commandData.Id);
                         positionInListToCommandIndex[identities.Count - 1] = index;
@@ -136,16 +141,29 @@ namespace Raven.Server.Documents.Handlers
                     cmds[index] = commandData;
                 }
 
-                var newIds = await serverStore.GenerateClusterIdentitiesBatchAsync(database.Name, identities);
-                Debug.Assert(newIds.Count == identities.Count);
-
-                foreach (var item in positionInListToCommandIndex)
+                if (identities != null)
                 {
-                    cmds[item.Value].Id = cmds[item.Value].Id.Substring(0, cmds[item.Value].Id.Length - 1) + "/" + newIds[item.Key];
+                    await GetIdentitiesValues(database, 
+                        serverStore, 
+                        identities, 
+                        positionInListToCommandIndex, 
+                        cmds);
                 }
-                
             }
             return new ArraySegment<CommandData>(cmds, 0, index + 1);
+        }
+
+        private static async Task GetIdentitiesValues(DocumentDatabase database, ServerStore serverStore, List<string> identities, List<int> positionInListToCommandIndex, CommandData[] cmds)
+        {
+            var newIds = await serverStore.GenerateClusterIdentitiesBatchAsync(database.Name, identities);
+            Debug.Assert(newIds.Count == identities.Count);
+
+            for (var index = 0; index < positionInListToCommandIndex.Count; index++)
+            {
+                var value = positionInListToCommandIndex[index];
+                cmds[value].Id = cmds[value].Id.Substring(0, cmds[value].Id.Length - 1) + "/" +
+                                 newIds[index];
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
