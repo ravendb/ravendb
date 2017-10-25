@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                     }
                 }
 
-                fields.Add(name);
+                fields.Add(name.TrimStart('@'));
             }
 
             return fields;

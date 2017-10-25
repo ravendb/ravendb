@@ -1688,7 +1688,9 @@ namespace Raven.Client.Documents.Indexes
                 }
                 if (node.Members?[i] != null)
                 {
-                    Out(node.Members[i].Name);
+                    string name = node.Members[i].Name;
+                    name = KeywordsInCSharp.Contains(name) ? $"@{name}" : name;
+                    Out(name);
                     Out(" = ");
 
                     var constantExpression = node.Arguments[i] as ConstantExpression;
