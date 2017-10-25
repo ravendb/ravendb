@@ -782,8 +782,9 @@ namespace Voron.Impl
             CommitStage3_DisposeTransactionResources();
         }
 
-        internal Task AsyncCommit;
+        internal Task<bool> AsyncCommit;
         private LowLevelTransaction _asyncCommitNextTransaction;
+        private static readonly Task<bool> NoWriteToJournalRequiredTask = Task.FromResult(false);
 
         /// <summary>
         /// This begins an async commit and starts a new transaction immediately.
@@ -808,8 +809,8 @@ namespace Voron.Impl
                 );
             _asyncCommitNextTransaction = nextTx;
             AsyncCommit = writeToJournalIsRequired
-                  ? Task.Run(() => { CommitStage2_WriteToJournal(); })
-                  : Task.CompletedTask;
+                  ? Task.Run(() => { CommitStage2_WriteToJournal(); return true; })
+                  : NoWriteToJournalRequiredTask;
 
             try
             {
@@ -858,7 +859,10 @@ namespace Voron.Impl
             }
 
             AsyncCommit.Wait();
-            Environment.LastWorkTime = DateTime.UtcNow;
+
+            if (AsyncCommit.Result)
+                Environment.LastWorkTime = DateTime.UtcNow;
+
             CommitStage3_DisposeTransactionResources();
             BeforeCommitFinalization?.Invoke(this);
         }
