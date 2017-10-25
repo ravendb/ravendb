@@ -35,7 +35,21 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
             using (var store = GetDocumentStore())
             {
                 var exception = await Assert.ThrowsAsync<IndexInvalidException>(async () => await store.ExecuteIndexAsync(new MonthlySelfReduceIndex()));
-                Assert.Contains("The collection name (DailyInvoices) cannot be used as this index (MonthlySelfReduceIndex) is mapping this collection and this will result in an infinite loop.", exception.Message);
+                Assert.Contains("It is forbidden to create the 'MonthlySelfReduceIndex' index " +
+                                "which would output reduce results to documents in the 'DailyInvoices' collection, " +
+                                "as this index is mapping or referencing the 'DailyInvoices' collection and this will result in an infinite loop.", exception.Message);
+            }
+        }
+
+        [Fact]
+        public async Task ForbidOutputReduceDocumentsOnTheDocumentsWeLoadInMap()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var exception = await Assert.ThrowsAsync<IndexInvalidException>(async () => await store.ExecuteIndexAsync(new InvoiceSelfReduceLoadDocumentIndex()));
+                Assert.Contains("It is forbidden to create the 'InvoiceSelfReduceLoadDocumentIndex' index " +
+                                "which would output reduce results to documents in the 'Invoices' collection, " +
+                                "as this index is mapping or referencing the 'Invoices' collection and this will result in an infinite loop.", exception.Message);
             }
         }
 
@@ -48,6 +62,24 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                 await store.ExecuteIndexAsync(new MonthlyInvoicesIndex());
                 var exception = await Assert.ThrowsAsync<IndexInvalidException>(async () => await store.ExecuteIndexAsync(new YearlyToDailyInfiniteLoopIndex()));
                 Assert.Contains($"DailyInvoicesIndex: Invoices => DailyInvoices{Environment.NewLine}" +
+                                $"MonthlyInvoicesIndex: DailyInvoices => MonthlyInvoices{Environment.NewLine}" +
+                                $"--> YearlyToDailyInfiniteLoopIndex: MonthlyInvoices => *Invoices*", exception.Message);
+            }
+        }
+
+        [Fact]
+        public async Task ForbidOutputReduceDocumentsInAInfiniteLoopCausedByLoadDocument()
+        {
+            using (var store = GetDocumentStore())
+            {
+                await store.ExecuteIndexAsync(new DailyInvoicesIndexLoadDocument());
+                await store.ExecuteIndexAsync(new MonthlyInvoicesIndex());
+                var exception = await Assert.ThrowsAsync<IndexInvalidException>(async () => await store.ExecuteIndexAsync(new YearlyToDailyInfiniteLoopIndex()));
+                Assert.Contains($"It is forbidden to create the 'YearlyToDailyInfiniteLoopIndex' index " +
+                                "which would output reduce results to documents in the 'Invoices' collection, " +
+                                "as 'Invoices' collection is consumed by other index in a way that would lead to an infinite loop." +
+                                $"{Environment.NewLine}" +
+                                $"DailyInvoicesIndexLoadDocument: InvoiceHolders,Invoices => DailyInvoices{Environment.NewLine}" +
                                 $"MonthlyInvoicesIndex: DailyInvoices => MonthlyInvoices{Environment.NewLine}" +
                                 $"--> YearlyToDailyInfiniteLoopIndex: MonthlyInvoices => *Invoices*", exception.Message);
             }
@@ -153,6 +185,12 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
             public DateTime IssuedAt { get; set; }
         }
 
+        public class InvoiceHolder
+        {
+            public string Id { get; set; }
+            public string InvoiceId { get; set; }
+        }
+
         public class DailyInvoice
         {
             public DateTime Date { get; set; }
@@ -178,6 +216,33 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
             {
                 Map = invoices =>
                     from invoice in invoices
+                    select new DailyInvoice
+                    {
+                        Date = invoice.IssuedAt.Date,
+                        Amount = invoice.Amount
+                    };
+
+                Reduce = results =>
+                    from r in results
+                    group r by r.Date
+                    into g
+                    select new DailyInvoice
+                    {
+                        Date = g.Key,
+                        Amount = g.Sum(x => x.Amount)
+                    };
+
+                OutputReduceToCollection = "DailyInvoices";
+            }
+        }
+
+        public class DailyInvoicesIndexLoadDocument : AbstractIndexCreationTask<InvoiceHolder, DailyInvoice>
+        {
+            public DailyInvoicesIndexLoadDocument()
+            {
+                Map = invoiceHolders =>
+                    from invoiceHolder in invoiceHolders
+                    let invoice = LoadDocument<Invoice>(invoiceHolder.InvoiceId)
                     select new DailyInvoice
                     {
                         Date = invoice.IssuedAt.Date,
@@ -273,6 +338,33 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                     };
 
                 OutputReduceToCollection = "DailyInvoices";
+            }
+        }
+
+        private class InvoiceSelfReduceLoadDocumentIndex : AbstractIndexCreationTask<InvoiceHolder, Invoice>
+        {
+            public InvoiceSelfReduceLoadDocumentIndex()
+            {
+                Map = invoiceHolders =>
+                    from invoiceHolder in invoiceHolders
+                    let invoice = LoadDocument<Invoice>(invoiceHolder.InvoiceId)
+                    select new Invoice
+                    {
+                        IssuedAt = invoice.IssuedAt,
+                        Amount = invoice.Amount
+                    };
+
+                Reduce = results =>
+                    from r in results
+                    group r by r.IssuedAt
+                    into g
+                    select new Invoice
+                    {
+                        IssuedAt = g.Key,
+                        Amount = g.Sum(x => x.Amount)
+                    };
+
+                OutputReduceToCollection = "Invoices";
             }
         }
 
