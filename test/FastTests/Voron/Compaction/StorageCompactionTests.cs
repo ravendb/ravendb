@@ -219,7 +219,7 @@ namespace FastTests.Voron.Compaction
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-8715, change when report format is finalized")]
         public void ShouldReportProgress()
         {
             using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))

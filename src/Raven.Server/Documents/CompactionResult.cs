@@ -8,47 +8,27 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents
 {
-    public abstract class CompactionResultBase
-    {
-        public virtual string Name { get; set; }
-        public virtual long SizeBeforeCompactionInMb { get; set; }
-        public virtual long SizeAfterCompactionInMb { get; set; }
-        public virtual long TreeTotal { get; set; }
-
-        public virtual DynamicJsonValue ToJson()
-        {
-            return new DynamicJsonValue(GetType())
-            {
-                [nameof(Name)] = Name,
-                [nameof(SizeBeforeCompactionInMb)] = SizeBeforeCompactionInMb,
-                [nameof(SizeAfterCompactionInMb)] = SizeAfterCompactionInMb,
-                [nameof(TreeTotal)] = TreeTotal
-            };
-        }
-    }
-
     public class CompactionResult : CompactionProgressBase, IOperationResult, IOperationProgress
     {
-        private readonly string _name;
         public long SizeBeforeCompactionInMb { get; set; }
         public long SizeAfterCompactionInMb { get; set; }
         private readonly List<string> _messages;
-        protected CompactionProgress _progress;
-        protected readonly Dictionary<string, CompactionProgressBase> _indexesResults;
 
         public CompactionResult(string name)
         {
-            _name = string.IsNullOrEmpty(name) ? string.Empty : name;
+            Name = string.IsNullOrEmpty(name) ? string.Empty : name;
             _messages = new List<string>();
-            _progress = new CompactionProgress(this);
-            _indexesResults = new Dictionary<string, CompactionProgressBase>();
+            Progress = new CompactionProgress(this);
+            IndexesResults = new Dictionary<string, CompactionProgressBase>();
         }
 
         public override string Message { get; set; }
 
-        public CompactionProgress Progress => _progress;
-        public string Name => _name;
-        public Dictionary<string, CompactionProgressBase> IndexesResults => _indexesResults;
+        public CompactionProgress Progress { get; }
+
+        public string Name { get; }
+
+        public Dictionary<string, CompactionProgressBase> IndexesResults { get; }
 
         public IReadOnlyList<string> Messages => _messages;
 
@@ -82,7 +62,7 @@ namespace Raven.Server.Documents
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
-            json[nameof(Name)] = _name;
+            json[nameof(Name)] = Name;
             json[nameof(SizeBeforeCompactionInMb)] = SizeBeforeCompactionInMb;
             json[nameof(SizeAfterCompactionInMb)] = SizeAfterCompactionInMb;
             json[nameof(Messages)] = Messages;
