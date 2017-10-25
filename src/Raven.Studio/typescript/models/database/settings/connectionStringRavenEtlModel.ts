@@ -98,8 +98,6 @@ class connectionStringRavenEtlModel extends connectionStringModel {
     }   
 
     addDiscoveryUrlWithBlink() { 
-        this.inputUrl().validationGroup.isValid();        
-        
         if ( !_.includes(this.topologyDiscoveryUrls(), this.inputUrl())) {
             this.topologyDiscoveryUrls.unshift(new discoveryUrl(this.inputUrl().discoveryUrlName()));
             this.inputUrl().discoveryUrlName("");
