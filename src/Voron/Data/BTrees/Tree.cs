@@ -110,7 +110,7 @@ namespace Voron.Data.BTrees
                 ThrowInvalidTreeCreateType();
 
             if (llt.Flags != TransactionFlags.ReadWrite)
-                throw new ArgumentException("Cannot create a tree in a read only transaction");
+                ThrowCannotCreatTreeInReadTx();
 
             var newPage = newPageAllocator?.AllocateSinglePage(0) ?? llt.AllocatePage(1);
 
@@ -131,6 +131,11 @@ namespace Voron.Data.BTrees
 
             tree.State.RecordNewPage(newRootPage, 1);
             return tree;
+        }
+
+        private static void ThrowCannotCreatTreeInReadTx()
+        {
+            throw new ArgumentException("Cannot create a tree in a read only transaction");
         }
 
         private static void ThrowInvalidTreeCreateType()

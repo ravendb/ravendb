@@ -28,7 +28,8 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                 foreach (var collection in step.DocumentsStorage.RevisionsStorage.GetCollections(step.ReadTx))
                 {
                     var collectionName = new CollectionName(collection);
-                    var readTable = step.DocumentsStorage.RevisionsStorage.EnsureRevisionTableCreated(step.ReadTx, collectionName);
+                    var tableName = collectionName.GetTableName(CollectionTableType.Revisions);
+                    var readTable = step.ReadTx.OpenTable(RevisionsSchema, tableName);
                     if (readTable == null)
                         continue;
                     
