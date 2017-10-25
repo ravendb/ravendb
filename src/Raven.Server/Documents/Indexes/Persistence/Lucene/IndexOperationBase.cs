@@ -141,7 +141,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     //    }
                     //    return parent.CreateAnalyzer(newAnalyzer, toDispose, true);
                     //});
-                    documentQuery = QueryBuilder.BuildQuery(context, metadata, whereExpression, parameters, analyzer, _index.GetQueryBuilderFactories());
+                    documentQuery = QueryBuilder.BuildQuery(context, metadata, whereExpression, parameters, analyzer, _index.QueryBuilderFactories);
                 }
                 finally
                 {
