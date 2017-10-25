@@ -65,6 +65,9 @@ namespace Raven.Server.Documents.Queries
             if (string.Equals(methodName, "point", StringComparison.OrdinalIgnoreCase))
                 return MethodType.Point;
 
+            if (string.Equals(methodName, "moreLikeThis", StringComparison.OrdinalIgnoreCase))
+                return MethodType.MoreLikeThis;
+
             if (throwIfNoMatch == false)
                 return MethodType.Unknown;
 

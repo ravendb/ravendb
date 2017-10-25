@@ -4,6 +4,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using FastTests;
 using Lucene.Net.Analysis;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Xunit;
@@ -31,15 +32,14 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var list = session
-                        .Advanced
-                        .MoreLikeThis<Movie>(new MoreLikeThisQuery
+                        .Query<Movie, MovieIndex>()
+                        .MoreLikeThis(x => x.Id == id, new MoreLikeThisOptions
                         {
-                            Query = $"FROM INDEX '{new MovieIndex().IndexName}'",
-                            DocumentId = id,
                             Fields = new[] { "Cast" },
                             MinimumTermFrequency = 1,
                             MinimumDocumentFrequency = 2
-                        });
+                        })
+                        .ToList();
 
                     Assert.NotEmpty(list);
                 }

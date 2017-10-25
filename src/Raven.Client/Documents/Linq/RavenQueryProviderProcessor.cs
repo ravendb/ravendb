@@ -16,6 +16,7 @@ using System.Text.RegularExpressions;
 using Lambda2Js;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Spatial;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Tokens;
@@ -963,6 +964,31 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                     _documentQuery.OrderByDescending((string)orderByDescendingPath, (OrderingType)orderByDescendingOrderingType);
                     break;
+                case nameof(LinqExtensions.MoreLikeThis):
+                    VisitExpression(expression.Arguments[0]);
+
+                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments.Last(), out var moreLikeThisOptions);
+
+                    using (var moreLikeThis = _documentQuery.MoreLikeThis())
+                    {
+                        moreLikeThis.WithOptions(moreLikeThisOptions as MoreLikeThisOptions);
+
+                        if (expression.Arguments.Count > 2)
+                        {
+                            var moreLikeThisArgument = expression.Arguments[1];
+                            if (moreLikeThisArgument is UnaryExpression moreLikeThisExpression)
+                            {
+                                VisitExpression(moreLikeThisExpression.Operand);
+                            }
+                            else
+                            {
+                                LinqPathProvider.GetValueFromExpressionWithoutConversion(moreLikeThisArgument, out var moreLikeThisDocument);
+
+                                moreLikeThis.WithDocument(moreLikeThisDocument as string);
+                            }
+                        }
+                    }
+                    break;
                 default:
                     throw new NotSupportedException("Method not supported: " + expression.Method.Name);
             }
@@ -1743,7 +1769,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 FieldsToFetch.Clear();
             }
 
-            _declareBuilder.Append("\t").Append("var ").Append(name).Append(" = ").Append(js).Append(";").Append(Environment.NewLine);           
+            _declareBuilder.Append("\t").Append("var ").Append(name).Append(" = ").Append(js).Append(";").Append(Environment.NewLine);
         }
 
         private string TranslateSelectBodyToJs(Expression expression)
@@ -2008,7 +2034,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                 if (member == null)
                     member = elementSelectorPath as MemberExpression;
-                
+
                 if (member != null)
                 {
                     mapReduceField = GetSelectPath(member);
@@ -2027,24 +2053,24 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         switch (methodCallExpression.Method.Name)
                         {
                             case "Sum":
-                            {
-                                if (mapReduceOperation != AggregationOperation.Sum)
-                                    throw new NotSupportedException("Cannot use different aggregating functions for a single field");
+                                {
+                                    if (mapReduceOperation != AggregationOperation.Sum)
+                                        throw new NotSupportedException("Cannot use different aggregating functions for a single field");
 
-                                if (methodCallExpression.Arguments.Count != 2)
-                                    throw new NotSupportedException($"Incompatible number of arguments of Sum function: {methodCallExpression.Arguments.Count}");
+                                    if (methodCallExpression.Arguments.Count != 2)
+                                        throw new NotSupportedException($"Incompatible number of arguments of Sum function: {methodCallExpression.Arguments.Count}");
 
-                                var firstPart = GetMember(methodCallExpression.Arguments[0]);
-                                var secondPart = GetMember(methodCallExpression.Arguments[1]);
+                                    var firstPart = GetMember(methodCallExpression.Arguments[0]);
+                                    var secondPart = GetMember(methodCallExpression.Arguments[1]);
 
-                                mapReduceField = $"{firstPart.Path}[].{secondPart.Path}";
+                                    mapReduceField = $"{firstPart.Path}[].{secondPart.Path}";
 
-                                break;
-                            }
+                                    break;
+                                }
                             default:
-                            {
-                                throw new NotSupportedException("Method not supported: " + methodCallExpression.Method.Name);
-                            }
+                                {
+                                    throw new NotSupportedException("Method not supported: " + methodCallExpression.Method.Name);
+                                }
                         }
                     }
                     else
@@ -2217,7 +2243,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             if (_jsSelectBody != null)
             {
-                return documentQuery.SelectFields<T>(new QueryData(new[] { _jsSelectBody }, _jsProjectionNames, _fromAlias, _declareToken, _loadTokens , true));
+                return documentQuery.SelectFields<T>(new QueryData(new[] { _jsSelectBody }, _jsProjectionNames, _fromAlias, _declareToken, _loadTokens, true));
             }
 
             var (fields, projections) = GetProjections();
@@ -2250,7 +2276,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             if (_jsSelectBody != null)
             {
-                return asyncDocumentQuery.SelectFields<T>(new QueryData(new[] { _jsSelectBody }, _jsProjectionNames, _fromAlias, _declareToken , _loadTokens , true));
+                return asyncDocumentQuery.SelectFields<T>(new QueryData(new[] { _jsSelectBody }, _jsProjectionNames, _fromAlias, _declareToken, _loadTokens, true));
             }
 
             var (fields, projections) = GetProjections();
@@ -2297,7 +2323,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
         {
             var (fields, projections) = GetProjections();
 
-            var finalQuery = ((IDocumentQuery<T>)_documentQuery).SelectFields<TProjection>(new QueryData(fields, projections, _fromAlias, _declareToken , _loadTokens , _declareToken !=null || _jsSelectBody !=null));
+            var finalQuery = ((IDocumentQuery<T>)_documentQuery).SelectFields<TProjection>(new QueryData(fields, projections, _fromAlias, _declareToken, _loadTokens, _declareToken != null || _jsSelectBody != null));
 
             var executeQuery = GetQueryResult(finalQuery);
 

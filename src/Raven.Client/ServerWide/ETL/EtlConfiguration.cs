@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -10,7 +9,6 @@ namespace Raven.Client.ServerWide.ETL
 {
     public abstract class EtlConfiguration<T> : IDatabaseTask where T : ConnectionString
     {
-        private ulong? _taskKey;
         private bool _initialized;
 
         public long TaskId { get; set; }

@@ -9,16 +9,12 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions;
-using Raven.Client.Util.RateLimiting;
-using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Documents.Queries.Faceted;
-using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Documents.Queries.Suggestion;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using DeleteDocumentCommand = Raven.Server.Documents.TransactionCommands.DeleteDocumentCommand;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents.Queries
@@ -126,35 +122,6 @@ namespace Raven.Server.Documents.Queries
             context.OpenReadTransaction();
 
             var result = index.SuggestionsQuery(query, context, token);
-            result.DurationInMs = (int)sw.Elapsed.TotalMilliseconds;
-            return result;
-        }
-
-        public MoreLikeThisQueryResultServerSide ExecuteMoreLikeThisQuery(MoreLikeThisQueryServerSide query, DocumentsOperationContext context, long? existingResultEtag, OperationCancelToken token)
-        {
-            if (query == null)
-                throw new ArgumentNullException(nameof(query));
-
-            if (string.IsNullOrWhiteSpace(query.DocumentId) &&
-                query.MapGroupFields.Count == 0 &&
-                string.IsNullOrWhiteSpace(query.Document))
-            {
-                throw new InvalidOperationException("The document id, document (artificial document property) or map group fields are mandatory");
-            }
-
-            var sw = Stopwatch.StartNew();
-            var index = GetIndex(query.Metadata.IndexName);
-
-            if (existingResultEtag.HasValue)
-            {
-                var etag = index.GetIndexEtag();
-                if (etag == existingResultEtag.Value)
-                    return MoreLikeThisQueryResultServerSide.NotModifiedResult;
-            }
-
-            context.OpenReadTransaction();
-
-            var result = index.MoreLikeThisQuery(query, context, token);
             result.DurationInMs = (int)sw.Elapsed.TotalMilliseconds;
             return result;
         }

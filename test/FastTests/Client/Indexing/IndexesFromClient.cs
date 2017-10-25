@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Analysis;
-using Newtonsoft.Json;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
@@ -502,19 +501,19 @@ namespace FastTests.Client.Indexing
                     }, new HashSet<string>()
                     {
                         "Posts"
-                    }, new[] {"Title", "Desc"}, false));
+                    }, new[] { "Title", "Desc" }, false));
 
                     var index = database.IndexStore.GetIndex(indexId);
 
                     WaitForIndexing(store);
 
-                    var list = session.Advanced.MoreLikeThis<Post>(new MoreLikeThisQuery()
-                    {
-                        Query = $"FROM INDEX '{index.Name}'",
-                        DocumentId = "posts/1",
-                        MinimumDocumentFrequency = 1,
-                        MinimumTermFrequency = 0
-                    });
+                    var list = session.Query<Post>("Posts/ByTitleAndDesc")
+                        .MoreLikeThis(x => x.Id == "posts/1", new MoreLikeThisOptions
+                        {
+                            MinimumDocumentFrequency = 1,
+                            MinimumTermFrequency = 0
+                        })
+                        .ToList();
 
                     Assert.Equal(3, list.Count);
                     Assert.Equal("doduck", list[0].Title);

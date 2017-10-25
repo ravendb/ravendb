@@ -17,7 +17,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Util;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
@@ -33,8 +32,6 @@ using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Faceted;
-using Raven.Server.Documents.Queries.MoreLikeThis;
-using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Suggestion;
 using Raven.Server.Exceptions;
@@ -858,7 +855,7 @@ namespace Raven.Server.Documents.Indexes
                                         // did finish the work, or the batch was cancelled, but not because of
                                         // a database shutdown
 
-                                        batchCompleted = _batchProcessCancellationTokenSource != null && 
+                                        batchCompleted = _batchProcessCancellationTokenSource != null &&
                                             _batchProcessCancellationTokenSource.IsCancellationRequested == false;
                                         _batchProcessCancellationTokenSource = null;
                                     }
@@ -1187,7 +1184,7 @@ namespace Raven.Server.Documents.Indexes
 
         public void ThrowIfCorruptionException(Exception e)
         {
-            if (e is VoronUnrecoverableErrorException == false && 
+            if (e is VoronUnrecoverableErrorException == false &&
                 e is PageCompressedException == false &&
                 e is UnexpectedReduceTreePageException == false)
                 return;
@@ -1704,7 +1701,6 @@ namespace Raven.Server.Documents.Indexes
 
             AssertQueryDoesNotContainFieldsThatAreNotIndexed(query.Metadata);
 
-
             if (resultToFill.SupportsInclude == false
                 && (query.Metadata.Includes != null && query.Metadata.Includes.Length > 0))
                 throw new NotSupportedException("Includes are not supported by this type of query.");
@@ -1775,15 +1771,25 @@ namespace Raven.Server.Documents.Indexes
 
                             var retriever = GetQueryResultRetriever(query, documentsContext, fieldsToFetch, includeDocumentsCommand);
 
-                            if (query.Metadata.IsIntersect == false)
+                            if (query.Metadata.IsMoreLikeThis)
                             {
-                                documents = reader.Query(query, fieldsToFetch, totalResults, skippedResults,
+                                documents = reader.MoreLikeThis(
+                                    query,
+                                    f => GetQueryResultRetriever(null, documentsContext, new FieldsToFetch(f, Definition), includeDocumentsCommand),
+                                    documentsContext,
+                                    GetOrAddSpatialField,
+                                    token.Token);
+                            }
+                            else if (query.Metadata.IsIntersect)
+                            {
+                                documents = reader.IntersectQuery(query, fieldsToFetch, totalResults, skippedResults,
                                     retriever, documentsContext, GetOrAddSpatialField, token.Token);
                             }
                             else
                             {
-                                documents = reader.IntersectQuery(query, fieldsToFetch, totalResults, skippedResults,
+                                documents = reader.Query(query, fieldsToFetch, totalResults, skippedResults,
                                     retriever, documentsContext, GetOrAddSpatialField, token.Token);
+
                             }
 
                             try
@@ -1941,70 +1947,6 @@ namespace Raven.Server.Documents.Indexes
                     }
 
                     return result;
-                }
-            }
-        }
-
-
-        public virtual MoreLikeThisQueryResultServerSide MoreLikeThisQuery(MoreLikeThisQueryServerSide query, DocumentsOperationContext documentsContext,
-            OperationCancelToken token)
-        {
-            AssertIndexState();
-
-            HashSet<string> stopWords = null;
-            if (string.IsNullOrWhiteSpace(query.StopWordsDocumentId) == false)
-            {
-                var stopWordsDoc = DocumentDatabase.DocumentsStorage.Get(documentsContext, query.StopWordsDocumentId);
-                if (stopWordsDoc == null)
-                    throw new InvalidOperationException("Stop words document " + query.StopWordsDocumentId +
-                                                        " could not be found");
-
-                if (stopWordsDoc.Data.TryGet(nameof(StopWordsSetup.StopWords), out BlittableJsonReaderArray value) && value != null)
-                {
-                    stopWords = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                    for (var i = 0; i < value.Length; i++)
-                        stopWords.Add(value.GetStringByIndex(i));
-                }
-            }
-
-            using (var marker = MarkQueryAsRunning(query, token))
-            {
-                AssertIndexState();
-                marker.HoldLock();
-
-                using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
-                using (var tx = indexContext.OpenReadTransaction())
-                {
-
-                    var result = new MoreLikeThisQueryResultServerSide();
-
-                    var isStale = IsStale(documentsContext, indexContext);
-
-                    FillQueryResult(result, isStale, documentsContext, indexContext);
-
-                    if (Type.IsMapReduce() && (query.Includes == null || query.Includes.Length == 0))
-                        documentsContext.CloseTransaction();
-                    // map reduce don't need to access mapResults storage unless we have a transformer. Possible optimization: if we will know if transformer needs transaction then we may reset this here or not
-
-                    using (var reader = IndexPersistence.OpenIndexReader(tx.InnerTransaction))
-                    {
-                        var includeDocumentsCommand = new IncludeDocumentsCommand(DocumentDatabase.DocumentsStorage,
-                            documentsContext, query.Includes);
-                        var documents = reader.MoreLikeThis(query, stopWords,
-                            fieldsToFetch => GetQueryResultRetriever(null, documentsContext, new FieldsToFetch(fieldsToFetch, Definition), includeDocumentsCommand), 
-                            documentsContext, GetOrAddSpatialField, token.Token);
-
-                        foreach (var document in documents)
-
-                        {
-                            result.Results.Add(document);
-                            includeDocumentsCommand.Gather(document);
-                        }
-
-                        includeDocumentsCommand.Fill(result.Includes);
-
-                        return result;
-                    }
                 }
             }
         }
@@ -2616,7 +2558,7 @@ namespace Raven.Server.Documents.Indexes
             return _spatialFields.GetOrAdd(name, n =>
             {
                 if (Definition.MapFields.TryGetValue(name, out var field) == false)
-                    return new SpatialField(name,  new SpatialOptions());
+                    return new SpatialField(name, new SpatialOptions());
 
                 if (field is AutoIndexField autoField)
                     return new SpatialField(name, autoField.Spatial ?? new SpatialOptions());

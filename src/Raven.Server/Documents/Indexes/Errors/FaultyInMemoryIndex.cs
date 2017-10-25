@@ -151,10 +151,5 @@ namespace Raven.Server.Documents.Indexes.Errors
         {
             throw new NotSupportedException($"Index with etag {Etag} is in-memory implementation of a faulty index", _e);
         }
-
-        public override MoreLikeThisQueryResultServerSide MoreLikeThisQuery(MoreLikeThisQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
-        {
-            throw new NotSupportedException($"Index with etag {Etag} is in-memory implementation of a faulty index", _e);
-        }
     }
 }

@@ -14,6 +14,8 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Persistence.Lucene;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Utils;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static.Spatial;
@@ -22,6 +24,7 @@ using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.LuceneIntegration;
 using Sparrow.Json;
 using Spatial4n.Core.Shapes;
+using MoreLikeThisQuery = Raven.Server.Documents.Queries.MoreLikeThis.MoreLikeThisQuery;
 using Query = Raven.Server.Documents.Queries.AST.Query;
 using Version = Lucene.Net.Util.Version;
 
@@ -42,6 +45,104 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
+
+        public static MoreLikeThisQuery BuildMoreLikeThisQuery(JsonOperationContext context, QueryMetadata metadata, QueryExpression whereExpression, BlittableJsonReaderObject parameters, RavenPerFieldAnalyzerWrapper analyzer, Func<string, SpatialField> getSpatialField)
+        {
+            using (CultureHelper.EnsureInvariantCulture())
+            {
+                var filterQuery = BuildQuery(context, metadata, whereExpression, parameters, analyzer, getSpatialField);
+                var moreLikeThisQuery = ToMoreLikeThisQuery(context, metadata.Query, whereExpression, metadata, parameters, analyzer, getSpatialField, out var baseDocument, out var options);
+
+                return new MoreLikeThisQuery
+                {
+                    BaseDocument = baseDocument,
+                    BaseDocumentQuery = moreLikeThisQuery,
+                    FilterQuery = filterQuery,
+                    Options = options
+                };
+            }
+        }
+
+        private static Lucene.Net.Search.Query ToMoreLikeThisQuery(JsonOperationContext context, Query query, QueryExpression expression, QueryMetadata metadata,
+            BlittableJsonReaderObject parameters, Analyzer analyzer, Func<string, SpatialField> getSpatialField, out string baseDocument, out BlittableJsonReaderObject options)
+        {
+            baseDocument = null;
+            options = null;
+
+            var moreLikeThisExpression = FindMoreLikeThisExpression(expression);
+            if (moreLikeThisExpression == null)
+                throw new InvalidOperationException("Query does not contain MoreLikeThis method expression");
+
+            if (moreLikeThisExpression.Arguments.Count == 2)
+            {
+                var value = GetValue(query, metadata, parameters, moreLikeThisExpression.Arguments[1], allowObjectsInParameters: true);
+                if (value.Type == ValueTokenType.String)
+                    options = IndexReadOperation.ParseJsonStringIntoBlittable((string)value.Value, context);
+                else
+                    options = value.Value as BlittableJsonReaderObject;
+            }
+
+            var firstArgument = moreLikeThisExpression.Arguments[0];
+            if (firstArgument is BinaryExpression binaryExpression)
+                return ToLuceneQuery(context, query, binaryExpression, metadata, parameters, analyzer, getSpatialField);
+
+            var firstArgumentValue = GetValue(query, metadata, parameters, firstArgument).Value as string;
+            if (bool.TryParse(firstArgumentValue, out var firstArgumentBool))
+            {
+                if (firstArgumentBool)
+                    return new MatchAllDocsQuery();
+
+                return new BooleanQuery(); // empty boolean query yields 0 documents
+            }
+
+            baseDocument = firstArgumentValue;
+            return null;
+        }
+
+        private static MethodExpression FindMoreLikeThisExpression(QueryExpression expression)
+        {
+            if (expression == null)
+                return null;
+
+            if (expression is BinaryExpression where)
+            {
+                switch (where.Operator)
+                {
+                    case OperatorType.And:
+                    case OperatorType.AndNot:
+                    case OperatorType.Or:
+                    case OperatorType.OrNot:
+                        var leftExpression = FindMoreLikeThisExpression(where.Left);
+                        if (leftExpression != null)
+                            return leftExpression;
+
+                        var rightExpression = FindMoreLikeThisExpression(where.Right);
+                        if (rightExpression != null)
+                            return rightExpression;
+
+                        return null;
+                    default:
+                        return null;
+                }
+            }
+
+            if (expression is MethodExpression me)
+            {
+                var methodName = me.Name.Value;
+                var methodType = QueryMethod.GetMethodType(methodName);
+
+                switch (methodType)
+                {
+                    case MethodType.MoreLikeThis:
+                        return me;
+                    default:
+                        return null;
+                }
+            }
+
+            return null;
+        }
+
         private static Lucene.Net.Search.Query ToLuceneQuery(JsonOperationContext context, Query query, QueryExpression expression, QueryMetadata metadata,
             BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories, bool exact = false)
         {
@@ -60,7 +161,7 @@ namespace Raven.Server.Documents.Queries
                     case OperatorType.GreaterThanEqual:
                         {
                             var fieldName = ExtractIndexFieldName(query, parameters, where.Left, metadata);
-                            var (value, valueType) = GetValue(fieldName, query, metadata, parameters, where.Right);
+                            var (value, valueType) = GetValue(query, metadata, parameters, where.Right);
 
                             var (luceneFieldName, fieldType, termType) = GetLuceneField(fieldName, valueType);
 
@@ -154,8 +255,8 @@ namespace Raven.Server.Documents.Queries
             if (expression is BetweenExpression be)
             {
                 var fieldName = ExtractIndexFieldName(query, parameters, be.Source, metadata);
-                var (valueFirst, valueFirstType) = GetValue(fieldName, query, metadata, parameters, be.Min);
-                var (valueSecond, _) = GetValue(fieldName, query, metadata, parameters, be.Max);
+                var (valueFirst, valueFirstType) = GetValue(query, metadata, parameters, be.Min);
+                var (valueSecond, _) = GetValue(query, metadata, parameters, be.Max);
 
                 var (luceneFieldName, fieldType, termType) = GetLuceneField(fieldName, valueFirstType);
 
@@ -248,6 +349,8 @@ namespace Raven.Server.Documents.Queries
                     case MethodType.Disjoint:
                     case MethodType.Intersects:
                         return HandleSpatial(query, me, metadata, parameters, methodType, factories.GetSpatialFieldFactory);
+                    case MethodType.MoreLikeThis:
+                        return new MatchAllDocsQuery();
                     default:
                         QueryMethod.ThrowMethodNotSupported(methodType, metadata.QueryText, parameters);
                         return null; // never hit
@@ -287,7 +390,7 @@ namespace Raven.Server.Documents.Queries
                 if (valueToken == null)
                     ThrowInvalidInValue(query, parameters, val);
 
-                foreach (var (value, type) in GetValues(fieldName, query, metadata, parameters, valueToken))
+                foreach (var (value, type) in GetValues(query, metadata, parameters, valueToken))
                 {
                     string valueAsString;
                     switch (type)
@@ -373,7 +476,7 @@ namespace Raven.Server.Documents.Queries
             Analyzer analyzer)
         {
             var fieldName = ExtractIndexFieldName(query, parameters, expression.Arguments[0], metadata);
-            var (value, valueType) = GetValue(fieldName, query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
+            var (value, valueType) = GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
 
             if (valueType != ValueTokenType.String)
                 ThrowMethodExpectsArgumentOfTheFollowingType("lucene", ValueTokenType.String, valueType, metadata.QueryText, parameters);
@@ -388,7 +491,7 @@ namespace Raven.Server.Documents.Queries
         private static Lucene.Net.Search.Query HandleStartsWith(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters)
         {
             var fieldName = ExtractIndexFieldName(query, parameters, expression.Arguments[0], metadata);
-            var (value, valueType) = GetValue(fieldName, query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
+            var (value, valueType) = GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
 
             if (valueType != ValueTokenType.String)
                 ThrowMethodExpectsArgumentOfTheFollowingType("startsWith", ValueTokenType.String, valueType, metadata.QueryText, parameters);
@@ -405,7 +508,7 @@ namespace Raven.Server.Documents.Queries
         private static Lucene.Net.Search.Query HandleEndsWith(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters)
         {
             var fieldName = ExtractIndexFieldName(query, parameters, expression.Arguments[0], metadata);
-            var (value, valueType) = GetValue(fieldName, query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
+            var (value, valueType) = GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
 
             if (valueType != ValueTokenType.String)
                 ThrowMethodExpectsArgumentOfTheFollowingType("endsWith", ValueTokenType.String, valueType, metadata.QueryText, parameters);
@@ -438,7 +541,7 @@ namespace Raven.Server.Documents.Queries
                     " while it should be invoked with 2 arguments e.g. Regex(foo.Name,\"^[a-z]+?\")");
 
             var fieldName = ExtractIndexFieldName(query, parameters, expression.Arguments[0], metadata);
-            var (value, valueType) = GetValue(fieldName, query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
+            var (value, valueType) = GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
             if (valueType != ValueTokenType.String && !(valueType == ValueTokenType.Parameter && IsStringFamily(value)))
                 ThrowMethodExpectsArgumentOfTheFollowingType("regex", ValueTokenType.String, valueType, metadata.QueryText, parameters);
             var valueAsString = GetValueAsString(value);
@@ -461,7 +564,7 @@ namespace Raven.Server.Documents.Queries
             else
                 throw new InvalidOperationException("search() method can only be called with an identifier or string, but was called with " + expression.Arguments[0]);
 
-            var (value, valueType) = GetValue(fieldName, query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
+            var (value, valueType) = GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
 
             if (valueType != ValueTokenType.String)
                 ThrowMethodExpectsArgumentOfTheFollowingType("search", ValueTokenType.String, valueType, metadata.QueryText, parameters);
@@ -537,7 +640,7 @@ namespace Raven.Server.Documents.Queries
             var distanceErrorPct = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct;
             if (expression.Arguments.Count == 3)
             {
-                var distanceErrorPctValue = GetValue(fieldName, query, metadata, parameters, (ValueExpression)expression.Arguments[2]);
+                var distanceErrorPctValue = GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[2]);
                 AssertValueIsNumber(fieldName, distanceErrorPctValue.Type);
 
                 distanceErrorPct = Convert.ToDouble(distanceErrorPctValue.Value);
@@ -597,7 +700,7 @@ namespace Raven.Server.Documents.Queries
         private static Shape HandleWkt(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, string fieldName,
             SpatialField spatialField)
         {
-            var wktValue = GetValue(fieldName, query, metadata, parameters, (ValueExpression)expression.Arguments[0]);
+            var wktValue = GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[0]);
             AssertValueIsString(fieldName, wktValue.Type);
 
             SpatialUnits? spatialUnits = null;
@@ -610,13 +713,13 @@ namespace Raven.Server.Documents.Queries
         private static Shape HandleCircle(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, string fieldName,
             SpatialField spatialField)
         {
-            var radius = GetValue(fieldName, query, metadata, parameters, (ValueExpression)expression.Arguments[0]);
+            var radius = GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[0]);
             AssertValueIsNumber(fieldName, radius.Type);
 
-            var latitute = GetValue(fieldName, query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
+            var latitute = GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
             AssertValueIsNumber(fieldName, latitute.Type);
 
-            var longitude = GetValue(fieldName, query, metadata, parameters, (ValueExpression)expression.Arguments[2]);
+            var longitude = GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[2]);
             AssertValueIsNumber(fieldName, longitude.Type);
 
             SpatialUnits? spatialUnits = null;
@@ -631,7 +734,7 @@ namespace Raven.Server.Documents.Queries
             if (value == null)
                 throw new ArgumentNullException(nameof(value));
 
-            var spatialUnitsValue = GetValue(fieldName, query, metadata, parameters, value);
+            var spatialUnitsValue = GetValue(query, metadata, parameters, value);
             AssertValueIsString(fieldName, spatialUnitsValue.Type);
 
             var spatialUnitsValueAsString = spatialUnitsValue.Value.ToString();
@@ -648,7 +751,7 @@ namespace Raven.Server.Documents.Queries
             return ToLuceneQuery(context, query, expression.Arguments[0], metadata, parameters, analyzer, factories, exact: true);
         }
 
-        public static IEnumerable<(object Value, ValueTokenType Type)> GetValues(string fieldName, Query query, QueryMetadata metadata,
+        public static IEnumerable<(object Value, ValueTokenType Type)> GetValues(Query query, QueryMetadata metadata,
             BlittableJsonReaderObject parameters, ValueExpression value)
         {
             if (value.Value == ValueTokenType.Parameter)
@@ -714,12 +817,11 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        public static (object Value, ValueTokenType Type) GetValue(string fieldName, Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters,
-            QueryExpression expr)
+        public static (object Value, ValueTokenType Type) GetValue(Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, QueryExpression expression, bool allowObjectsInParameters = false)
         {
-            var value = expr as ValueExpression;
+            var value = expression as ValueExpression;
             if (value == null)
-                throw new InvalidQueryException("Expected value, but got: " + expr, query.QueryText, parameters);
+                throw new InvalidQueryException("Expected value, but got: " + expression, query.QueryText, parameters);
 
             if (value.Value == ValueTokenType.Parameter)
             {
@@ -730,6 +832,9 @@ namespace Raven.Server.Documents.Queries
 
                 if (parameters.TryGetMember(parameterName, out var parameterValue) == false)
                     ThrowParameterValueWasNotProvided(parameterName, metadata.QueryText, parameters);
+
+                if (allowObjectsInParameters && parameterValue is BlittableJsonReaderObject)
+                    return (parameterValue, ValueTokenType.Parameter);
 
                 var parameterValueType = GetValueTokenType(parameterValue, metadata.QueryText, parameters);
 

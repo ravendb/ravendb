@@ -41,7 +41,8 @@ namespace Raven.Client.Documents.Session
 
         public List<T> MoreLikeThis<T>(string index, string documentId)
         {
-            if (index == null) throw new ArgumentNullException(nameof(index));
+            if (index == null)
+                throw new ArgumentNullException(nameof(index));
             if (documentId == null)
                 throw new ArgumentNullException(nameof(documentId));
 

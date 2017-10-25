@@ -11,18 +11,20 @@ namespace Raven.Client.Documents.Session
         {
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
 
-            AppendOperatorIfNeeded(WhereTokens);
-            NegateIfNeeded(fieldName);
+            var tokens = GetCurrentWhereTokens();
+            AppendOperatorIfNeeded(tokens);
+            NegateIfNeeded(tokens, fieldName);
 
-            WhereTokens.AddLast(WhereToken.Within(fieldName, ShapeToken.Circle(AddQueryParameter(radius), AddQueryParameter(latitude), AddQueryParameter(longitude), radiusUnits), distErrorPercent));
+            tokens.AddLast(WhereToken.Within(fieldName, ShapeToken.Circle(AddQueryParameter(radius), AddQueryParameter(latitude), AddQueryParameter(longitude), radiusUnits), distErrorPercent));
         }
 
         protected void Spatial(string fieldName, string shapeWKT, SpatialRelation relation, double distErrorPercent)
         {
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
 
-            AppendOperatorIfNeeded(WhereTokens);
-            NegateIfNeeded(fieldName);
+            var tokens = GetCurrentWhereTokens();
+            AppendOperatorIfNeeded(tokens);
+            NegateIfNeeded(tokens, fieldName);
 
             var wktToken = ShapeToken.Wkt(AddQueryParameter(shapeWKT));
             QueryToken relationToken;
@@ -44,15 +46,16 @@ namespace Raven.Client.Documents.Session
                     throw new ArgumentOutOfRangeException(nameof(relation), relation, null);
             }
 
-            WhereTokens.AddLast(relationToken);
+            tokens.AddLast(relationToken);
         }
 
         public void Spatial(SpatialDynamicField dynamicField, SpatialCriteria criteria)
         {
-            AppendOperatorIfNeeded(WhereTokens);
-            NegateIfNeeded(null);
+            var tokens = GetCurrentWhereTokens();
+            AppendOperatorIfNeeded(tokens);
+            NegateIfNeeded(tokens, null);
 
-            WhereTokens.AddLast(criteria.ToQueryToken(dynamicField.ToField(EnsureValidFieldName), AddQueryParameter));
+            tokens.AddLast(criteria.ToQueryToken(dynamicField.ToField(EnsureValidFieldName), AddQueryParameter));
         }
 
         /// <inheritdoc />
@@ -60,10 +63,11 @@ namespace Raven.Client.Documents.Session
         {
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
 
-            AppendOperatorIfNeeded(WhereTokens);
-            NegateIfNeeded(fieldName);
+            var tokens = GetCurrentWhereTokens();
+            AppendOperatorIfNeeded(tokens);
+            NegateIfNeeded(tokens, fieldName);
 
-            WhereTokens.AddLast(criteria.ToQueryToken(fieldName, AddQueryParameter));
+            tokens.AddLast(criteria.ToQueryToken(fieldName, AddQueryParameter));
         }
 
         /// <inheritdoc />

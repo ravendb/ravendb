@@ -1,10 +1,11 @@
+using System.Linq;
 using FastTests;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using SlowTests.Core.Utils.Indexes;
 using Xunit;
 using Address = SlowTests.Core.Utils.Entities.Address;
 using Post = SlowTests.Core.Utils.Entities.Post;
-using PostContent = SlowTests.Core.Utils.Entities.PostContent;
 using User = SlowTests.Core.Utils.Entities.User;
 
 namespace SlowTests.Core.Querying
@@ -30,13 +31,13 @@ namespace SlowTests.Core.Querying
 
                     WaitForIndexing(store);
 
-                    var list = session.Advanced.MoreLikeThis<Post>(new MoreLikeThisQuery()
-                    {
-                        Query = $"FROM INDEX '{new Posts_ByTitleAndContent().IndexName}'",
-                        DocumentId = "posts/1",
-                        MinimumDocumentFrequency = 1,
-                        MinimumTermFrequency = 0
-                    });
+                    var list = session.Query<Post, Posts_ByTitleAndContent>()
+                        .MoreLikeThis(x => x.Id == "posts/1", new MoreLikeThisOptions
+                        {
+                            MinimumDocumentFrequency = 1,
+                            MinimumTermFrequency = 0
+                        })
+                        .ToList();
 
                     Assert.Equal(3, list.Count);
                     Assert.Equal("doduck", list[0].Title);
@@ -68,14 +69,14 @@ namespace SlowTests.Core.Querying
 
                     WaitForIndexing(store);
 
-                    var list = session.Advanced.MoreLikeThis<User>(new MoreLikeThisQuery()
-                    {
-                        Query = $"FROM INDEX '{new Users_ByName().IndexName}'",
-                        DocumentId = "users/1",
-                        Includes = new[] { "AddressId" },
-                        MinimumDocumentFrequency = 1,
-                        MinimumTermFrequency = 0
-                    });
+                    var list = session.Query<User, Users_ByName>()
+                        .Include(x => x.AddressId)
+                        .MoreLikeThis(x => x.Id == "users/1", new MoreLikeThisOptions
+                        {
+                            MinimumDocumentFrequency = 1,
+                            MinimumTermFrequency = 0
+                        })
+                        .ToList();
 
                     Assert.Equal(1, list.Count);
                     Assert.Equal("John Doe", list[0].Name);

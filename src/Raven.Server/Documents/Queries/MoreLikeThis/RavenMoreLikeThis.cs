@@ -4,6 +4,7 @@ using System.IO;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
 using Lucene.Net.Util;
+using Raven.Client.Documents.Queries.MoreLikeThis;
 
 namespace Raven.Server.Documents.Queries.MoreLikeThis
 {
@@ -12,46 +13,32 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
         private readonly IndexReader _ir;
         private readonly IState _state;
 
-        public string Document { get; set; }
-
-        public RavenMoreLikeThis(IndexReader ir, MoreLikeThisQueryServerSide query, IState state)
+        public RavenMoreLikeThis(IndexReader ir, MoreLikeThisOptions options, IState state)
             : base(ir, state)
         {
             _ir = ir;
             _state = state;
 
-            if (query.Boost != null)
-                Boost = query.Boost.Value;
-
-            if (query.Document != null)
-                Document = query.Document;
-
-            if (query.BoostFactor != null)
-                BoostFactor = query.BoostFactor.Value;
-
-            if (query.MaximumNumberOfTokensParsed != null)
-                MaxNumTokensParsed = query.MaximumNumberOfTokensParsed.Value;
-
-            if (query.MaximumQueryTerms != null)
-                MaxQueryTerms = query.MaximumQueryTerms.Value;
-
-            if (query.MinimumWordLength != null)
-                MinWordLen = query.MinimumWordLength.Value;
-
-            if (query.MaximumWordLength != null)
-                MaxWordLen = query.MaximumWordLength.Value;
-
-            if (query.MinimumTermFrequency != null)
-                MinTermFreq = query.MinimumTermFrequency.Value;
-
-            if (query.MinimumDocumentFrequency != null)
-                MinDocFreq = query.MinimumDocumentFrequency.Value;
-
-            if (query.MaximumDocumentFrequency != null)
-                MaxDocFreq = query.MaximumDocumentFrequency.Value;
-
-            if (query.MaximumDocumentFrequencyPercentage != null)
-                SetMaxDocFreqPct(query.MaximumDocumentFrequencyPercentage.Value);
+            if (options.Boost != null)
+                Boost = options.Boost.Value;
+            if (options.BoostFactor != null)
+                BoostFactor = options.BoostFactor.Value;
+            //if (options.MaximumNumberOfTokensParsed != null)
+            //    MaxNumTokensParsed = options.MaximumNumberOfTokensParsed.Value;
+            //if (options.MaximumQueryTerms != null)
+            //    MaxQueryTerms = options.MaximumQueryTerms.Value;
+            if (options.MinimumWordLength != null)
+                MinWordLen = options.MinimumWordLength.Value;
+            //if (options.MaximumWordLength != null)
+            //    MaxWordLen = options.MaximumWordLength.Value;
+            if (options.MinimumTermFrequency != null)
+                MinTermFreq = options.MinimumTermFrequency.Value;
+            if (options.MinimumDocumentFrequency != null)
+                MinDocFreq = options.MinimumDocumentFrequency.Value;
+            //if (options.MaximumDocumentFrequency != null)
+            //    MaxDocFreq = options.MaximumDocumentFrequency.Value;
+            //if (options.MaximumDocumentFrequencyPercentage != null)
+            //    SetMaxDocFreqPct(options.MaximumDocumentFrequencyPercentage.Value);
         }
 
         protected override PriorityQueue<object[]> RetrieveTerms(int docNum)
