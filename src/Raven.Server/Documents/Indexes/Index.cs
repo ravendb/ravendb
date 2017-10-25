@@ -1777,7 +1777,7 @@ namespace Raven.Server.Documents.Indexes
                             {
                                 documents = reader.MoreLikeThis(
                                     query,
-                                    f => GetQueryResultRetriever(null, documentsContext, new FieldsToFetch(f, Definition), includeDocumentsCommand),
+                                    retriever,
                                     documentsContext,
                                     token.Token);
                             }

@@ -417,7 +417,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public IEnumerable<Document> MoreLikeThis(
             IndexQueryServerSide query,
-            Func<SelectField[], IQueryResultRetriever> createRetriever,
+            IQueryResultRetriever retriever,
             DocumentsOperationContext context,
             CancellationToken token)
         {
@@ -497,8 +497,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var hits = tsdc.TopDocs().ScoreDocs;
 
             var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            var retriever = createRetriever(null);
 
             foreach (var hit in hits)
             {
