@@ -431,7 +431,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 if (stopWordsDoc == null)
                     throw new InvalidOperationException($"Stop words document {options.StopWordsDocumentId} could not be found");
 
-                if (stopWordsDoc.Data.TryGet(nameof(StopWordsSetup.StopWords), out BlittableJsonReaderArray value) && value != null)
+                if (stopWordsDoc.Data.TryGet(nameof(MoreLikeThisStopWords.StopWords), out BlittableJsonReaderArray value) && value != null)
                 {
                     stopWords = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                     for (var i = 0; i < value.Length; i++)
