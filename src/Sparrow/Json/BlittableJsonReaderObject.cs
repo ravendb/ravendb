@@ -778,7 +778,11 @@ namespace Sparrow.Json
 
         public BlittableJsonReaderObject Clone(JsonOperationContext context)
         {
+            if (_parent != null)
+                return context.ReadObject(this, "cloning nested obj");
+
             var mem = context.GetMemory(Size);
+
             CopyTo(mem.Address);
             var cloned = new BlittableJsonReaderObject(mem.Address, Size, context)
             {
@@ -792,6 +796,7 @@ namespace Sparrow.Json
                     cloned.Modifications.Properties.Enqueue(property);
                 }
             }
+            
             return cloned;
         }
 
