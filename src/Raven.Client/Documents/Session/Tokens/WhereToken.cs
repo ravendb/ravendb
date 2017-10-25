@@ -13,7 +13,7 @@ namespace Raven.Client.Documents.Session.Tokens
 {
     public class WhereToken : QueryToken
     {
-        private WhereToken()
+        protected WhereToken()
         {
         }
 

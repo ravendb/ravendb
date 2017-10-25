@@ -80,7 +80,7 @@ namespace FastTests.Client.Indexing
 
                         Assert.True(json.TryGet(index.Name, out BlittableJsonReaderArray array));
 
-                        Assert.Equal(3, array.Length);
+                        Assert.Equal(2, array.Length);
 
                         foreach (BlittableJsonReaderObject info in array)
                         {
