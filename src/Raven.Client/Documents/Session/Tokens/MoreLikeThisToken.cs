@@ -3,7 +3,7 @@ using System.Text;
 
 namespace Raven.Client.Documents.Session.Tokens
 {
-    public class MoreLikeThisToken : QueryToken
+    public class MoreLikeThisToken : WhereToken
     {
         public string DocumentParameterName;
 
@@ -24,8 +24,15 @@ namespace Raven.Client.Documents.Session.Tokens
             {
                 if (WhereTokens.Count > 0)
                 {
-                    foreach (var token in WhereTokens)
-                        token.WriteTo(writer);
+                    var token = WhereTokens.First;
+                    while (token != null)
+                    {
+                        DocumentQueryHelper.AddSpaceIfNeeded(token.Previous?.Value, token.Value, writer);
+
+                        token.Value.WriteTo(writer);
+
+                        token = token.Next;
+                    }
                 }
                 else
                 {

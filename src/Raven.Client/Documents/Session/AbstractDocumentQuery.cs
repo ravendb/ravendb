@@ -1177,7 +1177,7 @@ If you really want to do in memory filtering on the data returned from the query
                 if (token.Previous != null && token.Previous.Value is DistinctToken == false)
                     writer.Append(",");
 
-                AddSpaceIfNeeded(token.Previous?.Value, token.Value, writer);
+                DocumentQueryHelper.AddSpaceIfNeeded(token.Previous?.Value, token.Value, writer);
 
                 token.Value.WriteTo(writer);
 
@@ -1224,7 +1224,7 @@ If you really want to do in memory filtering on the data returned from the query
             var token = WhereTokens.First;
             while (token != null)
             {
-                AddSpaceIfNeeded(token.Previous?.Value, token.Value, writer);
+                DocumentQueryHelper.AddSpaceIfNeeded(token.Previous?.Value, token.Value, writer);
 
                 token.Value.WriteTo(writer);
 
@@ -1274,17 +1274,6 @@ If you really want to do in memory filtering on the data returned from the query
                 token = token.Next;
             }
 
-        }
-
-        private static void AddSpaceIfNeeded(QueryToken previousToken, QueryToken currentToken, StringBuilder writer)
-        {
-            if (previousToken == null)
-                return;
-
-            if (previousToken is OpenSubclauseToken || currentToken is CloseSubclauseToken || currentToken is IntersectMarkerToken)
-                return;
-
-            writer.Append(" ");
         }
 
         private void AppendOperatorIfNeeded(LinkedList<QueryToken> tokens)

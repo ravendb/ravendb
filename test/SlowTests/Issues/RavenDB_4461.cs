@@ -40,8 +40,6 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var indexName = new Posts_ByPostCategory().IndexName;
-
                     Assert.NotEmpty(session.Query<MockPost, Posts_ByPostCategory>()
                         .MoreLikeThis(x => x.Id == "posts/123", new MoreLikeThisOptions
                         {
@@ -49,10 +47,12 @@ namespace SlowTests.Issues
                         }).ToList());
 
                     Assert.Empty(session.Query<MockPost, Posts_ByPostCategory>()
-                        .MoreLikeThis(x => x.Id == "posts/123" && x.Category == "IT", new MoreLikeThisOptions
+                        .MoreLikeThis(x => x.Id == "posts/123", new MoreLikeThisOptions
                         {
                             Fields = new[] { "Body" }
-                        }).ToList());
+                        })
+                        .Where(x => x.Category == "IT")
+                        .ToList());
                 }
             }
         }
