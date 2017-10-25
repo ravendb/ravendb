@@ -135,11 +135,10 @@ namespace Raven.Client.Util
                         {
                             if (methodCallExpression.Arguments.Count > 1)
                             {
-                                writer.Write(".filter");
+                                writer.Write(".find");
                                 context.Visitor.Visit(methodCallExpression.Arguments[1]);
 
                             }
-                            writer.Write("[0]");
                         }
                         return;
                     default:

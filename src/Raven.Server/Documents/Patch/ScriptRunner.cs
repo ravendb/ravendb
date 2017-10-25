@@ -117,8 +117,12 @@ namespace Raven.Server.Documents.Patch
                 ScriptEngine.SetValue("id", new ClrFunctionInstance(ScriptEngine, GetDocumentId));
                 ScriptEngine.SetValue("lastModified", new ClrFunctionInstance(ScriptEngine, GetLastModified));
 
+                ScriptEngine.SetValue("startsWith", new ClrFunctionInstance(ScriptEngine, StartsWith));
+                ScriptEngine.SetValue("endsWith", new ClrFunctionInstance(ScriptEngine, EndsWith));
 
                 ScriptEngine.SetValue("convertJsTimeToTimeSpanString", new ClrFunctionInstance(ScriptEngine, ConvertJsTimeToTimeSpanString));
+
+                ScriptEngine.Execute(ScriptRunnerCache.PolyfillJs);
 
                 foreach (var script in scriptsSource)
                 {
@@ -404,6 +408,22 @@ namespace Raven.Server.Documents.Patch
                 var asTimeSpan = new TimeSpan(ticks);
 
                 return new JsValue(asTimeSpan.ToString());
+            }
+
+            private static JsValue StartsWith(JsValue self, JsValue[] args)
+            {
+                if (args.Length != 2 || args[0].IsString() == false || args[1].IsString() == false)
+                    throw new InvalidOperationException("startsWith(text, contained) must be called with two string paremters");
+                
+                return new JsValue(args[0].AsString().StartsWith(args[1].AsString(), StringComparison.OrdinalIgnoreCase));
+            }
+
+            private static JsValue EndsWith(JsValue self, JsValue[] args)
+            {
+                if (args.Length != 2 || args[0].IsString() == false || args[1].IsString() == false)
+                    throw new InvalidOperationException("endsWith(text, contained) must be called with two string paremters");
+
+                return new JsValue(args[0].AsString().EndsWith(args[1].AsString(), StringComparison.OrdinalIgnoreCase));
             }
 
             private JsValue LoadDocumentInternal(string id)

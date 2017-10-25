@@ -1554,7 +1554,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                     for (int index = 0; index < newExpression.Arguments.Count; index++)
                     {
-                        if (newExpression.Arguments[index] is MemberExpression == false)
+                        if (!(newExpression.Arguments[index] is MemberExpression member) || HasComputation(member))
                         {
                             //lambda 2 js
 
@@ -1572,27 +1572,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         }
 
                         var expression = _linqPathProvider.GetMemberExpression(newExpression.Arguments[index]);
+                        AddToFieldsToFetch(GetSelectPath(expression), GetSelectPath(newExpression.Members[index]));
 
-                        try
-                        {
-                            AddToFieldsToFetch(GetSelectPath(expression), GetSelectPath(newExpression.Members[index]));
-                        }
-                        catch (Exception)
-                        {
-                            //lambda 2 js
-
-                            if (_fromAlias == null)
-                            {
-                                _fromAlias = lambdaExpression?.Parameters[0].Name;
-                            }
-
-                            _jsProjectionNames = new List<string>();
-                            FieldsToFetch.Clear();
-
-                            _jsSelectBody = TranslateSelectBodyToJs(newExpression);
-
-                            break;
-                        }
                     }
                     break;
                 //for example .Select(x => new SomeType { x.Cost } ), it's member init because it's using the object initializer
@@ -1612,9 +1593,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         if (field == null)
                             continue;
 
-                        if ((field.Expression is UnaryExpression 
-                             ||field.Expression is LabelExpression 
-                             || field.Expression is MemberExpression) == false)
+                        if (field.Expression is UnaryExpression 
+                             || field.Expression is LabelExpression 
+                             ||(field.Expression is MemberExpression member 
+                                && HasComputation(member) == false) == false)
                         {
                             //lambda 2 js
 
@@ -1632,28 +1614,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         }
 
                         var expression = _linqPathProvider.GetMemberExpression(field.Expression);
-                        try
-                        {
-                            var renamedField = GetSelectPath(expression);
-                            AddToFieldsToFetch(renamedField, GetSelectPath(field.Member));
-                        }
-                        catch (Exception)
-                        {
-                            //lambda 2 js
+                        var renamedField = GetSelectPath(expression);
 
-                            if (_fromAlias == null)
-                            {
-                                _fromAlias = lambdaExpression?.Parameters[0].Name;
-                            }
-
-                            _jsProjectionNames = new List<string>();
-                            FieldsToFetch.Clear();
-
-                            _jsSelectBody = TranslateSelectBodyToJs(memberInitExpression);
-
-                            break;
-                        }
-
+                        AddToFieldsToFetch(renamedField, GetSelectPath(field.Member));
                     }
                     break;
                 case ExpressionType.Parameter: // want the full thing, so just pass it on.
@@ -1876,6 +1839,42 @@ The recommended method is to use full text search (mark the field as Analyzed an
             return js;
         }
 
+
+        private bool HasComputation(MemberExpression memberExpression)
+        {
+            var cur = memberExpression;
+
+            while (cur != null)
+            {
+                switch (cur.Expression.NodeType)
+                {
+                    case ExpressionType.Call:
+                    case ExpressionType.Invoke:
+                    case ExpressionType.Add:
+                    case ExpressionType.And:
+                    case ExpressionType.AndAlso:
+                    case ExpressionType.AndAssign:
+                    case ExpressionType.Decrement:
+                    case ExpressionType.Increment:
+                    case ExpressionType.PostDecrementAssign:
+                    case ExpressionType.PostIncrementAssign:
+                    case ExpressionType.PreDecrementAssign:
+                    case ExpressionType.PreIncrementAssign:
+                    case ExpressionType.AddAssign:
+                    case ExpressionType.AddAssignChecked:
+                    case ExpressionType.AddChecked:
+                    case ExpressionType.Index:
+                    case ExpressionType.Assign:
+                    case ExpressionType.Block:
+                    case ExpressionType.Conditional:
+                    case ExpressionType.ArrayIndex:
+
+                        return true;
+                }
+                cur = cur.Expression as MemberExpression;
+            }
+            return false;
+        }
 
         private void VisitSelectAfterGroupBy(Expression operand, Expression elementSelectorPath)
         {
