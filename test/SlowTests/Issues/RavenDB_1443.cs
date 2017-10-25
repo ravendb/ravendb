@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using FastTests;
-using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.MoreLikeThis;
@@ -15,6 +14,7 @@ namespace SlowTests.Issues
     {
         public class Article
         {
+            public string Id { get; set; }
             public string Name { get; set; }
             public string ArticleBody { get; set; }
         }
@@ -80,13 +80,13 @@ namespace SlowTests.Issues
             {
                 var oldRequests = session.Advanced.NumberOfRequests;
 
-                var moreLikeThisLazy = session.Advanced.Lazily.MoreLikeThis<Article>(new MoreLikeThisQuery
-                {
-                    Query = $"FROM INDEX '{index.IndexName}'",
-                    DocumentId = "articles/0",
-                    MinimumTermFrequency = 0,
-                    MinimumDocumentFrequency = 0,
-                });
+                var moreLikeThisLazy = session.Query<Article, ArticleIndex>()
+                    .MoreLikeThis(x => x.Id == "articles/0", new MoreLikeThisOptions
+                    {
+                        MinimumTermFrequency = 0,
+                        MinimumDocumentFrequency = 0
+                    })
+                    .Lazily();
 
                 Assert.Equal(oldRequests, session.Advanced.NumberOfRequests);
                 Assert.NotEmpty(moreLikeThisLazy.Value);
