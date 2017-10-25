@@ -4,16 +4,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Text.RegularExpressions;
 using Lucene.Net.Analysis;
 using Lucene.Net.Search;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
-using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
-using Raven.Server.Documents.Queries.Parser;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Query = Lucene.Net.Search.Query;
@@ -106,12 +103,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return analyzerInstance;
         }
 
-        protected Query GetLuceneQuery(JsonOperationContext context, QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer, Func<string, SpatialField> getSpatialField)
+        protected Query GetLuceneQuery(JsonOperationContext context, QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories)
         {
-            return GetLuceneQuery(context, metadata, metadata.Query.Where, parameters, analyzer, getSpatialField);
+            return GetLuceneQuery(context, metadata, metadata.Query.Where, parameters, analyzer, factories);
         }
 
-        protected Query GetLuceneQuery(JsonOperationContext context, QueryMetadata metadata, QueryExpression whereExpression, BlittableJsonReaderObject parameters, Analyzer analyzer, Func<string, SpatialField> getSpatialField)
+        protected Query GetLuceneQuery(JsonOperationContext context, QueryMetadata metadata, QueryExpression whereExpression, BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories)
         {
             Query documentQuery;
 
@@ -141,7 +138,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     //    }
                     //    return parent.CreateAnalyzer(newAnalyzer, toDispose, true);
                     //});
-                    documentQuery = QueryBuilder.BuildQuery(context, metadata, whereExpression, parameters, analyzer, _index.QueryBuilderFactories);
+                    documentQuery = QueryBuilder.BuildQuery(context, metadata, whereExpression, parameters, analyzer, factories);
                 }
                 finally
                 {

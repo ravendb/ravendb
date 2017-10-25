@@ -170,6 +170,8 @@ namespace Raven.Server.Documents.Indexes
 
         private readonly ConcurrentDictionary<string, SpatialField> _spatialFields = new ConcurrentDictionary<string, SpatialField>(StringComparer.OrdinalIgnoreCase);
 
+        internal readonly QueryBuilderFactories _queryBuilderFactories;
+
         private string IndexingThreadName => "Indexing of " + Name + " of " + _indexStorage.DocumentDatabase.Name;
 
         private readonly WarnIndexOutputsPerDocument _indexOutputsPerDocumentWarning = new WarnIndexOutputsPerDocument
@@ -194,7 +196,7 @@ namespace Raven.Server.Documents.Indexes
                 HandleAllDocs = true;
 
             _storageOperation = new StorageOperationWrapper(this);
-            QueryBuilderFactories = new QueryBuilderFactories
+            _queryBuilderFactories = new QueryBuilderFactories
             {
                 GetSpatialFieldFactory = GetOrAddSpatialField,
                 GetRegexFactory = GetOrAddRegex
@@ -1777,7 +1779,6 @@ namespace Raven.Server.Documents.Indexes
                                     query,
                                     f => GetQueryResultRetriever(null, documentsContext, new FieldsToFetch(f, Definition), includeDocumentsCommand),
                                     documentsContext,
-                                    GetOrAddSpatialField,
                                     token.Token);
                             }
                             else if (query.Metadata.IsIntersect)
@@ -2543,11 +2544,6 @@ namespace Raven.Server.Documents.Indexes
         {
         }
 
-        internal QueryBuilderFactories QueryBuilderFactories
-        {
-            get; private set;
-        }
-
         private Regex GetOrAddRegex(string arg)
         {
             return _regexCache.Get(arg);
@@ -2706,6 +2702,6 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-       
+
     }
 }

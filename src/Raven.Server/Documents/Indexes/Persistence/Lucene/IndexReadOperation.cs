@@ -34,6 +34,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
     public sealed class IndexReadOperation : IndexOperationBase
     {
+        private readonly QueryBuilderFactories _queryBuilderFactories;
         private readonly IndexType _indexType;
         private readonly bool _indexHasBoostedFields;
 
@@ -45,7 +46,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private readonly IState _state;
 
-        public IndexReadOperation(Index index, LuceneVoronDirectory directory, IndexSearcherHolder searcherHolder, Transaction readTransaction)
+        public IndexReadOperation(Index index, LuceneVoronDirectory directory, IndexSearcherHolder searcherHolder, QueryBuilderFactories queryBuilderFactories, Transaction readTransaction)
             : base(index, LoggingSource.Instance.GetLogger<IndexReadOperation>(index._indexStorage.DocumentDatabase.Name))
         {
             try
@@ -57,6 +58,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 throw new IndexAnalyzerException(e);
             }
 
+            _queryBuilderFactories = queryBuilderFactories;
             _maxNumberOfOutputsPerDocument = index.MaxNumberOfOutputsPerDocument;
             _indexType = index.Type;
             _indexHasBoostedFields = index.HasBoostedFields;
@@ -75,7 +77,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var docsToGet = pageSize;
             var position = query.Start;
 
-            var luceneQuery = GetLuceneQuery(documentsContext, query.Metadata, query.QueryParameters, _analyzer, getSpatialField);
+            var luceneQuery = GetLuceneQuery(documentsContext, query.Metadata, query.QueryParameters, _analyzer, _queryBuilderFactories);
             var sort = GetSort(query, getSpatialField);
             var returnedResults = 0;
 
@@ -152,7 +154,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 if (whereExpression == null)
                     throw new InvalidQueryException($"Invalid intersect query. The intersect clause at position {i} isn't a valid expression", query.Metadata.QueryText, query.QueryParameters);
 
-                subQueries[i] = GetLuceneQuery(documentsContext, query.Metadata, whereExpression, query.QueryParameters, _analyzer, getSpatialField);
+                subQueries[i] = GetLuceneQuery(documentsContext, query.Metadata, whereExpression, query.QueryParameters, _analyzer, _queryBuilderFactories);
             }
 
             //Not sure how to select the page size here??? The problem is that only docs in this search can be part 
@@ -417,9 +419,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             IndexQueryServerSide query,
             Func<SelectField[], IQueryResultRetriever> createRetriever,
             DocumentsOperationContext context,
-            Func<string, SpatialField> getSpatialField, CancellationToken token)
+            CancellationToken token)
         {
-            var moreLikeThisQuery = QueryBuilder.BuildMoreLikeThisQuery(context, query.Metadata, query.Metadata.Query.Where, query.QueryParameters, _analyzer, getSpatialField);
+            var moreLikeThisQuery = QueryBuilder.BuildMoreLikeThisQuery(context, query.Metadata, query.Metadata.Query.Where, query.QueryParameters, _analyzer, _queryBuilderFactories);
             var options = moreLikeThisQuery.Options != null ? JsonDeserializationServer.MoreLikeThisOptions(moreLikeThisQuery.Options) : MoreLikeThisOptions.Default;
 
             HashSet<string> stopWords = null;
@@ -520,7 +522,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var docsToGet = GetPageSize(_searcher, query.PageSize);
             var position = query.Start;
 
-            var luceneQuery = GetLuceneQuery(documentsContext, query.Metadata, query.QueryParameters, _analyzer, getSpatialField);
+            var luceneQuery = GetLuceneQuery(documentsContext, query.Metadata, query.QueryParameters, _analyzer, _queryBuilderFactories);
             var sort = GetSort(query, getSpatialField);
 
             var search = ExecuteQuery(luceneQuery, query.Start, docsToGet, sort);

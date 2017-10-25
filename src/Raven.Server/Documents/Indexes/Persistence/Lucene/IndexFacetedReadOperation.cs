@@ -18,6 +18,7 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Server.Documents.Indexes.Static.Spatial;
+using Raven.Server.Documents.Queries;
 using Sparrow.Json;
 using Sparrow.LowMemory;
 
@@ -25,6 +26,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
     public class IndexFacetedReadOperation : IndexOperationBase
     {
+        private readonly QueryBuilderFactories _queryBuilderFactories;
         private readonly IndexSearcher _searcher;
         private readonly IDisposable _releaseReadTransaction;
         private readonly RavenPerFieldAnalyzerWrapper _analyzer;
@@ -36,6 +38,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             Dictionary<string, IndexField> fields,
             LuceneVoronDirectory directory,
             IndexSearcherHolder searcherHolder,
+            QueryBuilderFactories queryBuilderFactories,
             Transaction readTransaction,
             DocumentDatabase documentDatabase)
             : base(index, LoggingSource.Instance.GetLogger<IndexFacetedReadOperation>(documentDatabase.Name))
@@ -49,6 +52,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 throw new IndexAnalyzerException(e);
             }
 
+            _queryBuilderFactories = queryBuilderFactories;
             _releaseReadTransaction = directory.SetTransaction(readTransaction, out _state);
             _currentStateHolder = searcherHolder.GetStateHolder(readTransaction);
             _searcher = _currentStateHolder.GetIndexSearcher(_state);
@@ -64,7 +68,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (query.Metadata.IsDistinct)
                 fieldsHash = CalculateQueryFieldsHash(query);
 
-            var baseQuery = GetLuceneQuery(context, query.Metadata, query.QueryParameters, _analyzer, getSpatialField);
+            var baseQuery = GetLuceneQuery(context, query.Metadata, query.QueryParameters, _analyzer, _queryBuilderFactories);
             var returnedReaders = GetQueryMatchingDocuments(_searcher, baseQuery, _state);
 
             foreach (var facet in defaultFacets.Values)
