@@ -135,7 +135,7 @@ namespace Raven.Server.Documents.Handlers
                         }
                         // queue identities requests in order to send them at once to the leader (using List for simplicity)
                         identities.Add(commandData.Id);
-                        positionInListToCommandIndex[identities.Count - 1] = index;
+                        positionInListToCommandIndex.Add(index);
                     }
 
                     cmds[index] = commandData;

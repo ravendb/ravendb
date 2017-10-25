@@ -31,7 +31,7 @@ namespace Raven.Server.ServerWide.Commands
             var results = new List<long>();
             foreach (var identity in Identities)
             {
-                using (Slice.From(context.Allocator, identity, out var key))
+                using (Slice.From(context.Allocator, GetStorageKey(DatabaseName, identity), out var key))
                 {
                     var newVal = identitiesTree.Increment(key, 1);
                     // we assume this is single thread task and therefor we return the first identity of each id. 
