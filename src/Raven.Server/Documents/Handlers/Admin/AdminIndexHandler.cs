@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -56,34 +57,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 }
             }
         }
-
-        [RavenAction("/databases/*/admin/indexes/compact", "POST", AuthorizationStatus.DatabaseAdmin)]
-        public Task Compact()
-        {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-
-            var index = Database.IndexStore.GetIndex(name);
-            if (index == null)
-                return NoContent();
-
-            var token = CreateOperationToken();
-            var operationId = Database.Operations.GetNextOperationId();
-
-            Database.Operations.AddOperation(
-                Database,
-                "Compact index: " + index.Name,
-                Operations.Operations.OperationType.IndexCompact,
-                onProgress => Task.Factory.StartNew(() => index.Compact(onProgress), token.Token), operationId, token);
-
-            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                writer.WriteOperationId(context, operationId);
-            }
-
-            return Task.CompletedTask;
-        }
-
+        
         [RavenAction("/databases/*/admin/indexes/stop", "POST", AuthorizationStatus.DatabaseAdmin)]
         public Task Stop()
         {
