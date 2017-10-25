@@ -15,65 +15,54 @@ namespace FastTests.Issues
         [Fact]
         public void AggressivelyCacheWorksWhenTopologyUpdatesIsDisable()
         {
-
-            using (var server = GetNewServer(runInMemory: false))
+            using (var documentStore = GetDocumentStore())
             {
-                using (var documentStore = new DocumentStore
+                using (var session = documentStore.OpenSession())
                 {
-                    Urls = UseFiddler(server.WebUrl),
-                    Database = "RavenDB_9055"
-                })
-                {
-                    documentStore.Conventions.DisableTopologyUpdates = true;
-                    documentStore.Conventions.UseOptimisticConcurrency = true;
-                    documentStore.Initialize();
-
-                    var operation = new CreateDatabaseOperation(new DatabaseRecord(documentStore.Database));
-                    documentStore.Admin.Server.Send(operation);
-
-                    using (var session = documentStore.OpenSession())
+                    session.Store(new User
                     {
-                        session.Store(new User
-                        {
-                            Name = "Idan"
-                        }, "users/1");
-                        session.SaveChanges();
-                    }
+                        Name = "Idan"
+                    }, "users/1");
+                    session.SaveChanges();
+                }
 
-                    string changeVector;
+                var mre = new ManualResetEventSlim();
+                string changeVector;
+                using (documentStore.AggressivelyCache())
+                using (var session = documentStore.OpenSession())
+                {
+                    var forAllDocuments = documentStore.Changes().ForAllDocuments();
+                    forAllDocuments.Subscribe(change => mre.Set());
+                    forAllDocuments.EnsureSubscribedNow().Wait();
+
+                    var user = session.Load<User>("users/1");
+                    user.Name = "Shalom";
+                    session.SaveChanges();
+                    changeVector = session.Advanced.GetMetadataFor(user)?.GetString(Constants.Documents.Metadata.ChangeVector);
+                }
+                Assert.True(mre.Wait(500));
+                Assert.NotNull(changeVector);
+
+                string updateChangeVector = null;
+                for (int i = 0; i < 15; i++)
+                {
                     using (documentStore.AggressivelyCache())
                     using (var session = documentStore.OpenSession())
                     {
-                        documentStore.Changes().ForAllDocuments().EnsureSubscribedNow().Wait();
-
                         var user = session.Load<User>("users/1");
-                        user.Name = "Shalom";
-                        session.SaveChanges();
-                        changeVector = session.Advanced.GetMetadataFor(user)?.GetString(Constants.Documents.Metadata.ChangeVector);
-                    }
-                    Assert.NotNull(changeVector);
-                    
-                    string updateChangeVector = null;
-                    for (int i = 0; i < 15; i++)
-                    {
-                        using (documentStore.AggressivelyCache())
-                        using (var session = documentStore.OpenSession())
-                        {
-                            var user = session.Load<User>("users/1");
-                            updateChangeVector = session.Advanced.GetMetadataFor(user)?
-                                .GetString(Constants.Documents.Metadata.ChangeVector);
+                        updateChangeVector = session.Advanced.GetMetadataFor(user)?
+                            .GetString(Constants.Documents.Metadata.ChangeVector);
 
-                            if (updateChangeVector != null && updateChangeVector.Equals(changeVector))
-                            {
-                                break;
-                            }
-                            Thread.Sleep(100);
+                        if (updateChangeVector != null && updateChangeVector.Equals(changeVector))
+                        {
+                            break;
                         }
+                        Thread.Sleep(100);
                     }
-                    Assert.NotNull(updateChangeVector);
-                    Assert.Equal(changeVector, updateChangeVector);
                 }
+                Assert.NotNull(updateChangeVector);
+                Assert.Equal(changeVector, updateChangeVector);
             }
         }
-    }   
+    }
 }

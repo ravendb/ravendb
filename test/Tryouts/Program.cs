@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Blittable;
 using FastTests.Client.Attachments;
+using FastTests.Issues;
 using FastTests.Server.Documents.Expiration;
 using FastTests.Server.Documents.Indexing.Static;
 using FastTests.Smuggler;
@@ -22,10 +23,13 @@ namespace RavenDB4RCTests
     {
         static void Main(string[] args)
         {
+            for (int i = 0; i < 100; i++)
             {
-                var sp = Stopwatch.StartNew();
-                new LegacySmugglerTests().CanImportRevisions("SlowTests.Smuggler.Revisions_3.5.35220.ravendbdump").Wait();
-                Console.WriteLine(sp.Elapsed);
+                Console.WriteLine(i);
+                using (var test = new RavenDB_9055())
+                {
+                    test.AggressivelyCacheWorksWhenTopologyUpdatesIsDisable();
+                }
             }
         }
 
