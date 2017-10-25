@@ -83,14 +83,22 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             if (string.IsNullOrWhiteSpace(outputReduceToCollection))
                 return;
 
-            var collections = index.Maps.Keys.ToArray();
-            if (collections.Contains(Constants.Documents.Collections.AllDocumentsCollection, StringComparer.OrdinalIgnoreCase))
-                throw new IndexInvalidException($"Cannot output documents from index ({definition.Name}) " +
-                                                $"to the collection name ({outputReduceToCollection}) " +
-                                                $"because the index is mapping all documents and this will result in an infinite loop.");
-            if (collections.Contains(outputReduceToCollection, StringComparer.OrdinalIgnoreCase))
-                throw new IndexInvalidException($"The collection name ({outputReduceToCollection}) " +
-                                                $"cannot be used as this index ({definition.Name}) is mapping this collection " +
+            var collections = index.Maps.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            if (collections.Contains(Constants.Documents.Collections.AllDocumentsCollection))
+                throw new IndexInvalidException($"It is forbidden to create the '{definition.Name}' index " +
+                                                $"which would output reduce results to documents in the '{outputReduceToCollection}' collection, " +
+                                                $"as this index is mapping all documents " +
+                                                $"and this will result in an infinite loop.");
+
+            foreach (var referencedCollection in index.ReferencedCollections)
+            foreach (var collectionName in referencedCollection.Value)
+            {
+                collections.Add(collectionName.Name);
+            }
+            if (collections.Contains(outputReduceToCollection))
+                throw new IndexInvalidException($"It is forbidden to create the '{definition.Name}' index " +
+                                                $"which would output reduce results to documents in the '{outputReduceToCollection}' collection, " +
+                                                $"as this index is mapping or referencing the '{outputReduceToCollection}' collection " +
                                                 $"and this will result in an infinite loop.");
 
             var indexes = database.IndexStore.GetIndexes()
@@ -113,27 +121,39 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                                                         $"and than delete all of the documents in the '{otherIndex.Definition.OutputReduceToCollection}' collection.");
                     }
 
-                    throw new IndexInvalidException($"The collection name ({outputReduceToCollection}) " +
-                                                    $"which will be used to output documents results must be unique to only one index " +
-                                                    $"but it is already used by another index ({otherIndex.Name}).");
+                    throw new IndexInvalidException($"It is forbidden to create the '{definition.Name}' index " +
+                                                    $"which would output reduce results to documents in the '{outputReduceToCollection}' collection, " +
+                                                    $"as there is another index named '{otherIndex.Name}' " +
+                                                    $"which also output reduce results to documents in the same '{outputReduceToCollection}' collection. " +
+                                                    $"{nameof(IndexDefinition.OutputReduceToCollection)} must by set to unique value for each index or be null.");
                 }
 
-                if (otherIndex.Collections.Contains(outputReduceToCollection, StringComparer.OrdinalIgnoreCase) &&
+                var otherIndexCollections = otherIndex.Collections;
+                foreach (var referencedCollection in otherIndex.GetReferencedCollections())
+                foreach (var collectionName in referencedCollection.Value)
+                {
+                    otherIndexCollections.Add(collectionName.Name);
+                }
+                if (otherIndexCollections.Contains(outputReduceToCollection) &&
                     CheckIfThereIsAnIndexWhichWillOutputReduceDocumentsWhichWillBeUsedAsMapOnTheSpecifiedIndex(otherIndex, collections, indexes, out string description))
                 {
                     description += Environment.NewLine + $"--> {definition.Name}: {string.Join(",", collections)} => *{outputReduceToCollection}*";
-                    throw new IndexInvalidException($"The collection name ({outputReduceToCollection}) cannot be used to output documents results as it is consumed by other index that will also output results which will lead to an infinite loop:" + Environment.NewLine + description);
+                    throw new IndexInvalidException($"It is forbidden to create the '{definition.Name}' index " +
+                                                    $"which would output reduce results to documents in the '{outputReduceToCollection}' collection, " +
+                                                    $"as '{outputReduceToCollection}' collection is consumed by other index in a way that would " +
+                                                    $"lead to an infinite loop." +
+                                                    Environment.NewLine + description);
                 }
             }
 
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var stats = database.DocumentsStorage.GetCollection(definition.OutputReduceToCollection, context);
+                var stats = database.DocumentsStorage.GetCollection(outputReduceToCollection, context);
                 if (stats.Count > 0)
                 {
                     throw new IndexInvalidException($"In order to create the '{definition.Name}' index " +
-                                                    $"which would output reduce results to documents in the '{definition.OutputReduceToCollection}' collection, " +
+                                                    $"which would output reduce results to documents in the '{outputReduceToCollection}' collection, " +
                                                     $"you firstly need to delete all of the documents in the '{stats.Name}' collection " +
                                                     $"(currenlty have {stats.Count} document{(stats.Count == 1 ? "" : "s")}).");
                 }
@@ -141,7 +161,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         }
 
         private static bool CheckIfThereIsAnIndexWhichWillOutputReduceDocumentsWhichWillBeUsedAsMapOnTheSpecifiedIndex(
-            MapReduceIndex otherIndex, string[] indexCollections,
+            MapReduceIndex otherIndex, HashSet<string> indexCollections,
             List<MapReduceIndex> indexes, out string description)
         {
             description = $"{otherIndex.Name}: {string.Join(",", otherIndex.Collections)} => {otherIndex.Definition.OutputReduceToCollection}";
@@ -152,13 +172,22 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             if (indexCollections.Contains(otherIndex.Definition.OutputReduceToCollection))
                 return true;
 
-            foreach (var index in indexes.Where(mapReduceIndex => mapReduceIndex.Collections.Contains(otherIndex.Definition.OutputReduceToCollection, StringComparer.OrdinalIgnoreCase)))
+            foreach (var index in indexes)
             {
-                var failed = CheckIfThereIsAnIndexWhichWillOutputReduceDocumentsWhichWillBeUsedAsMapOnTheSpecifiedIndex(index, indexCollections, indexes, out string innerDescription);
-                description += Environment.NewLine + innerDescription;
-                if (failed)
+                var otherIndexCollections = index.Collections;
+                foreach (var referencedCollection in index.GetReferencedCollections())
+                foreach (var collectionName in referencedCollection.Value)
                 {
-                    return true;
+                    otherIndexCollections.Add(collectionName.Name);
+                }
+                if (otherIndexCollections.Contains(otherIndex.Definition.OutputReduceToCollection))
+                {
+                    var failed = CheckIfThereIsAnIndexWhichWillOutputReduceDocumentsWhichWillBeUsedAsMapOnTheSpecifiedIndex(index, indexCollections, indexes, out string innerDescription);
+                    description += Environment.NewLine + innerDescription;
+                    if (failed)
+                    {
+                        return true;
+                    }
                 }
             }
 
