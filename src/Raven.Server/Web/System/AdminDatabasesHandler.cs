@@ -1333,19 +1333,26 @@ namespace Raven.Server.Web.System
                     {
                         using (token)
                         {
-                            DatabaseCompactionResult.Instance.SizeBeforeCompactionInMb = await CalculateStorageSizeInBytes(compactSettings.DatabaseName) / 1024 / 1024;
-
+                            var before = CalculateStorageSizeInBytes(compactSettings.DatabaseName).Result / 1024 / 1024;
+                            var overallResult = new CompactionResult(compactSettings.DatabaseName);
+                            
                             foreach (var indexName in compactSettings.Indexes)
                             {
                                 var index = database.IndexStore.GetIndex(indexName);
-                                index.Compact(onProgress);
+                                var indexCompactionResult = new CompactionResult(indexName);
+                                overallResult.IndexesResults.Add(indexName, indexCompactionResult);
+                                index.Compact(onProgress, indexCompactionResult);
                             }
 
-                            if (compactSettings.Documents)
-                                await compactDatabaseTask.Execute(onProgress);
+                            if (!compactSettings.Documents)
+                                return overallResult;
 
-                            DatabaseCompactionResult.Instance.SizeAfterCompactionInMb = await CalculateStorageSizeInBytes(compactSettings.DatabaseName) / 1024 / 1024;
-                            return (IOperationResult)DatabaseCompactionResult.Instance;
+                            await compactDatabaseTask.Execute(onProgress, overallResult);
+                            
+                            overallResult.SizeAfterCompactionInMb = CalculateStorageSizeInBytes(compactSettings.DatabaseName).Result / 1024 / 1024;
+                            overallResult.SizeBeforeCompactionInMb = before;
+
+                            return (IOperationResult)overallResult;
                         }
                     }, token.Token),
                     id: operationId, token: token);

@@ -2457,16 +2457,16 @@ namespace Raven.Server.Documents.Indexes
             return _storageOperation;
         }
 
-        public IOperationResult Compact(Action<IOperationProgress> onProgress)
+        public void Compact(Action<IOperationProgress> onProgress, CompactionResult result)
         {
             if (_isCompactionInProgress)
                 throw new InvalidOperationException($"Index '{Name} ({Etag})' cannot be compacted because compaction is already in progress.");
+            
+            result.SizeBeforeCompactionInMb = CalculateIndexStorageSizeInBytes(Name) / 1024 / 1024;
 
-            var progress = new IndexCompactionProgress
-            {
-                Message = "Draining queries for " + Name
-            };
-            onProgress?.Invoke(progress);
+            result.AddMessage($"Starting compaction of index '{Name}'.");
+            result.AddMessage($"Draining queries for {Name}.");
+            onProgress?.Invoke(result.Progress);
 
             using (DrainRunningQueries())
             {
@@ -2479,12 +2479,10 @@ namespace Raven.Server.Documents.Indexes
                         $"Index '{Name} ({Etag})' cannot be compacted because it runs in memory.");
 
                 _isCompactionInProgress = true;
-                progress.Message = null;
-
                 PathSetting compactPath = null;
 
                 try
-                {
+                {                    
                     var storageEnvironmentOptions = _environment.Options;
 
                     using (StorageOperation())
@@ -2517,10 +2515,11 @@ namespace Raven.Server.Documents.Indexes
 
                             StorageCompaction.Execute(srcOptions, compactOptions, progressReport =>
                             {
-                                progress.Processed = progressReport.GlobalProgress;
-                                progress.Total = progressReport.GlobalTotal;
-
-                                onProgress?.Invoke(progress);
+                                result.Progress.TreeProgress = progressReport.TreeProgress;
+                                result.Progress.TreeTotal = progressReport.TreeTotal;
+                                result.Progress.TreeName = progressReport.TreeName;
+                                result.AddMessage(progressReport.Message);
+                                onProgress?.Invoke(result.Progress);
                             });
                         }
 
@@ -2528,7 +2527,7 @@ namespace Raven.Server.Documents.Indexes
                         IOExtensions.MoveDirectory(compactPath.FullPath, environmentOptions.BasePath.FullPath);
                     }
 
-                    return IndexCompactionResult.Instance;
+                    result.SizeAfterCompactionInMb = CalculateIndexStorageSizeInBytes(Name) / 1024 / 1024;
                 }
                 finally
                 {
@@ -2538,6 +2537,23 @@ namespace Raven.Server.Documents.Indexes
                     _isCompactionInProgress = false;
                 }
             }
+        }
+
+        public long CalculateIndexStorageSizeInBytes(string indexName)
+        {
+            long sizeOnDiskInBytes = 0;
+            
+            using (var tx = _environment.ReadTransaction())
+            {
+                var storageReport = _environment.GenerateReport(tx);
+                if (storageReport == null)
+                    return 0;
+
+                var journalSize = storageReport.Journals.Sum(j => j.AllocatedSpaceInBytes);
+                sizeOnDiskInBytes += storageReport.DataFile.AllocatedSpaceInBytes + journalSize;
+            }
+
+            return sizeOnDiskInBytes;
         }
 
         public long GetLastEtagInCollection(DocumentsOperationContext databaseContext, string collection)

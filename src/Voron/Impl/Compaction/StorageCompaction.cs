@@ -19,7 +19,7 @@ using Voron.Impl.Journal;
 
 namespace Voron.Impl.Compaction
 {
-    public class CompactionProgress
+    public class StorageCompactionProgress
     {
         public string TreeName;
         public long TreeProgress;
@@ -36,7 +36,7 @@ namespace Voron.Impl.Compaction
 
         public static void Execute(StorageEnvironmentOptions srcOptions,
             StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions compactOptions,
-            Action<CompactionProgress> progressReport = null,
+            Action<StorageCompactionProgress> progressReport = null,
             CancellationToken token = default(CancellationToken))
         {
             if (srcOptions.IncrementalBackupEnabled)
@@ -94,7 +94,7 @@ namespace Voron.Impl.Compaction
             }
         }
 
-        private static void CopyTrees(StorageEnvironment existingEnv, StorageEnvironment compactedEnv, Action<CompactionProgress> progressReport, CancellationToken token)
+        private static void CopyTrees(StorageEnvironment existingEnv, StorageEnvironment compactedEnv, Action<StorageCompactionProgress> progressReport, CancellationToken token)
         {
             var context = new TransactionPersistentContext(true);
             using (var txr = existingEnv.ReadTransaction(context))
@@ -181,7 +181,7 @@ namespace Voron.Impl.Compaction
             }
         }
 
-        private static long CopyFixedSizeTrees(StorageEnvironment compactedEnv, Action<CompactionProgress> progressReport, Transaction txr,
+        private static long CopyFixedSizeTrees(StorageEnvironment compactedEnv, Action<StorageCompactionProgress> progressReport, Transaction txr,
             TreeIterator rootIterator, string treeName, long copiedTrees, long totalTreesCount, TransactionPersistentContext context, CancellationToken token)
         {
 
@@ -191,7 +191,7 @@ namespace Voron.Impl.Compaction
 
             var fst = txr.FixedTreeFor(treeNameSlice, header->ValueSize);
 
-            Report(copiedTrees, totalTreesCount, 0, fst.NumberOfEntries, progressReport, "Copying fixed size tree", treeName);
+            Report(copiedTrees, totalTreesCount, 0, fst.NumberOfEntries, progressReport, $"Copying fixed size tree '{treeName}'. Progress: 0/{fst.NumberOfEntries} entries.", treeName);
 
             using (var it = fst.Iterate())
             {
@@ -206,6 +206,7 @@ namespace Voron.Impl.Compaction
                     {
                         var snd = txw.FixedTreeFor(treeNameSlice, header->ValueSize);
                         var transactionSize = 0L;
+
                         do
                         {
                             token.ThrowIfCancellationRequested();
@@ -215,25 +216,33 @@ namespace Voron.Impl.Compaction
                                 snd.Add(it.CurrentKey, val);
                             transactionSize += fst.ValueSize + sizeof(long);
                             copiedEntries++;
+
+                            var reportRate = fst.NumberOfEntries / 33 + 1;
+                            if (copiedEntries % reportRate == 0)
+                                Report(copiedTrees, totalTreesCount, copiedEntries, fst.NumberOfEntries, progressReport, $"Copying fixed size tree '{treeName}'. Progress: {copiedEntries}/{fst.NumberOfEntries} entries.", treeName);
+
                         } while (transactionSize < compactedEnv.Options.MaxScratchBufferSize / 2 && it.MoveNext());
 
                         txw.Commit();
                     }
-                    if (fst.NumberOfEntries == copiedEntries)
-                        copiedTrees++;
 
-                    Report(copiedTrees, totalTreesCount, copiedEntries, fst.NumberOfEntries, progressReport, "Copied fixed size tree", treeName);
+                    if (fst.NumberOfEntries == copiedEntries)
+                    {
+                        copiedTrees++;
+                        Report(copiedTrees, totalTreesCount, copiedEntries, fst.NumberOfEntries, progressReport, $"Finished copying fixed size tree '{treeName}'. Progress: {copiedEntries}/{fst.NumberOfEntries} entries.", treeName);
+                    }
+
                     compactedEnv.FlushLogToDataFile();
                 } while (it.MoveNext());
             }
             return copiedTrees;
         }
 
-        private static long CopyVariableSizeTree(StorageEnvironment compactedEnv, Action<CompactionProgress> progressReport, Transaction txr, string treeName, long copiedTrees, long totalTreesCount, TransactionPersistentContext context, CancellationToken token)
+        private static long CopyVariableSizeTree(StorageEnvironment compactedEnv, Action<StorageCompactionProgress> progressReport, Transaction txr, string treeName, long copiedTrees, long totalTreesCount, TransactionPersistentContext context, CancellationToken token)
         {
             var existingTree = txr.ReadTree(treeName);
 
-            Report(copiedTrees, totalTreesCount, 0, existingTree.State.NumberOfEntries, progressReport, "Copying variable size tree", treeName);
+            Report(copiedTrees, totalTreesCount, 0, existingTree.State.NumberOfEntries, progressReport, $"Copying variable size tree '{treeName}'. Progress: 0/{existingTree.State.NumberOfEntries} entries.", treeName);
 
             using (var existingTreeIterator = existingTree.Iterate(true))
             {
@@ -321,15 +330,21 @@ namespace Voron.Impl.Compaction
                             }
 
                             copiedEntries++;
+
+                            var reportRate = existingTree.State.NumberOfEntries / 33 + 1;
+                            if (copiedEntries % reportRate == 0)
+                                Report(copiedTrees, totalTreesCount, copiedEntries, existingTree.State.NumberOfEntries, progressReport, $"Copying variable size tree '{treeName}'. Progress: {copiedEntries}/{existingTree.State.NumberOfEntries} entries.", treeName);
+
                         } while (transactionSize < compactedEnv.Options.MaxScratchBufferSize / 2 && existingTreeIterator.MoveNext());
 
                         txw.Commit();
                     }
 
                     if (copiedEntries == existingTree.State.NumberOfEntries)
+                    {
                         copiedTrees++;
-
-                    Report(copiedTrees, totalTreesCount, copiedEntries, existingTree.State.NumberOfEntries, progressReport, "Copied variable size tree", treeName);
+                        Report(copiedTrees, totalTreesCount, copiedEntries, existingTree.State.NumberOfEntries, progressReport, $"Finished copying variable size tree '{treeName}'. Progress: {copiedEntries}/{existingTree.State.NumberOfEntries} entries.", treeName);
+                    }
 
                     compactedEnv.FlushLogToDataFile();
                 } while (existingTreeIterator.MoveNext());
@@ -337,7 +352,7 @@ namespace Voron.Impl.Compaction
             return copiedTrees;
         }
 
-        private static long CopyTableTree(StorageEnvironment compactedEnv, Action<CompactionProgress> progressReport, Transaction txr, string treeName, long copiedTrees, long totalTreesCount, TransactionPersistentContext context, CancellationToken token)
+        private static long CopyTableTree(StorageEnvironment compactedEnv, Action<StorageCompactionProgress> progressReport, Transaction txr, string treeName, long copiedTrees, long totalTreesCount, TransactionPersistentContext context, CancellationToken token)
         {
             // Load table
             var tableTree = txr.ReadTree(treeName, RootObjectType.Table);
@@ -361,7 +376,7 @@ namespace Voron.Impl.Compaction
             var lastSlice = Slices.BeforeAllKeys;
             long lastFixedIndex = 0L;
 
-            Report(copiedTrees, totalTreesCount, copiedEntries, inputTable.NumberOfEntries, progressReport, "Copying table tree", treeName);
+            Report(copiedTrees, totalTreesCount, copiedEntries, inputTable.NumberOfEntries, progressReport, $"Copying table tree '{treeName}'. Progress: {copiedEntries}/{inputTable.NumberOfEntries} entries.", treeName);
             using (var txw = compactedEnv.WriteTransaction(context))
             {
                 schema.Create(txw, treeName, Math.Max((ushort)inputTable.ActiveDataSmallSection.NumberOfPages, ushort.MaxValue));
@@ -400,6 +415,10 @@ namespace Voron.Impl.Compaction
                                 copiedEntries++;
                                 transactionSize += tvr.Result.Reader.Size;
 
+                                var reportRate = inputTable.NumberOfEntries / 33 + 1;
+                                if (copiedEntries % reportRate == 0)
+                                    Report(copiedTrees, totalTreesCount, copiedEntries, inputTable.NumberOfEntries, progressReport, $"Copying table tree '{treeName}'. Progress: {copiedEntries}/{inputTable.NumberOfEntries} entries.", treeName);
+                                
                                 // The transaction has surpassed the allowed
                                 // size before a flush
                                 if (lastSlice.Equals(tvr.Key) == false && transactionSize >= compactedEnv.Options.MaxScratchBufferSize / 2)
@@ -425,6 +444,10 @@ namespace Voron.Impl.Compaction
                                 outputTable.Insert(ref entry.Reader);
                                 copiedEntries++;
                                 transactionSize += entry.Reader.Size;
+
+                                var reportRate = inputTable.NumberOfEntries / 33 + 1;
+                                if (copiedEntries % reportRate == 0)
+                                    Report(copiedTrees, totalTreesCount, copiedEntries, inputTable.NumberOfEntries, progressReport, $"Copying table tree '{treeName}'. Progress: {copiedEntries}/{inputTable.NumberOfEntries} entries.", treeName);
 
                                 // The transaction has surpassed the allowed
                                 // size before a flush
@@ -461,9 +484,10 @@ namespace Voron.Impl.Compaction
                 }
 
                 if (copiedEntries == inputTable.NumberOfEntries)
+                {
                     copiedTrees++;
-
-                Report(copiedTrees, totalTreesCount, copiedEntries, inputTable.NumberOfEntries, progressReport, "Copied table tree", treeName);
+                    Report(copiedTrees, totalTreesCount, copiedEntries, inputTable.NumberOfEntries, progressReport, $"Finished copying table tree '{treeName}'. Progress: {copiedEntries}/{inputTable.NumberOfEntries} entries.", treeName);
+                }
 
                 compactedEnv.FlushLogToDataFile();
             }
@@ -471,12 +495,9 @@ namespace Voron.Impl.Compaction
             return copiedTrees;
         }
 
-        private static void Report(long globalProgress, long globalTotal, long objectProgress, long objectTotal, Action<CompactionProgress> progressReport, string message = null, string treeName = null)
+        private static void Report(long globalProgress, long globalTotal, long objectProgress, long objectTotal, Action<StorageCompactionProgress> progressReport, string message = null, string treeName = null)
         {
-            if (progressReport == null)
-                return;
-
-            progressReport(new CompactionProgress
+            progressReport?.Invoke(new StorageCompactionProgress
             {
                 TreeProgress = objectProgress,
                 TreeTotal = objectTotal,
