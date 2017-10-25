@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class HiLoHandler : DatabaseRequestHandler
     {
-        private const string RavenIdGeneratorsHilo = "Raven/Hilo/";
+        public const string RavenHiloIdPrefix = "Raven/Hilo/";
 
         private static long CalculateCapacity(long lastSize, string lastRangeAtStr)
         {
@@ -96,7 +96,7 @@ namespace Raven.Server.Documents.Handlers
 
             public override int Execute(DocumentsOperationContext context)
             {
-                var hiLoDocumentId = RavenIdGeneratorsHilo + Key;
+                var hiLoDocumentId = RavenHiloIdPrefix + Key;
                 var prefix = Key + Separator;
 
                 var newDoc = new DynamicJsonValue();
@@ -180,7 +180,7 @@ namespace Raven.Server.Documents.Handlers
 
             public override int Execute(DocumentsOperationContext context)
             {
-                var hiLoDocumentId = RavenIdGeneratorsHilo + Key;
+                var hiLoDocumentId = RavenHiloIdPrefix + Key;
 
                 var document = Database.DocumentsStorage.Get(context, hiLoDocumentId);
 

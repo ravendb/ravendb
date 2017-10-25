@@ -13,7 +13,6 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using NCrontab.Advanced;
 using Raven.Client.Documents.Conventions;
@@ -50,6 +49,7 @@ using Raven.Client.Extensions;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Utils;
+using Voron.Impl;
 using Constants = Raven.Client.Constants;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 
@@ -1294,44 +1294,105 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/compact", "POST", AuthorizationStatus.Operator)]
         public Task CompactDatabase()
         {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
             {
-                var record = ServerStore.Cluster.ReadDatabase(context, name);
-                if (record == null)
-                    throw new InvalidOperationException($"Cannot compact database {name}, it doesn't exist.");
-                if (record.Topology.RelevantFor(ServerStore.NodeTag) == false)
-                    throw new InvalidOperationException($"Cannot compact database {name} on node {ServerStore.NodeTag}, because it doesn't reside on this node.");
-            }
+                var compactSettingsJson = context.ReadForDisk(RequestBodyStream(), string.Empty);
 
-            var token = new OperationCancelToken(ServerStore.ServerShutdown);
-            var compactDatabaseTask = new CompactDatabaseTask(
-                ServerStore,
-                name,
-                token.Token);
+                var compactSettings = JsonDeserializationServer.CompactSettings(compactSettingsJson);
+                
+                if (string.IsNullOrEmpty(compactSettings.DatabaseName))
+                    throw new InvalidOperationException($"{nameof(compactSettings.DatabaseName)} is a required field when compacting a database.");
 
-            var operationId = ServerStore.Operations.GetNextOperationId();
+                if (compactSettings.Documents == false && compactSettings.Indexes.Length == 0)
+                    throw new InvalidOperationException($"{nameof(compactSettings.Documents)} is false in compact settings and no indexes were supplied. Nothing to compact.");
 
-            ServerStore.Operations.AddOperation(
-                null,
-                "Compacting database: " + name,
-                Documents.Operations.Operations.OperationType.DatabaseCompact,
-                taskFactory: onProgress => Task.Run(async () =>
+                using (context.OpenReadTransaction())
                 {
-                    using (token)
-                        return await compactDatabaseTask.Execute(onProgress);
-                }, token.Token),
-                id: operationId, token: token);
+                    var record = ServerStore.Cluster.ReadDatabase(context, compactSettings.DatabaseName);
+                    if (record == null)
+                        throw new InvalidOperationException($"Cannot compact database {compactSettings.DatabaseName}, it doesn't exist.");
+                    if (record.Topology.RelevantFor(ServerStore.NodeTag) == false)
+                        throw new InvalidOperationException($"Cannot compact database {compactSettings.DatabaseName} on node {ServerStore.NodeTag}, because it doesn't reside on this node.");
+                }
 
-            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                writer.WriteOperationId(context, operationId);
+                var database = ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(compactSettings.DatabaseName).Result;
+               
+                var token = new OperationCancelToken(ServerStore.ServerShutdown);
+                var compactDatabaseTask = new CompactDatabaseTask(
+                    ServerStore,
+                    compactSettings.DatabaseName,
+                    token.Token);
+
+                var operationId = ServerStore.Operations.GetNextOperationId();
+
+                ServerStore.Operations.AddOperation(
+                    null,
+                    "Compacting database: " + compactSettings.DatabaseName,
+                    Documents.Operations.Operations.OperationType.DatabaseCompact,
+                    taskFactory: onProgress => Task.Run(async () =>
+                    {
+                        using (token)
+                        {
+                            DatabaseCompactionResult.Instance.SizeBeforeCompactionInMb = await CalculateStorageSizeInBytes(compactSettings.DatabaseName) / 1024 / 1024;
+
+                            foreach (var indexName in compactSettings.Indexes)
+                            {
+                                var index = database.IndexStore.GetIndex(indexName);
+                                index.Compact(onProgress);
+                            }
+
+                            if (compactSettings.Documents)
+                                await compactDatabaseTask.Execute(onProgress);
+
+                            DatabaseCompactionResult.Instance.SizeAfterCompactionInMb = await CalculateStorageSizeInBytes(compactSettings.DatabaseName) / 1024 / 1024;
+                            return (IOperationResult)DatabaseCompactionResult.Instance;
+                        }
+                    }, token.Token),
+                    id: operationId, token: token);
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteOperationId(context, operationId);
+                }
             }
-
             return Task.CompletedTask;
+        }
+
+        public async Task<long> CalculateStorageSizeInBytes(string databaseName)
+        {
+            long sizeOnDiskInBytes = 0;
+
+            var database = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
+            var storageEnvironments = database?.GetAllStoragesEnvironment();
+            if (storageEnvironments != null)
+            {
+                foreach (var environment in storageEnvironments)
+                {
+                    Transaction tx = null;
+                    try
+                    {
+                        try
+                        {
+                            tx = environment?.Environment.ReadTransaction();
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            continue;
+                        }
+                        var storageReport = environment?.Environment.GenerateReport(tx);
+                        if (storageReport == null)
+                            continue;
+
+                        var journalSize = storageReport.Journals.Sum(j => j.AllocatedSpaceInBytes);
+                        sizeOnDiskInBytes += storageReport.DataFile.AllocatedSpaceInBytes + journalSize;
+                    }
+                    finally
+                    {
+                        tx?.Dispose();
+                    }
+                }
+            }
+            return sizeOnDiskInBytes;
         }
 
         [RavenAction("/admin/migrate", "POST", AuthorizationStatus.ClusterAdmin)]

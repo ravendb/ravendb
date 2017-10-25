@@ -44,7 +44,7 @@ namespace SlowTests.Smuggler
                 Assert.Equal(4, collectionStats.Collections["Regions"]);
                 Assert.Equal(3, collectionStats.Collections["Shippers"]);
                 Assert.Equal(29, collectionStats.Collections["Suppliers"]);
-                Assert.Equal(8, collectionStats.Collections["@empty"]);
+                Assert.Equal(8, collectionStats.Collections["@hilo"]);
 
                 using (var session = store.OpenSession())
                 {

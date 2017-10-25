@@ -479,7 +479,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             if (query.Metadata.WhereFields.Count > 0)
             {
-                var additionalQuery = QueryBuilder.BuildQuery(context, query.Metadata, query.Metadata.Query.Where, null, _analyzer, _index.GetQueryBuilderFactories());
+                var additionalQuery = QueryBuilder.BuildQuery(context, query.Metadata, query.Metadata.Query.Where, null, _analyzer, _index.QueryBuilderFactories);
 
                 mltQuery = new BooleanQuery
                     {
