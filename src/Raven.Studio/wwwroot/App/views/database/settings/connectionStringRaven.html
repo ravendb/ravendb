@@ -1,7 +1,7 @@
 <div class="form-group" data-bind="validationElement: connectionStringName">
     <label class="control-label">Name</label>
     <div class="flex-grow">
-        <input class="form-control" data-bind="textInput: connectionStringName, attr: { 'disabled': !isNew()}" placeholder="Enter a name for the connection string" title="Any name of your choice for this connection string">
+        <input class="form-control" data-bind="textInput: connectionStringName, disable: !isNew()" placeholder="Enter a name for the connection string" title="Any name of your choice for this connection string">
     </div>
 </div>
 <div class="form-group" data-bind="validationElement: database">
@@ -10,14 +10,12 @@
         <input class="form-control" data-bind="textInput: database" placeholder="Enter database for the connection string" title="Destination database">
     </div>
 </div>
-<div class="form-group" data-bind="validationElement: topologyDiscoveryUrls"> 
+<div class="form-group" data-bind="validationElement: inputUrl().discoveryUrlName"> 
     <label class="control-label">Discovery URLs:</label>    
     <div class="flex-grow"> 
-        <input class="form-control" placeholder="Enter discovery url to add" data-bind="textInput: inputUrl" />                              
+        <input class="form-control" placeholder="Enter discovery url to add" data-bind="textInput: inputUrl().discoveryUrlName" />                              
     </div>        
-    <div>
-        <button class="btn btn-info" data-bind="click: addDiscoveryUrlWithBlink, attr: { 'disabled': !inputUrl() }"><i class="icon-plus"></i><span>Add Url</span></button>
-    </div>  
+    <button class="btn btn-info" data-bind="click: addDiscoveryUrlWithBlink, disable: !inputUrl().discoveryUrlName() || !inputUrl().validationGroup.isValid()"><i class="icon-plus"></i><span>Add Url</span></button> 
 </div>
 <div class="form-group" data-bind="if: topologyDiscoveryUrls.error()">
     <label class="control-label">&nbsp;</label>
@@ -28,20 +26,20 @@
 <div class="form-group" data-bind="visible: topologyDiscoveryUrls().length">
     <label class="control-label">&nbsp;</label>
     <div class="flex-grow">
-        <ul class="well collection-list">          
-            <!-- ko foreach: topologyDiscoveryUrls -->
+        <ul class="well collection-list" data-bind="foreach: topologyDiscoveryUrls">
             <li>
-                <div class="name" data-bind="text: $data"></div>
-                <a title="Remove url" href="#" 
+                <div class="name" data-bind="text: $data.discoveryUrlName"></div>
+                <a title="Remove url" href="#"
                    data-bind="click: $parent.removeDiscoveryUrl.bind($parent, $data)">
-                   <i class="icon-trash"></i>
+                    <i class="icon-trash"></i>
                 </a>
-                <a class="btn btn-info" title="Test url connection" href="#" 
-                   data-bind="click: $root.onTestConnectionRaven.bind($root, $data), disable: $root.spinners.test, css: { 'btn-spinner': $root.spinners.test() && $parent.selectedUrlToTest() === $data }">
-                   <i class="icon-rocket"></i>
-                </a>                                           
+                <a class="btn btn-default" title="Test url connection" href="#"
+                   data-bind="click: _.partial($root.onTestConnectionRaven, $data.discoveryUrlName()), 
+                              disable: $root.spinners.test, 
+                              css: { 'btn-spinner': $root.spinners.test() && $parent.selectedUrlToTest() === $data.discoveryUrlName() }">                   
+                    <i class="icon-rocket"></i>
+                </a>
             </li>
-            <!-- /ko -->
         </ul>
     </div>
 </div>

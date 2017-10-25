@@ -2,12 +2,32 @@
 import connectionStringModel = require("models/database/settings/connectionStringModel");
 import testClusterNodeConnectionCommand = require("commands/database/cluster/testClusterNodeConnectionCommand");
 
+class discoveryUrl {
+    discoveryUrlName = ko.observable<string>();
+    validationGroup: KnockoutValidationGroup;
+    
+    constructor(urlName: string) {      
+
+        this.discoveryUrlName(urlName);
+        this.initValidation();
+    }
+    
+    initValidation() {
+        this.discoveryUrlName.extend({         
+            validUrl: true
+        });
+
+        this.validationGroup = ko.validatedObservable({
+            discoveryUrlName: this.discoveryUrlName
+        });
+    }
+}
+
 class connectionStringRavenEtlModel extends connectionStringModel { 
 
     database = ko.observable<string>();
-    topologyDiscoveryUrls = ko.observableArray<string>([]);     
-    
-    inputUrl = ko.observable<string>();
+    topologyDiscoveryUrls = ko.observableArray<discoveryUrl>([]);    
+    inputUrl = ko.observable<discoveryUrl>(new discoveryUrl(""));
     selectedUrlToTest = ko.observable<string>();
 
     validationGroup: KnockoutValidationGroup;
@@ -24,7 +44,7 @@ class connectionStringRavenEtlModel extends connectionStringModel {
         
         this.connectionStringName(dto.Name); 
         this.database(dto.Database);
-        this.topologyDiscoveryUrls(dto.TopologyDiscoveryUrls);
+        this.topologyDiscoveryUrls(dto.TopologyDiscoveryUrls.map((x) => new discoveryUrl(x)));        
     }
 
     initValidation() {
@@ -46,7 +66,7 @@ class connectionStringRavenEtlModel extends connectionStringModel {
                     message: "All least one discovery url is required"
                 }
             ]
-        });      // TODO: How to validate each url in the list with 'ValidUrl' ?      
+        });     
        
         this.validationGroup = ko.validatedObservable({
             connectionStringName: this.connectionStringName,
@@ -68,19 +88,21 @@ class connectionStringRavenEtlModel extends connectionStringModel {
         return {
             Type: "Raven",
             Name: this.connectionStringName(),
-            TopologyDiscoveryUrls: this.topologyDiscoveryUrls(),
+            TopologyDiscoveryUrls: this.topologyDiscoveryUrls().map((x) => x.discoveryUrlName()),
             Database: this.database()
         };
     }
     
-    removeDiscoveryUrl(url: string) {
-        this.topologyDiscoveryUrls.remove(url);
+    removeDiscoveryUrl(url: discoveryUrl) {
+        this.topologyDiscoveryUrls.remove(url); 
     }   
 
-    addDiscoveryUrlWithBlink() {
+    addDiscoveryUrlWithBlink() { 
+        this.inputUrl().validationGroup.isValid();        
+        
         if ( !_.includes(this.topologyDiscoveryUrls(), this.inputUrl())) {
-            this.topologyDiscoveryUrls.unshift(this.inputUrl());
-            this.inputUrl("");
+            this.topologyDiscoveryUrls.unshift(new discoveryUrl(this.inputUrl().discoveryUrlName()));
+            this.inputUrl().discoveryUrlName("");
 
             $(".collection-list li").first().addClass("blink-style");
         }
