@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
-using Raven.Server.Documents;
+using Raven.Client.ServerWide;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Voron.Compaction;
 using Tests.Infrastructure;

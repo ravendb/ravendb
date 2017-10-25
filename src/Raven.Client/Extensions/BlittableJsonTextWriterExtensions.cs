@@ -1,7 +1,6 @@
 ﻿using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
-using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Suggestion;
 using Raven.Client.Documents.Session;
 using Sparrow.Json;
@@ -60,123 +59,6 @@ namespace Raven.Client.Extensions
 
             writer.WritePropertyName(nameof(query.MaxSuggestions));
             writer.WriteInteger(query.MaxSuggestions);
-
-            writer.WriteEndObject();
-        }
-
-        public static void WriteMoreLikeThisQuery(this BlittableJsonTextWriter writer, DocumentConventions conventions, JsonOperationContext context, MoreLikeThisQuery query)
-        {
-            writer.WriteStartObject();
-
-            writer.WritePropertyName(nameof(query.DocumentId));
-            writer.WriteString(query.DocumentId);
-            writer.WriteComma();
-
-            if (query.PageSizeSet && query.PageSize >= 0)
-            {
-                writer.WritePropertyName(nameof(query.PageSize));
-                writer.WriteInteger(query.PageSize);
-                writer.WriteComma();
-            }
-
-            if (query.Boost.HasValue)
-            {
-                writer.WritePropertyName(nameof(query.Boost));
-                writer.WriteBool(query.Boost.Value);
-                writer.WriteComma();
-            }
-
-            if (query.BoostFactor.HasValue)
-            {
-                writer.WritePropertyName(nameof(query.BoostFactor));
-                writer.WriteDouble(query.BoostFactor.Value);
-                writer.WriteComma();
-            }
-
-            if (string.IsNullOrEmpty(query.StopWordsDocumentId) == false)
-            {
-                writer.WritePropertyName(nameof(query.StopWordsDocumentId));
-                writer.WriteString(query.StopWordsDocumentId);
-                writer.WriteComma();
-            }
-
-            if (query.Fields != null && query.Fields.Length > 0)
-            {
-                writer.WriteArray(nameof(query.Fields), query.Fields);
-                writer.WriteComma();
-            }
-
-            if (query.Includes != null && query.Includes.Length > 0)
-            {
-                writer.WriteArray(nameof(query.Includes), query.Includes);
-                writer.WriteComma();
-            }
-
-            if (query.MaximumDocumentFrequency.HasValue)
-            {
-                writer.WritePropertyName(nameof(query.MaximumDocumentFrequency));
-                writer.WriteInteger(query.MaximumDocumentFrequency.Value);
-                writer.WriteComma();
-            }
-
-            if (query.MaximumDocumentFrequencyPercentage.HasValue)
-            {
-                writer.WritePropertyName(nameof(query.MaximumDocumentFrequencyPercentage));
-                writer.WriteInteger(query.MaximumDocumentFrequencyPercentage.Value);
-                writer.WriteComma();
-            }
-
-            if (query.MaximumNumberOfTokensParsed.HasValue)
-            {
-                writer.WritePropertyName(nameof(query.MaximumNumberOfTokensParsed));
-                writer.WriteInteger(query.MaximumNumberOfTokensParsed.Value);
-                writer.WriteComma();
-            }
-
-            if (query.MaximumQueryTerms.HasValue)
-            {
-                writer.WritePropertyName(nameof(query.MaximumQueryTerms));
-                writer.WriteInteger(query.MaximumQueryTerms.Value);
-                writer.WriteComma();
-            }
-
-            if (query.MaximumWordLength.HasValue)
-            {
-                writer.WritePropertyName(nameof(query.MaximumWordLength));
-                writer.WriteInteger(query.MaximumWordLength.Value);
-                writer.WriteComma();
-            }
-
-            if (query.MinimumDocumentFrequency.HasValue)
-            {
-                writer.WritePropertyName(nameof(query.MinimumDocumentFrequency));
-                writer.WriteInteger(query.MinimumDocumentFrequency.Value);
-                writer.WriteComma();
-            }
-
-            if (query.MinimumTermFrequency.HasValue)
-            {
-                writer.WritePropertyName(nameof(query.MinimumTermFrequency));
-                writer.WriteInteger(query.MinimumTermFrequency.Value);
-                writer.WriteComma();
-            }
-
-            if (query.MinimumWordLength.HasValue)
-            {
-                writer.WritePropertyName(nameof(query.MinimumWordLength));
-                writer.WriteInteger(query.MinimumWordLength.Value);
-                writer.WriteComma();
-            }
-
-            if (string.IsNullOrEmpty(query.Document) == false)
-            {
-                writer.WritePropertyName(nameof(query.Document));
-                writer.WriteString(query.Document);
-                writer.WriteComma();
-            }
-
-            writer.WritePropertyName(nameof(query.Query));
-            writer.WriteString(query.Query);
 
             writer.WriteEndObject();
         }

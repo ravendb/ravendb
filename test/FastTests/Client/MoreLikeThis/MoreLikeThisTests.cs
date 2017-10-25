@@ -448,7 +448,7 @@ namespace FastTests.Client.MoreLikeThis
                     };
                     list.ForEach(session.Store);
 
-                    session.Store(new StopWordsSetup { Id = "Config/Stopwords", StopWords = new List<string> { "I", "A", "Be" } });
+                    session.Store(new MoreLikeThisStopWords { Id = "Config/Stopwords", StopWords = new List<string> { "I", "A", "Be" } });
 
                     session.SaveChanges();
 
@@ -541,7 +541,7 @@ namespace FastTests.Client.MoreLikeThis
             }
         }
 
-        private static void AssetMoreLikeThisHasMatchesFor<T, TIndex>(IDocumentStore store, string documentKey) 
+        private static void AssetMoreLikeThisHasMatchesFor<T, TIndex>(IDocumentStore store, string documentKey)
             where TIndex : AbstractIndexCreationTask, new()
             where T : Identity
         {
@@ -558,18 +558,18 @@ namespace FastTests.Client.MoreLikeThis
             }
         }
 
-        private static async Task AssetMoreLikeThisHasMatchesForAsync<T, TIndex>(IDocumentStore store, string documentKey) where TIndex : AbstractIndexCreationTask, new()
+        private static async Task AssetMoreLikeThisHasMatchesForAsync<T, TIndex>(IDocumentStore store, string documentKey)
+            where TIndex : AbstractIndexCreationTask, new()
+            where T : Identity
         {
             using (var session = store.OpenAsyncSession())
             {
-                var indexName = new TIndex().IndexName;
-
-                var list = await session.Advanced.MoreLikeThisAsync<T>(new MoreLikeThisQuery()
-                {
-                    Query = $"FROM INDEX '{indexName}'",
-                    DocumentId = documentKey,
-                    Fields = new[] { "Body" }
-                });
+                var list = await session.Query<T, TIndex>()
+                    .MoreLikeThis(x => x.Id == documentKey, new MoreLikeThisOptions
+                    {
+                        Fields = new[] { "Body" }
+                    })
+                    .ToListAsync();
 
                 Assert.NotEmpty(list);
             }

@@ -76,8 +76,6 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
         ///     null)
         /// </param>
         Lazy<Dictionary<string, TResult>> LoadStartingWith<TResult>(string idPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, string startAfter = null);
-
-        Lazy<List<TResult>> MoreLikeThis<TResult>(MoreLikeThisQuery query);
     }
 
     /// <summary>
@@ -153,8 +151,6 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
         /// </param>
         /// <param name="token">Cancellation token</param>
         Lazy<Task<Dictionary<string, TResult>>> LoadStartingWithAsync<TResult>(string idPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, string startAfter = null, CancellationToken token = default(CancellationToken));
-
-        Lazy<Task<List<TResult>>> MoreLikeThisAsync<TResult>(MoreLikeThisQuery query, CancellationToken token = default(CancellationToken));
     }
 
     /// <summary>

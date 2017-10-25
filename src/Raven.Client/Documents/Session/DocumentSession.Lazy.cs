@@ -8,7 +8,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
@@ -97,13 +96,6 @@ namespace Raven.Client.Documents.Session
             var operation = new LazyStartsWithOperation<TResult>(idPrefix, matches, exclude, start, pageSize, this, startAfter);
 
             return AddLazyOperation<Dictionary<string, TResult>>(operation, null);
-        }
-
-        Lazy<List<TResult>> ILazySessionOperations.MoreLikeThis<TResult>(MoreLikeThisQuery query)
-        {
-            //TODO - DisableAllCaching
-            var lazyOp = new LazyMoreLikeThisOperation<TResult>(this, query);
-            return AddLazyOperation<List<TResult>>(lazyOp, null);
         }
 
         /// <summary>

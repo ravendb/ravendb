@@ -11,7 +11,6 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
@@ -190,12 +189,6 @@ namespace Raven.Client.Documents.Session
 
             var lazyLoadOperation = new LazyLoadOperation<T>(this, new LoadOperation(this).ById(id)).ById(id);
             return AddLazyOperation(lazyLoadOperation, onEval, token);
-        }
-
-        Lazy<Task<List<T>>> IAsyncLazySessionOperations.MoreLikeThisAsync<T>(MoreLikeThisQuery query, CancellationToken token)
-        {
-            var lazyOp = new LazyMoreLikeThisOperation<T>(this, query);
-            return AddLazyOperation<List<T>>(lazyOp, null, token);
         }
 
         public Lazy<Task<Dictionary<string, T>>> LazyAsyncLoadInternal<T>(string[] ids, string[] includes, Action<Dictionary<string, T>> onEval, CancellationToken token = default(CancellationToken))
