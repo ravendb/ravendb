@@ -89,6 +89,7 @@ namespace Raven.Client.Documents.Linq
             _customizeQuery = customizeQuery;
             _originalQueryType = originalType ?? throw new ArgumentNullException(nameof(originalType));
             _linqPathProvider = new LinqPathProvider(queryGenerator.Conventions);
+            _jsProjectionNames = new List<string>();
         }
 
         /// <summary>
@@ -1552,6 +1553,13 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         break;
                     }
 
+                    if (_fromAlias != null)
+                    {
+                        //lambda 2 js
+                        _jsSelectBody = TranslateSelectBodyToJs(newExpression);
+                        break;
+                    }
+
                     for (int index = 0; index < newExpression.Arguments.Count; index++)
                     {
                         if (!(newExpression.Arguments[index] is MemberExpression member) || HasComputation(member))
@@ -1563,9 +1571,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                                 _fromAlias = lambdaExpression?.Parameters[0].Name;
                             }
 
-                            _jsProjectionNames = new List<string>();
                             FieldsToFetch.Clear();
-
                             _jsSelectBody = TranslateSelectBodyToJs(newExpression);
 
                             break;
@@ -1587,6 +1593,13 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         break;
                     }
 
+                    if (_fromAlias != null)
+                    {
+                        //lambda 2 js
+                        _jsSelectBody = TranslateSelectBodyToJs(memberInitExpression);
+                        break;
+                    }
+
                     foreach (MemberBinding t in memberInitExpression.Bindings)
                     {
                         var field = t as MemberAssignment;
@@ -1605,9 +1618,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                                 _fromAlias = lambdaExpression?.Parameters[0].Name;
                             }
 
-                            _jsProjectionNames = new List<string>();
                             FieldsToFetch.Clear();
-
                             _jsSelectBody = TranslateSelectBodyToJs(memberInitExpression);
 
                             break;
@@ -1738,9 +1749,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
             if (_declareBuilder == null)
             {
                 _declareBuilder = new StringBuilder();
-                _jsSelectBody = null;
-                _jsProjectionNames = new List<string>();
-                FieldsToFetch.Clear();
             }
 
             _declareBuilder.Append("\t").Append("var ").Append(name).Append(" = ").Append(js).Append(";").Append(Environment.NewLine);           

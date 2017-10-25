@@ -48,18 +48,19 @@ namespace Raven.Client.Documents.Session.Tokens
                 {
                    WriteField(writer, CollectionName);
                 }
-                if (Alias != null)
-                {
-                    writer.Append(" as ").Append(Alias);
-                }
-
-                return;
+            }
+            else
+            {
+                writer
+                    .Append("FROM INDEX '")
+                    .Append(IndexName)
+                    .Append("'");
             }
 
-            writer
-                .Append("FROM INDEX '")
-                .Append(IndexName)
-                .Append("'");
+            if (Alias != null)
+            {
+                writer.Append(" as ").Append(Alias);
+            }
         }
 
         private void ThrowInvalidcollectionName()

@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 
 namespace FastTests.Client
@@ -1789,6 +1791,113 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
             }
         }
 
+        [Fact]
+        public void Query_On_Index_With_Load()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var definition = new IndexDefinitionBuilder<User>("UsersByNameAndFriendId")
+                {
+                    Map = docs => from doc in docs
+                        select new
+                        {
+                            doc.Name, doc.FriendId
+                        }
+                }.ToIndexDefinition(store.Conventions);
+                store.Admin.Send(new PutIndexesOperation(definition));
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia", FriendId = "users/2" }, "users/1");
+                    session.Store(new User { Name = "Bob", LastName = "Weir", FriendId = "users/1"}, "users/2");
+                    session.Store(new User { Name = "Pigpen", FriendId = "users/1" }, "users/3");
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from u in session.Query<User>("UsersByNameAndFriendId")
+                                where u.Name != "Pigpen"
+                                let friend = RavenQuery.Load<User>(u.FriendId)
+                                select new
+                                {
+                                    Name = u.Name,
+                                    Friend = friend.Name
+                                };
+
+                    Assert.Equal("FROM INDEX \'UsersByNameAndFriendId\' as u WHERE Name != $p0 " +
+                                 "LOAD u.FriendId as friend SELECT { Name : u.Name, Friend : friend.Name }"
+                                , query.ToString());
+
+                    var queryResult = query.ToList();
+                    Assert.Equal(2, queryResult.Count);
+
+                    Assert.Equal("Jerry", queryResult[0].Name);
+                    Assert.Equal("Bob", queryResult[0].Friend);
+
+                    Assert.Equal("Bob", queryResult[1].Name);
+                    Assert.Equal("Jerry", queryResult[1].Friend);
+
+                }
+            }
+        }
+
+        [Fact]
+        public void Query_On_Index_With_Load_Into_Class()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var definition = new IndexDefinitionBuilder<User>("UsersByNameAndFriendId")
+                {
+                    Map = docs => from doc in docs
+                                  select new
+                                  {
+                                      doc.Name,
+                                      doc.FriendId
+                                  }
+                }.ToIndexDefinition(store.Conventions);
+                store.Admin.Send(new PutIndexesOperation(definition));
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia", FriendId = "users/2" }, "users/1");
+                    session.Store(new User { Name = "Bob", LastName = "Weir", FriendId = "users/1" }, "users/2");
+                    session.Store(new User { Name = "Pigpen", FriendId = "users/1" }, "users/3");
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from u in session.Query<User>("UsersByNameAndFriendId")
+                                where u.Name != "Pigpen"
+                                let friend = RavenQuery.Load<User>(u.FriendId)
+                                select new IndexQueryResult
+                                {
+                                    Name = u.Name,
+                                    Friend = friend.Name
+                                };
+
+                    Assert.Equal("FROM INDEX \'UsersByNameAndFriendId\' as u WHERE Name != $p0 " +
+                                 "LOAD u.FriendId as friend SELECT { Name : u.Name, Friend : friend.Name }"
+                                , query.ToString());
+
+                    var queryResult = query.ToList();
+                    Assert.Equal(2, queryResult.Count);
+
+                    Assert.Equal("Jerry", queryResult[0].Name);
+                    Assert.Equal("Bob", queryResult[0].Friend);
+
+                    Assert.Equal("Bob", queryResult[1].Name);
+                    Assert.Equal("Jerry", queryResult[1].Friend);
+
+                }
+            }
+        }
+
         public class ProjectionParameters : RavenTestBase
         {
             public class Document
@@ -2029,9 +2138,14 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
         {
             public int Number { get; set; }
         }
-        public class QueryResult
+        private class QueryResult
         {
             public string FullName { get; set; }
+        }
+        private class IndexQueryResult
+        {
+            public string Name { get; set; }
+            public string Friend { get; set; }
         }
     }
 }
