@@ -1,7 +1,6 @@
-﻿using System.Collections.Generic;
-using Sparrow.Json.Parsing;
+﻿using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Documents
+namespace Raven.Client.ServerWide
 {
     public class CompactSettings
     {

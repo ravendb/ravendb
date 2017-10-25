@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
@@ -9,7 +10,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace FastTests.Smuggler
+namespace SlowTests.Smuggler
 {
     public class SmugglerConflicts : ReplicationTestBase
     {

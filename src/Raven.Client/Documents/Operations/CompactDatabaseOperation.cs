@@ -5,7 +5,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Converters;
-using Raven.Server.Documents;
+using Raven.Client.ServerWide;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations
