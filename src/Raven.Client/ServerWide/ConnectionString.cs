@@ -35,6 +35,7 @@ namespace Raven.Client.ServerWide
 
     public enum ConnectionStringType
     {
+        None,
         Raven,
         Sql
     }

@@ -15,8 +15,8 @@ class getConnectionStringInfoCommand<T extends Raven.Client.ServerWide.ETL.Raven
     }
 
     private getConnectionStringInfo(): JQueryPromise<T> { 
-        const args = { name: this.db.name, type: this.type, connectionStringName: this.connectionStringName };
-        const url = endpoints.global.adminDatabases.adminConnectionString + this.urlEncodeArgs(args);
+        const args = { name: this.db.name, connectionStringName: this.connectionStringName, type: this.type };
+        const url = endpoints.global.adminDatabases.adminConnectionStrings + this.urlEncodeArgs(args);
 
         return this.query<T>(url, null);
     }

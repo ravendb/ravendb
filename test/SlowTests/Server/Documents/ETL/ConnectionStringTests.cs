@@ -121,7 +121,7 @@ namespace SlowTests.Server.Documents.ETL
                     var ravenConnectionStr = new RavenConnectionString()
                     {
                         Name = $"RavenConnectionString{i}",
-                        TopologyDiscoveryUrls = new []{$"http://127.0.0.1:808{i}"},
+                        TopologyDiscoveryUrls = new[] { $"http://127.0.0.1:808{i}" },
                         Database = "Northwind",
                     };
                     var sqlConnectionStr = new SqlConnectionString
@@ -150,6 +150,39 @@ namespace SlowTests.Server.Documents.ETL
                     Assert.Equal(raven?.TopologyDiscoveryUrls, ravenConnectionStrings[i].TopologyDiscoveryUrls);
                     Assert.Equal(raven?.Database, ravenConnectionStrings[i].Database);
                 }
+            }
+        }
+
+        [Fact]
+        public void CanGetConnectionStringByName()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var ravenConnectionStrings = new List<RavenConnectionString>();
+                var sqlConnectionStrings = new List<SqlConnectionString>();
+                
+                var ravenConnectionStr = new RavenConnectionString()
+                {
+                    Name = "RavenConnectionString",
+                    TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
+                    Database = "Northwind",
+                };
+                var sqlConnectionStr = new SqlConnectionString
+                {
+                    Name = "SqlConnectionString",
+                    ConnectionString = SqlEtlTests.GetConnectionString(store)
+                };
+
+                ravenConnectionStrings.Add(ravenConnectionStr);
+                sqlConnectionStrings.Add(sqlConnectionStr);
+
+                store.Admin.Server.Send(new PutConnectionStringOperation<RavenConnectionString>(ravenConnectionStr, store.Database));
+                store.Admin.Server.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionStr, store.Database));
+                
+
+                var result = store.Admin.Server.Send(new GetConnectionStringsOperation(store.Database, connectionStringName: sqlConnectionStr.Name, type: sqlConnectionStr.Type));
+                Assert.True(result.SqlConnectionStrings.Count > 0);
+                Assert.True(result.RavenConnectionStrings.Count == 0);
             }
         }
     }
