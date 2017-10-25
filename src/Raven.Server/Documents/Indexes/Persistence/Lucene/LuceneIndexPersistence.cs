@@ -172,16 +172,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             CheckDisposed();
             CheckInitialized();
-                        
-            return new IndexReadOperation(_index, _directory, _indexSearcherHolder, readTransaction);
+
+            return new IndexReadOperation(_index, _directory, _indexSearcherHolder, _index._queryBuilderFactories, readTransaction);
         }
 
         public IndexFacetedReadOperation OpenFacetedIndexReader(Transaction readTransaction)
         {
             CheckDisposed();
             CheckInitialized();
-            
-            return new IndexFacetedReadOperation(_index, _index.Definition.IndexFields, _directory, _indexSearcherHolder, readTransaction, _index._indexStorage.DocumentDatabase);
+
+            return new IndexFacetedReadOperation(_index, _index.Definition.IndexFields, _directory, _indexSearcherHolder, _index._queryBuilderFactories, readTransaction, _index._indexStorage.DocumentDatabase);
         }
 
         public LuceneSuggestionIndexReader OpenSuggestionIndexReader(Transaction readTransaction, string field)

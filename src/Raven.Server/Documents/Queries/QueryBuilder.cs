@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
-using System.Text.RegularExpressions;
 using Lucene.Net.Analysis;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
@@ -19,7 +18,6 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Utils;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static.Spatial;
-using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.LuceneIntegration;
 using Sparrow.Json;
@@ -46,12 +44,12 @@ namespace Raven.Server.Documents.Queries
         }
 
 
-        public static MoreLikeThisQuery BuildMoreLikeThisQuery(JsonOperationContext context, QueryMetadata metadata, QueryExpression whereExpression, BlittableJsonReaderObject parameters, RavenPerFieldAnalyzerWrapper analyzer, Func<string, SpatialField> getSpatialField)
+        public static MoreLikeThisQuery BuildMoreLikeThisQuery(JsonOperationContext context, QueryMetadata metadata, QueryExpression whereExpression, BlittableJsonReaderObject parameters, RavenPerFieldAnalyzerWrapper analyzer, QueryBuilderFactories factories)
         {
             using (CultureHelper.EnsureInvariantCulture())
             {
-                var filterQuery = BuildQuery(context, metadata, whereExpression, parameters, analyzer, getSpatialField);
-                var moreLikeThisQuery = ToMoreLikeThisQuery(context, metadata.Query, whereExpression, metadata, parameters, analyzer, getSpatialField, out var baseDocument, out var options);
+                var filterQuery = BuildQuery(context, metadata, whereExpression, parameters, analyzer, factories);
+                var moreLikeThisQuery = ToMoreLikeThisQuery(context, metadata.Query, whereExpression, metadata, parameters, analyzer, factories, out var baseDocument, out var options);
 
                 return new MoreLikeThisQuery
                 {
@@ -64,7 +62,7 @@ namespace Raven.Server.Documents.Queries
         }
 
         private static Lucene.Net.Search.Query ToMoreLikeThisQuery(JsonOperationContext context, Query query, QueryExpression expression, QueryMetadata metadata,
-            BlittableJsonReaderObject parameters, Analyzer analyzer, Func<string, SpatialField> getSpatialField, out string baseDocument, out BlittableJsonReaderObject options)
+            BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories, out string baseDocument, out BlittableJsonReaderObject options)
         {
             baseDocument = null;
             options = null;
@@ -84,7 +82,7 @@ namespace Raven.Server.Documents.Queries
 
             var firstArgument = moreLikeThisExpression.Arguments[0];
             if (firstArgument is BinaryExpression binaryExpression)
-                return ToLuceneQuery(context, query, binaryExpression, metadata, parameters, analyzer, getSpatialField);
+                return ToLuceneQuery(context, query, binaryExpression, metadata, parameters, analyzer, factories);
 
             var firstArgumentValue = GetValue(query, metadata, parameters, firstArgument).Value as string;
             if (bool.TryParse(firstArgumentValue, out var firstArgumentBool))
@@ -545,7 +543,7 @@ namespace Raven.Server.Documents.Queries
             if (valueType != ValueTokenType.String && !(valueType == ValueTokenType.Parameter && IsStringFamily(value)))
                 ThrowMethodExpectsArgumentOfTheFollowingType("regex", ValueTokenType.String, valueType, metadata.QueryText, parameters);
             var valueAsString = GetValueAsString(value);
-            return new RegexQuery(new Term(fieldName, valueAsString), factories.GetRegexFactory(valueAsString));            
+            return new RegexQuery(new Term(fieldName, valueAsString), factories.GetRegexFactory(valueAsString));
         }
 
         private static bool IsStringFamily(object value)
