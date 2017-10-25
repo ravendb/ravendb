@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using JetBrains.Annotations;
@@ -18,6 +19,18 @@ namespace Raven.Server.Documents.Patch
         private int _numberOfCachedScripts;
         private SpinLock _cleaning = new SpinLock();
         public bool EnableClr;
+        internal static string PolyfillJs;
+
+        static ScriptRunnerCache()
+        {
+            using (Stream stream = typeof(ScriptRunnerCache).Assembly.GetManifestResourceStream("Raven.Server.Documents.Patch.Polyfill.js"))
+            {
+                using (var reader = new StreamReader(stream))
+                {
+                    PolyfillJs = reader.ReadToEnd();
+                }
+            }
+        }
 
         public ScriptRunnerCache(DocumentDatabase database, [NotNull] RavenConfiguration configuration)
         {

@@ -1632,6 +1632,7 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Jerry", LastName = "Garcia", IdNumber = 19420801, Roles = new []{"The", "Grateful", "Dead"}}, "users/1");
+                    session.Store(new User { Name = "Bob", LastName = "Weir"}, "users/2");
                     session.SaveChanges();
                 }
 
@@ -1640,30 +1641,44 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
                     var query = from u in session.Query<User>()
                                 select new
                                 {
-                                    //padStart(), padEnd(), startsWith(), endsWith() are not supporeted in jint
-                                    //https://github.com/sebastienros/jint/issues/429
-
-                                    //PadLeft = u.Name.PadLeft(10, 'z'),
-                                    //PadRight = u.Name.PadRight(10, 'z'),
-
-                                    Substr = u.Name.Substring(0, 3),
+                                    PadLeft = u.Name.PadLeft(10, 'z'),
+                                    PadRight = u.Name.PadRight(10, 'z'),
+                                    StartsWith = u.Name.StartsWith("J"),
+                                    EndsWith = u.Name.EndsWith("b"),
+                                    Substr = u.Name.Substring(0, 2),
                                     Join = string.Join(", ", u.Name, u.LastName, u.IdNumber),
                                     ArrayJoin = string.Join("-", u.Roles)
                                 };
 
-                    Assert.Equal("FROM Users as u SELECT { Substr : u.Name.substr(0, 3), " +
-                                 "Join : [u.Name,u.LastName,u.IdNumber].join(\", \"), " +
-                                 "ArrayJoin : u.Roles.join(\"-\") }"
+                    Assert.Equal("FROM Users as u SELECT { " +
+                                     "PadLeft : u.Name.padStart(10, \"z\"), " +
+                                     "PadRight : u.Name.padEnd(10, \"z\"), " +
+                                     "StartsWith : u.Name.startsWith(\"J\"), " +
+                                     "EndsWith : u.Name.endsWith(\"b\"), " +
+                                     "Substr : u.Name.substr(0, 2), " +
+                                     "Join : [u.Name,u.LastName,u.IdNumber].join(\", \"), " +
+                                     "ArrayJoin : u.Roles.join(\"-\") }"
                                 , query.ToString());
 
                     var queryResult = query.ToList();
 
-                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal(2, queryResult.Count);
 
-                    Assert.Equal("Jer", queryResult[0].Substr);
+                    Assert.Equal("Jerry".PadLeft(10, 'z'), queryResult[0].PadLeft);
+                    Assert.Equal("Jerry".PadRight(10, 'z'), queryResult[0].PadRight);
+                    Assert.True(queryResult[0].StartsWith);
+                    Assert.False(queryResult[0].EndsWith);
+                    Assert.Equal("Je", queryResult[0].Substr);
                     Assert.Equal("Jerry, Garcia, 19420801", queryResult[0].Join);
                     Assert.Equal("The-Grateful-Dead", queryResult[0].ArrayJoin);
 
+                    Assert.Equal("Bob".PadLeft(10, 'z'), queryResult[1].PadLeft);
+                    Assert.Equal("Bob".PadRight(10, 'z'), queryResult[1].PadRight);
+                    Assert.False(queryResult[1].StartsWith);
+                    Assert.True(queryResult[1].EndsWith);
+                    Assert.Equal("Bo", queryResult[1].Substr);
+                    Assert.Equal("Bob, Weir, 0", queryResult[1].Join);
+                    Assert.Null(queryResult[1].ArrayJoin);
                 }
             }
         }
@@ -1693,13 +1708,13 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
                                 select new 
                                 {
                                     Name = u.Name,
-                                    First = details.First(x=>x.Number > 1).Number,
-                                    FirstOrDefault = details.FirstOrDefault(x => x.Number < 3)
+                                    First = details.First(x => x.Number > 1).Number,
+                                    FirstOrDefault = details.FirstOrDefault(x => x.Number < 3),
                                 };
 
                     Assert.Equal("FROM Users as u LOAD u.DetailIds as details[] " +
-                                 "SELECT { Name : u.Name, First : details.filter(function(x){return x.Number>1;})[0].Number, " +
-                                          "FirstOrDefault : details.filter(function(x){return x.Number<3;})[0] }", query.ToString());
+                                 "SELECT { Name : u.Name, First : details.find(function(x){return x.Number>1;}).Number, " +
+                                          "FirstOrDefault : details.find(function(x){return x.Number<3;}) }", query.ToString());
 
                     var queryResult = query.ToList();
                     Assert.Equal(2, queryResult.Count);
@@ -2009,7 +2024,6 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
             public string DetailId { get; set; }
             public string FriendId { get; set; }
             public IEnumerable<string> DetailIds { get; set; }
-            public List<User> SubUsers { get; set; }
         }
         private class Detail
         {
