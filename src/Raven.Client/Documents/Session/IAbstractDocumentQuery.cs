@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Spatial;
 
 namespace Raven.Client.Documents.Session
@@ -333,5 +334,7 @@ namespace Raven.Client.Documents.Session
         void OrderByDistanceDescending(string fieldName, double latitude, double longitude);
 
         void OrderByDistanceDescending(string fieldName, string shapeWkt);
+
+        MoreLikeThisScope MoreLikeThis();
     }
 }

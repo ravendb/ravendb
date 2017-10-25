@@ -218,12 +218,13 @@ namespace FastTests.Client.MoreLikeThis
                 {
                     var indexName = new DataIndex().IndexName;
 
-                    var list = session.Advanced.MoreLikeThis<Data>(new MoreLikeThisQuery()
-                    {
-                        Query = $"FROM INDEX '{indexName}'",
-                        DocumentId = key,
-                        Fields = new[] { "Body" }
-                    });
+                    var list = session.Query<Data>(indexName)
+                        .MoreLikeThis(x => x.Id == key, new MoreLikeThisOptions
+                        {
+                            Fields = new[] { "Body" }
+                        })
+                        .ToList();
+
                     WaitForIndexing(store);
 
                     Assert.Empty(list);
@@ -277,7 +278,9 @@ namespace FastTests.Client.MoreLikeThis
 
                 using (var session = store.OpenSession())
                 {
-                    var list = session.Advanced.MoreLikeThis<Data, DataIndex>(key);
+                    var list = session.Query<Data, DataIndex>()
+                        .MoreLikeThis()
+                        .ToList();
 
                     Assert.NotEmpty(list);
                 }
@@ -306,7 +309,9 @@ namespace FastTests.Client.MoreLikeThis
 
                 using (var session = store.OpenSession())
                 {
-                    var list = session.Advanced.MoreLikeThis<Data, DataIndex>(key);
+                    var list = session.Query<Data, DataIndex>()
+                        .MoreLikeThis(x => x.Id == key)
+                        .ToList();
 
                     Assert.Empty(list);
                 }
@@ -328,7 +333,9 @@ namespace FastTests.Client.MoreLikeThis
 
                 using (var session = store.OpenSession())
                 {
-                    var list = session.Advanced.MoreLikeThis<Data, DataIndex>(key);
+                    var list = session.Query<Data, DataIndex>()
+                        .MoreLikeThis(x => x.Id == key)
+                        .ToList();
 
                     Assert.NotEmpty(list);
                 }
@@ -362,15 +369,13 @@ namespace FastTests.Client.MoreLikeThis
 
                 using (var session = store.OpenSession())
                 {
-                    var indexName = new DataIndex().IndexName;
-
-                    var list = session.Advanced.MoreLikeThis<Data>(new MoreLikeThisQuery()
-                    {
-                        Query = $"FROM INDEX '{indexName}'",
-                        DocumentId = key,
-                        Fields = new[] { "Body" },
-                        MinimumDocumentFrequency = 2
-                    });
+                    var list = session.Query<Data, DataIndex>()
+                        .MoreLikeThis(x => x.Id == key, new MoreLikeThisOptions
+                        {
+                            Fields = new[] { "Body" },
+                            MinimumDocumentFrequency = 2
+                        })
+                        .ToList();
 
                     Assert.NotEmpty(list);
                 }
@@ -403,18 +408,15 @@ namespace FastTests.Client.MoreLikeThis
 
                 using (var session = store.OpenSession())
                 {
-                    var indexName = new DataIndex().IndexName;
-
-                    var list = session.Advanced.MoreLikeThis<Data>(
-                        new MoreLikeThisQuery()
+                    var list = session.Query<Data, DataIndex>()
+                        .MoreLikeThis(x => x.Id == key, new MoreLikeThisOptions
                         {
-                            Query = $"FROM INDEX '{indexName}'",
-                            DocumentId = key,
                             Fields = new[] { "Body" },
                             MinimumWordLength = 3,
                             MinimumDocumentFrequency = 1,
                             Boost = true
-                        });
+                        })
+                        .ToList();
 
                     Assert.NotEqual(0, list.Count);
                     Assert.Equal("I have a test tomorrow.", list[0].Body);
@@ -457,13 +459,13 @@ namespace FastTests.Client.MoreLikeThis
                 {
                     var indexName = new DataIndex().IndexName;
 
-                    var list = session.Advanced.MoreLikeThis<Data>(new MoreLikeThisQuery()
-                    {
-                        Query = $"FROM INDEX '{indexName}'",
-                        DocumentId = key,
-                        StopWordsDocumentId = "Config/Stopwords",
-                        MinimumDocumentFrequency = 1
-                    });
+                    var list = session.Query<Data, DataIndex>()
+                        .MoreLikeThis(x => x.Id == key, new MoreLikeThisOptions
+                        {
+                            StopWordsDocumentId = "Config/Stopwords",
+                            MinimumDocumentFrequency = 1
+                        })
+                        .ToList();
 
                     Assert.Equal(5, list.Count());
                 }
@@ -489,15 +491,15 @@ namespace FastTests.Client.MoreLikeThis
 
                 using (var session = store.OpenSession())
                 {
-                    var list = session.Advanced.MoreLikeThis<Data, DataIndex>(
-                        new MoreLikeThisQuery
+                    var list = session.Query<Data, DataIndex>()
+                        .MoreLikeThis("{ \"Body\": \"A test\" }", new MoreLikeThisOptions
                         {
-                            Document = "{ \"Body\": \"A test\" }",
                             Fields = new[] { "Body" },
                             MinimumTermFrequency = 1,
                             MinimumDocumentFrequency = 1
-                        });
-    
+                        })
+                        .ToList();
+
                     Assert.Equal(7, list.Count());
                 }
             }
@@ -526,37 +528,37 @@ namespace FastTests.Client.MoreLikeThis
 
                 using (var session = store.OpenSession())
                 {
-                    var list = session.Advanced.MoreLikeThis<ComplexData, ComplexDataIndex>(
-                        new MoreLikeThisQuery
+                    var list = session.Query<ComplexData, ComplexDataIndex>()
+                        .MoreLikeThis("{ \"Property\": { \"Body\": \"test\" } }", new MoreLikeThisOptions
                         {
-                            Document = "{ \"Property\": { \"Body\": \"test\" } }",
                             MinimumTermFrequency = 1,
                             MinimumDocumentFrequency = 1
-                        });
-    
+                        })
+                        .ToList();
+
                     Assert.Equal(1, list.Count);
                 }
             }
         }
 
-        private void AssetMoreLikeThisHasMatchesFor<T, TIndex>(IDocumentStore store, string documentKey) where TIndex : AbstractIndexCreationTask, new()
+        private static void AssetMoreLikeThisHasMatchesFor<T, TIndex>(IDocumentStore store, string documentKey) 
+            where TIndex : AbstractIndexCreationTask, new()
+            where T : Identity
         {
             using (var session = store.OpenSession())
             {
-                var indexName = new TIndex().IndexName;
-
-                var list = session.Advanced.MoreLikeThis<T>(new MoreLikeThisQuery()
-                {
-                    Query = $"FROM INDEX '{indexName}'",
-                    DocumentId = documentKey,
-                    Fields = new[] { "Body" }
-                });
+                var list = session.Query<T, TIndex>()
+                    .MoreLikeThis(x => x.Id == documentKey, new MoreLikeThisOptions
+                    {
+                        Fields = new[] { "Body" }
+                    })
+                    .ToList();
 
                 Assert.NotEmpty(list);
             }
         }
 
-        private async Task AssetMoreLikeThisHasMatchesForAsync<T, TIndex>(IDocumentStore store, string documentKey) where TIndex : AbstractIndexCreationTask, new()
+        private static async Task AssetMoreLikeThisHasMatchesForAsync<T, TIndex>(IDocumentStore store, string documentKey) where TIndex : AbstractIndexCreationTask, new()
         {
             using (var session = store.OpenAsyncSession())
             {
@@ -573,17 +575,20 @@ namespace FastTests.Client.MoreLikeThis
             }
         }
 
-        private class Data
+        private abstract class Identity
         {
             public string Id { get; set; }
+        }
+
+        private class Data : Identity
+        {
             public string Body { get; set; }
             public string WhitespaceAnalyzerField { get; set; }
             public string PersonId { get; set; }
         }
 
-        private class DataWithIntegerId
+        private class DataWithIntegerId : Identity
         {
-            public string Id;
             public string Body { get; set; }
         }
 

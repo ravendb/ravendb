@@ -12,14 +12,12 @@ using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Faceted;
-using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Documents.Queries.Suggestion;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
@@ -43,11 +41,6 @@ namespace Raven.Server.Documents.Handlers
                 }
 
                 var operation = GetStringQueryString("op", required: false);
-                if (string.Equals(operation, "morelikethis", StringComparison.OrdinalIgnoreCase))
-                {
-                    MoreLikeThis(context, token);
-                    return;
-                }
 
                 if (string.Equals(operation, "facets", StringComparison.OrdinalIgnoreCase))
                 {
@@ -80,10 +73,6 @@ namespace Raven.Server.Documents.Handlers
                 }
 
                 var operation = GetStringQueryString("op", required: false);
-                if (string.Equals(operation, "morelikethis", StringComparison.OrdinalIgnoreCase))
-                {
-                    throw new NotSupportedException("GET requests for MoreLikeThis queries are not supported");
-                }
 
                 if (string.Equals(operation, "facets", StringComparison.OrdinalIgnoreCase))
                 {
@@ -174,12 +163,6 @@ namespace Raven.Server.Documents.Handlers
             return IndexQueryServerSide.Create(json, context, Database.QueryMetadataCache);
         }
 
-        private MoreLikeThisQueryServerSide GetMoreLikeThisQuery(JsonOperationContext context)
-        {
-            var json = context.ReadForMemory(RequestBodyStream(), "morelikethis/query");
-            return MoreLikeThisQueryServerSide.Create(json);
-        }
-
         private async Task<(FacetQueryServerSide FacetQuery, long? FacetsEtag)> GetFacetQuery(JsonOperationContext context, HttpMethod method)
         {
             if (method == HttpMethod.Get)
@@ -229,31 +212,6 @@ namespace Raven.Server.Documents.Handlers
             }
 
             AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(Suggest)} ({query.IndexName})", HttpContext, result.Suggestions.Length, query.PageSize, TimeSpan.FromMilliseconds(result.DurationInMs));
-        }
-
-        private void MoreLikeThis(DocumentsOperationContext context, OperationCancelToken token)
-        {
-            var existingResultEtag = GetLongFromHeaders("If-None-Match");
-
-            var query = GetMoreLikeThisQuery(context);
-            
-            var result = Database.QueryRunner.ExecuteMoreLikeThisQuery(query, context, existingResultEtag, token);
-
-            if (result.NotModified)
-            {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                return;
-            }
-
-            HttpContext.Response.Headers[Constants.Headers.Etag] = CharExtensions.ToInvariantString(result.ResultEtag);
-
-            int numberOfResults;
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                writer.WriteMoreLikeThisQueryResult(context, result, out numberOfResults);
-            }
-
-            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(MoreLikeThis)} ({query.Metadata.IndexName})", HttpContext, numberOfResults, query.PageSize, TimeSpan.FromMilliseconds(result.DurationInMs));
         }
 
         private async Task Explain(DocumentsOperationContext context, HttpMethod method)

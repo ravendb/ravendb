@@ -317,7 +317,7 @@ namespace Raven.Server.Documents.Queries
                 {
                     if (fieldName is MethodExpression me && me.Name.Equals("id") && value is ValueExpression ve)
                     {
-                        var id = QueryBuilder.GetValue(Constants.Documents.Indexing.Fields.DocumentIdFieldName, _query, _metadata, parameters, ve);
+                        var id = QueryBuilder.GetValue(_query, _metadata, parameters, ve);
 
                         Debug.Assert(id.Type == ValueTokenType.String);
 
@@ -342,7 +342,7 @@ namespace Raven.Server.Documents.Queries
                         {
                             if (item is ValueExpression iv)
                             {
-                                foreach (var id in QueryBuilder.GetValues(me.Name, _query, _metadata, parameters, iv))
+                                foreach (var id in QueryBuilder.GetValues(_query, _metadata, parameters, iv))
                                 {
                                     AddId(id.Value?.ToString());
                                 }

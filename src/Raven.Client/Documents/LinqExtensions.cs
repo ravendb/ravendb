@@ -16,6 +16,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries.Facets;
+using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Spatial;
 using Raven.Client.Documents.Queries.Suggestion;
 using Raven.Client.Documents.Session;
@@ -1536,6 +1537,47 @@ namespace Raven.Client.Documents
 
             var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(path), Expression.Constant(ordering)));
             return (IOrderedQueryable<T>)queryable;
+        }
+
+        public static IRavenQueryable<T> MoreLikeThis<T>(this IQueryable<T> source, MoreLikeThisOptions options = null)
+        {
+#if NETSTANDARD2_0
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+#else
+            MethodInfo currentMethod = null; // TODO [ppekrol]
+#endif
+
+            var expression = ConvertExpressionIfNecessary(source);
+
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(options ?? MoreLikeThisOptions.Default)));
+            return (IRavenQueryable<T>)queryable;
+        }
+
+        public static IRavenQueryable<T> MoreLikeThis<T>(this IQueryable<T> source, string document, MoreLikeThisOptions options = null)
+        {
+#if NETSTANDARD2_0
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+#else
+            MethodInfo currentMethod = null; // TODO [ppekrol]
+#endif
+
+            var expression = ConvertExpressionIfNecessary(source);
+
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(document), Expression.Constant(options ?? MoreLikeThisOptions.Default)));
+            return (IRavenQueryable<T>)queryable;
+        }
+
+        public static IRavenQueryable<T> MoreLikeThis<T>(this IQueryable<T> source, Expression<Func<T, bool>> predicate, MoreLikeThisOptions options = null)
+        {
+#if NETSTANDARD2_0
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+#else
+            MethodInfo currentMethod = null; // TODO [ppekrol]
+#endif
+
+            var expression = ConvertExpressionIfNecessary(source);
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, predicate, Expression.Constant(options ?? MoreLikeThisOptions.Default)));
+            return (IRavenQueryable<T>)queryable;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

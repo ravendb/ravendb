@@ -3,15 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
-
-using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
-using Lucene.Net.Search.Similar;
 using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors;
@@ -23,6 +21,7 @@ using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Sorting.AlphaNumeric;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
+using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -57,11 +56,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 throw new IndexAnalyzerException(e);
             }
-            
+
             _maxNumberOfOutputsPerDocument = index.MaxNumberOfOutputsPerDocument;
             _indexType = index.Type;
             _indexHasBoostedFields = index.HasBoostedFields;
-            _releaseReadTransaction = directory.SetTransaction(readTransaction, out _state);            
+            _releaseReadTransaction = directory.SetTransaction(readTransaction, out _state);
             _releaseSearcher = searcherHolder.GetSearcher(readTransaction, _state, out _searcher);
         }
 
@@ -132,8 +131,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         public IEnumerable<Document> IntersectQuery(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, JsonOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
             var method = query.Metadata.Query.Where as MethodExpression;
-            
-            if (method  == null)
+
+            if (method == null)
                 throw new InvalidQueryException($"Invalid intersect query. WHERE clause must contains just an intersect() method call while it got {query.Metadata.Query.Where.Type} expression", query.Metadata.QueryText, query.QueryParameters);
 
             var methodName = method.Name;
@@ -415,54 +414,60 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         }
 
         public IEnumerable<Document> MoreLikeThis(
-            MoreLikeThisQueryServerSide query, 
-            HashSet<string> stopWords, 
-            Func<SelectField[], IQueryResultRetriever> createRetriever, 
-            JsonOperationContext context, 
+            IndexQueryServerSide query,
+            Func<SelectField[], IQueryResultRetriever> createRetriever,
+            DocumentsOperationContext context,
             Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
-            int? baseDocId = null;
-            if (string.IsNullOrWhiteSpace(query.DocumentId) == false || query.MapGroupFields.Count > 0)
+            var moreLikeThisQuery = QueryBuilder.BuildMoreLikeThisQuery(context, query.Metadata, query.Metadata.Query.Where, query.QueryParameters, _analyzer, getSpatialField);
+            var options = moreLikeThisQuery.Options != null ? JsonDeserializationServer.MoreLikeThisOptions(moreLikeThisQuery.Options) : MoreLikeThisOptions.Default;
+
+            HashSet<string> stopWords = null;
+            if (string.IsNullOrWhiteSpace(options.StopWordsDocumentId) == false)
             {
-                var documentQuery = new BooleanQuery();
+                var stopWordsDoc = context.DocumentDatabase.DocumentsStorage.Get(context, options.StopWordsDocumentId);
+                if (stopWordsDoc == null)
+                    throw new InvalidOperationException($"Stop words document {options.StopWordsDocumentId} could not be found");
 
-                if (string.IsNullOrWhiteSpace(query.DocumentId) == false)
-                    documentQuery.Add(new TermQuery(new Term(Constants.Documents.Indexing.Fields.DocumentIdFieldName, query.DocumentId.ToLowerInvariant())), Occur.MUST);
-
-                foreach (var key in query.MapGroupFields.Keys)
-                    documentQuery.Add(new TermQuery(new Term(key, query.MapGroupFields[key])), Occur.MUST);
-
-                var td = _searcher.Search(documentQuery, 1, _state);
-
-                // get the current Lucene docid for the given RavenDB doc ID
-                if (td.ScoreDocs.Length == 0)
-                    throw new InvalidOperationException("Document " + query.DocumentId + " could not be found");
-
-                baseDocId = td.ScoreDocs[0].Doc;
+                if (stopWordsDoc.Data.TryGet(nameof(StopWordsSetup.StopWords), out BlittableJsonReaderArray value) && value != null)
+                {
+                    stopWords = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    for (var i = 0; i < value.Length; i++)
+                        stopWords.Add(value.GetStringByIndex(i));
+                }
             }
 
             var ir = _searcher.IndexReader;
-            var mlt = new RavenMoreLikeThis(ir, query, _state);
+            var mlt = new RavenMoreLikeThis(ir, options, _state);
 
-            AssignParameters(mlt, query);
+            int? baseDocId = null;
+
+            if (moreLikeThisQuery.BaseDocument == null)
+            {
+                var td = _searcher.Search(moreLikeThisQuery.BaseDocumentQuery, 1, _state);
+
+                // get the current Lucene docid for the given RavenDB doc ID
+                if (td.ScoreDocs.Length == 0)
+                    throw new InvalidOperationException("Given filtering expression did not yield any documents that could be used as a base of comparison");
+
+                baseDocId = td.ScoreDocs[0].Doc;
+            }
 
             if (stopWords != null)
                 mlt.SetStopWords(stopWords);
 
             string[] fieldNames;
-            if (query.Fields != null && query.Fields.Length > 0)
-                fieldNames = query.Fields;
+            if (options.Fields != null && options.Fields.Length > 0)
+                fieldNames = options.Fields;
             else
                 fieldNames = ir.GetFieldNames(IndexReader.FieldOption.INDEXED)
                     .Where(x => x != Constants.Documents.Indexing.Fields.DocumentIdFieldName && x != Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName)
                     .ToArray();
-            
+
             mlt.SetFieldNames(fieldNames);
             mlt.Analyzer = _analyzer;
 
             var pageSize = GetPageSize(_searcher, query.PageSize);
-
-
 
             Query mltQuery;
             if (baseDocId.HasValue)
@@ -471,21 +476,19 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
             else
             {
-                using (var blittableJson = ParseJsonStringIntoBlittable(query.Document, context))
+                using (var blittableJson = ParseJsonStringIntoBlittable(moreLikeThisQuery.BaseDocument, context))
                     mltQuery = mlt.Like(blittableJson);
             }
 
             var tsdc = TopScoreDocCollector.Create(pageSize, true);
 
-            if (query.Metadata.WhereFields.Count > 0)
+            if (moreLikeThisQuery.FilterQuery != null && moreLikeThisQuery.FilterQuery is MatchAllDocsQuery == false)
             {
-                var additionalQuery = QueryBuilder.BuildQuery(context, query.Metadata, query.Metadata.Query.Where, null, _analyzer, _index.QueryBuilderFactories);
-
                 mltQuery = new BooleanQuery
-                    {
-                        {mltQuery, Occur.MUST},
-                        {additionalQuery, Occur.MUST}
-                    };
+                {
+                    {mltQuery, Occur.MUST},
+                    {moreLikeThisQuery.FilterQuery, Occur.MUST}
+                };
             }
 
             _searcher.Search(mltQuery, tsdc, _state);
@@ -510,30 +513,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 yield return retriever.Get(doc, hit.Score, _state);
             }
-        }
-
-        private static void AssignParameters(MoreLikeThis mlt, MoreLikeThisQueryServerSide parameters)
-        {
-            if (parameters.Boost != null)
-                mlt.Boost = parameters.Boost.Value;
-            if (parameters.BoostFactor != null)
-                mlt.BoostFactor = parameters.BoostFactor.Value;
-            if (parameters.MaximumNumberOfTokensParsed != null)
-                mlt.MaxNumTokensParsed = parameters.MaximumNumberOfTokensParsed.Value;
-            if (parameters.MaximumQueryTerms != null)
-                mlt.MaxQueryTerms = parameters.MaximumQueryTerms.Value;
-            if (parameters.MinimumWordLength != null)
-                mlt.MinWordLen = parameters.MinimumWordLength.Value;
-            if (parameters.MaximumWordLength != null)
-                mlt.MaxWordLen = parameters.MaximumWordLength.Value;
-            if (parameters.MinimumTermFrequency != null)
-                mlt.MinTermFreq = parameters.MinimumTermFrequency.Value;
-            if (parameters.MinimumDocumentFrequency != null)
-                mlt.MinDocFreq = parameters.MinimumDocumentFrequency.Value;
-            if (parameters.MaximumDocumentFrequency != null)
-                mlt.MaxDocFreq = parameters.MaximumDocumentFrequency.Value;
-            if (parameters.MaximumDocumentFrequencyPercentage != null)
-                mlt.SetMaxDocFreqPct(parameters.MaximumDocumentFrequencyPercentage.Value);
         }
 
         public IEnumerable<BlittableJsonReaderObject> IndexEntries(IndexQueryServerSide query, Reference<int> totalResults, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
@@ -567,7 +546,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _releaseReadTransaction?.Dispose();
         }
 
-        private unsafe BlittableJsonReaderObject ParseJsonStringIntoBlittable(string json, JsonOperationContext context)
+        internal static unsafe BlittableJsonReaderObject ParseJsonStringIntoBlittable(string json, JsonOperationContext context)
         {
             var bytes = Encoding.UTF8.GetBytes(json);
             fixed (byte* ptr = bytes)
@@ -576,6 +555,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 blittableJson.BlittableValidation(); //precaution, needed because this is user input..                
                 return blittableJson;
             }
-        }      
+        }
     }
 }

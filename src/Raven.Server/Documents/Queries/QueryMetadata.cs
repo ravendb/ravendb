@@ -57,6 +57,8 @@ namespace Raven.Server.Documents.Queries
 
         public readonly bool IsGroupBy;
 
+        public bool IsMoreLikeThis { get; private set; }
+
         public bool IsIntersect { get; private set; }
 
         public bool IsCollectionQuery { get; private set; } = true;
@@ -352,7 +354,7 @@ namespace Raven.Server.Documents.Queries
         {
             if (me.Name.Equals("id", StringComparison.OrdinalIgnoreCase))
             {
-                return new OrderByField(new QueryFieldName("id()",false), OrderByFieldType.String, asc, MethodType.Id);    
+                return new OrderByField(new QueryFieldName("id()", false), OrderByFieldType.String, asc, MethodType.Id);
             }
             if (me.Name.Equals("random", StringComparison.OrdinalIgnoreCase))
             {
@@ -986,10 +988,34 @@ namespace Raven.Server.Documents.Queries
                     case MethodType.Intersects:
                         HandleSpatial(methodName, arguments, parameters);
                         return;
+                    case MethodType.MoreLikeThis:
+                        HandleMoreLikeThis(methodName, arguments, parameters);
+                        return;
                     default:
                         QueryMethod.ThrowMethodNotSupported(methodType, QueryText, parameters);
                         break;
                 }
+            }
+
+            private void HandleMoreLikeThis(string methodName, List<QueryExpression> arguments, BlittableJsonReaderObject parameters)
+            {
+                if (arguments.Count == 0 || arguments.Count > 2)
+                    throw new InvalidQueryException($"Method {methodName}() expects to have one or two arguments", QueryText, parameters);
+
+                _metadata.IsMoreLikeThis = true;
+
+                var firstArgument = arguments[0];
+                if (firstArgument is BinaryExpression == false && firstArgument is FieldExpression == false && firstArgument is ValueExpression == false)
+                    throw new InvalidQueryException($"Method {methodName}() expects that first argument will be a binary expression or value", QueryText, parameters);
+
+                if (arguments.Count != 2)
+                    return;
+
+                var secondArgument = arguments[1];
+                if (secondArgument is ValueExpression)
+                    return;
+
+                throw new InvalidQueryException($"Method {methodName}() expects that second argument will be a paramter name or value", QueryText, parameters);
             }
 
             private void HandleSpatial(string methodName, List<QueryExpression> arguments, BlittableJsonReaderObject parameters)

@@ -5,10 +5,8 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
-using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Util;
 using Raven.Server.Documents.Queries;
-using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.ServerWide;
 using Sparrow;
 using Sparrow.Json;
@@ -58,11 +56,6 @@ namespace FastTests.Client.Indexing
                         WaitForNonStaleResultsTimeout = q.WaitForNonStaleResultsTimeout
                     };
 
-                    var query2 = new MoreLikeThisQueryServerSide
-                    {
-                        DocumentId = "docs/1"
-                    };
-
                     var query3 = new FacetQuery
                     {
                         FacetSetupDoc = "setup/1"
@@ -77,7 +70,6 @@ namespace FastTests.Client.Indexing
 
                     var now = SystemTime.UtcNow;
                     index.CurrentlyRunningQueries.TryAdd(new ExecutingQueryInfo(now, query1, 10, OperationCancelToken.None));
-                    index.CurrentlyRunningQueries.TryAdd(new ExecutingQueryInfo(now, query2, 11, OperationCancelToken.None));
                     index.CurrentlyRunningQueries.TryAdd(new ExecutingQueryInfo(now, query3, 12, OperationCancelToken.None));
 
                     var conventions = new DocumentConventions();
@@ -115,17 +107,6 @@ namespace FastTests.Client.Indexing
                                 var query = (IndexQuery)conventions.DeserializeEntityFromBlittable(typeof(IndexQuery), queryInfo);
 
                                 Assert.True(q.Equals(query));
-                                continue;
-                            }
-
-                            if (queryId == 11)
-                            {
-                                BlittableJsonReaderObject queryInfo;
-                                Assert.True(info.TryGet(nameof(ExecutingQueryInfo.QueryInfo), out queryInfo));
-
-                                var query = (MoreLikeThisQuery)conventions.DeserializeEntityFromBlittable(typeof(MoreLikeThisQuery), queryInfo);
-
-                                Assert.Equal(query2.DocumentId, query.DocumentId);
                                 continue;
                             }
 

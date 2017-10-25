@@ -12,13 +12,16 @@ using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Tokens;
 using Raven.Client.Extensions;
+using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
@@ -151,6 +154,8 @@ namespace Raven.Client.Documents.Session
         public bool IsDynamicMapReduce => GroupByTokens.Count > 0;
 
         protected long? CutoffEtag;
+
+        private bool _isInMoreLikeThis;
 
         private static TimeSpan DefaultTimeout
         {
@@ -364,10 +369,23 @@ namespace Raven.Client.Documents.Session
 
         public void WhereTrue()
         {
-            AppendOperatorIfNeeded(WhereTokens);
-            NegateIfNeeded(null);
+            var tokens = GetCurrentWhereTokens();
 
-            WhereTokens.AddLast(TrueToken.Instance);
+            AppendOperatorIfNeeded(tokens);
+            NegateIfNeeded(tokens, null);
+
+            tokens.AddLast(TrueToken.Instance);
+        }
+
+        public MoreLikeThisScope MoreLikeThis()
+        {
+            AppendOperatorIfNeeded(WhereTokens);
+
+            var token = new MoreLikeThisToken();
+            WhereTokens.AddLast(token);
+
+            _isInMoreLikeThis = true;
+            return new MoreLikeThisScope(token, AddQueryParameter, () => _isInMoreLikeThis = false);
         }
 
         /// <summary>
@@ -450,10 +468,12 @@ If you really want to do in memory filtering on the data returned from the query
         {
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
 
-            AppendOperatorIfNeeded(WhereTokens);
-            NegateIfNeeded(fieldName);
+            var tokens = GetCurrentWhereTokens();
 
-            WhereTokens.AddLast(WhereToken.Lucene(fieldName, AddQueryParameter(whereClause)));
+            AppendOperatorIfNeeded(tokens);
+            NegateIfNeeded(tokens, fieldName);
+
+            tokens.AddLast(WhereToken.Lucene(fieldName, AddQueryParameter(whereClause)));
         }
 
         /// <summary>
@@ -464,10 +484,11 @@ If you really want to do in memory filtering on the data returned from the query
         {
             _currentClauseDepth++;
 
-            AppendOperatorIfNeeded(WhereTokens);
-            NegateIfNeeded(null);
+            var tokens = GetCurrentWhereTokens();
+            AppendOperatorIfNeeded(tokens);
+            NegateIfNeeded(tokens, null);
 
-            WhereTokens.AddLast(OpenSubclauseToken.Instance);
+            tokens.AddLast(OpenSubclauseToken.Instance);
         }
 
         /// <summary>
@@ -478,7 +499,8 @@ If you really want to do in memory filtering on the data returned from the query
         {
             _currentClauseDepth--;
 
-            WhereTokens.AddLast(CloseSubclauseToken.Instance);
+            var tokens = GetCurrentWhereTokens();
+            tokens.AddLast(CloseSubclauseToken.Instance);
         }
 
         /// <summary>
@@ -509,10 +531,11 @@ If you really want to do in memory filtering on the data returned from the query
             var transformToEqualValue = TransformValue(whereParams);
             LastEquality = new KeyValuePair<string, object>(whereParams.FieldName, transformToEqualValue);
 
-            AppendOperatorIfNeeded(WhereTokens);
+            var tokens = GetCurrentWhereTokens();
+            AppendOperatorIfNeeded(tokens);
 
             whereParams.FieldName = EnsureValidFieldName(whereParams.FieldName, whereParams.IsNestedPath);
-            WhereTokens.AddLast(WhereToken.Equals(whereParams.FieldName, AddQueryParameter(transformToEqualValue), whereParams.Exact));
+            tokens.AddLast(WhereToken.Equals(whereParams.FieldName, AddQueryParameter(transformToEqualValue), whereParams.Exact));
         }
 
         /// <summary>
@@ -543,10 +566,11 @@ If you really want to do in memory filtering on the data returned from the query
             var transformToEqualValue = TransformValue(whereParams);
             LastEquality = new KeyValuePair<string, object>(whereParams.FieldName, transformToEqualValue);
 
-            AppendOperatorIfNeeded(WhereTokens);
+            var tokens = GetCurrentWhereTokens();
+            AppendOperatorIfNeeded(tokens);
 
             whereParams.FieldName = EnsureValidFieldName(whereParams.FieldName, whereParams.IsNestedPath);
-            WhereTokens.AddLast(WhereToken.NotEquals(whereParams.FieldName, AddQueryParameter(transformToEqualValue), whereParams.Exact));
+            tokens.AddLast(WhereToken.NotEquals(whereParams.FieldName, AddQueryParameter(transformToEqualValue), whereParams.Exact));
         }
 
         ///<summary>
@@ -564,10 +588,11 @@ If you really want to do in memory filtering on the data returned from the query
         {
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
 
-            AppendOperatorIfNeeded(WhereTokens);
-            NegateIfNeeded(fieldName);
+            var tokens = GetCurrentWhereTokens();
+            AppendOperatorIfNeeded(tokens);
+            NegateIfNeeded(tokens, fieldName);
 
-            WhereTokens.AddLast(WhereToken.In(fieldName, AddQueryParameter(TransformEnumerable(fieldName, UnpackEnumerable(values)).ToArray()), exact));
+            tokens.AddLast(WhereToken.In(fieldName, AddQueryParameter(TransformEnumerable(fieldName, UnpackEnumerable(values)).ToArray()), exact));
         }
 
         /// <summary>
@@ -587,12 +612,13 @@ If you really want to do in memory filtering on the data returned from the query
             var transformToEqualValue = TransformValue(whereParams);
             LastEquality = new KeyValuePair<string, object>(whereParams.FieldName, transformToEqualValue);
 
-            AppendOperatorIfNeeded(WhereTokens);
+            var tokens = GetCurrentWhereTokens();
+            AppendOperatorIfNeeded(tokens);
 
             whereParams.FieldName = EnsureValidFieldName(whereParams.FieldName, whereParams.IsNestedPath);
-            NegateIfNeeded(whereParams.FieldName);
+            NegateIfNeeded(tokens, whereParams.FieldName);
 
-            WhereTokens.AddLast(WhereToken.StartsWith(whereParams.FieldName, AddQueryParameter(transformToEqualValue)));
+            tokens.AddLast(WhereToken.StartsWith(whereParams.FieldName, AddQueryParameter(transformToEqualValue)));
         }
 
         /// <summary>
@@ -612,12 +638,13 @@ If you really want to do in memory filtering on the data returned from the query
             var transformToEqualValue = TransformValue(whereParams);
             LastEquality = new KeyValuePair<string, object>(whereParams.FieldName, transformToEqualValue);
 
-            AppendOperatorIfNeeded(WhereTokens);
+            var tokens = GetCurrentWhereTokens();
+            AppendOperatorIfNeeded(tokens);
 
             whereParams.FieldName = EnsureValidFieldName(whereParams.FieldName, whereParams.IsNestedPath);
-            NegateIfNeeded(whereParams.FieldName);
+            NegateIfNeeded(tokens, whereParams.FieldName);
 
-            WhereTokens.AddLast(WhereToken.EndsWith(whereParams.FieldName, AddQueryParameter(transformToEqualValue)));
+            tokens.AddLast(WhereToken.EndsWith(whereParams.FieldName, AddQueryParameter(transformToEqualValue)));
         }
 
         /// <summary>
@@ -631,13 +658,14 @@ If you really want to do in memory filtering on the data returned from the query
         {
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
 
-            AppendOperatorIfNeeded(WhereTokens);
-            NegateIfNeeded(fieldName);
+            var tokens = GetCurrentWhereTokens();
+            AppendOperatorIfNeeded(tokens);
+            NegateIfNeeded(tokens, fieldName);
 
             var fromParameterName = AddQueryParameter(start == null ? "*" : TransformValue(new WhereParams { Value = start, FieldName = fieldName }, forRange: true));
             var toParameterName = AddQueryParameter(end == null ? "NULL" : TransformValue(new WhereParams { Value = end, FieldName = fieldName }, forRange: true));
 
-            WhereTokens.AddLast(WhereToken.Between(fieldName, fromParameterName, toParameterName, exact));
+            tokens.AddLast(WhereToken.Between(fieldName, fromParameterName, toParameterName, exact));
         }
 
         /// <summary>
@@ -649,10 +677,11 @@ If you really want to do in memory filtering on the data returned from the query
         {
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
 
-            AppendOperatorIfNeeded(WhereTokens);
-            NegateIfNeeded(fieldName);
+            var tokens = GetCurrentWhereTokens();
+            AppendOperatorIfNeeded(tokens);
+            NegateIfNeeded(tokens, fieldName);
 
-            WhereTokens.AddLast(WhereToken.GreaterThan(fieldName, AddQueryParameter(value == null ? "*" : TransformValue(new WhereParams { Value = value, FieldName = fieldName }, forRange: true)), exact));
+            tokens.AddLast(WhereToken.GreaterThan(fieldName, AddQueryParameter(value == null ? "*" : TransformValue(new WhereParams { Value = value, FieldName = fieldName }, forRange: true)), exact));
         }
 
         /// <summary>
@@ -664,10 +693,11 @@ If you really want to do in memory filtering on the data returned from the query
         {
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
 
-            AppendOperatorIfNeeded(WhereTokens);
-            NegateIfNeeded(fieldName);
+            var tokens = GetCurrentWhereTokens();
+            AppendOperatorIfNeeded(tokens);
+            NegateIfNeeded(tokens, fieldName);
 
-            WhereTokens.AddLast(WhereToken.GreaterThanOrEqual(fieldName, AddQueryParameter(value == null ? "*" : TransformValue(new WhereParams { Value = value, FieldName = fieldName }, forRange: true)), exact));
+            tokens.AddLast(WhereToken.GreaterThanOrEqual(fieldName, AddQueryParameter(value == null ? "*" : TransformValue(new WhereParams { Value = value, FieldName = fieldName }, forRange: true)), exact));
         }
 
         /// <summary>
@@ -679,10 +709,11 @@ If you really want to do in memory filtering on the data returned from the query
         {
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
 
-            AppendOperatorIfNeeded(WhereTokens);
-            NegateIfNeeded(fieldName);
+            var tokens = GetCurrentWhereTokens();
+            AppendOperatorIfNeeded(tokens);
+            NegateIfNeeded(tokens, fieldName);
 
-            WhereTokens.AddLast(WhereToken.LessThan(fieldName, AddQueryParameter(value == null ? "NULL" : TransformValue(new WhereParams { Value = value, FieldName = fieldName }, forRange: true)), exact));
+            tokens.AddLast(WhereToken.LessThan(fieldName, AddQueryParameter(value == null ? "NULL" : TransformValue(new WhereParams { Value = value, FieldName = fieldName }, forRange: true)), exact));
         }
 
         /// <summary>
@@ -692,10 +723,11 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name = "value">The value.</param>
         public void WhereLessThanOrEqual(string fieldName, object value, bool exact = false)
         {
-            AppendOperatorIfNeeded(WhereTokens);
-            NegateIfNeeded(fieldName);
+            var tokens = GetCurrentWhereTokens();
+            AppendOperatorIfNeeded(tokens);
+            NegateIfNeeded(tokens, fieldName);
 
-            WhereTokens.AddLast(WhereToken.LessThanOrEqual(fieldName, AddQueryParameter(value == null ? "NULL" : TransformValue(new WhereParams { Value = value, FieldName = fieldName }, forRange: true)), exact));
+            tokens.AddLast(WhereToken.LessThanOrEqual(fieldName, AddQueryParameter(value == null ? "NULL" : TransformValue(new WhereParams { Value = value, FieldName = fieldName }, forRange: true)), exact));
         }
 
         /// <summary>
@@ -703,13 +735,15 @@ If you really want to do in memory filtering on the data returned from the query
         /// </summary>
         public void AndAlso()
         {
-            if (WhereTokens.Last == null)
+            var tokens = GetCurrentWhereTokens();
+
+            if (tokens.Last == null)
                 return;
 
-            if (WhereTokens.Last.Value is QueryOperatorToken)
+            if (tokens.Last.Value is QueryOperatorToken)
                 throw new InvalidOperationException("Cannot add AND, previous token was already an operator token.");
 
-            WhereTokens.AddLast(QueryOperatorToken.And);
+            tokens.AddLast(QueryOperatorToken.And);
         }
 
         /// <summary>
@@ -717,13 +751,15 @@ If you really want to do in memory filtering on the data returned from the query
         /// </summary>
         public void OrElse()
         {
-            if (WhereTokens.Last == null)
+            var tokens = GetCurrentWhereTokens();
+
+            if (tokens.Last == null)
                 return;
 
-            if (WhereTokens.Last.Value is QueryOperatorToken)
+            if (tokens.Last.Value is QueryOperatorToken)
                 throw new InvalidOperationException("Cannot add OR, previous token was already an operator token.");
 
-            WhereTokens.AddLast(QueryOperatorToken.Or);
+            tokens.AddLast(QueryOperatorToken.Or);
         }
 
         /// <summary>
@@ -740,7 +776,8 @@ If you really want to do in memory filtering on the data returned from the query
             if (boost == 1m) // 1.0 is the default
                 return;
 
-            var whereToken = WhereTokens.Last?.Value as WhereToken;
+            var tokens = GetCurrentWhereTokens();
+            var whereToken = tokens.Last?.Value as WhereToken;
             if (whereToken == null)
                 throw new InvalidOperationException("Missing where clause");
 
@@ -760,7 +797,8 @@ If you really want to do in memory filtering on the data returned from the query
         /// </remarks>
         public void Fuzzy(decimal fuzzy)
         {
-            var whereToken = WhereTokens.Last?.Value as WhereToken;
+            var tokens = GetCurrentWhereTokens();
+            var whereToken = tokens.Last?.Value as WhereToken;
             if (whereToken == null)
             {
                 throw new InvalidOperationException("Missing where clause");
@@ -791,7 +829,8 @@ If you really want to do in memory filtering on the data returned from the query
         /// </remarks>
         public void Proximity(int proximity)
         {
-            var whereToken = WhereTokens.Last?.Value as WhereToken;
+            var tokens = GetCurrentWhereTokens();
+            var whereToken = tokens.Last?.Value as WhereToken;
             if (whereToken == null)
             {
                 throw new InvalidOperationException("Missing where clause");
@@ -938,12 +977,13 @@ If you really want to do in memory filtering on the data returned from the query
                 hasWhiteSpace ? "(" + searchTerms + ")" : searchTerms
             );
 
-            AppendOperatorIfNeeded(WhereTokens);
+            var tokens = GetCurrentWhereTokens();
+            AppendOperatorIfNeeded(tokens);
 
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
-            NegateIfNeeded(fieldName);
+            NegateIfNeeded(tokens, fieldName);
 
-            WhereTokens.AddLast(WhereToken.Search(fieldName, AddQueryParameter(searchTerms), @operator));
+            tokens.AddLast(WhereToken.Search(fieldName, AddQueryParameter(searchTerms), @operator));
         }
 
 
@@ -1013,12 +1053,13 @@ If you really want to do in memory filtering on the data returned from the query
 
         public void Intersect()
         {
-            var last = WhereTokens.Last?.Value;
+            var tokens = GetCurrentWhereTokens();
+            var last = tokens.Last?.Value;
             if (last is WhereToken || last is CloseSubclauseToken)
             {
                 IsIntersect = true;
 
-                WhereTokens.AddLast(IntersectMarkerToken.Instance);
+                tokens.AddLast(IntersectMarkerToken.Instance);
             }
             else
                 throw new InvalidOperationException("Cannot add INTERSECT at this point.");
@@ -1028,48 +1069,51 @@ If you really want to do in memory filtering on the data returned from the query
         {
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
 
-            AppendOperatorIfNeeded(WhereTokens);
-            NegateIfNeeded(fieldName);
+            var tokens = GetCurrentWhereTokens();
+            AppendOperatorIfNeeded(tokens);
+            NegateIfNeeded(tokens, fieldName);
 
-            WhereTokens.AddLast(WhereToken.Exists(fieldName));
+            tokens.AddLast(WhereToken.Exists(fieldName));
         }
 
         public void ContainsAny(string fieldName, IEnumerable<object> values)
         {
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
 
-            AppendOperatorIfNeeded(WhereTokens);
-            NegateIfNeeded(fieldName);
+            var tokens = GetCurrentWhereTokens();
+            AppendOperatorIfNeeded(tokens);
+            NegateIfNeeded(tokens, fieldName);
 
             var array = TransformEnumerable(fieldName, UnpackEnumerable(values))
                 .ToArray();
 
             if (array.Length == 0)
             {
-                WhereTokens.AddLast(TrueToken.Instance);
+                tokens.AddLast(TrueToken.Instance);
                 return;
             }
 
-            WhereTokens.AddLast(WhereToken.In(fieldName, AddQueryParameter(array), exact: false));
+            tokens.AddLast(WhereToken.In(fieldName, AddQueryParameter(array), exact: false));
         }
 
         public void ContainsAll(string fieldName, IEnumerable<object> values)
         {
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
 
-            AppendOperatorIfNeeded(WhereTokens);
-            NegateIfNeeded(fieldName);
+            var tokens = GetCurrentWhereTokens();
+            AppendOperatorIfNeeded(tokens);
+            NegateIfNeeded(tokens, fieldName);
 
             var array = TransformEnumerable(fieldName, UnpackEnumerable(values))
                 .ToArray();
 
             if (array.Length == 0)
             {
-                WhereTokens.AddLast(TrueToken.Instance);
+                tokens.AddLast(TrueToken.Instance);
                 return;
             }
 
-            WhereTokens.AddLast(WhereToken.AllIn(fieldName, AddQueryParameter(array)));
+            tokens.AddLast(WhereToken.AllIn(fieldName, AddQueryParameter(array)));
         }
 
         public void AddRootType(Type type)
@@ -1300,14 +1344,14 @@ If you really want to do in memory filtering on the data returned from the query
             }
         }
 
-        private void NegateIfNeeded(string fieldName)
+        private void NegateIfNeeded(LinkedList<QueryToken> tokens, string fieldName)
         {
             if (Negate == false)
                 return;
 
             Negate = false;
 
-            if (WhereTokens.Count == 0 || WhereTokens.Last.Value is OpenSubclauseToken)
+            if (tokens.Count == 0 || tokens.Last.Value is OpenSubclauseToken)
             {
                 if (fieldName != null)
                     WhereExists(fieldName);
@@ -1317,7 +1361,7 @@ If you really want to do in memory filtering on the data returned from the query
                 AndAlso();
             }
 
-            WhereTokens.AddLast(NegateToken.Instance);
+            tokens.AddLast(NegateToken.Instance);
         }
 
         private static IEnumerable<object> UnpackEnumerable(IEnumerable items)
@@ -1445,6 +1489,23 @@ If you really want to do in memory filtering on the data returned from the query
             var parameterName = $"p{QueryParameters.Count.ToInvariantString()}";
             QueryParameters.Add(parameterName, value);
             return parameterName;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private LinkedList<QueryToken> GetCurrentWhereTokens()
+        {
+            if (_isInMoreLikeThis == false)
+                return WhereTokens;
+
+            if (WhereTokens.Count == 0)
+                throw new InvalidOperationException($"Cannot get '{nameof(MoreLikeThisToken)}' because there are no where tokens specified.");
+
+            var moreLikeThisToken = WhereTokens.Last.Value as MoreLikeThisToken;
+
+            if (moreLikeThisToken == null)
+                throw new InvalidOperationException($"Last token is not '{nameof(MoreLikeThisToken)}'.");
+
+            return moreLikeThisToken.WhereTokens;
         }
 
         protected void UpdateFieldsToFetchToken(FieldsToFetchToken fieldsToFetch)

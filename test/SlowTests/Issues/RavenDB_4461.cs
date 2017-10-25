@@ -2,6 +2,7 @@
 using System.Linq;
 using FastTests;
 using Lucene.Net.Analysis.Standard;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Xunit;
@@ -41,19 +42,15 @@ namespace SlowTests.Issues
                 {
                     var indexName = new Posts_ByPostCategory().IndexName;
 
-                    Assert.NotEmpty(session.Advanced
-                        .MoreLikeThis<MockPost>(new MoreLikeThisQuery
+                    Assert.NotEmpty(session.Query<MockPost, Posts_ByPostCategory>()
+                        .MoreLikeThis(x => x.Id == "posts/123", new MoreLikeThisOptions
                         {
-                            Query = $"FROM INDEX '{indexName}'",
-                            DocumentId = "posts/123",
                             Fields = new[] { "Body" }
                         }).ToList());
 
-                    Assert.Empty(session.Advanced
-                        .MoreLikeThis<MockPost>(new MoreLikeThisQuery
+                    Assert.Empty(session.Query<MockPost, Posts_ByPostCategory>()
+                        .MoreLikeThis(x => x.Id == "posts/123" && x.Category == "IT", new MoreLikeThisOptions
                         {
-                            Query = $"FROM INDEX '{indexName}' WHERE Category = 'IT'",
-                            DocumentId = "posts/123",
                             Fields = new[] { "Body" }
                         }).ToList());
                 }

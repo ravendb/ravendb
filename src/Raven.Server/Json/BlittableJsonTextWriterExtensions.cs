@@ -249,19 +249,6 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteMoreLikeThisQueryResult(this BlittableJsonTextWriter writer, JsonOperationContext context, MoreLikeThisQueryResultServerSide result, out int numberOfResults)
-        {
-            writer.WriteStartObject();
-
-            writer.WritePropertyName(nameof(result.DurationInMs));
-            writer.WriteInteger(result.DurationInMs);
-            writer.WriteComma();
-
-            writer.WriteQueryResult(context, result, metadataOnly: false, numberOfResults: out numberOfResults, partial: true);
-
-            writer.WriteEndObject();
-        }
-
         public static void WriteSuggestionQueryResult(this BlittableJsonTextWriter writer, JsonOperationContext context, SuggestionQueryResultServerSide result)
         {
             writer.WriteStartObject();
@@ -391,13 +378,6 @@ namespace Raven.Server.Json
                 return;
             }
 
-            var moreLikeThisQuery = query as MoreLikeThisQueryServerSide;
-            if (moreLikeThisQuery != null)
-            {
-                writer.WriteMoreLikeThisQuery(context, moreLikeThisQuery);
-                return;
-            }
-
             var facetQuery = query as FacetQuery;
             if (facetQuery != null)
             {
@@ -412,14 +392,6 @@ namespace Raven.Server.Json
         {
             var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(query);
             var json = context.ReadObject(djv, "facet-query");
-
-            writer.WriteObject(json);
-        }
-
-        public static void WriteMoreLikeThisQuery(this BlittableJsonTextWriter writer, JsonOperationContext context, MoreLikeThisQueryServerSide query)
-        {
-            var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(query);
-            var json = context.ReadObject(djv, "more-like-this-query");
 
             writer.WriteObject(json);
         }

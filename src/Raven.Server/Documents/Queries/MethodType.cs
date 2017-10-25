@@ -23,6 +23,8 @@
         Disjoint,
         Intersects,
 
+        MoreLikeThis,
+
         Unknown,
     }
 }
