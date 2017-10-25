@@ -32,7 +32,7 @@ class connectionStrings extends viewModelBase {
         super();
 
         this.initObservables();
-        this.bindToCurrentInstance("onEditSqlEtl", "onEditRavenEtl", "confirmDelete", "isConnectionStringInUse");
+        this.bindToCurrentInstance("onEditSqlEtl", "onEditRavenEtl", "confirmDelete", "isConnectionStringInUse", "onTestConnectionRaven");
         this.dirtyFlag = new ko.DirtyFlag([this.editedRavenEtlConnectionString, this.editedSqlEtlConnectionString], false); 
     }
     
@@ -202,11 +202,11 @@ class connectionStrings extends viewModelBase {
         ravenConnectionString.selectedUrlToTest(urlToTest);
 
         ravenConnectionString.testConnection(urlToTest)
-             .done((testResult) => this.testConnectionResult(testResult))
-             .always(() => {
-                              this.spinners.test(false);
-                              ravenConnectionString.selectedUrlToTest("");
-             });
+            .done((testResult) => this.testConnectionResult(testResult))
+            .always(() => { 
+                this.spinners.test(false); 
+                ravenConnectionString.selectedUrlToTest(""); 
+            });
     }
     
     onCloseEdit() {
