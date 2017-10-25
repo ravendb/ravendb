@@ -8,6 +8,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Util;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Handlers;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
@@ -394,9 +395,10 @@ namespace Raven.Server.Smuggler.Documents
                 UnmanagedJsonParserHelper.ThrowInvalidJson("Expected start array, but got " + _state.CurrentTokenType, _peepingTomStream, _parser);
 
             var context = _context;
+            var legacyImport = _buildVersionType == BuildVersionType.V3;
             var modifier = new BlittableMetadataModifier(context)
             {
-                ReadFirstEtagOfLegacyRevision = _buildVersionType == BuildVersionType.V3,
+                ReadFirstEtagOfLegacyRevision = legacyImport,
             };
             var builder = CreateBuilder(context, modifier);
             try
@@ -441,6 +443,21 @@ namespace Raven.Server.Smuggler.Documents
                         ProcessAttachmentStream(context, data, ref attachment);
                         attachments.Add(attachment);
                         continue;
+                    }
+
+                    if (legacyImport)
+                    {
+                        if (modifier.Id.Contains(HiLoHandler.RavenHiloIdPrefix))
+                        {
+                            data.Modifications = new DynamicJsonValue
+                            {
+                                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                                {
+                                    [Constants.Documents.Metadata.Collection] = CollectionName.HiLoCollection
+                                }
+                            };
+                            data = context.ReadObject(data, modifier.Id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                        }
                     }
 
                     yield return new DocumentItem
