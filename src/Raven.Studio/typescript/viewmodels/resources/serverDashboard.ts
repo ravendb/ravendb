@@ -425,12 +425,7 @@ class serverDashboard extends viewModelBase {
         this.node = ko.pureComputed(() => {
             const topology = this.clusterManager.topology();
             const nodeTag = topology.nodeTag();
-            const node = topology.nodes().filter(x => x.tag() === nodeTag)[0];
-            if (!node) {
-                return null;
-            }
-
-            return node;
+            return topology.nodes().find(x => x.tag() === nodeTag);
         });
     }
 
@@ -440,12 +435,6 @@ class serverDashboard extends viewModelBase {
         this.initSections();
         
         this.enableLiveView();
-    }
-
-    private getNode() {
-        const topology = this.clusterManager.topology();
-        const nodeTag = topology.nodeTag();
-        return topology.nodes().filter(x => x.tag() === nodeTag)[0];
     }
 
     private initSections() {
