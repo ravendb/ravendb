@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
+using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Spatial;
 
 namespace Raven.Client.Documents.Session
@@ -16,7 +17,6 @@ namespace Raven.Client.Documents.Session
         /// Register the query as a lazy-count query and return a lazy instance that will evaluate the query when needed.
         /// </summary>
         Lazy<Task<int>> CountLazilyAsync(CancellationToken token = default(CancellationToken));
-
 
         /// <summary>
         ///     Executed the query and returns the results.
@@ -152,5 +152,10 @@ namespace Raven.Client.Documents.Session
 
         IAsyncGroupByDocumentQuery<T> GroupBy(string fieldName, params string[] fieldNames);
 
+        IAsyncDocumentQuery<T> MoreLikeThis(MoreLikeThisOptions options = null);
+
+        IAsyncDocumentQuery<T> MoreLikeThis(string document, MoreLikeThisOptions options = null);
+
+        IAsyncDocumentQuery<T> MoreLikeThis(Action<IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>> predicate, MoreLikeThisOptions options = null);
     }
 }
