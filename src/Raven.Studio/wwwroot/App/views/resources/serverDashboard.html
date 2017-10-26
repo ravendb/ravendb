@@ -1,4 +1,4 @@
-<div id="dashboard-container" class="content-margin">
+<div id="dashboard-container" class="content-margin cluster">
     <div class="dashboard-items">
         <div class="flex-vertical dashboard-nodecpu">
 
@@ -43,19 +43,31 @@
                     <div class="panel-body">
                         <div class="infogrid">
                             <div class="infogrid-label" data-bind="with: resources">
-                                <div><i class="icon-processor"></i><span>CPU</span></div>
-                                <div><strong data-bind="text: cpuUsage().toFixed(2) + '%', attr: { class: cpuUsageClass() }"></strong></div>
+                                <div>
+                                    <i class="icon-processor"></i><span>CPU</span>
+                                    <span data-bind="with: $root.node">
+                                        (<strong data-bind="text: utilizedCores, css: cssCores" data-toggle="tooltip" title="Assigned CPU cores limit"></strong>/<strong data-bind="text: numberOfCores" data-toggle="tooltip" title="Total CPU cores count"></strong>)
+                                    </span>
+                                </div>
+                                <div>
+                                    <strong data-bind="text: cpuUsage().toFixed(2) + '%', attr: { class: cpuUsageClass() }" data-placement="bottom" data-toggle="tooltip" title="CPU usage"></strong>
+                                    (<strong data-bind="text: ravenCpuUsage().toFixed(2) + '%', attr: { class: ravenCpuUsageClass() }" data-placement="bottom" data-toggle="tooltip" title="RavenDB CPU usage"></strong>)
+                                </div>
                             </div>
                             <div class="infogrid-graph" >
                                 <div class="graph-container fix-size" id="cpuChart">
                                     
                                 </div>
                             </div>
-                            <div class="infogrid-label" data-bind="with: resources">
+                            <div class="infogrid-label" data-bind="with: resources" style="padding: 0">
                                 <div><i class="icon-memory"></i><span>MEM</span></div>
-                                <div data-bind="attr: { title: memoryUsage().toLocaleString() + ' out of ' + totalMemory().toLocaleString() }">
-                                    <strong data-bind="text: $root.sizeFormatter(memoryUsage()), attr: { class: memoryUsageClass }"></strong> / 
-                                    <span data-bind="text: $root.sizeFormatter(totalMemory())"></span>
+                                <div>
+                                    <div>
+                                        <strong data-bind="text: $root.sizeFormatter(memoryUsage()), attr: { class: memoryUsageClass }" data-toggle="tooltip" title="Memory usage"></strong> 
+                                        (<strong data-bind="text: $root.sizeFormatter(ravenMemoryUsage()), attr: { class: ravenMemoryUsageClass }" data-toggle="tooltip" title="RavenDB memory usage"></strong>)
+                                    </div>
+                                    <div>Total: <span data-bind="text: $root.sizeFormatter(totalMemory())"></span>
+                                    </div>
                                 </div>
                                 <!-- TODO
                                 <div><small><a href="#">see details</a></small></div>
