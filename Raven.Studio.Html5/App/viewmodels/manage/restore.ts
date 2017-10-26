@@ -25,16 +25,15 @@ class resourceRestore {
 
     constructor(private parent: restore, private type: string, private resources: KnockoutObservableArray<resource>) {
         this.nameCustomValidityError = ko.computed(() => {
-            return "";
-            //var errorMessage = "";
-            //var newResourceName = this.resourceName();
-            //var foundDb = resources.first((rs: resource) => newResourceName == rs.name);
+            var errorMessage = "";
+            var newResourceName = this.resourceName();
+            var foundDb = resources.first((rs: resource) => newResourceName == rs.name);
 
-            //if (!!foundDb && newResourceName.length > 0) {
-            //    errorMessage = (this.type === database.type ? "Database" : "File System") + " name already exist!";
-            //}
+            if (!!foundDb && newResourceName.length > 0) {
+                errorMessage = (this.type === database.type ? "Database" : "File System") + " name already exist!";
+            }
 
-            //return errorMessage;
+            return errorMessage;
         });
     }
 
