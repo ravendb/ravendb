@@ -209,7 +209,7 @@ namespace RachisTests
             await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrl).ConfigureAwait(false);
 
             string mentor = "C";
-            string tag1, tag2, tag3;
+            string tag2, tag3;
             using (var store = new DocumentStore
             {
                 Urls = new[] { leader.WebUrl },
@@ -795,7 +795,6 @@ namespace RachisTests
             try
             {
                 await task.ConfigureAwait(false);
-                Exception exception = null;
             }
             catch (T)
             {

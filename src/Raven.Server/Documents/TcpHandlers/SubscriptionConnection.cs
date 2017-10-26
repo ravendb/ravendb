@@ -468,8 +468,6 @@ namespace Raven.Server.Documents.TcpHandlers
                         }
                     }
 
-                    SubscriptionConnectionClientMessage clientReply;
-
                     (replyFromClientTask, subscriptionChangeVectorBeforeCurrentBatch) = 
                         await WaitForClientAck(replyFromClientTask, subscriptionChangeVectorBeforeCurrentBatch);
                 }
