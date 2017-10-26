@@ -279,7 +279,7 @@ namespace FastTests.Client.MoreLikeThis
                 using (var session = store.OpenSession())
                 {
                     var list = session.Query<Data, DataIndex>()
-                        .MoreLikeThis()
+                        .MoreLikeThis(x => x.Id == key)
                         .ToList();
 
                     Assert.NotEmpty(list);
