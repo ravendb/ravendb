@@ -555,6 +555,7 @@ namespace Raven.Server.Documents.Replication
                     {
                         var cmd = new GetTcpInfoCommand("extrenal-replication");
                         requestExecutor.Execute(cmd, ctx);
+                        node.Database = exNode.ConnectionString.Database;
                         node.Url = requestExecutor.Url;
                         return cmd.Result;
                     }

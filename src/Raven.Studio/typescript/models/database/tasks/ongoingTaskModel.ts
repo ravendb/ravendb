@@ -67,7 +67,7 @@ abstract class ongoingTaskModel {
         switch (dto.TaskType) { 
             case "Replication":
                 const dtoReplication = dto as Raven.Client.ServerWide.Operations.OngoingTaskReplication;
-                taskName = `External replication to ${dtoReplication.DestinationDatabase}@${dtoReplication.DestinationUrl}`;
+                taskName = `External replication to ${dtoReplication.DestinationDatabase}@${dtoReplication.DestinationUrl || 'N/A'}`;
                 break;
             case "Backup":
                 const dtoBackup = dto as Raven.Client.ServerWide.Operations.OngoingTaskBackup;
@@ -75,7 +75,7 @@ abstract class ongoingTaskModel {
                 break;
             case "RavenEtl":
                 const dtoRavenEtl = dto as Raven.Client.ServerWide.Operations.OngoingTaskRavenEtlListView;
-                taskName = `ETL to ${dtoRavenEtl.DestinationDatabase}@${dtoRavenEtl.DestinationUrl}`;
+                taskName = `ETL to ${dtoRavenEtl.DestinationDatabase}@${dtoRavenEtl.DestinationUrl || 'N/A'}`;
                 break;
             case "SqlEtl":
                 const dtoSqlEtl = dto as Raven.Client.ServerWide.Operations.OngoingTaskSqlEtlListView;

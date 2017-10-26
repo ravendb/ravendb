@@ -30,7 +30,7 @@ class ongoingTaskRavenEtlListModel extends ongoingTask {
         super.update(dto);
 
         this.destinationDB(dto.DestinationDatabase);
-        this.destinationURL(dto.DestinationUrl);
+        this.destinationURL(dto.DestinationUrl || 'N/A');
         this.connectionStringName(dto.ConnectionStringName);
     }
 

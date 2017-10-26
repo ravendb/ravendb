@@ -251,7 +251,7 @@ class editSqlEtlTask extends viewModelBase {
             }
         }
         
-        // 2.5 Validate *new connection string* (if relevant..)
+        // 3. Validate *new connection string* (if relevant..)
         let savingNewStringAction = $.Deferred<void>();        
         if (this.createNewConnectionString()) {
             if (!this.isValid(this.newConnectionString().validationGroup)) {
@@ -271,7 +271,7 @@ class editSqlEtlTask extends viewModelBase {
             savingNewStringAction.resolve();
         }       
         
-        // 3. Validate *general form*
+        // 4. Validate *general form*
         savingNewStringAction.done(() => {
             if (!this.isValid(this.editedSqlEtl().validationGroup)) {
                 hasAnyErrors = true;
@@ -283,7 +283,7 @@ class editSqlEtlTask extends viewModelBase {
             return false;
         }
 
-        // 4. Validation is OK - Save opened sections (if any)        
+        // 5. Validation is OK - Save opened sections (if any)        
         if (this.showEditTransformationArea()) {
             this.saveEditedTransformation();
         }
@@ -292,7 +292,7 @@ class editSqlEtlTask extends viewModelBase {
             this.saveEditedSqlTable();
         }
         
-        // 5. Convert form to dto and send collected data to server
+        // 6. Convert form to dto and send collected data to server
         savingNewStringAction.done(()=> {
             const dto = this.editedSqlEtl().toDto();
             saveEtlTaskCommand.forSqlEtl(this.activeDatabase(), dto)

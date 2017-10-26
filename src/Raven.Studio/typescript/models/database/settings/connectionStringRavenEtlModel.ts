@@ -1,5 +1,7 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
+import database = require("models/resources/database");
 import connectionStringModel = require("models/database/settings/connectionStringModel");
+import saveConnectionStringCommand = require("commands/database/settings/saveConnectionStringCommand");
 import testClusterNodeConnectionCommand = require("commands/database/cluster/testClusterNodeConnectionCommand");
 
 class discoveryUrl {
@@ -32,7 +34,7 @@ class connectionStringRavenEtlModel extends connectionStringModel {
 
     validationGroup: KnockoutValidationGroup;
     
-    constructor(dto: Raven.Client.ServerWide.ETL.RavenConnectionString, isNew: boolean, tasks: string[]) {
+    constructor(dto: Raven.Client.ServerWide.ETL.RavenConnectionString, isNew: boolean, tasks: { taskName: string; taskId: number }[]) {
         super(isNew, tasks);
         
         this.update(dto);       
@@ -108,6 +110,11 @@ class connectionStringRavenEtlModel extends connectionStringModel {
 
     testConnection(urlToTest: string) : JQueryPromise<Raven.Server.Web.System.NodeConnectionTestResult> {       
         return new testClusterNodeConnectionCommand(urlToTest)
+            .execute();
+    }
+
+    saveConnectionString(db: database) : JQueryPromise<void> {
+        return new saveConnectionStringCommand(db, this)
             .execute();
     }
 }

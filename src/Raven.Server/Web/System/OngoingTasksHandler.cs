@@ -67,7 +67,7 @@ namespace Raven.Server.Web.System
 
                 foreach (var tasks in new[]
                 {
-                    CollectExternalReplicationTasks(databaseRecord.ExternalReplication, dbTopology,clusterTopology),
+                    CollectExternalReplicationTasks(databaseRecord.ExternalReplication, dbTopology,clusterTopology,databaseRecord.RavenConnectionStrings),
                     CollectEtlTasks(databaseRecord, dbTopology, clusterTopology),
                     CollectBackupTasks(databaseRecord, dbTopology, clusterTopology)
                 })
@@ -104,20 +104,20 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private IEnumerable<OngoingTask> CollectExternalReplicationTasks(List<ExternalReplication> watchers, DatabaseTopology dbTopology, ClusterTopology clusterTopology)
+        private IEnumerable<OngoingTask> CollectExternalReplicationTasks(List<ExternalReplication> watchers, DatabaseTopology dbTopology, ClusterTopology clusterTopology, Dictionary<string, RavenConnectionString> connectionStrings)
         {
             if (dbTopology == null)
                 yield break;
 
             foreach (var watcher in watchers)
             {
-                var taskInfo = GetExternalReplicationInfo(dbTopology, clusterTopology, watcher);
+                var taskInfo = GetExternalReplicationInfo(dbTopology, clusterTopology, watcher, connectionStrings);
                 yield return taskInfo;
             }
         }
 
         private OngoingTaskReplication GetExternalReplicationInfo(DatabaseTopology dbTopology, ClusterTopology clusterTopology,
-            ExternalReplication watcher)
+            ExternalReplication watcher, Dictionary<string, RavenConnectionString> connectionStrings)
         {
             NodeId responsibale = null;
 
@@ -140,13 +140,14 @@ namespace Raven.Server.Web.System
             {
                 res.Status = OngoingTaskConnectionStatus.NotOnThisNode;
             }
-
+            
             var taskInfo = new OngoingTaskReplication
             {
                 TaskId = watcher.TaskId,
                 TaskName = watcher.Name,
                 ResponsibleNode = responsibale,
-                DestinationDatabase = watcher.Database,
+                ConnectionStringName = watcher.ConnectionStringName,     
+                DestinationDatabase = connectionStrings[watcher.ConnectionStringName].Database,
                 TaskState = watcher.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
                 DestinationUrl = res.Url,
                 TaskConnectionStatus = res.Status,
@@ -232,7 +233,6 @@ namespace Raven.Server.Web.System
                         throw new InvalidOperationException(
                             $"Could not find connection string named '{ravenEtl.ConnectionStringName}' in the database record for '{ravenEtl.Name}' ETL");
 
-
                     (string Url, OngoingTaskConnectionStatus Status) res = (null, OngoingTaskConnectionStatus.None);
                     string error = null;
                     if (tag == ServerStore.NodeTag)
@@ -241,7 +241,7 @@ namespace Raven.Server.Web.System
                         {
                             if (process is RavenEtl etlProcess)
                             {
-                                if (etlProcess.Name == ravenEtl.Name)
+                                if (etlProcess.ConfigurationName == ravenEtl.Name)
                                 {
                                     res.Url = etlProcess.Url;
                                     res.Status = OngoingTaskConnectionStatus.Active;
@@ -346,7 +346,7 @@ namespace Raven.Server.Web.System
                                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                                 break;
                             }
-                            var taskInfo = GetExternalReplicationInfo(dbTopology, clusterTopology, watcher);
+                            var taskInfo = GetExternalReplicationInfo(dbTopology, clusterTopology, watcher, record.RavenConnectionStrings);
 
                             WriteResult(context, taskInfo);
 
@@ -581,7 +581,6 @@ namespace Raven.Server.Web.System
                 }
             }
         }
-
 
         [RavenAction("/databases/*/subscription-tasks", "DELETE", AuthorizationStatus.ValidUser)]
         public async Task DeleteSubscriptionTask()

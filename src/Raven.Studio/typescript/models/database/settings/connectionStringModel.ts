@@ -4,9 +4,10 @@ abstract class connectionStringModel {
 
     isNew = ko.observable<boolean>();
     connectionStringName = ko.observable<string>();   
-    tasksThatAreUsingThisConnectionString = ko.observableArray<string>([]);
+    
+    tasksThatAreUsingThisConnectionString = ko.observableArray<{ taskName: string; taskId: number }>([]);
 
-    constructor(isNew: boolean, tasks: string[]) {      
+    constructor(isNew: boolean, tasks: { taskName: string; taskId: number }[]) {      
         this.isNew(isNew);
         this.tasksThatAreUsingThisConnectionString(tasks);
     }    

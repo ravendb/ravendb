@@ -45,11 +45,10 @@ namespace Raven.Client.ServerWide
         
         public static void EnsureUniqueDbAndConnectionString(List<ExternalReplication> watchers, ExternalReplication watcher)
         {
-            var dbName = watcher.Database;
             var connecitonString = watcher.ConnectionStringName;
             foreach (var w in watchers)
             {
-                if (w.Database != dbName || w.ConnectionStringName != connecitonString)
+                if (w.ConnectionStringName != connecitonString)
                     continue;
                 watchers.Remove(watcher);
                 return;
