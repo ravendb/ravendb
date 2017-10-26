@@ -229,6 +229,16 @@ namespace Raven.Client.Documents.Session.Tokens
             };
         }
 
+        public static WhereToken Regex(string fieldName, string parameterName)
+        {
+            return new WhereToken
+            {
+                FieldName = fieldName,
+                ParameterName = parameterName,
+                WhereOperator = WhereOperator.Regex
+            };
+        }
+
         public override void WriteTo(StringBuilder writer)
         {
             if (Boost.HasValue)
@@ -271,6 +281,9 @@ namespace Raven.Client.Documents.Session.Tokens
                     break;
                 case WhereOperator.Intersects:
                     writer.Append("intersects(");
+                    break;
+                case WhereOperator.Regex:
+                    writer.Append("regex(");
                     break;
             }
 
@@ -340,6 +353,7 @@ namespace Raven.Client.Documents.Session.Tokens
                 case WhereOperator.Lucene:
                 case WhereOperator.StartsWith:
                 case WhereOperator.EndsWith:
+                case WhereOperator.Regex:
                     writer
                         .Append(", $")
                         .Append(ParameterName)

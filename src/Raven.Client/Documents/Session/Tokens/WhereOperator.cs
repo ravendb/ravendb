@@ -19,6 +19,7 @@ namespace Raven.Client.Documents.Session.Tokens
         Within,
         Contains,
         Disjoint,
-        Intersects
+        Intersects,
+        Regex
     }
 }

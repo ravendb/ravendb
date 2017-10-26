@@ -839,6 +839,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 return;
             }
 
+            if (declaringType == typeof(Regex))
+            {
+                VisitRegexMethodCall(expression);
+                return;
+            }
+
             if (declaringType.GetTypeInfo().IsGenericType)
             {
                 var genericTypeDefinition = declaringType.GetGenericTypeDefinition();
@@ -854,6 +860,20 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             var method = declaringType.Name + "." + expression.Method.Name;
             throw new NotSupportedException(string.Format("Method not supported: {0}. Expression: {1}.", method, expression));
+        }
+
+        private void VisitRegexMethodCall(MethodCallExpression expression)
+        {
+            if (expression.Method.Name != "IsMatch")
+            {
+                throw new NotSupportedException(string.Format("Method not supported: Regex.{0}. Expression: {1}.", expression.Method.Name, expression));
+            }
+
+            var memberInfo = GetMember(expression.Arguments[0]);
+
+            _documentQuery.WhereRegex(
+                memberInfo.Path,
+                GetValueFromExpression(expression.Arguments[1], GetMemberType(memberInfo)).ToString());
         }
 
         private void VisitLinqExtensionsMethodCall(MethodCallExpression expression)

@@ -166,6 +166,11 @@ namespace Raven.Client.Documents.Session
         void WhereExists(string fieldName);
 
         /// <summary>
+        ///   Matches fields where Regex.IsMatch(filed, pattern)
+        /// </summary>
+        void WhereRegex(string fieldName, string pattern);
+
+        /// <summary>
         ///   Add an AND to the query
         /// </summary>
         void AndAlso();
