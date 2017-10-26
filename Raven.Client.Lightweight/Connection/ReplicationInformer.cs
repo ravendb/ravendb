@@ -194,6 +194,7 @@ namespace Raven.Client.Connection
                 {
                     lastReplicationUpdate = SystemTime.UtcNow; // checked and not found
                     ReplicationDestinations = new List<OperationMetadata>(); // clear destinations that could be retrieved from local storage
+                    Log.Info("Replication destinations cleared for url " + url + ". Failover servers count: " + (FailoverServers?.Length??0));
                     return;
                 }
 
