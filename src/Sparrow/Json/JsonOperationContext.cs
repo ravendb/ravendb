@@ -195,7 +195,40 @@ namespace Sparrow.Json
         public JsonOperationContext(int initialSize, int longLivedSize, SharedMultipleUseFlag lowMemoryFlag)
         {
             Debug.Assert(lowMemoryFlag != null);
-            
+            _disposeOnceRunner = new DisposeOnce<ExceptionRetry>(() =>
+            {
+#if MEM_GUARD_STACK
+                ElectricFencedMemory.DecrementConext();
+                ElectricFencedMemory.UnRegisterContextAllocation(this);
+#endif
+
+                Reset(true);
+
+                _documentBuilder.Dispose();
+                _arenaAllocator.Dispose();
+                _arenaAllocatorForLongLivedValues?.Dispose();
+
+                if (_managedBuffers != null)
+                {
+                    foreach (var managedPinnedBuffer in _managedBuffers)
+                    {
+                        managedPinnedBuffer.Dispose();
+                    }
+
+                    _managedBuffers = null;
+                }
+
+                if (_pinnedObjects != null)
+                {
+                    foreach (var pinnedObject in _pinnedObjects)
+                    {
+                        pinnedObject.Free();
+                    }
+
+                    _pinnedObjects = null;
+                }
+            });
+
             _initialSize = initialSize;
             _longLivedSize = longLivedSize;
             _arenaAllocator = new ArenaMemoryAllocator(lowMemoryFlag, initialSize);
@@ -298,49 +331,10 @@ namespace Sparrow.Json
             return new UnmanagedWriteBuffer(this, bufferMemory);
         }
 
+        private readonly DisposeOnce<ExceptionRetry> _disposeOnceRunner;
         public override void Dispose()
         {
-            if (_disposed)
-                return;
-
-            lock (this)
-            {
-                if(_disposed)
-                    return;
-                
-                
-#if MEM_GUARD_STACK
-            ElectricFencedMemory.DecrementConext();
-            ElectricFencedMemory.UnRegisterContextAllocation(this);
-#endif
-
-                Reset(true);
-
-                _documentBuilder.Dispose();
-
-                _arenaAllocator.Dispose();
-                _arenaAllocatorForLongLivedValues?.Dispose();
-
-                if (_managedBuffers != null)
-                {
-                    foreach (var managedPinnedBuffer in _managedBuffers)
-                    {
-                        managedPinnedBuffer.Dispose();
-                    }
-                    _managedBuffers = null;
-                }
-
-                if (_pinnedObjects != null)
-                {
-                    foreach (var pinnedObject in _pinnedObjects)
-                    {
-                        pinnedObject.Free();
-                    }
-                }
-
-                _disposed = true;
-            }
-            
+            _disposeOnceRunner.Dispose();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

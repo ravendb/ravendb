@@ -40,7 +40,7 @@ namespace SlowTests.Voron
         [InlineData(250)]
         public void Should_be_able_to_allocate_new_pages_with_apply_logs_to_data_file(int growthMultiplier)
         {
-            _options.ManualFlushing = true;
+            Options.ManualFlushing = true;
              Env.Options.DataPager.EnsureContinuous(0, growthMultiplier);
             var testData = GenerateTestData().ToList();
             CreatTestSchema();

@@ -77,7 +77,7 @@ namespace SlowTests.Utils.Analyzers
                 }
                 while (_curGramSize <= _maxGram)
                 {
-                    while (_curPos + _curGramSize <= _curTermLength)
+                    if (_curPos + _curGramSize <= _curTermLength)
                     {     // while there is input
                         ClearAttributes();
                         _termAtt.SetTermBuffer(_curTermBuffer, _curPos, _curGramSize);
@@ -85,6 +85,7 @@ namespace SlowTests.Utils.Analyzers
                         _curPos++;
                         return true;
                     }
+
                     _curGramSize++;                         // increase n-gram size
                     _curPos = 0;
                 }

@@ -20,12 +20,9 @@ namespace System.IO
 
         public ReusableStringReader(string s)
         {
-            if (s == null)
-                throw new ArgumentNullException(nameof(s));
-
             Contract.EndContractBlock();
-            _s = s;
-            _length = s == null ? 0 : s.Length;
+            _s = s ?? throw new ArgumentNullException(nameof(s));
+            _length = s.Length;
         }
 
         protected override void Dispose(bool disposing)

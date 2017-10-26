@@ -77,7 +77,7 @@ namespace SlowTests.Voron
 			var testBuffer = new byte[39];
 			rand.NextBytes(testBuffer);
 
-			_options.ManualFlushing = true;
+			Options.ManualFlushing = true;
 
 			using (var tx = Env.WriteTransaction())
 			{
