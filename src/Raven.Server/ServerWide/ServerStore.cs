@@ -1261,12 +1261,7 @@ namespace Raven.Server.ServerWide
             var identityInfo = identityInfoResult as List<long> ?? throw new InvalidOperationException(
                     $"Expected to get result from raft command that should generate a cluster-wide batch identity, but didn't. Leader is {LeaderTag}, Current node tag is {NodeTag}.");
 
-            var rc = new List<long>();
-            foreach (var identity in identityInfo)
-            {
-                rc.Add((long)identity);
-            }
-            return rc;
+           return identityInfo;
         }
 
         public License LoadLicense()
