@@ -3,8 +3,12 @@
         <div class="row flex-row absolute-fill">
             <div class="col-xs-12 col-lg-6 flex-vertical">
                 <div class="flex-header">
-                    <button type="submit" class="btn btn-primary" data-bind="enable: $root.dirtyFlag().isDirty"><i class="icon-save"></i><span>Save</span></button>
-                    <button data-bind="click: cancelOperation" class="btn btn-default" title="Return to Ongoing Tasks View"><i class="icon-cancel"></i><span>Cancel</span></button>
+                    <button type="submit" class="btn btn-primary" data-bind="enable: $root.dirtyFlag().isDirty, disable: $root.spinners.save(), css: { 'btn-spinner': $root.spinners.save }">
+                        <i class="icon-save"></i><span>Save</span>
+                    </button>
+                    <button data-bind="click: cancelOperation" class="btn btn-default" title="Return to Ongoing Tasks View">
+                        <i class="icon-cancel"></i><span>Cancel</span>
+                    </button>
                 </div>
                 <div class="panel">
                     <div class="panel-body" data-bind="with: editedExternalReplication">                      
@@ -28,7 +32,7 @@
                                     <label class="control-label">Preferred mentor</label>
                                 </div>
                                 <div class="flex-grow">
-                                    <button class="btn btn-block dropdown-toggle" data-toggle="dropdown">
+                                    <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
                                         <span data-bind="text: preferredMentor() ? 'Node ' + preferredMentor() : 'Select preferred mentor'"></span>
                                         <span class="caret"></span>
                                     </button>
@@ -39,38 +43,60 @@
                                 </div>
                             </div>
                         </div>                        
-                        <div class="form-group" data-bind="validationElement: destinationURL">
+                        <div class="form-group" data-bind="visible: !$root.isAddingNewReplicationTask()"> 
                             <label for="url" class="control-label">Destination URL</label>
-                            <div class="flex-grow" data-bind="validationElement: destinationURL">
-                                <input type="text" class="form-control" data-bind="textInput: destinationURL" id="url">     
-                            </div>
-                        </div>
-                        <div class="form-group" data-bind="validationElement: destinationDB">
-                            <label for="databaseName" class="control-label">Destination DB</label>
-                            <div class="flex-grow" data-bind="validationElement: destinationDB">
-                                <input type="text" class="form-control" data-bind="textInput: destinationDB" id="databaseName">
-                            </div>
-                        </div>
-                        <div class="flex-horizontal">
                             <div class="flex-grow">
+                                <input type="text" class="form-control" data-bind="textInput: destinationURL" id="url" disabled>     
                             </div>
-                            <div>
-                                <button type="submit" class="btn btn-default btn-info"
-                                        data-bind="click: $root.testConnection, disable: $root.spinners.test, css: { 'btn-spinner': $root.spinners.test }">
-                                    <i class="icon-rocket"></i>
-                                    <span>Test connection</span>
+                        </div>                        
+                        <div class="form-group">
+                            <label class="control-label">&nbsp;</label>
+                            <div class="toggle">
+                                <input id="createNewString" type="checkbox" data-bind="checked: $root.createNewConnectionString">
+                                <label for="createNewString">Create new RavenDB connection string</label>
+                            </div>
+                        </div>
+                        <div data-bind="collapse: $root.createNewConnectionString, with: $root.newConnectionString"> 
+                            <div class="form-group">
+                                <div class="flex-grow" data-bind="compose: 'database/settings/connectionStringRaven.html'"></div>
+                            </div>
+                        </div>
+                        <div class="form-group" data-bind="validationOptions: { insertMessages: false }, validationElement: connectionStringName, visible: !$root.createNewConnectionString()">
+                            <label class="control-label">Connection String</label>
+                            <div class="flex-grow">
+                                <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown"
+                                        data-bind="textInput: connectionStringName, disable: $root.ravenEtlConnectionStringsNames().length === 0">
+                                    <span data-bind="text: connectionStringName() || 'Select a connection string'"></span>
+                                    <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
                                 </button>
+                                <ul class="dropdown-menu max-height"
+                                    data-bind="foreach: $root.ravenEtlConnectionStringsNames">
+                                    <li data-bind="click: _.partial($root.useConnectionString, $data)">
+                                        <a href="#" data-bind="text: $data"></a>
+                                    </li>
+                                </ul>
+                                <span class="help-block" data-bind="validationMessage: connectionStringName"></span>
                             </div>
                         </div>
                     </div>
-                    <div class="panel-addon" data-bind="with: $root.testConnectionResult">
-                        <div class="padding bg-success small" data-bind="visible: Success">
-                            <div>Successfully connected to node</div>
-                        </div>
-                        <div class="padding bg-danger small" data-bind="visible: !Success">
-                            Connection test failed: <span data-bind="text: $root.fullErrorDetailsVisible() ? Error : $root.shortErrorText()"></span>
-                            <div>
-                                <a href="#" data-bind="click: $root.fullErrorDetailsVisible.toggle.bind($root.fullErrorDetailsVisible), text: $root.fullErrorDetailsVisible() ? 'hide details' : 'show details'"></a>
+                    <div>
+                        <div data-bind="if: createNewConnectionString">
+                            <div class="panel-addon" data-bind="with: $root.testConnectionResult">
+                                <div class="padding bg-success small" data-bind="visible: Success">
+                                    <div>Successfully connected to node</div>
+                                </div>
+                                <div class="padding bg-danger small" data-bind="visible: !Success">
+                                    Connection test failed: <span data-bind="text: $root.fullErrorDetailsVisible() ? Error : $root.shortErrorText()"></span>
+                                    <div>
+                                        <a href="#" data-bind="click: $root.fullErrorDetailsVisible.toggle.bind($root.fullErrorDetailsVisible), text: $root.fullErrorDetailsVisible() ? 'hide details' : 'show details'"></a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>    
+                        <div class="panel-addon" data-bind="visible: ravenEtlConnectionStringsNames().length === 0 && !createNewConnectionString()">
+                            <div class="padding bg-warning small">
+                                <i class="icon-warning"></i>&nbsp;&nbsp;No connection strings have been defined yet
+                                <a data-bind="attr: { href: connectionStringsUrl }"> - Click here to define a new connection string</a>
                             </div>
                         </div>
                     </div>

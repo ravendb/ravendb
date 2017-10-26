@@ -67,7 +67,7 @@
                     </div>
                 </div>
 
-                <!-- Replication -->
+                <!-- External Replication -->
 
                 <div data-bind="if: replicationTasks().length > 0 && (selectedTaskType() === 'External Replication' || selectedTaskType() === 'All tasks' )">
                     <div class="hr-title">
@@ -97,14 +97,20 @@
                             <div class="collapse panel-addon" data-bind="collapse: showReplicationDetails">
                                 <div class="padding padding-sm flex-horizontal">
                                     <div class="flex-grow">
-                                        <div class="property">
-                                            <h6><span>Destination:</span></h6>
-                                            <h4>
+                                        <ul class="properties">
+                                            <li>
+                                                <span>Destination:</span>
                                                 <span title="Destination <database>@<Url>">
-                                                    <a target="_blank" data-bind="attr: { href: destinationURL }, text: destinationDB() + '@' + destinationURL()"></a>
+                                                    <a target="_blank" data-bind="attr: { href: destinationURL() === 'N/A' ? null : destinationURL }, text: destinationDB() + '@' + destinationURL() "></a> 
                                                 </span>
-                                            </h4>
-                                        </div>
+                                            </li>
+                                            <li>
+                                                <span>Connection String:</span>
+                                                <span title="Destination <database>@<Url>">
+                                                    <a target="_blank" data-bind="attr: { href: $root.connectionStringsUrl }, text: connectionStringName"></a>
+                                                </span>
+                                            </li>
+                                        </ul>
                                     </div>
                                 </div>
                             </div>
@@ -146,7 +152,7 @@
                                             <li>
                                                 <span>Destination:</span>
                                                 <span title="Destination <database>@<Url>">
-                                                    <a target="_blank" data-bind="attr: { href: destinationURL }, text: destinationDB() + '@' + destinationURL()"></a>
+                                                    <a target="_blank" data-bind="attr: { href: destinationURL() === 'N/A' ? null : destinationURL }, text: destinationDB() + '@' + destinationURL()"></a>
                                                 </span>
                                             </li>
                                             <li>

@@ -2,13 +2,14 @@
 import appUrl = require("common/appUrl");
 import router = require("plugins/router");
 import ongoingTaskModel = require("models/database/tasks/ongoingTaskModel"); 
-import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 
 class ongoingTaskReplicationListModel extends ongoingTaskModel {
     editUrl: KnockoutComputed<string>;
 
     destinationDB = ko.observable<string>();
     destinationURL = ko.observable<string>();
+    connectionStringName = ko.observable<string>();
+    
     showReplicationDetails = ko.observable(false);
   
     constructor(dto: Raven.Client.ServerWide.Operations.OngoingTaskReplication) {
@@ -29,7 +30,8 @@ class ongoingTaskReplicationListModel extends ongoingTaskModel {
         super.update(dto);
 
         this.destinationDB(dto.DestinationDatabase);
-        this.destinationURL(dto.DestinationUrl);
+        this.destinationURL(dto.DestinationUrl || 'N/A');
+        this.connectionStringName(dto.ConnectionStringName);
     }
 
     editTask() {
