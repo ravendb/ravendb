@@ -31,22 +31,21 @@ namespace Raven.Database.Storage.Voron.Backup
                 CopyIndexes();
                 CopyIndexDefinitions();
 
-                var backupFilenamePath = BackupFilenamePath(BackupMethods.Filename);
-
-                if (Directory.GetDirectories(backupLocation, "Inc*").Any() == false)
-                    BackupMethods.Full.Restore(backupFilenamePath, Configuration.DataDirectory, journalLocation);
-                else
+                //if we have full & incremental in the same folder, do full restore first
+                var fullBackupFilename = Path.Combine(backupLocation, "RavenDB.Voron.Backup");
+                if (File.Exists(fullBackupFilename))
                 {
-                    using (var options = StorageEnvironmentOptions.ForPath(Configuration.DataDirectory, journalPath: journalLocation))
-                    {
-                        var backupPaths = Directory.GetDirectories(backupLocation, "Inc*")
-                            .OrderBy(dir=>dir)
-                            .Select(dir=> Path.Combine(dir,BackupMethods.Filename))
-                            .ToList();
-                        BackupMethods.Incremental.Restore(options, backupPaths);
-                    }
+                    BackupMethods.Full.Restore(fullBackupFilename, Configuration.DataDirectory, journalLocation);
                 }
 
+                using (var options = StorageEnvironmentOptions.ForPath(Configuration.DataDirectory, journalPath: journalLocation))
+                {
+                    var backupPaths = Directory.GetDirectories(backupLocation, "Inc*")
+                        .OrderBy(dir => dir)
+                        .Select(dir => Path.Combine(dir, BackupMethods.Filename))
+                        .ToList();
+                    BackupMethods.Incremental.Restore(options, backupPaths);
+                }
             }
             catch (Exception e)
             {
