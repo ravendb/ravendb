@@ -450,11 +450,10 @@ namespace Sparrow.Json.Parsing
                     continue;
                 }
 
-                if (current is List<long>)
+                if (current is List<long> ll)
                 {
                     var dja = new DynamicJsonArray();
-                    var listOfLongs = current as List<long>;
-                    foreach (var item in listOfLongs)
+                    foreach (var item in ll)
                     {
                         dja.Add(item);
                     }
@@ -462,11 +461,10 @@ namespace Sparrow.Json.Parsing
                     continue;
                 }
 
-                if (current is Dictionary<string, long>)
+                if (current is Dictionary<string, long> dsl)
                 {
                     var dja = new DynamicJsonArray();
-                    var dictionaryOfStringToLong = current as Dictionary<string, long>;
-                    foreach (var item in dictionaryOfStringToLong)
+                    foreach (var item in dsl)
                     {
                         var djv = new DynamicJsonValue
                         {

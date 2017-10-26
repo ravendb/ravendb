@@ -54,8 +54,7 @@ namespace Raven.Server.ServerWide.Commands
             json[nameof(Identities)] = new DynamicJsonArray(Identities);
         }
 
-        protected override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context,
-            BlittableJsonReaderObject existingValue, RachisState state)
+        protected override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue, RachisState state)
         {
             throw new NotImplementedException();
         }
@@ -64,6 +63,13 @@ namespace Raven.Server.ServerWide.Commands
         {
             var rc = new List<long>();
             var obj = remoteResult as BlittableJsonReaderArray;
+
+            if (obj == null)
+            {
+                // this is an error as we expect BlittableJsonReaderArray, but we will pass the object value to get later appropriate exception
+                return base.FromRemote(remoteResult);
+            }
+
             foreach (var o in obj)
             {
                 rc.Add((long)o);
