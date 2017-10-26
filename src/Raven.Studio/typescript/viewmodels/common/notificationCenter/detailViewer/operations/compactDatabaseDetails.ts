@@ -7,6 +7,7 @@ import abstractOperationDetails = require("viewmodels/common/notificationCenter/
 
 class compactDatabaseDetails extends abstractOperationDetails {
 
+    /* TODO:
     progress: KnockoutObservable<Raven.Server.Documents.DatabaseCompactionProgress>;
     result: KnockoutObservable<Raven.Server.Documents.DatabaseCompactionResult>;
 
@@ -26,7 +27,7 @@ class compactDatabaseDetails extends abstractOperationDetails {
         this.result = ko.pureComputed(() => {
             return this.op.status() === "Completed" ? this.op.result() as Raven.Server.Documents.DatabaseCompactionResult : null;
         });
-    }
+    }*/
 
     static supportsDetailsFor(notification: abstractNotification) {
         return (notification instanceof operation) && notification.taskType() === "DatabaseCompact";
