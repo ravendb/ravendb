@@ -90,6 +90,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                 writer.WritePropertyName(nameof(field.Indexing));
                 writer.WriteString(field.Indexing.ToString());
 
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(field.GroupByArrayBehavior));
+                writer.WriteString(field.GroupByArrayBehavior.ToString());
+
                 writer.WriteEndObject();
 
                 first = false;
@@ -193,12 +198,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
                 json.TryGet(nameof(IndexField.Name), out string name);
                 json.TryGet(nameof(IndexField.Indexing), out string indexing);
+                json.TryGet(nameof(AutoIndexField.GroupByArrayBehavior), out string groupByArray);
 
                 var field = new AutoIndexField
                 {
                     Name = name,
                     Storage = FieldStorage.Yes,
-                    Indexing = (AutoFieldIndexing)Enum.Parse(typeof(AutoFieldIndexing), indexing)
+                    Indexing = (AutoFieldIndexing)Enum.Parse(typeof(AutoFieldIndexing), indexing),
+                    GroupByArrayBehavior = (GroupByArrayBehavior)Enum.Parse(typeof(GroupByArrayBehavior), groupByArray),
                 };
 
                 groupByFields[i] = field;

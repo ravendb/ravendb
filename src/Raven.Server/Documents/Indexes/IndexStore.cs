@@ -153,6 +153,8 @@ namespace Raven.Server.Documents.Indexes
                     var field = AutoIndexField.Create(x.Key, x.Value);
                     field.Aggregation = x.Value.Aggregation;
 
+                    Debug.Assert(x.Value.GroupByArrayBehavior == GroupByArrayBehavior.NotApplicable);
+
                     return field;
                 })
                 .ToArray();
@@ -178,6 +180,7 @@ namespace Raven.Server.Documents.Indexes
                     {
                         var field = AutoIndexField.Create(x.Key, x.Value);
                         field.Aggregation = x.Value.Aggregation;
+                        field.GroupByArrayBehavior = x.Value.GroupByArrayBehavior;
 
                         return field;
                     })

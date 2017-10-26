@@ -127,10 +127,13 @@ namespace Raven.Server.Documents.Indexes
     {
         public AggregationOperation Aggregation { get; set; }
 
+        public GroupByArrayBehavior GroupByArrayBehavior { get; set; }
+
         public AutoIndexField()
         {
             Indexing = AutoFieldIndexing.Default;
             Storage = FieldStorage.No;
+            GroupByArrayBehavior = GroupByArrayBehavior.NotApplicable;
         }
 
         public bool HasQuotedName { get; set; }

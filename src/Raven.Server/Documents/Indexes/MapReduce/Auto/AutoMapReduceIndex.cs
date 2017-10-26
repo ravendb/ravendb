@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config.Categories;
@@ -23,14 +24,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
         private IndexingStatsScope _statsInstance;
         private readonly MapPhaseStats _stats = new MapPhaseStats();
+        private readonly bool _isFanout;
 
-        private readonly MapResult[] _singleOutputList = {
-            new MapResult()
-        };
+        private readonly List<MapResult> _results = new List<MapResult>();
 
         private AutoMapReduceIndex(long etag, AutoMapReduceIndexDefinition definition)
             : base(etag, IndexType.AutoMapReduce, definition)
         {
+            _isFanout = definition.GroupByFields.Any(x => x.Value.GroupByArrayBehavior == GroupByArrayBehavior.ByIndividualValues);
         }
 
         public static AutoMapReduceIndex CreateNew(long etag, AutoMapReduceIndexDefinition definition,
@@ -83,7 +84,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
         {
             EnsureValidStats(stats);
 
-            var mappedResult = new DynamicJsonValue();
+            var output = new MapOutput();
 
             using (_stats.BlittableJsonAggregation.Start())
             {
@@ -97,7 +98,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                     switch (autoIndexField.Aggregation)
                     {
                         case AggregationOperation.Count:
-                            mappedResult[autoIndexField.Name] = 1;
+                            output.Json[autoIndexField.Name] = 1;
                             break;
                         case AggregationOperation.Sum:
                             BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, document, autoIndexField.Name, out object fieldValue);
@@ -107,7 +108,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                             if (arrayResult == null)
                             {
                                 // explicitly adding this even if the value isn't there, as a null
-                                mappedResult[autoIndexField.Name] = fieldValue;
+                                output.Json[autoIndexField.Name] = fieldValue;
                                 continue;
                             }
 
@@ -129,14 +130,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                                 }
                             }
 
-                            mappedResult[autoIndexField.Name] = total;
-
+                            output.Json[autoIndexField.Name] = total;
                             break;
                         case AggregationOperation.None:
                             BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, document, autoIndexField.Name, out object result);
 
                             // explicitly adding this even if the value isn't there, as a null
-                            mappedResult[autoIndexField.Name] = result;
+                            output.Json[autoIndexField.Name] = result;
                             break;
                         default:
                             throw new ArgumentOutOfRangeException();
@@ -149,27 +149,95 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                 {
                     BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, document, groupByField.Key, out object result);
 
-                    // explicitly adding this even if the value isn't there, as a null
-                    mappedResult[groupByField.Key] = result;
+                    if (_isFanout == false)
+                    {
+                        // explicitly adding this even if the value isn't there, as a null
+                        output.Json[groupByField.Key] = result;
 
-                    _reduceKeyProcessor.Process(indexContext.Allocator, result);
+                        _reduceKeyProcessor.Process(indexContext.Allocator, result);
+                    }
+                    else
+                    {
+                        if (result is IEnumerable array)
+                        {
+                            switch (groupByField.Value.GroupByArrayBehavior)
+                            {
+                                case GroupByArrayBehavior.ByContent:
+                                    // just put entire array as a value
+                                    break;
+                                case GroupByArrayBehavior.ByIndividualValues:
+
+                                    foreach (var item in array)
+                                    {
+                                        output.AddGroupByValue(groupByField.Key, item);
+                                    }
+
+                                    continue;
+                                case GroupByArrayBehavior.NotApplicable:
+                                    ThrowUndefinedGroupByArrayBehavior(groupByField.Value.Name);
+                                    break;
+                            }
+                        }
+
+                        output.AddGroupByValue(groupByField.Key, result);
+                    }
                 }
             }
 
-            BlittableJsonReaderObject mr;
-            using (_stats.CreateBlittableJson.Start())
-                mr = indexContext.ReadObject(mappedResult, lowerId);
+            try
+            {
+                using (_stats.CreateBlittableJson.Start())
+                {
+                    if (_isFanout == false)
+                    {
+                        _results.Add(new MapResult
+                        {
+                            Data = indexContext.ReadObject(output.Json, "map result"),
+                            ReduceKeyHash = _reduceKeyProcessor.Hash
+                        });
+                    }
+                    else
+                    {
+                        for (int i = 0; i < output.MaxGroupByValuesCount; i++)
+                        {
+                            _reduceKeyProcessor.Reset();
 
-            var mapResult = _singleOutputList[0];
+                            var json = new DynamicJsonValue();
 
-            mapResult.Data = mr;
-            mapResult.ReduceKeyHash = _reduceKeyProcessor.Hash;
+                            foreach (var property in output.Json.Properties)
+                            {
+                                json[property.Name] = property.Value;
+                            }
 
-            var resultsCount = PutMapResults(lowerId, _singleOutputList, indexContext, stats);
+                            foreach (var groupBy in output.GroupByFields)
+                            {
+                                var index = Math.Min(i, groupBy.Value.Count - 1);
+                                var value = output.GroupByFields[groupBy.Key][index];
 
-            DocumentDatabase.Metrics.MapReduceIndexes.MappedPerSec.Mark(resultsCount);
+                                json[groupBy.Key] = value;
 
-            return resultsCount;
+                                _reduceKeyProcessor.Process(indexContext.Allocator, value);
+                            }
+
+                            _results.Add(new MapResult
+                            {
+                                Data = indexContext.ReadObject(json, "map result"),
+                                ReduceKeyHash = _reduceKeyProcessor.Hash
+                            });
+                        }
+                    }
+                }
+
+                var resultsCount = PutMapResults(lowerId, _results, indexContext, stats);
+                
+                DocumentDatabase.Metrics.MapReduceIndexes.MappedPerSec.Mark(resultsCount);
+
+                return resultsCount;
+            }
+            finally
+            {
+                _results.Clear();
+            }
         }
 
         public override void Dispose()
@@ -194,6 +262,41 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
         {
             public IndexingStatsScope BlittableJsonAggregation;
             public IndexingStatsScope CreateBlittableJson;
+        }
+
+        private class MapOutput
+        {
+            public MapOutput()
+            {
+                Json = new DynamicJsonValue();
+            }
+
+            public readonly DynamicJsonValue Json;
+
+            public Dictionary<string, List<object>> GroupByFields;
+
+            public int MaxGroupByValuesCount;
+
+            public void AddGroupByValue(string field, object value)
+            {
+                if (GroupByFields == null)
+                    GroupByFields = new Dictionary<string, List<object>>();
+
+                if (GroupByFields.TryGetValue(field, out var values) == false)
+                {
+                    values = new List<object>();
+                    GroupByFields.Add(field, values);
+                }
+
+                values.Add(value);
+
+                MaxGroupByValuesCount = Math.Max(values.Count, MaxGroupByValuesCount);
+            }
+        }
+
+        private static void ThrowUndefinedGroupByArrayBehavior(string fieldName)
+        {
+            throw new InvalidOperationException($"There is no behavior defined for grouping by array. Field name: {fieldName}");
         }
     }
 }

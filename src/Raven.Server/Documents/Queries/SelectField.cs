@@ -21,9 +21,9 @@ namespace Raven.Server.Documents.Queries
 
         public bool IsGroupByKey;
 
-        public QueryFieldName[] GroupByKeys;
+        public GroupByField[] GroupByKeys;
 
-        public string[] GroupByKeyName;
+        public string[] GroupByKeyNames;
 
         public string Function;
 
@@ -69,13 +69,13 @@ namespace Raven.Server.Documents.Queries
             };
         }
 
-        public static SelectField CreateGroupByKeyField(string alias, params QueryFieldName[] groupByKeys)
+        public static SelectField CreateGroupByKeyField(string alias, params GroupByField[] groupByKeys)
         {
             return new SelectField
             {
                 Alias = alias,
                 GroupByKeys = groupByKeys,
-                GroupByKeyName = groupByKeys.Select(x => x.Value).ToArray(),
+                GroupByKeyNames = groupByKeys.Select(x => x.Name.Value).ToArray(),
                 IsGroupByKey = true
             };
         }
