@@ -754,6 +754,34 @@ namespace Raven.Server.Documents.PeriodicBackup
             CreateBackupTask(periodicBackup, backupDetails);
         }
 
+        public async Task RunAdhocBackup(int taskId, bool isFullBackup)
+        {
+            var dr = GetDatabaseRecord();
+
+            PeriodicBackupConfiguration config = null;
+            // ReSharper disable once ForCanBeConvertedToForeach
+            for (int i = 0; i < dr.PeriodicBackups.Count; i++)
+            {
+                if (dr.PeriodicBackups[i].TaskId != taskId)
+                    continue;
+
+                config = dr.PeriodicBackups[i];
+                break;
+            }
+
+            if (config == null) //didn't find relevant backup task...
+                return;
+
+            if (_periodicBackups.TryGetValue(taskId, out var periodicBackup) == false ||
+                periodicBackup.Disposed)
+            {
+                // backup task doesn't exist anymore or is canceled
+                return;
+            }
+
+            await RunPeriodicBackup(periodicBackup.Configuration, periodicBackup.BackupStatus, isFullBackup);
+        }
+
         private void CreateBackupTask(PeriodicBackup periodicBackup, BackupTaskDetails backupDetails)
         {
             periodicBackup.RunningTask = Task.Run(async () =>
