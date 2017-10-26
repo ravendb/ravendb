@@ -450,6 +450,34 @@ namespace Sparrow.Json.Parsing
                     continue;
                 }
 
+                if (current is List<long>)
+                {
+                    var dja = new DynamicJsonArray();
+                    var listOfLongs = current as List<long>;
+                    foreach (var item in listOfLongs)
+                    {
+                        dja.Add(item);
+                    }
+                    current = dja;
+                    continue;
+                }
+
+                if (current is Dictionary<string, long>)
+                {
+                    var dja = new DynamicJsonArray();
+                    var dictionaryOfStringToLong = current as Dictionary<string, long>;
+                    foreach (var item in dictionaryOfStringToLong)
+                    {
+                        var djv = new DynamicJsonValue
+                        {
+                            [item.Key] = item.Value
+                        };
+                        dja.Add(djv);
+                    }
+                    current = dja;
+                    continue;
+                }
+
                 if (current == null)
                 {
                     _state.CurrentTokenType = JsonParserToken.Null;
@@ -465,6 +493,7 @@ namespace Sparrow.Json.Parsing
                 if (current is IDynamicJsonValueConvertible convertible)
                 {
                     current = convertible.ToJson();
+                    continue;
                 }
 
                 throw new InvalidOperationException("Got unknown type: " + current.GetType() + " " + current);
