@@ -1258,10 +1258,7 @@ namespace Raven.Server.ServerWide
         {
             var (_, identityInfoResult) = await SendToLeaderAsync(new IncrementClusterIdentitiesBatchCommand(databaseName, ids));
 
-            List<long> identityInfo;
-            if (identityInfoResult is List<long>) identityInfo = (List<long>)identityInfoResult;
-            else
-                throw new InvalidOperationException(
+            var identityInfo = identityInfoResult as List<long> ?? throw new InvalidOperationException(
                     $"Expected to get result from raft command that should generate a cluster-wide batch identity, but didn't. Leader is {LeaderTag}, Current node tag is {NodeTag}.");
 
             var rc = new List<long>();

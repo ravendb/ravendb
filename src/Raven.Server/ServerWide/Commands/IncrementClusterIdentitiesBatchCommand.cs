@@ -54,7 +54,8 @@ namespace Raven.Server.ServerWide.Commands
             json[nameof(Identities)] = new DynamicJsonArray(Identities);
         }
 
-        protected override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue, RachisState state)
+        protected override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context,
+            BlittableJsonReaderObject existingValue, RachisState state)
         {
             throw new NotImplementedException();
         }
@@ -70,9 +71,4 @@ namespace Raven.Server.ServerWide.Commands
             return rc;
         }
     }
-
-    //    public class IdentitiesResult
-    //    {
-    //        public List<long> Results = new List<long>();
-    //    }
 }
