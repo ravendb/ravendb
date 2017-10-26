@@ -10,6 +10,7 @@ using System.Linq.Expressions;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
+using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Spatial;
 
 namespace Raven.Client.Documents.Session
@@ -155,13 +156,17 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         Lazy<FacetedQueryResult> GetFacetsLazy(List<Facet> facets, int facetStart, int? facetPageSize);
 
-
-
         /// <summary>
         /// Changes the return type of the query
         /// </summary>
         IDocumentQuery<TResult> OfType<TResult>();
 
         IGroupByDocumentQuery<T> GroupBy(string fieldName, params string[] fieldNames);
+
+        IDocumentQuery<T> MoreLikeThis(MoreLikeThisOptions options = null);
+
+        IDocumentQuery<T> MoreLikeThis(string document, MoreLikeThisOptions options = null);
+
+        IDocumentQuery<T> MoreLikeThis(Action<IFilterDocumentQueryBase<T, IDocumentQuery<T>>> predicate, MoreLikeThisOptions options = null);
     }
 }
