@@ -15,9 +15,17 @@ class indexingSpeed {
     
     update(dto: Raven.Server.Dashboard.IndexingSpeedItem) {
         this.database(dto.Database);
-        this.indexedPerSecond(dto.IndexedPerSecond);
-        this.mappedPerSecond(dto.MappedPerSecond);
-        this.reducedPerSecond(dto.ReducedPerSecond);
+        this.indexedPerSecond(this.round(dto.IndexedPerSecond));
+        this.mappedPerSecond(this.round(dto.MappedPerSecond));
+        this.reducedPerSecond(this.round(dto.ReducedPerSecond));
+    }
+
+    private round(num: number): number {
+        if (num < 1) {
+            return num;
+        }
+
+        return Math.round(num);
     }
 }
 

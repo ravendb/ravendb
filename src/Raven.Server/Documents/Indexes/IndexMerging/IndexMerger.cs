@@ -352,7 +352,6 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
 
                 mergeSuggestion.CanMerge.Add(curProposedData.IndexName);
                 DataDictionaryMerge(mergeSuggestion.MergedIndex.Fields, curProposedData.Index.Fields);
-                mergeSuggestion.MergedIndex.Fields = mergeSuggestion.MergedIndex.Fields;
             }
         }
 

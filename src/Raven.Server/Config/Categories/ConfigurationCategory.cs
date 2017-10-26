@@ -168,7 +168,7 @@ namespace Raven.Server.Config.Categories
                                 }
                                 else
                                 {
-                                    var safeValue = value == null ? null : Convert.ChangeType(value, t);
+                                    var safeValue = Convert.ChangeType(value, t);
                                     property.SetValue(this, safeValue);
                                 }
                             }

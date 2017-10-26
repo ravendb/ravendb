@@ -57,11 +57,8 @@ namespace SlowTests.Issues
                 {
                     var enumerator = session.Advanced.Stream<object>(startsWith:"");
 
-                    while (enumerator.MoveNext())
-                    {
+                    if (enumerator.MoveNext())
                         enumerator.Dispose();
-                        break;
-                    }
                 }
             }
         }

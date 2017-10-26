@@ -82,7 +82,7 @@ namespace Raven.Server.Dashboard
             {
                 foreach (var databaseTuple in serverStore.Cluster.ItemsStartingWith(transactionContext, Constants.Documents.Prefix, 0, int.MaxValue))
                 {
-                    var databaseName = databaseTuple.ItemName.Substring(3);
+                    var databaseName = databaseTuple.ItemName.Substring(Constants.Documents.Prefix.Length);
                     if (cts.IsCancellationRequested)
                         yield break;
 

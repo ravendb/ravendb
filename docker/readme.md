@@ -18,6 +18,18 @@ The files here support building and running RavenDB 4.0 in a docker container on
 
 You can run RavenDB manually invoking `docker run`, yet if you don't feel that docker-savvy and would like to make full use of RavenDB docker images we recommend using our scripts.
 
+Simplest way to run and try RavenDB is (NOTE: server won't be secure):
+
+```
+.\run-ubuntu1604.ps1 -AuthenticationDisabled
+```
+
+or with regular docker run:
+
+```
+docker run -e UNSECURED_ACCESS_ALLOWED=PublicNetwork -p 8080:8080 ravendb/ravendb
+```
+
 #### Scripts
 
 Run Ubuntu-based image: [run-ubuntu1604.ps1](run-ubuntu1604.ps1)

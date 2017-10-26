@@ -148,8 +148,6 @@ namespace TypingsGenerator
             scripter.AddType(typeof(DeterminateProgress));
             scripter.AddType(typeof(IndeterminateProgress));
             scripter.AddType(typeof(BulkOperationResult));
-            scripter.AddType(typeof(IndexCompactionProgress));
-            scripter.AddType(typeof(IndexCompactionResult));
             scripter.AddType(typeof(BulkInsertProgress));
             scripter.AddType(typeof(OperationExceptionResult));
             scripter.AddType(typeof(DocumentChange));
@@ -241,10 +239,6 @@ namespace TypingsGenerator
             // conflicts
             scripter.AddType(typeof(GetConflictsResult));
             scripter.AddType(typeof(ConflictResolverAdvisor.MergeResult));
-            
-            // database compact
-            scripter.AddType(typeof(DatabaseCompactionResult));
-            scripter.AddType(typeof(DatabaseCompactionProgress));
 
             // ongoing tasks - common
             scripter.AddType(typeof(OngoingTasksResult));

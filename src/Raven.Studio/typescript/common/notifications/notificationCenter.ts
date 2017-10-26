@@ -21,7 +21,6 @@ import collectionsTracker = require("common/helpers/database/collectionsTracker"
 
 import smugglerDatabaseDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/smugglerDatabaseDetails");
 import patchDocumentsDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/patchDocumentsDetails");
-import indexCompactDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/indexCompactDetails");
 import bulkInsertDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/bulkInsertDetails");
 import deleteDocumentsDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/deleteDocumentsDetails");
 import generateClientCertificateDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/generateClientCertificateDetails");
@@ -108,7 +107,6 @@ class notificationCenter {
             generateClientCertificateDetails,
             deleteDocumentsDetails,
             bulkInsertDetails,
-            indexCompactDetails,
             compactDatabaseDetails,
 
             // performance hints:

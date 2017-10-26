@@ -263,7 +263,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             try
             {
-                writer?.Analyzer.Close();
+                writer.Analyzer.Close();
             }
             catch (Exception e)
             {

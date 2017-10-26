@@ -71,6 +71,39 @@ namespace FastTests.Client.MoreLikeThis
         }
 
         [Fact]
+        public void CanGetResultsUsingTermVectorsWithDocumentQuery()
+        {
+            using (var store = GetDocumentStore())
+            {
+                string id;
+
+                using (var session = store.OpenSession())
+                {
+                    new DataIndex(true, false).Execute(store);
+
+                    var list = GetDataList();
+                    list.ForEach(session.Store);
+                    session.SaveChanges();
+
+                    id = session.Advanced.GetDocumentId(list.First());
+                    WaitForIndexing(store);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var list = session.Advanced.DocumentQuery<Data, DataIndex>()
+                        .MoreLikeThis(x => x.WhereEquals(y => y.Id, id), new MoreLikeThisOptions
+                        {
+                            Fields = new[] { "Body" }
+                        })
+                        .ToList();
+
+                    Assert.NotEmpty(list);
+                }
+            }
+        }
+
+        [Fact]
         public async Task CanGetResultsUsingTermVectorsAsync()
         {
             using (var store = GetDocumentStore())
@@ -279,7 +312,7 @@ namespace FastTests.Client.MoreLikeThis
                 using (var session = store.OpenSession())
                 {
                     var list = session.Query<Data, DataIndex>()
-                        .MoreLikeThis()
+                        .MoreLikeThis(x => x.Id == key)
                         .ToList();
 
                     Assert.NotEmpty(list);

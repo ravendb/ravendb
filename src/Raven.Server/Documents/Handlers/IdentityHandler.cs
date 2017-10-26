@@ -1,0 +1,57 @@
+﻿using System;
+using System.Threading.Tasks;
+using Raven.Server.Routing;
+using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
+
+namespace Raven.Server.Documents.Handlers
+{
+    public class IdentityHandler : DatabaseRequestHandler
+    {
+        [RavenAction("/databases/*/identity/next", "POST", AuthorizationStatus.Operator)]
+        public async Task NextIdentityFor()
+        {
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+
+            if (name[name.Length - 1] != '|')
+                name += '|';
+
+            var (_, _, newIdentityValue) = await Database.ServerStore.GenerateClusterIdentityAsync(name, Database.Name);
+
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteStartObject();
+
+                writer.WritePropertyName("NewIdentityValue");
+                writer.WriteInteger(newIdentityValue);
+
+                writer.WriteEndObject();
+            }
+        }
+
+        [RavenAction("/databases/*/identity/seed", "POST", AuthorizationStatus.Operator)]
+        public async Task SeedIdentityFor()
+        {
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            var value = GetLongQueryString("value", true);
+            if (value == null)
+                throw new ArgumentException("Query string value 'value' must have a non empty value");
+
+            if (name[name.Length - 1] != '|')
+                name += '|';
+
+            var newIdentityValue = await Database.ServerStore.UpdateClusterIdentityAsync(name, Database.Name, value.Value);
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteStartObject();
+
+                writer.WritePropertyName("NewSeedValue");
+                writer.WriteInteger(newIdentityValue);
+
+                writer.WriteEndObject();
+            }
+        }
+    }
+}

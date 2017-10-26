@@ -3,7 +3,6 @@ import virtualGridController = require("widgets/virtualGrid/virtualGridControlle
 import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import generalUtils = require("common/generalUtils");
-
 import trafficItem = require("models/resources/serverDashboard/trafficItem");
 import databaseItem = require("models/resources/serverDashboard/databaseItem");
 import indexingSpeed = require("models/resources/serverDashboard/indexingSpeed");
@@ -15,6 +14,7 @@ import dashboardChart = require("models/resources/serverDashboard/dashboardChart
 import storagePieChart = require("models/resources/serverDashboard/storagePieChart");
 import serverDashboardWebSocketClient = require("common/serverDashboardWebSocketClient");
 import timeHelpers = require("common/timeHelpers");
+import clusterNode = require("models/database/cluster/clusterNode");
 
 class machineResourcesSection {
 
@@ -24,7 +24,7 @@ class machineResourcesSection {
     totalMemory: number;
     
     resources = ko.observable<machineResources>();
-    
+
     init() {
         this.cpuChart = new dashboardChart("#cpuChart", {
             yMaxProvider: () => 100,
@@ -47,6 +47,7 @@ class machineResourcesSection {
             this.resources().update(data);
         } else {
             this.resources(new machineResources(data));
+            $('.dashboard-cpu-memory [data-toggle="tooltip"]').tooltip();
         }
     }
 }
@@ -388,6 +389,7 @@ class serverDashboard extends viewModelBase {
     startUpTime = ko.observable<moment.Moment>();
     formattedUpTime: KnockoutComputed<string>;
     formattedStartTime: KnockoutComputed<string>;
+    node: KnockoutComputed<clusterNode>;
     sizeFormatter = generalUtils.formatBytesToSize;
 
     usingHttps = location.protocol === "https:";
@@ -413,17 +415,23 @@ class serverDashboard extends viewModelBase {
             const diff = now.diff(startTime);
             return generalUtils.formatDuration(moment.duration(diff), true, 2);
         });
-        
+
         this.formattedStartTime = ko.pureComputed(() => {
             const start = this.startUpTime();
             const dateFormat = "YYYY MMMM Do, h:mm A";
             return start ? start.local().format(dateFormat) : "";
-        })
+        });
+
+        this.node = ko.pureComputed(() => {
+            const topology = this.clusterManager.topology();
+            const nodeTag = topology.nodeTag();
+            return topology.nodes().find(x => x.tag() === nodeTag);
+        });
     }
 
     compositionComplete() {
         super.compositionComplete();
-        
+
         this.initSections();
         
         this.enableLiveView();
@@ -440,7 +448,7 @@ class serverDashboard extends viewModelBase {
     private enableLiveView() {
         this.liveClient(new serverDashboardWebSocketClient(d => this.onData(d)));
     }
-    
+
     private onData(data: Raven.Server.Dashboard.AbstractDashboardNotification) {
         switch (data.Type) {
             case "ServerInfo":

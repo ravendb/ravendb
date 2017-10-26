@@ -309,9 +309,9 @@ namespace SlowTests.Voron
 
         private void CorruptJournal(long journal, long posOf4KbInJrnl)
         {
-            _options.Dispose();
-            _options = StorageEnvironmentOptions.ForPath(DataDir);
-            Configure(_options);
+            Options.Dispose();
+            Options = StorageEnvironmentOptions.ForPath(DataDir);
+            Configure(Options);
             using (var fileStream = new FileStream(
                 Path.Combine(DataDir, StorageEnvironmentOptions.JournalName(journal)),
                 FileMode.Open,

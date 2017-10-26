@@ -4,6 +4,14 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#if NETSTANDARD2_0
+#define CURRENT
+#endif
+
+#if NETSTANDARD1_3
+#define LEGACY
+#endif
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -32,7 +40,7 @@ namespace Raven.Client.Documents
     ///</summary>
     public static class LinqExtensions
     {
-#if !NETSTANDARD2_0
+#if LEGACY
         private static readonly object Locker = new object();
 
         private static MethodInfo _includeMethod;
@@ -56,6 +64,12 @@ namespace Raven.Client.Documents
         private static MethodInfo _thenByMethod;
 
         private static MethodInfo _thenByDescendingMethod;
+
+        private static MethodInfo _moreLikeThisMethod1;
+
+        private static MethodInfo _moreLikeThisMethod2;
+
+        private static MethodInfo _moreLikeThisMethod3;
 #endif
 
         /// <summary>
@@ -102,10 +116,11 @@ namespace Raven.Client.Documents
         /// <returns></returns>
         public static IRavenQueryable<TResult> Include<TResult>(this IRavenQueryable<TResult> source, string path)
         {
-#if NETSTANDARD2_0
+#if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#else
-            MethodInfo currentMethod = GetIncludeMethod();
+#endif
+#if LEGACY
+            var currentMethod = GetIncludeMethod();
 #endif
 
             var expression = ConvertExpressionIfNecessary(source);
@@ -1323,9 +1338,10 @@ namespace Raven.Client.Documents
 
         public static IRavenQueryable<T> Where<T>(this IQueryable<T> source, Expression<Func<T, int, bool>> predicate, bool exact)
         {
-#if NETSTANDARD2_0
+#if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#else
+#endif
+#if LEGACY
             var currentMethod = GetWhereMethod(3);
 #endif
 
@@ -1337,9 +1353,10 @@ namespace Raven.Client.Documents
 
         public static IRavenQueryable<T> Where<T>(this IQueryable<T> source, Expression<Func<T, bool>> predicate, bool exact)
         {
-#if NETSTANDARD2_0
+#if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#else
+#endif
+#if LEGACY
             var currentMethod = GetWhereMethod(2);
 #endif
 
@@ -1356,9 +1373,10 @@ namespace Raven.Client.Documents
 
         public static IRavenQueryable<T> Spatial<T>(this IQueryable<T> source, string fieldName, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
         {
-#if NETSTANDARD2_0
+#if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#else
+#endif
+#if LEGACY
             var currentMethod = GetSpatialMethod(typeof(string));
 #endif
 
@@ -1375,9 +1393,10 @@ namespace Raven.Client.Documents
 
         public static IRavenQueryable<T> Spatial<T>(this IQueryable<T> source, SpatialDynamicField field, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
         {
-#if NETSTANDARD2_0
+#if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#else
+#endif
+#if LEGACY
             var currentMethod = GetSpatialMethod(typeof(SpatialDynamicField)); // TODO [ppekrol]
 #endif
 
@@ -1394,9 +1413,10 @@ namespace Raven.Client.Documents
 
         public static IOrderedQueryable<T> OrderByDistance<T>(this IQueryable<T> source, string fieldName, double latitude, double longitude)
         {
-#if NETSTANDARD2_0
+#if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#else
+#endif
+#if LEGACY
             var currentMethod = GetOrderByDistanceMethod(nameof(OrderByDistance), 4);
 #endif
 
@@ -1413,9 +1433,10 @@ namespace Raven.Client.Documents
 
         public static IOrderedQueryable<T> OrderByDistance<T>(this IQueryable<T> source, string fieldName, string shapeWkt)
         {
-#if NETSTANDARD2_0
+#if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#else
+#endif
+#if LEGACY
             var currentMethod = GetOrderByDistanceMethod(nameof(OrderByDistance), 3);
 #endif
 
@@ -1432,9 +1453,10 @@ namespace Raven.Client.Documents
 
         public static IOrderedQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, string fieldName, double latitude, double longitude)
         {
-#if NETSTANDARD2_0
+#if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#else
+#endif
+#if LEGACY
             var currentMethod = GetOrderByDistanceMethod(nameof(OrderByDistanceDescending), 4);
 #endif
 
@@ -1451,9 +1473,10 @@ namespace Raven.Client.Documents
 
         public static IOrderedQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, string fieldName, string shapeWkt)
         {
-#if NETSTANDARD2_0
+#if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#else
+#endif
+#if LEGACY
             var currentMethod = GetOrderByDistanceMethod(nameof(OrderByDistanceDescending), 3);
 #endif
 
@@ -1470,9 +1493,10 @@ namespace Raven.Client.Documents
 
         public static IOrderedQueryable<T> OrderBy<T>(this IQueryable<T> source, string path, OrderingType ordering = OrderingType.String)
         {
-#if NETSTANDARD2_0
+#if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#else
+#endif
+#if LEGACY
             var currentMethod = GetOrderByMethod(nameof(OrderBy));
 #endif
 
@@ -1489,9 +1513,10 @@ namespace Raven.Client.Documents
 
         public static IOrderedQueryable<T> OrderByDescending<T>(this IQueryable<T> source, string path, OrderingType ordering = OrderingType.String)
         {
-#if NETSTANDARD2_0
+#if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#else
+#endif
+#if LEGACY
             var currentMethod = GetOrderByMethod(nameof(OrderByDescending));
 #endif
 
@@ -1508,9 +1533,10 @@ namespace Raven.Client.Documents
 
         public static IOrderedQueryable<T> ThenBy<T>(this IOrderedQueryable<T> source, string path, OrderingType ordering = OrderingType.String)
         {
-#if NETSTANDARD2_0
+#if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#else
+#endif
+#if LEGACY
             var currentMethod = GetOrderByMethod(nameof(ThenBy));
 #endif
 
@@ -1527,9 +1553,10 @@ namespace Raven.Client.Documents
 
         public static IOrderedQueryable<T> ThenByDescending<T>(this IOrderedQueryable<T> source, string path, OrderingType ordering = OrderingType.String)
         {
-#if NETSTANDARD2_0
+#if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#else
+#endif
+#if LEGACY
             var currentMethod = GetOrderByMethod(nameof(ThenByDescending));
 #endif
 
@@ -1541,10 +1568,11 @@ namespace Raven.Client.Documents
 
         public static IRavenQueryable<T> MoreLikeThis<T>(this IQueryable<T> source, MoreLikeThisOptions options = null)
         {
-#if NETSTANDARD2_0
+#if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#else
-            MethodInfo currentMethod = null; // TODO [ppekrol]
+#endif
+#if LEGACY
+            var currentMethod = GetMoreLikeThisMethod(typeof(MoreLikeThisOptions));
 #endif
 
             var expression = ConvertExpressionIfNecessary(source);
@@ -1555,10 +1583,11 @@ namespace Raven.Client.Documents
 
         public static IRavenQueryable<T> MoreLikeThis<T>(this IQueryable<T> source, string document, MoreLikeThisOptions options = null)
         {
-#if NETSTANDARD2_0
+#if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#else
-            MethodInfo currentMethod = null; // TODO [ppekrol]
+#endif
+#if LEGACY
+            var currentMethod = GetMoreLikeThisMethod(typeof(string));
 #endif
 
             var expression = ConvertExpressionIfNecessary(source);
@@ -1569,10 +1598,11 @@ namespace Raven.Client.Documents
 
         public static IRavenQueryable<T> MoreLikeThis<T>(this IQueryable<T> source, Expression<Func<T, bool>> predicate, MoreLikeThisOptions options = null)
         {
-#if NETSTANDARD2_0
+#if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#else
-            MethodInfo currentMethod = null; // TODO [ppekrol]
+#endif
+#if LEGACY
+            var currentMethod = GetMoreLikeThisMethod(typeof(Expression<Func<T, bool>>));
 #endif
 
             var expression = ConvertExpressionIfNecessary(source);
@@ -1590,7 +1620,65 @@ namespace Raven.Client.Documents
             return expression;
         }
 
-#if !NETSTANDARD2_0
+#if LEGACY
+        private static MethodInfo GetMoreLikeThisMethod(Type argumentType)
+        {
+            var moreLikeThisMethod = GetMoreLikeThisMethodInfo(argumentType);
+            if (moreLikeThisMethod != null)
+                return moreLikeThisMethod;
+
+            lock (Locker)
+            {
+                moreLikeThisMethod = GetMoreLikeThisMethodInfo(argumentType);
+                if (moreLikeThisMethod != null)
+                    return moreLikeThisMethod;
+
+                foreach (var method in typeof(LinqExtensions).GetMethods())
+                {
+                    if (method.Name != nameof(MoreLikeThis))
+                        continue;
+
+                    var parameters = method.GetParameters();
+
+                    if (parameters[1].ParameterType.Name != argumentType.Name)
+                        continue;
+
+                    SetMoreLikeThisMethodInfo(argumentType, method);
+                    break;
+                }
+
+                return GetMoreLikeThisMethodInfo(argumentType);
+            }
+        }
+
+        private static void SetMoreLikeThisMethodInfo(Type argumentType, MethodInfo method)
+        {
+            if (argumentType == typeof(MoreLikeThisOptions))
+            {
+                _moreLikeThisMethod1 = method;
+                return;
+            }
+
+            if (argumentType == typeof(string))
+            {
+                _moreLikeThisMethod2 = method;
+                return;
+            }
+
+            _moreLikeThisMethod3 = method;
+        }
+
+        private static MethodInfo GetMoreLikeThisMethodInfo(Type argumentType)
+        {
+            if (argumentType == typeof(MoreLikeThisOptions))
+                return _moreLikeThisMethod1;
+
+            if (argumentType == typeof(string))
+                return _moreLikeThisMethod2;
+
+            return _moreLikeThisMethod3;
+        }
+
         private static MethodInfo GetOrderByMethod(string methodName)
         {
             var orderByMethod = GetOrderByMethodInfo(methodName);

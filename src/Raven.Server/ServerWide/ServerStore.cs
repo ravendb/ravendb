@@ -1259,9 +1259,9 @@ namespace Raven.Server.ServerWide
             var (_, identityInfoResult) = await SendToLeaderAsync(new IncrementClusterIdentitiesBatchCommand(databaseName, ids));
 
             var identityInfo = identityInfoResult as List<long> ?? throw new InvalidOperationException(
-                                   $"Expected to get result from raft command that should generate a cluster-wide batch identity, but didn't. Leader is {LeaderTag}, Current node tag is {NodeTag}.");
+                    $"Expected to get result from raft command that should generate a cluster-wide batch identity, but didn't. Leader is {LeaderTag}, Current node tag is {NodeTag}.");
 
-            return identityInfo;
+           return identityInfo;
         }
 
         public License LoadLicense()
@@ -1381,7 +1381,8 @@ namespace Raven.Server.ServerWide
                         continue;
                     }
 
-                    return await SendToNodeAsync(cachedLeaderTag, cmd, reachedLeader);
+                    var result = await SendToNodeAsync(cachedLeaderTag, cmd, reachedLeader);
+                    return (result.Index, cmd.FromRemote(result.Result));
                 }
                 catch (Exception ex)
                 {

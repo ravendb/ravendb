@@ -16,11 +16,14 @@ namespace FastTests.Voron
 {
     public abstract class StorageTest : LinuxRaceConditionWorkAround, IDisposable
     {
-        private StorageEnvironment _storageEnvironment;
-        protected StorageEnvironmentOptions _options;
+        private Lazy<StorageEnvironment> _storageEnvironment;
+        public StorageEnvironment Env => _storageEnvironment.Value;
+
+        protected StorageEnvironmentOptions Options;
         protected readonly string DataDir = GenerateDataDir();
 
-        private ByteStringContext _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
+        private readonly ByteStringContext _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
+        protected ByteStringContext Allocator => _allocator;
 
         public static string GenerateDataDir()
         {
@@ -29,38 +32,19 @@ namespace FastTests.Voron
             return tempFileName;
         }
 
-        public StorageEnvironment Env
-        {
-            get
-            {
-                if (_storageEnvironment == null)
-                {
-                    lock (this)
-                    {
-                        if (_storageEnvironment == null)
-                            _storageEnvironment = new StorageEnvironment(_options);
-                    }
-                }
-                return _storageEnvironment;
-            }
-        }
-
-        protected ByteStringContext Allocator
-        {
-            get { return _allocator; }
-        }
-
         protected StorageTest(StorageEnvironmentOptions options)
         {
-            _options = options;
+            Options = options;
+            _storageEnvironment = new Lazy<StorageEnvironment>(() => new StorageEnvironment(Options), LazyThreadSafetyMode.ExecutionAndPublication);
         }
 
         protected StorageTest()
         {
             DeleteDirectory(DataDir);
-            _options = StorageEnvironmentOptions.CreateMemoryOnly();
+            Options = StorageEnvironmentOptions.CreateMemoryOnly();
 
-            Configure(_options);
+            Configure(Options);
+            _storageEnvironment = new Lazy<StorageEnvironment>(() => new StorageEnvironment(Options), LazyThreadSafetyMode.ExecutionAndPublication);
         }
 
         protected void RestartDatabase()
@@ -74,26 +58,26 @@ namespace FastTests.Voron
         {
             if(_storageEnvironment != null)
                 throw new InvalidOperationException("Too late");
-            if (_options is StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)
+            if (Options is StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)
                 return;
             DeleteDirectory(DataDir);
-            _options = StorageEnvironmentOptions.ForPath(DataDir);
-            Configure(_options);
+            Options = StorageEnvironmentOptions.ForPath(DataDir);
+            Configure(Options);
         }
 
         protected void StartDatabase()
         {
-            _storageEnvironment = new StorageEnvironment(_options);
+            var storageEnvironmentValue = _storageEnvironment.Value;
         }
 
         protected void StopDatabase()
         {
-            var ownsPagers = _options.OwnsPagers;
-            _options.OwnsPagers = false;
+            var ownsPagers = Options.OwnsPagers;
+            Options.OwnsPagers = false;
 
-            _storageEnvironment.Dispose();
+            _storageEnvironment.Value.Dispose();
 
-            _options.OwnsPagers = ownsPagers;
+            Options.OwnsPagers = ownsPagers;
         }
 
         public static void DeleteDirectory(string dir)
@@ -144,13 +128,14 @@ namespace FastTests.Voron
 
         public virtual void Dispose()
         {
-            _storageEnvironment?.Dispose();
-            _options.Dispose();
+            if (_storageEnvironment.IsValueCreated)
+                _storageEnvironment.Value.Dispose();
+            Options.Dispose();
             _allocator.Dispose();
             DeleteDirectory(DataDir);
 
             _storageEnvironment = null;
-            _options = null;
+            Options = null;
             _allocator = null;
             GC.Collect(GC.MaxGeneration);
             GC.WaitForPendingFinalizers();
