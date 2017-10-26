@@ -45,5 +45,10 @@ namespace Raven.Server.ServerWide.Commands
 
             throw new UnauthorizedAccessException("Attempted to " + GetType().Name + " but this is only available for cluster administrators");
         }
+
+        public virtual object FromRemote(object remoteResult)
+        {
+            return remoteResult;
+        }
     }
 }
