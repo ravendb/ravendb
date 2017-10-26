@@ -949,6 +949,10 @@ namespace Voron
             {
                 // we can ignore this, we'll try next time
             }
+            catch (OperationCanceledException)
+            {
+                // db is shutting down
+            }
             catch (SEHException sehException)
             {
                 VoronUnrecoverableErrorException.Raise(this, "Error occurred during flushing journals to the data file",
