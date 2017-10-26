@@ -869,6 +869,13 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 throw new NotSupportedException(string.Format("Method not supported: Regex.{0}. Expression: {1}.", expression.Method.Name, expression));
             }
 
+            if (expression.Arguments.Count != 2)
+            {
+                throw new NotSupportedException(string.Format("Regex.IsMatch() overload with {0} arguments is not supported. " +
+                                                              "Only Regex.IsMatch(string input, string pattern) overload is supported." +
+                                                              "Expression: {1}.", expression.Arguments.Count, expression));
+            }
+
             var memberInfo = GetMember(expression.Arguments[0]);
 
             _documentQuery.WhereRegex(
