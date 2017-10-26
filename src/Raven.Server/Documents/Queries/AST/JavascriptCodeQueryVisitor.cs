@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using Sparrow;
@@ -10,6 +11,9 @@ namespace Raven.Server.Documents.Queries.AST
     {
         private readonly StringBuilder _sb;
         private readonly HashSet<string> _knownAliases = new HashSet<string>();
+        private static readonly string[] UnsopportedQueryMethodsInJavascript = {
+            "Search","Boost","Lucene","Exact","Count","Sum","Circle","Wkt","Point","Within","Contains","Disjoint","Intersects","MoreLikeThis"
+        };
 
         public JavascriptCodeQueryVisitor(StringBuilder sb, Query q)
         {
@@ -99,28 +103,34 @@ namespace Raven.Server.Documents.Queries.AST
             // The regex usage here is just temporary, to get things working. Ideally, we want to implement the string functions in Jint
             if (expr.Name.Value.Equals("startswith", StringComparison.OrdinalIgnoreCase) && expr.Arguments.Count == 2)
             {
-                _sb.Append("new RegExp('^");
-                var param = expr.Arguments[1] as ValueExpression;
-                _sb.Append(Regex.Escape(param.Token.Value));
-                _sb.Append("').test(");
+                _sb.Append("startsWith(");
                 VisitExpression(expr.Arguments[0]);
-                
+                _sb.Append(",");
+                VisitExpression(expr.Arguments[1]);
                 _sb.Append(")");
                 return;
             }
             
             if (expr.Name.Value.Equals("endswith", StringComparison.OrdinalIgnoreCase) && expr.Arguments.Count == 2)
             {
-                _sb.Append("new RegExp('");
-                var param = expr.Arguments[1] as ValueExpression;
-                _sb.Append(Regex.Escape(param.Token.Value));
-                _sb.Append("$').test(");
+                _sb.Append("endsWith(");
                 VisitExpression(expr.Arguments[0]);
-                
+                _sb.Append(",");
+                VisitExpression(expr.Arguments[1]);
                 _sb.Append(")");
                 return;
             }
-            
+
+            if (expr.Name.Value.Equals("regex", StringComparison.OrdinalIgnoreCase) && expr.Arguments.Count == 2)
+            {
+                _sb.Append("regex(");
+                VisitExpression(expr.Arguments[0]);
+                _sb.Append(",");
+                VisitExpression(expr.Arguments[1]);
+                _sb.Append(")");
+                return;
+            }
+
             if (expr.Name.Value.Equals("intersect", StringComparison.OrdinalIgnoreCase) && expr.Arguments.Count >= 2)
             {
                 _sb.Append("(");
@@ -138,18 +148,6 @@ namespace Raven.Server.Documents.Queries.AST
                 return;    
             }
             
-            if (expr.Name.Value.Equals("regex", StringComparison.OrdinalIgnoreCase) && expr.Arguments.Count == 2)
-            {
-                _sb.Append("new RegExp('");
-                var param = expr.Arguments[1] as ValueExpression;
-                _sb.Append(Regex.Escape(param.Token.Value));
-                _sb.Append("').test(");
-                VisitExpression(expr.Arguments[0]);
-
-                _sb.Append(")");
-                return;
-            }
-            
             if (expr.Name.Value.Equals("exists", StringComparison.OrdinalIgnoreCase) && expr.Arguments.Count == 1)
             {
                 _sb.Append("(typeof "); 
@@ -158,15 +156,11 @@ namespace Raven.Server.Documents.Queries.AST
                 return;    
             }
             
-            if (expr.Name.Value.Equals("exact", StringComparison.OrdinalIgnoreCase) && expr.Arguments.Count ==2)
+            if (UnsopportedQueryMethodsInJavascript.Any(x=>
+                x.Equals(expr.Name.Value, StringComparison.OrdinalIgnoreCase)))
             {
-                throw new NotSupportedException("'exact' query method is not supported by subscriptions");
+                throw new NotSupportedException($"'{expr.Name.Value}' query method is not supported by subscriptions");
             }
-            
-            if (expr.Name.Value.Equals("search", StringComparison.OrdinalIgnoreCase) && expr.Arguments.Count == 2)
-            {
-                throw new NotSupportedException("'search' query method is not supported by subscriptions");
-            }            
             
             _sb.Append(expr.Name.Value);
             _sb.Append("(");

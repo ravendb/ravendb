@@ -195,14 +195,14 @@ namespace FastTests.Client.Subscriptions
             {
                 var subscriptionName = store.Subscriptions.Create(new SubscriptionCreationOptions()
                 {
-                    Query = @"From Users as u Where intersect(endsWith(u.Name,'nd'), startsWith(u.Name, 'Th'), regex(u.Name, 'The'))"
+                    Query = "From Users as u Where intersect(endsWith(u.Name,'nd'), startsWith(u.Name, 'Th'), regex(u.Name, \"^(\\w+\\s+){3}$\"))"
                 });
 
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User()
                     {
-                        Name = "Thor the second"
+                        Name = "Thor the fabulous is second"
                     });
                     session.Store(new User()
                     {
@@ -226,7 +226,7 @@ namespace FastTests.Client.Subscriptions
                 });
 
                 Assert.True(await amre.WaitAsync(_reasonableWaitTime));
-                Assert.Equal(1, users.Count);
+                Assert.Equal(2, users.Count);
             }
         }
         

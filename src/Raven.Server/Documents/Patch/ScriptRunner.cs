@@ -13,6 +13,7 @@ using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Server.Config;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -85,6 +86,7 @@ namespace Raven.Server.Documents.Patch
             public HashSet<string> Includes;
             private HashSet<string> _documentIds;
             public bool ReadOnly;
+            private readonly ConcurrentLruRegexCache _regexCache = new ConcurrentLruRegexCache(1024);
 
             public SingleRun(DocumentDatabase database, RavenConfiguration configuration, ScriptRunner runner, List<string> scriptsSource)
             {
@@ -119,6 +121,7 @@ namespace Raven.Server.Documents.Patch
 
                 ScriptEngine.SetValue("startsWith", new ClrFunctionInstance(ScriptEngine, StartsWith));
                 ScriptEngine.SetValue("endsWith", new ClrFunctionInstance(ScriptEngine, EndsWith));
+                ScriptEngine.SetValue("regex", new ClrFunctionInstance(ScriptEngine, Regex));
 
                 ScriptEngine.SetValue("convertJsTimeToTimeSpanString", new ClrFunctionInstance(ScriptEngine, ConvertJsTimeToTimeSpanString));
 
@@ -424,6 +427,16 @@ namespace Raven.Server.Documents.Patch
                     throw new InvalidOperationException("endsWith(text, contained) must be called with two string paremters");
 
                 return new JsValue(args[0].AsString().EndsWith(args[1].AsString(), StringComparison.OrdinalIgnoreCase));
+            }
+
+            private JsValue Regex(JsValue self, JsValue[] args)
+            {
+                if (args.Length != 2 || args[0].IsString() == false || args[1].IsString() == false)
+                    throw new InvalidOperationException("startsWith(text, contained) must be called with two string paremters");
+
+                var regex = _regexCache.Get(args[1].AsString());
+                
+                return new JsValue(regex.IsMatch(args[0].AsString()));
             }
 
             private JsValue LoadDocumentInternal(string id)
