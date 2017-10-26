@@ -185,7 +185,7 @@ namespace Raven.Server.Documents.Queries.AST
             if (expr.Value == ValueTokenType.String)
                 _sb.Append('"');
             
-            _sb.Append(expr.Token.Value.Replace("\"", "\\\""));
+            _sb.Append(expr.Token.Value.Replace("\\", "\\\\"));
 
             if (expr.Value == ValueTokenType.String)
                 _sb.Append('"');

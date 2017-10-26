@@ -195,7 +195,7 @@ namespace FastTests.Client.Subscriptions
             {
                 var subscriptionName = store.Subscriptions.Create(new SubscriptionCreationOptions()
                 {
-                    Query = "From Users as u Where intersect(endsWith(u.Name,'nd'), startsWith(u.Name, 'Th'), regex(u.Name, \"^(\\w+\\s+){3}$\"))"
+                    Query = "From Users as u Where intersect(endsWith(u.Name,'nd'), startsWith(u.Name, 'Th'), regex(u.Name, 'fabulous'))"
                 });
 
                 using (var session = store.OpenSession())
@@ -226,11 +226,138 @@ namespace FastTests.Client.Subscriptions
                 });
 
                 Assert.True(await amre.WaitAsync(_reasonableWaitTime));
-                Assert.Equal(2, users.Count);
+                Assert.Equal(1, users.Count);
             }
         }
-        
 
-    
+        [Fact]
+        public async Task SubscriptionsRQLSupportIntersectWithComplexRegex()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var subscriptionName = store.Subscriptions.Create(new SubscriptionCreationOptions()
+                {
+                    Query = "From Users as u Where intersect(endsWith(u.Name,'nd'), startsWith(u.Name, 'Th'), regex(u.Name, '^(\\\\w+\\\\s+){4}\\\\w+$'))"
+                });
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User()
+                    {
+                        Name = "Thor the fabulous is second"
+                    });
+                    session.Store(new User()
+                    {
+                        Name = "The emperror"
+                    });
+                    session.Store(new User()
+                    {
+                        Name = "Thee the second"
+                    });
+                    session.Store(new User { Name = "you the second" });
+                    session.SaveChanges();
+                }
+
+                var subscription = store.Subscriptions.Open<User>(subscriptionName);
+                var amre = new AsyncManualResetEvent();
+                var users = new List<User>();
+                _ = subscription.Run(x =>
+                {
+                    users.AddRange(x.Items.Select(i => i.Result));
+                    amre.Set();
+                });
+
+                Assert.True(await amre.WaitAsync(_reasonableWaitTime));
+                Assert.Equal(1, users.Count);
+            }
+        }
+
+        [Fact]
+        public async Task SubscriptionsRQLSupportStartsWithWithEscapedValues()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var subscriptionName = store.Subscriptions.Create(new SubscriptionCreationOptions()
+                {
+                    Query = "From Users as u Where startsWith(u.Name, 'my\\\\id')"
+                });
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User()
+                    {
+                        Name = "my\\id some other foo bar"
+                    });
+                    session.Store(new User()
+                    {
+                        Name = "The emperror"
+                    });
+                    session.Store(new User()
+                    {
+                        Name = "Thee the second"
+                    });
+                    session.Store(new User { Name = "you the second" });
+                    session.SaveChanges();
+                }
+
+                var subscription = store.Subscriptions.Open<User>(subscriptionName);
+                var amre = new AsyncManualResetEvent();
+                var users = new List<User>();
+                _ = subscription.Run(x =>
+                {
+                    users.AddRange(x.Items.Select(i => i.Result));
+                    amre.Set();
+                });
+
+                Assert.True(await amre.WaitAsync(_reasonableWaitTime));
+                Assert.Equal(1, users.Count);
+            }
+        }
+
+        [Fact]
+        public async Task SubscriptionsRQLSupportEscapedValue()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var subscriptionName = store.Subscriptions.Create(new SubscriptionCreationOptions()
+                {
+                    Query = @"
+
+From Users as u Where u.Name = 'my\\id'
+
+"
+                });
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User()
+                    {
+                        Name = @"my\id"
+                    });
+                    session.Store(new User()
+                    {
+                        Name = "The emperror"
+                    });
+                    session.Store(new User()
+                    {
+                        Name = "Thee the second"
+                    });
+                    session.Store(new User { Name = "you the second" });
+                    session.SaveChanges();
+                }
+
+                var subscription = store.Subscriptions.Open<User>(subscriptionName);
+                var amre = new AsyncManualResetEvent();
+                var users = new List<User>();
+                _ = subscription.Run(x =>
+                {
+                    users.AddRange(x.Items.Select(i => i.Result));
+                    amre.Set();
+                });
+
+                Assert.True(await amre.WaitAsync(_reasonableWaitTime));
+                Assert.Equal(1, users.Count);
+            }
+        }
     }
 }
