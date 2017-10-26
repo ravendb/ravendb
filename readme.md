@@ -1,15 +1,17 @@
-﻿# RavenDB: The Premier NoSQL database for .NET
+﻿# RavenDB - an ACID NoSQL 2nd generation database
 
 This repository contains source code for the [RavenDB](https://ravendb.net/) document database. With a RavenDB database you can set up a NoSQL data architecture, or add a NoSQL layer to your current relational database. 
 
 ![RavenDb Studio](docs/readmeScreenshot.png)
 
-Requirements
+Supported Platforms
 --------------
 
-- .NET Core 1.0
-- TypeScript 2.1
-- WiX Toolset 3.7 or higher
+- Windows
+- Linux
+- Docker
+- Mac OS X
+- Raspberry Pi
 
 Grab Your License and Latest Version
 ------------------------
