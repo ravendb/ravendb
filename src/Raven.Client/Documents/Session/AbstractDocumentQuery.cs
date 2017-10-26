@@ -730,6 +730,21 @@ If you really want to do in memory filtering on the data returned from the query
             tokens.AddLast(WhereToken.LessThanOrEqual(fieldName, AddQueryParameter(value == null ? "NULL" : TransformValue(new WhereParams { Value = value, FieldName = fieldName }, forRange: true)), exact));
         }
 
+
+        /// <summary>
+        ///   Matches fields where Regex.IsMatch(filedName, pattern)
+        /// </summary>
+        /// <param name = "fieldName">Name of the field.</param>
+        /// <param name="pattern"> The pattern to match</param>
+        public void WhereRegex(string fieldName, string pattern)
+        {
+            var tokens = GetCurrentWhereTokens();
+            AppendOperatorIfNeeded(tokens);
+            NegateIfNeeded(tokens, fieldName);
+
+            tokens.AddLast(WhereToken.Regex(fieldName, AddQueryParameter(TransformValue(new WhereParams { Value = pattern, FieldName = fieldName }))));
+        }
+
         /// <summary>
         ///   Add an AND to the query
         /// </summary>
