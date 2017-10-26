@@ -48,8 +48,11 @@ namespace Raven.Server.Monitoring.Snmp
             [Description("Server process ID")]
             public const string Pid = "1.4";
 
-            [Description("Server CPU usage in %")]
-            public const string Cpu = "1.5";
+            [Description("Process CPU usage in %")]
+            public const string ProcessCpu = "1.5.1";
+
+            [Description("Machine CPU usage in %")]
+            public const string MachineCpu = "1.5.2";
 
             [Description("Server allocated memory in MB")]
             public const string TotalMemory = "1.6.1";
