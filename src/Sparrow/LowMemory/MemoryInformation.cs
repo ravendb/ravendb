@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Sparrow.Logging;
 using Sparrow.Platform;
@@ -75,38 +73,49 @@ namespace Sparrow.LowMemory
 
         public static long GetRssMemoryUsage(int processId)
         {
+            var path = $"/proc/{processId}/status";
+            return GetMemoryUsageByFilter(path, "VmRSS");
+        }
+
+        public static long GetAvailableMemoryFromProcMemInfo()
+        {
+            var path = "/proc/meminfo";
+            return GetMemoryUsageByFilter(path, "MemAvailable"); // this is different then sysinfo freeram+buffered (and the closest to the real free memory)
+        }
+
+        public static long GetMemoryUsageByFilter(string path, string filter)
+        {
             // currently Process.GetCurrentProcess().WorkingSet64 doesn't give the real RSS number
             // getting it from /proc/self/stat or statm can be also problematic because in some distros the number is in page size, in other pages, and position is not always guarenteed
             // however /proc/self/status gives the real number in humenly format. We extract this here:
-            var path = $"/proc/{processId}/status";
-            var vmRssString = KernelVirtualFileSystemUtils.ReadLineFromFile(path, "VmRSS");
-            if (vmRssString == null)
+            var filterString = KernelVirtualFileSystemUtils.ReadLineFromFile(path, filter);
+            if (filterString == null)
             {
                 if (Logger.IsInfoEnabled)
-                    Logger.Info($"Failed to read VmRSS from {path}");
+                    Logger.Info($"Failed to read {filter} from {path}");
                 return 0;
             }
 
-            var parsedLine = vmRssString.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            var parsedLine = filterString.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
 
-            if (parsedLine.Length != 3) // format should be: VmRss: <num> kb
+            if (parsedLine.Length != 3) // format should be: {filter}: <num> kb
             {
                 if (Logger.IsInfoEnabled)
-                    Logger.Info($"Failed to read VmRSS from {path}. Line was {parsedLine}");
+                    Logger.Info($"Failed to read {filter} from {path}. Line was {parsedLine}");
                 return 0;
             }
 
-            if (parsedLine[0].Contains("VmRSS:") == false)
+            if (parsedLine[0].Contains($"{filter}:") == false)
             {
                 if (Logger.IsInfoEnabled)
-                    Logger.Info($"Failed to find VmRSS from {path}. Line was {parsedLine}");
+                    Logger.Info($"Failed to find {filter} from {path}. Line was {parsedLine}");
                 return 0;
             }
 
             if (long.TryParse(parsedLine[1], out var result) == false)
             {
                 if (Logger.IsInfoEnabled)
-                    Logger.Info($"Failed to parse VmRSS from {path}. Line was {parsedLine}");
+                    Logger.Info($"Failed to parse {filter} from {path}. Line was {parsedLine}");
                 return 0;
             }
 
@@ -206,7 +215,7 @@ namespace Sparrow.LowMemory
                         return FailedResult;
                     }
 
-                    availableRamInBytes = info.AvailableRam;
+                    availableRamInBytes = (ulong)GetAvailableMemoryFromProcMemInfo();
                     totalPhysicalMemoryInBytes = info.TotalRam;
                 }
                 else
