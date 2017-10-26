@@ -87,7 +87,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         Name = field.Name,
                         Storage = FieldStorage.No,
                         Indexing = AutoFieldIndexing.Default,
-                        HasQuotedName = field.Name.IsQuoted
+                        HasQuotedName = field.Name.IsQuoted,
+                        GroupByArrayBehavior = field.GroupByArrayBehavior
                     };
 
                     if (field.IsFullTextSearch)
@@ -242,9 +243,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 var groupByField = groupByFields[i];
 
-                result[groupByField] = DynamicQueryMappingItem.Create(groupByField, AggregationOperation.None, query.Metadata.WhereFields);
+                result[groupByField.Name] = DynamicQueryMappingItem.CreateGroupBy(groupByField.Name, groupByField.GroupByArrayBehavior, query.Metadata.WhereFields);
 
-                mapFields.Remove(groupByField);  // ensure we don't have duplicated group by fields
+                mapFields.Remove(groupByField.Name);  // ensure we don't have duplicated group by fields
             }
 
             return result;

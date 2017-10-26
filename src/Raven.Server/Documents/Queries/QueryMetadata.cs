@@ -77,7 +77,7 @@ namespace Raven.Server.Documents.Queries
 
         public readonly Dictionary<QueryFieldName, WhereField> WhereFields = new Dictionary<QueryFieldName, WhereField>();
 
-        public QueryFieldName[] GroupBy;
+        public GroupByField[] GroupBy;
 
         public OrderByField[] OrderBy;
 
@@ -117,11 +117,11 @@ namespace Raven.Server.Documents.Queries
 
             if (Query.GroupBy != null)
             {
-                GroupBy = new QueryFieldName[Query.GroupBy.Count];
+                GroupBy = new GroupByField[Query.GroupBy.Count];
 
                 for (var i = 0; i < Query.GroupBy.Count; i++)
                 {
-                    GroupBy[i] = GetIndexFieldName(Query.GroupBy[i], parameters);
+                    GroupBy[i] = GetGroupByField(Query.GroupBy[i], parameters);
                 }
             }
 
@@ -520,7 +520,7 @@ namespace Raven.Server.Documents.Queries
                         else
                         {
                             if (selectField.GroupByKeys.Length == 1)
-                                _aliasToName[selectField.Alias] = selectField.GroupByKeys[0];
+                                _aliasToName[selectField.Alias] = selectField.GroupByKeys[0].Name;
                         }
                     }
                 }
@@ -624,6 +624,7 @@ namespace Raven.Server.Documents.Queries
             return null; // never hit
         }
 
+
         private void ThrowInvalidArgumentToId(BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException("id() in simple select clause must only be used without arguments", QueryText, parameters);
@@ -725,6 +726,27 @@ namespace Raven.Server.Documents.Queries
             }
 
             return fieldNameOrAlias;
+        }
+
+        private GroupByField GetGroupByField(FieldExpression field, BlittableJsonReaderObject parameters)
+        {
+            var name = GetIndexFieldName(field, parameters);
+
+            var isArray = false;
+
+            if (field.Compound.Count > 1)
+            {
+                foreach (var part in field.Compound)
+                {
+                    if (part == "[]")
+                    {
+                        isArray = true;
+                        break;
+                    }
+                }
+            }
+
+            return new GroupByField(name, isArray);
         }
 
         private static void ThrowBetweenMustHaveFieldSource(string queryText, BlittableJsonReaderObject parameters)

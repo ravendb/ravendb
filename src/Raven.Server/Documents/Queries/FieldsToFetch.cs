@@ -88,7 +88,7 @@ namespace Raven.Server.Documents.Queries
 
                 if (selectField.GroupByKeys.Length == 1)
                 {
-                    selectFieldName = selectField.GroupByKeys[0];
+                    selectFieldName = selectField.GroupByKeys[0].Name;
 
                     if (selectFieldKey == null)
                         selectFieldKey = selectFieldName;
@@ -96,7 +96,7 @@ namespace Raven.Server.Documents.Queries
                 else
                 {
                     selectFieldKey = selectFieldKey ?? "Key";
-                    return new FieldToFetch(selectFieldKey, selectField.GroupByKeyName);
+                    return new FieldToFetch(selectFieldKey, selectField.GroupByKeyNames);
                 }
             }
             if (indexDefinition == null)

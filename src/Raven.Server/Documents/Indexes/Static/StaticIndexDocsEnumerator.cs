@@ -9,7 +9,7 @@ namespace Raven.Server.Documents.Indexes.Static
     {
         private readonly IndexingStatsScope _documentReadStats;
         private readonly IEnumerator<Document> _docsEnumerator;
-        protected IEnumerable ResultsOfCurrentDocument;
+        private readonly IEnumerable _resultsOfCurrentDocument;
         private readonly MultipleIndexingFunctionsEnumerator _multipleIndexingFunctionsEnumerator;
 
         protected StaticIndexDocsEnumerator(IEnumerable<Document> docs)
@@ -26,13 +26,13 @@ namespace Raven.Server.Documents.Indexes.Static
 
             if (funcs.Count == 1)
             {
-                ResultsOfCurrentDocument =
+                _resultsOfCurrentDocument =
                     new TimeCountingEnumerable(funcs[0](new DynamicIteratonOfCurrentDocumentWrapper(this)), linqStats);
             }
             else
             {
                 _multipleIndexingFunctionsEnumerator = new MultipleIndexingFunctionsEnumerator(funcs, new DynamicIteratonOfCurrentDocumentWrapper(this));
-                ResultsOfCurrentDocument = new TimeCountingEnumerable(_multipleIndexingFunctionsEnumerator, linqStats);
+                _resultsOfCurrentDocument = new TimeCountingEnumerable(_multipleIndexingFunctionsEnumerator, linqStats);
             }
 
             CurrentIndexingScope.Current.SetSourceCollection(collection, linqStats);
@@ -53,7 +53,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 }
 
                 Current = _docsEnumerator.Current;
-                resultsOfCurrentDocument = ResultsOfCurrentDocument;
+                resultsOfCurrentDocument = _resultsOfCurrentDocument;
 
                 return true;
             }

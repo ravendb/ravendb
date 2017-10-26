@@ -241,7 +241,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 {
                     Name = "Location",
                     Storage = FieldStorage.Yes,
-                    Indexing = AutoFieldIndexing.Search | AutoFieldIndexing.Exact | AutoFieldIndexing.Default
+                    Indexing = AutoFieldIndexing.Search | AutoFieldIndexing.Exact | AutoFieldIndexing.Default,
+                    GroupByArrayBehavior = GroupByArrayBehavior.ByContent
                 };
 
                 Assert.True(await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition("Users", new[] { count }, new[] { location })) > 0);
@@ -288,6 +289,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal(1, definition.GroupByFields.Count);
                 Assert.Equal("Location", definition.GroupByFields["Location"].Name);
                 Assert.Equal(AutoFieldIndexing.Search | AutoFieldIndexing.Exact | AutoFieldIndexing.Default, definition.GroupByFields["Location"].Indexing);
+                Assert.Equal(GroupByArrayBehavior.ByContent, definition.GroupByFields["Location"].GroupByArrayBehavior);
 
                 Assert.Equal(IndexLockMode.Unlock, indexes[0].Definition.LockMode);
                 Assert.Equal(IndexPriority.Normal, indexes[0].Definition.Priority);
@@ -310,6 +312,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal(1, definition.GroupByFields.Count);
                 Assert.Equal("Location", definition.GroupByFields["Location"].Name);
                 Assert.Equal(AutoFieldIndexing.Search | AutoFieldIndexing.Exact | AutoFieldIndexing.Default, definition.GroupByFields["Location"].Indexing);
+                Assert.Equal(GroupByArrayBehavior.ByContent, definition.GroupByFields["Location"].GroupByArrayBehavior);
 
                 Assert.Equal(IndexLockMode.LockedError, indexes[1].Definition.LockMode);
                 Assert.Equal(IndexPriority.High, indexes[1].Definition.Priority);

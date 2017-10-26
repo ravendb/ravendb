@@ -108,7 +108,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 using (_stats.GetMapEntriesTree.Start())
                     MapReduceWorkContext.DocumentMapEntries.RepurposeInstance(docIdAsSlice, clone: false);
 
-
                 if (MapReduceWorkContext.DocumentMapEntries.NumberOfEntries > 0)
                 {
                     using (_stats.GetMapEntries.Start())
