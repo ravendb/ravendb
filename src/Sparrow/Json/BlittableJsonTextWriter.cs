@@ -242,7 +242,7 @@ namespace Sparrow.Json
             var ptr = strBuffer;
             var buffer = _buffer;
             while (numberOfEscapeSequences > 0)
-            {                
+            {
                 numberOfEscapeSequences--;
                 var bytesToSkip = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, ref escapeSequencePos);
                 WriteRawString(strBuffer, bytesToSkip);
@@ -347,7 +347,8 @@ namespace Sparrow.Json
 
                 return;
 
-                WriteLargeCompressedString: UnlikelyWriteCompressedString(numberOfEscapeSequences, strSrcBuffer, escapeSequencePos, strBuffer, size);
+WriteLargeCompressedString:
+                UnlikelyWriteCompressedString(numberOfEscapeSequences, strSrcBuffer, escapeSequencePos, strBuffer, size);
             }
             finally
             {
@@ -547,16 +548,30 @@ namespace Sparrow.Json
             var localBuffer = _parserAuxiliarMemory.Address;
 
             int idx = 0;
-            bool negative = false;
+            var negative = false;
+            var isLongMin = false;
             if (val < 0)
             {
                 negative = true;
-                val = -val; // value is positive now.
+                if (val == long.MinValue)
+                {
+                    isLongMin = true;
+                    val = long.MaxValue;
+                }
+                else
+                    val = -val; // value is positive now.
             }
 
             do
             {
-                localBuffer[idx++] = (byte)('0' + val % 10);
+                var v = val % 10;
+                if (isLongMin)
+                {
+                    isLongMin = false;
+                    v += 1;
+                }
+
+                localBuffer[idx++] = (byte)('0' + v);
                 val /= 10;
             }
             while (val != 0);
@@ -573,7 +588,7 @@ namespace Sparrow.Json
                 buffer[auxPos++] = localBuffer[--idx];
             while (idx > 0);
 
-            _pos = auxPos;          
+            _pos = auxPos;
         }
 
         public void WriteDouble(LazyNumberValue val)
