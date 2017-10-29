@@ -126,9 +126,7 @@ namespace Raven.Server.Documents.Replication
             {
                 using (_connectionOptions.ConnectionProcessingInProgress("Replication"))
                 using (_stream)
-                using (var interruptibleRead = new InterruptibleRead(
-                            _database.DocumentsStorage.ContextPool,
-                            _stream))
+                using (var interruptibleRead = new InterruptibleRead(_database.DocumentsStorage.ContextPool, _stream))
                 {
                     while (!_cts.IsCancellationRequested)
                     {
@@ -177,17 +175,28 @@ namespace Raven.Server.Documents.Replication
 
                             if (_log.IsInfoEnabled)
                             {
-                                if (e.InnerException is SocketException)
+                                if (e is AggregateException ae && 
+                                    ae.InnerExceptions.Count == 1 && 
+                                    e.InnerException is SocketException ase)
                                 {
-                                    if (_log.IsInfoEnabled)
-                                        _log.Info("Failed to read data from incoming connection. The incoming connection will be closed and re-created.", e);
+                                    HandleSocketException(ase);
+                                }
+                                else if (e.InnerException is SocketException se)
+                                {
+                                    HandleSocketException(se);
                                 }
                                 else
                                 {
                                     //if we are disposing, do not notify about failure (not relevant)
                                     if (_cts.IsCancellationRequested == false)
                                         if (_log.IsInfoEnabled)
-                                            _log.Info("Received unexpected exception while receiving replication batch.",e);
+                                            _log.Info("Received unexpected exception while receiving replication batch.", e);
+                                }
+                                
+                                void HandleSocketException(SocketException e)
+                                {
+                                    if (_log.IsInfoEnabled)
+                                        _log.Info("Failed to read data from incoming connection. The incoming connection will be closed and re-created.", e);
                                 }
                             }
 
@@ -223,14 +232,12 @@ namespace Raven.Server.Documents.Replication
             try
             {
                 if (!message.TryGet(nameof(ReplicationMessageHeader.Type), out messageType))
-                    throw new InvalidDataException(
-                        "Expected the message to have a 'Type' field. The property was not found");
+                    throw new InvalidDataException("Expected the message to have a 'Type' field. The property was not found");
 
                 if (!message.TryGet(nameof(ReplicationMessageHeader.LastDocumentEtag), out _lastDocumentEtag))
-                    throw new InvalidOperationException(
-                        "Expected LastDocumentEtag property in the replication message, but didn't find it..");
+                    throw new InvalidOperationException("Expected LastDocumentEtag property in the replication message, " +
+                                                        "but didn't find it..");
                 
-
                 switch (messageType)
                 {
                     case ReplicationMessageType.Documents:
@@ -295,45 +302,44 @@ namespace Raven.Server.Documents.Replication
             catch (EndOfStreamException e)
             {
                 if (_log.IsInfoEnabled)
-                    _log.Info(
-                        "Received unexpected end of stream while receiving replication batches. This might indicate an issue with network.",
-                        e);
+                    _log.Info("Received unexpected end of stream while receiving replication batches. " +
+                              "This might indicate an issue with network.", e);
                 throw;
             }
             catch (Exception e)
             {
                 //if we are disposing, ignore errors
-                if (!_cts.IsCancellationRequested && !(e is ObjectDisposedException))
+                if (_cts.IsCancellationRequested)
+                    return;
+
+                if (_log.IsInfoEnabled)
+                    _log.Info($"Failed replicating documents {FromToString}.", e);
+
+                //return negative ack
+                var returnValue = new DynamicJsonValue
                 {
-                    //return negative ack
-                    var returnValue = new DynamicJsonValue
-                    {
-                        [nameof(ReplicationMessageReply.Type)] = ReplicationMessageReply.ReplyType.Error.ToString(),
-                        [nameof(ReplicationMessageReply.MessageType)] = messageType,
-                        [nameof(ReplicationMessageReply.LastEtagAccepted)] = -1,
-                        [nameof(ReplicationMessageReply.Exception)] = e.ToString()
-                    };
+                    [nameof(ReplicationMessageReply.Type)] = ReplicationMessageReply.ReplyType.Error.ToString(),
+                    [nameof(ReplicationMessageReply.MessageType)] = messageType,
+                    [nameof(ReplicationMessageReply.LastEtagAccepted)] = -1,
+                    [nameof(ReplicationMessageReply.Exception)] = e.ToString()
+                };
 
-                    documentsContext.Write(writer, returnValue);
-                    writer.Flush();
+                documentsContext.Write(writer, returnValue);
+                writer.Flush();
 
-                    if (_log.IsInfoEnabled)
-                        _log.Info($"Failed replicating documents from {FromToString}.", e);
-
-                    throw;
-                }
+                throw;
             }
         }
 
         private void HandleReceivedDocumentsAndAttachmentsBatch(DocumentsOperationContext documentsContext, BlittableJsonReaderObject message, long lastDocumentEtag, IncomingReplicationStatsScope stats)
         {
             if (!message.TryGet(nameof(ReplicationMessageHeader.ItemsCount), out int itemsCount))
-                throw new InvalidDataException(
-                    $"Expected the '{nameof(ReplicationMessageHeader.ItemsCount)}' field, but had no numeric field of this value, this is likely a bug");
+                throw new InvalidDataException($"Expected the '{nameof(ReplicationMessageHeader.ItemsCount)}' field, " +
+                                               $"but had no numeric field of this value, this is likely a bug");
 
             if (!message.TryGet(nameof(ReplicationMessageHeader.AttachmentStreamsCount), out int attachmentStreamCount))
-                throw new InvalidDataException(
-                    $"Expected the '{nameof(ReplicationMessageHeader.AttachmentStreamsCount)}' field, but had no numeric field of this value, this is likely a bug");
+                throw new InvalidDataException($"Expected the '{nameof(ReplicationMessageHeader.AttachmentStreamsCount)}' field, " +
+                                               $"but had no numeric field of this value, this is likely a bug");
 
 
             ReceiveSingleDocumentsBatch(documentsContext, itemsCount, attachmentStreamCount, lastDocumentEtag, stats);
@@ -482,8 +488,9 @@ namespace Raven.Server.Documents.Replication
                 sw.Stop();
 
                 if (_log.IsInfoEnabled)
-                    _log.Info(
-                        $"Replication connection {FromToString}: received and written {replicatedItemsCount:#,#;;0} documents to database in {sw.ElapsedMilliseconds:#,#;;0} ms, with last etag = {lastEtag}.");
+                    _log.Info($"Replication connection {FromToString}: " +
+                              $"received and written {replicatedItemsCount:#,#;;0} documents to database in {sw.ElapsedMilliseconds:#,#;;0} ms, " +
+                              $"with last etag = {lastEtag}.");
             }
             catch (Exception e)
             {
@@ -526,8 +533,8 @@ namespace Raven.Server.Documents.Replication
             }
             if (_log.IsInfoEnabled)
             {
-                _log.Info(
-                    $"Sending heartbeat ok => {FromToString} with last document etag = {lastDocumentEtag}, last document change vector: {databaseChangeVector}");
+                _log.Info($"Sending heartbeat ok => {FromToString} with last document etag = {lastDocumentEtag}, " +
+                          $"last document change vector: {databaseChangeVector}");
             }
             var heartbeat = new DynamicJsonValue
             {
