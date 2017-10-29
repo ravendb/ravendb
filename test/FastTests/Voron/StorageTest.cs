@@ -52,11 +52,12 @@ namespace FastTests.Voron
             StopDatabase();
 
             StartDatabase();
+            GC.KeepAlive(_storageEnvironment.Value); // force initiliazation
         }
 
         protected void RequireFileBasedPager()
         {
-            if(_storageEnvironment != null)
+            if(_storageEnvironment.IsValueCreated)
                 throw new InvalidOperationException("Too late");
             if (Options is StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)
                 return;
@@ -67,7 +68,9 @@ namespace FastTests.Voron
 
         protected void StartDatabase()
         {
-            var storageEnvironmentValue = _storageEnvironment.Value;
+            // have to create a new instance
+            _storageEnvironment = new Lazy<StorageEnvironment>(() => 
+            new StorageEnvironment(Options), LazyThreadSafetyMode.ExecutionAndPublication);
         }
 
         protected void StopDatabase()
