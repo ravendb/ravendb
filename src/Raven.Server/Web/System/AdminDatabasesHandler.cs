@@ -660,6 +660,17 @@ namespace Raven.Server.Web.System
             }
         }
 
+        [RavenAction("/admin/backup/database", "POST", AuthorizationStatus.Operator)]
+        public async Task BackupDatabase()
+        {
+            var taskId = GetIntValueQueryString("taskId");
+            var databaseName = GetStringQueryString("databaseName");
+            var isFullBackup = GetBoolValueQueryString("isFullBackup");
+
+            var database = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
+            await database.PeriodicBackupRunner.RunAdhocBackup(taskId ?? -1, isFullBackup ?? true);
+        }
+
         [RavenAction("/admin/restore/database", "POST", AuthorizationStatus.Operator)]
         public async Task RestoreDatabase()
         {

@@ -1,17 +1,16 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
-import appUrl = require("common/appUrl");
-import router = require("plugins/router");
 import ongoingTaskEditModel = require("models/database/tasks/ongoingTaskEditModel"); 
-import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 
 class ongoingTaskReplicationEditModel extends ongoingTaskEditModel {
-
-    destinationDB = ko.observable<string>();
-    destinationURL = ko.observable<string>();
+       
+    destinationDB = ko.observable<string>();        // Read-only data. Input data is through the connection string.
+    destinationURL = ko.observable<string>();       // Actual destination url where the targeted database is located. Read-only data.
+    connectionStringName = ko.observable<string>(); // Contains list of discovery urls in the targeted cluster. The task communicates with these urls.
+    
     showReplicationDetails = ko.observable(false);
   
     validationGroup: KnockoutValidationGroup;
-    
+
     constructor(dto: Raven.Client.ServerWide.Operations.OngoingTaskReplication) {
         super();
 
@@ -23,8 +22,9 @@ class ongoingTaskReplicationEditModel extends ongoingTaskEditModel {
     update(dto: Raven.Client.ServerWide.Operations.OngoingTaskReplication) {
         super.update(dto);
 
+        this.connectionStringName(dto.ConnectionStringName); 
         this.destinationDB(dto.DestinationDatabase);
-        this.destinationURL(dto.DestinationUrl);
+        this.destinationURL(dto.DestinationUrl || 'N/A');
         this.manualChooseMentor(!!dto.MentorNode);
         this.preferredMentor(dto.MentorNode);
     }
@@ -34,6 +34,7 @@ class ongoingTaskReplicationEditModel extends ongoingTaskEditModel {
             Name: this.taskName(),
             Database: this.destinationDB(),
             MentorNode: this.manualChooseMentor() ? this.preferredMentor() : undefined,
+            ConnectionStringName: this.connectionStringName(),
             TaskId: taskId
         } as Raven.Client.ServerWide.ExternalReplication;
     }
@@ -41,20 +42,13 @@ class ongoingTaskReplicationEditModel extends ongoingTaskEditModel {
     initValidation() {
 
         this.initializeMentorValidation();
-        
-        this.destinationDB.extend({
-            required: true,
-            validDatabaseName: true
-        });
 
-        this.destinationURL.extend({
-            required: true,
-            validUrl: true
-        });
+        this.connectionStringName.extend({
+            required: true
+        });               
 
-        this.validationGroup = ko.validatedObservable({
-            destinationDB: this.destinationDB,
-            destinationURL: this.destinationURL,
+        this.validationGroup = ko.validatedObservable({         
+            connectionStringName: this.connectionStringName,
             preferredMentor: this.preferredMentor
         });
     }

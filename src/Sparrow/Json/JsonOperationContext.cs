@@ -105,8 +105,6 @@ namespace Sparrow.Json
             return allocateStringValue;
         }
 
-        private bool _disposed;
-
         public unsafe class ManagedPinnedBuffer : IDisposable
         {
             public const int WholeBufferSize = 256 * Constants.Size.Kilobyte;
@@ -275,7 +273,7 @@ namespace Sparrow.Json
 
                 //_parent disposal sets _managedBuffers to null,
                 //throwing ObjectDisposedException() to make it more visible
-                if (_parent._disposed)
+                if (_parent.Disposed)
                     ThrowParentWasDisposed();
 
                 _parent._managedBuffers.Push(_buffer);
@@ -332,6 +330,7 @@ namespace Sparrow.Json
         }
 
         private readonly DisposeOnce<ExceptionRetry> _disposeOnceRunner;
+        private bool Disposed => _disposeOnceRunner.Disposed;
         public override void Dispose()
         {
             _disposeOnceRunner.Dispose();
@@ -468,7 +467,7 @@ namespace Sparrow.Json
             CancellationToken cancellationToken)
         {
 
-            if (_disposed)
+            if (Disposed)
                 ThrowObjectDisposed();
 
             _jsonParserState.Reset();
@@ -544,7 +543,7 @@ namespace Sparrow.Json
             ManagedPinnedBuffer bytes, IBlittableDocumentModifier modifier = null)
         {
 
-            if (_disposed)
+            if (Disposed)
                 ThrowObjectDisposed();
 
             _jsonParserState.Reset();
@@ -581,7 +580,7 @@ namespace Sparrow.Json
             BlittableJsonDocumentBuilder.UsageMode mode, IBlittableDocumentModifier modifier = null)
         {
 
-            if (_disposed)
+            if (Disposed)
                 ThrowObjectDisposed();
 
             _jsonParserState.Reset();
@@ -606,7 +605,7 @@ namespace Sparrow.Json
             BlittableJsonDocumentBuilder.UsageMode mode, IBlittableDocumentModifier modifier = null)
         {
 
-            if (_disposed)
+            if (Disposed)
                 ThrowObjectDisposed();
 
             _jsonParserState.Reset();
@@ -647,7 +646,7 @@ namespace Sparrow.Json
            CancellationToken token = default(CancellationToken)
            )
         {
-            if (_disposed)
+            if (Disposed)
                 ThrowObjectDisposed();
 
             _jsonParserState.Reset();
@@ -692,7 +691,7 @@ namespace Sparrow.Json
 
         private void EnsureNotDisposed()
         {
-            if (_disposed)
+            if (Disposed)
             {
 #if DEBUG
                 // not sure what should we put here.
@@ -711,7 +710,7 @@ namespace Sparrow.Json
             CancellationToken? token = null,
             int maxSize = int.MaxValue)
         {
-            if (_disposed)
+            if (Disposed)
                 ThrowObjectDisposed();
 
             _jsonParserState.Reset();

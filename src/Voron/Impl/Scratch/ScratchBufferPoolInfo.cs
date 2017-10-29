@@ -13,6 +13,8 @@ namespace Voron.Impl.Scratch
 
         public int NumberOfScratchFiles { get; set; }
 
+        public int CurrentFileNumber { get; set; }
+
         public long CurrentFileSizeInMB { get; set; }
 
         public long PerScratchFileSizeLimitInMB { get; set; }
@@ -38,6 +40,8 @@ namespace Voron.Impl.Scratch
         public long SizeInKB { get; set; }
 
         public int NumberOfAllocations { get; set; }
+
+        public long AllocatedPagesCount { get; set; }
 
         public long TxIdAfterWhichLatestFreePagesBecomeAvailable { get; set; }
 

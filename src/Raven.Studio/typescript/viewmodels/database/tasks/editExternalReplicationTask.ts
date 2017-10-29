@@ -6,8 +6,9 @@ import ongoingTaskReplicationEditModel = require("models/database/tasks/ongoingT
 import ongoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskInfoCommand");
 import eventsCollector = require("common/eventsCollector");
 import generalUtils = require("common/generalUtils");
-import testClusterNodeConnectionCommand = require("commands/database/cluster/testClusterNodeConnectionCommand");
+import getConnectionStringsCommand = require("commands/database/settings/getConnectionStringsCommand");
 import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
+import connectionStringRavenEtlModel = require("models/database/settings/connectionStringRavenEtlModel");
 import jsonUtil = require("common/jsonUtil");
 
 class editExternalReplicationTask extends viewModelBase {
@@ -17,19 +18,26 @@ class editExternalReplicationTask extends viewModelBase {
     private taskId: number = null;
     
     possibleMentors = ko.observableArray<string>([]);
+    ravenEtlConnectionStringsNames = ko.observableArray<string>([]);
+    connectionStringsUrl = appUrl.forCurrentDatabase().connectionStrings();
 
     testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
+    
     spinners = { 
-        test: ko.observable<boolean>(false) 
+        test: ko.observable<boolean>(false),
+        save: ko.observable<boolean>(false) 
     };
 
     fullErrorDetailsVisible = ko.observable<boolean>(false);
 
     shortErrorText: KnockoutObservable<string>;
 
+    createNewConnectionString = ko.observable<boolean>(false);
+    newConnectionString = ko.observable<connectionStringRavenEtlModel>();
+
     constructor() {
         super();
-        this.bindToCurrentInstance("testConnection");
+        this.bindToCurrentInstance("useConnectionString", "onTestConnectionRaven");
     }
 
     activate(args: any) { 
@@ -61,7 +69,8 @@ class editExternalReplicationTask extends viewModelBase {
         }
 
         deferred.done(() => this.initObservables());
-        return $.when<any>(deferred, this.loadPossibleMentors());
+        
+        return $.when<any>(this.getAllConnectionStrings(), this.loadPossibleMentors(), deferred);
     }
     
     private loadPossibleMentors() {
@@ -70,9 +79,16 @@ class editExternalReplicationTask extends viewModelBase {
             .done(mentors => this.possibleMentors(mentors));
     }
 
-    private initObservables() {
-        // Discard test connection result when url has changed
-        this.editedExternalReplication().destinationURL.subscribe(() => this.testConnectionResult(null));
+    private getAllConnectionStrings() {
+        return new getConnectionStringsCommand(this.activeDatabase())
+            .execute()
+            .done((result: Raven.Client.ServerWide.Operations.ConnectionStrings.GetConnectionStringsResult) => {
+                const connectionStringsNames = Object.keys(result.RavenConnectionStrings);
+                this.ravenEtlConnectionStringsNames(_.sortBy(connectionStringsNames, x => x.toUpperCase()));
+            });
+    }
+
+    private initObservables() {        
 
         this.shortErrorText = ko.pureComputed(() => {
             const result = this.testConnectionResult();
@@ -88,9 +104,15 @@ class editExternalReplicationTask extends viewModelBase {
                 model.taskName,
                 model.manualChooseMentor,
                 model.preferredMentor,
-                model.destinationDB,
-                model.destinationURL
+                model.connectionStringName,
+                this.createNewConnectionString                
             ], false, jsonUtil.newLineNormalizingHashFunction);
+
+        this.newConnectionString(connectionStringRavenEtlModel.empty());
+
+        // Discard test connection result when needed
+        this.createNewConnectionString.subscribe(() => this.testConnectionResult(null));
+        this.newConnectionString().inputUrl().discoveryUrlName.subscribe(() => this.testConnectionResult(null));
     }
 
     compositionComplete() {
@@ -101,22 +123,55 @@ class editExternalReplicationTask extends viewModelBase {
     }
 
     saveExternalReplication() {
-        // 1. Validate model
-        if (!this.validate()) {
-             return;
+        let hasAnyErrors = false;
+        this.spinners.save(true);
+        
+        // 1. Validate new connection string (if needed..)
+        let savingNewStringAction = $.Deferred<void>();
+        if (this.createNewConnectionString()) {
+            if (!this.isValid(this.newConnectionString().validationGroup)) {
+                hasAnyErrors = true;
+            }
+            else {
+                // Save & use the new connection string
+                this.newConnectionString()
+                    .saveConnectionString(this.activeDatabase())
+                    .done(() => {
+                        this.editedExternalReplication().connectionStringName(this.newConnectionString().connectionStringName());
+                        savingNewStringAction.resolve();
+                    });
+            }
         }
+        else {
+            savingNewStringAction.resolve();
+        }
+        
+        // 2. Validate model
+        savingNewStringAction.done(() => {
+            if (!this.isValid(this.editedExternalReplication().validationGroup)) {
+                hasAnyErrors = true;
+            }
+        });
+        
+        // todo: spinners 
+        if (hasAnyErrors) {
+            this.spinners.save(false);
+            return false;
+        }
+        
+        // 3. Create/add the new replication task        
+        savingNewStringAction.done(()=> {
+            const dto = this.editedExternalReplication().toDto(this.taskId);
+            this.taskId = this.isAddingNewReplicationTask() ? 0 : this.taskId;
 
-        // 2. Create/add the new replication task
-        const dto = this.editedExternalReplication().toDto(this.taskId);
-
-        this.taskId = this.isAddingNewReplicationTask() ? 0 : this.taskId;
-
-        new saveExternalReplicationTaskCommand(this.activeDatabase(), dto)
-            .execute()
-            .done(() => {
-                this.dirtyFlag().reset();
-                this.goToOngoingTasksView();
-            });
+            new saveExternalReplicationTaskCommand(this.activeDatabase(), dto)
+                .execute()
+                .done(() => {
+                    this.dirtyFlag().reset();
+                    this.goToOngoingTasksView();
+                })
+                .always(() => this.spinners.save(false));
+        });  
     }
    
     cancelOperation() {
@@ -127,26 +182,22 @@ class editExternalReplicationTask extends viewModelBase {
         router.navigate(appUrl.forOngoingTasks(this.activeDatabase()));
     }
 
-    private validate(): boolean {
-        let valid = true;
-
-        if (!this.isValid(this.editedExternalReplication().validationGroup))
-            valid = false;
-
-        return valid;
+    useConnectionString(connectionStringToUse: string) {
+        this.editedExternalReplication().connectionStringName(connectionStringToUse);
     }
+    
+    onTestConnectionRaven(urlToTest: string) {
+        eventsCollector.default.reportEvent("external-replication", "test-connection");
+        this.spinners.test(true);
+        this.newConnectionString().selectedUrlToTest(urlToTest);
 
-    testConnection() {
-        if (this.isValid(this.editedExternalReplication().destinationURL)) {
-            eventsCollector.default.reportEvent("external-replication", "test-connection");
-
-            this.spinners.test(true);
-
-            new testClusterNodeConnectionCommand(this.editedExternalReplication().destinationURL())
-                .execute()
-                .done(result => this.testConnectionResult(result))
-                .always(() => this.spinners.test(false));
-        }
+        this.newConnectionString()
+            .testConnection(urlToTest)
+            .done(result => this.testConnectionResult(result))
+            .always(() => {
+                this.spinners.test(false);
+                this.newConnectionString().selectedUrlToTest(urlToTest);
+            });
     }
 }
 

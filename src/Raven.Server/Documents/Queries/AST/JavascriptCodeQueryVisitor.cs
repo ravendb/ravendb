@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using Sparrow;
 
 namespace Raven.Server.Documents.Queries.AST
@@ -9,6 +11,9 @@ namespace Raven.Server.Documents.Queries.AST
     {
         private readonly StringBuilder _sb;
         private readonly HashSet<string> _knownAliases = new HashSet<string>();
+        private static readonly string[] UnsopportedQueryMethodsInJavascript = {
+            "Search","Boost","Lucene","Exact","Count","Sum","Circle","Wkt","Point","Within","Contains","Disjoint","Intersects","MoreLikeThis"
+        };
 
         public JavascriptCodeQueryVisitor(StringBuilder sb, Query q)
         {
@@ -95,9 +100,72 @@ namespace Raven.Server.Documents.Queries.AST
 
         public override void VisitMethod(MethodExpression expr)
         {
+            // The regex usage here is just temporary, to get things working. Ideally, we want to implement the string functions in Jint
+            if (expr.Name.Value.Equals("startswith", StringComparison.OrdinalIgnoreCase) && expr.Arguments.Count == 2)
+            {
+                _sb.Append("startsWith(");
+                VisitExpression(expr.Arguments[0]);
+                _sb.Append(",");
+                VisitExpression(expr.Arguments[1]);
+                _sb.Append(")");
+                return;
+            }
+            
+            if (expr.Name.Value.Equals("endswith", StringComparison.OrdinalIgnoreCase) && expr.Arguments.Count == 2)
+            {
+                _sb.Append("endsWith(");
+                VisitExpression(expr.Arguments[0]);
+                _sb.Append(",");
+                VisitExpression(expr.Arguments[1]);
+                _sb.Append(")");
+                return;
+            }
+
+            if (expr.Name.Value.Equals("regex", StringComparison.OrdinalIgnoreCase) && expr.Arguments.Count == 2)
+            {
+                _sb.Append("regex(");
+                VisitExpression(expr.Arguments[0]);
+                _sb.Append(",");
+                VisitExpression(expr.Arguments[1]);
+                _sb.Append(")");
+                return;
+            }
+
+            if (expr.Name.Value.Equals("intersect", StringComparison.OrdinalIgnoreCase) && expr.Arguments.Count >= 2)
+            {
+                _sb.Append("(");
+                for (var index = 0; index < expr.Arguments.Count; index++)
+                {
+                    var argument = expr.Arguments[index];
+                    
+                    VisitExpression(argument);
+                    
+                    if (index < expr.Arguments.Count - 1)
+                        _sb.Append(" && ");
+                }
+                
+                _sb.Append(")");
+                return;    
+            }
+            
+            if (expr.Name.Value.Equals("exists", StringComparison.OrdinalIgnoreCase) && expr.Arguments.Count == 1)
+            {
+                _sb.Append("(typeof "); 
+                VisitExpression(expr.Arguments[0]);
+                _sb.Append("!== 'undefined')");
+                return;    
+            }
+            
+            if (UnsopportedQueryMethodsInJavascript.Any(x=>
+                x.Equals(expr.Name.Value, StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new NotSupportedException($"'{expr.Name.Value}' query method is not supported by subscriptions");
+            }
+            
             _sb.Append(expr.Name.Value);
             _sb.Append("(");
 
+            
             if (expr.Name.Value == "id" && expr.Arguments.Count == 0)
             {
                 _sb.Append("this");
@@ -117,7 +185,7 @@ namespace Raven.Server.Documents.Queries.AST
             if (expr.Value == ValueTokenType.String)
                 _sb.Append('"');
             
-            _sb.Append(expr.Token.Value.Replace("\"", "\\\""));
+            _sb.Append(expr.Token.Value.Replace("\\", "\\\\"));
 
             if (expr.Value == ValueTokenType.String)
                 _sb.Append('"');

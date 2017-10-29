@@ -84,12 +84,15 @@ namespace Raven.Client.ServerWide.Operations
         public string DestinationUrl { get; set; }
         public string DestinationDatabase { get; set; }
         public string MentorNode { get; set; }
+        public string ConnectionStringName { get; set; }
+        
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
             json[nameof(DestinationUrl)] = DestinationUrl;
             json[nameof(DestinationDatabase)] = DestinationDatabase;
             json[nameof(MentorNode)] = MentorNode;
+            json[nameof(ConnectionStringName)] = ConnectionStringName;
             return json;
         }
     }

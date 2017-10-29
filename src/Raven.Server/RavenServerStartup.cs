@@ -148,13 +148,14 @@ namespace Raven.Server
 
         private async Task RequestHandler(HttpContext context)
         {
+            string database = null;
             try
             {
                 context.Response.StatusCode = (int)HttpStatusCode.OK;
                 context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
 
                 var sp = Stopwatch.StartNew();
-                var database = await _router.HandlePath(context, context.Request.Method, context.Request.Path.Value);
+                database = await _router.HandlePath(context, context.Request.Method, context.Request.Path.Value);
                 sp.Stop();
 
                 if (_logger.IsInfoEnabled && SkipHttpLogging == false)
@@ -163,29 +164,13 @@ namespace Raven.Server
                 }
 
                 if (TrafficWatchManager.HasRegisteredClients)
-                {
-                    var requestId = Interlocked.Increment(ref _requestId);
-
-                    var twn = new TrafficWatchChange
-                    {
-                        TimeStamp = DateTime.UtcNow,
-                        RequestId = requestId, // counted only for traffic watch
-                        HttpMethod = context.Request.Method ?? "N/A", // N/A ?
-                        ElapsedMilliseconds = sp.ElapsedMilliseconds,
-                        ResponseStatusCode = context.Response.StatusCode,
-                        RequestUri = context.Request.GetEncodedUrl(),
-                        AbsoluteUri = $@"{context.Request.Scheme}://{context.Request.Host}",
-                        DatabaseName = database ?? "N/A",
-                        CustomInfo = "", // TODO: Implement
-                        InnerRequestsCount = 0, // TODO: Implement
-                        QueryTimings = null // TODO: Implement
-                    };
-
-                    TrafficWatchManager.DispatchMessage(twn);
-                }
+                    LogTrafficWatch(context, sp.ElapsedMilliseconds, database);
             }
             catch (Exception e)
             {
+                if (TrafficWatchManager.HasRegisteredClients)
+                    LogTrafficWatch(context, 0, database ?? "N/A");
+
                 if (context.RequestAborted.IsCancellationRequested)
                     return;
 
@@ -230,6 +215,28 @@ namespace Raven.Server
 
                 }
             }
+        }
+
+        private void LogTrafficWatch(HttpContext context, long elapsedMilliseconds, string database)
+        {
+                var requestId = Interlocked.Increment(ref _requestId);
+
+                var twn = new TrafficWatchChange
+                {
+                    TimeStamp = DateTime.UtcNow,
+                    RequestId = requestId, // counted only for traffic watch
+                    HttpMethod = context.Request.Method ?? "N/A", // N/A ?
+                    ElapsedMilliseconds = elapsedMilliseconds,
+                    ResponseStatusCode = context.Response.StatusCode,
+                    RequestUri = context.Request.GetEncodedUrl(),
+                    AbsoluteUri = $@"{context.Request.Scheme}://{context.Request.Host}",
+                    DatabaseName = database ?? "N/A",
+                    CustomInfo = "", // TODO: Implement
+                    InnerRequestsCount = 0, // TODO: Implement
+                    QueryTimings = null // TODO: Implement
+                };
+
+                TrafficWatchManager.DispatchMessage(twn);
         }
 
         private void MaybeAddAdditionalExceptionData(DynamicJsonValue djv, Exception exception)
