@@ -41,5 +41,75 @@ namespace SlowTests.Issues
                 }
             }
         }
+
+        [Fact]
+        public async Task TestNullIntTest()
+        {
+            using (var store = GetDocumentStore())
+            {
+                new DocIndex().Execute(store);
+
+                if (await ShouldInitData(store))
+                {
+                    await InitializeData(store);
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    // This assertion works but the following query in studio returns one result:
+                    // from index 'DocIndex' where IntVal = -9223372036854775808
+                    var filtered = await session.Query<Doc, DocIndex>().Where(x => x.IntVal == long.MinValue).ToListAsync();
+                    Assert.Empty(filtered);
+
+                    var results = await session.Query<Doc, DocIndex>().AggregateBy(x => x.IntVal).CountOn(x => x.Id).ToListAsync();
+                    Assert.Empty(results.Results["IntVal"].Values.Where(x => x.Range == "-9223372036854775808"));
+                    Assert.NotEmpty(results.Results["IntVal"].Values.Where(x => x.Range == "1"));
+                }
+            }
+        }
+
+        private static async Task<bool> ShouldInitData(DocumentStore store)
+        {
+            using (var session = store.OpenAsyncSession())
+            {
+                var doc = await session.LoadAsync<Doc>("doc/1");
+                return doc == null;
+            }
+        }
+
+        private static async Task InitializeData(DocumentStore store)
+        {
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Doc { Id = "doc/1", IntVal = 1 });
+                await session.StoreAsync(new Doc { Id = "doc/2", IntVal = null });
+                await session.SaveChangesAsync();
+            }
+        }
+
+        private class Doc
+        {
+            public string Id { get; set; }
+            public int? IntVal { get; set; }
+        }
+
+        private class DocIndex : AbstractIndexCreationTask<Doc>
+        {
+            public DocIndex()
+            {
+                Map = docs =>
+                    from doc in docs
+                    select new
+                    {
+                        doc.Id,
+                        doc.IntVal,
+                    };
+
+
+                StoreAllFields(FieldStorage.Yes);
+            }
+        }
     }
 }

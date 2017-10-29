@@ -176,12 +176,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 {
                     instance.Add(GetOrCreateField(path, Constants.Documents.Indexing.Fields.NullValue, null, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO));
                     newFields++;
-
-                    foreach (var numericField in GetOrCreateNumericField(field, double.MinValue, storage))
-                    {
-                        instance.Add(numericField);
-                        newFields++;
-                    }
                 }
 
                 return newFields;
