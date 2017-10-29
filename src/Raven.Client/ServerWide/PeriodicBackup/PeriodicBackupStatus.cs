@@ -9,6 +9,8 @@ namespace Raven.Client.ServerWide.PeriodicBackup
 
         public BackupType BackupType { get; set; }
 
+        public bool IsFull { get; set; }
+
         public string NodeTag { get; set; }
 
         public DateTime? LastFullBackup { get; set; }
@@ -44,6 +46,7 @@ namespace Raven.Client.ServerWide.PeriodicBackup
         {
             json[nameof(TaskId)] = TaskId;
             json[nameof(BackupType)] = BackupType;
+            json[nameof(IsFull)] = IsFull;
             json[nameof(NodeTag)] = NodeTag;
             json[nameof(LastFullBackup)] = LastFullBackup;
             json[nameof(LastIncrementalBackup)] = LastIncrementalBackup;

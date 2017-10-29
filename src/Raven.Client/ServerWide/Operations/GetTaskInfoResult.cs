@@ -189,6 +189,7 @@ namespace Raven.Client.ServerWide.Operations
         public List<string> BackupDestinations { get; set; }
         public DateTime? LastFullBackup { get; set; }
         public DateTime? LastIncrementalBackup { get; set; }
+        public RunningBackup OnGoingBackup { get; set; }
         public NextBackup NextBackup { get; set; }
 
         public OngoingTaskBackup()
@@ -203,6 +204,7 @@ namespace Raven.Client.ServerWide.Operations
             json[nameof(BackupDestinations)] = new DynamicJsonArray(BackupDestinations);
             json[nameof(LastFullBackup)] = LastFullBackup;
             json[nameof(LastIncrementalBackup)] = LastIncrementalBackup;
+            json[nameof(OnGoingBackup)] = OnGoingBackup?.ToJson();
             json[nameof(NextBackup)] = NextBackup?.ToJson();
             return json;
         }
@@ -225,6 +227,22 @@ namespace Raven.Client.ServerWide.Operations
             return new DynamicJsonValue
             {
                 [nameof(TimeSpan)] = TimeSpan,
+                [nameof(IsFull)] = IsFull
+            };
+        }
+    }
+
+    public class RunningBackup
+    {
+        public DateTime? StartTime { get; set; }
+
+        public bool IsFull { get; set; }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(StartTime)] = StartTime,
                 [nameof(IsFull)] = IsFull
             };
         }

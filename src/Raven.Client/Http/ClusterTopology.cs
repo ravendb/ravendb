@@ -79,10 +79,14 @@ namespace Raven.Client.Http
 
         public string GetUrlFromTag(string tag)
         {
+            if (tag == null)
+                return null;
+
             if (Members.TryGetValue(tag, out string url) ||
                 Promotables.TryGetValue(tag, out url) ||
                 Watchers.TryGetValue(tag, out url))
                 return url;
+
             return null;
         }
 

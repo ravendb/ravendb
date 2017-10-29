@@ -53,36 +53,18 @@ namespace Raven.Client.ServerWide.PeriodicBackup
             return MentorNode;
         }
 
-        public bool Equals(PeriodicBackupConfiguration other)
+        public bool HasBackupFrequencyChanged(PeriodicBackupConfiguration other)
         {
             if (other == null)
-                return false;
+                return true;
 
             if (Equals(other.FullBackupFrequency, FullBackupFrequency) == false)
-                return false;
+                return true;
 
             if (Equals(other.IncrementalBackupFrequency, IncrementalBackupFrequency) == false)
-                return false;
+                return true;
 
-            if (other.BackupType.Equals(BackupType) == false)
-                return false;
-
-            if (Equals(other.LocalSettings, LocalSettings) == false)
-                return false;
-
-            if (Equals(other.S3Settings, S3Settings) == false)
-                return false;
-
-            if (Equals(other.GlacierSettings, GlacierSettings) == false)
-                return false;
-
-            if (Equals(other.AzureSettings, AzureSettings) == false)
-                return false;
-
-            if (Equals(other.MentorNode, MentorNode) == false)
-                return false;
-
-            return true;
+            return false;
         }
 
         public bool HasBackup()

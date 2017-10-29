@@ -660,15 +660,41 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/backup/database", "POST", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/backup/database", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task BackupDatabase()
         {
-            var taskId = GetIntValueQueryString("taskId");
-            var databaseName = GetStringQueryString("databaseName");
-            var isFullBackup = GetBoolValueQueryString("isFullBackup");
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                DynamicJsonValue result;
 
-            var database = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
-            await database.PeriodicBackupRunner.RunAdhocBackup(taskId ?? -1, isFullBackup ?? true);
+                try
+                {
+                    var taskId = GetLongQueryString("taskId");
+                    var databaseName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+                    var isFullBackup = GetBoolValueQueryString("isFullBackup", required: false);
+
+                    var database = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
+                    database.PeriodicBackupRunner.StartBackupTask(taskId, isFullBackup ?? true);
+
+                    result = new DynamicJsonValue
+                    {
+                        [nameof(NodeConnectionTestResult.Success)] = true,
+                    };
+                }
+                catch (Exception e)
+                {
+                    result = new DynamicJsonValue
+                    {
+                        [nameof(NodeConnectionTestResult.Success)] = false,
+                        [nameof(NodeConnectionTestResult.Error)] = e.ToString()
+                    };
+                }
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, result);
+                }
+            }
         }
 
         [RavenAction("/admin/restore/database", "POST", AuthorizationStatus.Operator)]
