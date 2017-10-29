@@ -554,6 +554,7 @@ more responsive application.
             DocumentInfo value;
             if (DocumentsByEntity.TryGetValue(entity, out value))
             {
+                value.ChangeVector = changeVector ?? value.ChangeVector;
                 value.ConcurrencyCheckMode = forceConcurrencyCheck;
                 return;
             }
