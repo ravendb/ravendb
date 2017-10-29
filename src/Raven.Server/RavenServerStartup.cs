@@ -163,11 +163,14 @@ namespace Raven.Server
                     _logger.Info($"{context.Request.Method} {context.Request.Path.Value}?{context.Request.QueryString.Value} - {context.Response.StatusCode} - {sp.ElapsedMilliseconds:#,#;;0} ms");
                 }
 
-                LogTrafficWatch(context, sp.ElapsedMilliseconds, database);
+                if (TrafficWatchManager.HasRegisteredClients)
+                    LogTrafficWatch(context, sp.ElapsedMilliseconds, database);
             }
             catch (Exception e)
             {
-                LogTrafficWatch(context, 0, database ?? "N/A");
+                if (TrafficWatchManager.HasRegisteredClients)
+                    LogTrafficWatch(context, 0, database ?? "N/A");
+
                 if (context.RequestAborted.IsCancellationRequested)
                     return;
 
@@ -216,8 +219,6 @@ namespace Raven.Server
 
         private void LogTrafficWatch(HttpContext context, long elapsedMilliseconds, string database)
         {
-            if (TrafficWatchManager.HasRegisteredClients)
-            {
                 var requestId = Interlocked.Increment(ref _requestId);
 
                 var twn = new TrafficWatchChange
@@ -236,7 +237,6 @@ namespace Raven.Server
                 };
 
                 TrafficWatchManager.DispatchMessage(twn);
-            }
         }
 
         private void MaybeAddAdditionalExceptionData(DynamicJsonValue djv, Exception exception)
