@@ -339,6 +339,8 @@ namespace Voron.Impl.Scratch
 
             _allocatedPages.Add(shrinked.PositionInScratchBuffer, shrinked);
 
+            _allocatedPagesCount -= value.NumberOfPages - newNumberOfPages;
+
             return shrinked;
         }
 

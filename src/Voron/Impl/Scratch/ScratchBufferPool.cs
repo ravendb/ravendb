@@ -27,7 +27,7 @@ namespace Voron.Impl.Scratch
         private readonly StorageEnvironmentOptions _options;
 
         // Local per scratch file potentially read delayed inconsistent (need guards). All must be modified atomically (but it wont necessarily require a memory barrier)
-        private ScratchBufferItem _current;
+        internal ScratchBufferItem _current;
 
         // Local writable state. Can perform multiple reads, but must never do multiple writes simultaneously.
         private int _currentScratchNumber = -1;
@@ -268,7 +268,7 @@ namespace Voron.Impl.Scratch
             _disposeOnceRunner.Dispose();
         }
 
-        private class ScratchBufferItem
+        internal class ScratchBufferItem
         {
             public readonly int Number;
             public readonly ScratchBufferFile File;
@@ -455,6 +455,7 @@ namespace Voron.Impl.Scratch
             {
                 OldestActiveTransaction = oldestActiveTransaction,
                 NumberOfScratchFiles = _scratchBuffers.Count,
+                CurrentFileNumber = currentFile.Number,
                 CurrentFileSizeInMB = currentFile.Size / 1024L / 1024L,
                 PerScratchFileSizeLimitInMB = _options.MaxScratchBufferSize / 1024L / 1024L
             };
@@ -467,6 +468,7 @@ namespace Voron.Impl.Scratch
                     Name = StorageEnvironmentOptions.ScratchBufferName(scratchBufferItem.File.Number),
                     SizeInKB = scratchBufferItem.File.Size / 1024,
                     NumberOfAllocations = scratchBufferItem.File.NumberOfAllocations,
+                    AllocatedPagesCount = scratchBufferItem.File.AllocatedPagesCount,
                     CanBeDeleted = scratchBufferItem != current && scratchBufferItem.File.HasActivelyUsedBytes(oldestActiveTransaction) == false,
                     TxIdAfterWhichLatestFreePagesBecomeAvailable = scratchBufferItem.File.TxIdAfterWhichLatestFreePagesBecomeAvailable
                 };
