@@ -32,7 +32,7 @@ namespace Raven.Client.ServerWide
             ConnectionStringName = connectionStringName;
         }
 
-        public static void RemoveWatcher(ref List<ExternalReplication> watchers, long taskId)
+        public static void RemoveWatcher(List<ExternalReplication> watchers, long taskId)
         {
             foreach (var watcher in watchers)
             {
@@ -53,21 +53,6 @@ namespace Raven.Client.ServerWide
                 watchers.Remove(watcher);
                 return;
             }
-        }
-
-        internal static (IEnumerable<ExternalReplication> AddedDestinations, IEnumerable<ExternalReplication> RemovedDestiantions) FindChanges(
-            List<ExternalReplication> current, List<ExternalReplication> newDestinations)
-        {
-            if (current == null)
-            {
-                current = new List<ExternalReplication>();
-            }
-            if (newDestinations == null)
-            {
-                newDestinations = new List<ExternalReplication>();
-            }
-
-            return (newDestinations.Except(current), current.Except(newDestinations));
         }
 
         public override DynamicJsonValue ToJson()
@@ -96,12 +81,21 @@ namespace Raven.Client.ServerWide
         {
             unchecked
             {
-                var hashCode = CalculateStringHash(Database);
-                hashCode = (hashCode * 397) ^ CalculateStringHash(ConnectionStringName);
-                hashCode = (hashCode * 397) ^ (ulong)TaskId;
+                var hashCode = (ulong)base.GetHashCode();
+                hashCode = (hashCode * 397) ^ CalculateStringHash(Name);
                 hashCode = (hashCode * 397) ^ CalculateStringHash(MentorNode);
+                hashCode = (hashCode * 397) ^ CalculateStringHash(ConnectionStringName);
                 return (int)hashCode;
             }
+        }
+
+        public override bool IsEqualTo(ReplicationNode other)
+        {
+            var externalReplication = (ExternalReplication)other;
+            return base.IsEqualTo(other) && 
+                   string.Equals(Name, externalReplication.Name, StringComparison.OrdinalIgnoreCase) &&
+                   string.Equals(MentorNode, externalReplication.MentorNode, StringComparison.OrdinalIgnoreCase) &&
+                   string.Equals(ConnectionStringName, externalReplication.ConnectionStringName, StringComparison.OrdinalIgnoreCase);
         }
 
         public string GetMentorNode()
