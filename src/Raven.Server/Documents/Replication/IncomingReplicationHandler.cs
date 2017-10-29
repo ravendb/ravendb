@@ -177,7 +177,7 @@ namespace Raven.Server.Documents.Replication
                             {
                                 if (e is AggregateException ae && 
                                     ae.InnerExceptions.Count == 1 && 
-                                    e.InnerException is SocketException ase)
+                                    ae.InnerException is SocketException ase)
                                 {
                                     HandleSocketException(ase);
                                 }
@@ -192,15 +192,15 @@ namespace Raven.Server.Documents.Replication
                                         if (_log.IsInfoEnabled)
                                             _log.Info("Received unexpected exception while receiving replication batch.", e);
                                 }
-                                
-                                void HandleSocketException(SocketException e)
-                                {
-                                    if (_log.IsInfoEnabled)
-                                        _log.Info("Failed to read data from incoming connection. The incoming connection will be closed and re-created.", e);
-                                }
                             }
 
                             throw;
+                        }
+                        
+                        void HandleSocketException(SocketException e)
+                        {
+                            if (_log.IsInfoEnabled)
+                                _log.Info("Failed to read data from incoming connection. The incoming connection will be closed and re-created.", e);
                         }
                     }
                 }

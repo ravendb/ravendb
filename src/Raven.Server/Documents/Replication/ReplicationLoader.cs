@@ -422,7 +422,7 @@ namespace Raven.Server.Documents.Replication
             return (addedDestinations, removedDestiantions);
         }
 
-        private void HandleExternalReplication(DatabaseRecord newRecord, List<OutgoingReplicationHandler> instancesToDispose, long index)
+        private void HandleExternalReplication(DatabaseRecord newRecord, List<OutgoingReplicationHandler> instancesToDispose)
         {
             var changes = FindExternalReplicationChanges(_externalDestinations, newRecord.ExternalReplication);
 
