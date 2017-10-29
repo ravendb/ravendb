@@ -31,6 +31,7 @@ class editExternalReplicationTask extends viewModelBase {
     fullErrorDetailsVisible = ko.observable<boolean>(false);
 
     shortErrorText: KnockoutObservable<string>;
+    showError = ko.observable<boolean>(true);
 
     createNewConnectionString = ko.observable<boolean>(false);
     newConnectionString = ko.observable<connectionStringRavenEtlModel>();
@@ -126,40 +127,45 @@ class editExternalReplicationTask extends viewModelBase {
         let hasAnyErrors = false;
         this.spinners.save(true);
         
-        // 1. Validate new connection string (if needed..)
-        let savingNewStringAction = $.Deferred<void>();
+        // 1. Validate *new connection string* (if relevant..) 
         if (this.createNewConnectionString()) {
             if (!this.isValid(this.newConnectionString().validationGroup)) {
                 hasAnyErrors = true;
             }
             else {
-                // Save & use the new connection string
-                this.newConnectionString()
-                    .saveConnectionString(this.activeDatabase())
-                    .done(() => {
-                        this.editedExternalReplication().connectionStringName(this.newConnectionString().connectionStringName());
-                        savingNewStringAction.resolve();
-                    });
+                // Use the new connection string
+                this.editedExternalReplication().connectionStringName(this.newConnectionString().connectionStringName());
             }
+        }
+
+        // 2. Validate *general form*
+        if (!this.isValid(this.editedExternalReplication().validationGroup)) {
+            hasAnyErrors = true;
+        }            
+       
+        if (hasAnyErrors) {
+            this.spinners.save(false);
+            return false;
+        }
+
+        // 3. All is well, Save connection string (if relevant..) 
+        let savingNewStringAction = $.Deferred<void>();
+        if (this.createNewConnectionString()) {
+            this.newConnectionString()
+                .saveConnectionString(this.activeDatabase())
+                .done(() => {
+                    savingNewStringAction.resolve();
+                })
+                .fail(() => {
+                    this.spinners.save(false);
+                    return false;
+                });
         }
         else {
             savingNewStringAction.resolve();
         }
         
-        // 2. Validate model
-        savingNewStringAction.done(() => {
-            if (!this.isValid(this.editedExternalReplication().validationGroup)) {
-                hasAnyErrors = true;
-            }
-        });
-        
-        // todo: spinners 
-        if (hasAnyErrors) {
-            this.spinners.save(false);
-            return false;
-        }
-        
-        // 3. Create/add the new replication task        
+        // 4. All is well, Save Replication task
         savingNewStringAction.done(()=> {
             const dto = this.editedExternalReplication().toDto(this.taskId);
             this.taskId = this.isAddingNewReplicationTask() ? 0 : this.taskId;
@@ -190,13 +196,15 @@ class editExternalReplicationTask extends viewModelBase {
         eventsCollector.default.reportEvent("external-replication", "test-connection");
         this.spinners.test(true);
         this.newConnectionString().selectedUrlToTest(urlToTest);
+        this.showError(false);
 
         this.newConnectionString()
             .testConnection(urlToTest)
             .done(result => this.testConnectionResult(result))
             .always(() => {
                 this.spinners.test(false);
-                this.newConnectionString().selectedUrlToTest(urlToTest);
+                this.newConnectionString().selectedUrlToTest("");
+                this.showError(true);
             });
     }
 }

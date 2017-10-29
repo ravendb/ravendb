@@ -123,6 +123,8 @@ namespace Raven.Client.ServerWide.Operations
 
     public class OngoingTaskRavenEtlDetails : OngoingTask
     {
+        public string DestinationUrl{ get; set; }
+        
         public OngoingTaskRavenEtlDetails()
         {
             TaskType = OngoingTaskType.RavenEtl;
@@ -134,7 +136,7 @@ namespace Raven.Client.ServerWide.Operations
         {
             var json = base.ToJson();
             json[nameof(Configuration)] = Configuration?.ToJson();
-
+            json[nameof(DestinationUrl)] = DestinationUrl;
             return json;
         }
     }

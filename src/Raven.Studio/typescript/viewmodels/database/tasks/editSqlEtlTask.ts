@@ -41,6 +41,7 @@ class editSqlEtlTask extends viewModelBase {
     
     fullErrorDetailsVisible = ko.observable<boolean>(false);
     shortErrorText: KnockoutObservable<string>;
+    showError = ko.observable<boolean>(true);
     
     collectionNames: KnockoutComputed<string[]>;
     
@@ -149,12 +150,6 @@ class editSqlEtlTask extends viewModelBase {
         this.showEditTransformationArea = ko.pureComputed(() => !!this.editedTransformationScriptSandbox());
         
         this.initDirtyFlag();
-        
-        this.createNewConnectionString.subscribe((createNew) => {
-            if (createNew) {
-                this.dirtyFlag().forceDirty();
-            }
-        });
 
         this.newConnectionString(connectionStringSqlEtlModel.empty());
     }
@@ -195,9 +190,10 @@ class editSqlEtlTask extends viewModelBase {
             editedSqlTableFlag,
             scriptsCount,
             tablesCount,
-            hasAnyDirtyTransformationScript,
+            hasAnyDirtyTransformationScript,            
             hasAnyDirtySqlTable,
-            
+            this.createNewConnectionString
+
         ], false, jsonUtil.newLineNormalizingHashFunction);
     }
     
@@ -208,23 +204,30 @@ class editSqlEtlTask extends viewModelBase {
     testConnection() {
         eventsCollector.default.reportEvent("SQL-ETL-connection-string", "test-connection");
         this.spinners.test(true);
+        this.showError(false);
         
         // New connection string
         if (this.createNewConnectionString()) {
             this.newConnectionString()
                 .testConnection(this.activeDatabase())
                 .done((testResult) => this.testConnectionResult(testResult))
-                .always(()=> this.spinners.test(false));
+                .always(()=> {
+                    this.spinners.test(false);
+                    this.showError(true);
+                });
         }
         else {
             // Existing connection string
             getConnectionStringInfoCommand.forSqlEtl(this.activeDatabase(), this.editedSqlEtl().connectionStringName())
                 .execute()
-                .done((result: Raven.Client.ServerWide.ETL.SqlConnectionString) => {                       
-                       new connectionStringSqlEtlModel(result, true, [])
+                .done((result: Raven.Client.ServerWide.Operations.ConnectionStrings.GetConnectionStringsResult) => {                       
+                       new connectionStringSqlEtlModel(result.SqlConnectionStrings[this.editedSqlEtl().connectionStringName()], true, [])
                             .testConnection(this.activeDatabase())
                             .done((testResult) => this.testConnectionResult(testResult))
-                            .always(() => this.spinners.test(false));
+                            .always(() => {
+                                this.spinners.test(false);
+                                this.showError(true);
+                            });
                 });                        
         }    
     }
@@ -237,7 +240,8 @@ class editSqlEtlTask extends viewModelBase {
         if (this.showEditSqlTableArea()) {
             if (!this.isValid(this.editedSqlTable().validationGroup)) {                
                 hasAnyErrors = true;
-            } else {
+            } 
+            else {
                 this.saveEditedSqlTable();
             }
         }
@@ -246,53 +250,51 @@ class editSqlEtlTask extends viewModelBase {
         if (this.showEditTransformationArea()) {
             if (!this.isValid(this.editedTransformationScriptSandbox().validationGroup)) {
                 hasAnyErrors = true;  
-            } else {
+            } 
+            else {
                 this.saveEditedTransformation();
             }
         }
         
-        // 3. Validate *new connection string* (if relevant..)
-        let savingNewStringAction = $.Deferred<void>();        
+        // 3. Validate *new connection string* (if relevant..)         
         if (this.createNewConnectionString()) {
             if (!this.isValid(this.newConnectionString().validationGroup)) {
                 hasAnyErrors = true;  
             } 
-            else {               
-                // Save & use the new connection string
-                this.newConnectionString()
-                    .saveConnectionString(this.activeDatabase())
-                    .done(() => { 
-                        this.editedSqlEtl().connectionStringName(this.newConnectionString().connectionStringName());
-                        savingNewStringAction.resolve();
-                     });   
+            else {
+                // Use the new connection string
+                this.editedSqlEtl().connectionStringName(this.newConnectionString().connectionStringName());
             } 
         } 
-        else {
-            savingNewStringAction.resolve();
-        }       
         
         // 4. Validate *general form*
-        savingNewStringAction.done(() => {
-            if (!this.isValid(this.editedSqlEtl().validationGroup)) {
-                hasAnyErrors = true;
-            }
-        });
+        if (!this.isValid(this.editedSqlEtl().validationGroup)) {
+              hasAnyErrors = true;
+        }
         
         if (hasAnyErrors) {
             this.spinners.save(false);
             return false;
         }
-
-        // 5. Validation is OK - Save opened sections (if any)        
-        if (this.showEditTransformationArea()) {
-            this.saveEditedTransformation();
+                
+        // 5. All is well, Save connection string (if relevant..) 
+        let savingNewStringAction = $.Deferred<void>();
+        if (this.createNewConnectionString()) {          
+            this.newConnectionString()
+                .saveConnectionString(this.activeDatabase())
+                .done(() => {
+                    savingNewStringAction.resolve();
+                })
+                .fail(() => {
+                    this.spinners.save(false);
+                    return false;
+                });
+        }
+        else {
+            savingNewStringAction.resolve();
         }
         
-        if (this.showEditSqlTableArea()) {
-            this.saveEditedSqlTable();
-        }
-        
-        // 6. Convert form to dto and send collected data to server
+        // 6. All is well, Save Sql Etl task
         savingNewStringAction.done(()=> {
             const dto = this.editedSqlEtl().toDto();
             saveEtlTaskCommand.forSqlEtl(this.activeDatabase(), dto)

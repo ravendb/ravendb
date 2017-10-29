@@ -2,19 +2,20 @@ import app = require("durandal/app");
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import router = require("plugins/router");
-import ongoingTaskRavenEtlEditModel = require("models/database/tasks/ongoingTaskRavenEtlEditModel");
 import getOngoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskInfoCommand");
 import eventsCollector = require("common/eventsCollector");
-import testClusterNodeConnectionCommand = require("commands/database/cluster/testClusterNodeConnectionCommand");
-import getConnectionStringInfoCommand = require("commands/database/settings/getConnectionStringInfoCommand");
 import getConnectionStringsCommand = require("commands/database/settings/getConnectionStringsCommand");
 import saveEtlTaskCommand = require("commands/database/tasks/saveEtlTaskCommand");
 import generalUtils = require("common/generalUtils");
+import ongoingTaskRavenEtlEditModel = require("models/database/tasks/ongoingTaskRavenEtlEditModel");
 import ongoingTaskRavenEtlTransformationModel = require("models/database/tasks/ongoingTaskRavenEtlTransformationModel");
+import connectionStringRavenEtlModel = require("models/database/settings/connectionStringRavenEtlModel");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import transformationScriptSyntax = require("viewmodels/database/tasks/transformationScriptSyntax");
 import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
+import jsonUtil = require("common/jsonUtil");
+import {RelativeTimeSpec} from "../../../../wwwroot/lib/moment/moment";
 
 class editRavenEtlTask extends viewModelBase {
     
@@ -27,14 +28,19 @@ class editRavenEtlTask extends viewModelBase {
     possibleMentors = ko.observableArray<string>([]);
 
     testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
-    spinners = { 
-        test: ko.observable<boolean>(false) 
+    
+    spinners = {
+        test: ko.observable<boolean>(false),
+        save: ko.observable<boolean>(false)
     };
     
     fullErrorDetailsVisible = ko.observable<boolean>(false);
     shortErrorText: KnockoutObservable<string>;
+    showError = ko.observable<boolean>(true);
     
     connectionStringsUrl = appUrl.forCurrentDatabase().connectionStrings();
+    createNewConnectionString = ko.observable<boolean>(false);
+    newConnectionString = ko.observable<connectionStringRavenEtlModel>();
 
     collections = collectionsTracker.default.collections;
 
@@ -42,7 +48,7 @@ class editRavenEtlTask extends viewModelBase {
         super();
         
         aceEditorBindingHandler.install();
-        this.bindToCurrentInstance("useConnectionString", "testConnection", "removeTransformationScript", "cancelEditedTransformation", "saveEditedTransformation", "syntaxHelp");
+        this.bindToCurrentInstance("useConnectionString", "onTestConnectionRaven", "removeTransformationScript", "cancelEditedTransformation", "saveEditedTransformation", "syntaxHelp"); //testConnection
     }
 
     activate(args: any) {
@@ -99,10 +105,7 @@ class editRavenEtlTask extends viewModelBase {
             });
     }
 
-    private initObservables() {
-        // Discard test connection result when connection string has changed
-        this.editedRavenEtl().connectionStringName.subscribe(() => this.testConnectionResult(null));
-
+    private initObservables() {     
         this.shortErrorText = ko.pureComputed(() => {
             const result = this.testConnectionResult();
             if (!result || result.Success) {
@@ -111,52 +114,99 @@ class editRavenEtlTask extends viewModelBase {
             return generalUtils.trimMessage(result.Error);
         });
 
-        this.dirtyFlag = this.editedRavenEtl().dirtyFlag;
+        this.dirtyFlag = new ko.DirtyFlag([           
+            this.createNewConnectionString,
+            this.editedRavenEtl().dirtyFlag
+        ], false, jsonUtil.newLineNormalizingHashFunction);
+        
+        this.newConnectionString(connectionStringRavenEtlModel.empty());
+        
+        // Discard test connection result when needed
+        this.createNewConnectionString.subscribe(() => this.testConnectionResult(null));
+        this.newConnectionString().inputUrl().discoveryUrlName.subscribe(() => this.testConnectionResult(null));        
     }
 
     useConnectionString(connectionStringToUse: string) {
         this.editedRavenEtl().connectionStringName(connectionStringToUse);
     }
 
-    testConnection() {
+    onTestConnectionRaven(urlToTest: string) {
         eventsCollector.default.reportEvent("ravenDB-ETL-connection-string", "test-connection");
         this.spinners.test(true);
+        this.newConnectionString().selectedUrlToTest(urlToTest);
+        this.showError(false);
 
-        getConnectionStringInfoCommand.forRavenEtl(this.activeDatabase(), this.editedRavenEtl().connectionStringName())
-            .execute()
-            .done((result: Raven.Client.ServerWide.ETL.RavenConnectionString) => {
-                new testClusterNodeConnectionCommand(result.TopologyDiscoveryUrls[0])
-                    .execute()
-                    .done(result => this.testConnectionResult(result))
-                    .always(() => this.spinners.test(false));
-            }
-        );
+        this.newConnectionString()
+            .testConnection(urlToTest)
+            .done(result => this.testConnectionResult(result))
+            .always(() => {
+                this.spinners.test(false);
+                this.newConnectionString().selectedUrlToTest("");
+                this.showError(true);
+            });
     }
 
     saveRavenEtl() {
-        const editedEtl = this.editedRavenEtl();
+        let hasAnyErrors = false;
+        this.spinners.save(true);        
+        let editedEtl = this.editedRavenEtl();
 
-        this.isValid(this.editedRavenEtl().validationGroup);
-        
+        // 1. Validate *edited transformation script*
         if (editedEtl.showEditTransformationArea()) {
             if (!this.isValid(editedEtl.editedTransformationScriptSandbox().validationGroup)) {
-                return false;
+                hasAnyErrors = true;
+            } else {
+                this.saveEditedTransformation();
             }
+        }
+        
+        // 2. Validate *new connection string* (if relevant..)       
+        if (this.createNewConnectionString()) {
+            if (!this.isValid(this.newConnectionString().validationGroup)) {
+                hasAnyErrors = true;
+            }
+            else {
+                // Use the new connection string
+                editedEtl.connectionStringName(this.newConnectionString().connectionStringName());               
+            }
+        }      
 
-            this.saveEditedTransformation();
+        // 3. Validate *general form*               
+        if (!this.isValid(editedEtl.validationGroup)) {
+            hasAnyErrors = true;
         }
 
-        if (!this.isValid(this.editedRavenEtl().validationGroup)) {
+        if (hasAnyErrors) {
+            this.spinners.save(false);
             return false;
         }
 
-        const dto = this.editedRavenEtl().toDto();
+        // 5. All is well, Save connection string (if relevant..) 
+        let savingNewStringAction = $.Deferred<void>();
+        if (this.createNewConnectionString()) {
+            this.newConnectionString()
+                .saveConnectionString(this.activeDatabase())
+                .done(() => {                   
+                    savingNewStringAction.resolve();
+                })
+                .fail(() => {
+                    this.spinners.save(false);
+                    return false;
+                });
+        }
+        else {
+            savingNewStringAction.resolve();
+        }
+
+        // 6. All is well, Save Raven Etl task
+        const dto = editedEtl.toDto();
         saveEtlTaskCommand.forRavenEtl(this.activeDatabase(), dto)
             .execute()
             .done(() => {
-                this.editedRavenEtl().dirtyFlag().reset();
+                editedEtl.dirtyFlag().reset();
                 this.goToOngoingTasksView();
-            });
+            })
+            .always(() => this.spinners.save(false));
     }
 
     addNewTransformation() {

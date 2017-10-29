@@ -27,6 +27,7 @@ class connectionStrings extends viewModelBase {
     fullErrorDetailsVisible = ko.observable<boolean>(false);
 
     shortErrorText: KnockoutObservable<string>;
+    showError = ko.observable<boolean>(true);
 
     constructor() {
         super();
@@ -159,8 +160,8 @@ class connectionStrings extends viewModelBase {
         
         return getConnectionStringInfoCommand.forRavenEtl(this.activeDatabase(), connectionStringName)
             .execute()
-            .done((result: Raven.Client.ServerWide.ETL.RavenConnectionString) => {
-                this.editedRavenEtlConnectionString(new connectionStringRavenEtlModel(result, false, this.getTasksThatUseThisString(connectionStringName, 'RavenEtl')));
+            .done((result: Raven.Client.ServerWide.Operations.ConnectionStrings.GetConnectionStringsResult) => {
+                this.editedRavenEtlConnectionString(new connectionStringRavenEtlModel(result.RavenConnectionStrings[connectionStringName], false, this.getTasksThatUseThisString(connectionStringName, 'RavenEtl')));
                 this.editedRavenEtlConnectionString().topologyDiscoveryUrls.subscribe(() => this.clearTestResult());
                 this.editedRavenEtlConnectionString().inputUrl().discoveryUrlName.subscribe(() => this.testConnectionResult(null));
                 this.editedSqlEtlConnectionString(null);
@@ -172,8 +173,8 @@ class connectionStrings extends viewModelBase {
         
         return getConnectionStringInfoCommand.forSqlEtl(this.activeDatabase(), connectionStringName)
             .execute()
-            .done((result: Raven.Client.ServerWide.ETL.SqlConnectionString) => {
-                this.editedSqlEtlConnectionString(new connectionStringSqlEtlModel(result, false, this.getTasksThatUseThisString(connectionStringName, 'SqlEtl')));
+            .done((result: Raven.Client.ServerWide.Operations.ConnectionStrings.GetConnectionStringsResult) => {
+                this.editedSqlEtlConnectionString(new connectionStringSqlEtlModel(result.SqlConnectionStrings[connectionStringName], false, this.getTasksThatUseThisString(connectionStringName, 'SqlEtl')));
                 this.editedSqlEtlConnectionString().connectionString.subscribe(() => this.clearTestResult());
                 this.editedRavenEtlConnectionString(null);
             });
@@ -187,6 +188,7 @@ class connectionStrings extends viewModelBase {
     }
 
     onTestConnectionSql() { 
+        this.showError(false);
         const sqlConnectionString = this.editedSqlEtlConnectionString();
 
         if (sqlConnectionString) {
@@ -196,12 +198,16 @@ class connectionStrings extends viewModelBase {
                 this.spinners.test(true);
                 sqlConnectionString.testConnection(this.activeDatabase())
                     .done((testResult) => this.testConnectionResult(testResult))
-                    .always(() => this.spinners.test(false));           
+                    .always(() => {
+                        this.spinners.test(false);
+                        this.showError(true);
+                    });           
             }
         }
     }  
     
-    onTestConnectionRaven(urlToTest: string) {                     
+    onTestConnectionRaven(urlToTest: string) {
+        this.showError(false);
         const ravenConnectionString = this.editedRavenEtlConnectionString();
         eventsCollector.default.reportEvent("ravenDB-ETL-connection-string", "test-connection");
         
@@ -213,6 +219,7 @@ class connectionStrings extends viewModelBase {
             .always(() => { 
                 this.spinners.test(false); 
                 ravenConnectionString.selectedUrlToTest(""); 
+                this.showError(true);
             });
     }
     

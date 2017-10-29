@@ -3,8 +3,12 @@
         <div class="col-xs-12 col-lg-6 flex-vertical">
             <form class="flex-form" data-bind="submit: saveRavenEtl">
                 <div class="flex-header">
-                    <button type="submit" class="btn btn-primary" data-bind="enable: $root.dirtyFlag().isDirty"><i class="icon-save"></i><span>Save</span></button>
-                    <button data-bind="click: cancelOperation" class="btn btn-default"><i class="icon-cancel"></i><span>Cancel</span></button>
+                    <button type="submit" class="btn btn-primary" data-bind="enable: $root.dirtyFlag().isDirty, disable: $root.spinners.save(), css: { 'btn-spinner': $root.spinners.save }">
+                        <i class="icon-save"></i><span>Save</span>
+                    </button>
+                    <button data-bind="click: cancelOperation" class="btn btn-default" title="Return to Ongoing Tasks View">
+                        <i class="icon-cancel"></i><span>Cancel</span>
+                    </button>
                 </div>
                 <div class="panel">
                     <div class="panel-body" data-bind="with: editedRavenEtl">                       
@@ -13,6 +17,22 @@
                             <label for="taskName" class="control-label">Task Name</label>
                             <div class="flex-grow">
                                 <input type="text" autocomplete="off" class="form-control" id="taskName" placeholder="Enter a descriptive name for the RavenDB ETL task (optional)" data-bind="textInput: taskName">
+                            </div>
+                        </div>                       
+                        <div data-bind="if: $root.activeDatabase() && $root.activeDatabase().isEncrypted"> 
+                            <div class="form-group">
+                                <label class="control-label">&nbsp;</label>
+                                <div class="bg-info inline-block padding padding-xs small">
+                                    <i class="icon-info"></i>
+                                    &nbsp;Note:&nbsp;&nbsp;Database&nbsp;<strong data-bind="text: $root.activeDatabase().name"></strong>&nbsp;is encrypted
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="control-label">&nbsp;</label>
+                                <div class="toggle">
+                                    <input id="toggle-non-encrypted-channel" type="checkbox" data-bind="checked: allowEtlOnNonEncryptedChannel">
+                                    <label  for="toggle-non-encrypted-channel">Allow ETL on non-encrypted communication channel</label>
+                                </div>
                             </div>
                         </div>
                         <div class="form-group">
@@ -39,12 +59,29 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="form-group"
-                             data-bind="validationOptions: { insertMessages: false }, validationElement: connectionStringName">
+                        <div class="form-group" data-bind="visible: !$root.isAddingNewRavenEtlTask()">
+                            <label for="url" class="control-label">Destination URL</label>
+                            <div class="flex-grow">
+                                <input type="text" class="form-control" data-bind="textInput: destinationURL" id="url" disabled>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label">&nbsp;</label>
+                            <div class="toggle">
+                                <input id="createNewString" type="checkbox" data-bind="checked: $root.createNewConnectionString">
+                                <label for="createNewString">Create new RavenDB connection string</label>
+                            </div>
+                        </div>
+                        <div data-bind="collapse: $root.createNewConnectionString, with: $root.newConnectionString">
+                            <div class="form-group">
+                                <div class="flex-grow" data-bind="compose: 'database/settings/connectionStringRaven.html'"></div>
+                            </div>
+                        </div>
+                        <div class="form-group" data-bind="validationOptions: { insertMessages: false }, validationElement: connectionStringName, visible: !$root.createNewConnectionString()">
                             <label class="control-label">Connection String</label>
                             <div class="flex-grow">
-                                <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown"
-                                        data-bind="attr: { disabled: $root.ravenEtlConnectionStringsNames().length == 0 }">
+                                <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown"
+                                        data-bind="textInput: connectionStringName, disable: $root.ravenEtlConnectionStringsNames().length === 0">
                                     <span data-bind="text: connectionStringName() || 'Select a connection string'"></span>
                                     <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
                                 </button>
@@ -57,49 +94,28 @@
                                 <span class="help-block" data-bind="validationMessage: connectionStringName"></span>
                             </div>
                         </div>
-                        <div data-bind="if: $root.activeDatabase() && $root.activeDatabase().isEncrypted">
-                            <div class="form-group">
-                                <label class="control-label">&nbsp;</label>
-                                <div class="bg-info inline-block padding padding-xs small">
-                                    <i class="icon-info"></i>
-                                    &nbsp;Note:&nbsp;&nbsp;Database&nbsp;<strong data-bind="text: $root.activeDatabase().name"></strong>&nbsp;is encrypted
+                    </div>
+                    <div>
+                        <div data-bind="if: createNewConnectionString">
+                            <div class="panel-addon" data-bind="with: testConnectionResult">
+                                <div data-bind="if: $root.showError()">
+                                    <div class="padding bg-success small" data-bind="visible: Success">
+                                        <div>Successfully connected to node</div>
+                                    </div>
+                                    <div class="padding bg-danger small" data-bind="visible: !Success">
+                                        Connection test failed: <span data-bind="text: $root.fullErrorDetailsVisible() ? Error : $root.shortErrorText()"></span>
+                                        <div>
+                                            <a href="#" data-bind="click: $root.fullErrorDetailsVisible.toggle.bind($root.fullErrorDetailsVisible), text: $root.fullErrorDetailsVisible() ? 'hide details' : 'show details'"></a>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="form-group">
-                                <label class="control-label">&nbsp;</label>
-                                <div class="toggle">
-                                    <input id="toggle-non-encrypted-channel" type="checkbox" data-bind="checked: allowEtlOnNonEncryptedChannel">
-                                    <label  for="toggle-non-encrypted-channel">Allow ETL on non-encrypted communication channel</label>
-                                </div>
-                            </div>
                         </div>
-                        <div class="flex-horizontal">
-                            <div class="flex-grow">
+                        <div class="panel-addon" data-bind="visible: ravenEtlConnectionStringsNames().length === 0 && !createNewConnectionString()">
+                            <div class="padding bg-warning small">
+                                <i class="icon-warning"></i>&nbsp;&nbsp;No connection strings have been defined yet
+                                <a data-bind="attr: { href: connectionStringsUrl }"> - Click here to define a new connection string</a>
                             </div>
-                            <div>
-                                <button type="submit" class="btn btn-default btn-info" title="Test the connection string connection"
-                                        data-bind="click: $root.testConnection, disable: !connectionStringName() || $root.spinners.test(), css: { 'btn-spinner': $root.spinners.test }">
-                                    <i class="icon-rocket"></i>
-                                    <span>Test Connection</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="panel-addon" data-bind="with: testConnectionResult">
-                        <div class="padding bg-success small" data-bind="visible: Success">
-                            <div>Successfully connected to node</div>
-                        </div>
-                        <div class="padding bg-danger small" data-bind="visible: !Success">
-                            Connection test failed: <span data-bind="text: $root.fullErrorDetailsVisible() ? Error : $root.shortErrorText()"></span>
-                            <div>
-                                <a href="#" data-bind="click: $root.fullErrorDetailsVisible.toggle.bind($root.fullErrorDetailsVisible), text: $root.fullErrorDetailsVisible() ? 'hide details' : 'show details'"></a>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="panel-addon" data-bind="visible: ravenEtlConnectionStringsNames().length == 0">
-                        <div class="padding bg-warning small">
-                            <span class="icon-warning"></span>&nbsp;&nbsp;No connection strings have been defined yet
-                            <a data-bind="attr: { href: connectionStringsUrl }"> - Click here to define a new connection string</a>
                         </div>
                     </div>
                 </div>
