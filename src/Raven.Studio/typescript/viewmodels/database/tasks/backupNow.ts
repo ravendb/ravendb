@@ -17,10 +17,6 @@ class deleteDatabaseConfirm extends confirmViewModelBase<backupNowConfirmResult>
         this.confirm();
     }
 
-    protected getCofirmButton(): HTMLElement {
-        return $(".modal-footer:visible .btn-danger")[0] as HTMLElement;
-    }
-
     protected prepareResponse(can: boolean): backupNowConfirmResult {
         return {
             can: can,

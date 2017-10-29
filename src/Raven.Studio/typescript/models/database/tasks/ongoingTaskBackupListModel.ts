@@ -127,14 +127,9 @@ class ongoingTaskBackupListModel extends ongoingTask {
     }
 
     refreshBackupInfo() {
-        const deferred = $.Deferred();
-
-        ongoingTaskInfoCommand.forBackup(this.activeDatabase(), this.taskId)
+        return ongoingTaskInfoCommand.forBackup(this.activeDatabase(), this.taskId)
             .execute()
-            .done((result: Raven.Client.ServerWide.Operations.OngoingTaskBackup) => this.update(result))
-            .always(() => deferred.resolve());
-
-        return deferred;
+            .done((result: Raven.Client.ServerWide.Operations.OngoingTaskBackup) => this.update(result));
     }
 
     backupNow() {
@@ -147,9 +142,7 @@ class ongoingTaskBackupListModel extends ongoingTask {
                     this.backupNowInProgress(true);
 
                     const task = new backupNowCommand(this.activeDatabase(), this.taskId, confirmResult.isFullBackup);
-                    task.execute().always(() => {
-                        this.refreshBackupInfo().always(() => this.backupNowInProgress(false));
-                    });
+                    task.execute().always(() => this.refreshBackupInfo().always(() => this.backupNowInProgress(false)));
                 }
             });
 

@@ -75,7 +75,7 @@ abstract class dialogViewModelBase {
     }
 
     protected enterKeyPressed(): boolean {
-        const confirmButton = this.getCofirmButton();
+        const confirmButton = this.getConfirmButton();
         if (confirmButton && confirmButton.click) {
             confirmButton.click();
         }
@@ -83,7 +83,7 @@ abstract class dialogViewModelBase {
         return true;
     }
 
-    protected getCofirmButton(): HTMLElement {
+    protected getConfirmButton(): HTMLElement {
         return $(".modal-footer:visible .btn-primary")[0] as HTMLElement;
     }
 

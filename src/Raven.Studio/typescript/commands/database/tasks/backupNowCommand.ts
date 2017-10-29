@@ -7,7 +7,7 @@ class backupNowCommand extends commandBase {
         super();
     }
  
-    execute(): JQueryPromise<Raven.Server.Web.System.NodeConnectionTestResult> {
+    execute(): JQueryPromise<void> {
         const url = endpoints.global.adminDatabases.adminBackupDatabase +
             this.urlEncodeArgs({
                 name: this.db.name,
