@@ -41,7 +41,6 @@ class editSqlEtlTask extends viewModelBase {
     
     fullErrorDetailsVisible = ko.observable<boolean>(false);
     shortErrorText: KnockoutObservable<string>;
-    showError = ko.observable<boolean>(true);
     
     collectionNames: KnockoutComputed<string[]>;
     
@@ -204,7 +203,7 @@ class editSqlEtlTask extends viewModelBase {
     testConnection() {
         eventsCollector.default.reportEvent("SQL-ETL-connection-string", "test-connection");
         this.spinners.test(true);
-        this.showError(false);
+        this.testConnectionResult(null);
         
         // New connection string
         if (this.createNewConnectionString()) {
@@ -213,7 +212,6 @@ class editSqlEtlTask extends viewModelBase {
                 .done((testResult) => this.testConnectionResult(testResult))
                 .always(()=> {
                     this.spinners.test(false);
-                    this.showError(true);
                 });
         }
         else {
@@ -226,7 +224,6 @@ class editSqlEtlTask extends viewModelBase {
                             .done((testResult) => this.testConnectionResult(testResult))
                             .always(() => {
                                 this.spinners.test(false);
-                                this.showError(true);
                             });
                 });                        
         }    
@@ -287,7 +284,6 @@ class editSqlEtlTask extends viewModelBase {
                 })
                 .fail(() => {
                     this.spinners.save(false);
-                    return false;
                 });
         }
         else {

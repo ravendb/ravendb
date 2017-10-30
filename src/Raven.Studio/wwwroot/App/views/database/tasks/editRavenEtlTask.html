@@ -24,7 +24,7 @@
                                 <label class="control-label">&nbsp;</label>
                                 <div class="bg-info inline-block padding padding-xs small">
                                     <i class="icon-info"></i>
-                                    &nbsp;Note:&nbsp;&nbsp;Database&nbsp;<strong data-bind="text: $root.activeDatabase().name"></strong>&nbsp;is encrypted
+                                    Note: Database <strong data-bind="text: $root.activeDatabase().name"></strong> is encrypted
                                 </div>
                             </div>
                             <div class="form-group">
@@ -98,15 +98,13 @@
                     <div>
                         <div data-bind="if: createNewConnectionString">
                             <div class="panel-addon" data-bind="with: testConnectionResult">
-                                <div data-bind="if: $root.showError()">
-                                    <div class="padding bg-success small" data-bind="visible: Success">
-                                        <div>Successfully connected to node</div>
-                                    </div>
-                                    <div class="padding bg-danger small" data-bind="visible: !Success">
-                                        Connection test failed: <span data-bind="text: $root.fullErrorDetailsVisible() ? Error : $root.shortErrorText()"></span>
-                                        <div>
-                                            <a href="#" data-bind="click: $root.fullErrorDetailsVisible.toggle.bind($root.fullErrorDetailsVisible), text: $root.fullErrorDetailsVisible() ? 'hide details' : 'show details'"></a>
-                                        </div>
+                                <div class="padding bg-success small" data-bind="visible: Success">
+                                    <div>Successfully connected to node</div>
+                                </div>
+                                <div class="padding bg-danger small" data-bind="visible: !Success">
+                                    Connection test failed: <span data-bind="text: $root.fullErrorDetailsVisible() ? Error : $root.shortErrorText()"></span>
+                                    <div>
+                                        <a href="#" data-bind="click: $root.fullErrorDetailsVisible.toggle.bind($root.fullErrorDetailsVisible), text: $root.fullErrorDetailsVisible() ? 'hide details' : 'show details'"></a>
                                     </div>
                                 </div>
                             </div>

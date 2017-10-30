@@ -29,9 +29,7 @@ class editExternalReplicationTask extends viewModelBase {
     };
 
     fullErrorDetailsVisible = ko.observable<boolean>(false);
-
     shortErrorText: KnockoutObservable<string>;
-    showError = ko.observable<boolean>(true);
 
     createNewConnectionString = ko.observable<boolean>(false);
     newConnectionString = ko.observable<connectionStringRavenEtlModel>();
@@ -158,7 +156,6 @@ class editExternalReplicationTask extends viewModelBase {
                 })
                 .fail(() => {
                     this.spinners.save(false);
-                    return false;
                 });
         }
         else {
@@ -196,15 +193,14 @@ class editExternalReplicationTask extends viewModelBase {
         eventsCollector.default.reportEvent("external-replication", "test-connection");
         this.spinners.test(true);
         this.newConnectionString().selectedUrlToTest(urlToTest);
-        this.showError(false);
+        this.testConnectionResult(null);
 
         this.newConnectionString()
             .testConnection(urlToTest)
             .done(result => this.testConnectionResult(result))
             .always(() => {
                 this.spinners.test(false);
-                this.newConnectionString().selectedUrlToTest("");
-                this.showError(true);
+                this.newConnectionString().selectedUrlToTest(null);
             });
     }
 }

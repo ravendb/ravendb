@@ -108,16 +108,14 @@
                     </div>
                 </form>
                 <div class="panel-addon" data-bind="with: testConnectionResult">
-                    <div data-bind="if: $root.showError()">
-                        <div class="padding bg-success small" data-bind="visible: Success">
-                            <div data-bind="visible: $root.editedRavenEtlConnectionString()">Successfully connected to node</div>
-                            <div data-bind="visible: $root.editedSqlEtlConnectionString()">Successfully connected to SQL Sever</div>
-                        </div>
-                        <div class="padding bg-danger small" data-bind="visible: !Success">
-                            Connection test failed: <span data-bind="text: $root.fullErrorDetailsVisible() ? Error : $root.shortErrorText()"></span>
-                            <div>
-                                <a href="#" data-bind="click: $root.fullErrorDetailsVisible.toggle.bind($root.fullErrorDetailsVisible), text: $root.fullErrorDetailsVisible() ? 'hide details' : 'show details'"></a>
-                            </div>
+                    <div class="padding bg-success small" data-bind="visible: Success">
+                        <div data-bind="visible: $root.editedRavenEtlConnectionString()">Successfully connected to node</div>
+                        <div data-bind="visible: $root.editedSqlEtlConnectionString()">Successfully connected to SQL Sever</div>
+                    </div>
+                    <div class="padding bg-danger small" data-bind="visible: !Success">
+                        Connection test failed: <span data-bind="text: $root.fullErrorDetailsVisible() ? Error : $root.shortErrorText()"></span>
+                        <div>
+                            <a href="#" data-bind="click: $root.fullErrorDetailsVisible.toggle.bind($root.fullErrorDetailsVisible), text: $root.fullErrorDetailsVisible() ? 'hide details' : 'show details'"></a>
                         </div>
                     </div>
                 </div>

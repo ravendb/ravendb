@@ -27,7 +27,6 @@ class connectionStrings extends viewModelBase {
     fullErrorDetailsVisible = ko.observable<boolean>(false);
 
     shortErrorText: KnockoutObservable<string>;
-    showError = ko.observable<boolean>(true);
 
     constructor() {
         super();
@@ -187,8 +186,8 @@ class connectionStrings extends viewModelBase {
                                     x => x.taskName.toUpperCase()) : [];    
     }
 
-    onTestConnectionSql() { 
-        this.showError(false);
+    onTestConnectionSql() {
+        this.testConnectionResult(null);
         const sqlConnectionString = this.editedSqlEtlConnectionString();
 
         if (sqlConnectionString) {
@@ -200,14 +199,13 @@ class connectionStrings extends viewModelBase {
                     .done((testResult) => this.testConnectionResult(testResult))
                     .always(() => {
                         this.spinners.test(false);
-                        this.showError(true);
                     });           
             }
         }
     }  
     
     onTestConnectionRaven(urlToTest: string) {
-        this.showError(false);
+        this.testConnectionResult(null);
         const ravenConnectionString = this.editedRavenEtlConnectionString();
         eventsCollector.default.reportEvent("ravenDB-ETL-connection-string", "test-connection");
         
@@ -218,8 +216,7 @@ class connectionStrings extends viewModelBase {
             .done((testResult) => this.testConnectionResult(testResult))
             .always(() => { 
                 this.spinners.test(false); 
-                ravenConnectionString.selectedUrlToTest(""); 
-                this.showError(true);
+                ravenConnectionString.selectedUrlToTest(null); 
             });
     }
     

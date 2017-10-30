@@ -15,7 +15,6 @@ import transformationScriptSyntax = require("viewmodels/database/tasks/transform
 import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import jsonUtil = require("common/jsonUtil");
-import {RelativeTimeSpec} from "../../../../wwwroot/lib/moment/moment";
 
 class editRavenEtlTask extends viewModelBase {
     
@@ -36,7 +35,6 @@ class editRavenEtlTask extends viewModelBase {
     
     fullErrorDetailsVisible = ko.observable<boolean>(false);
     shortErrorText: KnockoutObservable<string>;
-    showError = ko.observable<boolean>(true);
     
     connectionStringsUrl = appUrl.forCurrentDatabase().connectionStrings();
     createNewConnectionString = ko.observable<boolean>(false);
@@ -134,15 +132,14 @@ class editRavenEtlTask extends viewModelBase {
         eventsCollector.default.reportEvent("ravenDB-ETL-connection-string", "test-connection");
         this.spinners.test(true);
         this.newConnectionString().selectedUrlToTest(urlToTest);
-        this.showError(false);
+        this.testConnectionResult(null);
 
         this.newConnectionString()
             .testConnection(urlToTest)
             .done(result => this.testConnectionResult(result))
             .always(() => {
                 this.spinners.test(false);
-                this.newConnectionString().selectedUrlToTest("");
-                this.showError(true);
+                this.newConnectionString().selectedUrlToTest(null);                
             });
     }
 
@@ -191,7 +188,6 @@ class editRavenEtlTask extends viewModelBase {
                 })
                 .fail(() => {
                     this.spinners.save(false);
-                    return false;
                 });
         }
         else {
