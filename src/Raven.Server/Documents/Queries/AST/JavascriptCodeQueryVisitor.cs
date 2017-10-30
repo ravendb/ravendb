@@ -100,9 +100,12 @@ namespace Raven.Server.Documents.Queries.AST
 
         public override void VisitMethod(MethodExpression expr)
         {
-            // The regex usage here is just temporary, to get things working. Ideally, we want to implement the string functions in Jint
-            if (expr.Name.Value.Equals("startswith", StringComparison.OrdinalIgnoreCase) && expr.Arguments.Count == 2)
+            if (expr.Name.Value.Equals("startswith", StringComparison.OrdinalIgnoreCase))
             {
+                if (expr.Arguments.Count != 2)
+                {
+                    throw new InvalidOperationException("startsWith(text, prefix) must be called with two string paremters");
+                }
                 _sb.Append("startsWith(");
                 VisitExpression(expr.Arguments[0]);
                 _sb.Append(",");
@@ -111,8 +114,12 @@ namespace Raven.Server.Documents.Queries.AST
                 return;
             }
             
-            if (expr.Name.Value.Equals("endswith", StringComparison.OrdinalIgnoreCase) && expr.Arguments.Count == 2)
+            if (expr.Name.Value.Equals("endswith", StringComparison.OrdinalIgnoreCase))
             {
+                if (expr.Arguments.Count != 2)
+                {
+                    throw new InvalidOperationException("endsWith(text, suffix) must be called with two string paremters");
+                }
                 _sb.Append("endsWith(");
                 VisitExpression(expr.Arguments[0]);
                 _sb.Append(",");
@@ -121,8 +128,12 @@ namespace Raven.Server.Documents.Queries.AST
                 return;
             }
 
-            if (expr.Name.Value.Equals("regex", StringComparison.OrdinalIgnoreCase) && expr.Arguments.Count == 2)
+            if (expr.Name.Value.Equals("regex", StringComparison.OrdinalIgnoreCase))
             {
+                if (expr.Arguments.Count != 2)
+                {
+                    throw new InvalidOperationException("regex(text, regex) must be called with two string paremters");
+                }
                 _sb.Append("regex(");
                 VisitExpression(expr.Arguments[0]);
                 _sb.Append(",");
@@ -131,8 +142,12 @@ namespace Raven.Server.Documents.Queries.AST
                 return;
             }
 
-            if (expr.Name.Value.Equals("intersect", StringComparison.OrdinalIgnoreCase) && expr.Arguments.Count >= 2)
+            if (expr.Name.Value.Equals("intersect", StringComparison.OrdinalIgnoreCase))
             {
+                if (expr.Arguments.Count < 2)
+                {
+                    throw new InvalidOperationException("intersect(logical statement, logical statement, ..) must be called with two or more logical statements parameters");
+                }
                 _sb.Append("(");
                 for (var index = 0; index < expr.Arguments.Count; index++)
                 {
@@ -148,8 +163,12 @@ namespace Raven.Server.Documents.Queries.AST
                 return;    
             }
             
-            if (expr.Name.Value.Equals("exists", StringComparison.OrdinalIgnoreCase) && expr.Arguments.Count == 1)
+            if (expr.Name.Value.Equals("exists", StringComparison.OrdinalIgnoreCase))
             {
+                if (expr.Arguments.Count != 1)
+                {
+                    throw new InvalidOperationException("exists(field name) must be called with one string paremter");
+                }
                 _sb.Append("(typeof "); 
                 VisitExpression(expr.Arguments[0]);
                 _sb.Append("!== 'undefined')");
@@ -168,6 +187,10 @@ namespace Raven.Server.Documents.Queries.AST
             
             if (expr.Name.Value == "id" && expr.Arguments.Count == 0)
             {
+                if (expr.Arguments.Count != 1)
+                {
+                    throw new InvalidOperationException("id(document) must be called with one document paremter");
+                }
                 _sb.Append("this");
             }
 
