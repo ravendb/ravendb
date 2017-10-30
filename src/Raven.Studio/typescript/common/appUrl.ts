@@ -149,8 +149,9 @@ class appUrl {
         return "#admin/settings/topology";
     }
 
-    static forTrafficWatch(): string {
-        return "#admin/settings/trafficWatch";
+    static forTrafficWatch(initialFilter: string = undefined): string {
+        const filter = _.isUndefined(initialFilter) ? "" : "?filter=" + encodeURIComponent(initialFilter);
+        return "#admin/settings/trafficWatch" + filter;
     }
 
     static forLicenseInformation(): string {
@@ -260,7 +261,7 @@ class appUrl {
         return "#databases/status/requests/tracing?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forIndexPerformance(db: database | databaseInfo, indexName?: string): string {
+    static forIndexPerformance(db: database | databaseInfo | string, indexName?: string): string {
         return `#databases/indexes/performance?${(appUrl.getEncodedDbPart(db))}&${appUrl.getEncodedIndexNamePart(indexName)}`;
     }
 
@@ -324,7 +325,7 @@ class appUrl {
         return '#databases/status/subscriptions?' + appUrl.getEncodedDbPart(db); 
     }
 
-    static forStatusStorageReport(db: database | databaseInfo): string {
+    static forStatusStorageReport(db: database | databaseInfo | string): string {
         return '#databases/status/storage/report?' + appUrl.getEncodedDbPart(db);
     }
 
@@ -401,8 +402,8 @@ class appUrl {
             collectionName = null;
 
         const collectionPart = collectionName ? "collection=" + encodeURIComponent(collectionName) : "";
-        const databasePart = _.isString(db) ? "&database=" + encodeURIComponent(db) : appUrl.getEncodedDbPart(db);
-        return "#databases/documents?" + collectionPart + databasePart;
+        
+        return "#databases/documents?" + collectionPart + appUrl.getEncodedDbPart(db);
     }
 
     static forRevisionsBin(db: database | databaseInfo): string {
@@ -639,8 +640,12 @@ class appUrl {
         return appUrl.currentDbComputeds;
     }
 
-    private static getEncodedDbPart(db?: database | databaseInfo) {
-        return db ? "&database=" + encodeURIComponent(db.name) : "";
+    private static getEncodedDbPart(db?: database | databaseInfo | string) {
+        if (!db) {
+            return "";
+        }
+        
+        return "&database=" + encodeURIComponent(_.isString(db) ? db : db.name);
     }
     
     private static getEncodedIndexNamePart(indexName?: string) {
