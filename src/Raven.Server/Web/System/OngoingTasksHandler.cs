@@ -371,11 +371,6 @@ namespace Raven.Server.Web.System
                                 break;
                             }
 
-                            tag = dbTopology?.WhoseTaskIsIt(backupConfiguration, ServerStore.Engine.CurrentState);
-                            var backupDestinations = GetBackupDestinations(backupConfiguration);
-                            var backupStatus = Database.PeriodicBackupRunner.GetBackupStatus(key);
-                            var nextBackup = Database.PeriodicBackupRunner.GetNextBackupDetails(record, backupConfiguration, backupStatus);
-
                             var backupTaskInfo = GetOngoingTaskBackup(key, record, backupConfiguration, dbTopology, clusterTopology);
 
                             WriteResult(context, backupTaskInfo);
