@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide.PeriodicBackup
@@ -28,6 +29,8 @@ namespace Raven.Client.ServerWide.PeriodicBackup
         public UploadToFtp UploadToFtp;
 
         public long? LastEtag { get; set; }
+
+        public Dictionary<string, long> LastTombstoneEtagsByCollection { get; set; } = new Dictionary<string, long>();
 
         public string FolderName { get; set; }
 

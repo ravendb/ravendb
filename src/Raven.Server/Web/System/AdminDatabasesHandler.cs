@@ -15,6 +15,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using NCrontab.Advanced;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
@@ -678,15 +679,15 @@ namespace Raven.Server.Web.System
 
                     result = new DynamicJsonValue
                     {
-                        [nameof(NodeConnectionTestResult.Success)] = true,
+                        [nameof(CommandResult.Success)] = true,
                     };
                 }
                 catch (Exception e)
                 {
                     result = new DynamicJsonValue
                     {
-                        [nameof(NodeConnectionTestResult.Success)] = false,
-                        [nameof(NodeConnectionTestResult.Error)] = e.ToString()
+                        [nameof(CommandResult.Success)] = false,
+                        [nameof(CommandResult.Error)] = e.ToString()
                     };
                 }
 

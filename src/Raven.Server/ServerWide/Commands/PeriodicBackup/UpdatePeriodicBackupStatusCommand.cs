@@ -9,6 +9,7 @@ namespace Raven.Server.ServerWide.Commands.PeriodicBackup
     {
         public PeriodicBackupStatus PeriodicBackupStatus;
 
+        // ReSharper disable once UnusedMember.Local
         private UpdatePeriodicBackupStatusCommand() : base(null)
         {
             // for deserialization
