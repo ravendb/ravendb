@@ -40,8 +40,16 @@ class machineResourcesSection {
     onData(data: Raven.Server.Dashboard.MachineResources) {
         this.totalMemory = data.TotalMemory;
         
-        this.cpuChart.onData(moment.utc(data.Date).toDate(), [{ key: "cpu", value: data.CpuUsage }]);
-        this.memoryChart.onData(moment.utc(data.Date).toDate(), [{ key: "memory", value: data.MemoryUsage }]);
+        this.cpuChart.onData(moment.utc(data.Date).toDate(), 
+            [
+                    { key: "machine", value: data.MachineCpuUsage },
+                    { key: "process", value: data.ProcessCpuUsage }
+                ]);
+        this.memoryChart.onData(moment.utc(data.Date).toDate(), 
+            [
+                    { key: "machine", value: data.MachineMemoryUsage },
+                    { key: "process", value: data.ProcessMemoryUsage }
+                  ]);
         
         if (this.resources()) {
             this.resources().update(data);
@@ -259,7 +267,16 @@ class trafficSection {
         
         this.trafficChart = new dashboardChart("#trafficChart", {
             useSeparateYScales: true,
-            topPaddingProvider: key => (key === "writes") ? 20 : 5
+            topPaddingProvider: key => {
+                switch (key) {
+                    case "written":
+                        return 30;
+                    case "writes":
+                        return 20;
+                    default:
+                        return 5;
+                }
+            }
         });
     }
     
@@ -288,11 +305,14 @@ class trafficSection {
         this.updateTotals();
         
         this.trafficChart.onData(moment.utc(data.Date).toDate(), [{
-            key: "requests",
-            value: this.totalRequestsPerSecond()
-        }, {
             key: "writes",
             value: this.totalWritesPerSecond()
+        }, {
+            key: "written",
+            value: this.totalDataWritesPerSecond()
+        },{
+            key: "requests",
+            value: this.totalRequestsPerSecond()
         }]);
         
         this.gridController().reset(false);
