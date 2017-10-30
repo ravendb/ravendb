@@ -101,10 +101,10 @@
                     <div class="infogrid">
                         <div class="infogrid-label">
                             <div class="margin-bottom"># Total Requests/s<br/>
-                                <i class="total-requests-legend"></i>
+                                <i class="total-requests-legend legend-rect"></i>
                                 <strong data-bind="text: totalRequestsPerSecond().toLocaleString()"></strong></div>
-                            <div class="margin-bottom"># Writes/s<br/> <i class="total-writes-legend" ></i> <strong data-bind="text: totalWritesPerSecond().toLocaleString()"></strong></div>
-                            <div># Data Written/s<br /> <i class="total-written-legend"></i> <strong data-bind="text: $root.sizeFormatter(totalDataWritesPerSecond())"></strong></div>
+                            <div class="margin-bottom"># Writes/s<br/> <i class="total-writes-legend legend-rect" ></i> <strong data-bind="text: totalWritesPerSecond().toLocaleString()"></strong></div>
+                            <div># Data Written/s<br /> <i class="total-written-legend legend-rect"></i> <strong data-bind="text: $root.sizeFormatter(totalDataWritesPerSecond())"></strong></div>
                         </div>
                         <div class="infogrid-graph">
                             <div class="graph-container fix-size" id="trafficChart"></div>
@@ -151,6 +151,7 @@
                         <div class="infogrid margin-right margin-right-sm">
                             <div class="infogrid-label">
                                 <div># Docs indexed/s<br/>
+                                    <i class="indexed-legend legend-rect"></i>
                                     <strong data-bind="text: totalIndexedPerSecond().toLocaleString()"></strong>
                                 </div>
                             </div>
@@ -160,10 +161,12 @@
                             <div class="infogrid-label">
                                 <div class="margin-bottom">
                                     # Docs mapped/s<br />
+                                    <i class="mapped-legend legend-rect"></i>
                                     <strong data-bind="text: totalMappedPerSecond().toLocaleString()"></strong>
                                 </div>
                                 <div>
                                     # Docs reduced/s<br />
+                                    <i class="reduced-legend legend-rect"></i>
                                     <strong data-bind="text: totalReducedPerSecond().toLocaleString()"></strong>
                                 </div>
                             </div>
