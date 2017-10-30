@@ -123,7 +123,7 @@ namespace Raven.Client.ServerWide.Operations
 
     public class OngoingTaskRavenEtlDetails : OngoingTask
     {
-        public string DestinationUrl{ get; set; }
+        public string DestinationUrl { get; set; }
         
         public OngoingTaskRavenEtlDetails()
         {
