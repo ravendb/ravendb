@@ -23,7 +23,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-9188")]
         public async Task CanCompact()
         {
             var path = NewDataPath();
