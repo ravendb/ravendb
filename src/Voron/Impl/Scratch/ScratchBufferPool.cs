@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Sparrow.Collections.LockFree;
+using Sparrow.LowMemory;
 using Sparrow.Threading;
 using Voron.Global;
 using Voron.Impl.Paging;
@@ -20,7 +21,7 @@ namespace Voron.Impl.Scratch
     /// This class relies on external synchronization and is not meant to be used in multiple
     /// threads at the same time
     /// </summary>
-    public unsafe class ScratchBufferPool : IDisposable
+    public unsafe class ScratchBufferPool : ILowMemoryHandler, IDisposable
     {
         private readonly StorageEnvironment _env;
         // Immutable state. 
@@ -39,6 +40,10 @@ namespace Voron.Impl.Scratch
         private readonly LinkedList<ScratchBufferItem> _recycleArea = new LinkedList<ScratchBufferItem>();
 
         private readonly DisposeOnce<ExceptionRetry> _disposeOnceRunner;
+
+        private long _lastLowMemoryEventTicks = 0;
+        private readonly long _lowMemoryIntervalTicks = TimeSpan.FromMinutes(3).Ticks;
+        private readonly MultipleUseFlag _lowMemoryFlag = new MultipleUseFlag();
 
         public ScratchBufferPool(StorageEnvironment env)
         {
@@ -64,6 +69,8 @@ namespace Voron.Impl.Scratch
             _options = env.Options;
             _current = NextFile(_options.InitialLogFileSize, null);
             UpdateCacheForPagerStatesOfAllScratches();
+
+            LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
         }
 
         public Dictionary<int, PagerState> GetPagerStatesOfAllScratches()
@@ -102,7 +109,7 @@ namespace Voron.Impl.Scratch
 
         internal long GetNumberOfAllocations(int scratchNumber)
         {
-            // While used only in tests, there is no multithread risk. 
+            // while used only in tests, there is no multi thread risk. 
             return _scratchBuffers[scratchNumber].File.NumberOfAllocations;
         }
 
@@ -210,12 +217,13 @@ namespace Voron.Impl.Scratch
             scratch.File.Free(page, txId);
             if (scratch.File.AllocatedPagesCount != 0)
                 return;
-
+            
             while (_recycleArea.First != null)
             {
                 var recycledScratch = _recycleArea.First.Value;
 
-                if (DateTime.UtcNow - recycledScratch.RecycledAt <= TimeSpan.FromMinutes(1))
+                if (IsLowMemory() == false && 
+                    DateTime.UtcNow - recycledScratch.RecycledAt <= TimeSpan.FromMinutes(1))
                     break;
 
                 _recycleArea.RemoveFirst();
@@ -225,11 +233,11 @@ namespace Voron.Impl.Scratch
                     // even though this was in the recycle area, there might still be some transactions looking at it
                     // so we cannot dispose it right now, the disposal will happen in RemoveInactiveScratches 
                     // when we are sure it's really no longer in use
+
                     continue;
                 }
 
-                ScratchBufferItem _;
-                _scratchBuffers.TryRemove(recycledScratch.Number, out _);
+                _scratchBuffers.TryRemove(recycledScratch.Number, out var _);
                 recycledScratch.File.Dispose();
             }
 
@@ -251,12 +259,15 @@ namespace Voron.Impl.Scratch
                 _current = newCurrent;
             }
 
-            TryRecyleScratchFile(scratch);
+            TryRecycleScratchFile(scratch);
         }
 
-        private void TryRecyleScratchFile(ScratchBufferItem scratch)
+        private void TryRecycleScratchFile(ScratchBufferItem scratch)
         {
             if (scratch.File.Size != _current.File.Size)
+                return;
+
+            if (IsLowMemory())
                 return;
 
             scratch.RecycledAt = DateTime.UtcNow;
@@ -486,6 +497,26 @@ namespace Voron.Impl.Scratch
             }
 
             return scratchBufferPoolInfo;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool IsLowMemory()
+        {
+            if (_lowMemoryFlag.IsRaised())
+                return true;
+
+            return DateTime.UtcNow.Ticks - _lastLowMemoryEventTicks <= _lowMemoryIntervalTicks;
+        }
+
+        public void LowMemory()
+        {
+            _lastLowMemoryEventTicks = DateTime.UtcNow.Ticks;
+            _lowMemoryFlag.Raise();
+        }
+
+        public void LowMemoryOver()
+        {
+            _lowMemoryFlag.Lower();
         }
     }
 }
