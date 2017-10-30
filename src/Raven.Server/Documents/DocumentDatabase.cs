@@ -511,6 +511,7 @@ namespace Raven.Server.Documents
                 IndexStore?.RunIdleOperations();
                 Operations?.CleanupOperations();
                 PeriodicBackupRunner?.RemoveInactiveCompletedTasks();
+                DocumentsStorage.Environment.ScratchBufferPool.Cleanup();
             }
             finally
             {

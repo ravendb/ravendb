@@ -15,6 +15,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Client.Documents.Linq.Indexing;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Util;
@@ -95,16 +96,6 @@ namespace Raven.Server.Documents.Indexes
         /// </summary>
         private CancellationTokenSource _indexingProcessCancellationTokenSource;
 
-        /// <summary>
-        /// If not null, a batch of indexing work is in progress. Cancelling
-        /// this token source will force the current indexing batch work to 
-        /// end prematurely. This does NOT abort the indexing process, but
-        /// merely forces the batch to restart.
-        /// 
-        /// Example usage is adjusting the memory allocation parameters.
-        /// </summary>
-        private CancellationTokenSource _batchProcessCancellationTokenSource;
-
         protected DocumentDatabase DocumentDatabase;
 
         private Thread _indexingThread;
@@ -156,6 +147,10 @@ namespace Raven.Server.Documents.Indexes
         protected PerformanceHintsConfiguration PerformanceHints;
 
         private bool _allocationCleanupNeeded;
+        private readonly MultipleUseFlag _lowMemoryFlag = new MultipleUseFlag();
+        private long _lastLowMemoryEventTicks = 0;
+        private readonly long _lowMemoryIntervalTicks = TimeSpan.FromMinutes(1).Ticks;
+
         private Size _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
         private NativeMemory.ThreadStats _threadAllocations;
         private string _errorStateReason;
@@ -477,6 +472,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     try
                     {
+                        LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
                         ExecuteIndexing();
                     }
                     catch (Exception e)
@@ -702,7 +698,11 @@ namespace Raven.Server.Documents.Indexes
 
                         var lastDoc = DocumentDatabase.DocumentsStorage.GetByEtag(databaseContext, lastDocEtag);
 
-                        stalenessReasons.Add($"There are still some documents to process from collection '{collection}'. The last document etag in that collection is '{lastDocEtag}' ({Constants.Documents.Metadata.Id}: '{lastDoc.Id}', {Constants.Documents.Metadata.LastModified}: '{lastDoc.LastModified}'), but last processed document etag for that collection is '{lastProcessedDocEtag}'.");
+                        stalenessReasons.Add($"There are still some documents to process from collection '{collection}'. " +
+                                             $"The last document etag in that collection is '{lastDocEtag:#,#;;0}' " +
+                                             $"({Constants.Documents.Metadata.Id}: '{lastDoc.Id}', " +
+                                             $"{Constants.Documents.Metadata.LastModified}: '{lastDoc.LastModified}'), " +
+                                             $"but last processed document etag for that collection is '{lastProcessedDocEtag:#,#;;0}'.");
                     }
 
                     var lastTombstoneEtag = GetLastTombstoneEtagInCollection(databaseContext, collection);
@@ -714,7 +714,11 @@ namespace Raven.Server.Documents.Indexes
 
                         var lastTombstone = DocumentDatabase.DocumentsStorage.GetTombstoneByEtag(databaseContext, lastTombstoneEtag);
 
-                        stalenessReasons.Add($"There are still some tombstones to process from collection '{collection}'. The last tombstone etag in that collection is '{lastTombstoneEtag}' ({Constants.Documents.Metadata.Id}: '{lastTombstone.LowerId}', {Constants.Documents.Metadata.LastModified}: '{lastTombstone.LastModified}'), but last processed tombstone etag for that collection is '{lastProcessedTombstoneEtag}'.");
+                        stalenessReasons.Add($"There are still some tombstones to process from collection '{collection}'. " +
+                                             $"The last tombstone etag in that collection is '{lastTombstoneEtag:#,#;;0}' " +
+                                             $"({Constants.Documents.Metadata.Id}: '{lastTombstone.LowerId}', " +
+                                             $"{Constants.Documents.Metadata.LastModified}: '{lastTombstone.LastModified}'), " +
+                                             $"but last processed tombstone etag for that collection is '{lastProcessedTombstoneEtag:#,#;;0}'.");
                     }
                 }
                 else
@@ -727,7 +731,12 @@ namespace Raven.Server.Documents.Indexes
 
                         var lastDoc = DocumentDatabase.DocumentsStorage.GetByEtag(databaseContext, lastDocEtag);
 
-                        stalenessReasons.Add($"There are still some documents to process from collection '{collection}'. The last document etag in that collection is '{lastDocEtag}' ({Constants.Documents.Metadata.Id}: '{lastDoc.Id}', {Constants.Documents.Metadata.LastModified}: '{lastDoc.LastModified}') with cutoff set to '{cutoff.Value}', but last processed document etag for that collection is '{lastProcessedDocEtag}'.");
+                        stalenessReasons.Add($"There are still some documents to process from collection '{collection}'. " +
+                                             $"The last document etag in that collection is '{lastDocEtag:#,#;;0}' " +
+                                             $"({Constants.Documents.Metadata.Id}: '{lastDoc.Id}', " +
+                                             $"{Constants.Documents.Metadata.LastModified}: '{lastDoc.LastModified}') " +
+                                             $"with cutoff set to '{cutoff.Value}', " +
+                                             $"but last processed document etag for that collection is '{lastProcessedDocEtag:#,#;;0}'.");
                     }
 
                     var hasTombstones = DocumentDatabase.DocumentsStorage.HasTombstonesWithDocumentEtagBetween(databaseContext,
@@ -795,7 +804,7 @@ namespace Raven.Server.Documents.Indexes
                 try
                 {
                     _contextPool.SetMostWorkInGoingToHappenonThisThread();
-
+                    
                     DocumentDatabase.Changes.OnDocumentChange += HandleDocumentChange;
                     storageEnvironment.OnLogsApplied += HandleLogsApplied;
 
@@ -824,42 +833,20 @@ namespace Raven.Server.Documents.Indexes
                                 try
                                 {
                                     _indexingProcessCancellationTokenSource.Token.ThrowIfCancellationRequested();
-                                    _batchProcessCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_indexingProcessCancellationTokenSource.Token);
 
                                     try
                                     {
                                         TimeSpentIndexing.Start();
                                         var lastAllocatedBytes = GC.GetAllocatedBytesForCurrentThread();
 
-                                        didWork = DoIndexingWork(scope, _batchProcessCancellationTokenSource.Token);
-
+                                        didWork = DoIndexingWork(scope, _indexingProcessCancellationTokenSource.Token);
+                                        batchCompleted = true;
                                         lastAllocatedBytes = GC.GetAllocatedBytesForCurrentThread() - lastAllocatedBytes;
                                         scope.AddAllocatedBytes(lastAllocatedBytes);
                                     }
-                                    catch (OperationCanceledException)
-                                    {
-                                        // We are here because the batch has been cancelled. This may happen
-                                        // because the database is shutting down, or the batch has been
-                                        // cancelled by some other internal process. If the database is
-                                        // shutting down, then we throw again to handle shutdown.
-                                        if (_indexingProcessCancellationTokenSource.IsCancellationRequested)
-                                        {
-                                            throw;
-                                        }
-                                    }
                                     finally
                                     {
-
                                         TimeSpentIndexing.Stop();
-
-                                        // If we are here, then the previous block did not throw. There's two
-                                        // possibilities: either the batch was not cancelled, and we really
-                                        // did finish the work, or the batch was cancelled, but not because of
-                                        // a database shutdown
-
-                                        batchCompleted = _batchProcessCancellationTokenSource != null &&
-                                            _batchProcessCancellationTokenSource.IsCancellationRequested == false;
-                                        _batchProcessCancellationTokenSource = null;
                                     }
 
                                     _indexingBatchCompleted.SetAndResetAtomically();
@@ -2311,12 +2298,54 @@ namespace Raven.Server.Documents.Indexes
             return null;
         }
 
+        private int? _minBatchSize;
+
+        private const int MinMapBatchSize = 128;
+        private const int MinMapReduceBatchSize = 64;
+
+        private int MinBatchSize
+        {
+            get
+            {
+                if (_minBatchSize != null)
+                    return _minBatchSize.Value;
+
+                switch (Type)
+                {
+                    case IndexType.Map:
+                    case IndexType.AutoMap:
+                        _minBatchSize = MinMapBatchSize;
+                        break;
+                    case IndexType.MapReduce:
+                    case IndexType.AutoMapReduce:
+                        _minBatchSize = MinMapReduceBatchSize;
+                        break;
+                    default:
+                        throw new ArgumentException($"Unknown index type {Type}");
+                }
+
+                return _minBatchSize.Value;
+            }
+        }
+
+        public int GetPageSize()
+        {
+            return IsLowMemory() ? MinBatchSize : int.MaxValue;
+        }
+
         public bool CanContinueBatch(
             IndexingStatsScope stats,
             DocumentsOperationContext documentsOperationContext,
-            TransactionOperationContext indexingContext)
+            TransactionOperationContext indexingContext,
+            int count)
         {
             stats.RecordMapAllocations(_threadAllocations.TotalAllocated);
+
+            if (_lowMemoryFlag.IsRaised() && count > MinBatchSize)
+            {
+                stats.RecordMapCompletedReason($"The batch was stopped after processing {MinBatchSize} documents because of low memory");
+                return false;
+            }
 
             if (_firstBatchTimeout.HasValue && stats.Duration > _firstBatchTimeout)
             {
@@ -2549,15 +2578,22 @@ namespace Raven.Server.Documents.Indexes
         {
             _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
             _allocationCleanupNeeded = true;
-            _batchProcessCancellationTokenSource?.Cancel();
+            _lowMemoryFlag.Raise();
+            _lastLowMemoryEventTicks = DateTime.UtcNow.Ticks;
         }
 
-        /// <summary>
-        /// We don't need to do anything when the low memory problem is over,
-        /// the class will automatically raise memory usage.
-        /// </summary>
         public void LowMemoryOver()
         {
+            _lowMemoryFlag.Lower();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool IsLowMemory()
+        {
+            if (_lowMemoryFlag.IsRaised())
+                return true;
+
+            return DateTime.UtcNow.Ticks - _lastLowMemoryEventTicks <= _lowMemoryIntervalTicks;
         }
 
         private Regex GetOrAddRegex(string arg)

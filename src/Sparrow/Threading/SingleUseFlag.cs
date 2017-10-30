@@ -83,6 +83,9 @@ namespace Sparrow.Threading
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static implicit operator bool(SingleUseFlag flag)
         {
+            if (flag == null)
+                return false;
+
             return flag.IsRaised();
         }
     }

@@ -685,7 +685,7 @@ namespace Voron
 
             var message = $"Waited for {wait} for transaction write lock, but could not get it";
             if (copy != null)
-                message += $", the tx is currently owned by thread {copy.Id} - {copy.Name}";
+                message += $", the tx is currently owned by thread {copy.Id} - {copy.Name}, OS thread id: {copy.UnmanagedThreadId}";
 
             throw new TimeoutException(message);
         }

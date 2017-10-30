@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             return moreWorkFound;
         }
 
-        public bool CanContinueBatch(DocumentsOperationContext documentsContext, TransactionOperationContext indexingContext, IndexingStatsScope stats, long currentEtag, long maxEtag)
+        public bool CanContinueBatch(DocumentsOperationContext documentsContext, TransactionOperationContext indexingContext, IndexingStatsScope stats, long currentEtag, long maxEtag, int count)
         {
             if (stats.Duration >= _configuration.MapTimeout.AsTimeSpan)
                 return false;
@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             if (currentEtag >= maxEtag && stats.Duration >= _configuration.MapTimeoutAfterEtagReached.AsTimeSpan)
                 return false;
 
-            if (_index.CanContinueBatch(stats, documentsContext, indexingContext) == false)
+            if (_index.CanContinueBatch(stats, documentsContext, indexingContext, count) == false)
                 return false;
 
             return true;
@@ -207,7 +207,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                                     _logger.Info($"Failed to execute mapping function on '{current.Id}' for '{_index.Name} ({_index.Etag})'.", e);
                                             }
 
-                                            if (CanContinueBatch(databaseContext, indexContext, collectionStats, lastEtag, lastCollectionEtag) == false)
+                                            if (CanContinueBatch(databaseContext, indexContext, collectionStats, lastEtag, lastCollectionEtag, batchCount) == false)
                                             {
                                                 keepRunning = false;
                                                 break;

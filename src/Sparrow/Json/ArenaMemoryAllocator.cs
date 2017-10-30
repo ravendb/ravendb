@@ -67,7 +67,6 @@ namespace Sparrow.Json
             _lowMemoryFlag = lowMemoryFlag;
         }
 
-
         public bool GrowAllocation(AllocatedMemoryData allocation, int sizeIncrease)
         {
             byte* end = allocation.Address + allocation.SizeInBytes;
@@ -157,9 +156,6 @@ namespace Sparrow.Json
 
         private void GrowArena(int requestedSize)
         {
-            if (_lowMemoryFlag)
-                throw new LowMemoryException($"Request to grow the arena by {requestedSize} because we are under memory pressure");
-
             if (requestedSize >= MaxArenaSize)
                 throw new ArgumentOutOfRangeException(nameof(requestedSize));
 
@@ -171,7 +167,6 @@ namespace Sparrow.Json
             long newSize = Math.Max(Bits.NextPowerOf2(requestedSize) * 3, _initialSize);
             if (newSize > MaxArenaSize)
                 newSize = MaxArenaSize;
-
 
             NativeMemory.ThreadStats thread;
             var newBuffer = NativeMemory.AllocateMemory(newSize, out thread);
