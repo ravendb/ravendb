@@ -291,6 +291,22 @@ namespace Raven.Server.Documents.Subscriptions
             return subscription;
         }
 
+        public bool TryGetRunningSubscriptionConnection(long subscriptionId, out SubscriptionConnection connection)
+        {
+            connection = null;
+
+            if (_subscriptionConnectionStates.TryGetValue(subscriptionId, out var state) == false)
+                return false;
+
+            var stateConnection = state.Connection;
+            if (stateConnection == null)
+                return false;
+
+            connection = stateConnection;
+
+            return true;
+        }
+
         public SubscriptionConnectionState GetSubscriptionConnection(TransactionOperationContext context, string subscriptionName)
         {
             var subscriptionBlittable = _serverStore.Cluster.Read(context, SubscriptionState.GenerateSubscriptionItemKeyName(_db.Name, subscriptionName));
