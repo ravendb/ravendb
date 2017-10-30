@@ -62,7 +62,7 @@ class driveUsage {
                 items: this.items()
             }), () => {
                 return [
-                    new hyperlinkColumn<driveUsageDetails>(grid, x => x.database(), x => appUrl.forDocuments(null, x.database()), "Database", "60%"),
+                    new hyperlinkColumn<driveUsageDetails>(grid, x => x.database(), x => appUrl.forStatusStorageReport(x.database()), "Database", "60%"),
                     new textColumn<driveUsageDetails>(grid, x => this.sizeFormatter(x.size()), "Size", "30%"),
                 ];
             });
