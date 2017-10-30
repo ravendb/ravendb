@@ -396,7 +396,7 @@ namespace Raven.Server.Documents.Patch
             private JsValue GetMetadata(JsValue self, JsValue[] args)
             {
                 if (args.Length != 1 || !(args[0].AsObject() is BlittableObjectInstance boi))               
-                    throw new InvalidOperationException("getMetadata(id) must be called with a single entity argument");
+                    throw new InvalidOperationException("getMetadata(doc) must be called with a single entity argument");
 
                 if (!(boi.Blittable[Constants.Documents.Metadata.Key] is BlittableJsonReaderObject metadata))
                     return JsValue.Null;
