@@ -432,7 +432,7 @@ namespace Raven.Server.Documents.Patch
             private JsValue Regex(JsValue self, JsValue[] args)
             {
                 if (args.Length != 2 || args[0].IsString() == false || args[1].IsString() == false)
-                    throw new InvalidOperationException("startsWith(text, contained) must be called with two string paremters");
+                    throw new InvalidOperationException("regex(text, regex) must be called with two string paremters");
 
                 var regex = _regexCache.Get(args[1].AsString());
                 
