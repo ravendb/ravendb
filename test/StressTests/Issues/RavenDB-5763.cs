@@ -1,6 +1,5 @@
 ﻿using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Replication;
 using SlowTests.Server.Replication;
 using Xunit;
 

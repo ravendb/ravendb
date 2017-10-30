@@ -7,29 +7,44 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Blittable;
 using FastTests.Client.Attachments;
-using FastTests.Issues;
 using FastTests.Server.Documents.Expiration;
 using FastTests.Server.Documents.Indexing.Static;
 using FastTests.Smuggler;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Identity;
+using Raven.Server.Utils;
 using SlowTests.Client.Attachments;
 using SlowTests.Server.Documents.Indexing;
 using SlowTests.Smuggler;
+using Sparrow.Logging;
+using StressTests.Server.Replication;
 
-namespace RavenDB4RCTests
+/*
+    Code reference - please DO NOT REMOVE:
+         
+    DebuggerAttachedTimeout.DisableLongTimespan = true;
+    
+    Console.WriteLine(Process.GetCurrentProcess().Id);
+    Console.WriteLine();
+    
+    LoggingSource.Instance.SetupLogMode(LogMode.Information, @"c:\work\ravendb\logs");
+ */
+
+namespace Tryouts
 {
     class Program
     {
         static void Main(string[] args)
         {
-            for (int i = 0; i < 100; i++)
+            DebuggerAttachedTimeout.DisableLongTimespan = true;
+
+            Console.WriteLine(Process.GetCurrentProcess().Id);
+            Console.WriteLine();
+
+            for (int i = 0; i < 10000; i++)
             {
                 Console.WriteLine(i);
-                using (var test = new RavenDB_9055())
-                {
-                    test.AggressivelyCacheWorksWhenTopologyUpdatesIsDisable();
-                }
+                new ExternalReplicationStressTests().ExternalReplicationShouldWorkWithSmallTimeoutStress();
             }
         }
 

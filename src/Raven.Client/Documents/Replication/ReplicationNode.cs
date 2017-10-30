@@ -42,10 +42,10 @@ namespace Raven.Client.Documents.Replication
 
         public bool Equals(ReplicationNode other) => IsEqualTo(other);
 
-        public bool IsEqualTo(ReplicationNode other)
+        public virtual bool IsEqualTo(ReplicationNode other)
         {
-            return string.Equals(Url, other.Url, StringComparison.OrdinalIgnoreCase) &&
-                   string.Equals(Database, other.Database, StringComparison.OrdinalIgnoreCase);
+            return string.Equals(Database, other.Database, StringComparison.OrdinalIgnoreCase) && 
+                   Disabled == other.Disabled;
         }
 
         public override bool Equals(object obj)
@@ -60,10 +60,9 @@ namespace Raven.Client.Documents.Replication
         {
             unchecked
             {
-                var hashCode = CalculateStringHash(Url);
-                hashCode = (hashCode * 397) ^ CalculateStringHash(Database);
-                hashCode = (hashCode * 397) ^ CalculateStringHash(Disabled.ToString());
-                return (int)hashCode;
+                var hashCode = (int)CalculateStringHash(Database);
+                hashCode = (hashCode * 397) ^ Disabled.GetHashCode();
+                return hashCode;
             }
         }
 

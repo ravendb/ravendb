@@ -20,6 +20,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
+using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Platform;
@@ -255,7 +256,8 @@ namespace Tests.Infrastructure
             Func<T, bool> predicate,
             int timeout = 10000)
         {
-            if (Debugger.IsAttached)
+            if (DebuggerAttachedTimeout.DisableLongTimespan == false &&
+                Debugger.IsAttached)
                 timeout *= 100;
 
             var sw = Stopwatch.StartNew();

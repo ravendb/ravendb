@@ -29,7 +29,7 @@ namespace Raven.Server.ServerWide.Commands
             switch (TaskType)
             {
                 case OngoingTaskType.Replication:
-                   ExternalReplication.RemoveWatcher(ref record.ExternalReplication,TaskId);
+                   ExternalReplication.RemoveWatcher(record.ExternalReplication,TaskId);
                     break;
 
                 case OngoingTaskType.Backup:

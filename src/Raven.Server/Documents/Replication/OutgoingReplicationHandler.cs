@@ -308,31 +308,61 @@ namespace Raven.Server.Documents.Replication
                     }
                 }
             }
+            catch (AggregateException e)
+            {
+                if (e.InnerExceptions.Count == 1)
+                {
+                    if (e.InnerException is OperationCanceledException oce)
+                    {
+                        HandleOperationCancelException(oce);
+                    }
+                    if (e.InnerException is IOException ioe)
+                    {
+                        HandleIOException(ioe);
+                    }
+                }
+                
+                HandleException(e);
+            }
             catch (OperationCanceledException e)
             {
-                if (_log.IsInfoEnabled)
-                    _log.Info($"Operation canceled on replication thread ({FromToString}). This is not necessary due to an issue. Stopped the thread.");
-                Failed?.Invoke(this, e);
+                HandleOperationCancelException(e);
             }
             catch (IOException e)
+            {
+                HandleIOException(e);
+            }
+            catch (Exception e)
+            {
+                HandleException(e);
+            }
+
+            void HandleOperationCancelException(OperationCanceledException e)
+            {
+                if (_log.IsInfoEnabled)
+                    _log.Info($"Operation canceled on replication thread ({FromToString}). " +
+                              $"This is not necessary due to an issue. Stopped the thread.");
+                Failed?.Invoke(this, e);
+            }
+
+            void HandleIOException(IOException e)
             {
                 if (_log.IsInfoEnabled)
                 {
                     if (e.InnerException is SocketException)
-                        _log.Info(
-                            $"SocketException was thrown from the connection to remote node ({FromToString}). This might mean that the remote node is done or there is a network issue.",
-                            e);
+                        _log.Info($"SocketException was thrown from the connection to remote node ({FromToString}). " +
+                                  $"This might mean that the remote node is done or there is a network issue.", e);
                     else
                         _log.Info($"IOException was thrown from the connection to remote node ({FromToString}).", e);
                 }
                 Failed?.Invoke(this, e);
             }
-            catch (Exception e)
+
+            void HandleException(Exception e)
             {
                 if (_log.IsInfoEnabled)
-                    _log.Info(
-                        $"Unexpected exception occurred on replication thread ({FromToString}). Replication stopped (will be retried later).",
-                        e);
+                    _log.Info($"Unexpected exception occurred on replication thread ({FromToString}). " +
+                              $"Replication stopped (will be retried later).", e);
                 Failed?.Invoke(this, e);
             }
         }

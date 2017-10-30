@@ -72,6 +72,22 @@ namespace Raven.Client.ServerWide
         {
             return $"[{NodeTag}/{Url}]";
         }
+
+        public override bool IsEqualTo(ReplicationNode other)
+        {
+            return base.IsEqualTo(other) && 
+                   string.Equals(Url, other.Url, StringComparison.OrdinalIgnoreCase);
+        }
+        
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = base.GetHashCode();
+                hashCode = (hashCode * 397) ^ (int)CalculateStringHash(Url);
+                return hashCode;
+            }
+        }
     }
 
     public class DatabaseTopology
