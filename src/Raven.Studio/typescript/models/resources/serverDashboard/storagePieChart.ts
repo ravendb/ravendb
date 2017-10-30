@@ -6,6 +6,7 @@ class storagePieChart {
 
     private width: number;
     private svg: d3.Selection<void>;
+    private colorScale: d3.scale.Ordinal<string, string>;
     
     constructor(containerSelector: string) {
         const container = d3.select(containerSelector);
@@ -30,7 +31,11 @@ class storagePieChart {
             .attr("cx", 0)
             .attr("cy", 0)
             .attr("r", this.width);
-        
+
+        this.colorScale = d3.scale.ordinal<string>()
+            .range(["#27c6db", "#d3e158", "#fea724"]); //TODO: colors
+
+
     }
 
     onData(data: Raven.Server.Dashboard.DatabaseDiskUsage[]) {
@@ -44,17 +49,22 @@ class storagePieChart {
             .value(x => x.Size);
 
         const arcs = group.selectAll(".arc")
-            .data(pie(data))
+            .data(pie(data));
+        
+        arcs.exit().remove();
+        
+        const enteringArcs = arcs
             .enter()
             .append("g")
             .attr("class", "arc");
-
-        const color = d3.scale.ordinal<string>()
-            .range(["#27c6db", "#d3e158", "#fea724"]); //TODO: colors
-        
-        arcs.append("path")
+       
+        enteringArcs.append("path")
             .attr("d", d => arc(d as any))
-            .attr("fill", d => color(d.data.Database));
+            .attr("fill", d => this.colorScale(d.data.Database));
+        
+        arcs.select("path")
+            .attr("d", d => arc(d as any))
+            .attr("fill", d => this.colorScale(d.data.Database));
 
     }
    
