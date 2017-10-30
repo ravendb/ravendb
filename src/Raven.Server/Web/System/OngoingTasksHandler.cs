@@ -120,12 +120,12 @@ namespace Raven.Server.Web.System
         private OngoingTaskReplication GetExternalReplicationInfo(DatabaseTopology dbTopology, ClusterTopology clusterTopology,
             ExternalReplication watcher, Dictionary<string, RavenConnectionString> connectionStrings)
         {
-            NodeId responsibale = null;
+            NodeId responsible = null;
 
             var tag = dbTopology.WhoseTaskIsIt(watcher, ServerStore.Engine.CurrentState);
             if (tag != null)
             {
-                responsibale = new NodeId
+                responsible = new NodeId
                 {
                     NodeTag = tag,
                     NodeUrl = clusterTopology.GetUrlFromTag(tag)
@@ -146,7 +146,7 @@ namespace Raven.Server.Web.System
             {
                 TaskId = watcher.TaskId,
                 TaskName = watcher.Name,
-                ResponsibleNode = responsibale,
+                ResponsibleNode = responsible,
                 ConnectionStringName = watcher.ConnectionStringName,     
                 DestinationDatabase = connectionStrings[watcher.ConnectionStringName].Database,
                 TaskState = watcher.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
@@ -173,30 +173,41 @@ namespace Raven.Server.Web.System
 
             foreach (var backupConfiguration in databaseRecord.PeriodicBackups)
             {
-                var tag = dbTopology.WhoseTaskIsIt(backupConfiguration, ServerStore.Engine.CurrentState);
-
-                var backupDestinations = GetBackupDestinations(backupConfiguration);
-
-                var backupStatus = Database.PeriodicBackupRunner.GetBackupStatus(backupConfiguration.TaskId);
-                var nextBackup = Database.PeriodicBackupRunner.GetNextBackupDetails(databaseRecord, backupConfiguration, backupStatus);
-
-                yield return new OngoingTaskBackup
-                {
-                    TaskId = backupConfiguration.TaskId,
-                    BackupType = backupConfiguration.BackupType,
-                    TaskName = backupConfiguration.Name,
-                    TaskState = backupConfiguration.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
-                    LastFullBackup = backupStatus.LastFullBackup,
-                    LastIncrementalBackup = backupStatus.LastIncrementalBackup,
-                    NextBackup = nextBackup,
-                    ResponsibleNode = new NodeId
-                    {
-                        NodeTag = tag,
-                        NodeUrl = clusterTopology.GetUrlFromTag(tag)
-                    },
-                    BackupDestinations = backupDestinations
-                };
+                yield return GetOngoingTaskBackup(backupConfiguration.TaskId, databaseRecord, backupConfiguration, dbTopology, clusterTopology);
             }
+        }
+
+        private OngoingTaskBackup GetOngoingTaskBackup(
+            long taskId, 
+            DatabaseRecord databaseRecord,
+            PeriodicBackupConfiguration backupConfiguration,
+            DatabaseTopology dbTopology,
+            ClusterTopology clusterTopology)
+        {
+            var backupStatus = Database.PeriodicBackupRunner.GetBackupStatus(taskId);
+            var nextBackup = Database.PeriodicBackupRunner.GetNextBackupDetails(databaseRecord, backupConfiguration, backupStatus);
+            var onGoingBackup = Database.PeriodicBackupRunner.OnGoingBackup(taskId);
+
+            var backupDestinations = GetBackupDestinations(backupConfiguration);
+            var tag = dbTopology.WhoseTaskIsIt(backupConfiguration, ServerStore.Engine.CurrentState);
+
+            return new OngoingTaskBackup
+            {
+                TaskId = backupConfiguration.TaskId,
+                BackupType = backupConfiguration.BackupType,
+                TaskName = backupConfiguration.Name,
+                TaskState = backupConfiguration.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
+                LastFullBackup = backupStatus.LastFullBackup,
+                LastIncrementalBackup = backupStatus.LastIncrementalBackup,
+                OnGoingBackup = onGoingBackup,
+                NextBackup = nextBackup,
+                ResponsibleNode = new NodeId
+                {
+                    NodeTag = tag,
+                    NodeUrl = clusterTopology.GetUrlFromTag(tag)
+                },
+                BackupDestinations = backupDestinations
+            };
         }
 
         private static List<string> GetBackupDestinations(PeriodicBackupConfiguration backupConfiguration)
@@ -378,22 +389,7 @@ namespace Raven.Server.Web.System
                             var backupStatus = Database.PeriodicBackupRunner.GetBackupStatus(key);
                             var nextBackup = Database.PeriodicBackupRunner.GetNextBackupDetails(record, backupConfiguration, backupStatus);
 
-                            var backupTaskInfo = new OngoingTaskBackup
-                            {
-                                TaskId = backupConfiguration.TaskId,
-                                BackupType = backupConfiguration.BackupType,
-                                TaskName = backupConfiguration.Name,
-                                TaskState = backupConfiguration.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
-                                ResponsibleNode = new NodeId
-                                {
-                                    NodeTag = tag,
-                                    NodeUrl = clusterTopology.GetUrlFromTag(tag)
-                                },
-                                BackupDestinations = backupDestinations,
-                                LastFullBackup = backupStatus.LastFullBackup,
-                                LastIncrementalBackup = backupStatus.LastIncrementalBackup,
-                                NextBackup = nextBackup
-                            };
+                            var backupTaskInfo = GetOngoingTaskBackup(key, record, backupConfiguration, dbTopology, clusterTopology);
 
                             WriteResult(context, backupTaskInfo);
                             break;

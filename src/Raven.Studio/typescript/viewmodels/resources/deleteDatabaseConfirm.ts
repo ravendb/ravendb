@@ -18,7 +18,7 @@ class deleteDatabaseConfirm extends confirmViewModelBase<deleteDatabaseConfirmRe
         this.confirm();
     }
 
-    protected getCofirmButton(): HTMLElement {
+    protected getConfirmButton(): HTMLElement {
         return $(".modal-footer:visible .btn-danger")[0] as HTMLElement;
     }
 

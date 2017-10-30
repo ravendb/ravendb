@@ -110,6 +110,10 @@ interface deleteDatabaseConfirmResult extends confirmDialogResult {
     keepFiles: boolean;
 }
 
+interface backupNowConfirmResult extends confirmDialogResult {
+    isFullBackup: boolean;
+}
+
 type menuItemType = "separator" | "intermediate" | "leaf" | "collections";
 
 interface menuItem {
