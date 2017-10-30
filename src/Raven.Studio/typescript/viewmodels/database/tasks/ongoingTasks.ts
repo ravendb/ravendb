@@ -40,8 +40,6 @@ class ongoingTasks extends viewModelBase {
 
     existingNodes = ko.observableArray<string>();
     selectedNode = ko.observable<string>();
-
-    connectionStringsUrl = appUrl.forCurrentDatabase().connectionStrings();
     
     constructor() {
         super();

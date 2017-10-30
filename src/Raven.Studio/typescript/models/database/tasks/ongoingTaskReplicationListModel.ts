@@ -9,6 +9,8 @@ class ongoingTaskReplicationListModel extends ongoingTaskModel {
     destinationDB = ko.observable<string>();
     destinationURL = ko.observable<string>();
     connectionStringName = ko.observable<string>();
+
+    connectionStringsUrl: string; 
     
     showReplicationDetails = ko.observable(false);
   
@@ -17,6 +19,8 @@ class ongoingTaskReplicationListModel extends ongoingTaskModel {
 
         this.update(dto); 
         this.initializeObservables();
+
+        this.connectionStringsUrl = `${appUrl.forCurrentDatabase().connectionStrings()}` + `&type=raven&name=${this.connectionStringName()}`;
     }
     
     initializeObservables() {

@@ -48,7 +48,18 @@ class connectionStrings extends viewModelBase {
 
     activate(args: any) {
         super.activate(args);        
-        return $.when<any>(this.getAllConnectionStrings(), this.fetchOngoingTasks());      
+        
+        return $.when<any>(this.getAllConnectionStrings(), this.fetchOngoingTasks())
+                .done(()=>{                    
+                    if (args.name) {
+                        if (args.type === 'sql') {                           
+                            this.onEditSqlEtl(args.name);
+                        }
+                        else {
+                            this.onEditRavenEtl(args.name);
+                        }
+                    }
+                });      
     }
 
     compositionComplete() {
