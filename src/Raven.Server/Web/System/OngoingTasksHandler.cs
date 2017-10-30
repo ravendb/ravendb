@@ -17,6 +17,7 @@ using Raven.Client.ServerWide.PeriodicBackup;
 using Raven.Server.Documents;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.Raven;
+using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
@@ -237,21 +238,16 @@ namespace Raven.Server.Web.System
                     string error = null;
                     if (tag == ServerStore.NodeTag)
                     {
-                        foreach (var process in Database.EtlLoader.Processes)
+                        var process = Database.EtlLoader.Processes.OfType<RavenEtl>().FirstOrDefault(x => x.ConfigurationName == ravenEtl.Name);
+
+                        if (process != null)
                         {
-                            if (process is RavenEtl etlProcess)
-                            {
-                                if (etlProcess.ConfigurationName == ravenEtl.Name)
-                                {
-                                    res.Url = etlProcess.Url;
-                                    res.Status = OngoingTaskConnectionStatus.Active;
-                                    break;
-                                }
-                            }
+                            res.Url = process.Url;
+                            res.Status = process.GetConnectionStatus();
                         }
-                        if (res.Status == OngoingTaskConnectionStatus.None)
+                        else
                         {
-                            error = $"The raven etl process'{ravenEtl.Name}' was not found.";
+                            error = $"Raven ETL process '{ravenEtl.Name}' was not found.";
                         }
                     }
                     else
@@ -263,7 +259,6 @@ namespace Raven.Server.Web.System
                     {
                         TaskId = ravenEtl.TaskId,
                         TaskName = ravenEtl.Name,
-                        // TODO arek TaskConnectionStatus = 
                         TaskState = taskState,
                         ResponsibleNode = new NodeId
                         {
@@ -294,11 +289,27 @@ namespace Raven.Server.Web.System
                     var (database, server) =
                         SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString(sqlEtl.FactoryName, sqlConnection.ConnectionString);
 
+                    var connectionStatus = OngoingTaskConnectionStatus.None;
+                    string error = null;
+                    if (tag == ServerStore.NodeTag)
+                    {
+                        var process = Database.EtlLoader.Processes.OfType<SqlEtl>().FirstOrDefault(x => x.ConfigurationName == sqlEtl.Name);
+
+                        if (process != null)
+                            connectionStatus = process.GetConnectionStatus();
+                        else
+                            error = $"SQL ETL process '{sqlEtl.Name}' was not found.";
+                    }
+                    else
+                    {
+                        connectionStatus = OngoingTaskConnectionStatus.NotOnThisNode;
+                    }
+
                     yield return new OngoingTaskSqlEtlListView()
                     {
                         TaskId = sqlEtl.TaskId,
                         TaskName = sqlEtl.Name,
-                        // TODO arek TaskConnectionStatus = 
+                        TaskConnectionStatus = connectionStatus,
                         TaskState = taskState,
                         ResponsibleNode = new NodeId
                         {
@@ -307,7 +318,8 @@ namespace Raven.Server.Web.System
                         },
                         DestinationServer = server,
                         DestinationDatabase = database,
-                        ConnectionStringName = sqlEtl.ConnectionStringName
+                        ConnectionStringName = sqlEtl.ConnectionStringName,
+                        Error = error
                     };
                 }
             }
