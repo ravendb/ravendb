@@ -19,6 +19,7 @@ namespace Raven.Server.Documents.Patch
         public bool Changed;
         private readonly BlittableObjectInstance _parent;
         public readonly DateTime? LastModified;
+        public readonly string ChangeVector;
         public readonly BlittableJsonReaderObject Blittable;
         public readonly string DocumentId;
         public HashSet<string> Deletes;
@@ -168,10 +169,11 @@ namespace Raven.Server.Documents.Patch
             BlittableObjectInstance parent,
             BlittableJsonReaderObject blittable,
             string docId,
-            DateTime? lastModified) : base(engine)
+            DateTime? lastModified, string changeVector = null) : base(engine)
         {
             _parent = parent;
             LastModified = lastModified;
+            ChangeVector = changeVector;
             Blittable = blittable;
             DocumentId = docId;
         }

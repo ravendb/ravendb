@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Linq.Expressions;
+using Raven.Client.Documents.Session;
 
 namespace Raven.Client.Documents.Queries
 {
@@ -26,5 +26,9 @@ namespace Raven.Client.Documents.Queries
             throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
         }
 
+        public static IMetadataDictionary Metadata<T>(T instance)
+        {
+            throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
+        }
     }
 }

@@ -17,6 +17,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using JavaScriptException = Jint.Runtime.JavaScriptException;
 
 namespace Raven.Server.Documents.Patch
@@ -115,6 +116,7 @@ namespace Raven.Server.Documents.Patch
                 ScriptEngine.SetValue("del", new ClrFunctionInstance(ScriptEngine, DeleteDocument));
                 ScriptEngine.SetValue("put", new ClrFunctionInstance(ScriptEngine, PutDocument));
 
+                ScriptEngine.SetValue("getMetadata", new ClrFunctionInstance(ScriptEngine, GetMetadata));
 
                 ScriptEngine.SetValue("id", new ClrFunctionInstance(ScriptEngine, GetDocumentId));
                 ScriptEngine.SetValue("lastModified", new ClrFunctionInstance(ScriptEngine, GetLastModified));
@@ -391,6 +393,26 @@ namespace Raven.Server.Documents.Patch
             }
 
 
+            private JsValue GetMetadata(JsValue self, JsValue[] args)
+            {
+                if (args.Length != 1 || !(args[0].AsObject() is BlittableObjectInstance boi))               
+                    throw new InvalidOperationException("getMetadata(id) must be called with a single entity argument");
+
+                if (!(boi.Blittable[Constants.Documents.Metadata.Key] is BlittableJsonReaderObject metadata))
+                    return JsValue.Null;
+
+                metadata.Modifications = new DynamicJsonValue                
+                {                   
+                        [Constants.Documents.Metadata.ChangeVector] = boi.ChangeVector,
+                        [Constants.Documents.Metadata.Id] = boi.DocumentId,
+                        [Constants.Documents.Metadata.LastModified] = boi.LastModified,
+                };
+
+                metadata = _context.ReadObject(metadata, boi.DocumentId);
+
+                return TranslateToJs(ScriptEngine, _context, metadata);              
+            }
+
             private JsValue LoadDocument(JsValue self, JsValue[] args)
             {
                 AssertValidDatabaseContext();
@@ -534,7 +556,7 @@ namespace Raven.Server.Documents.Patch
                 if (o is Tuple<Document, Lucene.Net.Documents.Document, IState> t)
                 {
                     var d = t.Item1;
-                    return new BlittableObjectInstance(engine, null, Clone(d.Data), d.Id, d.LastModified)
+                    return new BlittableObjectInstance(engine, null, Clone(d.Data), d.Id, d.LastModified, d.ChangeVector)
                     {
                         LuceneDocument = t.Item2,
                         LuceneState = t.Item3

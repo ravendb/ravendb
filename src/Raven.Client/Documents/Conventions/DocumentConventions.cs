@@ -586,6 +586,8 @@ namespace Raven.Client.Documents.Conventions
             jsonSerializer.Converters.Add(JsonDictionaryDateTimeKeysConverter.Instance);
             jsonSerializer.Converters.Add(ParametersConverter.Instance);
             jsonSerializer.Converters.Add(JsonLinqEnumerableConverter.Instance);
+            jsonSerializer.Converters.Add(JsonIMetadataDictionaryConverter.Instance);
+
             // TODO: Iftah
             //var convertersToUse = SaveEnumsAsIntegers ? DefaultConvertersEnumsAsIntegers : DefaultConverters;
             //if (jsonSerializer.Converters.Count == 0)
