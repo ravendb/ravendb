@@ -68,7 +68,6 @@ namespace SlowTests.Voron
             StopDatabase();
 
             StartDatabase();
-            GC.KeepAlive(_storageEnvironment.Value); // force creation
         }
 
         protected void RequireFileBasedPager()
@@ -85,6 +84,7 @@ namespace SlowTests.Voron
         protected void StartDatabase()
         {
             _storageEnvironment = new Lazy<StorageEnvironment>(() => new StorageEnvironment(Options), LazyThreadSafetyMode.ExecutionAndPublication);
+            GC.KeepAlive(_storageEnvironment.Value); // force creation
         }
 
         protected void StopDatabase()
