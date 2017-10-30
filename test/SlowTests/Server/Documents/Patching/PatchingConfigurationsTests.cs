@@ -103,7 +103,8 @@ namespace SlowTests.Server.Documents.Patching
         {
             using (var store = GetDocumentStore(new Options
             {
-                ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Patching.MaxStepsForScript)] = "8"
+                ModifyDatabaseRecord = record => 
+                record.Settings[RavenConfiguration.GetKey(x => x.Patching.MaxStepsForScript)] = "20"
             }))
             {
                 using (var session = store.OpenSession())
@@ -120,7 +121,7 @@ namespace SlowTests.Server.Documents.Patching
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Order() { Lines = Enumerable.Repeat(new OrderLine(), 5).ToList() }, "users/2");
+                    session.Store(new Order() { Lines = Enumerable.Repeat(new OrderLine(), 25).ToList() }, "users/2");
                     session.SaveChanges();
                 }
 
