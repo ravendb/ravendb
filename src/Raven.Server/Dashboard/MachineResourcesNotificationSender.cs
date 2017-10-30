@@ -73,10 +73,10 @@ namespace Raven.Server.Dashboard
             var machineResources = new MachineResources
             {
                 TotalMemory = installedMemory,
-                MemoryUsage = installedMemory - availableMemory,
-                RavenMemoryUsage = workingSet,
-                CpuUsage = cpuInfo.MachineCpuUsage,
-                RavenCpuUsage = cpuInfo.ProcessCpuUsage
+                MachineMemoryUsage = installedMemory - availableMemory,
+                ProcessMemoryUsage = workingSet,
+                MachineCpuUsage = cpuInfo.MachineCpuUsage,
+                ProcessCpuUsage = cpuInfo.ProcessCpuUsage
             };
 
             return machineResources;

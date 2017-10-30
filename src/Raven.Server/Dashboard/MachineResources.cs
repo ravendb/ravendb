@@ -6,25 +6,25 @@ namespace Raven.Server.Dashboard
     {
         public override DashboardNotificationType Type => DashboardNotificationType.MachineResources;
         
-        public double CpuUsage { get; set; } // 0 - 100
+        public double MachineCpuUsage { get; set; } // 0 - 100
 
-        public double RavenCpuUsage { get; set; } // 0 - 100
+        public double ProcessCpuUsage { get; set; } // 0 - 100
 
         public long TotalMemory { get; set; } // in bytes
 
-        public long MemoryUsage { get; set; } // in bytes
+        public long MachineMemoryUsage { get; set; } // in bytes
 
-        public long RavenMemoryUsage { get; set; } // in bytes
+        public long ProcessMemoryUsage { get; set; } // in bytes
 
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
 
-            json[nameof(CpuUsage)] = CpuUsage;
-            json[nameof(RavenCpuUsage)] = RavenCpuUsage;
+            json[nameof(MachineCpuUsage)] = MachineCpuUsage;
+            json[nameof(ProcessCpuUsage)] = ProcessCpuUsage;
             json[nameof(TotalMemory)] = TotalMemory;
-            json[nameof(MemoryUsage)] = MemoryUsage;
-            json[nameof(RavenMemoryUsage)] = RavenMemoryUsage;
+            json[nameof(MachineMemoryUsage)] = MachineMemoryUsage;
+            json[nameof(ProcessMemoryUsage)] = ProcessMemoryUsage;
             
             return json;
         }

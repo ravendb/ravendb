@@ -74,21 +74,21 @@ namespace Raven.Server.Utils
             var systemUserDiff = windowsInfo.SystemUserTime - _previousWindowsInfo.SystemUserTime;
             var sysTotal = systemKernelDiff + systemUserDiff;
 
-            double cpuUsage = 0;
-            double ravenCpuUsage = 0;
+            double machineCpuUsage = 0;
+            double processCpuUsage = 0;
             if (sysTotal > 0)
             {
-                cpuUsage = (sysTotal - systemIdleDiff) * 100.00 / sysTotal;
+                machineCpuUsage = (sysTotal - systemIdleDiff) * 100.00 / sysTotal;
 
                 var processTotal =
                     windowsInfo.ProcessProcessorTime.Ticks -
                     _previousWindowsInfo.ProcessProcessorTime.Ticks;
-                ravenCpuUsage = (processTotal * 100.0) / sysTotal;
-                ravenCpuUsage = Math.Min(100, ravenCpuUsage);
+                processCpuUsage = (processTotal * 100.0) / sysTotal;
+                processCpuUsage = Math.Min(100, processCpuUsage);
             }
 
             _previousWindowsInfo = windowsInfo;
-            return (cpuUsage, ravenCpuUsage);
+            return (machineCpuUsage, processCpuUsage);
         }
 
         private static (double MachineCpuUsage, double ProcessCpuUsage) CalculateLinuxCpuUsage()
@@ -100,7 +100,7 @@ namespace Raven.Server.Utils
             if (linuxInfo == null)
                 return EmptyCpuUsage;
 
-            double cpuUsage = 0;
+            double machineCpuUsage = 0;
             if (linuxInfo.TotalUserTime >= _previousLinuxInfo.TotalUserTime &&
                 linuxInfo.TotalUserLowTime >= _previousLinuxInfo.TotalUserLowTime &&
                 linuxInfo.TotalSystemTime >= _previousLinuxInfo.TotalSystemTime &&
@@ -112,15 +112,15 @@ namespace Raven.Server.Utils
                 var idleTimeDiff = linuxInfo.TotalIdleTime - _previousLinuxInfo.TotalIdleTime;
 
                 var totalUsed = userTimeDiff + userLowTimeDiff + systemTimeDiff;
-                cpuUsage = (totalUsed * 100.0) / (totalUsed + idleTimeDiff);
+                machineCpuUsage = (totalUsed * 100.0) / (totalUsed + idleTimeDiff);
             }
             else if (_lastCpuInfo != null)
             {
                 // overflow
-                cpuUsage = _lastCpuInfo.Value.MachineCpuUsage;
+                machineCpuUsage = _lastCpuInfo.Value.MachineCpuUsage;
             }
 
-            double ravenCpuUsage = 0;
+            double processCpuUsage = 0;
             if (linuxInfo.Time > _previousLinuxInfo.Time &&
                 linuxInfo.LastSystemCpu >= _previousLinuxInfo.LastSystemCpu &&
                 linuxInfo.LastUserCpu >= _previousLinuxInfo.LastUserCpu)
@@ -128,16 +128,16 @@ namespace Raven.Server.Utils
                 var lastSystemCpuDiff = linuxInfo.LastSystemCpu - _previousLinuxInfo.LastSystemCpu;
                 var lastUserCpuDiff = linuxInfo.LastUserCpu - _previousLinuxInfo.LastUserCpu;
                 var totalCpuTime = lastSystemCpuDiff + lastUserCpuDiff;
-                ravenCpuUsage = (totalCpuTime * 100.0 / (linuxInfo.Time - _previousLinuxInfo.Time)) / ProcessorInfo.ProcessorCount;
+                processCpuUsage = (totalCpuTime * 100.0 / (linuxInfo.Time - _previousLinuxInfo.Time)) / ProcessorInfo.ProcessorCount;
             }
             else if (_lastCpuInfo != null)
             {
                 // overflow
-                ravenCpuUsage = _lastCpuInfo.Value.ProcessCpuUsage;
+                processCpuUsage = _lastCpuInfo.Value.ProcessCpuUsage;
             }
 
             _previousLinuxInfo = linuxInfo;
-            return (cpuUsage, ravenCpuUsage);
+            return (machineCpuUsage, processCpuUsage);
         }
 
         private static (double MachineCpuUsage, double ProcessCpuUsage) CalculateMacOsCpuUsage()
@@ -151,23 +151,23 @@ namespace Raven.Server.Utils
 
             var totalTicksSinceLastTime = macInfo.TotalTicks - _previousMacInfo.TotalTicks;
             var idleTicksSinceLastTime = macInfo.IdleTicks - _previousMacInfo.IdleTicks;
-            double cpuUsage = 0;
+            double machineCpuUsage = 0;
             if (totalTicksSinceLastTime > 0)
             {
-                cpuUsage = (1.0d - (double)idleTicksSinceLastTime / totalTicksSinceLastTime) * 100;
+                machineCpuUsage = (1.0d - (double)idleTicksSinceLastTime / totalTicksSinceLastTime) * 100;
             }
 
             var systemTimeDelta = macInfo.TaskTime - _previousMacInfo.TaskTime;
             var timeDelta = macInfo.DateTimeNanoTicks - _previousMacInfo.DateTimeNanoTicks;
-            var ravenCpuUsage = 0d;
+            var processCpuUsage = 0d;
             if (timeDelta > 0)
             {
-                ravenCpuUsage = (systemTimeDelta * 100.0) / timeDelta / ProcessorInfo.ProcessorCount;
+                processCpuUsage = (systemTimeDelta * 100.0) / timeDelta / ProcessorInfo.ProcessorCount;
             }
 
             _previousMacInfo = macInfo;
 
-            return (cpuUsage, ravenCpuUsage);
+            return (machineCpuUsage, processCpuUsage);
         }
 
         private static WindowsInfo GetWindowsInfo()

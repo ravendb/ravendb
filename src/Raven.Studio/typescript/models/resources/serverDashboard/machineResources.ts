@@ -1,46 +1,46 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 
 class machineResources {
-    cpuUsage = ko.observable<number>();
-    ravenCpuUsage = ko.observable<number>();
-    memoryUsage = ko.observable<number>();
-    ravenMemoryUsage = ko.observable<number>();
+    machineCpuUsage = ko.observable<number>();
+    processCpuUsage = ko.observable<number>();
+    machineMemoryUsage = ko.observable<number>();
+    processMemoryUsage = ko.observable<number>();
     totalMemory = ko.observable<number>();
     
-    cpuUsageClass: KnockoutComputed<string>;
-    ravenCpuUsageClass: KnockoutComputed<string>;
-    memoryUsageClass: KnockoutComputed<string>;
-    ravenMemoryUsageClass: KnockoutComputed<string>;
+    machineCpuUsageClass: KnockoutComputed<string>;
+    processCpuUsageClass: KnockoutComputed<string>;
+    machineMemoryUsageClass: KnockoutComputed<string>;
+    processMemoryUsageClass: KnockoutComputed<string>;
     
     constructor(dto: Raven.Server.Dashboard.MachineResources) {
         this.update(dto);
         
-        this.cpuUsageClass = ko.pureComputed(() => {
-            const usage = this.cpuUsage();
+        this.machineCpuUsageClass = ko.pureComputed(() => {
+            const usage = this.machineCpuUsage();
             return this.getCpuUsageClass(usage);
         });
 
-        this.ravenCpuUsageClass = ko.pureComputed(() => {
-            const usage = this.ravenCpuUsage();
+        this.processCpuUsageClass = ko.pureComputed(() => {
+            const usage = this.processCpuUsage();
             return this.getCpuUsageClass(usage);
         });
         
-        this.memoryUsageClass = ko.pureComputed(() => {
-            const used = this.memoryUsage();
+        this.machineMemoryUsageClass = ko.pureComputed(() => {
+            const used = this.machineMemoryUsage();
             return this.getMemoryUsageClass(used);
         });
 
-        this.ravenMemoryUsageClass = ko.pureComputed(() => {
-            const used = this.ravenMemoryUsage();
+        this.processMemoryUsageClass = ko.pureComputed(() => {
+            const used = this.processMemoryUsage();
             return this.getMemoryUsageClass(used);
         });
     }
     
     update(dto: Raven.Server.Dashboard.MachineResources) {
-        this.cpuUsage(dto.CpuUsage);
-        this.ravenCpuUsage(dto.RavenCpuUsage);
-        this.memoryUsage(dto.MemoryUsage);
-        this.ravenMemoryUsage(dto.RavenMemoryUsage);
+        this.machineCpuUsage(dto.MachineCpuUsage);
+        this.processCpuUsage(dto.ProcessCpuUsage);
+        this.machineMemoryUsage(dto.MachineMemoryUsage);
+        this.processMemoryUsage(dto.ProcessMemoryUsage);
         this.totalMemory(dto.TotalMemory);
     }
 

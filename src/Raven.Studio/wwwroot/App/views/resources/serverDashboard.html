@@ -49,9 +49,13 @@
                                         (<strong data-bind="text: utilizedCores, css: cssCores" data-toggle="tooltip" title="Assigned CPU cores limit"></strong>/<strong data-bind="text: numberOfCores" data-toggle="tooltip" title="Total CPU cores count"></strong>)
                                     </span>
                                 </div>
-                                <div>
-                                    <strong data-bind="text: cpuUsage().toFixed(2) + '%', attr: { class: cpuUsageClass() }" data-placement="bottom" data-toggle="tooltip" title="CPU usage"></strong>
-                                    (<strong data-bind="text: ravenCpuUsage().toFixed(2) + '%', attr: { class: ravenCpuUsageClass() }" data-placement="bottom" data-toggle="tooltip" title="RavenDB CPU usage"></strong>)
+                                <div data-placement="bottom" data-toggle="tooltip" title="Machine CPU usage">
+                                    <i class="icon-server machine-usage"></i>
+                                    <strong data-bind="text: machineCpuUsage().toFixed(0) + '%', attr: { class: machineCpuUsageClass() }" ></strong>
+                                </div>
+                                <div data-placement="bottom" data-toggle="tooltip" title="RavenDB CPU usage">
+                                    <i class="icon-raven process-usage"></i>
+                                    <strong data-bind="text: processCpuUsage().toFixed(0) + '%', attr: { class: processCpuUsageClass() }"></strong>
                                 </div>
                             </div>
                             <div class="infogrid-graph" >
@@ -62,11 +66,15 @@
                             <div class="infogrid-label dashboard-memory" data-bind="with: resources">
                                 <div><i class="icon-memory"></i><span>MEM</span></div>
                                 <div>
-                                    <div>
-                                        <strong data-bind="text: $root.sizeFormatter(memoryUsage()), attr: { class: memoryUsageClass }" data-toggle="tooltip" title="Memory usage"></strong> 
-                                        (<strong data-bind="text: $root.sizeFormatter(ravenMemoryUsage()), attr: { class: ravenMemoryUsageClass }" data-toggle="tooltip" title="RavenDB memory usage"></strong>)
+                                    <div data-toggle="tooltip" title="Machine Memory usage">
+                                        <i class="icon-server machine-usage"></i>
+                                        <strong data-bind="text: $root.sizeFormatter(machineMemoryUsage()), attr: { class: machineMemoryUsageClass }" ></strong>
                                     </div>
-                                    <div>Total: <span data-bind="text: $root.sizeFormatter(totalMemory())"></span>
+                                    <div data-toggle="tooltip" title="RavenDB memory usage">
+                                        <i class="icon-raven process-usage"></i>
+                                        <strong data-bind="text: $root.sizeFormatter(processMemoryUsage()), attr: { class: processMemoryUsageClass }" ></strong>
+                                    </div>
+                                    <div>&Sigma; <span data-bind="text: $root.sizeFormatter(totalMemory())"></span>
                                     </div>
                                 </div>
                                 <!-- TODO
@@ -93,9 +101,10 @@
                     <div class="infogrid">
                         <div class="infogrid-label">
                             <div class="margin-bottom"># Total Requests/s<br/>
+                                <i class="total-requests-legend"></i>
                                 <strong data-bind="text: totalRequestsPerSecond().toLocaleString()"></strong></div>
-                            <div class="margin-bottom"># Writes/s<br/> <strong data-bind="text: totalWritesPerSecond().toLocaleString()"></strong></div>
-                            <div># Data Written/s<br /> <strong data-bind="text: $root.sizeFormatter(totalDataWritesPerSecond())"></strong></div>
+                            <div class="margin-bottom"># Writes/s<br/> <i class="total-writes-legend" ></i> <strong data-bind="text: totalWritesPerSecond().toLocaleString()"></strong></div>
+                            <div># Data Written/s<br /> <i class="total-written-legend"></i> <strong data-bind="text: $root.sizeFormatter(totalDataWritesPerSecond())"></strong></div>
                         </div>
                         <div class="infogrid-graph">
                             <div class="graph-container fix-size" id="trafficChart"></div>

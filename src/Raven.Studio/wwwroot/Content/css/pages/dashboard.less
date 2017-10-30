@@ -1,5 +1,9 @@
 ﻿
-
+@resource-usage-primary-color: @brand-primary-light;
+@resource-usage-secondary-color: @brand-primary-dark;
+@dashboard-requests-color: #27c5da;
+@dashboard-writes-color: #7051ad;
+@dashboard-written-color: #d08f27;
 
 #dashboard-container {
     display: flex;
@@ -62,14 +66,31 @@
     #cpuChart, #memoryChart {
         .line {
             fill: none;
-            stroke: @brand-primary;
             stroke-width: 2;
         }
 
         .fill {
             fill-opacity: 0.3;
-            fill: @brand-primary;
             stroke: none;
+        }
+        
+        .machine {
+            .line {
+                stroke: @resource-usage-secondary-color;
+            }
+            
+            .fill {
+                fill: @resource-usage-secondary-color;
+            }
+        }
+        
+        .process {
+            .line {
+                stroke: @resource-usage-primary-color;
+            }
+            .fill {
+                fill: @resource-usage-primary-color;
+            }
         }
     }
 
@@ -116,18 +137,38 @@
             }
         }
     }
+    
+    .total-writes-legend, .total-requests-legend, .total-written-legend {
+        width: 12px;
+        height: 12px;
+        margin-right: 10px;
+        vertical-align: middle;
+        display: inline-block;
+    }
+    
+    .total-requests-legend {
+        background-color: @dashboard-requests-color;
+    }
+    
+    .total-writes-legend {
+        background-color: @dashboard-writes-color;
+    }
+    
+    .total-written-legend {
+        background-color: @dashboard-written-color;
+    }
 
     #trafficChart {
         .requests {
             .line {
                 fill: none;
-                stroke: #27c5da;
+                stroke: @dashboard-requests-color;
                 stroke-width: 2;
             }
 
             .fill {
                 fill-opacity: 0.3;
-                fill: #27c5da;
+                fill: @dashboard-requests-color;
                 stroke: none;
             }
         }
@@ -135,13 +176,27 @@
         .writes {
             .line {
                 fill: none;
-                stroke: #7051ad;
+                stroke: @dashboard-writes-color;
                 stroke-width: 2;
             }
 
             .fill {
                 fill-opacity: 0.3;
-                fill: #7051ad;
+                fill: @dashboard-writes-color;
+                stroke: none;
+            }
+        }
+        
+        .written {
+            .line {
+                fill: none;
+                stroke: @dashboard-written-color;
+                stroke-width: 2;
+            }
+
+            .fill {
+                fill-opacity: 0.3;
+                fill: @dashboard-written-color;
                 stroke: none;
             }
         }
@@ -240,6 +295,14 @@
         }
 
         .infogrid-graph {
+        }
+        
+        .process-usage {
+            color: @resource-usage-primary-color;
+        }
+        
+        .machine-usage {
+            color: @resource-usage-secondary-color;
         }
     }
 
