@@ -1746,6 +1746,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     new JavascriptConversionExtensions.NestedConditionalSupport(),
                     new JavascriptConversionExtensions.StringSupport(),
                     new JavascriptConversionExtensions.ConstSupport(),
+                    new JavascriptConversionExtensions.MetadataSupport(),
                     MemberInitAsJson.ForAllTypes,
                     loadSupport));
 
@@ -1889,6 +1890,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     new JavascriptConversionExtensions.StringSupport(),
                     new JavascriptConversionExtensions.ConstSupport(),
                     new JavascriptConversionExtensions.LoadSupport(),
+                    new JavascriptConversionExtensions.MetadataSupport(),
                     MemberInitAsJson.ForAllTypes));
 
             if (expression.Type == typeof(TimeSpan) && expression.NodeType != ExpressionType.MemberAccess)

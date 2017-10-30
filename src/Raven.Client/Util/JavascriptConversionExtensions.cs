@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -721,6 +720,32 @@ namespace Raven.Client.Util
                         context.Visitor.Visit(mce.Arguments[1]);
                     }
 
+                    writer.Write(")");
+                }
+            }
+        }
+
+        public class MetadataSupport : JavascriptConversionExtension
+        {
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                var methodCallExpression = context.Node as MethodCallExpression;
+
+                if (methodCallExpression?.Method.Name != "Metadata"
+                    && methodCallExpression?.Method.Name != "GetMetadataFor")
+                    return;
+
+                if (methodCallExpression.Method.DeclaringType != typeof(RavenQuery)
+                    && methodCallExpression.Object?.Type != typeof(IAdvancedSessionOperations)
+                    && methodCallExpression.Object?.Type != typeof(IAsyncAdvancedSessionOperations))
+                    return;
+
+                context.PreventDefault();
+                var writer = context.GetWriter();
+                using (writer.Operation(methodCallExpression))
+                {
+                    writer.Write("getMetadata(");
+                    context.Visitor.Visit(methodCallExpression.Arguments[0]);
                     writer.Write(")");
                 }
             }
