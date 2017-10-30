@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                     var lastEtag = lastMappedEtag;
                     var count = 0;
                     var resultsCount = 0;
-                    const int pageSize = int.MaxValue;
+                    var pageSize = _index.GetPageSize();
 
                     var sw = new Stopwatch();
                     IndexWriteOperation indexWriter = null;
@@ -126,7 +126,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                             $"Failed to execute mapping function on {current.Id}. Exception: {e}");
                                     }
 
-                                    if (CanContinueBatch(databaseContext, indexContext, collectionStats, lastEtag, lastCollectionEtag) == false)
+                                    if (CanContinueBatch(databaseContext, indexContext, collectionStats, lastEtag, lastCollectionEtag, count) == false)
                                     {
                                         keepRunning = false;
                                         break;
@@ -217,7 +217,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             return false;
         }
 
-        public bool CanContinueBatch(DocumentsOperationContext documentsContext, TransactionOperationContext indexingContext, IndexingStatsScope stats, long currentEtag, long maxEtag)
+        public bool CanContinueBatch(DocumentsOperationContext documentsContext, TransactionOperationContext indexingContext, IndexingStatsScope stats, long currentEtag, long maxEtag, int count)
         {
             if (stats.Duration >= _configuration.MapTimeout.AsTimeSpan)
             {
@@ -234,7 +234,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             if (ShouldReleaseTransactionBecauseFlushIsWaiting(stats))
                 return false;
 
-            if (_index.CanContinueBatch(stats, documentsContext, indexingContext) == false)
+            if (_index.CanContinueBatch(stats, documentsContext, indexingContext, count) == false)
                 return false;
 
             return true;
