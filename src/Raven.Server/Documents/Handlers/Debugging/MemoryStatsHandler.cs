@@ -63,7 +63,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     ["FreeMem"] = item.FreeMem,
                     ["TotalUnmanaged"] = item.TotalUnmanaged,
                     ["PhysicalMem"] = item.PhysicalMem,
-                    ["RatioFactor"] = item.LowMemRatio,
                     ["TimeOfEvent"] = item.Time,
                     ["HumanlyReadSizes"] = humanSizes
                 };

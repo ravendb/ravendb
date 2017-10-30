@@ -35,7 +35,6 @@ namespace Sparrow.LowMemory
             public LowMemReason Reason;
             public long FreeMem;
             public DateTime Time;
-            public double LowMemRatio { get; set; }
             public long PhysicalMem { get; set; }
             public long TotalUnmanaged { get; set; }
             public long LowMemThreshold { get; set; }
@@ -90,30 +89,27 @@ namespace Sparrow.LowMemory
             _lowMemoryHandlers.Add(new WeakReference<ILowMemoryHandler>(handler));
         }
 
-        public static readonly LowMemoryNotification Instance = new LowMemoryNotification(1024 * 1024 * 256, 0.1);
+        public static readonly LowMemoryNotification Instance = new LowMemoryNotification(1024 * 1024 * 256);
 
         public bool LowMemoryState { get; set; }
 
-        public static void Initialize(CancellationToken shutdownNotification, long lowMemoryThreshold, double physicalRatioForLowMemDetection)
+        public static void Initialize(CancellationToken shutdownNotification, long lowMemoryThreshold)
         {
             Instance._lowMemoryThreshold = lowMemoryThreshold;
-            Instance._physicalRatioForLowMemDetection = physicalRatioForLowMemDetection;
 
             shutdownNotification.Register(() => Instance._shutdownRequested.Set());
         }
 
         private long _lowMemoryThreshold;
-        private double _physicalRatioForLowMemDetection;
         private readonly ManualResetEvent _simulatedLowMemory = new ManualResetEvent(false);
         private readonly ManualResetEvent _shutdownRequested = new ManualResetEvent(false);
         private readonly ManualResetEvent _warnAllocation = new ManualResetEvent(false);
 
-        public LowMemoryNotification(long lowMemoryThreshold, double physicalRatioForLowMemDetection)
+        public LowMemoryNotification(long lowMemoryThreshold)
         {
             _logger = LoggingSource.Instance.GetLogger<LowMemoryNotification>("Server");
 
             _lowMemoryThreshold = lowMemoryThreshold;
-            _physicalRatioForLowMemDetection = physicalRatioForLowMemDetection;
             var thread = new Thread(MonitorMemoryUsage)
             {
                 IsBackground = true,
@@ -156,8 +152,7 @@ namespace Sparrow.LowMemory
                         var memInfo = MemoryInformation.GetMemoryInfo();
 
                         var availableMem = memInfo.AvailableMemory.GetValue(SizeUnit.Bytes);
-                        if (availableMem < _lowMemoryThreshold && 
-                            totalUnmanagedAllocations > memInfo.TotalPhysicalMemory.GetValue(SizeUnit.Bytes) * _physicalRatioForLowMemDetection)
+                        if (availableMem < _lowMemoryThreshold)
                         {
                             if (LowMemoryState == false)
                             {
@@ -214,7 +209,6 @@ namespace Sparrow.LowMemory
                 FreeMem = availableMem,
                 TotalUnmanaged = totalUnmanaged,
                 PhysicalMem = physicalMem,
-                LowMemRatio = _physicalRatioForLowMemDetection,
                 LowMemThreshold = _lowMemoryThreshold,
                 Time = DateTime.UtcNow
             };
