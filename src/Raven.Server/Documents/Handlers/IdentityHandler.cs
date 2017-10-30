@@ -8,7 +8,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class IdentityHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/identity/next", "POST", AuthorizationStatus.Operator)]
+        [RavenAction("/databases/*/identity/next", "POST", AuthorizationStatus.ValidUser)]
         public async Task NextIdentityFor()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/identity/seed", "POST", AuthorizationStatus.Operator)]
+        [RavenAction("/databases/*/identity/seed", "POST", AuthorizationStatus.ValidUser)]
         public async Task SeedIdentityFor()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
