@@ -314,28 +314,24 @@ namespace Sparrow.Json
                     }
                     else
                     {
-                        if (result is LazyStringValue lazyStringValue && lazyStringValue != null)
+                        switch (result)
                         {
-                            obj = (T)Convert.ChangeType(lazyStringValue.ToString(), type);
-                        }
-                        else if (result is LazyNumberValue lazyNumberValue && lazyNumberValue != null)
-                        {
-                            obj = (T)Convert.ChangeType(lazyNumberValue, type);
-                        }
-                        else
-                        {
-                            if (result is LazyCompressedStringValue lazyCompressStringValue && lazyCompressStringValue != null)
-                            {
+                            case LazyStringValue lazyStringValue:
+                                obj = (T)Convert.ChangeType(lazyStringValue.ToString(), type);
+                                break;
+                            case LazyNumberValue lazyNumberValue:
+                                obj = (T)Convert.ChangeType(lazyNumberValue, type);
+                                break;
+                            case LazyCompressedStringValue lazyCompressStringValue:
                                 if (typeof(T) == typeof(LazyStringValue))
                                 {
                                     obj = (T)(object)lazyCompressStringValue.ToLazyStringValue();
                                 }
                                 obj = (T)Convert.ChangeType(lazyCompressStringValue.ToString(), type);
-                            }
-                            else
-                            {
+                                break;
+                            default:
                                 obj = (T)Convert.ChangeType(result, type);
-                            }
+                                break;
                         }
                     }
                 }
@@ -353,45 +349,40 @@ namespace Sparrow.Json
 
         public bool TryGet(StringSegment name, out double? nullableDbl)
         {
-            double dbl;
-            if (TryGet(name, out dbl) == false)
+            if (TryGet(name, out double doubleNum) == false)
             {
                 nullableDbl = null;
                 return false;
             }
 
-            nullableDbl = dbl;
+            nullableDbl = doubleNum;
             return true;
         }
 
-        public bool TryGet(string name, out double dbl)
+        public bool TryGet(string name, out double doubleNum)
         {
-            return TryGet(new StringSegment(name), out dbl);
+            return TryGet(new StringSegment(name), out doubleNum);
         }
 
-        public bool TryGet(StringSegment name, out double dbl)
+        public bool TryGet(StringSegment name, out double doubleNum)
         {
-            object result;
-            if (TryGetMember(name, out result) == false)
+            if (TryGetMember(name, out var result) == false)
             {
-                dbl = 0;
+                doubleNum = 0;
                 return false;
             }
 
-            var lazyDouble = result as LazyNumberValue;
-            if (lazyDouble != null)
+            switch (result)
             {
-                dbl = lazyDouble;
-                return true;
+                case LazyNumberValue lazyDouble:
+                    doubleNum = lazyDouble;
+                    return true;
+                case long longNum:
+                    doubleNum = longNum;
+                    return true;
             }
 
-            if (result is long)
-            {
-                dbl = (long)result;
-                return true;
-            }
-
-            dbl = 0;
+            doubleNum = 0;
             return false;
         }
 
@@ -402,8 +393,7 @@ namespace Sparrow.Json
 
         public bool TryGet(StringSegment name, out string str)
         {
-            object result;
-            if (TryGetMember(name, out result) == false)
+            if (TryGetMember(name, out var result) == false)
             {
                 str = null;
                 return false;
@@ -414,23 +404,20 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool ChangeTypeToString(object result, out string str)
         {
-            if (result == null)
+            switch (result)
             {
-                str = null;
-                return true;
-            }
-            var lazyCompressedStringValue = result as LazyCompressedStringValue;
-            if (lazyCompressedStringValue != null)
-            {
-                str = lazyCompressedStringValue;
-                return true;
-            }
-
-            var lazyStringValue = result as LazyStringValue;
-            if (lazyStringValue != (LazyStringValue)null)
-            {
-                str = (string)lazyStringValue;
-                return true;
+                case null:
+                    str = null;
+                    return true;
+                case LazyCompressedStringValue lazyCompressedStringValue:
+                    str = lazyCompressedStringValue;
+                    return true;
+                case LazyStringValue lazyStringValue:
+                    str = lazyStringValue;
+                    return true;
+                case StringSegment stringSegmentValue:
+                    str = stringSegmentValue.Value;
+                    return true;
             }
 
             str = null;

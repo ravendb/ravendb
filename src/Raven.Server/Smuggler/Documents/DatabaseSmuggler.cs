@@ -127,8 +127,7 @@ namespace Raven.Server.Smuggler.Documents
 
             counts.Processed = true;
 
-            var countsWithEtag = counts as SmugglerProgressBase.CountsWithLastEtag;
-            if (countsWithEtag != null)
+            if (counts is SmugglerProgressBase.CountsWithLastEtag countsWithEtag)
                 countsWithEtag.Attachments.Processed = true;
 
             result.AddInfo($"Finished processing {type}. {counts}");

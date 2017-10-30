@@ -715,7 +715,7 @@ namespace Raven.Server.Documents.Replication
             ea.ThrowIfNeeded();
         }
 
-        public Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
+        public IReadOnlyDictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
         {
             var minEtag = MinimalEtagForReplication;
             var result = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase)

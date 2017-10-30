@@ -168,6 +168,6 @@ namespace Raven.Server.Documents
 
     public interface IDocumentTombstoneAware
     {
-        Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection();
+        IReadOnlyDictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection();
     }
 }

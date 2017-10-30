@@ -34,7 +34,7 @@ using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.PeriodicBackup
 {
-    public class PeriodicBackupRunner : IDisposable
+    public class PeriodicBackupRunner : IDocumentTombstoneAware,IDisposable
     {
         private readonly Logger _logger;
 
@@ -66,6 +66,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             _tempBackupPath = (_database.Configuration.Storage.TempPath ?? _database.Configuration.Core.DataDirectory).Combine("PeriodicBackupTemp");
 
+            _database.DocumentTombstoneCleaner.Subscribe(this);
             IOExtensions.DeleteDirectory(_tempBackupPath.FullPath);
             Directory.CreateDirectory(_tempBackupPath.FullPath);
         }
@@ -146,6 +147,23 @@ namespace Raven.Server.Documents.PeriodicBackup
                 TimeSpan = nextBackupTimeSpan,
                 IsFull = isFullBackup
             };
+        }
+
+        private Dictionary<string, long> UpdateTombstoneLastEtagsPerCollection(DocumentsOperationContext context, Dictionary<string, long> existingData)
+        {
+            existingData = existingData ?? new Dictionary<string, long>(); //precaution, just in case
+
+            //precaution, should never be true
+            if (context.Transaction == null)
+                throw new InvalidOperationException("Expected an active transaction, but found none. This shouldn't happen.");
+
+            foreach (var collection in _database.DocumentsStorage.GetCollections(context))
+            {
+                var lastTombstoneEtag = _database.DocumentsStorage.GetLastTombstoneEtag(context, collection.Name);
+                existingData[collection.Name] = Math.Max(existingData[collection.Name], lastTombstoneEtag);
+            }
+
+            return existingData;
         }
 
         private bool IsFullBackup(PeriodicBackupStatus backupStatus,
@@ -262,6 +280,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         }
                     }
 
+                    status.LastTombstoneEtagsByCollection = UpdateTombstoneLastEtagsPerCollection(context, status.LastTombstoneEtagsByCollection);
                     status.LastEtag = lastEtag;
                     status.FolderName = folderName;
                 }
@@ -1055,6 +1074,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     return;
 
                 _disposed = true;
+                _database.DocumentTombstoneCleaner.Unsubscribe(this);
 
                 using (_cancellationToken)
                 {
@@ -1159,6 +1179,30 @@ namespace Raven.Server.Documents.PeriodicBackup
                 StartTime = periodicBackup.StartTime,
                 IsFull = periodicBackup.BackupStatus.IsFull
             };
+        }
+
+        public IReadOnlyDictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
+        {
+            var results = new Dictionary<string,long>();
+
+            foreach (var periodicBackup in _periodicBackups.Values)
+            {
+                foreach (var etagItem in periodicBackup.BackupStatus.LastTombstoneEtagsByCollection)
+                {
+                    if (results.TryGetValue(etagItem.Key, out long existingEtag))
+                    {
+                        //since we are collecting max etags for tombstones cleaner,
+                        //we need to get the minimal etag processed in all backups
+                        results[etagItem.Key] = Math.Min(existingEtag, etagItem.Value);
+                    }
+                    else
+                    {
+                        results[etagItem.Key] = etagItem.Value;
+                    }
+                }
+            }
+
+            return results;
         }
     }
 }
