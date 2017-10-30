@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace Raven.Client.ServerWide.PeriodicBackup
@@ -89,6 +90,24 @@ namespace Raven.Client.ServerWide.PeriodicBackup
             return settings != null &&
                    settings.Disabled == false &&
                    settings.HasSettings();
+        }
+
+        public List<string> GetDestinations()
+        {
+            var backupDestinations = new List<string>();
+
+            if (LocalSettings != null && LocalSettings.Disabled == false)
+                backupDestinations.Add("Local");
+            if (AzureSettings != null && AzureSettings.Disabled == false)
+                backupDestinations.Add("Azure");
+            if (S3Settings != null && S3Settings.Disabled == false)
+                backupDestinations.Add("S3");
+            if (GlacierSettings != null && GlacierSettings.Disabled == false)
+                backupDestinations.Add("Glacier");
+            if (FtpSettings != null && FtpSettings.Disabled == false)
+                backupDestinations.Add("FTP");
+
+            return backupDestinations;
         }
     }
 }

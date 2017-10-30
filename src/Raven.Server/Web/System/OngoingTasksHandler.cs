@@ -188,7 +188,7 @@ namespace Raven.Server.Web.System
             var nextBackup = Database.PeriodicBackupRunner.GetNextBackupDetails(databaseRecord, backupConfiguration, backupStatus);
             var onGoingBackup = Database.PeriodicBackupRunner.OnGoingBackup(taskId);
 
-            var backupDestinations = GetBackupDestinations(backupConfiguration);
+            var backupDestinations = backupConfiguration.GetDestinations();
             var tag = dbTopology.WhoseTaskIsIt(backupConfiguration, ServerStore.Engine.CurrentState);
 
             return new OngoingTaskBackup
@@ -201,6 +201,11 @@ namespace Raven.Server.Web.System
                 LastIncrementalBackup = backupStatus.LastIncrementalBackup,
                 OnGoingBackup = onGoingBackup,
                 NextBackup = nextBackup,
+                TaskConnectionStatus = backupConfiguration.Disabled
+                    ? OngoingTaskConnectionStatus.NotActive
+                    : tag == ServerStore.NodeTag
+                        ? OngoingTaskConnectionStatus.Active
+                        : OngoingTaskConnectionStatus.NotOnThisNode,
                 ResponsibleNode = new NodeId
                 {
                     NodeTag = tag,
@@ -208,24 +213,6 @@ namespace Raven.Server.Web.System
                 },
                 BackupDestinations = backupDestinations
             };
-        }
-
-        private static List<string> GetBackupDestinations(PeriodicBackupConfiguration backupConfiguration)
-        {
-            var backupDestinations = new List<string>();
-
-            if (backupConfiguration.LocalSettings != null && backupConfiguration.LocalSettings.Disabled == false)
-                backupDestinations.Add("Local");
-            if (backupConfiguration.AzureSettings != null && backupConfiguration.AzureSettings.Disabled == false)
-                backupDestinations.Add("Azure");
-            if (backupConfiguration.S3Settings != null && backupConfiguration.S3Settings.Disabled == false)
-                backupDestinations.Add("S3");
-            if (backupConfiguration.GlacierSettings != null && backupConfiguration.GlacierSettings.Disabled == false)
-                backupDestinations.Add("Glacier");
-            if (backupConfiguration.FtpSettings != null && backupConfiguration.FtpSettings.Disabled == false)
-                backupDestinations.Add("FTP");
-
-            return backupDestinations;
         }
 
         private IEnumerable<OngoingTask> CollectEtlTasks(DatabaseRecord databaseRecord, DatabaseTopology dbTopology, ClusterTopology clusterTopology)
