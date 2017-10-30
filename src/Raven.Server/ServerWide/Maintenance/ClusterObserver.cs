@@ -232,6 +232,9 @@ namespace Raven.Server.ServerWide.Maintenance
             Dictionary<string, ClusterNodeStatusReport> previous,
             ref List<DeleteDatabaseCommand> deletions)
         {
+            if (record.Disabled)
+                return null;
+
             var topology = record.Topology;
             var hasLivingNodes = false;
             foreach (var member in topology.Members)

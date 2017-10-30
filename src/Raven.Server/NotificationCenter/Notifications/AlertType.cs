@@ -29,6 +29,8 @@ namespace Raven.Server.NotificationCenter.Notifications
         NonDurableFileSystem,
         RecoveryError,
         RestoreError,
+        DeletionError,
+
         ClusterTopologyWarning,
         DatabaseTopologyWarning,
         SwappingHddInsteadOfSsd,

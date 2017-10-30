@@ -82,8 +82,6 @@ namespace Raven.Client.ServerWide
             unchecked
             {
                 var hashCode = (ulong)base.GetHashCode();
-                hashCode = (hashCode * 397) ^ CalculateStringHash(Name);
-                hashCode = (hashCode * 397) ^ CalculateStringHash(MentorNode);
                 hashCode = (hashCode * 397) ^ CalculateStringHash(ConnectionStringName);
                 return (int)hashCode;
             }
@@ -93,8 +91,6 @@ namespace Raven.Client.ServerWide
         {
             var externalReplication = (ExternalReplication)other;
             return base.IsEqualTo(other) && 
-                   string.Equals(Name, externalReplication.Name, StringComparison.OrdinalIgnoreCase) &&
-                   string.Equals(MentorNode, externalReplication.MentorNode, StringComparison.OrdinalIgnoreCase) &&
                    string.Equals(ConnectionStringName, externalReplication.ConnectionStringName, StringComparison.OrdinalIgnoreCase);
         }
 
