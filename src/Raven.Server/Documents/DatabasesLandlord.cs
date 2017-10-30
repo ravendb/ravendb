@@ -106,7 +106,7 @@ namespace Raven.Server.Documents
                                 "This node was recently recovered from rehabilitation and should be deleted to maintain the replication factor, " +
                                 "but it may contain documents that are not existing in the rest of the database-group.\n" +
                                 $"The current change-vector is {dbChangeVector}, while issued change-vector for the deletion is {mentorsChangeVector}",
-                                AlertType.DatabaseTopologyWarning,
+                                AlertType.DeletionError,
                                 NotificationSeverity.Error
                             ));
                             return;
@@ -171,8 +171,10 @@ namespace Raven.Server.Documents
             }
             catch (Exception e)
             {
+                var title = $"Failed to digest change of type '{changeType}' for database '{t.DatabaseName}'";
                 if (_logger.IsInfoEnabled)
-                    _logger.Info($"Could not react to a cluster database change of type {changeType} for db {t.DatabaseName}", e);
+                    _logger.Info(title, e);
+                _serverStore.NotificationCenter.Add(AlertRaised.Create(title, e.Message, AlertType.DeletionError, NotificationSeverity.Error));
             }
             finally
             {
