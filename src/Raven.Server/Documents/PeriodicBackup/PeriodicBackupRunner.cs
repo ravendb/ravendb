@@ -989,39 +989,6 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
 
             existingBackupState.UpdateTimer(GetTimer(newConfiguration, backupStatus));
-
-            //if (taskState == TaskStatus.ActiveByCurrentNode &&
-            //    backupStatus.NodeTag != _serverStore.NodeTag &&
-            //    existingBackupState.RunningTask == null)
-
-
-            //return;
-
-            //if (existingBackupState.Configuration.Equals(newConfiguration))
-            //{
-            //    // the username/password for the cloud backups might have changed,
-            //    // and it will be reloaded on the next backup re-scheduling
-            //    existingBackupState.Configuration = newConfiguration;
-            //    if (taskState == TaskStatus.ActiveByCurrentNode)
-            //        existingBackupState.UpdateTimer(GetTimer(newConfiguration, backupStatus));
-
-            //    return;
-            //}
-
-            //// the backup configuration changed
-            //existingBackupState.DisableFutureBackups();
-            //TryAddInactiveRunningPeriodicBackups(existingBackupState.RunningTask);
-            //_periodicBackups.TryRemove(taskId, out _);
-
-            //var periodicBackup = new PeriodicBackup
-            //{
-            //    Configuration = newConfiguration
-            //};
-
-            //if (taskState == TaskStatus.ActiveByCurrentNode)
-            //    existingBackupState.UpdateTimer(GetTimer(newConfiguration, backupStatus));
-
-            //_periodicBackups.TryAdd(taskId, periodicBackup);
         }
 
         private enum TaskStatus
