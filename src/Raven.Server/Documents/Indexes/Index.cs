@@ -149,7 +149,7 @@ namespace Raven.Server.Documents.Indexes
         private bool _allocationCleanupNeeded;
         private readonly MultipleUseFlag _lowMemoryFlag = new MultipleUseFlag();
         private long _lastLowMemoryEventTicks = 0;
-        private readonly long _lowMemoryIntervalTicks = TimeSpan.FromMinutes(3).Ticks;
+        private readonly long _lowMemoryIntervalTicks = TimeSpan.FromMinutes(1).Ticks;
 
         private Size _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
         private NativeMemory.ThreadStats _threadAllocations;
@@ -957,12 +957,6 @@ namespace Raven.Server.Documents.Indexes
 
                         try
                         {
-                            if (IsLowMemory())
-                            {
-                                // need to reduce the amount of memory that we use
-                                storageEnvironment.Cleanup();
-                            }
-
                             // the logic here is that unless we hit the memory limit on the system, we want to retain our
                             // allocated memory as long as we still have work to do (since we will reuse it on the next batch)
                             // and it is probably better to avoid alloc/free jitter.
