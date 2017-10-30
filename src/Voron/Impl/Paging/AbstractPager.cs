@@ -204,7 +204,7 @@ namespace Voron.Impl.Paging
             var allocationSize = Math.Max(NumberOfAllocatedPages * Constants.Storage.PageSize, Constants.Storage.PageSize);
             while (minRequested > allocationSize)
             {
-                allocationSize = GetNewLength(allocationSize);
+                allocationSize = GetNewLength(allocationSize, minRequested);
             }
 
             return AllocateMorePages(allocationSize);
@@ -240,7 +240,7 @@ namespace Voron.Impl.Paging
 
         protected internal abstract PagerState AllocateMorePages(long newLength);
 
-        private long GetNewLength(long current)
+        private long GetNewLength(long current, long minRequested)
         {
             DateTime now = DateTime.UtcNow;
             if (_lastIncrease == DateTime.MinValue)
@@ -252,7 +252,8 @@ namespace Voron.Impl.Paging
             if (_lowMemoryFlag)
             {
                 _lastIncrease = now;
-                return MinIncreaseSize;
+                // cannot return less than the minRequested
+                return Bits.NextPowerOf2(minRequested);
             }
 
             TimeSpan timeSinceLastIncrease = (now - _lastIncrease);
@@ -281,13 +282,12 @@ namespace Voron.Impl.Paging
             if (totalSize < 512 * 1024 * 1024L)
                 return Bits.NextPowerOf2(totalSize);
 
-            // if it is over  0.5 GB, then we grow at 1 GB intervals
-
+            // if it is over 0.5 GB, then we grow at 1 GB intervals
             var remainder = totalSize%Constants.Size.Gigabyte;
             if (remainder == 0)
                 return totalSize;
 
-            // above 0.5GB we need to round to then next GB number
+            // above 0.5GB we need to round to the next GB number
             return totalSize + Constants.Size.Gigabyte - remainder;
         }
 
