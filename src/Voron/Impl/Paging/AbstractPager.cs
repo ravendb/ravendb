@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Threading;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.LowMemory;
@@ -115,6 +114,8 @@ namespace Voron.Impl.Paging
             PageMinSpace = (int)(PageMaxSpace * 0.33);
 
             SetPagerState(new PagerState(this));
+
+            LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
         }
 
         public StorageEnvironmentOptions Options => _options;
