@@ -9,6 +9,8 @@ class ongoingTaskSqlEtlListModel extends ongoingTask {
     destinationServer = ko.observable<string>();
     destinationDatabase = ko.observable<string>();
     connectionStringName = ko.observable<string>();
+
+    connectionStringsUrl: string;
     
     showSqlEtlDetails = ko.observable(false);
 
@@ -17,6 +19,8 @@ class ongoingTaskSqlEtlListModel extends ongoingTask {
 
         this.update(dto);
         this.initializeObservables();        
+
+        this.connectionStringsUrl = `${appUrl.forCurrentDatabase().connectionStrings()}` + `&type=sql&name=${this.connectionStringName()}`;
     }
 
     initializeObservables() {

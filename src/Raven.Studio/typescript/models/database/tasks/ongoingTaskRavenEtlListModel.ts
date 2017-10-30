@@ -10,6 +10,8 @@ class ongoingTaskRavenEtlListModel extends ongoingTask {
     destinationURL = ko.observable<string>();
     connectionStringName = ko.observable<string>();
 
+    connectionStringsUrl: string;
+    
     showRavenEtlDetails = ko.observable(false);
 
     constructor(dto: Raven.Client.ServerWide.Operations.OngoingTaskRavenEtlListView) {
@@ -17,6 +19,8 @@ class ongoingTaskRavenEtlListModel extends ongoingTask {
 
         this.update(dto);
         this.initializeObservables();
+
+        this.connectionStringsUrl = `${appUrl.forCurrentDatabase().connectionStrings()}` + `&type=raven&name=${this.connectionStringName()}`;
     }
 
     initializeObservables() {
