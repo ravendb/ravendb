@@ -698,7 +698,11 @@ namespace Raven.Server.Documents.Indexes
 
                         var lastDoc = DocumentDatabase.DocumentsStorage.GetByEtag(databaseContext, lastDocEtag);
 
-                        stalenessReasons.Add($"There are still some documents to process from collection '{collection}'. The last document etag in that collection is '{lastDocEtag}' ({Constants.Documents.Metadata.Id}: '{lastDoc.Id}', {Constants.Documents.Metadata.LastModified}: '{lastDoc.LastModified}'), but last processed document etag for that collection is '{lastProcessedDocEtag}'.");
+                        stalenessReasons.Add($"There are still some documents to process from collection '{collection}'. " +
+                                             $"The last document etag in that collection is '{lastDocEtag:#,#;;0}' " +
+                                             $"({Constants.Documents.Metadata.Id}: '{lastDoc.Id}', " +
+                                             $"{Constants.Documents.Metadata.LastModified}: '{lastDoc.LastModified}'), " +
+                                             $"but last processed document etag for that collection is '{lastProcessedDocEtag:#,#;;0}'.");
                     }
 
                     var lastTombstoneEtag = GetLastTombstoneEtagInCollection(databaseContext, collection);
@@ -710,7 +714,11 @@ namespace Raven.Server.Documents.Indexes
 
                         var lastTombstone = DocumentDatabase.DocumentsStorage.GetTombstoneByEtag(databaseContext, lastTombstoneEtag);
 
-                        stalenessReasons.Add($"There are still some tombstones to process from collection '{collection}'. The last tombstone etag in that collection is '{lastTombstoneEtag}' ({Constants.Documents.Metadata.Id}: '{lastTombstone.LowerId}', {Constants.Documents.Metadata.LastModified}: '{lastTombstone.LastModified}'), but last processed tombstone etag for that collection is '{lastProcessedTombstoneEtag}'.");
+                        stalenessReasons.Add($"There are still some tombstones to process from collection '{collection}'. " +
+                                             $"The last tombstone etag in that collection is '{lastTombstoneEtag:#,#;;0}' " +
+                                             $"({Constants.Documents.Metadata.Id}: '{lastTombstone.LowerId}', " +
+                                             $"{Constants.Documents.Metadata.LastModified}: '{lastTombstone.LastModified}'), " +
+                                             $"but last processed tombstone etag for that collection is '{lastProcessedTombstoneEtag:#,#;;0}'.");
                     }
                 }
                 else
@@ -723,7 +731,12 @@ namespace Raven.Server.Documents.Indexes
 
                         var lastDoc = DocumentDatabase.DocumentsStorage.GetByEtag(databaseContext, lastDocEtag);
 
-                        stalenessReasons.Add($"There are still some documents to process from collection '{collection}'. The last document etag in that collection is '{lastDocEtag}' ({Constants.Documents.Metadata.Id}: '{lastDoc.Id}', {Constants.Documents.Metadata.LastModified}: '{lastDoc.LastModified}') with cutoff set to '{cutoff.Value}', but last processed document etag for that collection is '{lastProcessedDocEtag}'.");
+                        stalenessReasons.Add($"There are still some documents to process from collection '{collection}'. " +
+                                             $"The last document etag in that collection is '{lastDocEtag:#,#;;0}' " +
+                                             $"({Constants.Documents.Metadata.Id}: '{lastDoc.Id}', " +
+                                             $"{Constants.Documents.Metadata.LastModified}: '{lastDoc.LastModified}') " +
+                                             $"with cutoff set to '{cutoff.Value}', " +
+                                             $"but last processed document etag for that collection is '{lastProcessedDocEtag:#,#;;0}'.");
                     }
 
                     var hasTombstones = DocumentDatabase.DocumentsStorage.HasTombstonesWithDocumentEtagBetween(databaseContext,
