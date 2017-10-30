@@ -2,22 +2,10 @@ using Raven.Client.Documents;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Blittable;
-using FastTests.Client.Attachments;
-using FastTests.Server.Documents.Expiration;
-using FastTests.Server.Documents.Indexing.Static;
-using FastTests.Smuggler;
-using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Identity;
 using Raven.Server.Utils;
-using SlowTests.Client.Attachments;
-using SlowTests.Server.Documents.Indexing;
-using SlowTests.Smuggler;
-using Sparrow.Logging;
-using StressTests.Server.Replication;
+using SlowTests.Voron.Issues;
 
 /*
     Code reference - please DO NOT REMOVE:
@@ -44,7 +32,7 @@ namespace Tryouts
             for (int i = 0; i < 10000; i++)
             {
                 Console.WriteLine(i);
-                new ExternalReplicationStressTests().ExternalReplicationShouldWorkWithSmallTimeoutStress();
+                new RavenDB_7099().Flushed_journals_should_become_recyclable_files_after_sync(seed: 1694445455);
             }
         }
 
