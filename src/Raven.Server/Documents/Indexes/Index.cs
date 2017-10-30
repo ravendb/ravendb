@@ -2334,7 +2334,7 @@ namespace Raven.Server.Documents.Indexes
         {
             stats.RecordMapAllocations(_threadAllocations.TotalAllocated);
 
-            if (count > MinBatchSize && IsLowMemory())
+            if (_lowMemoryFlag.IsRaised() && count > MinBatchSize)
             {
                 stats.RecordMapCompletedReason($"The batch was stopped after processing {MinBatchSize} documents because of low memory");
                 return false;
@@ -2575,10 +2575,6 @@ namespace Raven.Server.Documents.Indexes
             _lastLowMemoryEventTicks = DateTime.UtcNow.Ticks;
         }
 
-        /// <summary>
-        /// We don't need to do anything when the low memory problem is over,
-        /// the class will automatically raise memory usage.
-        /// </summary>
         public void LowMemoryOver()
         {
             _lowMemoryFlag.Lower();
