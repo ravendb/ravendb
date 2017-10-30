@@ -371,6 +371,54 @@ namespace FastTests.Server.Documents.Patching
         }
 
         [Fact]
+        public async Task CanOutputNestedDebugInformation()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CustomType customType;
+                using (var session = store.OpenSession())
+                {
+                    customType = new CustomType
+                    {
+                        Owner = "Idan",
+                        Value = 3
+
+                    };
+
+                    session.Store(customType);
+                    session.SaveChanges();
+                }
+
+                var requestExecutor = store.GetRequestExecutor();
+                using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                {
+                    var command = new PatchOperation.PatchCommand(
+                        store.Conventions,
+                        context,
+                        customType.Id,
+                        null,
+                        new PatchRequest
+                        {
+                            Script = "output(this[\"@metadata\"])",
+                        },
+                        patchIfMissing: null,
+                        skipPatchIfChangeVectorMismatch: false,
+                        returnDebugInformation: true,
+                        test: false);
+
+                    await requestExecutor.ExecuteAsync(command, context);
+                    var result = command.Result;
+                    var array = (BlittableJsonReaderArray)result.Debug["Info"];
+                    var fromPatch = array[0].ToString();
+
+                    Assert.True(fromPatch.Contains("@collection"));
+
+                }
+            }
+        }
+
+
+        [Fact]
         public async Task CannotUseInfiniteLoop()
         {
             using (var store = GetDocumentStore())
