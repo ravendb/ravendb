@@ -29,11 +29,13 @@ namespace Raven.Server.Documents.ETL
 
         private int TransformationSuccesses { get; set; }
 
-        private int LoadErrors { get; set; }
+        public int LoadErrors { get; set; }
 
         public int LoadSuccesses { get; private set; }
 
         public AlertRaised LastAlert { get; set; }
+
+        public bool WasLatestLoadSuccessful { get; set; }
 
         public void TransformationSuccess()
         {
@@ -76,12 +78,14 @@ namespace Raven.Server.Documents.ETL
 
         public void RecordLoadError(Exception e, int count = 1)
         {
+            WasLatestLoadSuccessful = false;
+
             LoadErrors += count;
 
             LastErrorTime = SystemTime.UtcNow;
 
             LastAlert = AlertRaised.Create(_processType,
-                $"[{_name}] Write error: {e.Message}",
+                $"[{_name}] Load error: {e.Message}",
                 AlertType.Etl_LoadError,
                 NotificationSeverity.Error,
                 key: _name, details: new ExceptionDetails(e));
@@ -92,7 +96,7 @@ namespace Raven.Server.Documents.ETL
             if (LoadErrors <= LoadSuccesses)
                 return;
 
-            var message = $"[{_name}] Write error hit ratio too high. Could not tolerate write error ratio and stopped current ETL cycle";
+            var message = $"[{_name}] Load error hit ratio too high. Could not tolerate load error ratio and stopped current ETL cycle";
 
             LastAlert = AlertRaised.Create(_processType,
                 message,
@@ -108,6 +112,7 @@ namespace Raven.Server.Documents.ETL
 
         public void LoadSuccess(int items)
         {
+            WasLatestLoadSuccessful = true;
             LoadSuccesses += items;
         }
 

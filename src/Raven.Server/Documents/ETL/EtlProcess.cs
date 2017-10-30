@@ -10,6 +10,7 @@ using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.ETL;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents.ETL.Metrics;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.NotificationCenter.Notifications;
@@ -595,6 +596,14 @@ namespace Raven.Server.Documents.ETL
                 message.Append($"Batch completion reason: {stats.BatchCompleteReason}");
 
             Logger.Info(message.ToString());
+        }
+
+        public OngoingTaskConnectionStatus GetConnectionStatus()
+        {
+            if (Statistics.WasLatestLoadSuccessful || Statistics.LoadErrors == 0)
+                return OngoingTaskConnectionStatus.Active;
+
+            return OngoingTaskConnectionStatus.NotActive;
         }
 
         public override void Dispose()
