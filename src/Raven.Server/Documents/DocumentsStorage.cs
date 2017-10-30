@@ -50,7 +50,7 @@ namespace Raven.Server.Documents
         public static readonly TableSchema TombstonesSchema = new TableSchema();
         public static readonly TableSchema CollectionsSchema = new TableSchema();
 
-        private readonly DocumentDatabase _documentDatabase;
+        public readonly DocumentDatabase DocumentDatabase;
 
         private Dictionary<string, CollectionName> _collectionsCache;
 
@@ -170,8 +170,8 @@ namespace Raven.Server.Documents
 
         public DocumentsStorage(DocumentDatabase documentDatabase)
         {
-            _documentDatabase = documentDatabase;
-            _name = _documentDatabase.Name;
+            DocumentDatabase = documentDatabase;
+            _name = DocumentDatabase.Name;
             _logger = LoggingSource.Instance.GetLogger<DocumentsStorage>(documentDatabase.Name);
         }
 
@@ -208,23 +208,23 @@ namespace Raven.Server.Documents
             if (_logger.IsInfoEnabled)
             {
                 _logger.Info
-                ("Starting to open document storage for " + (_documentDatabase.Configuration.Core.RunInMemory
+                ("Starting to open document storage for " + (DocumentDatabase.Configuration.Core.RunInMemory
                      ? "<memory>"
-                     : _documentDatabase.Configuration.Core.DataDirectory.FullPath));
+                     : DocumentDatabase.Configuration.Core.DataDirectory.FullPath));
             }
 
 
-            var options = GetStorageEnvironmentOptionsFromConfiguration(_documentDatabase.Configuration, _documentDatabase.IoChanges, _documentDatabase.CatastrophicFailureNotification);
+            var options = GetStorageEnvironmentOptionsFromConfiguration(DocumentDatabase.Configuration, DocumentDatabase.IoChanges, DocumentDatabase.CatastrophicFailureNotification);
 
-            options.OnNonDurableFileSystemError += _documentDatabase.HandleNonDurableFileSystemError;
-            options.OnRecoveryError += _documentDatabase.HandleOnRecoveryError;
+            options.OnNonDurableFileSystemError += DocumentDatabase.HandleNonDurableFileSystemError;
+            options.OnRecoveryError += DocumentDatabase.HandleOnRecoveryError;
 
             options.GenerateNewDatabaseId = generateNewDatabaseId;
-            options.CompressTxAboveSizeInBytes = _documentDatabase.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
-            options.ForceUsing32BitsPager = _documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
-            options.TimeToSyncAfterFlashInSec = (int)_documentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
-            options.NumOfConcurrentSyncsPerPhysDrive = _documentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
-            Sodium.CloneKey(out options.MasterKey, _documentDatabase.MasterKey);
+            options.CompressTxAboveSizeInBytes = DocumentDatabase.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
+            options.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
+            options.TimeToSyncAfterFlashInSec = (int)DocumentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
+            options.NumOfConcurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
+            Sodium.CloneKey(out options.MasterKey, DocumentDatabase.MasterKey);
 
             try
             {
@@ -269,7 +269,7 @@ namespace Raven.Server.Documents
             options.SchemaUpgrader = SchemaUpgrader.Upgrader(SchemaUpgrader.StorageType.Documents, null, this);
             try
             {
-                ContextPool = new DocumentsContextPool(_documentDatabase);
+                ContextPool = new DocumentsContextPool(DocumentDatabase);
                 Environment = new StorageEnvironment(options);
 
                 using (var tx = Environment.WriteTransaction())
@@ -284,12 +284,12 @@ namespace Raven.Server.Documents
 
                     CollectionsSchema.Create(tx, CollectionsSlice, 32);
 
-                    RevisionsStorage = new RevisionsStorage(_documentDatabase, tx);
-                    ExpirationStorage = new ExpirationStorage(_documentDatabase, tx);
-                    Identities = new IdentitiesStorage(_documentDatabase, tx);
-                    ConflictsStorage = new ConflictsStorage(_documentDatabase, tx);
-                    AttachmentsStorage = new AttachmentsStorage(_documentDatabase, tx);
-                    DocumentPut = new DocumentPutAction(this, _documentDatabase);
+                    RevisionsStorage = new RevisionsStorage(DocumentDatabase, tx);
+                    ExpirationStorage = new ExpirationStorage(DocumentDatabase, tx);
+                    Identities = new IdentitiesStorage(DocumentDatabase, tx);
+                    ConflictsStorage = new ConflictsStorage(DocumentDatabase, tx);
+                    AttachmentsStorage = new AttachmentsStorage(DocumentDatabase, tx);
+                    DocumentPut = new DocumentPutAction(this, DocumentDatabase);
 
                     _lastEtag = ReadLastEtag(tx);
                     _collectionsCache = ReadCollections(tx);
@@ -330,9 +330,9 @@ namespace Raven.Server.Documents
         {
             var changeVector = GetDatabaseChangeVector(context);
             if (string.IsNullOrEmpty(changeVector))
-                return ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, newEtag, _documentDatabase.DbId);
+                return ChangeVectorUtils.NewChangeVector(DocumentDatabase.ServerStore.NodeTag, newEtag, DocumentDatabase.DbId);
 
-            ChangeVectorUtils.TryUpdateChangeVector(_documentDatabase.ServerStore.NodeTag, Environment.DbId, newEtag, ref changeVector);
+            ChangeVectorUtils.TryUpdateChangeVector(DocumentDatabase.ServerStore.NodeTag, Environment.DbId, newEtag, ref changeVector);
             return changeVector;
         }
 
@@ -975,7 +975,7 @@ namespace Raven.Server.Documents
             }
 
             var local = GetDocumentOrTombstone(context, lowerId, throwOnConflict: false);
-            var modifiedTicks = lastModifiedTicks ?? _documentDatabase.Time.GetUtcNow().Ticks;
+            var modifiedTicks = lastModifiedTicks ?? DocumentDatabase.Time.GetUtcNow().Ticks;
 
             if (local.Tombstone != null)
             {
@@ -994,7 +994,7 @@ namespace Raven.Server.Documents
                 if (collectionName.IsHiLo == false &&
                     (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
                 {
-                    var revisionsStorage = _documentDatabase.DocumentsStorage.RevisionsStorage;
+                    var revisionsStorage = DocumentDatabase.DocumentsStorage.RevisionsStorage;
                     if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false &&
                         (revisionsStorage.Configuration != null || flags.Contain(DocumentFlags.Resolved)))
                     {
@@ -1068,7 +1068,7 @@ namespace Raven.Server.Documents
                 if (collectionName.IsHiLo == false &&
                     (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
                 {
-                    var revisionsStorage = _documentDatabase.DocumentsStorage.RevisionsStorage;
+                    var revisionsStorage = DocumentDatabase.DocumentsStorage.RevisionsStorage;
                     if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false && 
                         (revisionsStorage.Configuration != null || flags.Contain(DocumentFlags.Resolved)))
                     {
@@ -1120,7 +1120,7 @@ namespace Raven.Server.Documents
                     changeVector,
                     DateTime.UtcNow.Ticks,
                     null,
-                    DocumentFlags.None).Etag;
+                    documentFlags).Etag;
 
                 return new DeleteOperationResult
                 {

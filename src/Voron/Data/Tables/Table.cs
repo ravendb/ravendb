@@ -185,7 +185,7 @@ namespace Voron.Data.Tables
             return RawDataSection.DirectRead(_tx.LowLevelTransaction, id, out size);
         }
 
-        public long Update(long id, TableValueBuilder builder)
+        public long Update(long id, TableValueBuilder builder, bool forceUpdate = false)
         {
             AssertWritableTable();
 
@@ -209,7 +209,8 @@ namespace Voron.Data.Tables
                     var tvr = new TableValueReader(oldData, oldDataSize);
                     UpdateValuesFromIndex(id,
                         ref tvr,
-                        builder);
+                        builder, 
+                        forceUpdate);
 
                     builder.CopyTo(pos);
                     return id;
@@ -233,7 +234,7 @@ namespace Voron.Data.Tables
 
                     AssertNoReferenceToOldData(builder, pos, size);
 
-                    UpdateValuesFromIndex(id, ref tvr, builder);
+                    UpdateValuesFromIndex(id, ref tvr, builder, forceUpdate);
 
                     // MemoryCopy into final position.
                     page.OverflowSize = size;
@@ -460,7 +461,7 @@ namespace Voron.Data.Tables
             return id;
         }
 
-        private void UpdateValuesFromIndex(long id, ref TableValueReader oldVer, TableValueBuilder newVer)
+        private void UpdateValuesFromIndex(long id, ref TableValueReader oldVer, TableValueBuilder newVer, bool forceUpdate)
         {
             AssertWritableTable();
 
@@ -471,7 +472,8 @@ namespace Voron.Data.Tables
                     using (_schema.Key.GetSlice(_tx.Allocator, ref oldVer, out Slice oldKeySlice))
                     using (_schema.Key.GetSlice(_tx.Allocator, newVer, out Slice newKeySlice))
                     {
-                        if (SliceComparer.AreEqual(oldKeySlice, newKeySlice) == false)
+                        if (SliceComparer.AreEqual(oldKeySlice, newKeySlice) == false ||
+                            forceUpdate)
                         {
                             var pkTree = GetTree(_schema.Key);
                             pkTree.Delete(oldKeySlice);
@@ -488,7 +490,8 @@ namespace Voron.Data.Tables
                     using (indexDef.GetSlice(_tx.Allocator, ref oldVer, out oldVal))
                     using (indexDef.GetSlice(_tx.Allocator, newVer, out newVal))
                     {
-                        if (SliceComparer.AreEqual(oldVal, newVal) == false)
+                        if (SliceComparer.AreEqual(oldVal, newVal) == false ||
+                            forceUpdate)
                         {
                             var indexTree = GetTree(indexDef);
                             var fst = GetFixedSizeTree(indexTree, oldVal.Clone(_tx.Allocator), 0);
@@ -504,7 +507,8 @@ namespace Voron.Data.Tables
                     var index = GetFixedSizeTree(indexDef);
                     var oldKey = indexDef.GetValue(ref oldVer);
                     var newKey = indexDef.GetValue(_tx.Allocator, newVer);
-                    if (oldKey != newKey)
+                    if (oldKey != newKey || 
+                        forceUpdate)
                     {
                         index.Delete(oldKey);
                         index.Add(newKey, idAsSlice);
@@ -512,7 +516,6 @@ namespace Voron.Data.Tables
                 }
             }
         }
-
 
         internal long Insert(ref TableValueReader reader)
         {
@@ -1193,7 +1196,8 @@ namespace Voron.Data.Tables
             var fst = GetFixedSizeTree(index);
             using (var it = fst.Iterate())
             {
-                if (it.Seek(key) == false)
+                if (it.Seek(key) == false &&
+                    it.SeekToLast() == false)
                     yield break;
 
                 var result = new TableValueHolder();
@@ -1236,7 +1240,7 @@ namespace Voron.Data.Tables
             reader = new TableValueReader(id, ptr, size);
         }
 
-        public bool Set(TableValueBuilder builder)
+        public bool Set(TableValueBuilder builder, bool forceUpdate = false)
         {
             AssertWritableTable();
 
@@ -1252,7 +1256,7 @@ namespace Voron.Data.Tables
 
             if (exists)
             {
-                Update(id, builder);
+                Update(id, builder, forceUpdate);
                 return false;
             }
 

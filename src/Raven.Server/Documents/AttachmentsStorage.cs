@@ -847,6 +847,7 @@ namespace Raven.Server.Documents
         private void CreateTombstone(DocumentsOperationContext context, Slice keySlice, long attachmentEtag, string changeVector)
         {
             var newEtag = _documentsStorage.GenerateNextEtag();
+            var lastModifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
 
             var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, AttachmentsTombstonesSlice);
             using (table.Allocate(out TableValueBuilder tvb))
@@ -860,7 +861,7 @@ namespace Raven.Server.Documents
                 tvb.Add(null, 0);
                 tvb.Add((int)DocumentFlags.None);
                 tvb.Add(cv.Content.Ptr, cv.Size);
-                tvb.Add(null, 0);
+                tvb.Add(lastModifiedTicks);
                 table.Insert(tvb);
             }
         }

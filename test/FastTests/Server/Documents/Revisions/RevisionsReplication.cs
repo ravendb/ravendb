@@ -217,6 +217,10 @@ namespace FastTests.Server.Documents.Revisions
                 Assert.Equal(useSession ? 2 : 1, statistics.CountOfDocuments);
                 Assert.Equal(4, statistics.CountOfRevisionDocuments);
 
+                //sanity
+                deletedRevisions = await store1.Commands().GetRevisionsBinEntriesAsync(long.MaxValue);
+                Assert.Equal(1, deletedRevisions.Count);
+
                 deletedRevisions = await store2.Commands().GetRevisionsBinEntriesAsync(long.MaxValue);
                 Assert.Equal(1, deletedRevisions.Count);
 
@@ -233,9 +237,9 @@ namespace FastTests.Server.Documents.Revisions
                 // Can get metadata only
                 dynamic revisions = await store2.Commands().GetRevisionsForAsync(id, metadataOnly: true);
                 Assert.Equal(4, revisions.Count);
-                Assert.Equal(DocumentFlags.DeleteRevision.ToString(), revisions[0][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
+                Assert.Contains(DocumentFlags.DeleteRevision.ToString(), revisions[0][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
                 Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision | DocumentFlags.FromReplication).ToString(), revisions[1][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
-                Assert.Equal(DocumentFlags.DeleteRevision.ToString(), revisions[2][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
+                Assert.Contains(DocumentFlags.DeleteRevision.ToString(), revisions[2][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
                 Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision | DocumentFlags.FromReplication).ToString(), revisions[3][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
 
                 await store1.Admin.SendAsync(new RevisionsTests.DeleteRevisionsOperation(new AdminRevisionsHandler.Parameters

@@ -109,6 +109,9 @@ namespace Voron.Data.BTrees
             if (type != RootObjectType.VariableSizeTree && type != RootObjectType.Table)
                 ThrowInvalidTreeCreateType();
 
+            if (llt.Flags != TransactionFlags.ReadWrite)
+                throw new ArgumentException("Cannot create a tree in a read only transaction");
+
             var newPage = newPageAllocator?.AllocateSinglePage(0) ?? llt.AllocatePage(1);
 
             TreePage newRootPage = PrepareTreePage(TreePageFlags.Leaf, 1, newPage);

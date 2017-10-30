@@ -147,8 +147,8 @@ namespace Raven.Server.Documents.Handlers
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
-            using (revisionsStorage.GetLatestRevisionsBinEntryEtag(context, etag, out Slice revisionsBinEntryKey, out var actualChangeVector))
             {
+                revisionsStorage.GetLatestRevisionsBinEntryEtag(context, etag, out var actualChangeVector);
                 if (actualChangeVector != null)
                 {
                     if (GetStringFromHeaders("If-None-Match") == actualChangeVector)
@@ -166,7 +166,7 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteStartObject();
 
                     writer.WritePropertyName("Results");
-                    var revisions = revisionsStorage.GetRevisionsBinEntries(context, revisionsBinEntryKey, pageSize);
+                    var revisions = revisionsStorage.GetRevisionsBinEntries(context, etag, pageSize);
                     writer.WriteDocuments(context, revisions, false, out count);
 
                     writer.WriteEndObject();

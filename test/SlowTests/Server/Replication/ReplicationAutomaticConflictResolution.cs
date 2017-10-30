@@ -8,9 +8,12 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
+using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Replication;
+using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
+using Raven.Server.Documents;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -52,7 +55,7 @@ namespace SlowTests.Server.Replication
 
                 using (var session = slave.OpenSession())
                 {
-                    Assert.Equal(3, session.Advanced.GetRevisionsFor<User>("users/1").Count);
+                    VerifyRevisionsAfterConflictResolving(session);
                     session.SaveChanges();
                 }
                 
@@ -120,7 +123,7 @@ return out;
                         var item = session.Load<User>("users/1");
                         Assert.Equal("Karmel", item.Name);
                         Assert.Equal(123, item.Age);
-                        Assert.Equal(3, session.Advanced.GetRevisionsFor<User>("users/1").Count);
+                        VerifyRevisionsAfterConflictResolving(session);
                     }
                     catch (ConflictException)
                     {
@@ -249,7 +252,7 @@ return out;
                     //this shouldn't throw
                     var item = session.Load<User>("users/1");
                     Assert.Equal(item.Name, "Karmeli123");
-                    Assert.Equal(3, session.Advanced.GetRevisionsFor<User>("users/1").Count);
+                    VerifyRevisionsAfterConflictResolving(session);
                 }
             }
         }
@@ -325,7 +328,7 @@ return out;
                     Assert.Equal("2nd", user1.Name);
                     Assert.Equal("2nd", user2.Name);
 
-                    Assert.Equal(3, session.Advanced.GetRevisionsFor<User>("users/1").Count);
+                    VerifyRevisionsAfterConflictResolving(session);
                 }
             }
         }
@@ -386,9 +389,28 @@ return out;
                     var user = session.Load<User>("users/1");
                     Assert.Null(user);
                     WaitForUserToContinueTheTest(slave);
-                    Assert.Equal(3, session.Advanced.GetRevisionsFor<User>("users/1").Count);
+                    VerifyRevisionsAfterConflictResolving(session);
                 }
             }
         }
+
+        private static void VerifyRevisionsAfterConflictResolving(IDocumentSession session)
+        {
+            var revision = session.Advanced.GetRevisionsFor<User>("users/1");
+            Assert.Equal(3, revision.Count);
+
+            var metadata = session.Advanced.GetMetadataFor(revision[0]);
+            var flags = metadata.GetString(Constants.Documents.Metadata.Flags);
+            Assert.Contains(DocumentFlags.Resolved.ToString(), flags);
+
+            metadata = session.Advanced.GetMetadataFor(revision[1]);
+            flags = metadata.GetString(Constants.Documents.Metadata.Flags);
+            Assert.Contains(DocumentFlags.Conflicted.ToString(), flags);
+
+            metadata = session.Advanced.GetMetadataFor(revision[2]);
+            flags = metadata.GetString(Constants.Documents.Metadata.Flags);
+            Assert.Contains(DocumentFlags.Conflicted.ToString(), flags);
+        }
+
     }
 }
