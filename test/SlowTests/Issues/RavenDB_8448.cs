@@ -26,7 +26,7 @@ namespace SlowTests.Issues
 
                 store.Subscriptions.Create(new SubscriptionCreationOptions
                 {
-                    Query = "from Users where id() = 'users/1' OR id() = 'users/3'",
+                    Query = "from Users as u where id(u) = 'users/1' OR id(u) = 'users/3'",
                     Name = "test"
                 });
 
