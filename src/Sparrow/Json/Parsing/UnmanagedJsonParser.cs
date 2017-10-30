@@ -560,14 +560,15 @@ namespace Sparrow.Json.Parsing
                 if (pos >= bufferSize)
                     goto NotANumber;
 
-                _charPos++;
-
                 byte b = inputBuffer[pos];
+                byte digit = (byte)(b - (byte)'0');
+
+                _charPos++;
                 pos++;
-                if (b >= '0' && b <= '9')
+                if (digit <= 9) // PERF: Simplified the check to get rid of 1 comparison
                 {
                     // PERF: This is a fast loop for the most common characters found on numbers.
-                    var next = (value * 10) + b - (byte)'0';
+                    var next = (value * 10) + digit;
 
                     if (next < value) //overflow
                         _isDouble = true;
