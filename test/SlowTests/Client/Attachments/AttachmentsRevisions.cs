@@ -167,7 +167,7 @@ namespace SlowTests.Client.Attachments
             var metadata = session.Advanced.GetMetadataFor(revision);
             var flags = DocumentFlags.HasRevisions | DocumentFlags.Revision;
             if (isDeleteRevision)
-                flags = DocumentFlags.DeleteRevision | flags;
+                flags = DocumentFlags.DeleteRevision | DocumentFlags.HasRevisions;
             Assert.Equal(flags.ToString(), metadata[Constants.Documents.Metadata.Flags]);
             Assert.False(metadata.ContainsKey(Constants.Documents.Metadata.Attachments));
         }

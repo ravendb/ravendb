@@ -568,6 +568,11 @@ namespace Raven.Server.Documents.Revisions
         {
             Debug.Assert(changeVector != null, "Change vector must be set");
 
+            if (flags.Contain(DocumentFlags.HasAttachments))
+            {
+                flags &= ~DocumentFlags.HasAttachments;
+            }
+
             var configuration = GetRevisionsConfiguration(collectionName.Name, flags);
             if (configuration.Active == false)
                 return;

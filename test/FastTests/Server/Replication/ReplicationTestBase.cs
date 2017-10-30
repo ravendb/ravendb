@@ -212,7 +212,7 @@ namespace FastTests.Server.Replication
             var resList = new List<ModifyOngoingTaskResult>();
             foreach (var store in toStores)
             {
-                var databaseWatcher = new ExternalReplication(store.Database, "ConnectionString");
+                var databaseWatcher = new ExternalReplication(store.Database, $"ConnectionString-{store.Identifier}");
                 ModifyReplicationDestination(databaseWatcher);
                 tasks.Add(AddWatcherToReplicationTopology(fromStore, databaseWatcher));
             }
