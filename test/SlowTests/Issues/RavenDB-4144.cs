@@ -33,6 +33,7 @@ namespace SlowTests.Issues
                 {
                     Script = @"var list = ['my', 'list']; 
                                 for(var x in list){
+                                        if(list.hasOwnProperty(x) == false) continue;
                                     this.List[x] = list[x];
                                 }"
                 }));
