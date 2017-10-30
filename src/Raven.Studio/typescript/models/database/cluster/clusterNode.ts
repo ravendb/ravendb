@@ -23,9 +23,10 @@ class clusterNode {
 
     utilizedMemoryInGb = ko.pureComputed(() => {
         const licenseStatus = license.licenseStatus();
-        const utilizedMemory = this.utilizedCores() * licenseStatus.Ratio;
+        let utilizedMemory = this.utilizedCores() * licenseStatus.Ratio;
         const installedMemoryInGb = this.installedMemoryInGb();
-        return utilizedMemory > installedMemoryInGb ? installedMemoryInGb : utilizedMemory;
+        utilizedMemory = utilizedMemory > installedMemoryInGb ? installedMemoryInGb : utilizedMemory;
+        return this.getNumber(utilizedMemory);
     });
 
     cssCores = ko.pureComputed(() => {
