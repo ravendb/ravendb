@@ -569,15 +569,15 @@ namespace Raven.Tests.Json
             Assert.NotNull(clazz);
 
             var first = classTypes["RecursiveClass"].Single() as JsonCodeGenerator.ClassType;
-            Assert.NotNull(clazz);
+            Assert.NotNull(first);
 
             Assert.Equal("string", clazz.Properties["Name"].Name);
             Assert.False(clazz.Properties["Name"].IsArray);
             Assert.True(clazz.Properties["Name"].IsPrimitive);
 
             Assert.Equal("string", first.Properties["Name"].Name);
-            Assert.False(clazz.Properties["Name"].IsArray);
-            Assert.True(clazz.Properties["Name"].IsPrimitive);
+            Assert.False(first.Properties["Name"].IsArray);
+            Assert.True(first.Properties["Name"].IsPrimitive);
 
             Assert.Equal("RecursiveClass", clazz.Properties["Recursive"].Name);
             Assert.False(clazz.Properties["Recursive"].IsArray);
