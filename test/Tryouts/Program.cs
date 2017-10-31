@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests.Issues;
 using Raven.Server.Utils;
 using SlowTests.Voron.Issues;
 
@@ -32,7 +33,8 @@ namespace Tryouts
             for (int i = 0; i < 10000; i++)
             {
                 Console.WriteLine(i);
-                new RavenDB_7099().Flushed_journals_should_become_recyclable_files_after_sync(seed: 1694445455);
+                using (var ravenDb9055 = new RavenDB_9055())
+                    ravenDb9055.AggressivelyCacheWorksWhenTopologyUpdatesIsDisable();
             }
         }
 

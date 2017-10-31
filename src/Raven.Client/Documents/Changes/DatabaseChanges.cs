@@ -11,6 +11,7 @@ using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Util;
 using Sparrow;
+using Sparrow.Collections.LockFree;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
@@ -19,6 +20,7 @@ namespace Raven.Client.Documents.Changes
 {
     public class DatabaseChanges : IDatabaseChanges
     {
+        private int _commandId;
         private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
         private readonly MemoryStream _ms = new MemoryStream();
 
@@ -33,6 +35,8 @@ namespace Raven.Client.Documents.Changes
         private readonly CancellationTokenSource _cts;
         private TaskCompletionSource<IDatabaseChanges> _tcs;
 
+        private readonly ConcurrentDictionary<int, TaskCompletionSource<object>> _confirmations = new ConcurrentDictionary<int, TaskCompletionSource<object>>();
+        
         private readonly AtomicDictionary<DatabaseConnectionState> _counters = new AtomicDictionary<DatabaseConnectionState>(StringComparer.OrdinalIgnoreCase);
 
         public DatabaseChanges(RequestExecutor requestExecutor, string databaseName, Action onDispose)
@@ -249,6 +253,11 @@ namespace Raven.Client.Documents.Changes
 
         public void Dispose()
         {
+            foreach (var confirmation in _confirmations)
+            {
+                confirmation.Value.TrySetCanceled();
+            }
+            
             _client?.Dispose();
 
             _cts.Cancel();
@@ -311,35 +320,46 @@ namespace Raven.Client.Documents.Changes
 
         private async Task Send(string command, string value)
         {
-            await _semaphore.WaitAsync(_cts.Token).ConfigureAwait(false);
+            var stackTrace = Environment.StackTrace;
 
+            await _semaphore.WaitAsync(_cts.Token).ConfigureAwait(false);
+            var taskCompletionSource = new TaskCompletionSource<object>();
+            var currentCommandId = ++_commandId;
             try
             {
-                JsonOperationContext context;
-                using (_requestExecutor.ContextPool.AllocateOperationContext(out context))
+                using (_requestExecutor.ContextPool.AllocateOperationContext(out var context))
                 using (var writer = new BlittableJsonTextWriter(context, _ms))
                 {
                     writer.WriteStartObject();
-
+                    writer.WritePropertyName("CommandId");
+                    writer.WriteInteger(currentCommandId);
+                    
+                    writer.WriteComma();
                     writer.WritePropertyName("Command");
                     writer.WriteString(command);
                     writer.WriteComma();
 
                     writer.WritePropertyName("Param");
                     writer.WriteString(value);
-
+                  
                     writer.WriteEndObject();
                 }
 
-                ArraySegment<byte> buffer;
-                _ms.TryGetBuffer(out buffer);
+                _ms.TryGetBuffer(out var buffer);
 
+                _confirmations.Add(_commandId, taskCompletionSource);
+                
                 await _client.SendAsync(buffer, WebSocketMessageType.Text, endOfMessage: true, cancellationToken: _cts.Token).ConfigureAwait(false);
             }
             finally
             {
                 _ms.SetLength(0);
                 _semaphore.Release();
+            }
+
+            if (await taskCompletionSource.Task.WaitWithTimeout(TimeSpan.FromSeconds(15)).ConfigureAwait(false) == false)
+            {
+                throw new TimeoutException("Did not get a confirmation for command #" + currentCommandId);
             }
         }
 
@@ -405,6 +425,14 @@ namespace Raven.Client.Documents.Changes
 
                     NotifyAboutError(e);
                 }
+                finally
+                {
+                    foreach (var confirmation in _confirmations)
+                    {
+                        confirmation.Value.TrySetCanceled();
+                    }
+                    _confirmations.Clear();
+                }
 
                 try
                 {
@@ -464,9 +492,15 @@ namespace Raven.Client.Documents.Changes
                                         json.TryGet("Exception", out string exceptionAsString);
                                         NotifyAboutError(new Exception(exceptionAsString));
                                         break;
+                                     case "Confirm":
+                                         if (json.TryGet("CommandId", out int commandId) &&
+                                             _confirmations.TryRemove(commandId, out var tcs))
+                                         {
+                                             tcs.TrySetResult(null);
+                                         }
+                                         break;
                                     default:
-                                        BlittableJsonReaderObject value;
-                                        json.TryGet("Value", out value);
+                                        json.TryGet("Value", out BlittableJsonReaderObject value);
                                         NotifySubscribers(type, value, _counters.ValuesSnapshot);
                                         break;
                                 }
