@@ -1,4 +1,5 @@
-﻿using Raven.Tests.Core.Utils.Entities;
+﻿using Raven.Client.Documents.Session;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace FastTests.Client
@@ -33,6 +34,40 @@ namespace FastTests.Client
                     newSession.SaveChanges();
                     var user = newSession.Load<User>(new[] { "users/1", "users/2" });
                     Assert.Equal(user.Count, 2);
+                }
+            }
+        }
+
+        [Fact]
+        public void Refresh_stored_document()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var outerSession = (DocumentSession) store.OpenSession())
+                {
+                    var user = new User
+                    {
+                        Name = "RavenDB"
+                    };
+                    outerSession.Store(user, "users/1");
+                    outerSession.SaveChanges();
+
+                    var changeVector1 = outerSession.Advanced.GetChangeVectorFor(user);
+
+                    using (var innerSession = store.OpenSession())
+                    {
+                        var loadedUser = innerSession.Load<User>("users/1");
+                        loadedUser.Age = 10;
+                        innerSession.SaveChanges();
+                    }
+                    
+                    Assert.True(outerSession.DocumentsById.TryGetValue("users/1", out DocumentInfo docInfo));
+                 
+                    outerSession.Advanced.Refresh(user);
+                    
+                    Assert.NotNull(docInfo.ChangeVector);
+                    Assert.NotEqual(docInfo.ChangeVector, changeVector1);
+                    Assert.NotEqual(outerSession.Advanced.GetChangeVectorFor(user), changeVector1);
                 }
             }
         }
