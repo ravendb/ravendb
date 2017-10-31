@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
@@ -328,9 +329,23 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
                     }
 
-                    Debug.Assert(item.Document.Id != null);
+                    Debug.Assert(item.Document.Id != null);                  
 
                     item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
+
+
+                    if (item.Document.TryGetMetadata(out var metadata) &&
+                        metadata.TryGet(Constants.Documents.Metadata.Collection, out string collection))
+                    {
+                        if (result.LastEtagsByCollection.TryGetValue(collection, out var existingEtag))
+                        {
+                            result.LastEtagsByCollection[collection] = Math.Max(existingEtag, item.Document.Etag);
+                        }
+                        else
+                        {
+                            result.LastEtagsByCollection[collection] = item.Document.Etag;
+                        }
+                    }
 
                     actions.WriteDocument(item, result.RevisionDocuments);
 
@@ -364,6 +379,7 @@ namespace Raven.Server.Smuggler.Documents
                         result.Documents.ErroredCount++;
                         continue;
                     }
+                    
 
                     if (item.Document.Id == null)
                         ThrowInvalidData();
@@ -373,7 +389,7 @@ namespace Raven.Server.Smuggler.Documents
                         SkipDocument(item, result);
                         continue;
                     }
-
+                    
                     if (_options.IncludeExpired == false && 
                         ExpirationStorage.HasExpired(item.Document.Data, _time.GetUtcNow()))
                     {
@@ -388,6 +404,19 @@ namespace Raven.Server.Smuggler.Documents
                         {
                             result.Documents.SkippedCount++;
                             continue;
+                        }
+                    }
+
+                    if (item.Document.TryGetMetadata(out var metadata) &&
+                        metadata.TryGet(Constants.Documents.Metadata.Collection, out string collection))
+                    {
+                        if (result.LastEtagsByCollection.TryGetValue(collection, out var existingEtag))
+                        {
+                            result.LastEtagsByCollection[collection] = Math.Max(existingEtag, item.Document.Etag);
+                        }
+                        else
+                        {
+                            result.LastEtagsByCollection[collection] = item.Document.Etag;
                         }
                     }
 
@@ -451,6 +480,15 @@ namespace Raven.Server.Smuggler.Documents
                     if (tombstone.LowerId == null)
                         ThrowInvalidData();
 
+                    if (result.LastEtagsByCollection.TryGetValue(tombstone.Collection, out var existingEtag))
+                    {
+                        result.LastEtagsByCollection[tombstone.Collection] = Math.Max(existingEtag, tombstone.Etag);
+                    }
+                    else
+                    {
+                        result.LastEtagsByCollection[tombstone.Collection] = tombstone.Etag;
+                    }
+
                     actions.WriteTombstone(tombstone, result.Tombstones);
 
                     result.Tombstones.LastEtag = tombstone.Etag;
@@ -484,6 +522,15 @@ namespace Raven.Server.Smuggler.Documents
 
                     if (conflict.Id == null)
                         ThrowInvalidData();
+
+                    if (result.LastEtagsByCollection.TryGetValue(conflict.Collection, out var existingEtag))
+                    {
+                        result.LastEtagsByCollection[conflict.Collection] = Math.Max(existingEtag, conflict.Etag);
+                    }
+                    else
+                    {
+                        result.LastEtagsByCollection[conflict.Collection] = conflict.Etag;
+                    }
 
                     actions.WriteConflict(conflict, result.Conflicts);
 

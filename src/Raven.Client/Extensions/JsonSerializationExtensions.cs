@@ -11,8 +11,8 @@ namespace Raven.Client.Extensions
             where TValue : struct
         {
             var jsonMap = new DynamicJsonValue();
-            if (dic == null) //precaution
-                return jsonMap;
+            if (dic == null) //precaution, prevent NRE
+                return null;
 
             foreach (var kvp in dic)
             {
@@ -27,8 +27,8 @@ namespace Raven.Client.Extensions
             where TValue : struct
         {
             var jsonMap = new DynamicJsonValue();
-            if (dic == null) //precaution
-                return jsonMap;
+            if (dic == null) //precaution, prevent NRE
+                return null;
 
             foreach (var kvp in dic)
             {
@@ -42,8 +42,8 @@ namespace Raven.Client.Extensions
             where TValue : IDynamicJsonValueConvertible
         {
             var jsonMap = new DynamicJsonValue();
-            if (dic == null) //precaution
-                return jsonMap;
+            if (dic == null) //precaution, prevent NRE
+                return null;
 
             foreach (var kvp in dic)
             {

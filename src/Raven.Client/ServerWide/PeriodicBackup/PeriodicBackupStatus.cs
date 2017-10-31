@@ -28,9 +28,9 @@ namespace Raven.Client.ServerWide.PeriodicBackup
 
         public UploadToFtp UploadToFtp;
 
-        public long? LastEtag { get; set; }
+        public long? LastExportedEtag { get; set; }
 
-        public Dictionary<string, long> LastTombstoneEtagsByCollection { get; set; } = new Dictionary<string, long>();
+        public Dictionary<string, long> LastEtagsByCollection { get; set; } = new Dictionary<string, long>();
 
         public string FolderName { get; set; }
 
@@ -57,7 +57,7 @@ namespace Raven.Client.ServerWide.PeriodicBackup
             json[nameof(UploadToS3)] = UploadToS3?.ToJson();
             json[nameof(UploadToGlacier)] = UploadToGlacier?.ToJson();
             json[nameof(UploadToAzure)] = UploadToAzure?.ToJson();
-            json[nameof(LastEtag)] = LastEtag;
+            json[nameof(LastExportedEtag)] = LastExportedEtag;
             json[nameof(FolderName)] = FolderName;
             json[nameof(DurationInMs)] = DurationInMs;
             json[nameof(Version)] = Version;

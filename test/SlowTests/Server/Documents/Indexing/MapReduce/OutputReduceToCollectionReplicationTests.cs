@@ -93,7 +93,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             //replicationNode.SkipIndexReplication = true;
         }
 
-        public IReadOnlyDictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
+        public Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
         {
             return new Dictionary<string, long>
             {
