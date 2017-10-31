@@ -190,7 +190,8 @@ namespace Raven.Server.Dashboard
             var databaseInfoItem = new DatabaseInfoItem
             {
                 Database = databaseName,
-                Online = false
+                Online = false,
+                Irrelevant = databaseRecord.Topology?.AllNodes.Contains(serverStore.NodeTag) ?? true
             };
 
             DatabaseInfo databaseInfo = null;

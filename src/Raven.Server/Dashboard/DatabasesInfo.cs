@@ -38,7 +38,9 @@ namespace Raven.Server.Dashboard
         public int ReplicationFactor { get; set; }
         
         public bool Online { get; set; }
-        
+
+        public bool Irrelevant { get; set; }
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
@@ -49,7 +51,9 @@ namespace Raven.Server.Dashboard
                 [nameof(ErroredIndexesCount)] = ErroredIndexesCount,
                 [nameof(AlertsCount)] = AlertsCount,
                 [nameof(ReplicationFactor)] = ReplicationFactor,
-                [nameof(Online)] = Online
+                [nameof(Online)] = Online,
+                [nameof(Irrelevant)] = Irrelevant
+
             };
         }
     }
