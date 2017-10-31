@@ -39,6 +39,8 @@ namespace Raven.Server.Dashboard
         
         public bool Online { get; set; }
 
+        public bool Disabled { get; set; }
+
         public bool Irrelevant { get; set; }
 
         public DynamicJsonValue ToJson()
@@ -52,8 +54,8 @@ namespace Raven.Server.Dashboard
                 [nameof(AlertsCount)] = AlertsCount,
                 [nameof(ReplicationFactor)] = ReplicationFactor,
                 [nameof(Online)] = Online,
+                [nameof(Disabled)] = Disabled,
                 [nameof(Irrelevant)] = Irrelevant
-
             };
         }
     }

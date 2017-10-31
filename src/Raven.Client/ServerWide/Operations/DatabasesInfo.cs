@@ -38,6 +38,7 @@ namespace Raven.Client.ServerWide.Operations
         public bool IsEncrypted { get; set; }
         public TimeSpan? UpTime { get; set; }
         public BackupInfo BackupInfo { get; set; }
+        public List<MountPointUsage> MountPointsUsage { get; set; }
 
         public long? Alerts { get; set; }
         public bool RejectClients { get; set; }
@@ -86,6 +87,44 @@ namespace Raven.Client.ServerWide.Operations
                 [nameof(ReplicationFactor)] = ReplicationFactor,
                 [nameof(DynamicNodesDistribution)] = DynamicNodesDistribution,
                 [nameof(DeletionInProgress)] = DynamicJsonValue.Convert(DeletionInProgress)
+            };
+        }
+    }
+
+    public class MountPointUsage
+    {
+        public DiskSpaceResult DiskSpaceResult { get; set; }
+
+        public long UsedSpace { get; set; }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(DiskSpaceResult)] = DiskSpaceResult.ToJson(),
+                [nameof(UsedSpace)] = UsedSpace
+            };
+        }
+    }
+
+    public class DiskSpaceResult
+    {
+        public string DriveName { get; set; }
+
+        public string VolumeLabel { get; set; }
+
+        public long TotalFreeSpaceInBytes { get; set; }
+
+        public long TotalSizeInBytes { get; set; }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(DriveName)] = DriveName,
+                [nameof(VolumeLabel)] = VolumeLabel,
+                [nameof(TotalFreeSpaceInBytes)] = TotalFreeSpaceInBytes,
+                [nameof(TotalSizeInBytes)] = TotalSizeInBytes
             };
         }
     }

@@ -11,6 +11,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.ETL;
@@ -32,13 +33,12 @@ using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using Sparrow.Platform;
-using Sparrow.Platform.Posix;
 using Voron;
 using Voron.Exceptions;
 using Voron.Impl;
 using Voron.Impl.Backup;
 using DatabaseInfo = Raven.Client.ServerWide.Operations.DatabaseInfo;
+using DiskSpaceResult = Raven.Client.ServerWide.Operations.DiskSpaceResult;
 using Size = Raven.Client.Util.Size;
 
 namespace Raven.Server.Documents
@@ -459,6 +459,7 @@ namespace Raven.Server.Documents
             var envs = GetAllStoragesEnvironment().ToList();
             if (envs.Any(x => x.Environment == null))
                 return null;
+
             var size = new Size(envs.Sum(env => env.Environment.Stats().AllocatedDataFileSizeInBytes));
             var databaseInfo = new DynamicJsonValue
             {
@@ -477,6 +478,7 @@ namespace Raven.Server.Documents
                 [nameof(DatabaseInfo.Alerts)] = NotificationCenter.GetAlertCount(),
                 [nameof(DatabaseInfo.UpTime)] = null, //it is shutting down
                 [nameof(DatabaseInfo.BackupInfo)] = PeriodicBackupRunner.GetBackupInfo(),
+                [nameof(DatabaseInfo.MountPointsUsage)] = new DynamicJsonArray(GetMountPointsUsage().Select(x => x.ToJson())),
                 [nameof(DatabaseInfo.DocumentsCount)] = DocumentsStorage.GetNumberOfDocuments(),
                 [nameof(DatabaseInfo.IndexesCount)] = IndexStore.GetIndexes().Count(),
                 [nameof(DatabaseInfo.RejectClients)] = false, //TODO: implement me!
@@ -845,7 +847,7 @@ namespace Raven.Server.Documents
             return sizeOnDiskInBytes;
         }
 
-        public IEnumerable<(DiskSpaceResult DiskSpaceResult, long UsedSpace)> GetMountPointsUsage()
+        public IEnumerable<MountPointUsage> GetMountPointsUsage()
         {
             var storageEnvironments = GetAllStoragesEnvironment();
             if (storageEnvironments == null)
@@ -878,7 +880,17 @@ namespace Raven.Server.Documents
                     if (sizeOnDiskInBytes == 0)
                         continue;
 
-                    yield return (diskSpaceResult, sizeOnDiskInBytes);
+                    yield return new MountPointUsage
+                    {
+                        UsedSpace = sizeOnDiskInBytes,
+                        DiskSpaceResult = new DiskSpaceResult
+                        {
+                            DriveName = diskSpaceResult.DriveName,
+                            VolumeLabel = diskSpaceResult.VolumeLabel,
+                            TotalFreeSpaceInBytes = diskSpaceResult.TotalFreeSpace.GetValue(SizeUnit.Bytes),
+                            TotalSizeInBytes = diskSpaceResult.TotalSize.GetValue(SizeUnit.Bytes)
+                        }
+                    };
                 }
                 finally
                 {
