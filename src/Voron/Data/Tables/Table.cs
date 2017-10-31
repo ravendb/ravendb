@@ -7,6 +7,7 @@ using Sparrow.Collections;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
 using Voron.Data.RawData;
+using Voron.Exceptions;
 using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Paging;
@@ -64,6 +65,14 @@ namespace Voron.Data.Tables
 
         private void OnDataMoved(long previousId, long newId, byte* data, int size)
         {
+#if DEBUG
+            if (IsOwned(previousId) == false || IsOwned(newId) == false)
+            {
+                VoronUnrecoverableErrorException.Raise(_tx.LowLevelTransaction.Environment,
+                    $"Cannot move data in section because the old ({previousId}) or new ({newId}) belongs to a different owner");
+
+            }
+#endif
             var tvr = new TableValueReader(data, size);
             DeleteValueFromIndex(previousId, ref tvr);
             InsertIndexValuesFor(newId, ref tvr);
