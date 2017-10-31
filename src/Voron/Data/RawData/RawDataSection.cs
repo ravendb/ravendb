@@ -16,7 +16,7 @@ namespace Voron.Data.RawData
 
         protected readonly LowLevelTransaction _tx;
 
-        public const int MaxItemSize = (Constants.Storage.PageSize - RawDataSmallPageHeader.SizeOf)/2;
+        public const int MaxItemSize = (Constants.Storage.PageSize - RawDataSmallPageHeader.SizeOf) / 2;
 
         protected RawDataSmallSectionPageHeader* _sectionHeader;
 
@@ -32,7 +32,7 @@ namespace Voron.Data.RawData
             PageNumber = pageNumber;
             _tx = tx;
 
-            
+
             _sectionHeader = (RawDataSmallSectionPageHeader*)_tx.GetPage(pageNumber).Pointer;
         }
 
@@ -78,29 +78,41 @@ namespace Voron.Data.RawData
             var ids = new List<long>(_sectionHeader->NumberOfEntries);
             for (int i = 0; i < _sectionHeader->NumberOfPages && ids.Count < _sectionHeader->NumberOfEntries; i++)
             {
-                var pageHeader = PageHeaderFor(_sectionHeader->PageNumber + i + 1);
-                var offset = sizeof(RawDataSmallPageHeader);
-                while (offset + sizeof(RawDataEntrySizes) < Constants.Storage.PageSize)
-                {
-                    var sizes = (RawDataEntrySizes*)((byte*)pageHeader + offset);
-                    if (sizes->UsedSize != -1)
-                    {
-                        var currentId = (pageHeader->PageNumber * Constants.Storage.PageSize) + offset;
-
-                        var posInPage = (int)(currentId % Constants.Storage.PageSize);
-
-                        if (posInPage >= pageHeader->NextAllocation)
-                            break;
-
-                        ids.Add(currentId);
-
-                        if (ids.Count == _sectionHeader->NumberOfEntries)
-                            break;
-                    }
-                    offset += sizeof(short) * 2 + sizes->AllocatedSize;
-                }
+                FillAllIdsInPage(_sectionHeader->PageNumber + i, ids);
             }
             return ids;
+        }
+
+        public List<long> GetAllIsInSamePageAs(long id)
+        {
+            var ids = new List<long>();
+            FillAllIdsInPage((id / Constants.Storage.PageSize) - 1, ids);
+            return ids;
+        }
+
+        public void FillAllIdsInPage(long pageNumber, List<long> ids)
+        {
+            var pageHeader = PageHeaderFor(pageNumber + 1);
+            var offset = sizeof(RawDataSmallPageHeader);
+            while (offset + sizeof(RawDataEntrySizes) < Constants.Storage.PageSize)
+            {
+                var sizes = (RawDataEntrySizes*)((byte*)pageHeader + offset);
+                if (sizes->UsedSize != -1)
+                {
+                    var currentId = (pageHeader->PageNumber * Constants.Storage.PageSize) + offset;
+
+                    var posInPage = (int)(currentId % Constants.Storage.PageSize);
+
+                    if (posInPage >= pageHeader->NextAllocation)
+                        break;
+
+                    ids.Add(currentId);
+
+                    if (ids.Count == _sectionHeader->NumberOfEntries)
+                        break;
+                }
+                offset += sizeof(short) * 2 + sizes->AllocatedSize;
+            }
         }
 
         public int NumberOfEntries => _sectionHeader->NumberOfEntries;
@@ -191,7 +203,7 @@ namespace Voron.Data.RawData
 
             if (posInPage >= pageHeader->NextAllocation)
             {
-                if(posInPage == 0)
+                if (posInPage == 0)
                     VoronUnrecoverableErrorException.Raise(tx.Environment,
                         $"Asked to load a large value from a raw data section page {pageHeader->PageNumber}, this is a bug");
 
