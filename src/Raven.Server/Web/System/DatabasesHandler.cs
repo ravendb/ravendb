@@ -229,12 +229,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/periodic-backup/next-backup-occurrence", "GET", AuthorizationStatus.ValidUser)]
         public Task GetNextBackupOccurrence()
         {
-            var dateAsString = GetQueryStringValueAndAssertIfSingleAndNotEmpty("date");
-            if (DateTime.TryParse(dateAsString, out DateTime date) == false)
-                throw new ArgumentException("Date");
-
             var backupFrequency = GetQueryStringValueAndAssertIfSingleAndNotEmpty("backupFrequency");
-
             CrontabSchedule crontabSchedule;
             try
             {
@@ -252,13 +247,16 @@ namespace Raven.Server.Web.System
                 return Task.CompletedTask;
             }
 
-            var nextOccurrence = crontabSchedule.GetNextOccurrence(date);
+            var nextOccurrence = crontabSchedule.GetNextOccurrence(SystemTime.UtcNow.ToLocalTime());
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
-                writer.WritePropertyName(nameof(NextBackupOccurrence.DateTime));
+                writer.WritePropertyName(nameof(NextBackupOccurrence.Utc));
+                writer.WriteDateTime(nextOccurrence.ToUniversalTime(), true);
+                writer.WriteComma();
+                writer.WritePropertyName(nameof(NextBackupOccurrence.ServerTime));
                 writer.WriteDateTime(nextOccurrence, false);
                 writer.WriteEndObject();
                 writer.Flush();
@@ -525,6 +523,8 @@ namespace Raven.Server.Web.System
 
     public class NextBackupOccurrence
     {
-        public DateTime DateTime { get; set; }
+        public DateTime Utc { get; set; }
+
+        public DateTime ServerTime { get; set; }
     }
 }

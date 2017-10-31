@@ -23,10 +23,12 @@ class periodicBackupConfiguration {
 
     fullBackupHumanReadable: KnockoutComputed<string>;
     fullBackupParsingError = ko.observable<string>();
-    nextFullBackupOccurrence = ko.observable<string>("N/A");
+    nextFullBackupOccurrenceServerTime = ko.observable<string>("N/A");
+    nextFullBackupOccurrenceLocalTime = ko.observable<string>();
     incrementalBackupHumanReadable: KnockoutComputed<string>;
     incrementalBackupParsingError = ko.observable<string>();
-    nextIncrementalBackupOccurrence = ko.observable<string>("N/A");
+    nextIncrementalBackupOccurrenceServerTime = ko.observable<string>("N/A");
+    nextIncrementalBackupOccurrenceLocalTime = ko.observable<string>();
 
     manualChooseMentor = ko.observable<boolean>(false);
     preferredMentor = ko.observable<string>();
@@ -75,26 +77,30 @@ class periodicBackupConfiguration {
         this.fullBackupFrequency.throttle(500).subscribe((newValue) =>
             this.getNextOccurance(
                 newValue,
-                this.nextFullBackupOccurrence,
+                this.nextFullBackupOccurrenceServerTime,
+                this.nextFullBackupOccurrenceLocalTime,
                 this.fullBackupParsingError));
 
         this.incrementalBackupFrequency.throttle(500).subscribe((newValue) =>
             this.getNextOccurance(
                 newValue,
-                this.nextIncrementalBackupOccurrence,
+                this.nextIncrementalBackupOccurrenceServerTime,
+                this.nextIncrementalBackupOccurrenceLocalTime,
                 this.incrementalBackupParsingError));
 
         if (this.fullBackupFrequency()) {
             this.getNextOccurance(
                 this.fullBackupFrequency(),
-                this.nextFullBackupOccurrence,
+                this.nextFullBackupOccurrenceServerTime,
+                this.nextFullBackupOccurrenceLocalTime,
                 this.fullBackupParsingError);
         }
 
         if (this.incrementalBackupFrequency()) {
             this.getNextOccurance(
                 this.incrementalBackupFrequency(),
-                this.nextIncrementalBackupOccurrence,
+                this.nextIncrementalBackupOccurrenceServerTime,
+                this.nextIncrementalBackupOccurrenceLocalTime,
                 this.incrementalBackupParsingError);
         }
         
@@ -255,25 +261,34 @@ class periodicBackupConfiguration {
     }
 
     getNextOccurance(backupFrequency: string,
-        nextBackupOccurance: KnockoutObservable<string>,
+        nextBackupOccuranceServerTime: KnockoutObservable<string>,
+        nextBackupOccuranceLocalTime: KnockoutObservable<string>,
         parsingError: KnockoutObservable<string>) {
-        if (parsingError())
+        if (parsingError()) {
+            nextBackupOccuranceServerTime("N/A");
+            nextBackupOccuranceLocalTime("");
             return;
+        }
 
-        if (!backupFrequency)
+        if (!backupFrequency) {
+            nextBackupOccuranceServerTime("N/A");
+            nextBackupOccuranceLocalTime("");
             return;
+        }
 
-        const now = moment();
         const dateFormat = "YYYY MMMM Do, h:mm A";
-        new getNextBackupOccurrenceCommand(now.format(), backupFrequency)
+        new getNextBackupOccurrenceCommand(backupFrequency)
             .execute()
             .done((result: Raven.Server.Web.System.NextBackupOccurrence) => {
-                const nextBackup = moment(result.DateTime).format(dateFormat);
-                nextBackupOccurance(nextBackup);
+                const nextBackupServerTime = moment(result.ServerTime).format(dateFormat);
+                nextBackupOccuranceServerTime(nextBackupServerTime);
+                const nextBackupLocalTime = moment.utc(result.Utc).local().format(dateFormat);
+                nextBackupOccuranceLocalTime(nextBackupLocalTime);
                 parsingError(null);
             })
             .fail((response: JQueryXHR) => {
-                nextBackupOccurance("N/A");
+                nextBackupOccuranceServerTime("N/A");
+                nextBackupOccuranceLocalTime("");
                 parsingError(response.responseText);
             });
     }

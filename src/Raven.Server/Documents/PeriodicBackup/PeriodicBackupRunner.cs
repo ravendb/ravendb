@@ -34,7 +34,7 @@ using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.PeriodicBackup
 {
-    public class PeriodicBackupRunner : IDocumentTombstoneAware,IDisposable
+    public class PeriodicBackupRunner : IDocumentTombstoneAware, IDisposable
     {
         private readonly Logger _logger;
 
@@ -140,7 +140,8 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             var isFullBackup = IsFullBackup(backupStatus, configuration, nextFullBackup, nextIncrementalBackup);
             var nextBackupDateTime = GetNextBackupDateTime(nextFullBackup, nextIncrementalBackup);
-            var nextBackupTimeSpan = (nextBackupDateTime - now).Ticks <= 0 ? TimeSpan.Zero : nextBackupDateTime - now;
+            var nowLocalTime = now.ToLocalTime();
+            var nextBackupTimeSpan = (nextBackupDateTime - nowLocalTime).Ticks <= 0 ? TimeSpan.Zero : nextBackupDateTime - nowLocalTime;
 
             return new NextBackup
             {
@@ -704,7 +705,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         }
 
         private DateTime? GetNextBackupOccurrence(string backupFrequency,
-            DateTime now, PeriodicBackupConfiguration configuration, bool skipErrorLog)
+            DateTime lastBackupUtc, PeriodicBackupConfiguration configuration, bool skipErrorLog)
         {
             if (string.IsNullOrWhiteSpace(backupFrequency))
                 return null;
@@ -712,7 +713,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             try
             {
                 var backupParser = CrontabSchedule.Parse(backupFrequency);
-                return backupParser.GetNextOccurrence(now);
+                return backupParser.GetNextOccurrence(lastBackupUtc.ToLocalTime());
             }
             catch (Exception e)
             {
