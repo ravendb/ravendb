@@ -13,6 +13,7 @@ import loadDatabaseCommand = require("commands/resources/loadDatabaseCommand");
 import changesContext = require("common/changesContext");
 import compactDatabaseCommand = require("commands/resources/compactDatabaseCommand");
 import notificationCenter = require("common/notifications/notificationCenter");
+import getIndexNamesCommand = require("commands/database/index/getIndexNamesCommand");
 
 import databasesInfo = require("models/resources/info/databasesInfo");
 import getDatabasesCommand = require("commands/resources/getDatabasesCommand");
@@ -23,6 +24,8 @@ import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import databaseGroupNode = require("models/resources/info/databaseGroupNode");
 import databaseNotificationCenterClient = require("common/databaseNotificationCenterClient");
 import changeSubscription = require("common/changeSubscription");
+import databasesManager = require("common/shell/databasesManager");
+import generalUtils = require("common/generalUtils"); 
 
 class databases extends viewModelBase {
 
@@ -53,7 +56,7 @@ class databases extends viewModelBase {
 
         this.bindToCurrentInstance("newDatabase", "toggleDatabase", "togglePauseDatabaseIndexing", 
             "toggleDisableDatabaseIndexing", "deleteDatabase", "activateDatabase", "updateDatabaseInfo",
-            "compactDatabase");
+            "compactDatabase", "databasePanelClicked");
 
         this.initObservables();
     }
@@ -431,18 +434,23 @@ class databases extends viewModelBase {
         this.confirmationMessage("Are you sure?", "Do you want to compact '" + db.name + "'?", ["No", "Yes, compact"])
             .done(result => {
                 if (result.can) {
-                    db.inProgressAction("Compacting...");
-
-                    new compactDatabaseCommand(db.name)
+                    
+                    new getIndexNamesCommand(databasesManager.default.getDatabaseByName(db.name))
                         .execute()
-                        .done(result => {
+                        .done(indexNames => {
+                            db.inProgressAction("Compacting...");
 
-                            notificationCenter.instance.monitorOperation(null, result.OperationId)
-                                .always(() => db.inProgressAction(null));
-                            
-                            notificationCenter.instance.openDetailsForOperationById(null, result.OperationId);
-                        })
-                        .fail(() => db.inProgressAction(null));
+                            new compactDatabaseCommand(db.name, true, indexNames)
+                                .execute()
+                                .done(result => {
+
+                                    notificationCenter.instance.monitorOperation(null, result.OperationId)
+                                        .always(() => db.inProgressAction(null));
+
+                                    notificationCenter.instance.openDetailsForOperationById(null, result.OperationId);
+                                })
+                                .fail(() => db.inProgressAction(null));
+                        });
                 }
             });
     }
@@ -479,6 +487,15 @@ class databases extends viewModelBase {
         app.showBootstrapDialog(createDbView);
     }
 
+    databasePanelClicked(dbInfo: databaseInfo, event: JQueryEventObject) {
+        if (generalUtils.canConsumeDelegatedEvent(event)) {
+            this.activateDatabase(dbInfo);
+            return false;
+        }
+        
+        return true;
+    }
+    
     activateDatabase(dbInfo: databaseInfo) {
         const db = this.databasesManager.getDatabaseByName(dbInfo.name);
         if (!db || db.disabled() || !db.relevant())
