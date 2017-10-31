@@ -15,7 +15,8 @@ type chartData = {
 type chartOpts = {
     yMaxProvider?: () => number | null;
     useSeparateYScales?: boolean;
-    topPaddingProvider?: (key: string) => number
+    topPaddingProvider?: (key: string) => number;
+    tooltipProvider?: (data: dashboardChartTooltipProviderArgs) => string;
 }
 
 class dashboardChart {
@@ -25,11 +26,17 @@ class dashboardChart {
     private width: number;
     private height: number;
     
+    private minDate: Date = null;
     private maxDate: Date = null;
     private data: chartData[] = [];
     private opts: chartOpts;
     
     private svg: d3.Selection<void>;
+    private pointer: d3.Selection<void>;
+    private lastXPosition: number = null;
+    private tooltip: d3.Selection<void>;
+    
+    private xScale: d3.time.Scale<number, number>;
     
     constructor(containerSelector: string, opts?: chartOpts) {
         this.opts = opts || {} as any;
@@ -37,6 +44,7 @@ class dashboardChart {
         if (!this.opts.topPaddingProvider) {
             this.opts.topPaddingProvider = () => dashboardChart.defaultTopPadding;
         }
+        
         const container = d3.select(containerSelector);
         
         const $container = $(containerSelector);
@@ -76,9 +84,136 @@ class dashboardChart {
             .attr("x2", x => x)
             .attr("y1", 0)
             .attr("y2", this.height);
+        
+        const pointer = this.svg
+            .append("g")
+            .attr("class", "pointer");
+        
+        this.pointer = pointer.append("line")
+            .attr("class", "pointer-line")
+            .attr("x1", 0)
+            .attr("x2", 0)
+            .attr("y1", 0)
+            .attr("y2", this.height)
+            .style("stroke-opacity", 0);
+        
+        this.tooltip = d3.select(".tooltip");
+        
+        if (this.opts.tooltipProvider) {
+            this.setupValuesPreview();
+        }
+    }
+    
+    private setupValuesPreview() {
+        this.svg
+            .on("mousemove.tip", () => {
+                const node = this.svg.node();
+                const mouseLocation = d3.mouse(node);
+                this.pointer
+                    .attr("x1", mouseLocation[0] + 0.5)
+                    .attr("x2", mouseLocation[0] + 0.5);
+                
+                this.updateTooltip();
+            })
+            .on("mouseenter.tip", () => {
+                this.pointer
+                    .transition()
+                    .duration(200)
+                    .style("stroke-opacity", 1);
+                
+                this.showTooltip();
+            })
+            .on("mouseleave.tip", () => {
+                this.pointer
+                    .transition()
+                    .duration(100)
+                    .style("stroke-opacity", 0);
+                
+                this.hideTooltip();
+            });
+    }
+    
+    showTooltip() {
+        this.tooltip
+            .transition()
+            .duration(250)
+            .style("opacity", 1);
+    }
+    
+    updateTooltip(passive = false) {
+        let xToUse = null as number;
+        if (passive) {
+            // just update contents
+            xToUse = this.lastXPosition;
+        } else {
+            xToUse = d3.mouse(this.svg.node())[0];
+            this.lastXPosition = xToUse;
+
+            const globalLocation = d3.mouse(d3.select("#dashboard-container").node());
+            const [x, y] = globalLocation;
+            this.tooltip
+                .style("left", (x + 10) + "px")
+                .style("top", (y + 10) + "px")
+                .style('display', undefined);
+        }
+        
+        if (!_.isNull(xToUse) && this.minDate) {
+            const data = this.findClosestData(xToUse);
+            const html = this.opts.tooltipProvider(data) || "";
+            
+            if (html) {
+                this.tooltip.html(html);
+                this.tooltip.style("display", undefined);
+            } else {
+                this.tooltip.style("display", "none");
+            }
+            
+        }
+    }
+    
+    private findClosestData(xToUse: number): dashboardChartTooltipProviderArgs {
+        const hoverTime = this.xScale.invert(xToUse);
+
+        if (hoverTime.getTime() < this.minDate.getTime()) {
+            return null;
+        } else {
+            
+            const hoverTicks = hoverTime.getTime();
+            let bestIndex = 0;
+            let bestDistance = 99999;
+            
+            for (let i = 0; i < this.data[0].values.length; i++) {
+                const dx = Math.abs(hoverTicks - this.data[0].values[i].x.getTime());
+                if (dx < bestDistance) {
+                    bestDistance = dx;
+                    bestIndex = i;
+                }
+            }
+            
+            const values = {} as dictionary<number>; 
+                this.data.forEach(d => {
+                values[d.id] = d.values[bestIndex].y;
+            });
+            
+            return {
+                date: this.data[0].values[bestIndex].x,
+                values: values
+            } as dashboardChartTooltipProviderArgs;
+        }
+    }
+    
+    hideTooltip() {
+        this.tooltip.transition()
+            .duration(250)
+            .style("opacity", 0);
+
+        this.lastXPosition = null;
     }
     
     onData(time: Date, data: { key: string,  value: number }[] ) {
+        if (!this.minDate) {
+            this.minDate = time;
+        }
         this.maxDate = time;
         
         data.forEach(dataItem => {
@@ -99,6 +234,8 @@ class dashboardChart {
         });
         
         this.draw();
+        
+        this.updateTooltip(true);
     }
     
     private createLineFunctions(): Map<string, d3.svg.Line<chartItemData>> {
@@ -108,7 +245,7 @@ class dashboardChart {
 
         const result = new Map<string, d3.svg.Line<chartItemData>>();
 
-        const xScale = d3.time.scale()
+        this.xScale = d3.time.scale()
             .range([0, this.width])
             .domain([minTime, maxTime]);
         
@@ -125,7 +262,7 @@ class dashboardChart {
             const yScale = yScaleCreator(this.opts.yMaxProvider(), this.opts.topPaddingProvider(null));
 
             const lineFunction = d3.svg.line<chartItemData>()
-                .x(x => xScale(x.x))
+                .x(x => this.xScale(x.x))
                 .y(x => yScale(x.y));
             
             this.data.forEach(data => {
@@ -137,7 +274,7 @@ class dashboardChart {
                 const yScale = yScaleCreator(yMax, this.opts.topPaddingProvider(data.id));
 
                 const lineFunction = d3.svg.line<chartItemData>()
-                    .x(x => xScale(x.x))
+                    .x(x => this.xScale(x.x))
                     .y(x => yScale(x.y));
                 
                 result.set(data.id, lineFunction);
@@ -147,7 +284,7 @@ class dashboardChart {
             const yScale = yScaleCreator(yMax, this.opts.topPaddingProvider(null));
 
             const lineFunction = d3.svg.line<chartItemData>()
-                .x(x => xScale(x.x))
+                .x(x => this.xScale(x.x))
                 .y(x => yScale(x.y));
 
             this.data.forEach(data => {

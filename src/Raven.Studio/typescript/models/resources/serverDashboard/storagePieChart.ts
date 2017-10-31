@@ -34,8 +34,6 @@ class storagePieChart {
 
         this.colorScale = d3.scale.ordinal<string>()
             .range(["#27c6db", "#d3e158", "#fea724"]); //TODO: colors
-
-
     }
 
     onData(data: Raven.Server.Dashboard.DatabaseDiskUsage[]) {
