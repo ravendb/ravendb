@@ -178,7 +178,7 @@ class editRavenEtlTask extends viewModelBase {
             return false;
         }
 
-        // 5. All is well, Save connection string (if relevant..) 
+        // 4. All is well, Save connection string (if relevant..) 
         let savingNewStringAction = $.Deferred<void>();
         if (this.createNewConnectionString()) {
             this.newConnectionString()
@@ -194,9 +194,15 @@ class editRavenEtlTask extends viewModelBase {
             savingNewStringAction.resolve();
         }
 
-        // 6. All is well, Save Raven Etl task
+        // 5. All is well, Save Raven Etl task       
+        const scriptsToReset = editedEtl.transformationScripts().map((x)=> {
+            if (x.resetScript()) {
+                return x.name();
+            }
+        });
+        
         const dto = editedEtl.toDto();
-        saveEtlTaskCommand.forRavenEtl(this.activeDatabase(), dto)
+        saveEtlTaskCommand.forRavenEtl(this.activeDatabase(), dto, scriptsToReset)
             .execute()
             .done(() => {
                 editedEtl.dirtyFlag().reset();
@@ -222,13 +228,13 @@ class editRavenEtlTask extends viewModelBase {
         }
         
         if (transformation.isNew()) {
-            const newTransformationItem = new ongoingTaskRavenEtlTransformationModel(transformation.toDto(), false);
+            const newTransformationItem = new ongoingTaskRavenEtlTransformationModel(transformation.toDto(), true, false); 
             newTransformationItem.name(this.findNameForNewTransformation());
             newTransformationItem.dirtyFlag().forceDirty();
             this.editedRavenEtl().transformationScripts.push(newTransformationItem);
         } else {
             const oldItem = this.editedRavenEtl().transformationScriptSelectedForEdit();
-            const newItem = new ongoingTaskRavenEtlTransformationModel(transformation.toDto(), false);
+            const newItem = new ongoingTaskRavenEtlTransformationModel(transformation.toDto(), false, transformation.resetScript());
             
             if (oldItem.dirtyFlag().isDirty() || newItem.hasUpdates(oldItem)) {
                 newItem.dirtyFlag().forceDirty();

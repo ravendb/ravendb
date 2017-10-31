@@ -182,6 +182,10 @@
                                 <div class="help-block" data-bind="validationMessage: script"></div>
                             </div>
                         </div>
+                        <div class="toggle" data-bind="visible: !isNew()">
+                            <input id="reset" type="checkbox" data-bind="checked: resetScript">
+                            <label for="reset">Apply script to documents from beginning of time (Reset)</label>
+                        </div>
                         <div class="toggle">
                             <input id="applyToAll" type="checkbox" data-bind="checked: applyScriptForAllCollections">
                             <label for="applyToAll">Apply script to all collections</label>

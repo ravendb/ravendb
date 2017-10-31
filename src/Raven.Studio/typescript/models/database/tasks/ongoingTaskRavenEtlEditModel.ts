@@ -89,7 +89,7 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
         if (dto.Configuration) {
             this.connectionStringName(dto.Configuration.ConnectionStringName);
             this.destinationURL(dto.DestinationUrl || 'N/A');
-            this.transformationScripts(dto.Configuration.Transforms.map(x => new ongoingTaskRavenEtlTransformationModel(x, false)));
+            this.transformationScripts(dto.Configuration.Transforms.map(x => new ongoingTaskRavenEtlTransformationModel(x, false, false)));
             this.manualChooseMentor(!!dto.Configuration.MentorNode);
             this.preferredMentor(dto.Configuration.MentorNode);
         }
@@ -119,7 +119,7 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
 
     editTransformationScript(transformationScript: ongoingTaskRavenEtlTransformationModel) {
         this.transformationScriptSelectedForEdit(transformationScript);
-        this.editedTransformationScriptSandbox(new ongoingTaskRavenEtlTransformationModel(transformationScript.toDto(), false));
+        this.editedTransformationScriptSandbox(new ongoingTaskRavenEtlTransformationModel(transformationScript.toDto(), false, transformationScript.resetScript()));
     }
 
     static empty(): ongoingTaskRavenEtlEditModel {
