@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Util;
 using Raven.Server.Documents.Queries;
 using Raven.Server.ServerWide;
@@ -56,11 +55,6 @@ namespace FastTests.Client.Indexing
                         WaitForNonStaleResultsTimeout = q.WaitForNonStaleResultsTimeout
                     };
 
-                    var query3 = new FacetQuery
-                    {
-                        FacetSetupDoc = "setup/1"
-                    };
-
                     var database = await Server
                         .ServerStore
                         .DatabasesLandlord
@@ -70,7 +64,6 @@ namespace FastTests.Client.Indexing
 
                     var now = SystemTime.UtcNow;
                     index.CurrentlyRunningQueries.TryAdd(new ExecutingQueryInfo(now, query1, 10, OperationCancelToken.None));
-                    index.CurrentlyRunningQueries.TryAdd(new ExecutingQueryInfo(now, query3, 12, OperationCancelToken.None));
 
                     var conventions = new DocumentConventions();
 
@@ -80,7 +73,7 @@ namespace FastTests.Client.Indexing
 
                         Assert.True(json.TryGet(index.Name, out BlittableJsonReaderArray array));
 
-                        Assert.Equal(2, array.Length);
+                        Assert.Equal(1, array.Length);
 
                         foreach (BlittableJsonReaderObject info in array)
                         {
@@ -107,17 +100,6 @@ namespace FastTests.Client.Indexing
                                 var query = (IndexQuery)conventions.DeserializeEntityFromBlittable(typeof(IndexQuery), queryInfo);
 
                                 Assert.True(q.Equals(query));
-                                continue;
-                            }
-
-                            if (queryId == 12)
-                            {
-                                BlittableJsonReaderObject queryInfo;
-                                Assert.True(info.TryGet(nameof(ExecutingQueryInfo.QueryInfo), out queryInfo));
-
-                                var query = (FacetQuery)conventions.DeserializeEntityFromBlittable(typeof(FacetQuery), queryInfo);
-
-                                Assert.Equal(query3.FacetSetupDoc, query.FacetSetupDoc);
                                 continue;
                             }
 

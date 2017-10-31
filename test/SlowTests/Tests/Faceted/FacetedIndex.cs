@@ -36,7 +36,6 @@ namespace SlowTests.Tests.Faceted
                             new Facet
                                 {
                                     Name = "Cost_D_Range",
-                                    Mode = FacetMode.Ranges,
                                     Ranges =
                                         {
                                             "[NULL TO 200]",
@@ -49,7 +48,6 @@ namespace SlowTests.Tests.Faceted
                             new Facet
                                 {
                                     Name = "Megapixels_D_Range",
-                                    Mode = FacetMode.Ranges,
                                     Ranges =
                                         {
                                             "[NULL TO 3]",
@@ -163,7 +161,8 @@ namespace SlowTests.Tests.Faceted
                         var facetResults = s.Query<Camera>("CameraCost")
                             .Customize(x => x.WaitForNonStaleResults())
                             .Where(exp)
-                            .ToFacetsLazy("facets/CameraFacets");
+                            .AggregateUsing("facets/CameraFacets")
+                            .ToDictionaryLazy();
 
                         Assert.Equal(oldRequests, s.Advanced.NumberOfRequests);
 
@@ -232,7 +231,8 @@ namespace SlowTests.Tests.Faceted
                     var facetResults = s.Query<Camera>("CameraCost")
                         .Customize(x => x.WaitForNonStaleResults())
                         .Where(exp)
-                        .ToFacets("facets/CameraFacets");
+                        .AggregateUsing("facets/CameraFacets")
+                        .ToDictionary();
                     facetQueryTimer.Stop();
 
                     var filteredData = _data.Where(exp.Compile()).ToList();
@@ -261,7 +261,9 @@ namespace SlowTests.Tests.Faceted
                     var task = s.Query<Camera>("CameraCost")
                         .Customize(x => x.WaitForNonStaleResults())
                         .Where(exp)
-                        .ToFacetsAsync("facets/CameraFacets");
+                        .AggregateUsing("facets/CameraFacets")
+                        .ToDictionaryAsync();
+
                     task.Wait();
                     facetQueryTimer.Stop();
                     var facetResults = task.Result;
@@ -286,14 +288,14 @@ namespace SlowTests.Tests.Faceted
         }
 
         private void CheckFacetResultsMatchInMemoryData(
-                    FacetedQueryResult facetResults,
+                    Dictionary<string, FacetResult> facetResults,
                     List<Camera> filteredData)
         {
             //Make sure we get all range values
             Assert.Equal(filteredData.GroupBy(x => x.Manufacturer).Count(),
-                        facetResults.Results["Manufacturer"].Values.Count());
+                        facetResults["Manufacturer"].Values.Count());
 
-            foreach (var facet in facetResults.Results["Manufacturer"].Values)
+            foreach (var facet in facetResults["Manufacturer"].Values)
             {
                 var inMemoryCount = filteredData.Count(x => x.Manufacturer.ToLower() == facet.Range);
                 Assert.Equal(inMemoryCount, facet.Hits);
@@ -301,7 +303,7 @@ namespace SlowTests.Tests.Faceted
 
             //Go through the expected (in-memory) results and check that there is a corresponding facet result
             //Not the prettiest of code, but it works!!!
-            var costFacets = facetResults.Results["Cost_D_Range"].Values;
+            var costFacets = facetResults["Cost_D_Range"].Values;
             CheckFacetCount(filteredData.Count(x => x.Cost <= 200.0m),
                             costFacets.FirstOrDefault(x => x.Range == "[NULL TO 200]"));
             CheckFacetCount(filteredData.Count(x => x.Cost >= 200.0m && x.Cost <= 400),
@@ -314,7 +316,7 @@ namespace SlowTests.Tests.Faceted
                             costFacets.FirstOrDefault(x => x.Range == "[800 TO NULL]"));
 
             //Test the Megapixels_Range facets using the same method
-            var megapixelsFacets = facetResults.Results["Megapixels_D_Range"].Values;
+            var megapixelsFacets = facetResults["Megapixels_D_Range"].Values;
             CheckFacetCount(filteredData.Where(x => x.Megapixels <= 3.0m).Count(),
                             megapixelsFacets.FirstOrDefault(x => x.Range == "[NULL TO 3]"));
             CheckFacetCount(filteredData.Where(x => x.Megapixels >= 3.0m && x.Megapixels <= 7.0m).Count(),

@@ -40,7 +40,6 @@ namespace SlowTests.Bugs.Facets
                     new Facet
                     {
                         Name = "DateOfListing",
-                        Mode = FacetMode.Ranges,
                         Ranges = new List<string>{
                             string.Format("[NULL TO {0:yyyy-MM-ddTHH-mm-ss.fffffff}]", dates[0]),
                             string.Format("[{0:yyyy-MM-ddTHH-mm-ss.fffffff} TO {1:yyyy-MM-ddTHH-mm-ss.fffffff}]", dates[0], dates[1]),
@@ -55,7 +54,7 @@ namespace SlowTests.Bugs.Facets
                 //CameraCostIndex does not include zoom, bad index specified.
                 var query = session.Query<Camera, CameraCostIndex>().Where(x => x.Zoom > 3);
                 Assert.Throws<RavenException>(() => query.ToList());
-                Assert.Throws<RavenException>(() => query.ToFacets(facets));
+                Assert.Throws<RavenException>(() => query.AggregateBy(facets).ToDictionary());
             }
         }
     }

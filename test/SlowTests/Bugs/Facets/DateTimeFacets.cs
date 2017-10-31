@@ -42,7 +42,6 @@ namespace SlowTests.Bugs.Facets
                     new Facet
                                      {
                                          Name = "DateOfListing",
-                                         Mode = FacetMode.Ranges,
                                          Ranges = new List<string>{
                                              string.Format("[NULL TO {0:yyyy-MM-ddTHH:mm:ss.fffffff}]", dates[0]),
                                              string.Format("[{0:yyyy-MM-ddTHH:mm:ss.fffffff} TO {1:yyyy-MM-ddTHH:mm:ss.fffffff}]", dates[0], dates[1]),
@@ -58,19 +57,17 @@ namespace SlowTests.Bugs.Facets
                 var o = facetOldSchool[i];
                 var n = facetsNewWay[i];
                 Assert.Equal(o.Name, n.Name);
-                Assert.Equal(o.AggregationField, n.AggregationField);
                 Assert.Equal(o.DisplayName, n.DisplayName);
-                Assert.Equal(o.Aggregation, n.Aggregation);
-                Assert.Equal(o.IncludeRemainingTerms, n.IncludeRemainingTerms);
-                Assert.Equal(o.MaxResults, n.MaxResults);
-                Assert.Equal(o.Mode, n.Mode);
-                Assert.Equal(o.TermSortMode, n.TermSortMode);
+                Assert.Equal(o.Options, n.Options);
                 Assert.Equal(o.Ranges.Count, n.Ranges.Count);
 
                 for (int j = 0; j < o.Ranges.Count; j++)
                 {
                     Assert.Equal(o.Ranges[i], n.Ranges[i]);
                 }
+
+                Assert.Equal(o.Aggregations.Count, n.Aggregations.Count);
+                Assert.True(Raven.Client.Extensions.DictionaryExtensions.ContentEquals(o.Aggregations, n.Aggregations));
             }
         }
 
@@ -119,7 +116,6 @@ namespace SlowTests.Bugs.Facets
                     new Facet
                                      {
                                          Name = "DateOfListing",
-                                         Mode = FacetMode.Ranges,
                                         Ranges = new List<string>{
                                              string.Format("[NULL TO {0:yyyy-MM-ddTHH:mm:ss.fffffff}]", dates[0]),
                                              string.Format("[{0:yyyy-MM-ddTHH:mm:ss.fffffff} TO {1:yyyy-MM-ddTHH:mm:ss.fffffff}]", dates[0], dates[1]),
@@ -144,11 +140,13 @@ namespace SlowTests.Bugs.Facets
                     {
                         var facetResultsNew = s.Query<Camera, CameraCostIndex>()
                             .Where(exp)
-                            .ToFacets(facetsNewWay);
+                            .AggregateBy(facetsNewWay)
+                            .ToDictionary();
 
                         var facetResultsOldSchool = s.Query<Camera, CameraCostIndex>()
-                           .Where(exp)
-                           .ToFacets(facetOldSchool);
+                            .Where(exp)
+                            .AggregateBy(facetOldSchool)
+                            .ToDictionary();
 
                         var areFacetsEquiv = AreFacetsEquiv(facetResultsNew, facetResultsOldSchool);
                         if (areFacetsEquiv == false)
@@ -162,26 +160,26 @@ namespace SlowTests.Bugs.Facets
 
         }
 
-        private bool AreFacetsEquiv(FacetedQueryResult left, FacetedQueryResult right)
+        private bool AreFacetsEquiv(Dictionary<string, FacetResult> left, Dictionary<string, FacetResult> right)
         {
             //check if same number of ranges.
-            if (left.Results.Count != right.Results.Count
+            if (left.Count != right.Count
                 // || left.Results.Select(r=> r.Key).Intersect(right.Results.Select(r=> r.Key)).Count() != left.Results.Count
                 )
             {
                 return false;
             }
             //deeper check onthe ranges.
-            if (left.Results.Sum(r => r.Value.Values.Sum(var => var.Hits)) != right.Results.Sum(r => r.Value.Values.Sum(var => var.Hits)))
+            if (left.Sum(r => r.Value.Values.Sum(var => var.Hits)) != right.Sum(r => r.Value.Values.Sum(var => var.Hits)))
             {
                 return false;
             }
 
             //all the way down...
-            foreach (var lfr in left.Results)
+            foreach (var lfr in left)
             {
                 var leftFacetResult = lfr.Value;
-                var rightFacetResult = right.Results.First(r => r.Key.Contains(lfr.Key) || lfr.Key.Contains(r.Key)).Value;
+                var rightFacetResult = right.First(r => r.Key.Contains(lfr.Key) || lfr.Key.Contains(r.Key)).Value;
                 for (int i = 0; i < leftFacetResult.Values.Count; i++)
                 {
                     if (leftFacetResult.Values[i].Hits != rightFacetResult.Values[i].Hits)

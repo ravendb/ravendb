@@ -8,12 +8,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using FastTests.Client.Queries;
-using Raven.Client;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
-using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Session;
 using Xunit;
@@ -67,19 +64,14 @@ namespace SlowTests.MailingList
 
                     var result = query.ToList();
 
-                    var indexQuery = RavenTestHelper.GetIndexQuery(query);
+                    var facetResults = query
+                        .AggregateUsing("facets/PropertySearchingFacets")
+                        .ToDictionary();
 
-                    var facetResults = session.Advanced.DocumentStore.Operations.Send(new GetMultiFacetsOperation(new FacetQuery()
-                    {
-                        Query = indexQuery.Query,
-                        QueryParameters = indexQuery.QueryParameters,
-                        FacetSetupDoc = "facets/PropertySearchingFacets"
-                    }))[0];
-
-                    var facetedCount = facetResults.Results["Feature"];
+                    var facetedCount = facetResults["Feature"];
 
                     Assert.Equal(1, result.Count());
-                    Assert.Equal(1, facetResults.Results["Feature"].Values.First(x => x.Range == "pool").Hits);
+                    Assert.Equal(1, facetResults["Feature"].Values.First(x => x.Range == "pool").Hits);
                     Assert.Equal("PropertiesSearchIndex", stats.IndexName);
                 }
             }

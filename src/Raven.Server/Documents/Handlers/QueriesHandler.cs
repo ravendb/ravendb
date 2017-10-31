@@ -42,12 +42,6 @@ namespace Raven.Server.Documents.Handlers
 
                 var operation = GetStringQueryString("op", required: false);
 
-                if (string.Equals(operation, "facets", StringComparison.OrdinalIgnoreCase))
-                {
-                    await FacetedQuery(context, token, HttpMethod.Post).ConfigureAwait(false);
-                    return;
-                }
-
                 if (string.Equals(operation, "suggest", StringComparison.OrdinalIgnoreCase))
                 {
                     Suggest(context, token, HttpMethod.Post);
@@ -74,12 +68,6 @@ namespace Raven.Server.Documents.Handlers
 
                 var operation = GetStringQueryString("op", required: false);
 
-                if (string.Equals(operation, "facets", StringComparison.OrdinalIgnoreCase))
-                {
-                    await FacetedQuery(context, token, HttpMethod.Get).ConfigureAwait(false);
-                    return;
-                }
-
                 if (string.Equals(operation, "suggest", StringComparison.OrdinalIgnoreCase))
                 {
                     Suggest(context, token, HttpMethod.Get);
@@ -91,15 +79,11 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private async Task FacetedQuery(DocumentsOperationContext context, OperationCancelToken token, HttpMethod method)
+        private async Task FacetedQuery(IndexQueryServerSide query, DocumentsOperationContext context, OperationCancelToken token)
         {
-            var query = await GetFacetQuery(context, method);
-            if (query.FacetQuery.FacetSetupDoc == null && (query.FacetQuery.Facets == null || query.FacetQuery.Facets.Count == 0))
-                throw new InvalidOperationException("One of the required parameters (facetDoc or facets) was not specified.");
-
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
 
-            var result = await Database.QueryRunner.ExecuteFacetedQuery(query.FacetQuery, query.FacetsEtag, existingResultEtag, context, token);
+            var result = await Database.QueryRunner.ExecuteFacetedQuery(query, null, existingResultEtag, context, token);
 
             if (result.NotModified)
             {
@@ -114,7 +98,7 @@ namespace Raven.Server.Documents.Handlers
                 writer.WriteFacetedQueryResult(context, result);
             }
 
-            Database.QueryMetadataCache.MaybeAddToCache(query.FacetQuery.Metadata, result.IndexName);
+            Database.QueryMetadataCache.MaybeAddToCache(query.Metadata, result.IndexName);
         }
 
         private async Task Query(DocumentsOperationContext context, OperationCancelToken token, HttpMethod method)
@@ -122,6 +106,13 @@ namespace Raven.Server.Documents.Handlers
             var indexQuery = await GetIndexQuery(context, method);
 
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
+
+            if (indexQuery.Metadata.IsFacet)
+            {
+                await FacetedQuery(indexQuery, context, token);
+                return;
+            }
+
             var metadataOnly = GetBoolValueQueryString("metadata-only", required: false) ?? false;
 
             DocumentQueryResult result;
@@ -161,20 +152,6 @@ namespace Raven.Server.Documents.Handlers
             var json = await context.ReadForMemoryAsync(RequestBodyStream(), "index/query");
 
             return IndexQueryServerSide.Create(json, context, Database.QueryMetadataCache);
-        }
-
-        private async Task<(FacetQueryServerSide FacetQuery, long? FacetsEtag)> GetFacetQuery(JsonOperationContext context, HttpMethod method)
-        {
-            if (method == HttpMethod.Get)
-            {
-                return await FacetQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(), context);
-            }
-
-            var json = context.ReadForMemory(RequestBodyStream(), "facet/query");
-
-            // read from cache here
-
-            return FacetQueryServerSide.Create(json, context, Database.QueryMetadataCache);
         }
 
         private SuggestionQueryServerSide GetSuggestionQuery(JsonOperationContext context, HttpMethod method)

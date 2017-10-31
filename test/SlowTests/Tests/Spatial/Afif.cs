@@ -138,18 +138,15 @@ namespace SlowTests.Tests.Spatial
             public void ShouldMatchMakeFacetsOnLocation(CultureInfo criticalCulture)
             {
                 using (CultureHelper.EnsureCulture(criticalCulture))
-                using (_store.OpenSession())
+                using (var session = _store.OpenSession())
                 {
-                    var index = typeof(ByVehicle).Name;
-
-                    var value = _store.Operations.Send(new GetFacetsOperation(new FacetQuery
-                    {
-                        Query = $"FROM INDEX '{index}' WHERE within(Coordinates, circle(5, {new Darwin().Latitude.ToInvariantString()}, {new Darwin().Longitude.ToInvariantString()}))",
-                        FacetSetupDoc = "facets/Vehicle"
-                    }));
+                    var value = session.Query<Vehicle, ByVehicle>()
+                        .Spatial("Coordinates", factory => factory.WithinRadius(5, new Darwin().Latitude, new Darwin().Longitude))
+                        .AggregateUsing("facets/Vehicle")
+                        .ToDictionary();
 
                     Assert.NotNull(value);
-                    Assert.Equal(2, value.Results["Make"].Values.Count());
+                    Assert.Equal(2, value["Make"].Values.Count);
                 }
             }
         }

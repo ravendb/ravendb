@@ -16,6 +16,7 @@ using System.Text.RegularExpressions;
 using Lambda2Js;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Spatial;
 using Raven.Client.Documents.Session;
@@ -845,7 +846,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 VisitRavenQueryMethodCall(expression);
                 return;
             }
-            
+
             if (declaringType == typeof(String))
             {
                 VisitStringMethodCall(expression);
@@ -913,7 +914,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             var memberInfo = GetMember(expression.Arguments[1]);
             _documentQuery.CmpXchg(expression.Arguments[0].ToString(), GetValueFromExpression(expression.Arguments[1], GetMemberType(memberInfo)).ToString());
         }
-        
+
         private void VisitLinqExtensionsMethodCall(MethodCallExpression expression)
         {
             switch (expression.Method.Name)
@@ -1048,8 +1049,14 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         }
                     }
                     break;
-case "cmpxchg.match":
-                        break;                case nameof(LinqExtensions.GroupByArrayValues):
+                case nameof(LinqExtensions.AggregateBy):
+                    VisitExpression(expression.Arguments[0]);
+
+                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var aggregateFacet);
+
+                    _documentQuery.AggregateBy(aggregateFacet as Facet);
+                    break;
+                case nameof(LinqExtensions.GroupByArrayValues):
                 case nameof(LinqExtensions.GroupByArrayContent):
                     EnsureValidDynamicGroupByMethod(expression.Method.Name);
 
@@ -1481,9 +1488,9 @@ case "cmpxchg.match":
 
                     break;
                 default:
-                {
-                    throw new NotSupportedException("Method not supported: " + expression.Method.Name);
-                }
+                    {
+                        throw new NotSupportedException("Method not supported: " + expression.Method.Name);
+                    }
             }
         }
 
@@ -1626,7 +1633,7 @@ case "cmpxchg.match":
 
                             if (IsCollection(field.Type))
                                 path += "[]";
-                     
+
                             parts.Add(path);
                         }
                     }
@@ -1645,7 +1652,7 @@ case "cmpxchg.match":
                 var originalField = GetSelectPath((MemberExpression)newExpression.Arguments[index]);
 
                 if (prefix != null)
-                    originalField = string.Join(".", prefix.Union(new[] {originalField}));
+                    originalField = string.Join(".", prefix.Union(new[] { originalField }));
 
                 _documentQuery.GroupBy(originalField);
 
@@ -1803,9 +1810,9 @@ case "cmpxchg.match":
                             continue;
                         }
 
-                        if (field.Expression is UnaryExpression 
-                            ||field.Expression is LabelExpression 
-                            ||(field.Expression is MemberExpression member && HasComputation(member) == false))                               
+                        if (field.Expression is UnaryExpression
+                            || field.Expression is LabelExpression
+                            || (field.Expression is MemberExpression member && HasComputation(member) == false))
                         {
                             var expression = _linqPathProvider.GetMemberExpression(field.Expression);
                             var renamedField = GetSelectPathOrConstantValue(expression);
@@ -1847,8 +1854,8 @@ case "cmpxchg.match":
                 var value = filedInfo.GetValue(constantExpression.Value);
                 return GetConstantValueAsString(value);
             }
-            
-            return GetSelectPath(member);           
+
+            return GetSelectPath(member);
         }
 
         private static string GetConstantValueAsString(object value)
@@ -1898,7 +1905,7 @@ case "cmpxchg.match":
             var name = GetSelectPath(expression.Members[1]);
             var parameter = expression?.Arguments[0] as ParameterExpression;
 
-            var loadSupport = new JavascriptConversionExtensions.LoadSupport{ DoNotTranslate = true };
+            var loadSupport = new JavascriptConversionExtensions.LoadSupport { DoNotTranslate = true };
             var js = expression.Arguments[1].CompileToJavascript(
                 new JavascriptCompilationOptions(
                     new JavascriptConversionExtensions.MathSupport(),

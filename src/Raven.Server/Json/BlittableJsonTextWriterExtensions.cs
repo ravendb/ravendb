@@ -5,14 +5,12 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Extensions;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
-using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Documents.Queries.Suggestion;
 using Raven.Server.Utils;
 using Sparrow;
@@ -378,22 +376,7 @@ namespace Raven.Server.Json
                 return;
             }
 
-            var facetQuery = query as FacetQuery;
-            if (facetQuery != null)
-            {
-                writer.WriteFacetQuery(context, facetQuery);
-                return;
-            }
-
             throw new NotSupportedException($"Not supported query type: {query.GetType()}");
-        }
-
-        public static void WriteFacetQuery(this BlittableJsonTextWriter writer, JsonOperationContext context, FacetQuery query)
-        {
-            var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(query);
-            var json = context.ReadObject(djv, "facet-query");
-
-            writer.WriteObject(json);
         }
 
         public static void WriteIndexQuery(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexQueryServerSide query)

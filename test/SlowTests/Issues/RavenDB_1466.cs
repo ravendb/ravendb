@@ -7,11 +7,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries.Facets;
 using Xunit;
 
@@ -112,20 +110,20 @@ namespace SlowTests.Issues
                 WaitForIndexing((DocumentStore)store);
 
                 var facets = new List<Facet>
-            {
-                new Facet<Employee>
                 {
-                    Name = x => x.Salary,
-                    Ranges =
+                    new Facet<Employee>
                     {
-                        x => x.Salary < 20000,
-                        x => x.Salary >= 20000 && x.Salary < 40000,
-                        x => x.Salary >= 40000 && x.Salary < 60000,
-                        x => x.Salary >= 60000 && x.Salary < 80000,
-                        x => x.Salary > 80000
+                        Name = x => x.Salary,
+                        Ranges =
+                        {
+                            x => x.Salary < 20000,
+                            x => x.Salary >= 20000 && x.Salary < 40000,
+                            x => x.Salary >= 40000 && x.Salary < 60000,
+                            x => x.Salary >= 60000 && x.Salary < 80000,
+                            x => x.Salary > 80000
+                        }
                     }
-                }
-            };
+                };
 
                 using (var s = store.OpenSession())
                 {
@@ -137,67 +135,56 @@ namespace SlowTests.Issues
                 // by using setup document
 
                 var northSalaryFacetQuery = session.Query<Employee, EmployeeByRegionAndSalary>()
-                                                    .Where(x => x.Region == Region.North).ToFacetQuery("facets/EmployeeFacets");
+                                                    .Where(x => x.Region == Region.North).AggregateUsing("facets/EmployeeFacets").ToDictionary();
                 var southSalaryFacetQuery = session.Query<Employee, EmployeeByRegionAndSalary>()
-                                                    .Where(x => x.Region == Region.South).ToFacetQuery("facets/EmployeeFacets");
+                                                    .Where(x => x.Region == Region.South).AggregateUsing("facets/EmployeeFacets").ToDictionary();
                 var eastSalaryFacetQuery = session.Query<Employee, EmployeeByRegionAndSalary>()
-                                                    .Where(x => x.Region == Region.East).ToFacetQuery("facets/EmployeeFacets");
+                                                    .Where(x => x.Region == Region.East).AggregateUsing("facets/EmployeeFacets").ToDictionary();
                 var westSalaryFacetQuery = session.Query<Employee, EmployeeByRegionAndSalary>()
-                                                    .Where(x => x.Region == Region.West).ToFacetQuery("facets/EmployeeFacets");
+                                                    .Where(x => x.Region == Region.West).AggregateUsing("facets/EmployeeFacets").ToDictionary();
 
-
-                var multiFacetedSearchResults = session.Advanced.DocumentStore.Operations.Send(new GetMultiFacetsOperation(northSalaryFacetQuery, southSalaryFacetQuery,
-                                                                                    eastSalaryFacetQuery, westSalaryFacetQuery));
-
-                Assert.Equal(4, multiFacetedSearchResults.Length);
-
-                AssertResults(multiFacetedSearchResults);
+                AssertResults(northSalaryFacetQuery, southSalaryFacetQuery, eastSalaryFacetQuery, westSalaryFacetQuery);
 
                 // by using list of facets
 
                 northSalaryFacetQuery = session.Query<Employee, EmployeeByRegionAndSalary>()
-                                                .Where(x => x.Region == Region.North).ToFacetQuery(facets);
+                                                .Where(x => x.Region == Region.North).AggregateBy(facets).ToDictionary();
                 southSalaryFacetQuery = session.Query<Employee, EmployeeByRegionAndSalary>()
-                                                .Where(x => x.Region == Region.South).ToFacetQuery(facets);
+                                                .Where(x => x.Region == Region.South).AggregateBy(facets).ToDictionary();
                 eastSalaryFacetQuery = session.Query<Employee, EmployeeByRegionAndSalary>()
-                                                .Where(x => x.Region == Region.East).ToFacetQuery(facets);
+                                                .Where(x => x.Region == Region.East).AggregateBy(facets).ToDictionary();
                 westSalaryFacetQuery = session.Query<Employee, EmployeeByRegionAndSalary>()
-                                                .Where(x => x.Region == Region.West).ToFacetQuery(facets);
+                                                .Where(x => x.Region == Region.West).AggregateBy(facets).ToDictionary();
 
 
-                multiFacetedSearchResults = session.Advanced.DocumentStore.Operations.Send(new GetMultiFacetsOperation(northSalaryFacetQuery, southSalaryFacetQuery,
-                                                                                    eastSalaryFacetQuery, westSalaryFacetQuery));
-
-                Assert.Equal(4, multiFacetedSearchResults.Length);
-
-                AssertResults(multiFacetedSearchResults);
+                AssertResults(northSalaryFacetQuery, southSalaryFacetQuery, eastSalaryFacetQuery, westSalaryFacetQuery);
             }
         }
 
-        private static void AssertResults(FacetedQueryResult[] multiFacetedSearchResults)
+        private static void AssertResults(params Dictionary<string, FacetResult>[] results)
         {
-            var northResults = multiFacetedSearchResults[0].Results["Salary_D_Range"].Values;
+            var northResults = results[0]["Salary_D_Range"].Values;
             Assert.Equal(1, northResults[0].Hits);
             Assert.Equal(1, northResults[1].Hits);
             Assert.Equal(0, northResults[2].Hits);
             Assert.Equal(0, northResults[3].Hits);
             Assert.Equal(0, northResults[4].Hits);
 
-            var southResults = multiFacetedSearchResults[1].Results["Salary_D_Range"].Values;
+            var southResults = results[1]["Salary_D_Range"].Values;
             Assert.Equal(0, southResults[0].Hits);
             Assert.Equal(1, southResults[1].Hits);
             Assert.Equal(0, southResults[2].Hits);
             Assert.Equal(0, southResults[3].Hits);
             Assert.Equal(0, southResults[4].Hits);
 
-            var eastResults = multiFacetedSearchResults[2].Results["Salary_D_Range"].Values;
+            var eastResults = results[2]["Salary_D_Range"].Values;
             Assert.Equal(0, eastResults[0].Hits);
             Assert.Equal(0, eastResults[1].Hits);
             Assert.Equal(2, eastResults[2].Hits);
             Assert.Equal(0, eastResults[3].Hits);
             Assert.Equal(0, eastResults[4].Hits);
 
-            var westResults = multiFacetedSearchResults[3].Results["Salary_D_Range"].Values;
+            var westResults = results[3]["Salary_D_Range"].Values;
             Assert.Equal(1, westResults[0].Hits);
             Assert.Equal(0, westResults[1].Hits);
             Assert.Equal(0, westResults[2].Hits);

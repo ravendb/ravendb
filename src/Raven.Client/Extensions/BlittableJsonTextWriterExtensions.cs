@@ -1,6 +1,5 @@
 ﻿using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.Suggestion;
 using Raven.Client.Documents.Session;
 using Sparrow.Json;
@@ -9,11 +8,6 @@ namespace Raven.Client.Extensions
 {
     internal static class BlittableJsonTextWriterExtensions
     {
-        public static void WriteFacetQuery(this BlittableJsonTextWriter writer, DocumentConventions conventions, JsonOperationContext context, FacetQuery query)
-        {
-            writer.WriteObject(EntityToBlittable.ConvertEntityToBlittable(query, conventions, context));
-        }
-
         public static void WriteSuggestionQuery(this BlittableJsonTextWriter writer, DocumentConventions conventions, JsonOperationContext context, SuggestionQuery query)
         {
             writer.WriteStartObject();

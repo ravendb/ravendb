@@ -5,7 +5,7 @@ namespace FastTests.Issues
 {
     public class RavenDB9158 : RavenTestBase
     {
-        public class User
+        private class User
         {
             public string Id { get; set; }
 

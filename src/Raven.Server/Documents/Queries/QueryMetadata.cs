@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
@@ -58,6 +59,8 @@ namespace Raven.Server.Documents.Queries
         public readonly bool IsDynamic;
 
         public readonly bool IsGroupBy;
+
+        public bool IsFacet { get; private set; }
 
         public bool IsMoreLikeThis { get; private set; }
 
@@ -545,10 +548,16 @@ namespace Raven.Server.Documents.Queries
         {
             if (expression is ValueExpression ve)
             {
+                if (IsFacet)
+                    throw new InvalidOperationException("TODO ppekrol");
+
                 return SelectField.CreateValue(ve.Token, alias, ve.Value);
             }
             if (expression is FieldExpression fe)
             {
+                if (IsFacet)
+                    throw new InvalidOperationException("TODO ppekrol");
+
                 if (fe.IsQuoted && fe.Compound.Count == 1)
                     return SelectField.CreateValue(fe.Compound[0], alias, ValueTokenType.String);
                 return GetSelectValue(alias, fe, parameters);
@@ -560,6 +569,9 @@ namespace Raven.Server.Documents.Queries
                 {
                     if (Query.DeclaredFunctions != null && Query.DeclaredFunctions.TryGetValue(methodName, out _))
                     {
+                        if (IsFacet)
+                            throw new InvalidOperationException("TODO ppekrol");
+
                         var args = new SelectField[me.Arguments.Count];
                         for (int i = 0; i < me.Arguments.Count; i++)
                         {
@@ -576,6 +588,9 @@ namespace Raven.Server.Documents.Queries
 
                     if (string.Equals("id", methodName, StringComparison.OrdinalIgnoreCase))
                     {
+                        if (IsFacet)
+                            throw new InvalidOperationException("TODO ppekrol");
+
                         if (IsGroupBy)
                             ThrowInvalidIdInGroupByQuery(parameters);
 
@@ -583,6 +598,16 @@ namespace Raven.Server.Documents.Queries
                             ThrowInvalidArgumentToId(parameters);
 
                         return SelectField.Create(QueryFieldName.DocumentId, alias);
+                    }
+
+                    if (string.Equals("facet", methodName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (IsGroupBy)
+                            ThrowInvalidIdInGroupByQuery(parameters);
+
+                        IsFacet = true;
+
+                        return CreateFacet(me, alias, parameters);
                     }
 
                     if (IsGroupBy == false)
@@ -597,6 +622,10 @@ namespace Raven.Server.Documents.Queries
                             return null; // never hit
                     }
                 }
+
+                if (IsFacet)
+                    throw new InvalidOperationException("TODO ppekrol");
+
                 QueryFieldName fieldName = null;
 
                 switch (aggregation)
@@ -629,6 +658,60 @@ namespace Raven.Server.Documents.Queries
             return null; // never hit
         }
 
+        private FacetField CreateFacet(MethodExpression expression, string alias, BlittableJsonReaderObject parameters)
+        {
+            if (expression.Arguments.Count == 0)
+                throw new InvalidOperationException("TODO ppekrol");
+
+            QueryFieldName name = null;
+            var result = new FacetField();
+
+            for (var i = 0; i < expression.Arguments.Count; i++)
+            {
+                var argument = expression.Arguments[i];
+                if (argument is FieldExpression fe)
+                {
+                    if (name != null)
+                        throw new InvalidOperationException("TODO ppekrol");
+
+                    name = new QueryFieldName(fe.FieldValue, fe.IsQuoted);
+                    continue;
+                }
+
+                if (argument is MethodExpression me)
+                {
+                    var methodType = QueryMethod.GetMethodType(me.Name);
+                    switch (methodType)
+                    {
+                        case MethodType.Sum:
+                            if (me.Arguments.Count != 1)
+                                throw new InvalidOperationException("TODO ppekrol");
+
+                            var methodFieldName = ExtractFieldNameFromArgument(me.Arguments[0], me.Name, parameters, QueryText);
+
+                            result.AddAggregation(FacetAggregation.Sum, methodFieldName);
+                            break;
+                        case MethodType.Count:
+                            if (me.Arguments.Count != 0)
+                                throw new InvalidOperationException("TODO ppekrol");
+
+                            result.AddAggregation(FacetAggregation.Count, null);
+                            break;
+                        default:
+                            throw new InvalidOperationException("TODO ppekrol");
+                    }
+
+                    continue;
+                }
+
+                throw new InvalidOperationException("TODO ppekrol");
+            }
+
+            result.Name = name;
+            result.Alias = alias;
+
+            return result;
+        }
 
         private void ThrowInvalidArgumentToId(BlittableJsonReaderObject parameters)
         {

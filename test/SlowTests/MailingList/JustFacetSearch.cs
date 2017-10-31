@@ -113,8 +113,8 @@ namespace SlowTests.MailingList
 
             IList<SectionFacet> getFacets(IQueryable<Article> results, IDocumentSession session)
             {
-                var facetResults = results.ToFacets("facets/ArticleFacets");
-                var sections = facetResults.Results.FirstOrDefault().Value;
+                var facetResults = results.AggregateUsing("facets/ArticleFacets").ToDictionary();
+                var sections = facetResults.FirstOrDefault().Value;
                 return sections.Values.Select(value =>
                 {
                     // Doesn't contact server due to Include in original query

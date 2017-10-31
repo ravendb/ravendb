@@ -142,7 +142,7 @@ namespace Raven.Server.Documents.Indexes.Errors
             throw new NotSupportedException($"Index with etag {Etag} is in-memory implementation of a faulty index", _e);
         }
 
-        public override Task<FacetedQueryResult> FacetedQuery(FacetQueryServerSide query, long facetSetupEtag, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        public override Task<FacetedQueryResult> FacetedQuery(IndexQueryServerSide query, long facetSetupEtag, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             throw new NotSupportedException($"Index with etag {Etag} is in-memory implementation of a faulty index", _e);
         }

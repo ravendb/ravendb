@@ -2,8 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Net;
-using Newtonsoft.Json;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries.Facets;
@@ -40,7 +38,8 @@ namespace SlowTests.Tests.Faceted
                     {
                         var facetResults = s.Query<Camera, CameraCostIndex>()
                             .Where(exp)
-                            .ToFacets(facets);
+                            .AggregateBy(facets)
+                            .ToDictionary();
 
                         var filteredData = cameras.Where(exp.Compile()).ToList();
 
@@ -77,7 +76,8 @@ namespace SlowTests.Tests.Faceted
                     {
                         var facetResults = s.Query<Camera, CameraCostIndex>()
                             .Where(exp)
-                            .ToFacets(facets);
+                            .AggregateBy(facets)
+                            .ToDictionary();
 
                         var filteredData = cameras.Where(exp.Compile()).ToList();
 
@@ -87,50 +87,13 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [Fact]
-        public void RemoteDynamicFacetedSearchHonorsConditionalGet()
-        {
-            using (var store = GetDocumentStore())
-            {
-                CreateCameraCostIndex(store);
-
-                InsertCameraData(store, GetCameras(1));
-
-                var query = new FacetQuery
-                {
-                    Facets = GetFacets(),
-                    Query = "FROM INDEX 'CameraCost' WHERE Manufacturer = 'canon'"
-                };
-
-                var queryAsJson = JsonConvert.SerializeObject(query);
-
-                string firstChangeVector;
-
-                Assert.Equal(HttpStatusCode.OK, ConditionalGetHelper.PerformPost(store, "/queries", queryAsJson, null, out firstChangeVector));
-
-                //second request should give 304 not modified
-                Assert.Equal(HttpStatusCode.NotModified, ConditionalGetHelper.PerformPost(store, "/queries", queryAsJson, firstChangeVector, out firstChangeVector));
-
-                //change index etag by inserting new doc
-                InsertCameraData(store, GetCameras(1));
-
-                string secondChangeVector;
-
-                //changing the index should give 200 OK
-                Assert.Equal(HttpStatusCode.OK, ConditionalGetHelper.PerformPost(store, "/queries", queryAsJson, firstChangeVector, out secondChangeVector));
-
-                //next request should give 304 not modified
-                Assert.Equal(HttpStatusCode.NotModified, ConditionalGetHelper.PerformPost(store, "/queries", queryAsJson, secondChangeVector, out secondChangeVector));
-            }
-        }
-
-        private void CheckFacetResultsMatchInMemoryData(FacetedQueryResult facetResults, List<Camera> filteredData)
+        private void CheckFacetResultsMatchInMemoryData(Dictionary<string, FacetResult> facetResults, List<Camera> filteredData)
         {
             //Make sure we get all range values
             Assert.Equal(filteredData.GroupBy(x => x.Manufacturer).Count(),
-                        facetResults.Results["Manufacturer"].Values.Count());
+                        facetResults["Manufacturer"].Values.Count());
 
-            foreach (var facet in facetResults.Results["Manufacturer"].Values)
+            foreach (var facet in facetResults["Manufacturer"].Values)
             {
                 var inMemoryCount = filteredData.Count(x => x.Manufacturer.ToLower() == facet.Range);
                 Assert.Equal(inMemoryCount, facet.Hits);
@@ -138,7 +101,7 @@ namespace SlowTests.Tests.Faceted
 
             //Go through the expected (in-memory) results and check that there is a corresponding facet result
             //Not the prettiest of code, but it works!!!
-            var costFacets = facetResults.Results["Cost_D_Range"].Values;
+            var costFacets = facetResults["Cost_D_Range"].Values;
             CheckFacetCount(filteredData.Count(x => x.Cost <= 200.0m), costFacets.FirstOrDefault(x => x.Range == "[NULL TO 200]"));
             CheckFacetCount(filteredData.Count(x => x.Cost >= 200.0m && x.Cost <= 400), costFacets.FirstOrDefault(x => x.Range == "[200 TO 400]"));
             CheckFacetCount(filteredData.Count(x => x.Cost >= 400.0m && x.Cost <= 600.0m), costFacets.FirstOrDefault(x => x.Range == "[400 TO 600]"));
@@ -146,7 +109,7 @@ namespace SlowTests.Tests.Faceted
             CheckFacetCount(filteredData.Count(x => x.Cost >= 800.0m), costFacets.FirstOrDefault(x => x.Range == "[800 TO NULL]"));
 
             //Test the Megapixels_Range facets using the same method
-            var megapixelsFacets = facetResults.Results["Megapixels_D_Range"].Values;
+            var megapixelsFacets = facetResults["Megapixels_D_Range"].Values;
             CheckFacetCount(filteredData.Count(x => x.Megapixels <= 3.0m), megapixelsFacets.FirstOrDefault(x => x.Range == "[NULL TO 3]"));
             CheckFacetCount(filteredData.Count(x => x.Megapixels >= 3.0m && x.Megapixels <= 7.0m), megapixelsFacets.FirstOrDefault(x => x.Range == "[3 TO 7]"));
             CheckFacetCount(filteredData.Count(x => x.Megapixels >= 7.0m && x.Megapixels <= 10.0m), megapixelsFacets.FirstOrDefault(x => x.Range == "[7 TO 10]"));

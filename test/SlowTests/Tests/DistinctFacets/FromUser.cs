@@ -7,10 +7,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Queries.Facets;
 using Xunit;
 
 namespace SlowTests.Tests.DistinctFacets
@@ -30,24 +28,17 @@ namespace SlowTests.Tests.DistinctFacets
                     var result = session.Advanced.DocumentQuery<SampleData, SampleData_Index>()
                         .Distinct()
                         .SelectFields<SampleData_Index.Result>("Name")
-                        .ToFacets(new[]
-                        {
-                            new Facet
-                            {
-                                Name = "Tag"
-                            },
-                            new Facet
-                            {
-                                Name = "TotalCount"
-                            },
-                        });
-                    Assert.Equal(3, result.Results["Tag"].Values.Count);
+                        .AggregateBy("Tag")
+                        .AndAggregateOn("TotalCount")
+                        .ToDictionary();
 
-                    Assert.Equal(5, result.Results["TotalCount"].Values[0].Hits);
+                    Assert.Equal(3, result["Tag"].Values.Count);
 
-                    Assert.Equal(5, result.Results["Tag"].Values.First(x => x.Range == "0").Hits);
-                    Assert.Equal(5, result.Results["Tag"].Values.First(x => x.Range == "1").Hits);
-                    Assert.Equal(5, result.Results["Tag"].Values.First(x => x.Range == "2").Hits);
+                    Assert.Equal(5, result["TotalCount"].Values[0].Hits);
+
+                    Assert.Equal(5, result["Tag"].Values.First(x => x.Range == "0").Hits);
+                    Assert.Equal(5, result["Tag"].Values.First(x => x.Range == "1").Hits);
+                    Assert.Equal(5, result["Tag"].Values.First(x => x.Range == "2").Hits);
                 }
             }
         }

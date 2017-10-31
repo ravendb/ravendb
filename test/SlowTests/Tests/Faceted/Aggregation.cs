@@ -62,12 +62,10 @@ namespace SlowTests.Tests.Faceted
                 using (var session = store.OpenSession())
                 {
                     var r = session.Query<Order>("Orders/All")
-                       .AggregateBy(x => x.Region)
-                         .MaxOn(x => x.Total)
-                         .MinOn(x => x.Total)
-                       .ToList();
+                       .AggregateBy(x => x.Region, factory => factory.MaxOn(x => x.Total).MinOn(x => x.Total))
+                       .ToDictionary();
 
-                    var facetResult = r.Results["Region"];
+                    var facetResult = r["Region"];
                     Assert.Equal(2, facetResult.Values[0].Hits);
                     Assert.Equal(1, facetResult.Values[0].Min);
                     Assert.Equal(1.1, facetResult.Values[0].Max);
@@ -100,12 +98,10 @@ namespace SlowTests.Tests.Faceted
                 using (var session = store.OpenSession())
                 {
                     var r = session.Query<Order>("Orders/All")
-                       .AggregateBy(x => x.Region)
-                         .MaxOn(x => x.Tax)
-                         .MinOn(x => x.Tax)
-                       .ToList();
+                        .AggregateBy(x => x.Region, factory => factory.MaxOn(x => x.Tax).MinOn(x => x.Tax))
+                        .ToDictionary();
 
-                    var facetResult = r.Results["Region"];
+                    var facetResult = r["Region"];
                     Assert.Equal(2, facetResult.Values[0].Hits);
                     Assert.Equal(1, facetResult.Values[0].Min);
                     Assert.Equal(1.5, facetResult.Values[0].Max);
@@ -139,12 +135,10 @@ namespace SlowTests.Tests.Faceted
                 using (var session = store.OpenSession())
                 {
                     var r = session.Query<Order>("Orders/All")
-                       .AggregateBy(x => x.Region)
-                         .MaxOn(x => x.Quantity)
-                         .MinOn(x => x.Quantity)
-                       .ToList();
+                        .AggregateBy(x => x.Region, factory => factory.MaxOn(x => x.Quantity).MinOn(x => x.Quantity))
+                        .ToDictionary();
 
-                    var facetResult = r.Results["Region"];
+                    var facetResult = r["Region"];
                     Assert.Equal(2, facetResult.Values[0].Hits);
                     Assert.Equal(1, facetResult.Values[0].Min);
                     Assert.Equal(2, facetResult.Values[0].Max);
@@ -178,12 +172,10 @@ namespace SlowTests.Tests.Faceted
                 using (var session = store.OpenSession())
                 {
                     var r = session.Query<Order>("Orders/All")
-                       .AggregateBy(x => x.Product)
-                         .MaxOn(x => x.Region)
-                         .MinOn(x => x.Region)
-                       .ToList();
+                       .AggregateBy(x => x.Product, factory => factory.MaxOn(x => x.Region).MinOn(x => x.Region))
+                       .ToDictionary();
 
-                    var facetResult = r.Results["Product"];
+                    var facetResult = r["Product"];
                     Assert.Equal(2, facetResult.Values[0].Hits);
                     Assert.Equal(1, facetResult.Values[0].Min);
                     Assert.Equal(2, facetResult.Values[0].Max);
@@ -211,11 +203,10 @@ namespace SlowTests.Tests.Faceted
                 using (var session = store.OpenSession())
                 {
                     var r = session.Query<Order, Orders_All>()
-                           .AggregateBy(x => x.Product)
-                           .SumOn(x => x.Total)
-                           .ToList();
+                           .AggregateBy(x => x.Product, f => f.SumOn(x => x.Total))
+                           .ToDictionary();
 
-                    var facetResult = r.Results["Product"];
+                    var facetResult = r["Product"];
                     Assert.Equal(2, facetResult.Values.Count);
 
                     Assert.Equal(12, facetResult.Values.First(x => x.Range == "milk").Sum);
@@ -243,19 +234,17 @@ namespace SlowTests.Tests.Faceted
                 using (var session = store.OpenSession())
                 {
                     var r = session.Query<Order>("Orders/All")
-                       .AggregateBy(order => order.Product)
-                          .SumOn(order => order.Total)
-                       .AndAggregateOn(order => order.Currency)
-                           .SumOn(order => order.Total)
-                       .ToList();
+                       .AggregateBy(order => order.Product, x => x.SumOn(y => y.Total))
+                       .AndAggregateOn(order => order.Currency, x => x.SumOn(y => y.Total))
+                       .ToDictionary();
 
-                    var facetResult = r.Results["Product"];
+                    var facetResult = r["Product"];
                     Assert.Equal(2, facetResult.Values.Count);
 
                     Assert.Equal(12, facetResult.Values.First(x => x.Range == "milk").Sum);
                     Assert.Equal(3333, facetResult.Values.First(x => x.Range == "iphone").Sum);
 
-                    facetResult = r.Results["Currency"];
+                    facetResult = r["Currency"];
                     Assert.Equal(2, facetResult.Values.Count);
 
                     Assert.Equal(3336, facetResult.Values.First(x => x.Range == "eur").Sum);
@@ -284,12 +273,10 @@ namespace SlowTests.Tests.Faceted
                 using (var session = store.OpenSession())
                 {
                     var r = session.Query<Order>("Orders/All")
-                       .AggregateBy(x => x.Product)
-                         .MaxOn(x => x.Total)
-                         .MinOn(x => x.Total)
-                       .ToList();
+                       .AggregateBy(x => x.Product, factory => factory.MaxOn(x => x.Total).MinOn(x => x.Total))
+                       .ToDictionary();
 
-                    var facetResult = r.Results["Product"];
+                    var facetResult = r["Product"];
                     Assert.Equal(2, facetResult.Values.Count);
 
                     Assert.Equal(9, facetResult.Values.First(x => x.Range == "milk").Max);
@@ -320,12 +307,10 @@ namespace SlowTests.Tests.Faceted
                 using (var session = store.OpenSession())
                 {
                     var r = session.Query<Order>("Orders/All")
-                       .AggregateBy(x => x.Region)
-                         .MaxOn(x => x.Total)
-                         .MinOn(x => x.Total)
-                       .ToList();
+                        .AggregateBy(x => x.Region, factory => factory.MaxOn(x => x.Total).MinOn(x => x.Total))
+                       .ToDictionary();
 
-                    var facetResult = r.Results["Region"];
+                    var facetResult = r["Region"];
                     Assert.Equal(2, facetResult.Values.Count);
 
                     Assert.Equal(1, facetResult.Values.Count(x => x.Range == "1"));
@@ -351,12 +336,10 @@ namespace SlowTests.Tests.Faceted
                 using (var session = store.OpenSession())
                 {
                     var r = session.Query<Order>("Orders/All")
-                       .AggregateBy(x => x.At)
-                         .MaxOn(x => x.Total)
-                         .MinOn(x => x.Total)
-                       .ToList();
+                        .AggregateBy(x => x.At, factory => factory.MaxOn(x => x.Total).MinOn(x => x.Total))
+                       .ToDictionary();
 
-                    var facetResult = r.Results["At"];
+                    var facetResult = r["At"];
                     Assert.Equal(2, facetResult.Values.Count);
 
                     Assert.Equal(1, facetResult.Values.Count(x => x.Range == DateTime.Today.ToString(DefaultFormat.DateTimeFormatsToWrite)));
@@ -382,19 +365,17 @@ namespace SlowTests.Tests.Faceted
                 using (var session = store.OpenSession())
                 {
                     var r = session.Query<Order>("Orders/All")
-                       .AggregateBy(x => x.Product, "ProductMax")
-                         .MaxOn(x => x.Total)
-                       .AndAggregateOn(x => x.Product, "ProductMin")
-                         .CountOn(x => x.Currency)
-                       .ToList();
+                       .AggregateBy(x => x.Product, f => f.WithDisplayName("ProductMax").MaxOn(x => x.Total))
+                       .AndAggregateOn(x => x.Product, f => f.WithDisplayName("ProductMin").Count())
+                       .ToDictionary();
 
-                    Assert.Equal(2, r.Results.Count);
+                    Assert.Equal(2, r.Count);
 
-                    Assert.NotNull(r.Results["ProductMax"]);
-                    Assert.NotNull(r.Results["ProductMin"]);
+                    Assert.NotNull(r["ProductMax"]);
+                    Assert.NotNull(r["ProductMin"]);
 
-                    Assert.Equal(3333, r.Results["ProductMax"].Values.First().Max);
-                    Assert.Equal(2, r.Results["ProductMin"].Values[1].Count);
+                    Assert.Equal(3333, r["ProductMax"].Values.First().Max);
+                    Assert.Equal(2, r["ProductMin"].Values[1].Count);
 
                 }
             }
@@ -418,29 +399,24 @@ namespace SlowTests.Tests.Faceted
                 using (var session = store.OpenSession())
                 {
                     var r = session.Query<Order>("Orders/All")
-                       .AggregateBy(x => x.Product)
-                         .SumOn(x => x.Total)
-                       .AndAggregateOn(x => x.Total)
-                           .AddRanges(x => x.Total < 100,
-                                      x => x.Total >= 100 && x.Total < 500,
-                                      x => x.Total >= 500 && x.Total < 1500,
-                                      x => x.Total >= 1500)
-                       .SumOn(x => x.Total)
-                       .ToList();
+                       .AggregateBy(x => x.Product, f => f.SumOn(x => x.Total))
+                       .AndAggregateOn(x => x.Total, f => f.SumOn(x => x.Total).WithRanges(x => x.Total < 100,
+                            x => x.Total >= 100 && x.Total < 500,
+                            x => x.Total >= 500 && x.Total < 1500,
+                            x => x.Total >= 1500))
+                       .ToDictionary();
 
-                    var facetResult = r.Results["Product"];
+                    var facetResult = r["Product"];
                     Assert.Equal(2, facetResult.Values.Count);
 
                     Assert.Equal(12, facetResult.Values.First(x => x.Range == "milk").Sum);
                     Assert.Equal(3333, facetResult.Values.First(x => x.Range == "iphone").Sum);
 
-                    facetResult = r.Results["Total"];
+                    facetResult = r["Total"];
                     Assert.Equal(4, facetResult.Values.Count);
 
                     Assert.Equal(12, facetResult.Values.First(x => x.Range == "[NULL TO 100]").Sum);
                     Assert.Equal(3333, facetResult.Values.First(x => x.Range == "{1500 TO NULL]").Sum);
-
-
                 }
             }
         }
@@ -471,16 +447,14 @@ namespace SlowTests.Tests.Faceted
                 {
                     var r = session.Query<ItemsOrder>("ItemsOrders/All")
                         .Where(x => x.At >= end0)
-                       .AggregateBy(x => x.At)
-                            .AddRanges(
-                                x => x.At >= minValue, // all - 4
-                                x => x.At >= end0 && x.At < end1, // 1
-                                x => x.At >= end1 && x.At < end2 // 3
-                            )
-                         .CountOn(x => x.At)
-                       .ToList();
+                       .AggregateBy(x => x.At, f => f.Count().WithRanges(
+                            x => x.At >= minValue, // all - 4
+                            x => x.At >= end0 && x.At < end1, // 1
+                            x => x.At >= end1 && x.At < end2 // 3
+                            ))
+                       .ToDictionary();
 
-                    var facetResults = r.Results["At"].Values;
+                    var facetResults = r["At"].Values;
                     Assert.Equal(4, facetResults[0].Count);
                     Assert.Equal(1, facetResults[1].Count);
                     Assert.Equal(3, facetResults[2].Count);
@@ -516,16 +490,14 @@ namespace SlowTests.Tests.Faceted
                     var r = session.Query<ItemsOrder>("ItemsOrders/All")
                         .Where(x => x.At >= end0)
                         .Where(x => x.Items.In(items))
-                        .AggregateBy(x => x.At)
-                            .AddRanges(
-                                x => x.At >= minValue, // all - 3
-                                x => x.At >= end0 && x.At < end1, // 1
-                                x => x.At >= end1 && x.At < end2 // 2
-                            )
-                         .CountOn(x => x.At)
-                       .ToList();
+                        .AggregateBy(x => x.At, f => f.Count().WithRanges(
+                            x => x.At >= minValue, // all - 3
+                            x => x.At >= end0 && x.At < end1, // 1
+                            x => x.At >= end1 && x.At < end2 // 2
+                            ))
+                       .ToDictionary();
 
-                    var facetResults = r.Results["At"].Values;
+                    var facetResults = r["At"].Values;
                     Assert.Equal(3, facetResults[0].Count);
                     Assert.Equal(1, facetResults[1].Count);
                     Assert.Equal(2, facetResults[2].Count);
@@ -561,16 +533,18 @@ namespace SlowTests.Tests.Faceted
                     var r = session.Query<ItemsOrder>("ItemsOrders/All")
                         .Where(x => x.Items.In(items))
                         .Where(x => x.At >= end0)
-                        .AggregateBy(x => x.At)
-                            .AddRanges(
-                                x => x.At >= minValue, // all - 3
-                                x => x.At >= end0 && x.At < end1, // 1
-                                x => x.At >= end1 && x.At < end2 // 2
-                            )
-                         .CountOn(x => x.At)
-                       .ToList();
+                        .AggregateBy(
+                            x => x.At,
+                            f => f
+                                .Count()
+                                .WithRanges(
+                                    x => x.At >= minValue, // all - 3
+                                    x => x.At >= end0 && x.At < end1, // 1
+                                    x => x.At >= end1 && x.At < end2 // 2
+                                ))
+                        .ToDictionary();
 
-                    var facetResults = r.Results["At"].Values;
+                    var facetResults = r["At"].Values;
                     Assert.Equal(3, facetResults[0].Count);
                     Assert.Equal(1, facetResults[1].Count);
                     Assert.Equal(2, facetResults[2].Count);

@@ -4,6 +4,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -17,8 +18,16 @@ namespace SlowTests.MailingList
             {
                 new BlogIndex().Execute(store);
 
-                var facets = new List<Facet>{
-                    new Facet{Name = "Tags", TermSortMode= FacetTermSortMode.HitsDesc}
+                var facets = new List<Facet>
+                {
+                    new Facet
+                    {
+                        Name = "Tags",
+                        Options = new FacetOptions
+                        {
+                            TermSortMode = FacetTermSortMode.HitsDesc
+                        }
+                    }
                 };
 
                 using (var session = store.OpenSession())
@@ -47,12 +56,12 @@ namespace SlowTests.MailingList
                 {
                     var q = session.Query<BlogPost, BlogIndex>();
 
-                    var f = q.ToFacets("facets/BlogFacets");
+                    var f = q.AggregateUsing("facets/BlogFacets").ToDictionary();
 
-                    Assert.Equal(1, f.Results.Count);
-                    Assert.Equal(3, f.Results["Tags"].Values.Count);
-                    Assert.Equal("news", f.Results["Tags"].Values[0].Range);
-                    Assert.Equal(2, f.Results["Tags"].Values[0].Hits);
+                    Assert.Equal(1, f.Count);
+                    Assert.Equal(3, f["Tags"].Values.Count);
+                    Assert.Equal("news", f["Tags"].Values[0].Range);
+                    Assert.Equal(2, f["Tags"].Values[0].Hits);
 
                 }
 

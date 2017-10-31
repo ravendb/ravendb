@@ -6,7 +6,6 @@
 
 using System.Linq;
 using FastTests;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
 using Xunit;
@@ -54,15 +53,16 @@ namespace SlowTests.MailingList
                         .WhereLucene("Name", "Oren")
                         .AndAlso()
                         .WhereLucene("Name", "Eini")
-                        .ToFacets(new Facet[]
+                        .AggregateBy(new Facet[]
                         {
                             new Facet<User>
                             {
                                 Name = user => user.Admin
                             }
-                        });
+                        })
+                        .ToDictionary();
 
-                    Assert.Empty(x.Results["Admin"].Values);
+                    Assert.Empty(x["Admin"].Values);
                 }
 
                 using (var session = store.OpenSession())
@@ -71,15 +71,16 @@ namespace SlowTests.MailingList
                         .WhereLucene("Name", "Oren")
                         .AndAlso()
                         .WhereLucene("Name", "Eini")
-                        .ToFacetsLazy(new Facet[]
+                        .AggregateBy(new Facet[]
                         {
                             new Facet<User>
                             {
                                 Name = user => user.Admin
                             }
-                        }).Value;
+                        })
+                        .ToDictionaryLazy().Value;
 
-                    Assert.Empty(x.Results["Admin"].Values);
+                    Assert.Empty(x["Admin"].Values);
                 }
             }
         }

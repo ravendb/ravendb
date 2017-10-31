@@ -6,7 +6,6 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
-using Raven.Client.Exceptions.Database;
 using Raven.Client.Json.Converters;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
@@ -15,7 +14,6 @@ using Raven.Client.ServerWide.ETL.SQL;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.PeriodicBackup;
 using Raven.Server.Documents;
-using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Routing;
@@ -134,8 +132,6 @@ namespace Raven.Server.Web.System
         private OngoingTaskReplication GetExternalReplicationInfo(DatabaseTopology dbTopology, ClusterTopology clusterTopology,
             ExternalReplication watcher, Dictionary<string, RavenConnectionString> connectionStrings)
         {
-            NodeId responsible = null;
-
             var tag = dbTopology.WhoseTaskIsIt(watcher, ServerStore.Engine.CurrentState);
 
             (string Url, OngoingTaskConnectionStatus Status) res = (null, OngoingTaskConnectionStatus.None);
@@ -365,8 +361,6 @@ namespace Raven.Server.Web.System
                     if (Enum.TryParse<OngoingTaskType>(typeStr, true, out var type) == false)
                         throw new ArgumentException($"Unknown task type: {type}", "type");
 
-                    string tag;
-
                     switch (type)
                     {
                         case OngoingTaskType.Replication:
@@ -447,7 +441,7 @@ namespace Raven.Server.Web.System
                             }
 
                             var subscriptionState = JsonDeserializationClient.SubscriptionState(doc);
-                            tag = dbTopology?.WhoseTaskIsIt(subscriptionState, ServerStore.Engine.CurrentState);
+                            var tag = dbTopology?.WhoseTaskIsIt(subscriptionState, ServerStore.Engine.CurrentState);
 
                             var subscriptionStateInfo = new SubscriptionStateWithNodeDetails
                             {

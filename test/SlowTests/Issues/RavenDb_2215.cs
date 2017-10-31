@@ -69,18 +69,20 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var failedFinance = session.Query<SalesIndex.Result, SalesIndex>()
-                       .Where(x => x.IsCancelled)
-                       .AggregateBy(x => x.IsCancelled)
-                            .SumOn(x => x.Nett)
-                            .CountOn(x => x.Id)
-                       .ToList();
+                        .Where(x => x.IsCancelled)
+                        .AggregateBy(
+                            x => x.IsCancelled,
+                            factory => factory
+                                .SumOn(x => x.Nett)
+                                .Count())
+                        .ToDictionary();
 
                     double cancelledFinanceSum = 0;
                     double cancelledFinanceCount = 0;
-                    if (failedFinance.Results["IsCancelled"].Values.Any())
+                    if (failedFinance["IsCancelled"].Values.Any())
                     {
-                        cancelledFinanceSum = failedFinance.Results["IsCancelled"].Values[0].Sum.GetValueOrDefault(0);
-                        cancelledFinanceCount = failedFinance.Results["IsCancelled"].Values[0].Count.GetValueOrDefault(0);
+                        cancelledFinanceSum = failedFinance["IsCancelled"].Values[0].Sum.GetValueOrDefault(0);
+                        cancelledFinanceCount = failedFinance["IsCancelled"].Values[0].Count.GetValueOrDefault(0);
                     }
 
                     Assert.Equal(5, cancelledFinanceCount);
@@ -116,20 +118,22 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var failedFinance = session.Query<SalesIndex.Result, SalesIndex>()
-                       .Where(x => x.IsCancelled)
-                       .AggregateBy(x => x.IsCancelled)
-                            .SumOn(x => x.Nett)
-                       .AndAggregateOn(x => x.IsCancelled, "AndAggregateOnName")
-                            .AverageOn(x => x.Val)
-                       .ToList();
+                        .Where(x => x.IsCancelled)
+                        .AggregateBy(x => x.IsCancelled, factory => factory.SumOn(x => x.Nett))
+                        .AndAggregateOn(
+                            x => x.IsCancelled,
+                            factory => factory
+                                .WithDisplayName("AndAggregateOnName")
+                                .AverageOn(x => x.Val))
+                        .ToDictionary();
 
                     double cancelledFinanceSum = 0;
                     double cancelledFinanceAverage = 0;
-                    if (failedFinance.Results["IsCancelled"].Values.Any())
+                    if (failedFinance["IsCancelled"].Values.Any())
                     {
-                        Assert.Equal(2, failedFinance.Results.Count);
-                        cancelledFinanceSum = failedFinance.Results["IsCancelled"].Values[0].Sum.GetValueOrDefault(0);
-                        cancelledFinanceAverage = failedFinance.Results["AndAggregateOnName"].Values[0].Average.GetValueOrDefault(0);
+                        Assert.Equal(2, failedFinance.Count);
+                        cancelledFinanceSum = failedFinance["IsCancelled"].Values[0].Sum.GetValueOrDefault(0);
+                        cancelledFinanceAverage = failedFinance["AndAggregateOnName"].Values[0].Average.GetValueOrDefault(0);
                     }
 
                     Assert.Equal(4, cancelledFinanceAverage);
@@ -165,22 +169,18 @@ namespace SlowTests.Issues
                     var ex = Assert.Throws<InvalidOperationException>(() =>
                         session.Query<SalesIndex.Result, SalesIndex>()
                             .Where(x => x.IsCancelled)
-                            .AggregateBy(x => x.IsCancelled)
-                            .SumOn(x => x.Nett)
-                            .AndAggregateOn(x => x.IsCancelled)
-                            .AverageOn(x => x.Val)
-                            .ToList());
+                            .AggregateBy(x => x.IsCancelled, factory => factory.SumOn(x => x.Nett))
+                            .AndAggregateOn(x => x.IsCancelled, factory => factory.AverageOn(x => x.Val))
+                            .ToDictionary());
                 }
                 using (var session = store.OpenSession())
                 {
                     var ex = Assert.Throws<InvalidOperationException>(() =>
                         session.Query<SalesIndex.Result, SalesIndex>()
                             .Where(x => x.IsCancelled)
-                            .AggregateBy(x => x.IsCancelled, "Name1")
-                            .SumOn(x => x.Nett)
-                            .AndAggregateOn(x => x.IsCancelled, "Name1")
-                            .AverageOn(x => x.Val)
-                            .ToList());
+                            .AggregateBy(x => x.IsCancelled, factory => factory.WithDisplayName("Name1").SumOn(x => x.Nett))
+                            .AndAggregateOn(x => x.IsCancelled, factory => factory.WithDisplayName("Name1").AverageOn(x => x.Val))
+                            .ToDictionary());
                 }
 
 
@@ -213,10 +213,8 @@ namespace SlowTests.Issues
                 {
                     var ex = Assert.Throws<InvalidOperationException>(() => session.Query<SalesIndex.Result, SalesIndex>()
                       .Where(x => x.IsCancelled)
-                      .AggregateBy(x => x.IsCancelled)
-                           .SumOn(x => x.Nett)
-                           .AverageOn(x => x.Val)// should throw, invalid
-                      .ToList());
+                      .AggregateBy(x => x.IsCancelled, f => f.SumOn(x => x.Nett).AverageOn(x => x.Val)) // should throw, invalid
+                      .ToDictionary());
                 }
             }
 
@@ -247,18 +245,16 @@ namespace SlowTests.Issues
                 {
                     var failedFinance = session.Query<SalesIndex.Result, SalesIndex>()
                        .Where(x => x.IsCancelled)
-                       .AggregateBy(x => x.IsCancelled)
-                            .SumOn(x => x.Nett)
-                            .AverageOn(x => x.Nett)
-                       .ToList();
+                       .AggregateBy(x => x.IsCancelled, f => f.SumOn(x => x.Nett).AverageOn(x => x.Nett))
+                       .ToDictionary();
 
                     double cancelledFinanceSum = 0;
                     double cancelledFinanceAverage = 0;
-                    if (failedFinance.Results["IsCancelled"].Values.Any())
+                    if (failedFinance["IsCancelled"].Values.Any())
                     {
-                        Assert.Equal(1, failedFinance.Results.Count);
-                        cancelledFinanceSum = failedFinance.Results["IsCancelled"].Values[0].Sum.GetValueOrDefault(0);
-                        cancelledFinanceAverage = failedFinance.Results["IsCancelled"].Values[0].Average.GetValueOrDefault(0);
+                        Assert.Equal(1, failedFinance.Count);
+                        cancelledFinanceSum = failedFinance["IsCancelled"].Values[0].Sum.GetValueOrDefault(0);
+                        cancelledFinanceAverage = failedFinance["IsCancelled"].Values[0].Average.GetValueOrDefault(0);
                     }
                     Assert.Equal(1262, cancelledFinanceAverage);
                     Assert.Equal(6310, cancelledFinanceSum);

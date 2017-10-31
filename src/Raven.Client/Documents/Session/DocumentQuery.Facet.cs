@@ -1,55 +1,30 @@
 ﻿using System;
 using System.Collections.Generic;
-using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries.Facets;
-using Raven.Client.Documents.Session.Operations.Lazy;
 
 namespace Raven.Client.Documents.Session
 {
     public partial class DocumentQuery<T>
     {
-        /// <inheritdoc />
-        public FacetedQueryResult GetFacets(string facetSetupDoc, int facetStart, int? facetPageSize)
+        public AggregationQuery<T> AggregateBy(string fieldName, Action<FacetFactory<T>> factory = null)
         {
-            var q = GetIndexQuery();
-            var query = FacetQuery.Create(q, facetSetupDoc, null, facetStart, facetPageSize, Conventions);
-
-            var command = new GetFacetsCommand(Conventions, TheSession.Context, query);
-            TheSession.RequestExecutor.Execute(command, TheSession.Context);
-
-            return command.Result;
+            throw new NotImplementedException();
         }
 
-        /// <inheritdoc />
-        public FacetedQueryResult GetFacets(List<Facet> facets, int facetStart, int? facetPageSize)
+        public new AggregationQuery<T> AggregateBy(Facet facet)
         {
-            var q = GetIndexQuery();
-            var query = FacetQuery.Create(q, null, facets, facetStart, facetPageSize, Conventions);
-
-            var command = new GetFacetsCommand(Conventions, TheSession.Context, query);
-            TheSession.RequestExecutor.Execute(command, TheSession.Context);
-
-            return command.Result;
+            throw new NotImplementedException();
         }
 
-        /// <inheritdoc />
-        public Lazy<FacetedQueryResult> GetFacetsLazy(string facetSetupDoc, int facetStart, int? facetPageSize)
+        public AggregationQuery<T> AggregateBy(IEnumerable<Facet> facets)
         {
-            var q = GetIndexQuery();
-            var query = FacetQuery.Create(q, facetSetupDoc, null, facetStart, facetPageSize, Conventions);
-
-            var lazyFacetsOperation = new LazyFacetsOperation(Conventions, query);
-            return ((DocumentSession)TheSession).AddLazyOperation(lazyFacetsOperation, (Action<FacetedQueryResult>)null);
+            throw new NotImplementedException();
         }
 
-        /// <inheritdoc />
-        public Lazy<FacetedQueryResult> GetFacetsLazy(List<Facet> facets, int facetStart, int? facetPageSize)
+        public AggregationQuery<T> AggregateUsing(string facetSetupDocumentKey)
         {
-            var q = GetIndexQuery();
-            var query = FacetQuery.Create(q, null, facets, facetStart, facetPageSize, Conventions);
-
-            var lazyFacetsOperation = new LazyFacetsOperation(Conventions, query);
-            return ((DocumentSession)TheSession).AddLazyOperation(lazyFacetsOperation, (Action<FacetedQueryResult>)null);
+            throw new NotImplementedException();
         }
     }
 }

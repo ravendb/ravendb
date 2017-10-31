@@ -1,9 +1,8 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Xunit;
 
@@ -30,20 +29,19 @@ namespace SlowTests.Issues
                 {
                     var resultInteger =
                         session.Query<SampleData, SampleData_Index>()
-                            .AggregateBy(x => x.IntegerAge)
-                            .CountOn(x => x.IntegerAge)
-                            .ToList();
+                            .AggregateBy(x => x.IntegerAge, factory => factory.Count())
+                            .ToDictionary();
 
-                    Assert.Equal(resultInteger.Results.Count, 1);
-                    Assert.Equal(resultInteger.Results.First().Value.Values.Count(), 2);
+                    Assert.Equal(resultInteger.Count, 1);
+                    Assert.Equal(resultInteger.First().Value.Values.Count(), 2);
                     Assert.Equal(GetFirstSortedRangeString(resultInteger), "2");
                 }
             }
         }
 
-        private static string GetFirstSortedRangeString(Raven.Client.Documents.Commands.FacetedQueryResult resultInteger)
+        private static string GetFirstSortedRangeString(Dictionary<string, FacetResult> resultInteger)
         {
-            var sorted = resultInteger.Results.First().Value.Values.Select(valueValue => valueValue.Range).ToList();
+            var sorted = resultInteger.First().Value.Values.Select(valueValue => valueValue.Range).ToList();
             sorted.Sort();
             return sorted.First();
         }
@@ -67,12 +65,11 @@ namespace SlowTests.Issues
                 {
                     var resultInteger =
                         session.Query<SampleData, SampleData_Index>()
-                            .AggregateBy("IntegerAge")
-                            .CountOn(x => x.IntegerAge)
-                            .ToList();
+                            .AggregateBy("IntegerAge", factory => factory.Count())
+                            .ToDictionary();
 
-                    Assert.Equal(resultInteger.Results.Count, 1);
-                    Assert.Equal(resultInteger.Results.First().Value.Values.Count(), 2);
+                    Assert.Equal(resultInteger.Count, 1);
+                    Assert.Equal(resultInteger.First().Value.Values.Count(), 2);
                     Assert.Equal(GetFirstSortedRangeString(resultInteger), "2");
                 }
             }
@@ -99,12 +96,11 @@ namespace SlowTests.Issues
                 {
                     var resultString =
                         session.Query<SampleData, SampleData_Index>()
-                            .AggregateBy(x => x.StringAge)
-                            .CountOn(x => x.StringAge)
-                            .ToList();
+                            .AggregateBy(x => x.StringAge, f => f.Count())
+                            .ToDictionary();
 
-                    Assert.Equal(resultString.Results.Count, 1);
-                    Assert.Equal(resultString.Results.First().Value.Values.Count(), 2);
+                    Assert.Equal(resultString.Count, 1);
+                    Assert.Equal(resultString.First().Value.Values.Count(), 2);
                     Assert.Equal(GetFirstSortedRangeString(resultString), "2");
                 }
             }

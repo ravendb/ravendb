@@ -35,7 +35,9 @@ namespace Raven.Server.Documents.Queries
 
         public bool HasSourceAlias;
 
-        private SelectField()
+        public bool IsFacet;
+
+        protected SelectField()
         {
 
         }
