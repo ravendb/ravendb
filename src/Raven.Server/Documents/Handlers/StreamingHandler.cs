@@ -72,7 +72,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/streams/queries", "GET", AuthorizationStatus.ValidUser)]
         public async Task StreamQueryGet()
         {
-            using (TrackRequestTime())
+            // ReSharper disable once ArgumentsStyleLiteral
+            using (TrackRequestTime(alertThresholdExceeded: false))
             using (var token = CreateTimeLimitedOperationToken())
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
@@ -97,7 +98,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/streams/queries", "POST", AuthorizationStatus.ValidUser)]
         public async Task StreamQueryPost()
         {
-            using (TrackRequestTime())
+            // ReSharper disable once ArgumentsStyleLiteral
+            using (TrackRequestTime(alertThresholdExceeded: false))
             using (var token = CreateTimeLimitedOperationToken())
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {

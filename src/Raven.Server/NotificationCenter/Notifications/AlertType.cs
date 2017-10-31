@@ -35,6 +35,8 @@ namespace Raven.Server.NotificationCenter.Notifications
         DatabaseTopologyWarning,
         SwappingHddInsteadOfSsd,
 
-        RevisionsConfigurationNotValid
+        RevisionsConfigurationNotValid,
+
+        TooLongRequestDuration
     }
 }
