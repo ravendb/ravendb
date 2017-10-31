@@ -15,7 +15,6 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
-using Raven.Client.Documents.Linq.Indexing;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Util;
@@ -2330,7 +2329,7 @@ namespace Raven.Server.Documents.Indexes
 
         public int GetPageSize()
         {
-            return IsLowMemory() ? MinBatchSize : int.MaxValue;
+            return IsLowMemory() ? MinBatchSize + 1 : int.MaxValue;
         }
 
         public bool CanContinueBatch(
