@@ -1615,25 +1615,29 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                     for (int index = 0; index < newExpression.Arguments.Count; index++)
                     {
-                        if (!(newExpression.Arguments[index] is MemberExpression member) || HasComputation(member))
+                        if (newExpression.Arguments[index] is ConstantExpression constant)
                         {
-                            //lambda 2 js
-
-                            if (_fromAlias == null)
-                            {
-                                _fromAlias = lambdaExpression?.Parameters[0].Name;
-                            }
-
-                            FieldsToFetch.Clear();
-                            _jsSelectBody = TranslateSelectBodyToJs(newExpression);
-
-                            break;
+                            AddToFieldsToFetch(GetConstantValueAsString(constant.Value), GetSelectPath(newExpression.Members[index]));
+                            continue;
                         }
 
-                        var expression = _linqPathProvider.GetMemberExpression(newExpression.Arguments[index]);
-                        AddToFieldsToFetch(GetSelectPath(expression), GetSelectPath(newExpression.Members[index]));
+                        if (newExpression.Arguments[index] is MemberExpression member && HasComputation(member) == false)
+                        {
+                            AddToFieldsToFetch(GetSelectPathOrConstantValue(member), GetSelectPath(newExpression.Members[index]));
+                            continue;
+                        }
 
+                        //lambda 2 js
+                        if (_fromAlias == null)
+                        {
+                            _fromAlias = lambdaExpression?.Parameters[0].Name;
+                        }
+
+                        FieldsToFetch.Clear();
+                        _jsSelectBody = TranslateSelectBodyToJs(newExpression);
+                        break;
                     }
+
                     break;
                 //for example .Select(x => new SomeType { x.Cost } ), it's member init because it's using the object initializer
                 case ExpressionType.MemberInit:
@@ -1659,28 +1663,34 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         if (field == null)
                             continue;
 
-                        if (field.Expression is UnaryExpression 
-                             || field.Expression is LabelExpression 
-                             ||(field.Expression is MemberExpression member 
-                                && HasComputation(member) == false) == false)
+                        if (field.Expression is ConstantExpression constant)
                         {
-                            //lambda 2 js
-
-                            if (_fromAlias == null)
-                            {
-                                _fromAlias = lambdaExpression?.Parameters[0].Name;
-                            }
-
-                            FieldsToFetch.Clear();
-                            _jsSelectBody = TranslateSelectBodyToJs(memberInitExpression);
-
-                            break;
+                            AddToFieldsToFetch(GetConstantValueAsString(constant.Value), GetSelectPath(field.Member));
+                            continue;
                         }
 
-                        var expression = _linqPathProvider.GetMemberExpression(field.Expression);
-                        var renamedField = GetSelectPath(expression);
+                        if (field.Expression is UnaryExpression 
+                            ||field.Expression is LabelExpression 
+                            ||(field.Expression is MemberExpression member && HasComputation(member) == false))                               
+                        {
+                            var expression = _linqPathProvider.GetMemberExpression(field.Expression);
+                            var renamedField = GetSelectPathOrConstantValue(expression);
 
-                        AddToFieldsToFetch(renamedField, GetSelectPath(field.Member));
+                            AddToFieldsToFetch(renamedField, GetSelectPath(field.Member));
+                            continue;
+                        }
+
+                        //lambda 2 js
+
+                        if (_fromAlias == null)
+                        {
+                            _fromAlias = lambdaExpression?.Parameters[0].Name;
+                        }
+
+                        FieldsToFetch.Clear();
+                        _jsSelectBody = TranslateSelectBodyToJs(memberInitExpression);
+
+                        break;
                     }
                     break;
                 case ExpressionType.Parameter: // want the full thing, so just pass it on.
@@ -1694,6 +1704,26 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 default:
                     throw new NotSupportedException("Node not supported: " + body.NodeType);
             }
+        }
+
+        private string GetSelectPathOrConstantValue(MemberExpression member)
+        {
+            if (member.Member is FieldInfo filedInfo && member.Expression is ConstantExpression constantExpression)
+            {
+                var value = filedInfo.GetValue(constantExpression.Value);
+                return GetConstantValueAsString(value);
+            }
+            
+            return GetSelectPath(member);           
+        }
+
+        private static string GetConstantValueAsString(object value)
+        {
+            if (value is string || value is char)
+            {
+                value = $"\"{value}\"";
+            }
+            return value.ToString();
         }
 
         private void AddReturnStatmentToOutputFunction(Expression expression)
