@@ -1687,7 +1687,7 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
                         //"SplitEscape : u.Name.split(/\\|\\/\\\\!@\\#\\$%&\\^\\*\\(\\)\"',\\.<>\\[]\\{}\\/\\/\\\\\\/\\\\\\\\\\//g), " +
                         "Replace : u.Name.replace(/r/g, \"d\"), " +
                         "ReplaceString : u.Name.replace(/Jerry/g, \"Charly\") " +
-                        //"ReplaceEscape : u.Name.replace(/\\|\\\\/\\\\!@\\#\\$%&\\^\\*\\(\\)\"',\\.<>\\[]\\{}\\\\/\\\\/\\\\\\\\/\\\\\\\\\\\\//g, \"\") " +
+                        //"ReplaceEscape : u.Name.replace/\\|\\/\\\\!@\\#\\$%&\\^\\*\\(\\)\"',\\.<>\\[]\\{}\\/\\/\\\\\\/\\\\\\\\\\//g, \"\") " +
                         "}", query.ToString());
 
                     var queryResult = query.ToList();
@@ -1701,6 +1701,7 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
                     Assert.Equal("Je", queryResult[0].Substr);
                     Assert.Equal("Jerry, Garcia, 19420801", queryResult[0].Join);
                     Assert.Equal("The-Grateful-Dead", queryResult[0].ArrayJoin);
+                    Assert.Equal("Jerry".Contains("e"), queryResult[0].Contains);
                     Assert.Equal("Jerry".ToUpper(), queryResult[0].ToUpper);
                     Assert.Equal("Jerry".ToLower(), queryResult[0].ToLower);
                     Assert.Equal("Jerry".Split('r', StringSplitOptions.None), queryResult[0].Split);
