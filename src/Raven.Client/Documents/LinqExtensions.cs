@@ -22,6 +22,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.MoreLikeThis;
@@ -70,6 +71,10 @@ namespace Raven.Client.Documents
         private static MethodInfo _moreLikeThisMethod2;
 
         private static MethodInfo _moreLikeThisMethod3;
+
+        private static MethodInfo _groupByArrayValuesMethod;
+
+        private static MethodInfo _groupByArrayContentMethod;
 #endif
 
         /// <summary>
@@ -1336,6 +1341,38 @@ namespace Raven.Client.Documents
             await session.Advanced.StreamIntoAsync(self, stream, token).ConfigureAwait(false);
         }
 
+        public static IRavenQueryable<IGrouping<TKey, TSource>> GroupByArrayValues<TSource, TKey>(this IQueryable<TSource> source,
+            Expression<Func<TSource, IEnumerable<TKey>>> fieldSelector)
+        {
+#if CURRENT
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+#endif
+#if LEGACY
+            var currentMethod = GetGroupByArrayValuesMethod();
+#endif
+            var expression = ConvertExpressionIfNecessary(source);
+
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(TSource), typeof(TKey)), expression, fieldSelector));
+
+            return (IRavenQueryable<IGrouping<TKey, TSource>>)queryable;
+        }
+
+        public static IRavenQueryable<IGrouping<IEnumerable<TKey>, TSource>> GroupByArrayContent<TSource, TKey>(this IQueryable<TSource> source,
+            Expression<Func<TSource, IEnumerable<TKey>>> fieldSelector)
+        {
+#if CURRENT
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+#endif
+#if LEGACY
+            var currentMethod = GetGroupByArrayContentMethod();
+#endif
+            var expression = ConvertExpressionIfNecessary(source);
+
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(TSource), typeof(TKey)), expression, fieldSelector));
+
+            return (IRavenQueryable<IGrouping<IEnumerable<TKey>, TSource>>)queryable;
+        }
+
         public static IRavenQueryable<T> Where<T>(this IQueryable<T> source, Expression<Func<T, int, bool>> predicate, bool exact)
         {
 #if CURRENT
@@ -1841,6 +1878,56 @@ namespace Raven.Client.Documents
             }
         }
 
+        private static MethodInfo GetGroupByArrayContentMethod()
+        {
+            var groupByMethod = GetGroupByArrayContentMethodInfo();
+            if (groupByMethod != null)
+                return groupByMethod;
+
+            lock (Locker)
+            {
+                groupByMethod = GetGroupByArrayContentMethodInfo();
+                if (groupByMethod != null)
+                    return groupByMethod;
+
+                foreach (var method in typeof(LinqExtensions).GetMethods())
+                {
+                    if (method.Name != nameof(GroupByArrayContent))
+                        continue;
+
+                    SetGroupByArrayContentMethodInfo(method);
+                    break;
+                }
+
+                return GetGroupByArrayContentMethodInfo();
+            }
+        }
+
+        private static MethodInfo GetGroupByArrayValuesMethod()
+        {
+            var groupByMethod = GetGroupByArrayValuesMethodInfo();
+            if (groupByMethod != null)
+                return groupByMethod;
+
+            lock (Locker)
+            {
+                groupByMethod = GetGroupByArrayValuesMethodInfo();
+                if (groupByMethod != null)
+                    return groupByMethod;
+
+                foreach (var method in typeof(LinqExtensions).GetMethods())
+                {
+                    if (method.Name != nameof(GroupByArrayValues))
+                        continue;
+
+                    SetGroupByArrayValuesMethodInfo(method);
+                    break;
+                }
+
+                return GetGroupByArrayValuesMethodInfo();
+            }
+        }
+
         private static MethodInfo GetWhereMethod(int numberOfFuncArguments)
         {
             var whereMethod = GetWhereMethodInfo(numberOfFuncArguments);
@@ -1915,7 +2002,6 @@ namespace Raven.Client.Documents
                     throw new ArgumentOutOfRangeException();
             }
         }
-
         private static void SetWhereMethodInfo(int numberOfFuncArguments, MethodInfo methodInfo)
         {
             switch (numberOfFuncArguments)
@@ -1929,6 +2015,26 @@ namespace Raven.Client.Documents
                 default:
                     throw new ArgumentOutOfRangeException();
             }
+        }
+
+        private static MethodInfo GetGroupByArrayValuesMethodInfo()
+        {
+            return _groupByArrayValuesMethod;
+        }
+
+        private static void SetGroupByArrayValuesMethodInfo(MethodInfo methodInfo)
+        {
+            _groupByArrayValuesMethod = methodInfo;
+        }
+
+        private static MethodInfo GetGroupByArrayContentMethodInfo()
+        {
+            return _groupByArrayContentMethod;
+        }
+
+        private static void SetGroupByArrayContentMethodInfo(MethodInfo methodInfo)
+        {
+            _groupByArrayContentMethod = methodInfo;
         }
 
         private static MethodInfo GetIncludeMethod()

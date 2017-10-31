@@ -33,6 +33,14 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                     Assert.Equal("products/2", products[1].ProductName);
                     Assert.Equal(2, products[1].Count);
+
+
+                    // linq: TODO arek
+                    //var results = session.Query<Order>().GroupByArrayValues(x => x.Lines.Select(y => y.Product)).Select(x => new ProductCount
+                    //{
+                    //    Count = x.Count(),
+                    //    ProductName = x.Key
+                    //}).ToList();
                 }
 
                 using (var session = store.OpenSession())

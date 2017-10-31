@@ -1017,9 +1017,27 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         }
                     }
                     break;
+                case nameof(LinqExtensions.GroupByArrayValues):
+                case nameof(LinqExtensions.GroupByArrayContent):
+                    EnsureValidDynamicGroupByMethod(expression.Method.Name);
+
+                    VisitExpression(expression.Arguments[0]);
+
+                    var behavior = expression.Method.Name == nameof(LinqExtensions.GroupByArrayValues)
+                        ? GroupByArrayBehavior.ByIndividualValues
+                        : GroupByArrayBehavior.ByContent;
+
+                    VisitGroupBy(((UnaryExpression)expression.Arguments[1]).Operand, behavior);
+                    break;
                 default:
                     throw new NotSupportedException("Method not supported: " + expression.Method.Name);
             }
+        }
+
+        private void EnsureValidDynamicGroupByMethod(string methodName)
+        {
+            if (_documentQuery.CollectionName == null)
+                throw new NotSupportedException($"{methodName} method is only supported in dynamic map-reduce queries");
         }
 
         private void VisitSearch(MethodCallExpression searchExpression)
@@ -1401,14 +1419,13 @@ The recommended method is to use full text search (mark the field as Analyzed an
                                  expression.Method.Name.EndsWith("Descending"));
                     break;
                 case "GroupBy":
-                    if (_documentQuery.CollectionName == null)
-                        throw new NotSupportedException("GroupBy method is only supported in dynamic map-reduce queries");
+                    EnsureValidDynamicGroupByMethod("GroupBy");
 
                     if (expression.Arguments.Count == 5) // GroupBy(x => keySelector, x => elementSelector, x => resultSelector, IEqualityComparer)
                         throw new NotSupportedException("Dynamic map-reduce queries does not support a custom equality comparer");
 
                     VisitExpression(expression.Arguments[0]);
-                    VisitGroupBy(((UnaryExpression)expression.Arguments[1]).Operand);
+                    VisitGroupBy(((UnaryExpression)expression.Arguments[1]).Operand, GroupByArrayBehavior.NotApplicable);
 
                     if (expression.Arguments.Count >= 3)
                     {
@@ -1432,13 +1449,13 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                     break;
                 default:
-                    {
-                        throw new NotSupportedException("Method not supported: " + expression.Method.Name);
-                    }
+                {
+                    throw new NotSupportedException("Method not supported: " + expression.Method.Name);
+                }
             }
         }
 
-        private void VisitGroupBy(Expression expression)
+        private void VisitGroupBy(Expression expression, GroupByArrayBehavior arrayBehavior)
         {
             var lambdaExpression = expression as LambdaExpression;
 
@@ -1449,7 +1466,30 @@ The recommended method is to use full text search (mark the field as Analyzed an
             switch (body.NodeType)
             {
                 case ExpressionType.MemberAccess:
-                    var singleGroupByFieldName = GetSelectPath(_linqPathProvider.GetMemberExpression(lambdaExpression));
+                    var groupByExpression = _linqPathProvider.GetMemberExpression(lambdaExpression);
+
+                    var singleGroupByFieldName = GetSelectPath(groupByExpression);
+
+                    var groupByFieldType = groupByExpression.Type;
+
+                    if (groupByFieldType.IsArray ||
+                        (typeof(IEnumerable).IsAssignableFrom(groupByFieldType) && typeof(string) != groupByFieldType))
+                    {
+                        switch (arrayBehavior)
+                        {
+                            case GroupByArrayBehavior.NotApplicable:
+                                throw new InvalidOperationException(
+                                    "Please use one of dedicated methods to group by collection: " +
+                                    $"{nameof(LinqExtensions.GroupByArrayValues)}, {nameof(LinqExtensions.GroupByArrayContent)}. " +
+                                    $"Field name: {singleGroupByFieldName}");
+                            case GroupByArrayBehavior.ByIndividualValues:
+                                singleGroupByFieldName += "[]";
+                                break;
+                            case GroupByArrayBehavior.ByContent:
+                                // TODO arek singleGroupByFieldName = $"array({singleGroupByFieldName})";
+                                break;
+                        }
+                    }
 
                     _documentQuery.GroupBy(singleGroupByFieldName);
                     break;
@@ -1513,6 +1553,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
                             throw new NotSupportedException($"Unhandled expression type in group by: {unaryExpression.NodeType}");
                     }
                     break;
+                case ExpressionType.Call:
+                    // .GroupBy(x => x.Lines.Select(y => y.Product)
+                    throw new NotImplementedException("TODO arek");
                 default:
                     throw new NotSupportedException("Node not supported in GroupBy: " + body.NodeType);
 
