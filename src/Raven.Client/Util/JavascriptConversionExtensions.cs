@@ -703,7 +703,7 @@ namespace Raven.Client.Util
 
                 using (writer.Operation(mce))
                 {
-                    if(newName == "join")
+                    if (newName == "join")
                     {
                         if (mce.Arguments.Count > 2)
                         {
