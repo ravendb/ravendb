@@ -2,6 +2,7 @@
 import appUrl = require("common/appUrl");
 import router = require("plugins/router");
 import ongoingTaskModel = require("models/database/tasks/ongoingTaskModel"); 
+import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 
 class ongoingTaskReplicationListModel extends ongoingTaskModel {
     editUrl: KnockoutComputed<string>;
@@ -20,7 +21,7 @@ class ongoingTaskReplicationListModel extends ongoingTaskModel {
         this.update(dto); 
         this.initializeObservables();
 
-        this.connectionStringsUrl = `${appUrl.forCurrentDatabase().connectionStrings()}` + `&type=raven&name=${this.connectionStringName()}`;
+        this.connectionStringsUrl = appUrl.forConnectionStrings(activeDatabaseTracker.default.database(), "raven", this.connectionStringName());
     }
     
     initializeObservables() {
