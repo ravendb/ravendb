@@ -1242,8 +1242,11 @@ more responsive application.
             document.TryGetMember(Constants.Documents.Metadata.Key, out object value);
             documentInfo.Metadata = value as BlittableJsonReaderObject;
 
-            document.TryGetMember(Constants.Documents.Metadata.ChangeVector, out var changeVector);
-            documentInfo.ChangeVector = changeVector as string;
+            if (documentInfo.Metadata != null)
+            {
+                documentInfo.Metadata.TryGetMember(Constants.Documents.Metadata.ChangeVector, out var changeVector);
+                documentInfo.ChangeVector = (LazyStringValue) changeVector;
+            }
 
             documentInfo.Document = document;
 
