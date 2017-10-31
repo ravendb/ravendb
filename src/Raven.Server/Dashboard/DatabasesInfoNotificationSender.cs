@@ -88,39 +88,15 @@ namespace Raven.Server.Dashboard
 
                     if (serverStore.DatabasesLandlord.DatabasesCache.TryGetValue(databaseName, out var databaseTask) == false)
                     {
-                        // database does not exist in this server or disabled
+                        // database does not exist on this server or disabled
+                        SetOfflineDatabaseInfo(serverStore, databaseName, databasesInfo);
                         continue;
                     }
 
                     var databaseOnline = IsDatabaseOnline(databaseTask, out var database);
                     if (databaseOnline == false)
                     {
-                        var databaseRecord = serverStore.LoadDatabaseRecord(databaseName, out var _);
-                        if (databaseRecord == null)
-                        {
-                            // database doesn't exist
-                            continue;
-                        }
-
-                        var databaseInfoItem = new DatabaseInfoItem
-                        {
-                            Database = databaseName,
-                            Online = false
-                        };
-
-                        DatabaseInfo databaseInfo = null;
-                        if (serverStore.DatabaseInfoCache.TryGet(databaseName, 
-                            databaseInfoJson => databaseInfo = JsonDeserializationServer.DatabaseInfo(databaseInfoJson)))
-                        {
-                            Debug.Assert(databaseInfo != null);
-
-                            databaseInfoItem.DocumentsCount = databaseInfo.DocumentsCount ?? 0;
-                            databaseInfoItem.IndexesCount = databaseInfo.IndexesCount ?? databaseRecord.Indexes.Count;
-                            databaseInfoItem.ReplicationFactor = databaseRecord.Topology?.ReplicationFactor ?? databaseInfo.ReplicationFactor;
-                            databaseInfoItem.ErroredIndexesCount = databaseInfo.IndexingErrors ?? 0;
-                        }
-
-                        databasesInfo.Items.Add(databaseInfoItem);
+                        SetOfflineDatabaseInfo(serverStore, databaseName, databasesInfo);
                         continue;
                     }
 
@@ -200,6 +176,36 @@ namespace Raven.Server.Dashboard
             yield return trafficWatch;
             yield return drivesUsage;
             
+        }
+
+        private static void SetOfflineDatabaseInfo(ServerStore serverStore, string databaseName, DatabasesInfo databasesInfo)
+        {
+            var databaseRecord = serverStore.LoadDatabaseRecord(databaseName, out var _);
+            if (databaseRecord == null)
+            {
+                // database doesn't exist
+                return;
+            }
+
+            var databaseInfoItem = new DatabaseInfoItem
+            {
+                Database = databaseName,
+                Online = false
+            };
+
+            DatabaseInfo databaseInfo = null;
+            if (serverStore.DatabaseInfoCache.TryGet(databaseName,
+                databaseInfoJson => databaseInfo = JsonDeserializationServer.DatabaseInfo(databaseInfoJson)))
+            {
+                Debug.Assert(databaseInfo != null);
+
+                databaseInfoItem.DocumentsCount = databaseInfo.DocumentsCount ?? 0;
+                databaseInfoItem.IndexesCount = databaseInfo.IndexesCount ?? databaseRecord.Indexes.Count;
+                databaseInfoItem.ReplicationFactor = databaseRecord.Topology?.ReplicationFactor ?? databaseInfo.ReplicationFactor;
+                databaseInfoItem.ErroredIndexesCount = databaseInfo.IndexingErrors ?? 0;
+            }
+
+            databasesInfo.Items.Add(databaseInfoItem);
         }
 
         private static int GetReplicationFactor(BlittableJsonReaderObject databaseRecordBlittable)
