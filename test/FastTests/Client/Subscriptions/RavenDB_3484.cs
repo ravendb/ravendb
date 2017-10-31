@@ -41,7 +41,8 @@ namespace FastTests.Client.Subscriptions
                 }
 
                 var mre = new AsyncManualResetEvent();
-                subscription.Run(x => mre.Set());
+                var t = subscription.Run(x => mre.Set());
+                GC.KeepAlive(t);
 
                 Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(60)));
 
@@ -205,7 +206,11 @@ namespace FastTests.Client.Subscriptions
                         s.SaveChanges();
                     }
 
-                    activeSubscription.AfterAcknowledgment += async x => activeSubscriptionMre.Set();
+                    activeSubscription.AfterAcknowledgment += x =>
+                    {
+                        activeSubscriptionMre.Set();
+                        return Task.CompletedTask;
+                    };
 
                     _ = activeSubscription.Run(x => { });
                     Assert.True(await activeSubscriptionMre.WaitAsync(_reasonableWaitTime));

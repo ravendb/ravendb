@@ -103,7 +103,6 @@ namespace SlowTests.Bugs.MapRedue
             /// <summary>
             /// Version number of document
             /// </summary>
-            [CLSCompliant(false)]
             public uint Version { get; set; }
 
             /// <summary>
@@ -122,7 +121,6 @@ namespace SlowTests.Bugs.MapRedue
             /// <summary>
             /// Version number of document
             /// </summary>
-            [CLSCompliant(false)]
             public uint Version { get; set; }
 
             /// <summary>

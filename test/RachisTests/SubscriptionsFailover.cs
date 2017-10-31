@@ -746,9 +746,10 @@ namespace RachisTests
                     var batchedAcked = new AsyncManualResetEvent();
                     var disposedOnce = false;
 
-                    subscription.AfterAcknowledgment+= async x=>
+                    subscription.AfterAcknowledgment+=  x=>
                     {
                         batchedAcked.Set();
+                        return Task.CompletedTask;
                     };
 
                     var task = subscription.Run(async a =>

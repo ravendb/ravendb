@@ -30,7 +30,7 @@ namespace FastTests.Client.Subscriptions
 
                 subscription = store.Subscriptions.Open<User>(subscriptionId);
                 cts = new CancellationTokenSource();
-                subscriptionTask = subscription.Run(async x => { }, cts.Token);
+                subscriptionTask = subscription.Run(x => Task.CompletedTask, cts.Token);
                 cts.Cancel();
                 Assert.True(await Assert.ThrowsAsync<OperationCanceledException>(() => subscriptionTask).WaitAsync(_reasonableWaitTime));
                 

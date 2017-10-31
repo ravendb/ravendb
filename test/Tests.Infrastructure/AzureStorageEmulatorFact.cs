@@ -6,7 +6,6 @@ using Xunit;
 
 namespace Tests.Infrastructure
 {
-    [CLSCompliant(false)]
     public class AzureStorageEmulatorFact : FactAttribute
     {
         public AzureStorageEmulatorFact([CallerMemberName] string memberName = "")
