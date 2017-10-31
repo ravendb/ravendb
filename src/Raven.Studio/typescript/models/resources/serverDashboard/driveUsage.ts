@@ -6,6 +6,23 @@ import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import generalUtils = require("common/generalUtils");
 import appUrl = require("common/appUrl");
+import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
+
+class legendColumn<T> implements virtualColumn {
+    constructor(
+        protected gridController: virtualGridController<T>,
+        public colorAccessor: (item: T) => string,
+        public header: string,
+        public width: string) {
+        
+    }
+
+    renderCell(item: T, isSelected: boolean): string {
+        const color = this.colorAccessor(item);
+        return `<div class="cell text-cell" style="width: ${this.width}"><div class="legend-rect" style="background-color: ${color}"></div></div>`;
+    }
+
+}
 
 class driveUsage {
     private sizeFormatter = generalUtils.formatBytesToSize;
@@ -24,8 +41,10 @@ class driveUsage {
     mountPointLabel: KnockoutComputed<string>;
 
     gridController = ko.observable<virtualGridController<driveUsageDetails>>();
+    private colorProvider: (name: string) => string;
     
-    constructor(dto: Raven.Server.Dashboard.MountPointUsage) {
+    constructor(dto: Raven.Server.Dashboard.MountPointUsage, colorProvider: (name: string) => string) {
+        this.colorProvider = colorProvider;
         this.update(dto);
         
         this.freeSpaceLevelClass = ko.pureComputed(() => {
@@ -62,6 +81,7 @@ class driveUsage {
                 items: this.items()
             }), () => {
                 return [
+                    new legendColumn<driveUsageDetails>(grid, x => this.colorProvider(x.database()), "", "26px"),
                     new hyperlinkColumn<driveUsageDetails>(grid, x => x.database(), x => appUrl.forStatusStorageReport(x.database()), "Database", "60%"),
                     new textColumn<driveUsageDetails>(grid, x => this.sizeFormatter(x.size()), "Size", "30%"),
                 ];
