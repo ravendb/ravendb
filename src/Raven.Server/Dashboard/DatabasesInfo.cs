@@ -51,7 +51,9 @@ namespace Raven.Server.Dashboard
                 [nameof(ErroredIndexesCount)] = ErroredIndexesCount,
                 [nameof(AlertsCount)] = AlertsCount,
                 [nameof(ReplicationFactor)] = ReplicationFactor,
-                [nameof(Online)] = Online
+                [nameof(Online)] = Online,
+                [nameof(Irrelevant)] = Irrelevant
+
             };
         }
     }
