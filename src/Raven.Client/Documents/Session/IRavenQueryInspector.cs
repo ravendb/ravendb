@@ -5,11 +5,7 @@
 //-----------------------------------------------------------------------
 
 using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
-using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Queries.Facets;
 
 namespace Raven.Client.Documents.Session
 {
@@ -34,23 +30,5 @@ namespace Raven.Client.Documents.Session
         /// Get the index query for this query
         /// </summary>
         IndexQuery GetIndexQuery(bool isAsync);
-        /// <summary>
-        /// Get the facets as per the specified facet document with the given start and pageSize
-        /// </summary>
-        FacetedQueryResult GetFacets(string facetSetupDoc, int start, int? pageSize);
-
-        /// <summary>
-        /// Get the facet results as per the specified facets with the given start and pageSize
-        /// </summary>
-        FacetedQueryResult GetFacets(List<Facet> facets, int start, int? pageSize);
-        /// <summary>
-        /// Get the facets as per the specified facet document with the given start and pageSize
-        /// </summary>
-        Task<FacetedQueryResult> GetFacetsAsync(string facetSetupDoc, int start, int? pageSize, CancellationToken token = default(CancellationToken));
-
-        /// <summary>
-        /// Get the facet results as per the specified facets with the given start and pageSize
-        /// </summary>
-        Task<FacetedQueryResult> GetFacetsAsync(List<Facet> facets, int start, int? pageSize, CancellationToken token = default(CancellationToken));
     }
 }

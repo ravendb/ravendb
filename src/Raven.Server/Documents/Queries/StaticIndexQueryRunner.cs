@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Queries
                 if (etag == existingResultEtag)
                     return Task.FromResult(DocumentQueryResult.NotModifiedResult);
             }
-            
+
             return index.Query(query, documentsContext, token);
         }
 
@@ -57,11 +57,12 @@ namespace Raven.Server.Documents.Queries
             return Task.FromResult(index.IndexEntries(query, context, token));
         }
 
-        public async Task<FacetedQueryResult> ExecuteFacetedQuery(FacetQueryServerSide query, long? facetsEtag, long? existingResultEtag, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        public async Task<FacetedQueryResult> ExecuteFacetedQuery(IndexQueryServerSide query, long? facetsEtag, long? existingResultEtag, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             if (query.Metadata.IsDynamic)
                 throw new InvalidQueryException("Facet query must be executed against static index.", query.Metadata.QueryText, query.QueryParameters);
 
+            /*
             if (query.FacetSetupDoc != null)
             {
                 FacetSetup facetSetup;
@@ -85,6 +86,9 @@ namespace Raven.Server.Documents.Queries
 
                 query.Facets = facetSetup.Facets;
             }
+            */
+
+            facetsEtag = 0; // TODO [ppekrol]
 
             var index = GetIndex(query.Metadata.IndexName);
             if (existingResultEtag.HasValue)

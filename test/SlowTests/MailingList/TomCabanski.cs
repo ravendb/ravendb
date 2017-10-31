@@ -1,6 +1,7 @@
+using System.Linq;
 using FastTests;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries.Facets;
 using Xunit;
@@ -29,7 +30,6 @@ namespace SlowTests.MailingList
                             {
                                 new Facet
                                 {
-                                    Mode = FacetMode.Default,
                                     Name = "Age"
                                 }
                             }
@@ -39,13 +39,21 @@ namespace SlowTests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    session.Advanced.DocumentStore.Operations.Send(new GetMultiFacetsOperation(new FacetQuery()
-                    {
-                        Query = "FROM INDEX 'test' WHERE (IsActive = true) AND (BookVendor = 'stroheim & romann')",
-                        FacetSetupDoc = "facets/test"
-                    }));
+                    session.Query<User>("test")
+                        .Where(x => x.IsActive && x.BookVendor == "stroheim & romann")
+                        .AggregateUsing("facets/test")
+                        .ToDictionary();
                 }
             }
+        }
+
+        private class User
+        {
+#pragma warning disable 649
+            public bool IsActive;
+
+            public string BookVendor;
+#pragma warning restore 649
         }
     }
 }

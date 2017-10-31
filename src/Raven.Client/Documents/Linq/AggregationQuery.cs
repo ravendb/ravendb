@@ -2,73 +2,77 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
+using System.Threading.Tasks;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries.Facets;
+using Raven.Client.Documents.Session;
+using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Linq
 {
-    internal class AggregationQuery<T> : AggregationQuery
+    public class AggregationQuery<T>
     {
-        public List<Expression<Func<T, bool>>> Ranges { get; set; }
+        private IQueryable<T> _source;
+        private readonly Func<IQueryable<T>, Expression> _convertExpressionIfNecessary;
+        private readonly MethodInfo _aggregateByMethod;
 
-        public static IEnumerable<Facet> GetFacets(List<AggregationQuery<T>> aggregationQueries)
+        public AggregationQuery(
+            IQueryable<T> source,
+            Func<IQueryable<T>, Expression> convertExpressionIfNecessary,
+            MethodInfo aggregateByMethod)
         {
-            var facetsList = new List<Facet>();
-
-            foreach (var aggregationQuery in aggregationQueries)
-            {
-                if (aggregationQuery.Aggregation == FacetAggregation.None)
-                    throw new InvalidOperationException("All aggregations must have a type");
-
-                var shouldUseRanges = aggregationQuery.Ranges != null && aggregationQuery.Ranges.Count > 0;
-
-                List<string> ranges = null;
-                if (shouldUseRanges)
-                    ranges = aggregationQuery.Ranges.Select(Facet<T>.Parse).ToList();
-
-                var mode = shouldUseRanges ? FacetMode.Ranges : FacetMode.Default;
-                facetsList.Add(new Facet
-                {
-                    Name = aggregationQuery.Name,
-                    DisplayName = aggregationQuery.DisplayName,
-                    Aggregation = aggregationQuery.Aggregation,
-                    AggregationType = aggregationQuery.AggregationType,
-                    AggregationField = aggregationQuery.AggregationField,
-                    Ranges = ranges,
-                    Mode = mode
-                });
-            }
-            return facetsList;
+            _source = source;
+            _convertExpressionIfNecessary = convertExpressionIfNecessary;
+            _aggregateByMethod = aggregateByMethod;
         }
-    }
 
-    internal class AggregationQuery
-    {
-        public string Name { get; set; }
-        public string DisplayName { get; set; }
-        public string AggregationField { get; set; }
-        public string AggregationType { get; set; }
-        public FacetAggregation Aggregation { get; set; }
-
-        public static List<Facet> GetFacets(List<AggregationQuery> aggregationQueries)
+        public AggregationQuery<T> AndAggregateOn(Expression<Func<T, object>> path, Action<FacetFactory<T>> factory = null)
         {
-            var facetsList = new List<Facet>();
+            return AndAggregateOn(path.ToPropertyPath('_'), factory);
+        }
 
-            foreach (var aggregationQuery in aggregationQueries)
-            {
-                if (aggregationQuery.Aggregation == FacetAggregation.None)
-                    throw new InvalidOperationException("All aggregations must have a type");
+        public AggregationQuery<T> AndAggregateOn(string path, Action<FacetFactory<T>> factory = null)
+        {
+            var f = new FacetFactory<T>();
+            factory?.Invoke(f);
+            f.Facet.Name = path;
 
-                facetsList.Add(new Facet
-                {
-                    Name = aggregationQuery.Name,
-                    DisplayName = aggregationQuery.DisplayName,
-                    Aggregation = aggregationQuery.Aggregation,
-                    AggregationType = aggregationQuery.AggregationType ?? aggregationQuery.Aggregation.ToString(),
-                    AggregationField = aggregationQuery.AggregationField,
-                    Mode = FacetMode.Default
-                });
-            }
-            return facetsList;
+            return AndAggregateOn(f.Facet);
+        }
+
+        public AggregationQuery<T> AndAggregateOn(Facet facet)
+        {
+            var expression = _convertExpressionIfNecessary(_source);
+            _source = _source.Provider.CreateQuery<T>(Expression.Call(null, _aggregateByMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(facet)));
+            return this;
+        }
+
+        public Dictionary<string, FacetResult> ToDictionary()
+        {
+            var inspector = (IRavenQueryInspector)_source;
+            var iq = inspector.GetIndexQuery(isAsync: false);
+
+            var command = new QueryCommand(inspector.Session.Conventions, iq);
+
+            inspector.Session.RequestExecutor.Execute(command, inspector.Session.Context);
+
+            return null;
+        }
+        
+        public Task<Dictionary<string, FacetResult>> ToDictionaryAsync()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Lazy<Dictionary<string, FacetResult>> ToDictionaryLazy()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Lazy<Task<Dictionary<string, FacetResult>>> ToDictionaryLazyAsync()
+        {
+            throw new NotImplementedException();
         }
     }
 }

@@ -44,17 +44,18 @@ namespace SlowTests.MailingList
                 WaitForIndexing(_store);
 
                 var facets = _session.Advanced.DocumentQuery<Item, ItemsWithDynamicFieldsIndex>()
-                                     .ToFacets(new[]
-                                           {
-                                               new Facet
-                                               {
-                                                   Name = "prop_brand",
-                                               },
-                                           });
+                    .AggregateBy(new[]
+                    {
+                        new Facet
+                        {
+                            Name = "prop_brand",
+                        },
+                    })
+                    .ToDictionary();
 
-                Assert.True(facets.Results.ContainsKey("prop_brand"));
+                Assert.True(facets.ContainsKey("prop_brand"));
 
-                var facetValues = facets.Results["prop_brand"].Values.Select(value => value.Range).ToArray();
+                var facetValues = facets["prop_brand"].Values.Select(value => value.Range).ToArray();
 
                 Assert.DoesNotContain("sony", facetValues, StringComparer.Ordinal);
                 Assert.DoesNotContain("samsung", facetValues, StringComparer.Ordinal);

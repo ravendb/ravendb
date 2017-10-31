@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using Lucene.Net.Util;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Extensions;
 
 namespace Raven.Server.Documents.Queries.Faceted
@@ -18,21 +17,6 @@ namespace Raven.Server.Documents.Queries.Faceted
             { typeof(float), RangeType.Double },
             { typeof(double), RangeType.Double }
         };
-
-        public static bool IsAggregationNumerical(FacetAggregation aggregation)
-        {
-            switch (aggregation)
-            {
-                case FacetAggregation.Average:
-                case FacetAggregation.Count:
-                case FacetAggregation.Max:
-                case FacetAggregation.Min:
-                case FacetAggregation.Sum:
-                    return true;
-                default:
-                    return false;
-            }
-        }
 
         public static RangeType GetRangeTypeForAggregationType(string aggregationType)
         {
@@ -60,7 +44,6 @@ namespace Raven.Server.Documents.Queries.Faceted
                 default:
                     return text;
             }
-
         }
     }
 }

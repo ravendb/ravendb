@@ -28,7 +28,6 @@ namespace SlowTests.Tests.Faceted
                 new Facet
                 {
                     Name = "Cost_D_Range",
-                    Mode = FacetMode.Ranges,
                     Ranges =
                     {
                         "[NULL TO 200]",
@@ -41,7 +40,6 @@ namespace SlowTests.Tests.Faceted
                 new Facet
                 {
                     Name = "Price_D_Range",
-                    Mode = FacetMode.Ranges,
                     Ranges =
                     {
                         "[NULL TO 9.99]",
@@ -145,7 +143,6 @@ namespace SlowTests.Tests.Faceted
         private bool AreFacetsEqual(Facet left, Facet right)
         {
             return left.Name == right.Name &&
-                left.Mode == right.Mode &&
                 left.Ranges.Count == right.Ranges.Count &&
                 left.Ranges.All(x => right.Ranges.Contains(x));
         }

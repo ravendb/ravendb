@@ -803,7 +803,7 @@ namespace Raven.Server.Documents.Indexes
                 try
                 {
                     _contextPool.SetMostWorkInGoingToHappenonThisThread();
-                    
+
                     DocumentDatabase.Changes.OnDocumentChange += HandleDocumentChange;
                     storageEnvironment.OnLogsApplied += HandleLogsApplied;
 
@@ -1809,7 +1809,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public virtual async Task<FacetedQueryResult> FacetedQuery(FacetQueryServerSide query, long facetSetupEtag,
+        public virtual async Task<FacetedQueryResult> FacetedQuery(IndexQueryServerSide query, long facetSetupEtag,
             DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             AssertIndexState();
@@ -1867,9 +1867,7 @@ namespace Raven.Server.Documents.Indexes
                                 continue;
                             }
 
-
-                            FillFacetedQueryResult(result, IsStale(documentsContext, indexContext), facetSetupEtag,
-                                documentsContext, indexContext);
+                            FillFacetedQueryResult(result, IsStale(documentsContext, indexContext), facetSetupEtag, documentsContext, indexContext);
 
                             documentsContext.CloseTransaction();
 
@@ -2432,7 +2430,7 @@ namespace Raven.Server.Documents.Indexes
         {
             if (_isCompactionInProgress)
                 throw new InvalidOperationException($"Index '{Name} ({Etag})' cannot be compacted because compaction is already in progress.");
-            
+
             result.SizeBeforeCompactionInMb = CalculateIndexStorageSizeInBytes(Name) / 1024 / 1024;
 
             result.AddMessage($"Starting compaction of index '{Name}'.");
@@ -2453,7 +2451,7 @@ namespace Raven.Server.Documents.Indexes
                 PathSetting compactPath = null;
 
                 try
-                {                    
+                {
                     var storageEnvironmentOptions = _environment.Options;
 
                     using (StorageOperation())
@@ -2518,7 +2516,7 @@ namespace Raven.Server.Documents.Indexes
         public long CalculateIndexStorageSizeInBytes(string indexName)
         {
             long sizeOnDiskInBytes = 0;
-            
+
             using (var tx = _environment.ReadTransaction())
             {
                 var storageReport = _environment.GenerateReport(tx);

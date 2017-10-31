@@ -2,10 +2,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries.Facets;
 using Xunit;
 
@@ -95,21 +93,25 @@ namespace SlowTests.Bugs.Caching
             {
                 using (var session = store.OpenSession())
                 {
-                    var response = session.Query<Person, PersonsIndex>().Where(x => x.Name == "Johnny").ToFacets(new[]
-                    {
-                        new Facet
+                    var response = session.Query<Person, PersonsIndex>().Where(x => x.Name == "Johnny").AggregateBy(new[]
                         {
-                            Name = "Age"
-                        }
-                    });
+                            new Facet
+                            {
+                                Name = "Age"
+                            }
+                        })
+                        .ToDictionary();
+
                     Assert.Equal(1, session.Advanced.RequestExecutor.Cache.NumberOfItems);
-                    response = session.Query<Person, PersonsIndex>().Where(x => x.Name == "Johnny").ToFacets(new[]
-                    {
-                        new Facet
+                    response = session.Query<Person, PersonsIndex>().Where(x => x.Name == "Johnny").AggregateBy(new[]
                         {
-                            Name = "Age"
-                        }
-                    });
+                            new Facet
+                            {
+                                Name = "Age"
+                            }
+                        })
+                        .ToDictionary();
+
                     Assert.Equal(1, session.Advanced.RequestExecutor.Cache.NumberOfItems);
                 }
             }
@@ -122,15 +124,17 @@ namespace SlowTests.Bugs.Caching
             {
                 using (var session = store.OpenSession())
                 {
-                    var response = session.Query<Person, PersonsIndex>().Where(x => x.Name == "Johnny").ToFacets(Enumerable.Repeat(1, 200).Select(x => new Facet()
+                    var response = session.Query<Person, PersonsIndex>().Where(x => x.Name == "Johnny").AggregateBy(Enumerable.Repeat(1, 200).Select(x => new Facet()
                     {
                         Name = "Age"
-                    }));
+                    }))
+                        .ToDictionary();
                     Assert.Equal(1, session.Advanced.RequestExecutor.Cache.NumberOfItems);
-                    response = session.Query<Person, PersonsIndex>().Where(x => x.Name == "Johnny").ToFacets(Enumerable.Repeat(1, 200).Select(x => new Facet()
+                    response = session.Query<Person, PersonsIndex>().Where(x => x.Name == "Johnny").AggregateBy(Enumerable.Repeat(1, 200).Select(x => new Facet()
                     {
                         Name = "Age"
-                    }));
+                    }))
+                        .ToDictionary();
                     Assert.Equal(1, session.Advanced.RequestExecutor.Cache.NumberOfItems);
                 }
             }
@@ -143,35 +147,33 @@ namespace SlowTests.Bugs.Caching
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.Advanced.DocumentStore.Operations.SendAsync(new GetMultiFacetsOperation(new FacetQuery()
-                    {
-                        Query = "FROM INDEX 'PersonsIndex' WHERE Name = 'Johnny'",
-                        Start = 0,
-                        PageSize = 16,
-                        Facets = new List<Facet>
+                    await session.Query<Person, PersonsIndex>()
+                        .Where(x => x.Name == "Johnny")
+                        .Skip(0)
+                        .Take(16)
+                        .AggregateBy(new List<Facet>
                         {
                             new Facet
                             {
                                 Name = "Age"
                             }
-                        }
-                    }));
+                        })
+                        .ToDictionaryAsync();
 
                     Assert.Equal(1, session.Advanced.RequestExecutor.Cache.NumberOfItems);
 
-                    await session.Advanced.DocumentStore.Operations.SendAsync(new GetMultiFacetsOperation(new FacetQuery()
-                    {
-                        Query = "FROM INDEX 'PersonsIndex' WHERE Name = 'Johnny'",
-                        Start = 0,
-                        PageSize = 16,
-                        Facets = new List<Facet>
+                    await session.Query<Person, PersonsIndex>()
+                        .Where(x => x.Name == "Johnny")
+                        .Skip(0)
+                        .Take(16)
+                        .AggregateBy(new List<Facet>
                         {
                             new Facet
                             {
                                 Name = "Age"
                             }
-                        }
-                    }));
+                        })
+                        .ToDictionaryAsync();
 
                     Assert.Equal(1, session.Advanced.RequestExecutor.Cache.NumberOfItems);
                 }

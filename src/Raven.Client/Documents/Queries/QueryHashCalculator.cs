@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using Raven.Client.Documents.Queries.Facets;
 using Sparrow;
 using Sparrow.Json;
 
@@ -168,26 +167,6 @@ namespace Raven.Client.Documents.Queries
             {
                 Write(kvp.Key);
                 Write(kvp.Value);
-            }
-        }
-
-        public void Write(IReadOnlyList<Facet> facets)
-        {
-            if (facets == null)
-                return;
-            for (int i = 0; i < facets.Count; i++)
-            {
-                var facet = facets[i];
-                Write(facet.AggregationField);
-                Write(facet.AggregationType);
-                Write(facet.DisplayName);
-                Write(facet.IncludeRemainingTerms);
-                Write(facet.MaxResults);
-                Write(facet.Name);
-                Write((int)facet.Aggregation);
-                Write((int)facet.Mode);
-                Write((int)facet.TermSortMode);
-                Write(facet.Ranges);
             }
         }
     }

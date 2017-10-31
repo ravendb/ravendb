@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Lucene.Net.Support;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
@@ -76,7 +75,6 @@ namespace SlowTests.MailingList
                             new Facet
                             {
                                 Name = "Price_D_Range",
-                                Mode = FacetMode.Ranges,
                                 Ranges = new List<string>
                                 {
                                     "[NULL TO 0]",
@@ -96,9 +94,9 @@ namespace SlowTests.MailingList
                 using (var s = store.OpenSession())
                 {
                     var query = s.Query<Product>("Products/Stats");
-                    var facetResults = query.ToFacets("facets/StatsFacet");
+                    var facetResults = query.AggregateUsing("facets/StatsFacet").ToDictionary();
 
-                    var priceFacet = facetResults.Results["Price_D_Range"];
+                    var priceFacet = facetResults["Price_D_Range"];
 
                     foreach (var val in priceFacet.Values)
                         Assert.NotEqual(0, val.Hits);

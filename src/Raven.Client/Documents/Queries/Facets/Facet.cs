@@ -5,8 +5,8 @@ using System.Linq.Expressions;
 using System.Reflection;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session;
 using Sparrow.Extensions;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Queries.Facets
 {
@@ -15,25 +15,7 @@ namespace Raven.Client.Documents.Queries.Facets
         [JsonIgnore]
         private string _displayName;
 
-        /// <summary>
-        /// Mode of a facet (Default, Ranges).
-        /// </summary>
-        public FacetMode Mode { get; set; }
-
-        /// <summary>
-        /// Flags indicating type of facet aggregation.
-        /// </summary>
-        public FacetAggregation Aggregation { get; set; }
-
-        /// <summary>
-        /// Field on which aggregation will be performed.
-        /// </summary>
-        public string AggregationField { get; set; }
-
-        /// <summary>
-        /// Type of field on which aggregation will be performed.
-        /// </summary>
-        public string AggregationType { get; set; }
+        public Dictionary<FacetAggregation, string> Aggregations { get; set; }
 
         /// <summary>
         /// Name of facet.
@@ -54,55 +36,22 @@ namespace Raven.Client.Documents.Queries.Facets
         /// </summary>
         public List<string> Ranges { get; set; }
 
-        /// <summary>
-        /// Maximum number of results to return.
-        /// </summary>
-        public int? MaxResults { get; set; }
-
-        /// <summary>
-        /// Indicates how terms should be sorted.
-        /// </summary>
-        /// <value>FacetTermSortMode.ValueAsc by default.</value>
-        public FacetTermSortMode TermSortMode { get; set; }
-
-        /// <summary>
-        /// Indicates if remaining terms should be included in results.
-        /// </summary>
-        public bool IncludeRemainingTerms { get; set; }
+        public FacetOptions Options { get; set; }
 
         public Facet()
         {
             Ranges = new List<string>();
-            TermSortMode = FacetTermSortMode.ValueAsc;
+            Aggregations = new Dictionary<FacetAggregation, string>();
         }
 
-        public DynamicJsonValue ToJson()
+        public class AggregationField
         {
-            var json = new DynamicJsonValue
-            {
-                [nameof(Mode)] = Mode,
-                [nameof(Aggregation)] = Aggregation,
-                [nameof(AggregationField)] = AggregationField,
-                [nameof(AggregationType)] = AggregationType,
-                [nameof(Name)] = Name,
-                [nameof(MaxResults)] = MaxResults,
-                [nameof(TermSortMode)] = TermSortMode,
-                [nameof(IncludeRemainingTerms)] = IncludeRemainingTerms
-            };
+            public FacetAggregation Type { get; set; }
 
-            if (string.IsNullOrWhiteSpace(_displayName) == false && string.Equals(Name, _displayName) == false)
-                json[nameof(DisplayName)] = DisplayName;
-
-            if (Ranges != null)
-            {
-                var list = new DynamicJsonArray();
-                foreach (var range in Ranges)
-                    list.Add(range);
-
-                json[nameof(Ranges)] = list;
-            }
-
-            return json;
+            /// <summary>
+            /// Field on which aggregation will be performed.
+            /// </summary>
+            public string Field { get; set; }
         }
     }
 
@@ -133,7 +82,6 @@ namespace Raven.Client.Documents.Queries.Facets
             var shouldUseRanges = other.Ranges != null &&
                                 other.Ranges.Count > 0 &&
                                 other.Name.Body.Type != typeof(string);
-            var mode = shouldUseRanges ? FacetMode.Ranges : FacetMode.Default;
 
             var name = string.Empty;
             if (other.Name.Body is MemberExpression)
@@ -149,7 +97,7 @@ namespace Raven.Client.Documents.Queries.Facets
                 }
             }
 
-            if (mode == FacetMode.Ranges)
+            if (shouldUseRanges)
             {
                 var type = GetExpressionType(other.Name);
                 name = FieldUtil.ApplyRangeSuffixIfNecessary(name, type);
@@ -158,7 +106,6 @@ namespace Raven.Client.Documents.Queries.Facets
             return new Facet
             {
                 Name = name,
-                Mode = mode,
                 Ranges = ranges
             };
         }

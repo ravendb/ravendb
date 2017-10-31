@@ -1,10 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Session;
 using Xunit;
@@ -90,7 +88,6 @@ namespace SlowTests.MailingList
                 // Create index
                 new Wod_Search().Execute(store);
                 WaitForIndexing(store);
-                WaitForIndexing(store);
 
                 for (int i = 1; i <= 5; i++)
                 {
@@ -108,13 +105,12 @@ namespace SlowTests.MailingList
 
                         var wods = query.ToList();
 
-                        var facets = session.Advanced.DocumentStore.Operations.Send(new GetMultiFacetsOperation(new FacetQuery
-                        {
-                            Query = $"FROM INDEX 'Wod/Search' WHERE ExerciseList = 'Pull-ups'",
-                            FacetSetupDoc = "Facets/WodFacets"
-                        }))[0];
+                        var facets = session.Query<WodBase, Wod_Search>()
+                            .Where(x => x.ExerciseList.Contains("Pull-ups"))
+                            .AggregateUsing("Facets/WodFacets")
+                            .ToDictionary();
 
-                        var pullupsCount = facets.Results["ExerciseList"].Values.First(o => o.Range == "pull-ups").Hits;
+                        var pullupsCount = facets["ExerciseList"].Values.First(o => o.Range == "pull-ups").Hits;
 
                         Assert.Equal(11, wods.Count);
                         Assert.Equal(11, pullupsCount);

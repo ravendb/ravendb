@@ -147,47 +147,6 @@ namespace Raven.Client.Documents.Linq
             return asyncDocumentQuery.GetIndexQuery();
         }
 
-        public virtual FacetedQueryResult GetFacets(string facetSetupDoc, int start, int? pageSize)
-        {
-            var q = GetIndexQuery(false);
-            var query = FacetQuery.Create(q, facetSetupDoc, null, start, pageSize, Session.Conventions);
-
-            var command = new GetFacetsCommand(_session.Conventions, _session.Context, query);
-            _session.RequestExecutor.Execute(command, _session.Context);
-            return command.Result;
-        }
-
-        public virtual FacetedQueryResult GetFacets(List<Facet> facets, int start, int? pageSize)
-        {
-            var q = GetIndexQuery(false);
-            var query = FacetQuery.Create(q, null, facets, start, pageSize, Session.Conventions);
-            var command = new GetFacetsCommand(_session.Conventions, _session.Context, query);
-            _session.RequestExecutor.Execute(command, _session.Context);
-            return command.Result;
-        }
-
-        public virtual async Task<FacetedQueryResult> GetFacetsAsync(string facetSetupDoc, int start, int? pageSize, CancellationToken token = default(CancellationToken))
-        {
-            var q = GetIndexQuery();
-            var query = FacetQuery.Create(q, facetSetupDoc, null, start, pageSize, Session.Conventions);
-
-            var command = new GetFacetsCommand(_session.Conventions, _session.Context, query);
-            await _session.RequestExecutor.ExecuteAsync(command, _session.Context, token).ConfigureAwait(false);
-
-            return command.Result;
-        }
-
-        public virtual async Task<FacetedQueryResult> GetFacetsAsync(List<Facet> facets, int start, int? pageSize, CancellationToken token = default(CancellationToken))
-        {
-            var q = GetIndexQuery();
-            var query = FacetQuery.Create(q, null, facets, start, pageSize, Session.Conventions);
-
-            var command = new GetFacetsCommand(_session.Conventions, _session.Context, query);
-            await _session.RequestExecutor.ExecuteAsync(command, _session.Context, token).ConfigureAwait(false);
-
-            return command.Result;
-        }
-
         private RavenQueryProviderProcessor<T> GetRavenQueryProvider()
         {
             return new RavenQueryProviderProcessor<T>(

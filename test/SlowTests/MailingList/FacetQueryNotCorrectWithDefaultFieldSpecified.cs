@@ -1,11 +1,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Session;
 using Xunit;
@@ -28,7 +26,7 @@ namespace SlowTests.MailingList
                 WaitForIndexing(store);
 
                 //Act
-                FacetedQueryResult result = ExecuteTest(store);
+                var result = ExecuteTest(store);
 
                 //Assert
                 CheckResults(result);
@@ -49,30 +47,29 @@ namespace SlowTests.MailingList
                 WaitForIndexing(store);
 
                 //Act
-                FacetedQueryResult result = ExecuteTest(store);
+                var result = ExecuteTest(store);
 
                 //Assert
                 CheckResults(result);
             }
         }
 
-        private static void CheckResults(FacetedQueryResult result)
+        private static void CheckResults(Dictionary<string, FacetResult> result)
         {
-            Assert.Contains("Brand", result.Results.Select(x => x.Key));
-            FacetResult facetResult = result.Results["Brand"];
+            Assert.Contains("Brand", result.Select(x => x.Key));
+            FacetResult facetResult = result["Brand"];
             Assert.Equal(1, facetResult.Values.Count);
             facetResult.Values[0] = new FacetValue { Range = "mybrand1", Hits = 1 };
         }
 
-        private static FacetedQueryResult ExecuteTest(IDocumentStore store)
+        private static Dictionary<string, FacetResult> ExecuteTest(IDocumentStore store)
         {
             using (var session = store.OpenSession())
             {
-                return session.Advanced.DocumentStore.Operations.Send(new GetMultiFacetsOperation(new FacetQuery()
-                {
-                    Query = "FROM INDEX 'Product/AvailableForSale2' WHERE Any = 'MyName1'",
-                    FacetSetupDoc = "facets/ProductFacets"
-                }))[0];
+                return session.Advanced.DocumentQuery<Product, Product_AvailableForSale2>()
+                    .WhereEquals("Any", "MyName1")
+                    .AggregateUsing("facets/ProductFacets")
+                    .ToDictionary();
             }
         }
 

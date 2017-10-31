@@ -37,27 +37,6 @@ namespace Raven.Client.Documents.Queries.Facets
         /// </summary>
         public double? Average { get; set; }
 
-        public double? GetAggregation(FacetAggregation aggregation)
-        {
-            switch (aggregation)
-            {
-                case FacetAggregation.None:
-                    return null;
-                case FacetAggregation.Count:
-                    return Count;
-                case FacetAggregation.Max:
-                    return Max;
-                case FacetAggregation.Min:
-                    return Min;
-                case FacetAggregation.Average:
-                    return Average;
-                case FacetAggregation.Sum:
-                    return Sum;
-                default:
-                    return null;
-            }
-        }
-
         public override string ToString()
         {
             var msg = Range + " -  Hits: " + Hits + ",";

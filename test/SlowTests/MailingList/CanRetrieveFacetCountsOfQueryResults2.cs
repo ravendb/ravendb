@@ -109,9 +109,12 @@ namespace SlowTests.MailingList
                         .Customize(customization => customization.WaitForNonStaleResults())
                         .Spatial("Distance", x => x.WithinRadius(100, 52.156161, 1.602483));
                     var partialFacetResults = query
-                        .ToFacets("facets/AttributeFacets");
+                            .AggregateUsing("facets/AttributeFacets")
+                            .ToDictionary();
                     var fullFacetResults = session.Query<AccItem, AccItems_Attributes>()
-                                                  .ToFacets("facets/AttributeFacets");
+                            .AggregateUsing("facets/AttributeFacets")
+                            .ToDictionary();
+
                     var results = query.ToList();
 
                     RavenTestHelper.AssertNoIndexErrors(store);
@@ -119,12 +122,12 @@ namespace SlowTests.MailingList
                     Assert.Equal(2, results.Count);
 
                     var partialGardenFacet =
-                        partialFacetResults.Results["Attributes"].Values.First(
+                        partialFacetResults["Attributes"].Values.First(
                             x => x.Range.Contains("hasgarden"));
                     Assert.Equal(2, partialGardenFacet.Hits);
 
                     var fullGardenFacet =
-                        fullFacetResults.Results["Attributes"].Values.First(
+                        fullFacetResults["Attributes"].Values.First(
                             x => x.Range.Contains("hasgarden"));
                     Assert.Equal(3, fullGardenFacet.Hits);
 

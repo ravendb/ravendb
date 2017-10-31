@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Spatial;
 using Raven.Client.Documents.Session.Tokens;
@@ -350,7 +351,8 @@ namespace Raven.Client.Documents.Session
 
         MoreLikeThisScope MoreLikeThis();
 
-        void AddFromAliasToWhereTokens(string fromAlias);
+        void AggregateBy(Facet facet);
 
+        void AddFromAliasToWhereTokens(string fromAlias);
     }
 }

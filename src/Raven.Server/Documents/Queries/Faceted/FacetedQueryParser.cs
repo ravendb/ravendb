@@ -9,57 +9,59 @@ using Lucene.Net.Util;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
+using Raven.Client.Documents.Session;
 using Raven.Server.Json;
 using Raven.Server.Web;
 using Sparrow;
 using Sparrow.Json;
-using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Queries.Faceted
 {
     public static class FacetedQueryParser
     {
-        public static Dictionary<string, FacetResult> Parse(IReadOnlyList<Facet> facets, out Dictionary<string, Facet> defaultFacets, out Dictionary<string, List<ParsedRange>> rangeFacets)
+        public static Dictionary<string, FacetResult> Parse(QueryMetadata metadata, out Dictionary<string, Facet> defaultFacets, out Dictionary<string, List<ParsedRange>> rangeFacets)
         {
             var results = new Dictionary<string, FacetResult>();
             defaultFacets = new Dictionary<string, Facet>();
             rangeFacets = new Dictionary<string, List<ParsedRange>>();
-            foreach (var facet in facets)
+            foreach (var field in metadata.SelectFields)
             {
+                if (field.IsFacet == false)
+                    throw new InvalidOperationException("Should not happen!");
+
+                var facetField = (FacetField)field;
+
+                var facet = new Facet
+                {
+                    Name = facetField.Name,
+                    DisplayName = facetField.Alias,
+                    Aggregations = facetField.Aggregations,
+                    Options = FacetOptions.Default // TODO [ppekrol]
+                };
+
                 var key = string.IsNullOrWhiteSpace(facet.DisplayName) ? facet.Name : facet.DisplayName;
 
                 defaultFacets[key] = facet;
-                if (facet.Aggregation != FacetAggregation.Count && facet.Aggregation != FacetAggregation.None)
-                {
-                    if (string.IsNullOrEmpty(facet.AggregationField))
-                        throw new InvalidOperationException($"Facet {facet.Name} cannot have aggregation set to {facet.Aggregation} without having a value in AggregationField");
 
-                    if (facet.AggregationField.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix) == false)
-                    {
-                        var rangeType = FacetedQueryHelper.GetRangeTypeForAggregationType(facet.AggregationType);
-                        facet.AggregationField = FieldUtil.ApplyRangeSuffixIfNecessary(facet.AggregationField, rangeType);
-                    }
+                if (facet.Ranges?.Count == 0)
+                {
+                    results[key] = new FacetResult();
                 }
-
-                switch (facet.Mode)
+                else
                 {
-                    case FacetMode.Default:
-                        results[key] = new FacetResult();
-                        break;
-                    case FacetMode.Ranges:
-                        rangeFacets[key] = facet.Ranges
-                            .Select(range => ParseRange(facet.Name, range))
-                            .ToList();
+                    rangeFacets[key] = facet.Ranges
+                        .Select(range => ParseRange(facet.Name, range))
+                        .ToList();
 
-                        results[key] = new FacetResult
-                        {
-                            Values = facet.Ranges
-                                .Select(range => new FacetValue { Range = range })
-                                .ToList()
-                        };
-                        break;
-                    default:
-                        throw new ArgumentException(string.Format("Could not understand '{0}'", facet.Mode));
+                    results[key] = new FacetResult
+                    {
+                        Values = facet.Ranges
+                            .Select(range => new FacetValue
+                            {
+                                Range = range
+                            })
+                            .ToList()
+                    };
                 }
             }
 

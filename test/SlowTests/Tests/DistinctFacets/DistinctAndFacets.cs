@@ -6,10 +6,8 @@
 
 using System.Linq;
 using FastTests;
-using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Queries.Facets;
 using Xunit;
 
 namespace SlowTests.Tests.DistinctFacets
@@ -144,15 +142,11 @@ namespace SlowTests.Tests.DistinctFacets
                         .WhereEquals("SecondayTag", "RavenDB").Boost(4)
                         .Distinct()
                         .SelectFields<Books_Search.Result>("Author")
-                        .ToFacets(new[]
-                        {
-                            new Facet
-                            {
-                                Name = "Category"
-                            },
-                        });
-                    Assert.Equal("databases", results.Results["Category"].Values[0].Range);
-                    Assert.Equal(1, results.Results["Category"].Values[0].Hits);
+                        .AggregateBy("Category")
+                        .ToDictionary();
+
+                    Assert.Equal("databases", results["Category"].Values[0].Range);
+                    Assert.Equal(1, results["Category"].Values[0].Hits);
                 }
             }
         }
@@ -173,15 +167,11 @@ namespace SlowTests.Tests.DistinctFacets
                         .WhereEquals("SecondayTag", "RavenDB").Boost(4)
                         .Distinct()
                         .SelectFields<Books_Search.Result>("Author")
-                        .ToFacetsLazy(new[]
-                        {
-                            new Facet
-                            {
-                                Name = "Category"
-                            },
-                        }).Value;
-                    Assert.Equal("databases", results.Results["Category"].Values[0].Range);
-                    Assert.Equal(1, results.Results["Category"].Values[0].Hits);
+                        .AggregateBy("Category")
+                        .ToDictionaryLazy().Value;
+
+                    Assert.Equal("databases", results["Category"].Values[0].Range);
+                    Assert.Equal(1, results["Category"].Values[0].Hits);
 
                     results = session.Advanced.DocumentQuery<Book, Books_Search>()
                         .WhereEquals("PrimaryTag", "RavenDB").Boost(4)
@@ -189,15 +179,11 @@ namespace SlowTests.Tests.DistinctFacets
                         .WhereEquals("SecondayTag", "RavenDB").Boost(4)
                         .Distinct()
                         .SelectFields<Books_Search.Result>("Author")
-                        .ToFacetsLazy(new[]
-                        {
-                            new Facet
-                            {
-                                Name = "Category"
-                            },
-                        }).Value;
-                    Assert.Equal("databases", results.Results["Category"].Values[0].Range);
-                    Assert.Equal(1, results.Results["Category"].Values[0].Hits);
+                        .AggregateBy("Category")
+                        .ToDictionaryLazy().Value;
+
+                    Assert.Equal("databases", results["Category"].Values[0].Range);
+                    Assert.Equal(1, results["Category"].Values[0].Hits);
                 }
             }
         }

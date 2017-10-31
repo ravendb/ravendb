@@ -58,9 +58,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _searcher = _currentStateHolder.GetIndexSearcher(_state);
         }
 
-        public Dictionary<string, FacetResult> FacetedQuery(FacetQueryServerSide query, JsonOperationContext context, Func<string, SpatialField> getSpatialField, CancellationToken token)
+        public Dictionary<string, FacetResult> FacetedQuery(IndexQueryServerSide query, JsonOperationContext context, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
-            var results = FacetedQueryParser.Parse(query.Facets, out Dictionary<string, Facet> defaultFacets, out Dictionary<string, List<FacetedQueryParser.ParsedRange>> rangeFacets);
+            var results = FacetedQueryParser.Parse(query.Metadata, out Dictionary<string, Facet> defaultFacets, out Dictionary<string, List<FacetedQueryParser.ParsedRange>> rangeFacets);
 
             var facetsByName = new Dictionary<string, Dictionary<string, FacetValue>>();
 
@@ -73,7 +73,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             foreach (var facet in defaultFacets.Values)
             {
-                if (facet.Mode != FacetMode.Default)
+                if (facet.Ranges?.Count > 0)
                     continue;
 
                 Dictionary<string, HashSet<IndexSearcherHolder.StringCollectionValue>> distinctItems = null;
@@ -84,7 +84,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 foreach (var readerFacetInfo in returnedReaders)
                 {
                     var termsForField = IndexedTerms.GetTermsAndDocumentsFor(readerFacetInfo.Reader, readerFacetInfo.DocBase, facet.Name, _indexName, _state);
-
 
                     if (facetsByName.TryGetValue(facet.DisplayName, out Dictionary<string, FacetValue> facetValues) == false)
                     {
@@ -102,7 +101,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                             }
                         }
 
-                        var needToApplyAggregation = (facet.Aggregation == FacetAggregation.None || facet.Aggregation == FacetAggregation.Count) == false;
+                        var needToApplyAggregation = facet.Aggregations.Count > 1 || facet.Aggregations.ContainsKey(FacetAggregation.Count) == false;
                         var intersectedDocuments = GetIntersectedDocuments(new ArraySegment<int>(kvp.Value), readerFacetInfo.Results, alreadySeen, query, fieldsHash, needToApplyAggregation, context);
                         var intersectCount = intersectedDocuments.Count;
                         if (intersectCount == 0)
@@ -131,7 +130,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             foreach (var range in rangeFacets)
             {
                 var facet = defaultFacets[range.Key];
-                var needToApplyAggregation = (facet.Aggregation == FacetAggregation.None || facet.Aggregation == FacetAggregation.Count) == false;
+                var needToApplyAggregation = facet.Aggregations.Count > 1 || facet.Aggregations.ContainsKey(FacetAggregation.Count) == false;
 
                 Dictionary<string, HashSet<IndexSearcherHolder.StringCollectionValue>> distinctItems = null;
                 HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen = null;
@@ -194,7 +193,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return results;
         }
 
-        private static unsafe uint CalculateQueryFieldsHash(FacetQueryServerSide query)
+        private static unsafe uint CalculateQueryFieldsHash(IndexQueryServerSide query)
         {
             uint hash = 0;
 
@@ -209,11 +208,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return hash;
         }
 
-        private static void UpdateFacetResults(Dictionary<string, FacetResult> results, FacetQueryServerSide query, Dictionary<string, Facet> facets, Dictionary<string, Dictionary<string, FacetValue>> facetsByName)
+        private static void UpdateFacetResults(Dictionary<string, FacetResult> results, IndexQueryServerSide query, Dictionary<string, Facet> facets, Dictionary<string, Dictionary<string, FacetValue>> facetsByName)
         {
             foreach (var facet in facets.Values)
             {
-                if (facet.Mode == FacetMode.Ranges)
+                if (facet.Ranges?.Count > 0)
                     continue;
 
                 var values = new List<FacetValue>();
@@ -221,7 +220,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 if (facetsByName.TryGetValue(facet.DisplayName, out Dictionary<string, FacetValue> groups) == false || groups == null)
                     continue;
 
-                switch (facet.TermSortMode)
+                switch (facet.Options.TermSortMode)
                 {
                     case FacetTermSortMode.ValueAsc:
                         allTerms = new List<string>(groups.OrderBy(x => x.Key).ThenBy(x => x.Value.Hits).Select(x => x.Key));
@@ -236,13 +235,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         allTerms = new List<string>(groups.OrderByDescending(x => x.Value.Hits).ThenBy(x => x.Key).Select(x => x.Key));
                         break;
                     default:
-                        throw new ArgumentException(string.Format("Could not understand '{0}'", facet.TermSortMode));
+                        throw new ArgumentException(string.Format("Could not understand '{0}'", facet.Options.TermSortMode));
                 }
 
                 var pageSize = Math.Min(allTerms.Count, query.PageSize);
-                int maxResults = facet.MaxResults.HasValue ? Math.Min(pageSize, facet.MaxResults.Value) : pageSize;
 
-                foreach (var term in allTerms.Skip(query.Start).TakeWhile(term => values.Count < maxResults))
+                foreach (var term in allTerms.Skip(query.Start).TakeWhile(term => values.Count < pageSize))
                 {
                     if (groups.TryGetValue(term, out FacetValue facetValue) == false || facetValue == null)
                         facetValue = new FacetValue { Range = term };
@@ -267,7 +265,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     RemainingHits = groups.Values.Sum(x => x.Hits) - (previousHits + values.Sum(x => x.Hits))
                 };
 
-                if (facet.IncludeRemainingTerms)
+                if (facet.Options.IncludeRemainingTerms)
                     results[key].RemainingTerms = allTerms.Skip(query.Start + values.Count).ToList();
             }
         }
@@ -279,15 +277,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 var key = facetResult.Key;
                 foreach (var facet in facets.Values.Where(f => f.DisplayName == key))
                 {
-                    if ((facet.Aggregation & FacetAggregation.Average) == FacetAggregation.Average)
+                    if (facet.Aggregations.TryGetValue(FacetAggregation.Average, out _) == false)
+                        continue;
+
+                    foreach (var facetValue in facetResult.Value.Values)
                     {
-                        foreach (var facetValue in facetResult.Value.Values)
-                        {
-                            if (facetValue.Hits == 0)
-                                facetValue.Average = double.NaN;
-                            else
-                                facetValue.Average = facetValue.Average / facetValue.Hits;
-                        }
+                        if (facetValue.Hits == 0)
+                            facetValue.Average = double.NaN;
+                        else
+                            facetValue.Average = facetValue.Average / facetValue.Hits;
                     }
                 }
             }
@@ -295,51 +293,30 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private static void ApplyAggregation(Facet facet, FacetValue value, ArraySegment<int> docsInQuery, IndexReader indexReader, int docBase, IState state)
         {
-            var name = facet.AggregationField;
-            var rangeType = FieldUtil.GetRangeTypeFromFieldName(name);
-            if (rangeType == RangeType.None)
+            foreach (var g in facet.Aggregations.GroupBy(x => x.Value))
             {
-                name = FieldUtil.ApplyRangeSuffixIfNecessary(facet.AggregationField, RangeType.Double);
-                rangeType = RangeType.Double;
-            }
+                if (g.Key == null) // Count
+                    continue;
 
-            long[] longs = null;
-            double[] doubles = null;
-            switch (rangeType)
-            {
-                case RangeType.Long:
-                    longs = FieldCache_Fields.DEFAULT.GetLongs(indexReader, name, state);
-                    break;
-                case RangeType.Double:
-                    doubles = FieldCache_Fields.DEFAULT.GetDoubles(indexReader, name, state);
-                    break;
-                default:
-                    throw new InvalidOperationException("Invalid range type for " + facet.Name + ", don't know how to handle " + rangeType);
-            }
+                var name = FieldUtil.ApplyRangeSuffixIfNecessary(g.Key, RangeType.Double);
+                var doubles = FieldCache_Fields.DEFAULT.GetDoubles(indexReader, name, state);
 
-            for (int index = 0; index < docsInQuery.Count; index++)
-            {
-                var doc = docsInQuery.Array[index];
-
-                var currentVal = rangeType == RangeType.Long ? longs[doc - docBase] : doubles[doc - docBase];
-                if ((facet.Aggregation & FacetAggregation.Max) == FacetAggregation.Max)
+                for (var index = 0; index < docsInQuery.Count; index++)
                 {
-                    value.Max = Math.Max(value.Max ?? double.MinValue, currentVal);
-                }
+                    var doc = docsInQuery.Array[index];
+                    var currentVal = doubles[doc - docBase];
 
-                if ((facet.Aggregation & FacetAggregation.Min) == FacetAggregation.Min)
-                {
-                    value.Min = Math.Min(value.Min ?? double.MaxValue, currentVal);
-                }
+                    if (facet.Aggregations.ContainsKey(FacetAggregation.Average))
+                        value.Average = currentVal + (value.Average ?? 0d);
 
-                if ((facet.Aggregation & FacetAggregation.Sum) == FacetAggregation.Sum)
-                {
-                    value.Sum = currentVal + (value.Sum ?? 0d);
-                }
+                    if (facet.Aggregations.ContainsKey(FacetAggregation.Min))
+                        value.Min = Math.Min(value.Min ?? double.MaxValue, currentVal);
 
-                if ((facet.Aggregation & FacetAggregation.Average) == FacetAggregation.Average)
-                {
-                    value.Average = currentVal + (value.Average ?? 0d);
+                    if (facet.Aggregations.ContainsKey(FacetAggregation.Max))
+                        value.Max = Math.Max(value.Max ?? double.MinValue, currentVal);
+
+                    if (facet.Aggregations.ContainsKey(FacetAggregation.Sum))
+                        value.Sum = currentVal + (value.Sum ?? 0d);
                 }
             }
         }
@@ -360,7 +337,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         /// <summary>
         /// This method expects both lists to be sorted
         /// </summary>
-        private IntersectDocs GetIntersectedDocuments(ArraySegment<int> a, ArraySegment<int> b, HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen, FacetQueryServerSide query, uint fieldsHash, bool needToApplyAggregation, JsonOperationContext context)
+        private IntersectDocs GetIntersectedDocuments(ArraySegment<int> a, ArraySegment<int> b, HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen, IndexQueryServerSide query, uint fieldsHash, bool needToApplyAggregation, JsonOperationContext context)
         {
             ArraySegment<int> n, m;
             if (a.Count > b.Count)
@@ -434,7 +411,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool IsDistinctValue(int docId, HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen, FacetQueryServerSide query, uint fieldsHash, JsonOperationContext context)
+        private bool IsDistinctValue(int docId, HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen, IndexQueryServerSide query, uint fieldsHash, JsonOperationContext context)
         {
             var fields = _currentStateHolder.GetFieldsValues(docId, fieldsHash, query.Metadata.SelectFields, context, _state);
             return alreadySeen.Add(fields);

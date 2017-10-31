@@ -57,9 +57,10 @@ namespace SlowTests.Tests.Faceted
                         .UsingDefaultOperator(QueryOperator.And)
                         .WhereEquals("Facet1", "term1")
                         .WhereEquals("Facet1", "term2")
-                        .ToFacets("Facets");
+                        .AggregateUsing("Facets")
+                        .ToDictionary();
 
-                    Assert.Equal(facetResults.Results["Facet1"].Values.Count, 0);
+                    Assert.Equal(facetResults["Facet1"].Values.Count, 0);
 
                     QueryStatistics stats;
                     var query = session.Advanced.DocumentQuery<Foo, Foos>()
@@ -69,9 +70,10 @@ namespace SlowTests.Tests.Faceted
                         .WhereEquals("Facet1", "term2");
 
                     facetResults = query
-                        .ToFacetsLazy("Facets").Value;
+                        .AggregateUsing("Facets")
+                        .ToDictionaryLazy().Value;
 
-                    Assert.Equal(facetResults.Results["Facet1"].Values.Count, 0);
+                    Assert.Equal(facetResults["Facet1"].Values.Count, 0);
                 }
             }
         }

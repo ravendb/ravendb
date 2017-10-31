@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.MoreLikeThis;
@@ -137,26 +138,6 @@ namespace Raven.Client.Documents.Session
         IDocumentQuery<T> Spatial(Func<SpatialDynamicFieldFactory<T>, SpatialDynamicField> field, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
 
         /// <summary>
-        /// Get the facets as per the specified facet document with the given start and pageSize
-        /// </summary>
-        FacetedQueryResult GetFacets(string facetSetupDoc, int start, int? pageSize);
-
-        /// <summary>
-        /// Get the facet results as per the specified facets with the given start and pageSize
-        /// </summary>
-        FacetedQueryResult GetFacets(List<Facet> facets, int start, int? pageSize);
-
-        /// <summary>
-        ///     Get the facets lazily as per the specified doc with the given start and pageSize
-        /// </summary>
-        Lazy<FacetedQueryResult> GetFacetsLazy(string facetSetupDoc, int facetStart, int? facetPageSize);
-
-        /// <summary>
-        ///     Get the facets lazily as per the specified doc with the given start and pageSize
-        /// </summary>
-        Lazy<FacetedQueryResult> GetFacetsLazy(List<Facet> facets, int facetStart, int? facetPageSize);
-
-        /// <summary>
         /// Changes the return type of the query
         /// </summary>
         IDocumentQuery<TResult> OfType<TResult>();
@@ -170,5 +151,13 @@ namespace Raven.Client.Documents.Session
         IDocumentQuery<T> MoreLikeThis(string document, MoreLikeThisOptions options = null);
 
         IDocumentQuery<T> MoreLikeThis(Action<IFilterDocumentQueryBase<T, IDocumentQuery<T>>> predicate, MoreLikeThisOptions options = null);
+
+        AggregationQuery<T> AggregateBy(string fieldName, Action<FacetFactory<T>> factory = null);
+
+        AggregationQuery<T> AggregateBy(Facet facet);
+
+        AggregationQuery<T> AggregateBy(IEnumerable<Facet> facets);
+
+        AggregationQuery<T> AggregateUsing(string facetSetupDocumentKey);
     }
 }

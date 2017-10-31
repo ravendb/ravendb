@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Queries
             return GetRunner(query).ExecuteStreamQuery(query, documentsContext, response, writer, token);
         }
 
-        public Task<FacetedQueryResult> ExecuteFacetedQuery(FacetQueryServerSide query, long? facetsEtag, long? existingResultEtag, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        public Task<FacetedQueryResult> ExecuteFacetedQuery(IndexQueryServerSide query, long? facetsEtag, long? existingResultEtag, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             if (query.Metadata.IsDynamic)
                 throw new InvalidQueryException("Facet query must be executed against static index.", query.Metadata.QueryText, query.QueryParameters);

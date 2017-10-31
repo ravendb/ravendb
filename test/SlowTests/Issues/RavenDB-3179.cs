@@ -36,7 +36,7 @@ namespace SlowTests.Issues
                         .Include(x => x.Sections);
 
 
-                    var facetResultsLazy = query.ToFacetsLazyAsync("facets/ArticleFacets");
+                    var facetResultsLazy = query.AggregateUsing("facets/ArticleFacets").ToDictionaryLazyAsync();
 
                     var articleResults = query
                         .Customize(x => x.ShowTimings())
@@ -54,7 +54,7 @@ namespace SlowTests.Issues
                     var facetResults = await facetResultsLazy.Value;
 
 
-                    var sections = facetResults.Results.FirstOrDefault().Value;
+                    var sections = facetResults.FirstOrDefault().Value;
 
                     var results = sections.Values.Select(async (value) =>
                    {

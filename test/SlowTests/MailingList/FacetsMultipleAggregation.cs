@@ -1,9 +1,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -28,9 +28,9 @@ namespace SlowTests.MailingList
                     WaitForIndexing(store);
 
                     var query = session.Advanced.DocumentQuery<Product>(new Products().IndexName);
-                    var results = query.ToFacets("facets/Products");
-                    Assert.Equal(100, results.Results["Prices"].Values.First().Min);
-                    Assert.Equal(200, results.Results["PricesMax"].Values.First().Max);
+                    var results = query.AggregateUsing("facets/Products").ToDictionary();
+                    Assert.Equal(100, results["Prices"].Values.First().Min);
+                    Assert.Equal(200, results["PricesMax"].Values.First().Max);
                 }
             }
         }
@@ -43,20 +43,25 @@ namespace SlowTests.MailingList
                 {
                     Name = "Prices",
                     DisplayName = "Prices",
-                    Mode = FacetMode.Ranges,
-                    Aggregation = FacetAggregation.Min,
-                    AggregationField = "Prices_D_Range",
-                    TermSortMode = FacetTermSortMode.ValueAsc,
+                    Aggregations = new Dictionary<FacetAggregation, string>
+                    {
+                        { FacetAggregation.Min, "Prices_D_Range" }
+                    },
+                    Options = new FacetOptions
+                    {
+                        TermSortMode = FacetTermSortMode.ValueAsc
+                    },
                     Ranges = {"[* TO *]"}
                 },
                 new Facet
                 {
                     Name = "Prices",
                     DisplayName = "PricesMax",
-                    Mode = FacetMode.Ranges,
-                    MaxResults = 1,
-                    Aggregation = FacetAggregation.Max,
-                    AggregationField = "Prices_D_Range",
+                    //MaxResults = 1,
+                    Aggregations = new Dictionary<FacetAggregation, string>
+                    {
+                        { FacetAggregation.Min, "Prices_D_Range" }
+                    },
                     Ranges = {"[* TO *]"}
                 },
             };

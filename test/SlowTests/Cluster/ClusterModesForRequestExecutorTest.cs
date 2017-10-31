@@ -19,7 +19,7 @@ namespace SlowTests.Cluster
     //tests for RavenDB-7533
     public class ClusterModesForRequestExecutorTest : ClusterTestBase
     {
-        public class User
+        private class User
         {
             public string Id { get; set; }
             public string Name { get; set; }

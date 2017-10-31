@@ -3,9 +3,7 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Spatial;
 
@@ -77,26 +75,6 @@ namespace Raven.Client.Documents.Session
         IAsyncDocumentQueryBase<T>
     {
         string IndexName { get; }
-
-        /// <summary>
-        ///     Get the facets as per the specified doc with the given start and pageSize
-        /// </summary>
-        Task<FacetedQueryResult> GetFacetsAsync(string facetSetupDoc, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken));
-
-        /// <summary>
-        ///     Get the facets as per the specified facets with the given start and pageSize
-        /// </summary>
-        Task<FacetedQueryResult> GetFacetsAsync(List<Facet> facets, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken));
-
-        /// <summary>
-        ///     Get the facets lazily as per the specified doc with the given start and pageSize
-        /// </summary>
-        Lazy<Task<FacetedQueryResult>> GetFacetsLazyAsync(string facetSetupDoc, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken));
-
-        /// <summary>
-        ///     Get the facets lazily as per the specified doc with the given start and pageSize
-        /// </summary>
-        Lazy<Task<FacetedQueryResult>> GetFacetsLazyAsync(List<Facet> facets, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Gets the query result. Executing this method for the first time will execute the query.
