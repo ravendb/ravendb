@@ -28,12 +28,14 @@ class machineResourcesSection {
     init() {
         this.cpuChart = new dashboardChart("#cpuChart", {
             yMaxProvider: () => 100,
-            topPaddingProvider: () => 2
+            topPaddingProvider: () => 2,
+            tooltipProvider: data => machineResourcesSection.cpuTooltip(data)
         });
 
         this.memoryChart = new dashboardChart("#memoryChart", {
             yMaxProvider: () => this.totalMemory,
-            topPaddingProvider: () => 2
+            topPaddingProvider: () => 2,
+            tooltipProvider: data => machineResourcesSection.memoryTooltip(data)
         });
     }
     
@@ -58,6 +60,37 @@ class machineResourcesSection {
             $('.dashboard-cpu-memory [data-toggle="tooltip"]').tooltip();
         }
     }
+    
+    
+    private static cpuTooltip(data: dashboardChartTooltipProviderArgs) {
+        if (data) {
+            const date = moment(data.date).format(serverDashboard.timeFormat);
+            const machine = data.values['machine'].toFixed(0) + "%";
+            const process = data.values['process'].toFixed(0) + "%";
+            return `<div>
+                Time: <strong>${date}</strong><br />
+                Machine CPU usage: <strong>${machine}</strong><br />
+                Process CPU usage: <strong>${process}</strong>
+                </div>`;
+        }
+        
+        return null;
+    }
+
+    private static memoryTooltip(data: dashboardChartTooltipProviderArgs) {
+        if (data) {
+            const date = moment(data.date).format(serverDashboard.timeFormat);
+            const machine = generalUtils.formatBytesToSize(data.values['machine']); 
+            const process = generalUtils.formatBytesToSize(data.values['process']);
+            return `<div>
+                Time: <strong>${date}</strong><br />
+                Machine memory usage: <strong>${machine}</strong><br />
+                Process memory usage: <strong>${process}</strong>
+                </div>`;
+        }
+
+        return null;
+    }
 }
 
 class indexingSpeedSection {
@@ -72,8 +105,12 @@ class indexingSpeedSection {
     totalReducedPerSecond = ko.observable<number>(0);
 
     init() {
-        this.indexingChart = new dashboardChart("#indexingChart");
-        this.reduceChart = new dashboardChart("#reduceChart");
+        this.indexingChart = new dashboardChart("#indexingChart", {
+            tooltipProvider: data => indexingSpeedSection.indexingTooltip(data)
+        });
+        this.reduceChart = new dashboardChart("#reduceChart", {
+            tooltipProvider: data => indexingSpeedSection.reduceTooltip(data)
+        });
         
         const grid = this.gridController();
 
@@ -98,7 +135,34 @@ class indexingSpeedSection {
             ];
         });
     }
-
+    
+    private static indexingTooltip(data: dashboardChartTooltipProviderArgs) {
+        if (data) {
+            const date = moment(data.date).format(serverDashboard.timeFormat);
+            const indexed = data.values['indexing'];
+            return `<div>
+                Time: <strong>${date}</strong><br />
+                # Documents indexed/s: <strong>${indexed.toLocaleString()}</strong>
+                </div>`;
+        }
+        
+        return null;
+    }
+    
+    private static reduceTooltip(data: dashboardChartTooltipProviderArgs) {
+        if (data) {
+            const date = moment(data.date).format(serverDashboard.timeFormat);
+            const map = data.values['map'];
+            const reduce = data.values['reduce'];
+            return `<div>
+                Time: <strong>${date}</strong><br />
+                # Documents mapped/s: <strong>${map.toLocaleString()}</strong><br />
+                # Documents reduced/s: <strong>${reduce.toLocaleString()}</strong>
+                </div>`;
+        }
+        return null;
+    }
+    
     onData(data: Raven.Server.Dashboard.IndexingSpeed) {
         const items = data.Items;
         items.sort((a, b) => generalUtils.sortAlphaNumeric(a.Database, b.Database));
@@ -276,8 +340,26 @@ class trafficSection {
                     default:
                         return 5;
                 }
-            }
+            },
+            tooltipProvider: data => trafficSection.trafficTooltip(data)
         });
+    }
+
+    private static trafficTooltip(data: dashboardChartTooltipProviderArgs) {
+        if (data) {
+            const date = moment(data.date).format(serverDashboard.timeFormat);
+            const requests = data.values['requests'];
+            const writes = data.values['writes'];
+            const written = data.values['written'];
+
+            return `<div>
+                Time: <strong>${date}</strong><br />
+                # Total Requests/s: <strong>${requests.toLocaleString()}</strong><br />
+                # Writes/s: <strong>${writes.toLocaleString()}</strong><br />
+                # Data Written/s: <strong>${written.toLocaleString()}</strong>
+                </div>`;
+        }
+        return null;
     }
     
     onData(data: Raven.Server.Dashboard.TrafficWatch) {
@@ -403,6 +485,9 @@ class driveUsageSection {
 }
 
 class serverDashboard extends viewModelBase {
+    
+    static readonly dateFormat = "YYYY MMMM Do, h:mm A";
+    static readonly timeFormat = "h:mm:ss A";
     liveClient = ko.observable<serverDashboardWebSocketClient>();
     
     clusterManager = clusterTopologyManager.default;
@@ -438,8 +523,7 @@ class serverDashboard extends viewModelBase {
 
         this.formattedStartTime = ko.pureComputed(() => {
             const start = this.startUpTime();
-            const dateFormat = "YYYY MMMM Do, h:mm A";
-            return start ? start.local().format(dateFormat) : "";
+            return start ? start.local().format(serverDashboard.dateFormat) : "";
         });
 
         this.node = ko.pureComputed(() => {
