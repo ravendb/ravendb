@@ -2490,6 +2490,8 @@ namespace Raven.Server.Documents.Indexes
                                 result.Progress.TreeProgress = progressReport.TreeProgress;
                                 result.Progress.TreeTotal = progressReport.TreeTotal;
                                 result.Progress.TreeName = progressReport.TreeName;
+                                result.Progress.GlobalProgress = progressReport.GlobalProgress;
+                                result.Progress.GlobalTotal = progressReport.GlobalTotal;
                                 result.AddMessage(progressReport.Message);
                                 onProgress?.Invoke(result.Progress);
                             });

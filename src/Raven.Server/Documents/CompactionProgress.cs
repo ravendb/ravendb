@@ -9,6 +9,8 @@ namespace Raven.Server.Documents
         public virtual string TreeName { get; set; }
         public virtual long TreeProgress { get; set; }
         public virtual long TreeTotal { get; set; }
+        public virtual long GlobalProgress { get; set; }
+        public virtual long GlobalTotal { get; set; }
         
         public virtual DynamicJsonValue ToJson()
         {
@@ -17,7 +19,9 @@ namespace Raven.Server.Documents
                 [nameof(Message)] = Message,
                 [nameof(TreeName)] = TreeName,
                 [nameof(TreeProgress)] = TreeProgress,
-                [nameof(TreeTotal)] = TreeTotal
+                [nameof(TreeTotal)] = TreeTotal,
+                [nameof(GlobalProgress)] = GlobalProgress,
+                [nameof(GlobalTotal)] = GlobalTotal
             };
 
         }
@@ -54,6 +58,18 @@ namespace Raven.Server.Documents
         {
             get => _result.TreeTotal;
             set => _result.TreeTotal = value;
+        }
+        
+        public override long GlobalProgress
+        {
+            get => _result.GlobalProgress;
+            set => _result.GlobalProgress = value;
+        }
+        
+        public override long GlobalTotal
+        {
+            get => _result.GlobalTotal;
+            set => _result.GlobalTotal = value;
         }
     }
 }
