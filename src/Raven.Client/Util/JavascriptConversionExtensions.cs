@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using Lambda2Js;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
@@ -675,9 +676,26 @@ namespace Raven.Client.Util
                     case "Join":
                         newName = "join";
                         break;
+                    case "Contains":
+                        newName = "indexOf";
+                        break;
+                    case "Split":
+                        newName = "split";
+                        break;
+                    case "Trim":
+                        newName = "trim";
+                        break;
+                    case "ToUpper":
+                        newName = "toUpperCase";
+                        break;
+                    case "ToLower":
+                        newName = "toLowerCase";
+                        break;
+                    case "Replace":
+                        newName = "replace";
+                        break;
                     default:
                         return;
-
                 }
 
                 var writer = context.GetWriter();
@@ -706,21 +724,80 @@ namespace Raven.Client.Util
                         {
                             context.Visitor.Visit(mce.Arguments[1]);
                         }
+
+                        writer.Write($".{newName}(");
+                        context.Visitor.Visit(mce.Arguments[0]);
+                        writer.Write(")");
                     }
                     else
                     {
                         context.Visitor.Visit(mce.Object);
-                    }
-                    writer.Write($".{newName}(");
-                    context.Visitor.Visit(mce.Arguments[0]);
+                        writer.Write($".{newName}(");
 
-                    if (mce.Arguments.Count > 1 && newName != "join")
-                    {
-                        writer.Write(", ");
-                        context.Visitor.Visit(mce.Arguments[1]);
-                    }
+                        if (newName == "split")
+                        {
+                            writer.Write("/");
+                            if (mce.Arguments[0] is NewArrayExpression arrayExpression)
+                            {
+                                for (var i = 0; i < arrayExpression.Expressions.Count; i++)
+                                {
+                                    if (i != 0)
+                                    {
+                                        writer.Write("|");
+                                    }
 
-                    writer.Write(")");
+                                    writer.Write(
+                                        Regex.Escape(
+                                            ((ConstantExpression)arrayExpression.Expressions[i]).Value
+                                                .ToString()
+                                        ).Replace("/", "\\/")
+                                    );
+                                }
+                            }
+                            else
+                            {
+                                writer.Write(
+                                    Regex.Escape(
+                                        ((ConstantExpression)mce.Arguments[0]).Value
+                                            .ToString()
+                                    ).Replace("/", "\\/")
+                                );
+                            }
+
+                            writer.Write("/g");
+                        }
+                        else if (newName == "replace")
+                        {
+                            writer.Write("/");
+                            writer.Write(
+                                Regex.Escape(
+                                    ((ConstantExpression)mce.Arguments[0]).Value
+                                        .ToString()
+                                ).Replace("/", "\\/")
+                            );
+                            writer.Write("/g, ");
+                            context.Visitor.Visit(mce.Arguments[1]);
+                        }
+                        else
+                        {
+                            for (var i = 0; i < mce.Arguments.Count; i++)
+                            {
+                                if (i != 0)
+                                {
+                                    writer.Write(", ");
+                                }
+
+                                context.Visitor.Visit(mce.Arguments[i]);
+                            }
+                        }
+
+                        writer.Write(")");
+
+                        if (mce.Method.Name == "Contains")
+                        {
+                            writer.Write(" !== -1");
+                        }
+                    }
                 }
             }
         }
