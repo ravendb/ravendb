@@ -83,7 +83,7 @@ namespace Voron.Data.RawData
             return ids;
         }
 
-        public List<long> GetAllIsInSamePageAs(long id)
+        public List<long> GetAllIdsInSamePageAs(long id)
         {
             var ids = new List<long>();
             FillAllIdsInPage((id / Constants.Storage.PageSize) - 1, ids);
