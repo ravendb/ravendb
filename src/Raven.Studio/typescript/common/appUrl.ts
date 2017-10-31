@@ -381,8 +381,12 @@ class appUrl {
         return "#databases/settings/expiration?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forConnectionStrings(db: database | databaseInfo): string {
-        return "#databases/settings/connectionStrings?" + appUrl.getEncodedDbPart(db);
+    static forConnectionStrings(db: database | databaseInfo, type?: string,  name?: string): string {
+        const databaseUrlPart = appUrl.getEncodedDbPart(db);
+        const typeUrlPart = type ? "&type=" + encodeURIComponent(type) : "";
+        const nameUrlPart = name ? "&name=" + encodeURIComponent(name) : "";
+        
+        return "#databases/settings/connectionStrings?" + databaseUrlPart + typeUrlPart + nameUrlPart;
     }
 
     static forDatabaseStudioConfig(db: database | databaseInfo): string {
