@@ -1,4 +1,5 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
+import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import ongoingTask = require("models/database/tasks/ongoingTaskModel");
 import appUrl = require("common/appUrl");
 import router = require("plugins/router");
@@ -20,7 +21,7 @@ class ongoingTaskSqlEtlListModel extends ongoingTask {
         this.update(dto);
         this.initializeObservables();        
 
-        this.connectionStringsUrl = `${appUrl.forCurrentDatabase().connectionStrings()}` + `&type=sql&name=${this.connectionStringName()}`;
+        this.connectionStringsUrl = appUrl.forConnectionStrings(activeDatabaseTracker.default.database(), "sql", this.connectionStringName());
     }
 
     initializeObservables() {
