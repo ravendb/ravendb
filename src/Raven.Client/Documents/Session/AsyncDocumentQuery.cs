@@ -775,7 +775,6 @@ namespace Raven.Client.Documents.Session
         {
             using (QueryOperation.EnterQueryContext())
             {
-                QueryOperation.LogQuery();
                 var command = QueryOperation.CreateRequest();
                 await TheSession.RequestExecutor.ExecuteAsync(command, TheSession.Context, token).ConfigureAwait(false);
                 QueryOperation.SetResult(command.Result);
