@@ -23,6 +23,9 @@ namespace Raven.Server.NotificationCenter.Handlers
                     };
                     await writer.WriteToWebSocket(serverInfo.ToJson());
 
+                    var machineResources = MachineResourcesNotificationSender.GetMachineResources();
+                    await writer.WriteToWebSocket(machineResources.ToJson());
+
                     using (var cts = CancellationTokenSource.CreateLinkedTokenSource(ServerStore.ServerShutdown))
                     {
                         var databasesInfo = DatabasesInfoNotificationSender.FetchDatabasesInfo(ServerStore, cts);
@@ -31,9 +34,6 @@ namespace Raven.Server.NotificationCenter.Handlers
                             await writer.WriteToWebSocket(info.ToJson());
                         }
                     }
-
-                    var machineResources = MachineResourcesNotificationSender.GetMachineResources();
-                    await writer.WriteToWebSocket(machineResources.ToJson());
 
                     await writer.WriteNotifications();
                 }

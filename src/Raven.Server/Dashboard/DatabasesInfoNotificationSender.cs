@@ -13,10 +13,10 @@ using Raven.Server.Json;
 using Raven.Server.NotificationCenter;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Dashboard
 {
@@ -89,14 +89,14 @@ namespace Raven.Server.Dashboard
                     if (serverStore.DatabasesLandlord.DatabasesCache.TryGetValue(databaseName, out var databaseTask) == false)
                     {
                         // database does not exist on this server or disabled
-                        SetOfflineDatabaseInfo(serverStore, databaseName, databasesInfo);
+                        SetOfflineDatabaseInfo(serverStore, databaseName, databasesInfo, drivesUsage, disabled: true);
                         continue;
                     }
 
                     var databaseOnline = IsDatabaseOnline(databaseTask, out var database);
                     if (databaseOnline == false)
                     {
-                        SetOfflineDatabaseInfo(serverStore, databaseName, databasesInfo);
+                        SetOfflineDatabaseInfo(serverStore, databaseName, databasesInfo, drivesUsage, disabled: false);
                         continue;
                     }
 
@@ -142,31 +142,7 @@ namespace Raven.Server.Dashboard
                         if (cts.IsCancellationRequested)
                             yield break;
 
-                        var mountPoint = mountPointUsage.DiskSpaceResult.DriveName;
-                        var usage = drivesUsage.Items.FirstOrDefault(x => x.MountPoint == mountPoint);
-                        if (usage == null)
-                        {
-                            usage = new MountPointUsage
-                            {
-                                MountPoint = mountPoint,
-                                VolumeLabel = mountPointUsage.DiskSpaceResult.VolumeLabel,
-                                FreeSpace = mountPointUsage.DiskSpaceResult.TotalFreeSpace.GetValue(SizeUnit.Bytes),
-                                TotalCapacity = mountPointUsage.DiskSpaceResult.TotalSize.GetValue(SizeUnit.Bytes)
-                            };
-                            drivesUsage.Items.Add(usage);
-                        }
-
-                        var existingDatabaseUsage = usage.Items.FirstOrDefault(x => x.Database == databaseName);
-                        if (existingDatabaseUsage == null)
-                        {
-                            existingDatabaseUsage = new DatabaseDiskUsage
-                            {
-                                Database = databaseName
-                            };
-                            usage.Items.Add(existingDatabaseUsage);
-                        }
-
-                        existingDatabaseUsage.Size += mountPointUsage.UsedSpace;
+                        UpdateMountPoint(mountPointUsage, databaseName, drivesUsage);
                     }
                 }
             }
@@ -178,7 +154,48 @@ namespace Raven.Server.Dashboard
             
         }
 
-        private static void SetOfflineDatabaseInfo(ServerStore serverStore, string databaseName, DatabasesInfo databasesInfo)
+        private static void UpdateMountPoint(
+            Client.ServerWide.Operations.MountPointUsage mountPointUsage, 
+            string databaseName, 
+            DrivesUsage drivesUsage)
+        {
+            var mountPoint = mountPointUsage.DiskSpaceResult.DriveName;
+            var usage = drivesUsage.Items.FirstOrDefault(x => x.MountPoint == mountPoint);
+            if (usage == null)
+            {
+                usage = new MountPointUsage
+                {
+                    MountPoint = mountPoint,
+                    VolumeLabel = mountPointUsage.DiskSpaceResult.VolumeLabel,
+                    FreeSpace = mountPointUsage.DiskSpaceResult.TotalFreeSpaceInBytes,
+                    TotalCapacity = mountPointUsage.DiskSpaceResult.TotalSizeInBytes
+                };
+                drivesUsage.Items.Add(usage);
+            }
+
+            usage.VolumeLabel = mountPointUsage.DiskSpaceResult.VolumeLabel;
+            usage.FreeSpace = mountPointUsage.DiskSpaceResult.TotalFreeSpaceInBytes;
+            usage.TotalCapacity = mountPointUsage.DiskSpaceResult.TotalSizeInBytes;
+
+            var existingDatabaseUsage = usage.Items.FirstOrDefault(x => x.Database == databaseName);
+            if (existingDatabaseUsage == null)
+            {
+                existingDatabaseUsage = new DatabaseDiskUsage
+                {
+                    Database = databaseName
+                };
+                usage.Items.Add(existingDatabaseUsage);
+            }
+
+            existingDatabaseUsage.Size += mountPointUsage.UsedSpace;
+        }
+
+        private static void SetOfflineDatabaseInfo(
+            ServerStore serverStore, 
+            string databaseName, 
+            DatabasesInfo existingDatabasesInfo, 
+            DrivesUsage existingDrivesUsage, 
+            bool disabled)
         {
             var databaseRecord = serverStore.LoadDatabaseRecord(databaseName, out var _);
             if (databaseRecord == null)
@@ -191,6 +208,7 @@ namespace Raven.Server.Dashboard
             {
                 Database = databaseName,
                 Online = false,
+                Disabled = disabled,
                 Irrelevant = databaseRecord.Topology?.AllNodes.Contains(serverStore.NodeTag) ?? true
             };
 
@@ -204,9 +222,31 @@ namespace Raven.Server.Dashboard
                 databaseInfoItem.IndexesCount = databaseInfo.IndexesCount ?? databaseRecord.Indexes.Count;
                 databaseInfoItem.ReplicationFactor = databaseRecord.Topology?.ReplicationFactor ?? databaseInfo.ReplicationFactor;
                 databaseInfoItem.ErroredIndexesCount = databaseInfo.IndexingErrors ?? 0;
+
+                if (databaseInfo.MountPointsUsage != null)
+                {
+                    var drives = DriveInfo.GetDrives();
+                    foreach (var mountPointUsage in databaseInfo.MountPointsUsage)
+                    {
+                        var diskSpaceResult = DiskSpaceChecker.GetFreeDiskSpace(mountPointUsage.DiskSpaceResult.DriveName, drives);
+                        if (diskSpaceResult != null)
+                        {
+                            // update the latest drive info
+                            mountPointUsage.DiskSpaceResult = new Client.ServerWide.Operations.DiskSpaceResult
+                            {
+                                DriveName = diskSpaceResult.DriveName,
+                                VolumeLabel = diskSpaceResult.VolumeLabel,
+                                TotalFreeSpaceInBytes = diskSpaceResult.TotalFreeSpace.GetValue(SizeUnit.Bytes),
+                                TotalSizeInBytes = diskSpaceResult.TotalSize.GetValue(SizeUnit.Bytes)
+                            };
+                        }
+                            
+                        UpdateMountPoint(mountPointUsage, databaseName, existingDrivesUsage);
+                    }
+                }
             }
 
-            databasesInfo.Items.Add(databaseInfoItem);
+            existingDatabasesInfo.Items.Add(databaseInfoItem);
         }
 
         private static int GetReplicationFactor(BlittableJsonReaderObject databaseRecordBlittable)
