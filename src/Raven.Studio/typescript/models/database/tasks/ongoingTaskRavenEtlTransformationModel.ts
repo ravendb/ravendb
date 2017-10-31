@@ -7,6 +7,7 @@ class ongoingTaskEtlTransformationModel {
     script = ko.observable<string>();
     transformScriptCollections = ko.observableArray<string>([]);
 
+    resetScript = ko.observable<boolean>(false);
     applyScriptForAllCollections = ko.observable<boolean>(false);
     isNew = ko.observable<boolean>(true);
     inputCollection = ko.observable<string>();
@@ -16,14 +17,15 @@ class ongoingTaskEtlTransformationModel {
     
     dirtyFlag: () => DirtyFlag;
   
-    constructor(dto: Raven.Client.ServerWide.ETL.Transformation, isNew: boolean) {
-        this.update(dto, isNew);
+    constructor(dto: Raven.Client.ServerWide.ETL.Transformation, isNew: boolean, resetScript: boolean) {
+        this.update(dto, isNew, resetScript);
         this.initObservables();
         this.initValidation();
 
         this.dirtyFlag = new ko.DirtyFlag([
             this.name,
             this.script,
+            this.resetScript,
             this.applyScriptForAllCollections,
             this.transformScriptCollections], 
         false, jsonUtil.newLineNormalizingHashFunction);
@@ -42,7 +44,7 @@ class ongoingTaskEtlTransformationModel {
                 HasLoadAttachment: false,
                 Name: "",
                 Script: ""
-            }, true);
+            }, true, false);
     }
 
     toDto(): Raven.Client.ServerWide.ETL.Transformation {
@@ -95,12 +97,13 @@ class ongoingTaskEtlTransformationModel {
         $(".collection-list li").first().addClass("blink-style");
     }
 
-    private update(dto: Raven.Client.ServerWide.ETL.Transformation, isNew: boolean) {
+    private update(dto: Raven.Client.ServerWide.ETL.Transformation, isNew: boolean, resetScript: boolean) {
         this.name(dto.Name);
         this.script(dto.Script);
         this.transformScriptCollections(dto.Collections || []);
         this.applyScriptForAllCollections(dto.ApplyToAllDocuments);
         this.isNew(isNew);
+        this.resetScript(resetScript)
     }
 
     hasUpdates(oldItem: this) {

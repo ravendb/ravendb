@@ -47,6 +47,8 @@ using Raven.Server.Smuggler.Migration;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.Smuggler.Documents;
 using Raven.Client.Extensions;
+using Raven.Server.Config.Categories;
+using Raven.Server.Monitoring.Snmp.Objects.Database;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Utils;
@@ -939,7 +941,6 @@ namespace Raven.Server.Web.System
             }
         }
 
-
         private async Task ToggleDisableDatabases(bool disable)
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -1047,14 +1048,35 @@ namespace Raven.Server.Web.System
                 return;
             }
 
-            await DatabaseConfigurations((_, databaseName, etlConfiguration) => ServerStore.UpdateEtl(_, databaseName, id.Value, etlConfiguration), "etl-update",
-                fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
+            string etlConfigurationName = null;
+            string dbName = null;
+            
+            await DatabaseConfigurations((_, databaseName, etlConfiguration) =>
+                {
+                    var task = ServerStore.UpdateEtl(_, databaseName, id.Value, etlConfiguration);
+                    dbName = databaseName;
+                    etlConfiguration.TryGet(nameof(RavenEtlConfiguration.Name), out etlConfigurationName);
+                    return task;
+                    
+                }, "etl-update", fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
+            
+           
+            // Reset scripts if needed
+            var scriptsToReset = HttpContext.Request.Query["reset"];
+            using(ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using(ctx.OpenReadTransaction())
+            {
+                foreach (var script in scriptsToReset)
+                {
+                    await ServerStore.ResetEtl(ctx, dbName, etlConfigurationName, script);     
+                }    
+            }
         }
 
         [RavenAction("/admin/etl", "RESET", AuthorizationStatus.Operator)]
         public async Task ResetEtl()
         {
-            var configurationName = GetStringQueryString("configuration-name");
+            var configurationName = GetStringQueryString("configuration-name"); // etl task name
             var transformationName = GetStringQueryString("transformation-name");
 
             await DatabaseConfigurations((_, databaseName, etlConfiguration) => ServerStore.ResetEtl(_, databaseName, configurationName, transformationName), "etl-reset");
