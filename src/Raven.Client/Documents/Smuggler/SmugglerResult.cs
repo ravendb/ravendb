@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Extensions;
 using Raven.Client.Util;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Smuggler
@@ -122,6 +124,9 @@ namespace Raven.Client.Documents.Smuggler
     {
         public virtual CountsWithSkippedCountAndLastEtag Documents { get; set; }
 
+        public virtual Dictionary<string, long> LastEtagsByCollection { get; set; } =
+            new Dictionary<string, long>();
+
         public virtual CountsWithLastEtag RevisionDocuments { get; set; }
 
         public virtual CountsWithLastEtag Tombstones { get; set; }
@@ -137,6 +142,7 @@ namespace Raven.Client.Documents.Smuggler
             return new DynamicJsonValue(GetType())
             {
                 [nameof(Documents)] = Documents.ToJson(),
+                [nameof(LastEtagsByCollection)] = LastEtagsByCollection.ToJson(),
                 [nameof(RevisionDocuments)] = RevisionDocuments.ToJson(),
                 [nameof(Tombstones)] = Tombstones.ToJson(),
                 [nameof(Conflicts)] = Conflicts.ToJson(),
@@ -172,7 +178,7 @@ namespace Raven.Client.Documents.Smuggler
             }
         }
 
-        public class CountsWithLastEtag : Counts
+        public class CountsWithLastEtag : Counts, IDynamicJsonValueConvertible
         {
             public long LastEtag { get; set; }
 

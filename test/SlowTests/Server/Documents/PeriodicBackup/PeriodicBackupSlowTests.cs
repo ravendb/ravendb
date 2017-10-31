@@ -105,10 +105,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 SpinWait.SpinUntil(() =>
                 {
                     var getPeriodicBackupResult = store.Admin.Server.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag > 0;
+                    return getPeriodicBackupResult.Status?.LastExportedEtag > 0;
                 }, TimeSpan.FromMinutes(2));
 
-                var etagForBackups = store.Admin.Server.Send(operation).Status.LastEtag;
+                var etagForBackups = store.Admin.Server.Send(operation).Status.LastExportedEtag;
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "ayende" }, "users/2");
@@ -117,7 +117,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 SpinWait.SpinUntil(() =>
                 {
-                    var newLastEtag = store.Admin.Server.Send(operation).Status.LastEtag;
+                    var newLastEtag = store.Admin.Server.Send(operation).Status.LastExportedEtag;
                     return newLastEtag != etagForBackups;
                 }, TimeSpan.FromMinutes(2));
             }
@@ -243,10 +243,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 SpinWait.SpinUntil(() =>
                 {
                     var getPeriodicBackupResult = store.Admin.Server.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag > 0;
+                    return getPeriodicBackupResult.Status?.LastExportedEtag > 0;
                 }, TimeSpan.FromMinutes(2));
 
-                var etagForBackups = store.Admin.Server.Send(operation).Status.LastEtag;
+                var etagForBackups = store.Admin.Server.Send(operation).Status.LastExportedEtag;
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "ayende" }, "users/2");
@@ -255,7 +255,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 SpinWait.SpinUntil(() =>
                 {
-                    var newLastEtag = store.Admin.Server.Send(operation).Status.LastEtag;
+                    var newLastEtag = store.Admin.Server.Send(operation).Status.LastExportedEtag;
                     return newLastEtag != etagForBackups;
                 }, TimeSpan.FromMinutes(2));
             }
@@ -304,10 +304,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 SpinWait.SpinUntil(() =>
                 {
                     var getPeriodicBackupResult = store.Admin.Server.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag > 0;
+                    return getPeriodicBackupResult.Status?.LastExportedEtag > 0;
                 }, TimeSpan.FromMinutes(2));
 
-                var etagForBackups = store.Admin.Server.Send(operation).Status.LastEtag;
+                var etagForBackups = store.Admin.Server.Send(operation).Status.LastExportedEtag;
                 using (var session = store.OpenAsyncSession())
                 {
                     session.Delete("users/1");
@@ -316,7 +316,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 SpinWait.SpinUntil(() =>
                 {
-                    var newLastEtag = store.Admin.Server.Send(operation).Status.LastEtag;
+                    var newLastEtag = store.Admin.Server.Send(operation).Status.LastExportedEtag;
                     return newLastEtag != etagForBackups;
                 }, TimeSpan.FromMinutes(2));
             }
@@ -364,10 +364,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 SpinWait.SpinUntil(() =>
                 {
                     var getPeriodicBackupResult = store.Admin.Server.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag > 0;
+                    return getPeriodicBackupResult.Status?.LastExportedEtag > 0;
                 }, TimeSpan.FromMinutes(2));
 
-                var etagForBackups = store.Admin.Server.Send(operation).Status.LastEtag;
+                var etagForBackups = store.Admin.Server.Send(operation).Status.LastExportedEtag;
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "ayende" }, "users/2");
@@ -376,7 +376,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 SpinWait.SpinUntil(() =>
                 {
-                    var newLastEtag = store.Admin.Server.Send(operation).Status.LastEtag;
+                    var newLastEtag = store.Admin.Server.Send(operation).Status.LastExportedEtag;
                     return newLastEtag != etagForBackups;
                 }, TimeSpan.FromMinutes(2));
             }
@@ -449,10 +449,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 SpinWait.SpinUntil(() =>
                 {
                     var getPeriodicBackupResult = store.Admin.Server.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag > 0;
+                    return getPeriodicBackupResult.Status?.LastExportedEtag > 0;
                 }, TimeSpan.FromMinutes(2));
 
-                var etagForBackups = store.Admin.Server.Send(operation).Status.LastEtag;
+                var etagForBackups = store.Admin.Server.Send(operation).Status.LastExportedEtag;
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "ayende" }, "users/2");
@@ -461,7 +461,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 SpinWait.SpinUntil(() =>
                 {
-                    var newLastEtag = store.Admin.Server.Send(operation).Status.LastEtag;
+                    var newLastEtag = store.Admin.Server.Send(operation).Status.LastExportedEtag;
                     return newLastEtag != etagForBackups;
                 }, TimeSpan.FromMinutes(2));
 
@@ -520,10 +520,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 SpinWait.SpinUntil(() =>
                 {
                     var getPeriodicBackupResult = store.Admin.Server.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag > 0;
+                    return getPeriodicBackupResult.Status?.LastExportedEtag > 0;
                 }, TimeSpan.FromMinutes(2));
                 
-                var etagForBackups = store.Admin.Server.Send(operation).Status.LastEtag;
+                var etagForBackups = store.Admin.Server.Send(operation).Status.LastExportedEtag;
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "ayende" }, "users/2");
@@ -533,7 +533,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 SpinWait.SpinUntil(() =>
                 {
-                    var newLastEtag = store.Admin.Server.Send(operation).Status.LastEtag;
+                    var newLastEtag = store.Admin.Server.Send(operation).Status.LastExportedEtag;
                     return newLastEtag != etagForBackups;
                 }, TimeSpan.FromMinutes(2));
 
@@ -617,7 +617,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 SpinWait.SpinUntil(() =>
                 {
                     var getPeriodicBackupResult = store.Admin.Server.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag > 0;
+                    return getPeriodicBackupResult.Status?.LastExportedEtag > 0;
                 }, TimeSpan.FromMinutes(2));
 
                 restoreConfiguration.BackupLocation = backupPath;

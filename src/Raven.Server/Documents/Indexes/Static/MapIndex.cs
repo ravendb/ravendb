@@ -149,7 +149,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return new StaticIndexDocsEnumerator(documents, _compiled.Maps[collection], collection, stats);
         }
 
-        public override IReadOnlyDictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
+        public override Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
         {
             _storageOperation.TryGetReadLock(Timeout.InfiniteTimeSpan, out var storageLock);
             using (storageLock)

@@ -272,7 +272,7 @@ namespace FastTests.Server.Documents.Revisions
             public string Name { get; set; }
         }
 
-        public IReadOnlyDictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
+        public Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
         {
             return new Dictionary<string, long>
             {

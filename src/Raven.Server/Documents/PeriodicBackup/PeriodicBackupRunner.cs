@@ -149,23 +149,6 @@ namespace Raven.Server.Documents.PeriodicBackup
             };
         }
 
-        private Dictionary<string, long> UpdateTombstoneLastEtagsPerCollection(DocumentsOperationContext context, Dictionary<string, long> existingData)
-        {
-            existingData = existingData ?? new Dictionary<string, long>(); //precaution, just in case
-
-            //precaution, should never be true
-            if (context.Transaction == null)
-                throw new InvalidOperationException("Expected an active transaction, but found none. This shouldn't happen.");
-
-            foreach (var collection in _database.DocumentsStorage.GetCollections(context))
-            {
-                var lastTombstoneEtag = _database.DocumentsStorage.GetLastTombstoneEtag(context, collection.Name);
-                existingData[collection.Name] = Math.Max(existingData[collection.Name], lastTombstoneEtag);
-            }
-
-            return existingData;
-        }
-
         private bool IsFullBackup(PeriodicBackupStatus backupStatus,
             PeriodicBackupConfiguration configuration,
             DateTime? nextFullBackup, DateTime? nextIncrementalBackup)
@@ -173,7 +156,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             if (backupStatus.LastFullBackup == null ||
                 backupStatus.NodeTag != _serverStore.NodeTag ||
                 backupStatus.BackupType != configuration.BackupType ||
-                backupStatus.LastEtag == null)
+                backupStatus.LastExportedEtag == null)
             {
                 // Reasons to start a new full backup:
                 // 1. there is no previous full backup, we are going to create one now
@@ -218,7 +201,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         status.LastFullBackup == null || // no full backup was previously performed
                         status.NodeTag != _serverStore.NodeTag || // last backup was performed by a different node
                         status.BackupType != configuration.BackupType || // backup type has changed
-                        status.LastEtag == null || // last document etag wasn't updated
+                        status.LastExportedEtag == null || // last document etag wasn't updated
                         backupToLocalFolder && DirectoryContainsFullBackupOrSnapshot(status.LocalBackup.BackupDirectory, configuration.BackupType) == false)
                         // the local folder has a missing full backup
                     {
@@ -252,7 +235,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     {
                         // no-op if nothing has changed
                         var currentLastEtag = DocumentsStorage.ReadLastEtag(tx.InnerTransaction);
-                        if (currentLastEtag == status.LastEtag)
+                        if (currentLastEtag == status.LastExportedEtag)
                         {
                             if (_logger.IsInfoEnabled)
                                 _logger.Info("Skipping incremental backup because " +
@@ -262,10 +245,14 @@ namespace Raven.Server.Documents.PeriodicBackup
                         }
                     }
 
-                    var startDocumentEtag = isFullBackup == false ? status.LastEtag : null;
+                    var startDocumentEtag = isFullBackup == false ? status.LastExportedEtag : null;
                     var fileName = GetFileName(isFullBackup, backupDirectory.FullPath, now, configuration.BackupType, out string backupFilePath);
-                    var lastEtag = CreateLocalBackupOrSnapshot(configuration,
-                        isFullBackup, status, backupFilePath, startDocumentEtag, context, tx);
+                    var lastEtag = CreateLocalBackupOrSnapshot(configuration, isFullBackup, status, backupFilePath, startDocumentEtag, context, tx, out var lastEtagsByCollection);
+
+                    if (lastEtagsByCollection != null)
+                    {
+                        status.LastEtagsByCollection = lastEtagsByCollection;
+                    }
 
                     try
                     {
@@ -280,8 +267,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         }
                     }
 
-                    status.LastTombstoneEtagsByCollection = UpdateTombstoneLastEtagsPerCollection(context, status.LastTombstoneEtagsByCollection);
-                    status.LastEtag = lastEtag;
+                    status.LastExportedEtag = lastEtag;
                     status.FolderName = folderName;
                 }
 
@@ -385,8 +371,10 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private long CreateLocalBackupOrSnapshot(PeriodicBackupConfiguration configuration,
             bool isFullBackup, PeriodicBackupStatus status, string backupFilePath,
-            long? startDocumentEtag, DocumentsOperationContext context, DocumentsTransaction tx)
+            long? startDocumentEtag, DocumentsOperationContext context, DocumentsTransaction tx,
+            out Dictionary<string, long> lastEtagsByCollection)
         {
+            lastEtagsByCollection = null;
             long lastEtag;
             using (status.LocalBackup.UpdateStats(isFullBackup))
             {
@@ -401,6 +389,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                             options.OperateOnTypes |= DatabaseItemType.Tombstones;
 
                         var result = CreateBackup(options, backupFilePath, startDocumentEtag, context);
+                        lastEtagsByCollection = result.LastEtagsByCollection;
                         lastEtag = result.GetLastEtag();
                     }
                     else
@@ -1181,13 +1170,13 @@ namespace Raven.Server.Documents.PeriodicBackup
             };
         }
 
-        public IReadOnlyDictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
+        public Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
         {
             var results = new Dictionary<string,long>();
 
             foreach (var periodicBackup in _periodicBackups.Values)
             {
-                foreach (var etagItem in periodicBackup.BackupStatus.LastTombstoneEtagsByCollection)
+                foreach (var etagItem in periodicBackup.BackupStatus.LastEtagsByCollection)
                 {
                     if (results.TryGetValue(etagItem.Key, out long existingEtag))
                     {
