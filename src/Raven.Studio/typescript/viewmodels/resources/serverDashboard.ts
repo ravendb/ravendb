@@ -430,6 +430,8 @@ class driveUsageSection {
     onData(data: Raven.Server.Dashboard.DrivesUsage) {
         const items = data.Items;
 
+        this.updateChart(data);
+
         const newMountPoints = items.map(x => x.MountPoint);
         const oldMountPoints = this.table().map(x => x.mountPoint());
 
@@ -444,13 +446,13 @@ class driveUsageSection {
             if (matched) {
                 matched.update(incomingItem);
             } else {
-                const usage = new driveUsage(incomingItem);
+                const usage = new driveUsage(incomingItem, this.storageChart.getColorProvider());
                 this.table.push(usage);
             }
         });
 
         this.updateTotals();
-        this.updateChart(data);
+        
     }
     
     private updateChart(data: Raven.Server.Dashboard.DrivesUsage) {

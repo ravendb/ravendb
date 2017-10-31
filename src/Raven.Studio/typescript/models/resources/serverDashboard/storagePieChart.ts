@@ -35,6 +35,10 @@ class storagePieChart {
         this.colorScale = d3.scale.ordinal<string>()
             .range(["#27c6db", "#d3e158", "#fea724"]); //TODO: colors
     }
+    
+    getColorProvider() {
+        return (dbName: string) => this.colorScale(dbName);
+    }
 
     onData(data: Raven.Server.Dashboard.DatabaseDiskUsage[]) {
         const group = this.svg.select(".pie");
