@@ -18,12 +18,10 @@ using Raven.Server.Documents;
 using Raven.Server.Extensions;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Migration;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Voron.Exceptions;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Web.System
@@ -195,8 +193,6 @@ namespace Raven.Server.Web.System
 
             return Task.CompletedTask;
         }
-
-        
 
         [RavenAction("/periodic-backup/status", "GET", AuthorizationStatus.ValidUser)]
         public Task GetPeriodicBackupStatus()

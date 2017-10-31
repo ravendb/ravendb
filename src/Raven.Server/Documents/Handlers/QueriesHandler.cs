@@ -234,17 +234,19 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/queries", "DELETE", AuthorizationStatus.ValidUser)]
         public Task Delete()
         {
-            var returnContextToPool = ContextPool.AllocateOperationContext(out DocumentsOperationContext context); // we don't dispose this as operation is async
+            using (TrackRequestTime())
+            {
+                var returnContextToPool = ContextPool.AllocateOperationContext(out DocumentsOperationContext context); // we don't dispose this as operation is async
 
-            var reader = context.Read(RequestBodyStream(), "queries/delete");
-            var query = IndexQueryServerSide.Create(reader, context, Database.QueryMetadataCache);
+                var reader = context.Read(RequestBodyStream(), "queries/delete");
+                var query = IndexQueryServerSide.Create(reader, context, Database.QueryMetadataCache);
 
-            ExecuteQueryOperation(query,
-                (runner, options, onProgress, token) => runner.ExecuteDeleteQuery(query, options, context, onProgress, token),
-                context, returnContextToPool, Operations.Operations.OperationType.DeleteByIndex);
+                ExecuteQueryOperation(query,
+                    (runner, options, onProgress, token) => runner.ExecuteDeleteQuery(query, options, context, onProgress, token),
+                    context, returnContextToPool, Operations.Operations.OperationType.DeleteByIndex);
 
-            return Task.CompletedTask;
-
+                return Task.CompletedTask;
+            }
         }
 
         [RavenAction("/databases/*/queries/test", "PATCH", AuthorizationStatus.ValidUser)]

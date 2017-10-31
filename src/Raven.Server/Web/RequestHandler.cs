@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
@@ -17,11 +18,14 @@ using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
+using Raven.Server.Extensions;
+using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Logging;
 
 namespace Raven.Server.Web
 {
@@ -32,6 +36,7 @@ namespace Raven.Server.Web
         public const string PageSizeParameter = "pageSize";
 
         private RequestHandlerContext _context;
+        private readonly Logger _logger = LoggingSource.Instance.GetLogger<RequestHandler>(nameof(RequestHandler));
 
         protected HttpContext HttpContext
         {
@@ -57,7 +62,7 @@ namespace Raven.Server.Web
 
         public virtual void Init(RequestHandlerContext context)
         {
-            _context = context;
+            _context = context;            
         }
 
         protected Stream TryGetRequestFromStream(string itemName)
@@ -353,12 +358,47 @@ namespace Raven.Server.Web
             throw new ArgumentException($"Query string value '{name}' must appear exactly once");
         }
 
-        protected DisposableAction TrackRequestTime()
+        protected DisposableAction TrackRequestTime(bool alertThresholdExceeded = true)
         {
-            HttpContext.Response.Headers.Add(Constants.Headers.RequestTime, "1");
-            return null; // TODO [ppekrol] we cannot write Headers after response have started without buffering
-            //var sw = Stopwatch.StartNew();
-            //return new DisposableAction(() => HttpContext.Response.Headers.Add(Constants.Headers.RequestTime, sw.ElapsedMilliseconds.ToString(CultureInfo.InvariantCulture)));
+            var sw = Stopwatch.StartNew();
+            _context.HttpContext.Response.OnStarting(state => 
+            {
+                var httpContext = (HttpContext)state;
+                httpContext.Response.Headers.Add(Constants.Headers.RequestTime, sw.ElapsedMilliseconds.ToString());
+                return Task.FromResult(0);
+            }, _context.HttpContext);
+
+            return new DisposableAction(() =>
+            {
+                try
+                {
+                    if (alertThresholdExceeded)
+                    {
+                        var threshold = _context.RavenServer.Configuration.Core.TooLongRequestThreshold.AsTimeSpan;
+                        if (threshold.TotalMilliseconds >= sw.ElapsedMilliseconds)
+                        {
+
+                            var alert = AlertRaised.Create(
+                                "Request Latency",
+                                $@"Request latency has surpassed the configured threshold (The threshold is {threshold.TotalSeconds} sec, 
+                            but the request lasted {sw.Elapsed.TotalSeconds} sec). {Environment.NewLine} 
+                            The request path was: {_context.HttpContext.Request.Path}",
+                                AlertType.TooLongRequestDuration,
+                                NotificationSeverity.Warning);
+
+                            _context.RavenServer.ServerStore.NotificationCenter.Add(alert);
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    //precaution - should never arrive here
+                    if (_logger.IsInfoEnabled)
+                    {
+                        _logger.Info($"Failed to write request time in response headers. This is not supposed to happen and is probably a bug. The request path was: {_context.HttpContext.Request.Path}",e);
+                    }
+                }
+            });
         }
 
         protected Task NoContent()
