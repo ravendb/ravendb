@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.Revisions
             TransactionMarker = 9,
         }
 
-        public static readonly long NotDeletedRevisionMarker = 0;
+        public const long NotDeletedRevisionMarker = 0;
 
         private readonly RevisionsCollectionConfiguration _emptyConfiguration = new RevisionsCollectionConfiguration();
 
@@ -131,9 +131,10 @@ namespace Raven.Server.Documents.Revisions
                 StartIndex = (int)Columns.Etag,
                 Name = CollectionRevisionsEtagsSlice
             });
-            RevisionsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
+            RevisionsSchema.DefineIndex(new TableSchema.SchemaIndexDef
             {
                 StartIndex = (int)Columns.DeletedEtag,
+                Count = 1,
                 Name = DeleteRevisionEtagSlice,
                 IsGlobal = true
             });
@@ -677,7 +678,17 @@ namespace Raven.Server.Documents.Revisions
             prefixSlice = new Slice(SliceOptions.Key, keyMem);
             return scope;
         }
-
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static ByteStringContext.InternalScope GetEtagAsSlice(DocumentsOperationContext context, long etag, out Slice slice)
+        {
+            var scope = context.Allocator.Allocate(sizeof(long), out var keyMem);
+            var swapped = Bits.SwapBytes(etag);
+            Memory.Copy(keyMem.Ptr, (byte*)&swapped, sizeof(long));
+            slice = new Slice(SliceOptions.Key, keyMem);
+            return scope;
+        }
+        
         private static long CountOfRevisions(DocumentsOperationContext context, Slice prefix)
         {
             var numbers = context.Transaction.InnerTransaction.ReadTree(RevisionsCountSlice);
@@ -721,22 +732,25 @@ namespace Raven.Server.Documents.Revisions
         public IEnumerable<Document> GetRevisionsBinEntries(DocumentsOperationContext context, long startEtag, int take)
         {
             var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
-            foreach (var tvr in table.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[DeleteRevisionEtagSlice], startEtag))
-            {
-                if (take-- <= 0)
-                    yield break;
-
-                var etag = TableValueToEtag((int)Columns.DeletedEtag, ref tvr.Reader);
-                if (etag == NotDeletedRevisionMarker)
-                    yield break;
-
-                using (TableValueToSlice(context, (int)Columns.LowerId, ref tvr.Reader, out Slice lowerId))
+            using (GetEtagAsSlice(context, startEtag, out var slice))
+            {          
+                foreach (var tvr in table.SeekBackwardFrom(RevisionsSchema.Indexes[DeleteRevisionEtagSlice], slice))
                 {
-                    if (IsRevisionsBinEntry(context, table, lowerId, etag) == false)
-                        continue;
-                }
+                    if (take-- <= 0)
+                        yield break;
 
-                yield return TableValueToRevision(context, ref tvr.Reader);
+                    var etag = TableValueToEtag((int)Columns.DeletedEtag, ref tvr.Result.Reader);
+                    if (etag == NotDeletedRevisionMarker)
+                        yield break;
+
+                    using (TableValueToSlice(context, (int)Columns.LowerId, ref tvr.Result.Reader, out Slice lowerId))
+                    {
+                        if (IsRevisionsBinEntry(context, table, lowerId, etag) == false)
+                            continue;
+                    }
+
+                    yield return TableValueToRevision(context, ref tvr.Result.Reader);
+                } 
             }
         }
 
