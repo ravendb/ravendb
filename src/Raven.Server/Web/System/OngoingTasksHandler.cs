@@ -137,14 +137,6 @@ namespace Raven.Server.Web.System
             NodeId responsible = null;
 
             var tag = dbTopology.WhoseTaskIsIt(watcher, ServerStore.Engine.CurrentState);
-            if (tag != null)
-            {
-                responsible = new NodeId
-                {
-                    NodeTag = tag,
-                    NodeUrl = clusterTopology.GetUrlFromTag(tag)
-                };
-            }
 
             (string Url, OngoingTaskConnectionStatus Status) res = (null, OngoingTaskConnectionStatus.None);
             if (tag == ServerStore.NodeTag)
@@ -160,7 +152,11 @@ namespace Raven.Server.Web.System
             {
                 TaskId = watcher.TaskId,
                 TaskName = watcher.Name,
-                ResponsibleNode = responsible,
+                ResponsibleNode = new NodeId
+                {
+                    NodeTag = tag,
+                    NodeUrl = clusterTopology.GetUrlFromTag(tag)
+                },
                 ConnectionStringName = watcher.ConnectionStringName,     
                 DestinationDatabase = connectionStrings[watcher.ConnectionStringName].Database,
                 TaskState = watcher.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,

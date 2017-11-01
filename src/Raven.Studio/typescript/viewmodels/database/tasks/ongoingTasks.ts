@@ -116,8 +116,11 @@ class ongoingTasks extends viewModelBase {
         const nodesSet = new Set<string>();
       
         result.OngoingTasksList.map((task) => {
-
-            nodesSet.add(task.ResponsibleNode.NodeTag);
+            
+            // Note: responsible node can be null if node is in a re-hab state for example..
+            if (task.ResponsibleNode.NodeTag) {
+                nodesSet.add(task.ResponsibleNode.NodeTag);
+            }
 
             switch (task.TaskType) {
                 case 'Replication':
