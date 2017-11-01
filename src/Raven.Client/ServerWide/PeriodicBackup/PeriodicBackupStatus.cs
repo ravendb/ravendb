@@ -72,7 +72,7 @@ namespace Raven.Client.ServerWide.PeriodicBackup
 
     public class Error
     {
-        public Exception Exception { get; set; }
+        public string Exception { get; set; }
 
         public DateTime At { get; set; }
 

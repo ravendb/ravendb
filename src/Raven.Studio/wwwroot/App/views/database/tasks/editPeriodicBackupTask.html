@@ -87,6 +87,10 @@
                         <div class="next-backup-occurrence-local" data-bind="if: canDisplayNextFullBackupOccurrenceLocalTime">
                             <strong data-bind="text: nextFullBackupOccurrenceLocalTime"></strong> <span data-bind="if: nextFullBackupOccurrenceLocalTime">(Local time)</span>
                         </div>
+
+                        <div class="next-backup-occurrence-local">
+                            <strong data-bind="text: nextFullBackupInterval"></strong>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -114,6 +118,10 @@
                         
                         <div class="next-backup-occurrence-local" data-bind="if: canDisplayNextIncrementalBackupOccurrenceLocalTime">
                             <strong data-bind="text: nextIncrementalBackupOccurrenceLocalTime"></strong> <span data-bind="if: nextIncrementalBackupOccurrenceLocalTime">(Local time)</span>
+                        </div>
+                        
+                        <div class="next-backup-occurrence-local">
+                            <strong data-bind="text: nextIncrementalBackupInterval"></strong>
                         </div>
                     </div>
                 </div>

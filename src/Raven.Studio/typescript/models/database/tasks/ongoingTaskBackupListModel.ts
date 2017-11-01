@@ -7,6 +7,8 @@ import ongoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskI
 import backupNowCommand = require("commands/database/tasks/backupNowCommand");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import backupNow = require("viewmodels/database/tasks/backupNow");
+import timeHelpers = require("common/timeHelpers");
+import generalUtils = require("common/generalUtils");
 
 class ongoingTaskBackupListModel extends ongoingTask {
     private static neverBackedUpText = "Never backed up";
@@ -15,10 +17,10 @@ class ongoingTaskBackupListModel extends ongoingTask {
     activeDatabase = activeDatabaseTracker.default.database;
 
     backupType = ko.observable<Raven.Client.ServerWide.PeriodicBackup.BackupType>();
-    nextBackup = ko.observable<string>();
+    nextBackup = ko.observable<Raven.Client.ServerWide.Operations.NextBackup>();
     lastFullBackup = ko.observable<string>();
     lastIncrementalBackup = ko.observable<string>();
-    ongoingBackup = ko.observable<string>();
+    onGoingBackup = ko.observable<Raven.Client.ServerWide.Operations.RunningBackup>();
 
     showBackupDetails = ko.observable(false);
     textClass = ko.observable<string>();
@@ -30,6 +32,11 @@ class ongoingTaskBackupListModel extends ongoingTask {
     neverBackedUp = ko.observable<boolean>(false);
     fullBackupTypeName: KnockoutComputed<string>;
 
+    lastFullBackupHumanized: KnockoutComputed<string>;
+    lastIncrementalBackupHumanized: KnockoutComputed<string>;
+    nextBackupHumanized: KnockoutComputed<string>;
+    onGoingBackupHumanized: KnockoutComputed<string>;
+
     constructor(dto: Raven.Client.ServerWide.Operations.OngoingTaskBackup) {
         super();
 
@@ -37,18 +44,81 @@ class ongoingTaskBackupListModel extends ongoingTask {
         this.initializeObservables();
 
         this.isBackupNowEnabled = ko.pureComputed(() => {
-            if (this.nextBackup() === "N/A") {
+            if (this.nextBackupHumanized() === "N/A") {
                 this.disabledBackupNowReason("No backup destinations");
                 return false;
             }
 
-            if (this.ongoingBackup()) {
+            if (this.onGoingBackupHumanized()) {
                 this.disabledBackupNowReason("Backup is already in progress");
                 return false;
             }
 
             this.disabledBackupNowReason(null);
             return true;
+        });
+
+        this.lastFullBackupHumanized = ko.pureComputed(() => {
+            const lastFullBackup = this.lastFullBackup();
+            if (!lastFullBackup) {
+                return ongoingTaskBackupListModel.neverBackedUpText;
+            }
+
+            const now = timeHelpers.utcNowWithSecondPrecision();
+            const diff = now.diff(moment.utc(lastFullBackup));
+            const fromDuration = diff > 0 ?
+                generalUtils.formatDuration(moment.duration(diff), true, 2) :
+                "moments";
+            return `${fromDuration} ago`;
+        });
+
+        this.lastIncrementalBackupHumanized = ko.pureComputed(() => {
+            const lastIncrementalBackup = this.lastIncrementalBackup();
+            if (!lastIncrementalBackup) {
+                return ongoingTaskBackupListModel.neverBackedUpText;
+            }
+
+            const now = timeHelpers.utcNowWithSecondPrecision();
+            const diff = now.diff(moment.utc(lastIncrementalBackup));
+            const fromDuration = diff > 0 ?
+                generalUtils.formatDuration(moment.duration(diff), true, 2) :
+                "moments";
+            return `${fromDuration} ago`;
+        });
+
+        this.nextBackupHumanized = ko.pureComputed(() => {
+            const nextBackup = this.nextBackup();
+            if (!nextBackup) {
+                this.textClass("text-warning");
+                return "N/A";
+            }
+
+            this.textClass("text-details");
+            const now = timeHelpers.utcNowWithSecondPrecision();
+            const diff = moment.utc(nextBackup.DateTime).diff(now);
+            const fromDuration = diff > 0 ?
+                generalUtils.formatDuration(moment.duration(diff), true, 2) :
+                "a few moments";
+
+            if (diff <= 0) {
+                this.refreshBackupInfo();
+            }
+
+            return `in ${fromDuration} (${this.getBackupType(this.backupType(), nextBackup.IsFull)})`;
+        });
+
+        this.onGoingBackupHumanized = ko.pureComputed(() => {
+            const onGoingBackup = this.onGoingBackup();
+            if (!onGoingBackup) {
+                return null;
+            }
+
+            const now = timeHelpers.utcNowWithSecondPrecision();
+            const diff = now.diff(moment.utc(onGoingBackup.StartTime));
+            const fromDuration = diff > 0 ?
+                generalUtils.formatDuration(moment.duration(diff), true, 2) :
+                "moments";
+            return `${fromDuration} ago (${this.getBackupType(this.backupType(), onGoingBackup.IsFull)})`;
         });
 
         this.fullBackupTypeName = ko.pureComputed(() => this.getBackupType(this.backupType(), true));
@@ -65,41 +135,11 @@ class ongoingTaskBackupListModel extends ongoingTask {
         super.update(dto);
 
         this.backupType(dto.BackupType);
-        const dateFormat = "YYYY MMMM Do, h:mm A";
-
-        if (dto.LastFullBackup) {
-            const lastFullBackup = moment.utc(dto.LastFullBackup).local().format(dateFormat);
-            this.lastFullBackup(lastFullBackup);
-            this.neverBackedUp(false);
-        } else {
-            this.lastFullBackup(ongoingTaskBackupListModel.neverBackedUpText);
-            this.neverBackedUp(true);
-        }
-
-        if (dto.LastIncrementalBackup) {
-            const lastIncrementalBackup = moment.utc(dto.LastIncrementalBackup).local().format(dateFormat);
-            this.lastIncrementalBackup(lastIncrementalBackup);
-        } else {
-            this.lastIncrementalBackup(ongoingTaskBackupListModel.neverBackedUpText);
-        }
-
-        if (dto.OnGoingBackup) {
-            const ongoingBackup = moment.utc(dto.OnGoingBackup.StartTime).local().format(dateFormat);
-            this.ongoingBackup(`${ongoingBackup} (${this.getBackupType(dto.BackupType, dto.OnGoingBackup.IsFull)})`);
-        } else {
-            this.ongoingBackup(null);
-        }
-
-        if (dto.NextBackup) {
-            const now = moment();
-            const timeSpan = moment.duration(dto.NextBackup.TimeSpan);
-            const nextBackupDateTime = now.add(timeSpan).format(dateFormat);
-            this.nextBackup(`${nextBackupDateTime} (${this.getBackupType(dto.BackupType, dto.NextBackup.IsFull)})`);
-            this.textClass("text-details");
-        } else {
-            this.nextBackup("N/A");
-            this.textClass("text-warning");
-        }
+        this.neverBackedUp(!dto.LastFullBackup);
+        this.lastFullBackup(dto.LastFullBackup);
+        this.lastIncrementalBackup(dto.LastIncrementalBackup);
+        this.nextBackup(dto.NextBackup);
+        this.onGoingBackup(dto.OnGoingBackup);
     }
 
     private getBackupType(backupType: Raven.Client.ServerWide.PeriodicBackup.BackupType, isFull: boolean): string {

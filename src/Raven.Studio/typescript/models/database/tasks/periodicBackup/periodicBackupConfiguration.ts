@@ -7,6 +7,7 @@ import ftpSettings = require("models/database/tasks/periodicBackup/ftpSettings")
 import getNextBackupOccurrenceCommand = require("commands/database/tasks/getNextBackupOccurrenceCommand");
 import jsonUtil = require("common/jsonUtil");
 import backupSettings = require("backupSettings");
+import generalUtils = require("common/generalUtils");
 
 class periodicBackupConfiguration {
     taskId = ko.observable<number>();
@@ -25,12 +26,14 @@ class periodicBackupConfiguration {
     fullBackupParsingError = ko.observable<string>();
     nextFullBackupOccurrenceServerTime = ko.observable<string>("N/A");
     nextFullBackupOccurrenceLocalTime = ko.observable<string>();
+    nextFullBackupInterval = ko.observable<string>();
     canDisplayNextFullBackupOccurrenceLocalTime: KnockoutComputed<boolean>; 
 
     incrementalBackupHumanReadable: KnockoutComputed<string>;
     incrementalBackupParsingError = ko.observable<string>();
     nextIncrementalBackupOccurrenceServerTime = ko.observable<string>("N/A");
     nextIncrementalBackupOccurrenceLocalTime = ko.observable<string>();
+    nextIncrementalBackupInterval = ko.observable<string>();
     canDisplayNextIncrementalBackupOccurrenceLocalTime: KnockoutComputed<boolean>; 
 
     manualChooseMentor = ko.observable<boolean>(false);
@@ -82,6 +85,7 @@ class periodicBackupConfiguration {
                 newValue,
                 this.nextFullBackupOccurrenceServerTime,
                 this.nextFullBackupOccurrenceLocalTime,
+                this.nextFullBackupInterval,
                 this.fullBackupParsingError));
 
         this.incrementalBackupFrequency.throttle(500).subscribe((newValue) =>
@@ -89,6 +93,7 @@ class periodicBackupConfiguration {
                 newValue,
                 this.nextIncrementalBackupOccurrenceServerTime,
                 this.nextIncrementalBackupOccurrenceLocalTime,
+                this.nextIncrementalBackupInterval,
                 this.incrementalBackupParsingError));
 
         if (this.fullBackupFrequency()) {
@@ -96,6 +101,7 @@ class periodicBackupConfiguration {
                 this.fullBackupFrequency(),
                 this.nextFullBackupOccurrenceServerTime,
                 this.nextFullBackupOccurrenceLocalTime,
+                this.nextFullBackupInterval,
                 this.fullBackupParsingError);
         }
 
@@ -104,6 +110,7 @@ class periodicBackupConfiguration {
                 this.incrementalBackupFrequency(),
                 this.nextIncrementalBackupOccurrenceServerTime,
                 this.nextIncrementalBackupOccurrenceLocalTime,
+                this.nextIncrementalBackupInterval,
                 this.incrementalBackupParsingError);
         }
         
@@ -270,16 +277,19 @@ class periodicBackupConfiguration {
     getNextOccurance(backupFrequency: string,
         nextBackupOccuranceServerTime: KnockoutObservable<string>,
         nextBackupOccuranceLocalTime: KnockoutObservable<string>,
+        nextBackupInterval: KnockoutObservable<string>,
         parsingError: KnockoutObservable<string>) {
         if (parsingError()) {
             nextBackupOccuranceServerTime("N/A");
             nextBackupOccuranceLocalTime("");
+            nextBackupInterval("");
             return;
         }
 
         if (!backupFrequency) {
             nextBackupOccuranceServerTime("N/A");
             nextBackupOccuranceLocalTime("");
+            nextBackupInterval("");
             return;
         }
 
@@ -289,13 +299,23 @@ class periodicBackupConfiguration {
             .done((result: Raven.Server.Web.System.NextBackupOccurrence) => {
                 const nextBackupServerTime = moment(result.ServerTime).format(dateFormat);
                 nextBackupOccuranceServerTime(nextBackupServerTime);
-                const nextBackupLocalTime = moment.utc(result.Utc).local().format(dateFormat);
+                const nextBackupUtc = moment.utc(result.Utc);
+                const nextBackupLocalTime = nextBackupUtc.local().format(dateFormat);
                 nextBackupOccuranceLocalTime(nextBackupLocalTime);
+
+                const now = moment.utc();
+                const diff = nextBackupUtc.diff(now);
+                const fromDuration = diff > 0 ?
+                    generalUtils.formatDuration(moment.duration(diff), true, 2) :
+                    "a few moments";
+
+                nextBackupInterval(`in ${fromDuration}`);
                 parsingError(null);
             })
             .fail((response: JQueryXHR) => {
                 nextBackupOccuranceServerTime("N/A");
                 nextBackupOccuranceLocalTime("");
+                nextBackupInterval("");
                 parsingError(response.responseText);
             });
     }
