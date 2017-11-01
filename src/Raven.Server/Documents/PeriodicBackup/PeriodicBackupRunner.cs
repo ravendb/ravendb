@@ -196,9 +196,15 @@ namespace Raven.Server.Documents.PeriodicBackup
             bool isFullBackup)
         {
             var totalSw = Stopwatch.StartNew();
-            var status = periodicBackup.BackupStatus;
+            var operationCanceled = false;
+            var previousBackupStatus = periodicBackup.BackupStatus;
             var configuration = periodicBackup.Configuration;
-            status.BackupType = configuration.BackupType;
+            var runningBackupStatus = periodicBackup.RunningBackupStatus = new PeriodicBackupStatus
+            {
+                TaskId = configuration.TaskId,
+                BackupType = configuration.BackupType,
+                LastEtag = previousBackupStatus.LastEtag
+            };
 
             try
             {
@@ -208,19 +214,19 @@ namespace Raven.Server.Documents.PeriodicBackup
                     var backupToLocalFolder = PeriodicBackupConfiguration.CanBackupUsing(configuration.LocalSettings);
                     var now = SystemTime.UtcNow.ToString(DateTimeFormat, CultureInfo.InvariantCulture);
 
-                    if (status.LocalBackup == null)
-                        status.LocalBackup = new LocalBackup();
+                    if (runningBackupStatus.LocalBackup == null)
+                        runningBackupStatus.LocalBackup = new LocalBackup();
 
                     PathSetting backupDirectory;
 
                     string folderName;
                     // check if we need to do a new full backup
                     if (isFullBackup ||
-                        status.LastFullBackup == null || // no full backup was previously performed
-                        status.NodeTag != _serverStore.NodeTag || // last backup was performed by a different node
-                        status.BackupType != configuration.BackupType || // backup type has changed
-                        status.LastEtag == null || // last document etag wasn't updated
-                        backupToLocalFolder && DirectoryContainsFullBackupOrSnapshot(status.LocalBackup.BackupDirectory, configuration.BackupType) == false)
+                        previousBackupStatus.LastFullBackup == null || // no full backup was previously performed
+                        previousBackupStatus.NodeTag != _serverStore.NodeTag || // last backup was performed by a different node
+                        previousBackupStatus.BackupType != configuration.BackupType || // backup type has changed
+                        previousBackupStatus.LastEtag == null || // last document etag wasn't updated
+                        backupToLocalFolder && DirectoryContainsFullBackupOrSnapshot(previousBackupStatus.LocalBackup.BackupDirectory, configuration.BackupType) == false)
                         // the local folder has a missing full backup
                     {
                         isFullBackup = true;
@@ -231,17 +237,16 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                         if (Directory.Exists(backupDirectory.FullPath) == false)
                             Directory.CreateDirectory(backupDirectory.FullPath);
-
-                        status.LocalBackup.TempFolderUsed = backupToLocalFolder == false;
-                        status.LocalBackup.BackupDirectory = backupToLocalFolder ? backupDirectory.FullPath : null;
                     }
                     else
                     {
-                        backupDirectory = backupToLocalFolder ? new PathSetting(status.LocalBackup.BackupDirectory) : _tempBackupPath;
-                        folderName = status.FolderName;
+                        backupDirectory = backupToLocalFolder ? new PathSetting(previousBackupStatus.LocalBackup.BackupDirectory) : _tempBackupPath;
+                        folderName = previousBackupStatus.FolderName;
                     }
 
-                    status.IsFull = isFullBackup;
+                    runningBackupStatus.LocalBackup.BackupDirectory = backupToLocalFolder ? backupDirectory.FullPath : null;
+                    runningBackupStatus.LocalBackup.TempFolderUsed = backupToLocalFolder == false;
+                    runningBackupStatus.IsFull = isFullBackup;
 
                     if (_logger.IsInfoEnabled)
                     {
@@ -253,7 +258,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     {
                         // no-op if nothing has changed
                         var currentLastEtag = DocumentsStorage.ReadLastEtag(tx.InnerTransaction);
-                        if (currentLastEtag == status.LastEtag)
+                        if (currentLastEtag == previousBackupStatus.LastEtag)
                         {
                             if (_logger.IsInfoEnabled)
                                 _logger.Info("Skipping incremental backup because " +
@@ -263,14 +268,14 @@ namespace Raven.Server.Documents.PeriodicBackup
                         }
                     }
 
-                    var startDocumentEtag = isFullBackup == false ? status.LastEtag : null;
+                    var startDocumentEtag = isFullBackup == false ? previousBackupStatus.LastEtag : null;
                     var fileName = GetFileName(isFullBackup, backupDirectory.FullPath, now, configuration.BackupType, out string backupFilePath);
                     var lastEtag = CreateLocalBackupOrSnapshot(configuration,
-                        isFullBackup, status, backupFilePath, startDocumentEtag, context, tx);
+                        isFullBackup, runningBackupStatus, backupFilePath, startDocumentEtag, context, tx);
 
                     try
                     {
-                        await UploadToServer(configuration, status, backupFilePath, folderName, fileName, isFullBackup);
+                        await UploadToServer(configuration, runningBackupStatus, backupFilePath, folderName, fileName, isFullBackup);
                     }
                     finally
                     {
@@ -281,9 +286,10 @@ namespace Raven.Server.Documents.PeriodicBackup
                         }
                     }
 
-                    status.LastTombstoneEtagsByCollection = UpdateTombstoneLastEtagsPerCollection(context, status.LastTombstoneEtagsByCollection);
-                    status.LastEtag = lastEtag;
-                    status.FolderName = folderName;
+                    //this throws an exception should be fixed in: http://issues.hibernatingrhinos.com/issue/RavenDB-8369
+                    //currentBackupStatus.LastTombstoneEtagsByCollection = UpdateTombstoneLastEtagsPerCollection(context, status.LastTombstoneEtagsByCollection);
+                    runningBackupStatus.LastEtag = lastEtag;
+                    runningBackupStatus.FolderName = folderName;
                 }
 
                 totalSw.Stop();
@@ -294,18 +300,28 @@ namespace Raven.Server.Documents.PeriodicBackup
                     _logger.Info($"Successfully created {(isFullBackup ? fullBackupText : "an incremental backup")} " +
                                  $"in {totalSw.ElapsedMilliseconds:#,#;;0} ms");
                 }
+
+                throw new InvalidOperationException("testing");
             }
             catch (OperationCanceledException)
             {
                 // shutting down, probably
+                operationCanceled = true;
             }
             catch (ObjectDisposedException)
             {
                 // shutting down, probably
+                operationCanceled = true;
             }
             catch (Exception e)
             {
                 const string message = "Error when performing periodic backup";
+
+                runningBackupStatus.Error = new Error
+                {
+                    Exception = e,
+                    At = DateTime.UtcNow
+                };
 
                 if (_logger.IsOperationsEnabled)
                     _logger.Operations(message, e);
@@ -318,20 +334,24 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
             finally
             {
-                // whether we succeeded or not,
-                // we need to update the last backup time to avoid
-                // starting a new backup right after this one
-                if (isFullBackup)
-                    status.LastFullBackup = periodicBackup.StartTime;
-                else
-                    status.LastIncrementalBackup = periodicBackup.StartTime;
+                if (operationCanceled == false)
+                {
+                    // whether we succeeded or not,
+                    // we need to update the last backup time to avoid
+                    // starting a new backup right after this one
+                    if (isFullBackup)
+                        runningBackupStatus.LastFullBackup = periodicBackup.StartTime;
+                    else
+                        runningBackupStatus.LastIncrementalBackup = periodicBackup.StartTime;
 
-                status.NodeTag = _serverStore.NodeTag;
-                status.DurationInMs = totalSw.ElapsedMilliseconds;
-                status.Version++;
+                    runningBackupStatus.NodeTag = _serverStore.NodeTag;
+                    runningBackupStatus.DurationInMs = totalSw.ElapsedMilliseconds;
+                    runningBackupStatus.Version++;
 
-                // save the backup status
-                await WriteStatus(status);
+                    periodicBackup.BackupStatus = runningBackupStatus;
+                    // save the backup status
+                    await WriteStatus(runningBackupStatus);
+                }
             }
         }
 
@@ -801,6 +821,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     finally
                     {
                         periodicBackup.RunningTask = null;
+                        periodicBackup.RunningBackupStatus = null;
 
                         if (periodicBackup.HasScheduledBackup() &&
                             _cancellationToken.IsCancellationRequested == false)
