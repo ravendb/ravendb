@@ -316,6 +316,10 @@ namespace TypingsGenerator
             scripter.AddType(typeof(ReorderDatabaseMembersOperation.Parameters));
             
             scripter.AddType(typeof(LicenseLimit));
+            
+            scripter.AddType(typeof(CompactSettings));
+            scripter.AddType(typeof(CompactionResult));
+            scripter.AddType(typeof(CompactionProgress));
 
             return scripter;
         }

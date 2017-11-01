@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using Lambda2Js;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
@@ -125,21 +126,51 @@ namespace Raven.Client.Util
                         context.PreventDefault();
                         context.Visitor.Visit(methodCallExpression.Arguments[0]);
                         return;
+                    case "ToDictionary":
+                        {
+                            context.PreventDefault();
+                            var writer = context.GetWriter();
+                            using (writer.Operation(methodCallExpression))
+                            {
+                                context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                                writer.Write(".reduce(function(_obj, _cur) {");
+
+                                writer.Write("_obj[");
+                                context.Visitor.Visit(methodCallExpression.Arguments[1]);
+                                writer.Write("(_cur)] = ");
+
+                                if (methodCallExpression.Arguments.Count > 2)
+                                {
+                                    context.Visitor.Visit(methodCallExpression.Arguments[2]);
+                                    writer.Write("(_cur);");
+                                }
+                                else
+                                {
+                                    writer.Write("_cur;");
+                                }
+
+                                writer.Write("return _obj;");
+                                writer.Write("}, {})");
+                            }
+                            return;
+                        }
                     case "FirstOrDefault":
                     case "First":
-                        context.PreventDefault();
-                        context.Visitor.Visit(methodCallExpression.Arguments[0]);
-                        var writer = context.GetWriter();
-                        using (writer.Operation(methodCallExpression))
                         {
-                            if (methodCallExpression.Arguments.Count > 1)
+                            context.PreventDefault();
+                            context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                            var writer = context.GetWriter();
+                            using (writer.Operation(methodCallExpression))
                             {
-                                writer.Write(".find");
-                                context.Visitor.Visit(methodCallExpression.Arguments[1]);
+                                if (methodCallExpression.Arguments.Count > 1)
+                                {
+                                    writer.Write(".find");
+                                    context.Visitor.Visit(methodCallExpression.Arguments[1]);
 
+                                }
                             }
+                            return;
                         }
-                        return;
                     default:
                         return;
                 }
@@ -675,9 +706,26 @@ namespace Raven.Client.Util
                     case "Join":
                         newName = "join";
                         break;
+                    case "Contains":
+                        newName = "indexOf";
+                        break;
+                    case "Split":
+                        newName = "split";
+                        break;
+                    case "Trim":
+                        newName = "trim";
+                        break;
+                    case "ToUpper":
+                        newName = "toUpperCase";
+                        break;
+                    case "ToLower":
+                        newName = "toLowerCase";
+                        break;
+                    case "Replace":
+                        newName = "replace";
+                        break;
                     default:
                         return;
-
                 }
 
                 var writer = context.GetWriter();
@@ -706,21 +754,66 @@ namespace Raven.Client.Util
                         {
                             context.Visitor.Visit(mce.Arguments[1]);
                         }
+
+                        writer.Write($".{newName}(");
+                        context.Visitor.Visit(mce.Arguments[0]);
+                        writer.Write(")");
                     }
                     else
                     {
                         context.Visitor.Visit(mce.Object);
-                    }
-                    writer.Write($".{newName}(");
-                    context.Visitor.Visit(mce.Arguments[0]);
+                        writer.Write($".{newName}(");
 
-                    if (mce.Arguments.Count > 1 && newName != "join")
-                    {
-                        writer.Write(", ");
-                        context.Visitor.Visit(mce.Arguments[1]);
-                    }
+                        if (newName == "split")
+                        {
+                            writer.Write("new RegExp(");
+                            if (mce.Arguments[0] is NewArrayExpression arrayExpression)
+                            {
+                                for (var i = 0; i < arrayExpression.Expressions.Count; i++)
+                                {
+                                    if (i != 0)
+                                    {
+                                        writer.Write("+\"|\"+");
+                                    }
 
-                    writer.Write(")");
+                                    context.Visitor.Visit(arrayExpression.Expressions[i]);
+                                }
+                            }
+                            else
+                            {
+                                context.Visitor.Visit(mce.Arguments[0]);
+                            }
+
+                            writer.Write(", \"g\")");
+                        }
+                        else if (newName == "replace")
+                        {
+                            writer.Write("new RegExp(");
+                            context.Visitor.Visit(mce.Arguments[0]);
+                            writer.Write(", \"g\"), ");
+
+                            context.Visitor.Visit(mce.Arguments[1]);
+                        }
+                        else
+                        {
+                            for (var i = 0; i < mce.Arguments.Count; i++)
+                            {
+                                if (i != 0)
+                                {
+                                    writer.Write(", ");
+                                }
+
+                                context.Visitor.Visit(mce.Arguments[i]);
+                            }
+                        }
+
+                        writer.Write(")");
+
+                        if (mce.Method.Name == "Contains")
+                        {
+                            writer.Write(" !== -1");
+                        }
+                    }
                 }
             }
         }

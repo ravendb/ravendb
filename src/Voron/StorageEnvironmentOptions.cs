@@ -115,7 +115,7 @@ namespace Voron
         // if set to a non zero value, will check that the expected schema is there
         public int SchemaVersion { get; set; }
 
-        public Func<Transaction, Transaction, int, bool> SchemaUpgrader { get; set; }
+        public UpgraderDelegate SchemaUpgrader { get; set; }
 
         public long MaxScratchBufferSize { get; set; }
 

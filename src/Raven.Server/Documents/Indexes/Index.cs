@@ -2205,7 +2205,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public virtual IReadOnlyDictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
+        public virtual Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
         {
             _storageOperation.TryGetReadLock(Timeout.InfiniteTimeSpan, out var storageLock);
             using (storageLock)
@@ -2489,10 +2489,15 @@ namespace Raven.Server.Documents.Indexes
                                 result.Progress.TreeProgress = progressReport.TreeProgress;
                                 result.Progress.TreeTotal = progressReport.TreeTotal;
                                 result.Progress.TreeName = progressReport.TreeName;
+                                result.Progress.GlobalProgress = progressReport.GlobalProgress;
+                                result.Progress.GlobalTotal = progressReport.GlobalTotal;
                                 result.AddMessage(progressReport.Message);
                                 onProgress?.Invoke(result.Progress);
                             });
                         }
+                        
+                        // reset tree name back to null after processing
+                        result.TreeName = null;
 
                         IOExtensions.DeleteDirectory(environmentOptions.BasePath.FullPath);
                         IOExtensions.MoveDirectory(compactPath.FullPath, environmentOptions.BasePath.FullPath);

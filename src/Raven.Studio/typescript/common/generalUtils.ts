@@ -314,6 +314,26 @@ class genUtils {
         return textLines.length;
     }
     
+    static canConsumeDelegatedEvent(event: JQueryEventObject) {
+        const target = event.target;
+        const currentTarget = event.currentTarget;
+        
+        let element = target;
+        
+        while (element != currentTarget) {
+            
+            const tag = element.tagName.toLocaleLowerCase();
+            
+            if (tag === "a" || tag === "button" || tag === "input") {
+                return false;
+            }
+            
+            element = element.parentElement;
+        }
+        
+        return true;
+    }
+    
 } 
 
 export = genUtils;

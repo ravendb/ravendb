@@ -20,12 +20,111 @@ namespace FastTests.Issues
         }
 
         [Fact]
-        public async Task Tombstones_should_be_cleaned_only_after_backup()
+        public async Task Tombstones_should_be_cleaned_only_after_backup_with_binary_backupwhen_delete_is_last_operation()
+        {
+            await Tombstones_should_be_cleaned_only_after_backup_when_delete_is_last_operation(BackupType.Backup);
+        }
+
+        [Fact]
+        public async Task Tombstones_should_be_cleaned_only_after_backup_with_snapshot_backupwhen_delete_is_last_operation()
+        {
+            await Tombstones_should_be_cleaned_only_after_backup_when_delete_is_last_operation(BackupType.Snapshot);
+        }
+
+        [Fact]
+        public async Task Tombstones_should_be_cleaned_only_after_backup_with_binary_backupwhen_delete_is_not_last_operation()
+        {
+            await Tombstones_should_be_cleaned_only_after_backup_when_delete_is_not_a_last_operation(BackupType.Backup);
+        }
+
+        [Fact]
+        public async Task Tombstones_should_be_cleaned_only_after_backup_with_snapshot_backupwhen_delete_is_not_last_operation()
+        {
+            await Tombstones_should_be_cleaned_only_after_backup_when_delete_is_not_a_last_operation(BackupType.Snapshot);
+        }
+
+        [Fact]
+        public async Task Tomstones_should_be_cleaned_properly_for_multiple_backup_tasks_for_snapshot()
+        {
+            await Tomstones_should_be_cleaned_properly_for_multiple_backup_tasks(BackupType.Snapshot);
+        }
+
+        [Fact]
+        public async Task Tomstones_should_be_cleaned_properly_for_multiple_backup_tasks_for_backup()
+        {
+            await Tomstones_should_be_cleaned_properly_for_multiple_backup_tasks(BackupType.Backup);
+        }
+
+        public async Task Tomstones_should_be_cleaned_properly_for_multiple_backup_tasks(BackupType backupType)
+        {
+            var backupPath1 = NewDataPath(suffix: "BackupFolder");
+            var backupPath2 = NewDataPath(suffix: "BackupFolder");
+            using (var store = GetDocumentStore())
+            {
+                var backupOperationResult1 = await SetupBackupAsync(backupPath1, store, backupType);
+                var backupOperationResult2 = await SetupBackupAsync(backupPath2, store, backupType);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new FooBar
+                    {
+                        Foo = "Bar1"
+                    }, "foo/bar1");
+                    session.Store(new FooBar
+                    {
+                        Foo = "Bar2"
+                    }, "foo/bar2");
+                    session.SaveChanges();
+                }
+
+                var documentDatabase = (await GetDocumentDatabaseInstanceFor(store));
+
+                using (var session = store.OpenSession())
+                {
+                    session.Delete("foo/bar1");
+                    session.SaveChanges();
+                }
+
+                RunBackup(backupOperationResult1.TaskId, documentDatabase);
+                RunBackup(backupOperationResult2.TaskId, documentDatabase);               
+
+                //force tombstone cleanup - now, after backup, tombstones should be cleaned
+                await documentDatabase.DocumentTombstoneCleaner.ExecuteCleanup();
+
+                using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var tombstonesCount = documentDatabase.DocumentsStorage.GetTombstonesFrom(context, 0, 0, int.MaxValue).Count();
+                    Assert.Equal(0, tombstonesCount);
+                }
+
+                //now delete one more document, but execute backup only for ONE of backup tasks.
+                //because the tombstone is not backed up by both tasks, only ONE will get deleted.
+                using (var session = store.OpenSession())
+                {
+                    session.Delete("foo/bar2");
+                    session.SaveChanges();
+                }
+
+                RunBackup(backupOperationResult1.TaskId, documentDatabase);
+                await documentDatabase.DocumentTombstoneCleaner.ExecuteCleanup();
+
+                //since we ran only one of backup tasks, only tombstones with minimal last etag get cleaned
+                using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var tombstonesCount = documentDatabase.DocumentsStorage.GetTombstonesFrom(context, 0, 0, int.MaxValue).Count();
+                    Assert.Equal(1, tombstonesCount);
+                }
+            }
+        }
+
+        public async Task Tombstones_should_be_cleaned_only_after_backup_when_delete_is_last_operation(BackupType backupType)
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore())
             {
-                var result = await SetupBackupAsync(backupPath, store);
+                var result = await SetupBackupAsync(backupPath, store, backupType);
 
                 using (var session = store.OpenSession())
                 {
@@ -62,13 +161,69 @@ namespace FastTests.Issues
                 using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var tombstones = documentDatabase.DocumentsStorage.GetTombstonesFrom(context, 0, 0, int.MaxValue).ToList();
-                    Assert.Empty(tombstones);
+                    var tombstonesCount = documentDatabase.DocumentsStorage.GetTombstonesFrom(context, 0, 0, int.MaxValue).Count();
+                    Assert.Equal(0,tombstonesCount);
                 }
             }
         }
 
-        private static async Task<UpdatePeriodicBackupOperationResult> SetupBackupAsync(string backupPath, DocumentStore store)
+        public async Task Tombstones_should_be_cleaned_only_after_backup_when_delete_is_not_a_last_operation(BackupType backupType)
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            using (var store = GetDocumentStore())
+            {
+                var result = await SetupBackupAsync(backupPath, store, backupType);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new FooBar { Foo = "Bar1" }, "foo/bar1");
+                    session.Store(new FooBar { Foo = "Bar2" }, "foo/bar2");
+                    session.SaveChanges();
+                }
+
+                var documentDatabase = (await GetDocumentDatabaseInstanceFor(store));
+
+                using (var session = store.OpenSession())
+                {
+                    session.Delete("foo/bar1");
+                    session.Delete("foo/bar2");
+                    session.SaveChanges();
+                }
+
+                await documentDatabase.DocumentTombstoneCleaner.ExecuteCleanup();
+
+                using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var tombstones = documentDatabase.DocumentsStorage.GetTombstonesFrom(context, 0, 0, int.MaxValue).ToList();
+
+                    //since we didn't backup the tombstones yet, they will not get cleaned
+                    Assert.Equal(2, tombstones.Count);
+                }
+
+                //do a document PUT, so latest etag won't belong to tombstone
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new FooBar { Foo = "Bar3" }, "foo/bar3");
+                    session.SaveChanges();
+                }
+
+                RunBackup(result.TaskId, documentDatabase);
+
+                //force tombstone cleanup - now, after backup, tombstones should be cleaned
+                await documentDatabase.DocumentTombstoneCleaner.ExecuteCleanup();
+
+                using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var tombstonesCount = documentDatabase.DocumentsStorage.GetTombstonesFrom(context, 0, 0, int.MaxValue).Count();
+                    Assert.Equal(0, tombstonesCount);
+                }
+            }
+        }
+
+
+        private static async Task<UpdatePeriodicBackupOperationResult> SetupBackupAsync(string backupPath, DocumentStore store, BackupType backupType)
         {
             var config = new PeriodicBackupConfiguration
             {
@@ -76,18 +231,19 @@ namespace FastTests.Issues
                 {
                     FolderPath = backupPath
                 },
-                FullBackupFrequency = "* */1 * * *",
-                IncrementalBackupFrequency = "* */2 * * *"
+                FullBackupFrequency = "* */6 * * *",
+                IncrementalBackupFrequency = "* */6 * * *",
+                BackupType = backupType
             };
 
             var result = await store.Admin.Server.SendAsync(new UpdatePeriodicBackupOperation(config, store.Database));
             return result;
         }
 
-        private static void RunBackup(long taskId, Raven.Server.Documents.DocumentDatabase documentDatabase)
+        private static void RunBackup(long taskId, Raven.Server.Documents.DocumentDatabase documentDatabase, bool forceAlwaysFullBackup = false)
         {
             var periodicBackupRunner = documentDatabase.PeriodicBackupRunner;
-            periodicBackupRunner.StartBackupTask(taskId, false);
+            periodicBackupRunner.StartBackupTask(taskId, forceAlwaysFullBackup);
 
             var cts = new CancellationTokenSource();
             cts.CancelAfter(Debugger.IsAttached ? 100000000 : 10000);

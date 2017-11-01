@@ -19,7 +19,6 @@ namespace Raven.Server.Documents
             Name = string.IsNullOrEmpty(name) ? string.Empty : name;
             _messages = new List<string>();
             Progress = new CompactionProgress(this);
-            IndexesResults = new Dictionary<string, CompactionProgressBase>();
         }
 
         public override string Message { get; set; }
@@ -27,8 +26,6 @@ namespace Raven.Server.Documents
         public CompactionProgress Progress { get; }
 
         public string Name { get; }
-
-        public Dictionary<string, CompactionProgressBase> IndexesResults { get; }
 
         public IReadOnlyList<string> Messages => _messages;
 
@@ -66,17 +63,7 @@ namespace Raven.Server.Documents
             json[nameof(SizeBeforeCompactionInMb)] = SizeBeforeCompactionInMb;
             json[nameof(SizeAfterCompactionInMb)] = SizeAfterCompactionInMb;
             json[nameof(Messages)] = Messages;
-
-            if (IndexesResults.Count != 0)
-            {
-                var indexes = new DynamicJsonValue();
-                foreach (var index in IndexesResults)
-                {
-                    indexes[index.Key] = index.Value.ToJson();
-                }
-
-                json[nameof(IndexesResults)] = indexes;
-            }
+            
             return json;
         }
 

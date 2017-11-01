@@ -1636,7 +1636,8 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Jerry", LastName = "Garcia", IdNumber = 19420801, Roles = new []{"The", "Grateful", "Dead"}}, "users/1");
-                    session.Store(new User { Name = "Bob", LastName = "Weir"}, "users/2");
+                    session.Store(new User { Name = "Bob", LastName = "Weir", Roles = new[] { "o" } }, "users/2");
+                    session.Store(new User { Name = "  John   ", LastName = "Doe" }, "users/3");
                     session.SaveChanges();
                 }
 
@@ -1651,22 +1652,48 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
                                     EndsWith = u.Name.EndsWith("b"),
                                     Substr = u.Name.Substring(0, 2),
                                     Join = string.Join(", ", u.Name, u.LastName, u.IdNumber),
-                                    ArrayJoin = string.Join("-", u.Roles)
-                                };
+                                    ArrayJoin = string.Join("-", u.Roles),
+                                    Trim = u.Name.Trim(),
+                                    ToUpper = u.Name.ToUpper(),
+                                    ToLower = u.Name.ToLower(),
+                                    Contains = u.Name.Contains("e"),
 
+                                    Split = u.Name.Split('r', StringSplitOptions.None),
+                                    SplitLimit = u.Name.Split(new char[] { 'r' }, 3),
+                                    SplitArray = u.Name.Split(new char[] { 'r', 'e' }),
+                                    SplitArgument =  u.Name.Split(u.Roles, StringSplitOptions.None),
+                                    SplitStringArray = u.Name.Split(new string[] { "er", "rr" }, StringSplitOptions.None),
+
+                                    Replace = u.Name.Replace('r', 'd'),
+                                    ReplaceString = u.Name.Replace("Jerry", "Charly"),
+                                    ReplaceArguments = u.Name.Replace(u.Name, u.LastName),
+                                    ReplaceArgumentsComplex = u.Name.Replace(u.Name + "a", u.LastName + "a")
+                                };
                     Assert.Equal("FROM Users as u SELECT { " +
-                                     "PadLeft : u.Name.padStart(10, \"z\"), " +
-                                     "PadRight : u.Name.padEnd(10, \"z\"), " +
-                                     "StartsWith : u.Name.startsWith(\"J\"), " +
-                                     "EndsWith : u.Name.endsWith(\"b\"), " +
-                                     "Substr : u.Name.substr(0, 2), " +
-                                     "Join : [u.Name,u.LastName,u.IdNumber].join(\", \"), " +
-                                     "ArrayJoin : u.Roles.join(\"-\") }"
-                                , query.ToString());
+                        "PadLeft : u.Name.padStart(10, \"z\"), " +
+                        "PadRight : u.Name.padEnd(10, \"z\"), " +
+                        "StartsWith : u.Name.startsWith(\"J\"), " +
+                        "EndsWith : u.Name.endsWith(\"b\"), " +
+                        "Substr : u.Name.substr(0, 2), " +
+                        "Join : [u.Name,u.LastName,u.IdNumber].join(\", \"), " +
+                        "ArrayJoin : u.Roles.join(\"-\"), " +
+                        "Trim : u.Name.trim(), " +
+                        "ToUpper : u.Name.toUpperCase(), " +
+                        "ToLower : u.Name.toLowerCase(), " +
+                        "Contains : u.Name.indexOf(\"e\") !== -1, " +
+                        "Split : u.Name.split(new RegExp(\"r\", \"g\")), " +
+                        "SplitLimit : u.Name.split(new RegExp(\"r\", \"g\")), " +
+                        "SplitArray : u.Name.split(new RegExp(\"r\"+\"|\"+\"e\", \"g\")), " +
+                        "SplitArgument : u.Name.split(new RegExp(u.Roles, \"g\")), " +
+                        "SplitStringArray : u.Name.split(new RegExp(\"er\"+\"|\"+\"rr\", \"g\")), " +
+                        "Replace : u.Name.replace(new RegExp(\"r\", \"g\"), \"d\"), " +
+                        "ReplaceString : u.Name.replace(new RegExp(\"Jerry\", \"g\"), \"Charly\"), " +
+                        "ReplaceArguments : u.Name.replace(new RegExp(u.Name, \"g\"), u.LastName), " +
+                        "ReplaceArgumentsComplex : u.Name.replace(new RegExp((u.Name+\"a\"), \"g\"), (u.LastName+\"a\")) }", query.ToString());
 
                     var queryResult = query.ToList();
 
-                    Assert.Equal(2, queryResult.Count);
+                    Assert.Equal(3, queryResult.Count);
 
                     Assert.Equal("Jerry".PadLeft(10, 'z'), queryResult[0].PadLeft);
                     Assert.Equal("Jerry".PadRight(10, 'z'), queryResult[0].PadRight);
@@ -1675,14 +1702,90 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
                     Assert.Equal("Je", queryResult[0].Substr);
                     Assert.Equal("Jerry, Garcia, 19420801", queryResult[0].Join);
                     Assert.Equal("The-Grateful-Dead", queryResult[0].ArrayJoin);
+                    Assert.Equal("Jerry".ToUpper(), queryResult[0].ToUpper);
+                    Assert.Equal("Jerry".ToLower(), queryResult[0].ToLower);
+                    Assert.Equal("Jerry".Contains("e"), queryResult[0].Contains);
+                    Assert.Equal("Jerry".Split('r', StringSplitOptions.None), queryResult[0].Split);
+                    Assert.Equal("Jerry".Split(new char[] { 'r' }, 3), queryResult[0].SplitLimit);
+                    Assert.Equal("Jerry".Split(new char[] { 'r', 'e' }), queryResult[0].SplitArray);
+                    Assert.Equal("Jerry".Split(new string[] { "er", "rr" }, StringSplitOptions.None), queryResult[0].SplitStringArray);
+                    Assert.Equal("Jerry".Replace('r', 'd'), queryResult[0].Replace);
+                    Assert.Equal("Jerry".Replace("Jerry", "Charly"), queryResult[0].ReplaceString);
+                    Assert.Equal("Jerry".Replace("Jerry", "Garcia"), queryResult[0].ReplaceArguments);
+                    Assert.Equal("Jerry".Replace("Jerrya", "Charlya"), queryResult[0].ReplaceArgumentsComplex);
 
                     Assert.Equal("Bob".PadLeft(10, 'z'), queryResult[1].PadLeft);
                     Assert.Equal("Bob".PadRight(10, 'z'), queryResult[1].PadRight);
+                    Assert.Equal("Bob".Split(new char[] { 'o' }), queryResult[1].SplitArgument);
                     Assert.False(queryResult[1].StartsWith);
                     Assert.True(queryResult[1].EndsWith);
                     Assert.Equal("Bo", queryResult[1].Substr);
                     Assert.Equal("Bob, Weir, 0", queryResult[1].Join);
-                    Assert.Null(queryResult[1].ArrayJoin);
+
+                    Assert.Equal("  John   ".Trim(), queryResult[2].Trim);
+                    Assert.Null(queryResult[2].ArrayJoin);
+                }
+            }
+        }
+
+        [Fact]
+        public void Custom_Function_ToDictionary_Support()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new UserGroup()
+                    {
+                        Name = "Administrators",
+                        Users = new List<User>()
+                        {
+                            new User() { Name = "Bob", LastName = "Santa Claus" },
+                            new User() { Name = "Jack", LastName = "Ripper" },
+                            new User() { Name = "John", LastName = "Doe" },
+                        }
+                    });
+                    session.Store(new UserGroup()
+                    {
+                        Name = "Editors",
+                        Users = new List<User>()
+                        {
+                            new User() { Name = "Tom", LastName = "Smith" },
+                            new User() { Name = "Ed", LastName = "Lay" },
+                            new User() { Name = "Russell", LastName = "Leetch" },
+                        }
+                    });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from u in session.Query<UserGroup>()
+                                select new
+                                {
+                                    Name = u.Name,
+                                    UsersByName = u.Users.ToDictionary(a => a.Name),
+                                    UsersByNameLastName = u.Users.ToDictionary(a => a.Name, a => a.LastName)
+                                };
+
+                    Assert.Equal("FROM UserGroups as u SELECT { " +
+                        "Name : u.Name, " +
+                        "UsersByName : u.Users.reduce(function(_obj, _cur) {_obj[(function(a){return a.Name;})(_cur)] = _cur;return _obj;}, {}), " +
+                        "UsersByNameLastName : u.Users.reduce(function(_obj, _cur) {_obj[(function(a){return a.Name;})(_cur)] = (function(a){return a.LastName;})(_cur);return _obj;}, {}) }", query.ToString());
+
+                    var queryResult = query.ToList();
+                    Assert.Equal(2, queryResult.Count);
+
+                    Assert.Equal("Administrators", queryResult[0].Name);
+                    Assert.Equal("Doe", queryResult[0].UsersByName["John"].LastName);
+                    Assert.Equal("Ripper", queryResult[0].UsersByNameLastName["Jack"]);
+                    Assert.Equal(3, queryResult[0].UsersByName.Count);
+
+                    Assert.Equal("Editors", queryResult[1].Name);
+                    Assert.Equal("Smith", queryResult[1].UsersByName["Tom"].LastName);
+                    Assert.Equal("Leetch", queryResult[1].UsersByNameLastName["Russell"]);
+                    Assert.Equal(3, queryResult[1].UsersByNameLastName.Count);
                 }
             }
         }
@@ -2252,7 +2355,12 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
                 }
             }
         }
-    
+        
+        private class UserGroup
+        {
+            public List<User> Users { get; set; }
+            public string Name { get; set; }
+        }
         private class User
         {
             public string Name { get; set; }

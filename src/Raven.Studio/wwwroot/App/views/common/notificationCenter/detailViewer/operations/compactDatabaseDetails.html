@@ -1,4 +1,4 @@
-<div class="modal-dialog" role="document">
+<div class="modal-dialog modal-lg" role="document" id="compactionModal">
     <div class="modal-content" tabindex="-1">
         <div class="modal-header">
             <div class="flex-horizontal">
@@ -16,70 +16,74 @@
             </div>
         </div>
         <div class="modal-body">
-            <div data-bind="with: progress">
+            <h3 class="text-danger" data-bind="visible: operationFailed">Operation failed</h3>
+            <div class="items-list" data-bind="visible: items().length">
+                <div class="export-legend">
+                    <div class="name">
+                    </div>
+                    <div class="status status-processed">
+                        status
+                    </div>
+                    <div class="read">
+                        processed
+                    </div>
+                    <div class="skipped">
+                        total
+                    </div>
+                    <div class="entries">
+                    </div>
+                </div>
 
-                <div class="modal-details">
-                    <div class="details-item">
-                        <div class="row">
-                            <div class="col-sm-6 text-right">
-                                Stage:
-                            </div>
-                            <div class="col-sm-6 details-value">
-                                <span data-bind="text: Message"></span>
-                            </div>
+                <div data-bind="foreach: items">
+                    <div class="export-item">
+                        <div class="name">
+                            <h3 data-bind="text: name"></h3>
                         </div>
-                    </div>
-                    <div class="details-item" data-bind="visible: TreeName">
-                        <div class="row">
-                            <div class="col-sm-6 text-right">
-                                Current Tree
-                            </div>
-                            <div class="col-sm-6 details-value">
-                                <span data-bind="text: TreeName"></span>
-                            </div>
+                        <div class="status status-processed" data-bind="visible: stage === 'processed'">
+                            <i class="icon-check"></i> <span>Processed</span>
                         </div>
-                    </div>
-                    <div class="details-item">
-                        <div class="row">
-                            <div class="col-sm-6 text-right">
-                                Processed tree entries:
-                            </div>
-                            <div class="col-sm-6 details-value">
-                                <span data-bind="text: TreeProgress.toLocaleString()"></span> / <span data-bind="text: TreeTotal.toLocaleString()"></span>
-                            </div>
+                        <div class="status status-skipped" data-bind="visible: stage === 'skipped'">
+                            <i class="icon-skip"></i> <span>Skipped</span>
                         </div>
-                    </div>
-                </div>
-                
-                <div class="progress">
-                    <div class="progress-bar" role="progressbar" data-bind="style: {'width': TreeProgress/TreeTotal*100 + '%'}">
-                    </div>
-                </div>
-                
-                <div class="modal-details">
-                    <div class="details-item">
-                        <div class="row">
-                            <div class="col-sm-6 text-right">
-                                Processed trees:
-                            </div>
-                            <div class="col-sm-6 details-value">
-                                <span data-bind="text: Processed.toLocaleString()"></span> / <span data-bind="text: Total.toLocaleString()"></span>
-                            </div>
+                        <div class="status status-processing" data-bind="visible: stage === 'processing'">
+                            <span class="global-spinner spinner-sm"></span> <span>Processing</span>
                         </div>
+                        <div class="status status-waiting" data-bind="visible: stage === 'pending'">
+                            <i class="icon-waiting"></i> <span>Pending</span>
+                        </div>
+                        <div class="read" data-bind="text: processed"> <!-- TODO css: { 'text-muted': !hasReadCount } -->
+                        </div>
+                        <div class="skipped" data-bind="text: total"> <!--  TODO css: { 'text-muted': !hasSkippedCount }-->
+                        </div>
+                        <div class="entries">trees</div>
                     </div>
-                </div>
-                <div class="progress">
-                    <div class="progress-bar" role="progressbar" data-bind="style: {'width': Processed/Total*100 + '%'}">
+                    <div class="attachments export-item" data-bind="with: detailedProgress, visible: detailedProgress">
+                        <div class="name">
+                            <h4 data-bind="text: 'Current tree: ' + treeName"></h4>
+                        </div>
+                        <div class="status">
+                        </div>
+                        <div class="read" data-bind="text: processed">
+                        </div>
+                        <div class="skipped" data-bind="text: total">
+                        </div>
+                        <div class="entries">entries</div>
                     </div>
                 </div>
             </div>
-            <div data-bind="with: result">
-                <h3 class="text-center" data-bind="text: Message"></h3>
+            <div class="clearfix" data-bind="visible: !operationFailed()">
+                <div class="pull-right margin-top">
+                    <button class="btn btn-default btn-sm" data-bind="click: toggleDetails, text: detailsVisible() ? 'Hide details':'Show details', clickBubble: false">
+                    </button>
+                </div>
             </div>
-            <div data-bind="if: operationFailed">
-                <h3 class="text-danger">Operation failed</h3>
-                <pre class="margin-top error-messages"><code data-bind="foreach: errorMessages"><span data-bind="text: $data"></span>
-</code></pre>    
+            <pre class="margin-top export-messages" data-bind="visible: detailsVisible"><code data-bind="foreach: messages"><span data-bind="text: $data"></span>
+</code></pre>
+            <div class="toggle" data-bind="visible: detailsVisible() && !operationFailed()">
+                <input id="smuggler-monitoring" type="checkbox" data-bind="checked: tail, disable: op.isCompleted">
+                <label for="smuggler-monitoring">
+                    Monitoring (tail -f)
+                </label>
             </div>
         </div>
         <div class="modal-footer">

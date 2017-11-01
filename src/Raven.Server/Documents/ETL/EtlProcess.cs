@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.ETL
 
         public abstract EtlPerformanceStats[] GetPerformanceStats();
 
-        public abstract IReadOnlyDictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection();
+        public abstract Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection();
     }
 
     public abstract class EtlProcess<TExtracted, TTransformed, TConfiguration, TConnectionString> : EtlProcess where TExtracted : ExtractedItem where TConfiguration : EtlConfiguration<TConnectionString> where TConnectionString : ConnectionString
@@ -523,7 +523,7 @@ namespace Raven.Server.Documents.ETL
             _threadAllocations = NativeMemory.ThreadAllocations.Value;
         }
 
-        public override IReadOnlyDictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
+        public override Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
         {
             var lastProcessedEtag = GetProcessState().GetLastProcessedEtagForNode(_serverStore.NodeTag);
 
