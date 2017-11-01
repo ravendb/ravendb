@@ -85,7 +85,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     DateTimeStyles.None,
                     out DateTime result) == false)
             {
-                result = File.GetLastWriteTimeUtc(filePath);
+                result = File.GetLastWriteTimeUtc(filePath).ToLocalTime();
             }
 
             return result;

@@ -187,7 +187,7 @@ class databaseCreationModel {
                     this.restore.restorePoints(restorePoints.List.map(x => {
                         const date = x.Key;
                         const dateFormat = "YYYY MMMM Do, h:mm A";
-                        x.Key = moment.utc(date).local().format(dateFormat);
+                        x.Key = moment(date).format(dateFormat);
                         return x;
                     }));
                     this.restore.selectedRestorePoint(null);

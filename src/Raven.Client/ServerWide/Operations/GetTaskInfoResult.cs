@@ -222,6 +222,8 @@ namespace Raven.Client.ServerWide.Operations
     {
         public TimeSpan TimeSpan { get; set; }
 
+        public DateTime DateTime { get; set; }
+
         public bool IsFull { get; set; }
 
         public DynamicJsonValue ToJson()
@@ -229,6 +231,7 @@ namespace Raven.Client.ServerWide.Operations
             return new DynamicJsonValue
             {
                 [nameof(TimeSpan)] = TimeSpan,
+                [nameof(DateTime)] = DateTime,
                 [nameof(IsFull)] = IsFull
             };
         }

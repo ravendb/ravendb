@@ -251,10 +251,10 @@
                                 <div class="padding padding-sm flex-horizontal">
                                     <div class="flex-grow">
                                         <ul class="properties">
-                                            <li data-bind="visible: lastFullBackup"><span data-bind="text: 'Last ' + fullBackupTypeName().toLowerCase() + ' backup'"></span><span class="text-details" data-bind="text: lastFullBackup"></span></li>
-                                            <li data-bind="visible: lastIncrementalBackup"><span>Last incremental backup:</span><span  class="text-details" data-bind="text: lastIncrementalBackup"></span></li>
-                                            <li data-bind="visible: nextBackup() && !ongoingBackup()"><span>Next estimated backup:</span><span data-bind="text: nextBackup, attr: { class: textClass() }"></span></li>
-                                            <li data-bind="visible: ongoingBackup"><span>Backup started at:</span><span data-bind="text: ongoingBackup, attr: { class: textClass() }"></span></li>
+                                            <li data-bind="visible: lastFullBackupHumanized"><span data-bind="text: 'Last ' + fullBackupTypeName().toLowerCase() + ' backup'"></span><span class="text-details" data-bind="text: lastFullBackupHumanized"></span></li>
+                                            <li data-bind="visible: lastIncrementalBackupHumanized"><span>Last incremental backup:</span><span  class="text-details" data-bind="text: lastIncrementalBackupHumanized"></span></li>
+                                            <li data-bind="visible: nextBackup() && !onGoingBackup()"><span>Next estimated backup:</span><span data-bind="text: nextBackupHumanized, attr: { class: textClass() }"></span></li>
+                                            <li data-bind="visible: onGoingBackup"><span>Backup started:</span><span data-bind="text: onGoingBackupHumanized, attr: { class: textClass() }"></span></li>
                                         </ul>
                                     </div>
                                     <div>

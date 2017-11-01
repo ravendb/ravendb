@@ -146,6 +146,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             return new NextBackup
             {
                 TimeSpan = nextBackupTimeSpan,
+                DateTime = DateTime.UtcNow.Add(nextBackupTimeSpan),
                 IsFull = isFullBackup
             };
         }
@@ -188,7 +189,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                 BackupType = configuration.BackupType,
                 LastEtag = previousBackupStatus.LastEtag,
                 LastFullBackup = previousBackupStatus.LastFullBackup,
-                LastIncrementalBackup = previousBackupStatus.LastIncrementalBackup
+                LastIncrementalBackup = previousBackupStatus.LastIncrementalBackup,
+                IsFull = isFullBackup
             };
 
             try
@@ -197,7 +199,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 using (var tx = context.OpenReadTransaction())
                 {
                     var backupToLocalFolder = PeriodicBackupConfiguration.CanBackupUsing(configuration.LocalSettings);
-                    var now = SystemTime.UtcNow.ToString(DateTimeFormat, CultureInfo.InvariantCulture);
+                    var now = DateTime.Now.ToString(DateTimeFormat, CultureInfo.InvariantCulture);
 
                     if (runningBackupStatus.LocalBackup == null)
                         runningBackupStatus.LocalBackup = new LocalBackup();
@@ -248,7 +250,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                             if (_logger.IsInfoEnabled)
                                 _logger.Info("Skipping incremental backup because " +
                                              $"last etag ({currentLastEtag}) hasn't changed since last backup");
-
                             return;
                         }
                     }
@@ -270,7 +271,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                             IOExtensions.DeleteFile(backupFilePath);
                         }
                     }
-                    
+
                     runningBackupStatus.LastEtag = lastEtag;
                     runningBackupStatus.FolderName = folderName;
                 }
@@ -300,7 +301,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 runningBackupStatus.Error = new Error
                 {
-                    Exception = e,
+                    Exception = e.ToString(),
                     At = DateTime.UtcNow
                 };
 
@@ -1182,7 +1183,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             return new RunningBackup
             {
                 StartTime = periodicBackup.StartTime,
-                IsFull = periodicBackup.BackupStatus.IsFull
+                IsFull = periodicBackup.RunningBackupStatus?.IsFull ?? false
             };
         }
 
