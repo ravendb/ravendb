@@ -636,7 +636,11 @@ namespace Raven.Server.Documents.Queries.Parser
                                 op = between;
                                 return true;
                             }
-
+                            if (methodOperator is MethodExpression me)
+                            {
+                                op = me;
+                                return true;
+                            }
                             ThrowParseException("Unexpected operator after method call: " + methodOperator);
                         }
 
@@ -647,11 +651,18 @@ namespace Raven.Server.Documents.Queries.Parser
                 }
             }
 
-            if (Value(out var val) == false)
-                ThrowParseException($"parsing {type} expression, expected a value (operators only work on scalar / parameters values)");
-
-            op = new BinaryExpression(field, val, type);
-            return true;
+            if (Value(out var val))
+            {
+                op = new BinaryExpression(field, val, type);
+                return true;
+            }
+            if (Operator(true, out var op2))
+            {
+                op = new BinaryExpression(field, op2, type);
+                return true;
+            }
+            op = null;
+            return false;
         }
 
         private bool Method(FieldExpression field, out MethodExpression op)

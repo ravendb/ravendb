@@ -161,6 +161,17 @@ namespace Raven.Client.Documents.Session.Tokens
             };
         }
 
+        public static WhereToken CmpXchg(string fieldName, string parameterName, SearchOperator op)
+        {
+            return new WhereToken
+            {
+                FieldName = fieldName,
+                ParameterName = parameterName,
+                WhereOperator = WhereOperator.CmpXchgMatch,
+                SearchOperator = op
+            };
+        }
+        
         public static WhereToken Lucene(string fieldName, string parameterName)
         {
             return new WhereToken
@@ -285,6 +296,9 @@ namespace Raven.Client.Documents.Session.Tokens
                 case WhereOperator.Regex:
                     writer.Append("regex(");
                     break;
+                case  WhereOperator.CmpXchgMatch:
+                    writer.Append("cmpxchg.match(");
+                    break;
             }
 
             WriteField(writer, FieldName);
@@ -348,6 +362,12 @@ namespace Raven.Client.Documents.Session.Tokens
                     if (SearchOperator == Queries.SearchOperator.And)
                         writer.Append(", AND");
 
+                    writer.Append(")");
+                    break;
+                case WhereOperator.CmpXchgMatch:
+                    writer
+                        .Append(", $")
+                        .Append(ParameterName);
                     writer.Append(")");
                     break;
                 case WhereOperator.Lucene:

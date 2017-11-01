@@ -15,6 +15,8 @@
         Sum,
         Intersect,
 
+        CmpXchg,
+        
         Circle,
         Wkt,
         Point,

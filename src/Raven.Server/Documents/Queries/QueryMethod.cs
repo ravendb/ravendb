@@ -14,6 +14,9 @@ namespace Raven.Server.Documents.Queries
             if (string.Equals(methodName, "search", StringComparison.OrdinalIgnoreCase))
                 return MethodType.Search;
 
+            if (string.Equals(methodName, "cmpxchg", StringComparison.OrdinalIgnoreCase))
+                return MethodType.CmpXchg;
+            
             if (string.Equals(methodName, "boost", StringComparison.OrdinalIgnoreCase))
                 return MethodType.Boost;
 

@@ -5,6 +5,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Spatial;
+using Raven.Client.Documents.Session.Tokens;
 
 namespace Raven.Client.Documents.Session
 {
@@ -170,6 +171,11 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         void WhereRegex(string fieldName, string pattern);
 
+        /// <summary>
+        ///   Matches where CmpXchg.Match(key, value)
+        /// </summary>
+        void CmpXchg(string key, object value);
+        
         /// <summary>
         ///   Add an AND to the query
         /// </summary>

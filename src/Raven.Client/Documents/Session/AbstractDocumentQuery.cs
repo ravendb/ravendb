@@ -745,6 +745,15 @@ If you really want to do in memory filtering on the data returned from the query
             tokens.AddLast(WhereToken.Regex(fieldName, AddQueryParameter(TransformValue(new WhereParams { Value = pattern, FieldName = fieldName }))));
         }
 
+        public void CmpXchg(string key, object value)
+        {
+            var tokens = GetCurrentWhereTokens();
+            AppendOperatorIfNeeded(tokens);
+            NegateIfNeeded(tokens, key);
+
+            tokens.AddLast(WhereToken.CmpXchg(key, AddQueryParameter(value), SearchOperator.Or));
+        }
+
         /// <summary>
         ///   Add an AND to the query
         /// </summary>
@@ -1000,8 +1009,7 @@ If you really want to do in memory filtering on the data returned from the query
 
             tokens.AddLast(WhereToken.Search(fieldName, AddQueryParameter(searchTerms), @operator));
         }
-
-
+        
         /// <inheritdoc />
         public override string ToString()
         {

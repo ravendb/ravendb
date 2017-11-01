@@ -144,6 +144,12 @@ namespace Raven.Server.Documents.Queries.Results
             return ReturnProjection(result, doc, score, _context);
         }
 
+         public bool Filter(Document doc, QueryMetadata queryMetadata)
+        {
+            return queryMetadata.CmpXchgMethod?.EvaluateExpression(this, doc) == false;
+        }
+        
+        
         public Document GetProjectionFromDocument(Document doc, Lucene.Net.Documents.Document luceneDoc, float score, FieldsToFetch fieldsToFetch, JsonOperationContext context, IState state)
         {
             var result = new DynamicJsonValue();
@@ -469,7 +475,7 @@ namespace Raven.Server.Documents.Queries.Results
             }
         }
 
-        private object InvokeFunction(string methodName, Query query, object[] args)
+        public object InvokeFunction(string methodName, Query query, object[] args)
         {
             var key = new QueryKey(query.DeclaredFunctions);
             using (_database.Scripts.GetScriptRunner(key, readOnly: true, patchRun: out var run))
@@ -484,6 +490,12 @@ namespace Raven.Server.Documents.Queries.Results
             }
         }
 
+
+        public bool TryGetValueFromDocument(Document document, string fieldName, out object value)
+        {
+            return BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, fieldName, out value);
+        }
+        
         private bool TryGetFieldValueFromDocument(Document document, FieldsToFetch.FieldToFetch field, out object value)
         {
             if (field.IsDocumentId)

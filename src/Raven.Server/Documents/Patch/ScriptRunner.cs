@@ -115,6 +115,7 @@ namespace Raven.Server.Documents.Patch
                 ScriptEngine.SetValue("loadPath", new ClrFunctionInstance(ScriptEngine, LoadDocumentByPath));
                 ScriptEngine.SetValue("del", new ClrFunctionInstance(ScriptEngine, DeleteDocument));
                 ScriptEngine.SetValue("put", new ClrFunctionInstance(ScriptEngine, PutDocument));
+                ScriptEngine.SetValue("cmpxchg", new ClrFunctionInstance(ScriptEngine, CmpXchangeValue));
 
                 ScriptEngine.SetValue("getMetadata", new ClrFunctionInstance(ScriptEngine, GetMetadata));
 
@@ -413,6 +414,35 @@ namespace Raven.Server.Documents.Patch
                 return TranslateToJs(ScriptEngine, _context, metadata);              
             }
 
+            private JsValue CmpXchangeValue(JsValue self, JsValue[] args)
+            {
+                AssertValidDatabaseContext();
+
+                if (args.Length != 1 || args[0].IsString() == false)
+                    throw new InvalidOperationException("cmpxchg(key) must be called with a single string argument");
+
+                return CmpXchangeValueInternal(args[0].AsString());
+            }
+
+//            private JsValue CmpXchangeMatch(JsValue self, JsValue[] args)
+//            {
+//                AssertValidDatabaseContext();
+//
+//                if (args.Length != 2)
+//                    throw new InvalidOperationException("cmpxchg.match(key, value) must be called");
+//
+//                var storedValue =  CmpXchangeValueInternal(args[0].AsString());
+//                var inputValue = args[1];
+//                
+//                if (storedValue == null && inputValue == null)
+//                    return true;
+//
+//                if (storedValue == null)
+//                    return false;
+//                
+//                return storedValue.Equals(args[1]);
+//            }
+            
             private JsValue LoadDocument(JsValue self, JsValue[] args)
             {
                 AssertValidDatabaseContext();
@@ -459,6 +489,25 @@ namespace Raven.Server.Documents.Patch
                 var regex = _regexCache.Get(args[1].AsString());
                 
                 return new JsValue(regex.IsMatch(args[0].AsString()));
+            }
+
+            private JsValue CmpXchangeValueInternal(string key)
+            {
+                if (string.IsNullOrEmpty(key))
+                    return JsValue.Undefined;
+                BlittableJsonReaderObject value;
+                var prefix = _database.Name + "/";
+                using (_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    value = _database.ServerStore.Cluster.GetCmpXchg(ctx, prefix + key).Value;
+                }
+                
+                if (value == null)
+                    return null;
+                
+                var jsValue = TranslateToJs(ScriptEngine, _context, value);
+                return jsValue.AsObject().Get("Object");
             }
 
             private JsValue LoadDocumentInternal(string id)
@@ -602,6 +651,8 @@ namespace Raven.Server.Documents.Patch
                     return new JsValue(dbl);
                 if (o is string s)
                     return new JsValue(s);
+                if (o is LazyStringValue ls)
+                    return new JsValue(ls.ToString());
                 if (o is JsValue js)
                     return js;
                 throw new InvalidOperationException("No idea how to convert " + o + " to JsValue");

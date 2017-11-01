@@ -827,6 +827,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 return;
             }
 
+            if (declaringType == typeof(RavenQuery))
+            {
+                VisitRavenQueryMethodCall(expression);
+                return;
+            }
+            
             if (declaringType == typeof(String))
             {
                 VisitStringMethodCall(expression);
@@ -883,6 +889,18 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 GetValueFromExpression(expression.Arguments[1], GetMemberType(memberInfo)).ToString());
         }
 
+        private void VisitRavenQueryMethodCall(MethodCallExpression expression)
+        {
+            if (expression.Arguments.Count != 2)
+            {
+                throw new NotSupportedException(string.Format("CmpXchg.Match() overload with {0} arguments is not supported. " +
+                                                              "Only CmpXchg.Match(string key, T value) overload is supported." +
+                                                              "Expression: {1}.", expression.Arguments.Count, expression));
+            }
+            var memberInfo = GetMember(expression.Arguments[1]);
+            _documentQuery.CmpXchg(expression.Arguments[0].ToString(), GetValueFromExpression(expression.Arguments[1], GetMemberType(memberInfo)).ToString());
+        }
+        
         private void VisitLinqExtensionsMethodCall(MethodCallExpression expression)
         {
             switch (expression.Method.Name)
@@ -1017,7 +1035,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         }
                     }
                     break;
-                case nameof(LinqExtensions.GroupByArrayValues):
+case "cmpxchg.match":
+                        break;                case nameof(LinqExtensions.GroupByArrayValues):
                 case nameof(LinqExtensions.GroupByArrayContent):
                     EnsureValidDynamicGroupByMethod(expression.Method.Name);
 
@@ -1820,6 +1839,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     new JavascriptConversionExtensions.StringSupport(),
                     new JavascriptConversionExtensions.ConstSupport(),
                     new JavascriptConversionExtensions.MetadataSupport(),
+                    new JavascriptConversionExtensions.CmpXchgValueSupport(),
+                    new JavascriptConversionExtensions.CmpXchgMatchSupport(),
                     MemberInitAsJson.ForAllTypes,
                     loadSupport));
 
@@ -1964,6 +1985,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     new JavascriptConversionExtensions.ConstSupport(),
                     new JavascriptConversionExtensions.LoadSupport(),
                     new JavascriptConversionExtensions.MetadataSupport(),
+                    new JavascriptConversionExtensions.CmpXchgValueSupport(),
+                    new JavascriptConversionExtensions.CmpXchgMatchSupport(),
                     MemberInitAsJson.ForAllTypes));
 
             if (expression.Type == typeof(TimeSpan) && expression.NodeType != ExpressionType.MemberAccess)

@@ -342,6 +342,9 @@ namespace Raven.Server.Documents.Queries
                         return HandleExists(query, parameters, me, metadata);
                     case MethodType.Exact:
                         return HandleExact(context, query, me, metadata, parameters, analyzer, factories);
+//                    case MethodType.CmpXchg:
+//                        var fieldName = ExtractIndexFieldName(query, parameters, me.Arguments[1], metadata);
+//                        return LuceneQueryHelper.Term(fieldName, LuceneQueryHelper.Asterisk, LuceneTermType.WildCard, exact: true);
                     case MethodType.Within:
                     case MethodType.Contains:
                     case MethodType.Disjoint:
