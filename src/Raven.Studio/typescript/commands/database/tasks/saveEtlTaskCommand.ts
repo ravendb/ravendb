@@ -19,14 +19,14 @@ class saveEtlTaskCommand<T extends Raven.Client.ServerWide.ETL.RavenEtlConfigura
 
     private updateEtl(): JQueryPromise<Raven.Client.ServerWide.Operations.ModifyOngoingTaskResult> {        
         
-        let scriptsToResetQueryString :string = "";
-        for (let i = 0; i < this.scriptsToReset.length; i++) {
-             scriptsToResetQueryString += `&reset=${encodeURIComponent(this.scriptsToReset[i])}`;   
-        }
+        const args = {            
+            name: this.db.name,
+            id : this.payload.TaskId || undefined,
+            reset: this.scriptsToReset || undefined
+        };       
         
-        const args = this.payload.TaskId ? { name: this.db.name, id: this.payload.TaskId } : { name: this.db.name };
-        const url = endpoints.global.adminDatabases.adminEtl + this.urlEncodeArgs(args) + scriptsToResetQueryString;
-
+        const url = endpoints.global.adminDatabases.adminEtl + this.urlEncodeArgs(args);
+        
         return this.put(url, JSON.stringify(this.payload));
     }
 
