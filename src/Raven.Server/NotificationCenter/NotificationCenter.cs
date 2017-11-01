@@ -28,6 +28,7 @@ namespace Raven.Server.NotificationCenter
             _shutdown = shutdown;
             Options = new NotificationCenterOptions();
             Paging = new Paging(this, _notificationsStorage);
+            RequestLatency = new RequestLatency(this, _notificationsStorage);
         }
 
         public bool IsInitialized { get; set; }
@@ -44,6 +45,7 @@ namespace Raven.Server.NotificationCenter
         }
 
         public readonly Paging Paging;
+        public readonly RequestLatency RequestLatency;
 
         public readonly NotificationCenterOptions Options;
 

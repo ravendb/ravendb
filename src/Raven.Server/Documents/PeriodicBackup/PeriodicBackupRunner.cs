@@ -1206,7 +1206,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                foreach (var collection in _database.DocumentsStorage.GetCollections(context).ToList())
+                foreach (var collection in _database.DocumentsStorage.GetCollections(context))
                 {
                     results[collection.Name] = minLastEtag;
                 }
