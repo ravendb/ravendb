@@ -96,24 +96,25 @@ namespace Raven.Server.Web.Authentication
                                                     "For a more detailed explanation please read about authentication and certificates in the RavenDB documentation.");
             }
 
+            // this creates a client certificate which is signed by the current server certificate
+            var selfSignedCertificate = CertificateUtils.CreateSelfSignedClientCertificate(certificate.Name, Server.ClusterCertificateHolder);
+
+            var newCertDef = new CertificateDefinition
+            {
+                Name = certificate.Name,
+                // this does not include the private key, that is only for the client
+                Certificate = Convert.ToBase64String(selfSignedCertificate.Export(X509ContentType.Cert)),
+                Permissions = certificate.Permissions,
+                SecurityClearance = certificate.SecurityClearance,
+                Thumbprint = selfSignedCertificate.Thumbprint
+            };
+
             if (PlatformDetails.RunningOnPosix)
             {
                 ValidateCaExistsInOsStores(certificate);
             }
 
-            // this creates a client certificate which is signed by the current server certificate
-            var selfSignedCertificate = CertificateUtils.CreateSelfSignedClientCertificate(certificate.Name, Server.ClusterCertificateHolder);
-
-            var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + selfSignedCertificate.Thumbprint,
-                new CertificateDefinition
-                {
-                    Name = certificate.Name,
-                    // this does not include the private key, that is only for the client
-                    Certificate = Convert.ToBase64String(selfSignedCertificate.Export(X509ContentType.Cert)),
-                    Permissions = certificate.Permissions,
-                    SecurityClearance = certificate.SecurityClearance,
-                    Thumbprint = selfSignedCertificate.Thumbprint
-                }));
+            var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + selfSignedCertificate.Thumbprint, newCertDef));
             await ServerStore.Cluster.WaitForIndexNotification(res.Index);
 
             return selfSignedCertificate.Export(X509ContentType.Pfx, certificate.Password);
