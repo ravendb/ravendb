@@ -320,13 +320,12 @@ namespace Raven.Client.Documents.Changes
 
         private async Task Send(string command, string value)
         {
-            var stackTrace = Environment.StackTrace;
-
-            await _semaphore.WaitAsync(_cts.Token).ConfigureAwait(false);
             var taskCompletionSource = new TaskCompletionSource<object>();
-            var currentCommandId = ++_commandId;
+            int currentCommandId;
+            await _semaphore.WaitAsync(_cts.Token).ConfigureAwait(false);
             try
             {
+                currentCommandId = ++_commandId;
                 using (_requestExecutor.ContextPool.AllocateOperationContext(out var context))
                 using (var writer = new BlittableJsonTextWriter(context, _ms))
                 {
@@ -347,7 +346,7 @@ namespace Raven.Client.Documents.Changes
 
                 _ms.TryGetBuffer(out var buffer);
 
-                _confirmations.Add(_commandId, taskCompletionSource);
+                _confirmations.Add(currentCommandId, taskCompletionSource);
                 
                 await _client.SendAsync(buffer, WebSocketMessageType.Text, endOfMessage: true, cancellationToken: _cts.Token).ConfigureAwait(false);
             }
