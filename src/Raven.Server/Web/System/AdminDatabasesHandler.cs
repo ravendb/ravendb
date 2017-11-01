@@ -1393,18 +1393,31 @@ namespace Raven.Server.Web.System
                             var before = CalculateStorageSizeInBytes(compactSettings.DatabaseName).Result / 1024 / 1024;
                             var overallResult = new CompactionResult(compactSettings.DatabaseName);
                             
+                            // first fill in data 
+                            foreach (var indexName in compactSettings.Indexes)
+                            {
+                                var indexCompactionResult = new CompactionResult(indexName);
+                                overallResult.IndexesResults.Add(indexName, indexCompactionResult);
+                            }
+                            
+                            // then do actual compaction
                             foreach (var indexName in compactSettings.Indexes)
                             {
                                 var index = database.IndexStore.GetIndex(indexName);
-                                var indexCompactionResult = new CompactionResult(indexName);
-                                overallResult.IndexesResults.Add(indexName, indexCompactionResult);
-                                index.Compact(onProgress, indexCompactionResult);
+                                var indexCompactionResult = overallResult.IndexesResults[indexName];
+                                index.Compact(onProgress, (CompactionResult) indexCompactionResult);
+                                indexCompactionResult.Processed = true;
                             }
 
                             if (!compactSettings.Documents)
-                                return overallResult;
+                            {
+                                overallResult.Skipped = true;
+                                overallResult.Processed = true;
+                                return overallResult;   
+                            }
 
                             await compactDatabaseTask.Execute(onProgress, overallResult);
+                            overallResult.Processed = true;
                             
                             overallResult.SizeAfterCompactionInMb = CalculateStorageSizeInBytes(compactSettings.DatabaseName).Result / 1024 / 1024;
                             overallResult.SizeBeforeCompactionInMb = before;
