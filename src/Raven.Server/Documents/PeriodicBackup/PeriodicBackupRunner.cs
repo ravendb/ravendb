@@ -203,7 +203,9 @@ namespace Raven.Server.Documents.PeriodicBackup
             {
                 TaskId = configuration.TaskId,
                 BackupType = configuration.BackupType,
-                LastEtag = previousBackupStatus.LastEtag
+                LastEtag = previousBackupStatus.LastEtag,
+                LastFullBackup = previousBackupStatus.LastFullBackup,
+                LastIncrementalBackup = previousBackupStatus.LastIncrementalBackup
             };
 
             try
@@ -300,8 +302,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                     _logger.Info($"Successfully created {(isFullBackup ? fullBackupText : "an incremental backup")} " +
                                  $"in {totalSw.ElapsedMilliseconds:#,#;;0} ms");
                 }
-
-                throw new InvalidOperationException("testing");
             }
             catch (OperationCanceledException)
             {
@@ -346,7 +346,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                     runningBackupStatus.NodeTag = _serverStore.NodeTag;
                     runningBackupStatus.DurationInMs = totalSw.ElapsedMilliseconds;
-                    runningBackupStatus.Version++;
+                    runningBackupStatus.Version = ++previousBackupStatus.Version;
 
                     periodicBackup.BackupStatus = runningBackupStatus;
                     // save the backup status
