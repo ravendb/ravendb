@@ -80,9 +80,11 @@
                         <strong data-bind="text: fullBackupHumanReadable"></strong>
                         <br/>
                         <span>Next estimated backup: </span> 
-                        <strong data-bind="text: nextFullBackupOccurrenceServerTime"></strong> <span data-bind="if: nextFullBackupOccurrenceServerTime() !== 'N/A'">(Server time)</span>
+                        <strong data-bind="text: nextFullBackupOccurrenceServerTime"></strong> <span data-bind="if: nextFullBackupOccurrenceServerTime() !== 'N/A'">
+                            <span data-bind="if: canDisplayNextFullBackupOccurrenceLocalTime">(Server time)</span>
+                        </span>
                         
-                        <div class="next-backup-occurrence-local">
+                        <div class="next-backup-occurrence-local" data-bind="if: canDisplayNextFullBackupOccurrenceLocalTime">
                             <strong data-bind="text: nextFullBackupOccurrenceLocalTime"></strong> <span data-bind="if: nextFullBackupOccurrenceLocalTime">(Local time)</span>
                         </div>
                     </div>
@@ -106,9 +108,11 @@
                         <span>Description:</span>
                         <strong data-bind="text: incrementalBackupHumanReadable"></strong><br/>
                         <span>Next estimated backup: </span> 
-                        <strong data-bind="text: nextIncrementalBackupOccurrenceServerTime"></strong> <span data-bind="if: nextIncrementalBackupOccurrenceServerTime() !== 'N/A'">(Server time)</span>
+                        <strong data-bind="text: nextIncrementalBackupOccurrenceServerTime"></strong> <span data-bind="if: nextIncrementalBackupOccurrenceServerTime() !== 'N/A'">
+                            <span data-bind="if: canDisplayNextIncrementalBackupOccurrenceLocalTime">(Server time)</span>
+                        </span>
                         
-                        <div class="next-backup-occurrence-local">
+                        <div class="next-backup-occurrence-local" data-bind="if: canDisplayNextIncrementalBackupOccurrenceLocalTime">
                             <strong data-bind="text: nextIncrementalBackupOccurrenceLocalTime"></strong> <span data-bind="if: nextIncrementalBackupOccurrenceLocalTime">(Local time)</span>
                         </div>
                     </div>
