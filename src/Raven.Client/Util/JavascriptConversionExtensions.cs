@@ -736,46 +736,32 @@ namespace Raven.Client.Util
 
                         if (newName == "split")
                         {
-                            writer.Write("/");
+                            writer.Write("new RegExp(");
                             if (mce.Arguments[0] is NewArrayExpression arrayExpression)
                             {
                                 for (var i = 0; i < arrayExpression.Expressions.Count; i++)
                                 {
                                     if (i != 0)
                                     {
-                                        writer.Write("|");
+                                        writer.Write("+\"|\"+");
                                     }
 
-                                    writer.Write(
-                                        Regex.Escape(
-                                            ((ConstantExpression)arrayExpression.Expressions[i]).Value
-                                                .ToString()
-                                        ).Replace("/", "\\/")
-                                    );
+                                    context.Visitor.Visit(arrayExpression.Expressions[i]);
                                 }
                             }
                             else
                             {
-                                writer.Write(
-                                    Regex.Escape(
-                                        ((ConstantExpression)mce.Arguments[0]).Value
-                                            .ToString()
-                                    ).Replace("/", "\\/")
-                                );
+                                context.Visitor.Visit(mce.Arguments[0]);
                             }
 
-                            writer.Write("/g");
+                            writer.Write(", \"g\")");
                         }
                         else if (newName == "replace")
                         {
-                            writer.Write("/");
-                            writer.Write(
-                                Regex.Escape(
-                                    ((ConstantExpression)mce.Arguments[0]).Value
-                                        .ToString()
-                                ).Replace("/", "\\/")
-                            );
-                            writer.Write("/g, ");
+                            writer.Write("new RegExp(");
+                            context.Visitor.Visit(mce.Arguments[0]);
+                            writer.Write(", \"g\"), ");
+
                             context.Visitor.Visit(mce.Arguments[1]);
                         }
                         else
