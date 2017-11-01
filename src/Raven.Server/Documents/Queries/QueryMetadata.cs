@@ -8,9 +8,11 @@ using System.Text;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Exceptions;
+using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Parser;
+using Raven.Server.Documents.Queries.Results;
 using Sparrow;
 using Sparrow.Json;
 
@@ -95,7 +97,7 @@ namespace Raven.Server.Documents.Queries
             IsCollectionQuery = false;
         }
 
-        private void AddWhereField(QueryFieldName fieldName, BlittableJsonReaderObject parameters, bool search = false, bool exact = false, AutoSpatialOptions spatial = null)
+        public void AddWhereField(QueryFieldName fieldName, BlittableJsonReaderObject parameters, bool search = false, bool exact = false, AutoSpatialOptions spatial = null)
         {
             var indexFieldName = GetIndexFieldName(fieldName, parameters);
 
@@ -140,6 +142,7 @@ namespace Raven.Server.Documents.Queries
                     switch (methodType)
                     {
                         case MethodType.Id:
+                        case MethodType.CmpXchg:
                         case MethodType.Count:
                         case MethodType.Sum:
                         case MethodType.Point:
@@ -807,6 +810,8 @@ namespace Raven.Server.Documents.Queries
                 QueryText, parameters);
         }
 
+        public ExpressionEvaluator CmpXchgMethod;
+        
         private class FillWhereFieldsAndParametersVisitor : WhereExpressionVisitor
         {
             private readonly QueryMetadata _metadata;
@@ -824,6 +829,47 @@ namespace Raven.Server.Documents.Queries
                 _insideExact++;
 
                 return new DisposableAction(() => _insideExact--);
+            }
+
+            public override void VisitBooleanMethod(QueryExpression leftSide, QueryExpression rightSide, OperatorType operatorType, BlittableJsonReaderObject parameters)
+            {
+                if (leftSide is FieldExpression fe)
+                    _metadata.AddWhereField(new QueryFieldName(fe.FieldValue, fe.IsQuoted), parameters, exact: _insideExact > 0);
+                if (leftSide is MethodExpression me)
+                {
+                    var methodType = QueryMethod.GetMethodType(me.Name);
+                    switch (methodType)
+                    {
+                        case MethodType.CmpXchg: // WHERE cmpxchg([<Func> | <Value>]) = <Value>
+                            if (!(rightSide is ValueExpression val))
+                            {
+                                throw new ArgumentException("Right side of the cmpxchg expression must be value type.");
+                            }
+                            if (me.Arguments == null || me.Arguments.Count != 1)
+                            {
+                                throw new ArgumentException("The cmpxchg expression must have exaclty one argument");
+                            }
+                            _metadata.CmpXchgMethod = new ExpressionEvaluator(_metadata, operatorType, me, val, parameters);
+                            break;
+                        case MethodType.Id:// WHERE id() = [<Func> | <Value>]
+                            if (rightSide is MethodExpression meRight)
+                            {
+                                _metadata.FillIds = new SingleMethodEvaluator(_metadata, meRight, parameters);
+                                _metadata.AddWhereField(QueryFieldName.DocumentId, parameters, exact: _insideExact > 0);
+                            }
+                            else
+                            {
+                                if (rightSide is FieldExpression rfe)
+                                    _metadata.AddWhereField(new QueryFieldName(rfe.FieldValue, rfe.IsQuoted), parameters, exact: _insideExact > 0);
+                                _metadata.AddWhereField(QueryFieldName.DocumentId, parameters, exact: _insideExact > 0);
+                            }
+                            break;
+                        case MethodType.Sum:
+                        case MethodType.Count:
+                            VisitFieldToken(leftSide,rightSide,parameters);
+                            break;
+                    }
+                }
             }
 
             public override void VisitFieldToken(QueryExpression fieldName, QueryExpression value, BlittableJsonReaderObject parameters)
@@ -1135,6 +1181,129 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
+        public SingleMethodEvaluator FillIds;
+
+        public class SingleMethodEvaluator
+        {
+            private readonly QueryMetadata _metadata;
+            private readonly MethodExpression _expression;
+            private readonly BlittableJsonReaderObject _parameters;
+            private readonly Query _query;
+
+            public SingleMethodEvaluator(QueryMetadata metadata, MethodExpression me, BlittableJsonReaderObject parameters)
+            {
+                _query = metadata.Query;
+                _metadata = metadata;
+                _expression = me;
+                _parameters = parameters;
+            }
+            
+            public object EvaluateSingleMethod(QueryResultRetrieverBase revtriver, Document doc)
+            {
+                _query.TryAddFunction(_expression.Name, _expression.Name);
+                if (_expression.Arguments == null || _expression.Arguments.Count == 0)
+                {
+                    return revtriver.InvokeFunction(_expression.Name, _query, new object[] { });
+                }
+                var list = new List<object>();
+                foreach (var argument in _expression.Arguments)
+                {
+                    if (argument is MethodExpression inner)
+                    {
+                        var eval = new SingleMethodEvaluator(_metadata, inner, _parameters);
+                        list.Add(eval.EvaluateSingleMethod(revtriver, doc));
+                    }
+                    else if (argument is ValueExpression v)
+                    {
+                        list.Add(v.Token.ToString());
+                    }
+                    else if (argument is FieldExpression f)
+                    {
+                        if (f.IsQuoted)
+                        {
+                            list.Add(f.FieldValue);
+                            continue;
+                        }
+                        
+                        if (_metadata.Query.From.Alias.HasValue)
+                        {
+                            var alias = _metadata.Query.From.Alias.Value;
+                            if (alias == f.FieldValue)
+                            {
+                                list.Add(doc);
+                            }
+                        }
+                        else if (string.IsNullOrEmpty(f.FieldValueWithoutAlias) == false)
+                        {
+                            revtriver.TryGetValueFromDocument(doc, f.FieldValueWithoutAlias, out object value);
+                            list.Add(value);
+                        }
+                        else if(string.IsNullOrEmpty(f.FieldValue) == false)
+                        {
+                            revtriver.TryGetValueFromDocument(doc, f.FieldValue, out object value);
+                            list.Add(value);
+                        }
+                        else
+                        {
+                            throw new ArgumentException($"Invalid field argument '{f}' for the method '{_expression.Name}'");
+                        }
+                    }
+                    else
+                    {
+                        throw new ArgumentException($"Invalid argument '{argument}' for the method '{_expression.Name}'");
+                    }
+                }
+                return revtriver.InvokeFunction(_expression.Name, _query,list.ToArray());
+            }
+        }
+        
+        public class ExpressionEvaluator
+        {
+            private readonly QueryMetadata _metadata;
+            private readonly OperatorType _operatorType;
+            private readonly QueryExpression _left;
+            private readonly ValueExpression _right;
+            private readonly BlittableJsonReaderObject _parameters;
+            
+            public ExpressionEvaluator(QueryMetadata metadata, OperatorType operatorType, QueryExpression left, ValueExpression right, BlittableJsonReaderObject parameters)
+            {
+                _metadata = metadata;
+                _operatorType = operatorType;
+                _left = left;
+                _right = right;
+                _parameters = parameters;
+            }
+            
+            public bool EvaluateExpression(QueryResultRetrieverBase revtriver, Document doc)
+            {
+                var parameterValue = _right.Token.ToString();
+                string value = null;
+
+                if (_left is MethodExpression me)
+                {
+                    value = (string)new SingleMethodEvaluator(_metadata, me, _parameters).EvaluateSingleMethod(revtriver,doc);
+                }
+                
+                switch (_operatorType)
+                {
+                    case OperatorType.Equal:
+                        return value == parameterValue;
+                    case OperatorType.NotEqual:
+                        return value != parameterValue;
+//                                    case OperatorType.LessThan:
+//                                        return value < parameterValue;
+//                                    case OperatorType.GreaterThan:
+//                                        return value > parameterValue;
+//                                    case OperatorType.LessThanEqual:
+//                                        return value <= parameterValue;
+//                                    case OperatorType.GreaterThanEqual:
+//                                        return value >= parameterValue;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+            }
+        }
+       
         private QueryFieldName ExtractFieldNameFromFirstArgument(List<QueryExpression> arguments, string methodName, BlittableJsonReaderObject parameters)
         {
             if (arguments == null || arguments.Count == 0)

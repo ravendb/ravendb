@@ -20,6 +20,7 @@ namespace Raven.Client.Documents.Session.Tokens
         Contains,
         Disjoint,
         Intersects,
-        Regex
+        Regex,
+        CmpXchgMatch
     }
 }

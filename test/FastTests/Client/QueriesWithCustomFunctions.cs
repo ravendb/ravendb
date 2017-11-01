@@ -8,6 +8,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 
@@ -2167,6 +2168,125 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
             }
         }
 
+        [Fact]
+        public async Task QueryCmpXchgValue(){
+        
+            using (var store = GetDocumentStore())
+            {
+                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("users/1", "Karmel", 0));
+                var res = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<string>("users/1"));
+                Assert.Equal("Karmel", res.Value);
+                Assert.True(res.Successful);
+                            
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia" }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from u in session.Query<User>()
+                                select new
+                                {
+                                    u.Name,
+                                    UniqueUser = RavenQuery.CmpXchgValue<string>("users/1")
+                                };
+
+                    Assert.Equal("FROM Users as u SELECT { Name : u.Name, UniqueUser : cmpxchg(\"users/1\") }", query.ToString());
+
+                    var queryResult = query.ToList();
+
+                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal("Karmel", queryResult[0].UniqueUser);
+                }
+            }
+        }
+        
+        [Fact]
+        public async Task QueryCmpXchgInnerValue(){
+        
+            using (var store = GetDocumentStore())
+            {
+                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("users/1", new User
+                {
+                    Name = "Karmel",
+                    LastName = "Indych"
+                }, 0));
+                var res = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<User>("users/1"));
+                Assert.Equal("Karmel", res.Value.Name);
+                Assert.True(res.Successful);
+                            
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia" }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from u in session.Query<User>()
+                        select new
+                        {
+                            u.Name,
+                            UniqueUser = RavenQuery.CmpXchgValue<User>("users/1").Name,
+                        };
+
+                    Assert.Equal("FROM Users as u SELECT { Name : u.Name, UniqueUser : cmpxchg(\"users/1\").Name }", query.ToString());
+
+                    var queryResult = query.ToList();
+
+                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal("Karmel", queryResult[0].UniqueUser);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task QueryCmpXchg(){
+        
+            using (var store = GetDocumentStore())
+            {
+                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("Tom","Jerry", 0));
+                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("Zeus","Hera", 0));
+                
+                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("users/1","Thunderstorm", 0));
+                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("users/2","Cat", 0));
+                
+                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("Jerry@gmail.com","users/2", 0));
+                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("Zeus@gmail.com","users/1", 0));
+                            
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry"}, "users/2");
+                    session.Store(new User { Name = "Zeus"}, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var rql = "FROM Users WHERE cmpxchg(Name) = \"Hera\"";
+                    var queryResult = session.Advanced.RawQuery<User>(rql).ToList();
+
+                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal("Zeus", queryResult[0].Name);
+                    
+                    rql = "FROM Users as u WHERE cmpxchg(id(u)) = \"Thunderstorm\"";
+                    queryResult = session.Advanced.RawQuery<User>(rql).ToList();
+                    
+                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal("Zeus", queryResult[0].Name);
+                    
+                    rql = "FROM Users WHERE id() = cmpxchg(\"Zeus@gmail.com\")";
+                    queryResult = session.Advanced.RawQuery<User>(rql).ToList();
+                    
+                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal("Zeus", queryResult[0].Name);
+                }
+            }
+        }
+        
+        
         public class ProjectionParameters : RavenTestBase
         {
             public class Document
@@ -2398,6 +2518,7 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
         }
         private class User
         {
+            public string Id { get; set; }
             public string Name { get; set; }
             public string LastName { get; set; }
             public DateTime Birthday { get; set; }

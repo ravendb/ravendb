@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Queries
                 VisitMethodTokens(me.Name, me.Arguments, parameters);
                 return;
             }
-
+            
             if (!(expression is BinaryExpression be))
             {
                 ThrowUnexpectedExpression(expression, parameters);
@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Queries
                 case OperatorType.GreaterThan:
                 case OperatorType.LessThanEqual:
                 case OperatorType.GreaterThanEqual:
-                    VisitFieldToken(be.Left, be.Right, parameters);
+                    VisitBooleanMethod(be.Left, be.Right, be.Operator, parameters);
                     return;
                 case OperatorType.And:
                 case OperatorType.AndNot:
@@ -107,6 +107,8 @@ namespace Raven.Server.Documents.Queries
             return value.Value;
         }
 
+        public abstract void VisitBooleanMethod(QueryExpression leftSide, QueryExpression rightSide, OperatorType operatorType, BlittableJsonReaderObject parameters);
+        
         public abstract void VisitFieldToken(QueryExpression fieldName, QueryExpression value, BlittableJsonReaderObject parameters);
 
         public abstract void VisitBetween(QueryExpression fieldName, QueryExpression firstValue, QueryExpression secondValue, BlittableJsonReaderObject parameters);

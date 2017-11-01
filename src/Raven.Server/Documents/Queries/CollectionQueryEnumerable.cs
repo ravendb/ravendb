@@ -90,11 +90,12 @@ namespace Raven.Server.Documents.Queries
                 if (_fieldsToFetch.IsDistinct)
                     _alreadySeenProjections = new HashSet<ulong>();
 
-                _ids = ExtractIdsFromQuery(query);
+                _resultsRetriever = new MapQueryResultRetriever(database, query, documents, context, fieldsToFetch, includeDocumentsCommand);
+                
+                _ids = ExtractIdsFromQuery(query,_resultsRetriever);
 
                 _sort = ExtractSortFromQuery(query);
 
-                _resultsRetriever = new MapQueryResultRetriever(database, query, documents, context, fieldsToFetch, includeDocumentsCommand);
             }
 
             private static Sort ExtractSortFromQuery(IndexQueryServerSide query)
@@ -116,7 +117,7 @@ namespace Raven.Server.Documents.Queries
                 return new Sort(customFieldName);
             }
 
-            private List<Slice> ExtractIdsFromQuery(IndexQueryServerSide query)
+            private List<Slice> ExtractIdsFromQuery(IndexQueryServerSide query, MapQueryResultRetriever resultsRetriever)
             {
                 if (string.IsNullOrWhiteSpace(query.Query))
                     return null;
@@ -127,10 +128,12 @@ namespace Raven.Server.Documents.Queries
                 if (query.Metadata.IndexFieldNames.Contains(QueryFieldName.DocumentId) == false)
                     return null;
 
-                var idsRetriever = new RetrieveDocumentIdsVisitor(query.Metadata, _context.Allocator);
+                var idsRetriever = new RetrieveDocumentIdsVisitor(resultsRetriever, query.Metadata, _context.Allocator);
 
                 idsRetriever.Visit(query.Metadata.Query.Where, query.QueryParameters);
 
+                
+                
                 return idsRetriever.Ids.OrderBy(x => x, SliceComparer.Instance).ToList();
             }
 
@@ -162,6 +165,11 @@ namespace Raven.Server.Documents.Queries
                         continue;
                     }
 
+                    if (_resultsRetriever.Filter(_inner.Current, _query.Metadata))
+                    {
+                        continue;
+                    }
+                    
                     _innerCount++;
 
                     var doc = _fieldsToFetch.IsProjection
@@ -299,27 +307,47 @@ namespace Raven.Server.Documents.Queries
             private class RetrieveDocumentIdsVisitor : WhereExpressionVisitor
             {
                 private readonly Query _query;
+                private readonly MapQueryResultRetriever _resultsRetriever;
                 private readonly QueryMetadata _metadata;
                 private readonly ByteStringContext _allocator;
 
                 public readonly List<Slice> Ids = new List<Slice>();
 
-                public RetrieveDocumentIdsVisitor(QueryMetadata metadata, ByteStringContext allocator) : base(metadata.Query.QueryText)
+                public RetrieveDocumentIdsVisitor(MapQueryResultRetriever resultsRetriever, QueryMetadata metadata, ByteStringContext allocator) : base(metadata.Query.QueryText)
                 {
                     _query = metadata.Query;
+                    _resultsRetriever = resultsRetriever;
                     _metadata = metadata;
                     _allocator = allocator;
                 }
 
+                public override void VisitBooleanMethod(QueryExpression leftSide, QueryExpression rightSide, OperatorType operatorType, BlittableJsonReaderObject parameters)
+                {
+                    VisitFieldToken(leftSide, rightSide, parameters);
+                }
+
                 public override void VisitFieldToken(QueryExpression fieldName, QueryExpression value, BlittableJsonReaderObject parameters)
                 {
-                    if (fieldName is MethodExpression me && me.Name.Equals("id") && value is ValueExpression ve)
+                    if (fieldName is MethodExpression me)
                     {
-                        var id = QueryBuilder.GetValue(_query, _metadata, parameters, ve);
+                        var methodType = QueryMethod.GetMethodType(me.Name);
+                        switch (methodType)
+                        {
+                            case MethodType.Id:
+                                if (value is ValueExpression ve)
+                                {
+                                    var id = QueryBuilder.GetValue(_query, _metadata, parameters, ve);
 
-                        Debug.Assert(id.Type == ValueTokenType.String);
+                                    Debug.Assert(id.Type == ValueTokenType.String);
 
-                        AddId(id.Value.ToString());
+                                    AddId(id.Value.ToString());
+                                }
+                                else if (_metadata.FillIds != null)
+                                {
+                                    AddId(_metadata.FillIds.EvaluateSingleMethod(_resultsRetriever, null).ToString());
+                                }
+                                break;
+                        }
                     }
                 }
 
