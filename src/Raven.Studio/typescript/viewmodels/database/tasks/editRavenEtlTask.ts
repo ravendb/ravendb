@@ -194,12 +194,8 @@ class editRavenEtlTask extends viewModelBase {
             savingNewStringAction.resolve();
         }
 
-        // 5. All is well, Save Raven Etl task       
-        const scriptsToReset = editedEtl.transformationScripts().map((x)=> {
-            if (x.resetScript()) {
-                return x.name();
-            }
-        });
+        // 5. All is well, Save Raven Etl task    
+        const scriptsToReset = editedEtl.transformationScripts().filter(x => x.resetScript()).map(x => x.name());
         
         const dto = editedEtl.toDto();
         saveEtlTaskCommand.forRavenEtl(this.activeDatabase(), dto, scriptsToReset)
