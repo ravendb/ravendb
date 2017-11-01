@@ -1,12 +1,10 @@
 /// <reference path="../../typings/tsd.d.ts" />
 
 import database = require("models/resources/database");
-import messagePublisher = require("common/messagePublisher");
 import abstractWebSocketClient = require("common/abstractWebSocketClient");
 
 abstract class eventsWebSocketClient<T> extends abstractWebSocketClient<T> {
 
-    private static messageWasShownOnce: boolean = false;
     inErrorState = ko.observable<boolean>(false);
     ignoreWebSocketConnectionError = ko.observable<boolean>(false);
 
@@ -26,21 +24,10 @@ abstract class eventsWebSocketClient<T> extends abstractWebSocketClient<T> {
 
         this.inErrorState(false);
         this.ignoreWebSocketConnectionError(false);
-        
-        if (eventsWebSocketClient.messageWasShownOnce) {
-            messagePublisher.reportSuccess("Successfully reconnected to changes stream!");
-            eventsWebSocketClient.messageWasShownOnce = false;
-        }
     }
 
     protected onError(e: Event) {
         this.inErrorState(true);
-        
-        if (!eventsWebSocketClient.messageWasShownOnce && !this.disposed) {
-            
-            messagePublisher.reportError("Changes stream was disconnected!", "Retrying connection shortly.");
-            eventsWebSocketClient.messageWasShownOnce = true;
-        }
     }
 
     protected send(command: string, value?: string, needToSaveSentMessages: boolean = true) {
