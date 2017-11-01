@@ -2205,7 +2205,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public virtual IReadOnlyDictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
+        public virtual Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
         {
             _storageOperation.TryGetReadLock(Timeout.InfiniteTimeSpan, out var storageLock);
             using (storageLock)

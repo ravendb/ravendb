@@ -30,8 +30,6 @@ namespace Raven.Client.ServerWide.PeriodicBackup
 
         public long? LastEtag { get; set; }
 
-        public Dictionary<string, long> LastTombstoneEtagsByCollection { get; set; } = new Dictionary<string, long>();
-
         public string FolderName { get; set; }
 
         public long? DurationInMs { get; set; }

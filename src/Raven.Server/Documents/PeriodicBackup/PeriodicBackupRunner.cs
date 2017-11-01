@@ -149,24 +149,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 IsFull = isFullBackup
             };
         }
-
-        private Dictionary<string, long> UpdateTombstoneLastEtagsPerCollection(DocumentsOperationContext context, Dictionary<string, long> existingData)
-        {
-            existingData = existingData ?? new Dictionary<string, long>(); //precaution, just in case
-
-            //precaution, should never be true
-            if (context.Transaction == null)
-                throw new InvalidOperationException("Expected an active transaction, but found none. This shouldn't happen.");
-
-            foreach (var collection in _database.DocumentsStorage.GetCollections(context))
-            {
-                var lastTombstoneEtag = _database.DocumentsStorage.GetLastTombstoneEtag(context, collection.Name);
-                existingData[collection.Name] = Math.Max(existingData[collection.Name], lastTombstoneEtag);
-            }
-
-            return existingData;
-        }
-
+        
         private bool IsFullBackup(PeriodicBackupStatus backupStatus,
             PeriodicBackupConfiguration configuration,
             DateTime? nextFullBackup, DateTime? nextIncrementalBackup)
@@ -285,9 +268,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                             IOExtensions.DeleteFile(backupFilePath);
                         }
                     }
-
-                    //this throws an exception should be fixed in: http://issues.hibernatingrhinos.com/issue/RavenDB-8369
-                    //currentBackupStatus.LastTombstoneEtagsByCollection = UpdateTombstoneLastEtagsPerCollection(context, status.LastTombstoneEtagsByCollection);
+                    
                     runningBackupStatus.LastEtag = lastEtag;
                     runningBackupStatus.FolderName = folderName;
                 }
@@ -422,7 +403,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                             options.OperateOnTypes |= DatabaseItemType.Tombstones;
 
                         var result = CreateBackup(options, backupFilePath, startDocumentEtag, context);
-                        lastEtag = result.GetLastEtag();
+                        lastEtag = isFullBackup ?
+                            DocumentsStorage.ReadLastEtag(tx.InnerTransaction) :
+                            result.GetLastEtag();
                     }
                     else
                     {
@@ -1203,24 +1186,29 @@ namespace Raven.Server.Documents.PeriodicBackup
             };
         }
 
-        public IReadOnlyDictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
+        public Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
         {
-            var results = new Dictionary<string,long>();
+            var results = new Dictionary<string, long>();
 
+            var minLastEtag = long.MaxValue;
             foreach (var periodicBackup in _periodicBackups.Values)
             {
-                foreach (var etagItem in periodicBackup.BackupStatus.LastTombstoneEtagsByCollection)
+                if (periodicBackup.BackupStatus?.LastEtag != null &&
+                    minLastEtag > periodicBackup.BackupStatus?.LastEtag)
                 {
-                    if (results.TryGetValue(etagItem.Key, out long existingEtag))
-                    {
-                        //since we are collecting max etags for tombstones cleaner,
-                        //we need to get the minimal etag processed in all backups
-                        results[etagItem.Key] = Math.Min(existingEtag, etagItem.Value);
-                    }
-                    else
-                    {
-                        results[etagItem.Key] = etagItem.Value;
-                    }
+                    minLastEtag = periodicBackup.BackupStatus.LastEtag.Value;
+                }
+            }
+
+            if(minLastEtag == long.MaxValue)
+                minLastEtag = 0;
+
+            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                foreach (var collection in _database.DocumentsStorage.GetCollections(context).ToList())
+                {
+                    results[collection.Name] = minLastEtag;
                 }
             }
 
