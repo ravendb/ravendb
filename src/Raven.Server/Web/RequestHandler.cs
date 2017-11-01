@@ -20,6 +20,7 @@ using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -358,11 +359,12 @@ namespace Raven.Server.Web
             throw new ArgumentException($"Query string value '{name}' must appear exactly once");
         }
 
-        protected DisposableAction TrackRequestTime(bool alertThresholdExceeded = true)
+        protected DisposableAction TrackRequestTime(string source, bool doPerformanceHintIfTooLong = true)
         {
             var sw = Stopwatch.StartNew();
             _context.HttpContext.Response.OnStarting(state => 
             {
+                sw.Stop();
                 var httpContext = (HttpContext)state;
                 httpContext.Response.Headers.Add(Constants.Headers.RequestTime, sw.ElapsedMilliseconds.ToString());
                 return Task.FromResult(0);
@@ -372,21 +374,16 @@ namespace Raven.Server.Web
             {
                 try
                 {
-                    if (alertThresholdExceeded)
+                    if (doPerformanceHintIfTooLong)
                     {
-                        var threshold = _context.RavenServer.Configuration.Core.TooLongRequestThreshold.AsTimeSpan;
+                        var threshold = _context.RavenServer.Configuration.PerformanceHints.TooLongRequestThresholdInSec.AsTimeSpan;
                         if (threshold.TotalMilliseconds >= sw.ElapsedMilliseconds)
-                        {
-
-                            var alert = AlertRaised.Create(
-                                "Request Latency",
-                                $@"Request latency has surpassed the configured threshold (The threshold is {threshold.TotalSeconds} sec, 
-                            but the request lasted {sw.Elapsed.TotalSeconds} sec). {Environment.NewLine} 
-                            The request path was: {_context.HttpContext.Request.Path}",
-                                AlertType.TooLongRequestDuration,
-                                NotificationSeverity.Warning);
-
-                            _context.RavenServer.ServerStore.NotificationCenter.Add(alert);
+                        {                           
+                            _context.RavenServer
+                                    .ServerStore
+                                    .NotificationCenter
+                                    .RequestLatency
+                                    .AddHint(_context.HttpContext.Request.Path,sw.ElapsedMilliseconds,source);
                         }
                     }
                 }
@@ -397,6 +394,7 @@ namespace Raven.Server.Web
                     {
                         _logger.Info($"Failed to write request time in response headers. This is not supposed to happen and is probably a bug. The request path was: {_context.HttpContext.Request.Path}",e);
                     }
+                    throw;
                 }
             });
         }

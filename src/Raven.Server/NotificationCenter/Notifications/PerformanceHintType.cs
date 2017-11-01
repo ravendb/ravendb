@@ -5,6 +5,7 @@
         None,
         Indexing,
         Replication,
-        Paging
+        Paging,
+        RequestLatency
     }
 }

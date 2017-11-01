@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using Raven.Server.Config.Attributes;
+using Raven.Server.Config.Settings;
 using Sparrow;
 
 namespace Raven.Server.Config.Categories
@@ -26,5 +27,11 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(2048)]
         [ConfigurationEntry("PerformanceHints.MaxNumberOfResults", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public int MaxNumberOfResults { get; set; }
+
+        [Description("Request latency threshold before the server would issue a performance hint")]
+        [ConfigurationEntry("TooLongRequestThresholdInSec", ConfigurationEntryScope.ServerWideOnly)]
+        [DefaultValue(30)]
+        [TimeUnit(TimeUnit.Seconds)]
+        public TimeSetting TooLongRequestThresholdInSec { get; set; }
     }
 }

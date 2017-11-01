@@ -51,13 +51,7 @@ namespace Raven.Server.Config.Categories
         [Description("Indicates if we should throw an exception if any index could not be opened")]
         [DefaultValue(false)]
         [ConfigurationEntry("ThrowIfAnyIndexCannotBeOpened", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public bool ThrowIfAnyIndexCannotBeOpened { get; set; }
-
-        [Description("Indicates request latency threshold before the server would issue an alert")]
-        [ConfigurationEntry("TooLongRequestThreshold", ConfigurationEntryScope.ServerWideOnly)]
-        [DefaultValue(2)]
-        [TimeUnit(TimeUnit.Seconds)]
-        public TimeSetting TooLongRequestThreshold { get; set; }
+        public bool ThrowIfAnyIndexCannotBeOpened { get; set; }     
 
         public override void Initialize(IConfigurationRoot settings, IConfigurationRoot serverWideSettings, ResourceType type, string resourceName)
         {
