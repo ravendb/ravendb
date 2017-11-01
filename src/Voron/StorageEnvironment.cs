@@ -34,6 +34,8 @@ using Voron.Util.Conversion;
 
 namespace Voron
 {
+    public delegate bool UpgraderDelegate(Transaction readTx, Transaction writeTx, int currentVersion, out int versionAfterUpgrade);
+
     public class StorageEnvironment : IDisposable
     {
         public void QueueForSyncDataFile()
@@ -312,36 +314,44 @@ namespace Voron
 
         private void UpgradeSchemaIfRequired()
         {
-            int schemaVersionVal;
-
-            var readPersistentContext = new TransactionPersistentContext(true);
-            using (var readTxInner = NewLowLevelTransaction(readPersistentContext, TransactionFlags.Read))
-            using (var readTx = new Transaction(readTxInner))
+            try
             {
-                var metadataTree = readTx.ReadTree(Constants.MetadataTreeNameSlice);
+                int schemaVersionVal;
 
-                var schemaVersion = metadataTree.Read("schema-version");
-                if (schemaVersion == null)
-                    VoronUnrecoverableErrorException.Raise(this, "Could not find schema version in metadata tree, possible mismatch / corruption?");
+                var readPersistentContext = new TransactionPersistentContext(true);
+                using (var readTxInner = NewLowLevelTransaction(readPersistentContext, TransactionFlags.Read))
+                using (var readTx = new Transaction(readTxInner))
+                {
+                    var metadataTree = readTx.ReadTree(Constants.MetadataTreeNameSlice);
 
-                schemaVersionVal = schemaVersion.Reader.ReadLittleEndianInt32();
+                    var schemaVersion = metadataTree.Read("schema-version");
+                    if (schemaVersion == null)
+                        VoronUnrecoverableErrorException.Raise(this, "Could not find schema version in metadata tree, possible mismatch / corruption?");
+
+                    schemaVersionVal = schemaVersion.Reader.ReadLittleEndianInt32();
+                }
+
+                if (Options.SchemaVersion != 0 &&
+                    schemaVersionVal != Options.SchemaVersion)
+                {
+                    if (schemaVersionVal > Options.SchemaVersion)
+                        ThrowSchemaUpgradeRequired(schemaVersionVal, "You have a schema version is newer than the current supported version.");
+
+                    UpgraderDelegate upgrader = Options.SchemaUpgrader;
+                    if (upgrader == null)
+                        ThrowSchemaUpgradeRequired(schemaVersionVal, "You need to upgrade the schema but there is no schema uprader provided.");
+
+                    UpgradeSchema(schemaVersionVal, upgrader);
+                }
             }
-
-            if (Options.SchemaVersion != 0 &&
-                schemaVersionVal != Options.SchemaVersion)
+            catch (Exception e)
             {
-                if (schemaVersionVal > Options.SchemaVersion)
-                    ThrowSchemaUpgradeRequired(schemaVersionVal, "You have a schema version is newer than the current supported version.");
-
-                Func<Transaction, Transaction, int, bool> upgrader = Options.SchemaUpgrader;
-                if (upgrader == null)
-                    ThrowSchemaUpgradeRequired(schemaVersionVal, "You need to upgrade the schema but there is no schema uprader provided.");
-
-                UpgradeSchema(schemaVersionVal, upgrader);
+                VoronUnrecoverableErrorException.Raise(this,e.Message);
+                throw;
             }
         }
 
-        private void UpgradeSchema(int schemaVersionVal, Func<Transaction, Transaction, int, bool> upgrader)
+        private void UpgradeSchema(int schemaVersionVal, UpgraderDelegate upgrader)
         {
             while (schemaVersionVal < Options.SchemaVersion)
             {
@@ -353,11 +363,12 @@ namespace Voron
                 using (var writeTx = new Transaction(writeTxInner))
                 {
                     // ReSharper disable once PossibleNullReferenceException
-                    if (upgrader(readTx, writeTx, schemaVersionVal) == false)
+                    if (upgrader(readTx, writeTx, schemaVersionVal, out schemaVersionVal) == false)
                         break;
 
                     var metadataTree = writeTx.ReadTree(Constants.MetadataTreeNameSlice);
-                    schemaVersionVal++;
+                    //schemaVersionVal++;
+                    
                     metadataTree.Add("schema-version", EndianBitConverter.Little.GetBytes(schemaVersionVal));
                     writeTx.Commit();
                 }

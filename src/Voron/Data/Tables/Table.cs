@@ -502,6 +502,7 @@ namespace Voron.Data.Tables
                         if (SliceComparer.AreEqual(oldVal, newVal) == false ||
                             forceUpdate)
                         {
+                          
                             var indexTree = GetTree(indexDef);
                             var fst = GetFixedSizeTree(indexTree, oldVal.Clone(_tx.Allocator), 0);
                             fst.Delete(id);
@@ -769,8 +770,16 @@ namespace Voron.Data.Tables
                 var fstIndex = GetFixedSizeTree(tree, value, 0);
                 using (var it = fstIndex.Iterate())
                 {
-                    it.Seek(long.MaxValue);
-
+                    if (it is FixedSizeTree.LargeIterator)
+                    {
+                        if (it.SeekToLast() == false)
+                            yield break;
+                    }
+                    else
+                    {
+                        it.Seek(long.MaxValue);
+                    }
+                    
                     var result = new TableValueHolder();
                     while (it.MovePrev())
                     {
@@ -928,6 +937,32 @@ namespace Voron.Data.Tables
             }
         }
 
+        public IEnumerable<SeekResult> SeekBackwardFrom(TableSchema.SchemaIndexDef index, Slice last)
+        {
+            var tree = GetTree(index);
+            if (tree == null ||
+                tree.State.NumberOfEntries == 0)
+                yield break;
+
+            using (var it = tree.Iterate(false))
+            {
+                if (it.Seek(last) == false && it.Seek(Slices.AfterAllKeys) == false)
+                    yield break;
+
+                do
+                {
+                    foreach (var result in GetBackwardSecondaryIndexForValue(tree, it.CurrentKey.Clone(_tx.Allocator)))
+                    {
+                        yield return new SeekResult
+                        {
+                            Key = it.CurrentKey,
+                            Result = result
+                        };
+                    }
+                } while (it.MovePrev());
+            }
+        }
+        
         public TableValueHolder SeekOneBackwardFrom(TableSchema.SchemaIndexDef index, Slice prefix, Slice last)
         {
             var tree = GetTree(index);
@@ -956,23 +991,6 @@ namespace Voron.Data.Tables
             }
 
             return null;
-        }
-
-        public TableValueHolder SeekOneBackwardFrom(TableSchema.SchemaIndexDef index, Slice value)
-        {
-            var tree = GetTree(index);
-            using (var it = tree.Iterate(false))
-            {
-                if (it.Seek(value) == false)
-                    return null;
-
-                foreach (var result in GetSecondaryIndexForValue(tree, it.CurrentKey.Clone(_tx.Allocator)))
-                {
-                    return result;
-                }
-
-                return null;
-            }
         }
 
         public long GetCountOfMatchesFor(TableSchema.SchemaIndexDef index, Slice value)

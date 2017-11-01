@@ -24,7 +24,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             using (step.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 step.WriteTx.DeleteTree("RevisionsFlagsAndEtag"); // remove the old index
-
+                step.WriteTx.CreateTree(DeleteRevisionEtagSlice);
                 foreach (var collection in step.DocumentsStorage.RevisionsStorage.GetCollections(step.ReadTx))
                 {
                     var collectionName = new CollectionName(collection);
