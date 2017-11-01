@@ -126,21 +126,51 @@ namespace Raven.Client.Util
                         context.PreventDefault();
                         context.Visitor.Visit(methodCallExpression.Arguments[0]);
                         return;
+                    case "ToDictionary":
+                        {
+                            context.PreventDefault();
+                            var writer = context.GetWriter();
+                            using (writer.Operation(methodCallExpression))
+                            {
+                                context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                                writer.Write(".reduce(function(_obj, _cur) {");
+
+                                writer.Write("_obj[");
+                                context.Visitor.Visit(methodCallExpression.Arguments[1]);
+                                writer.Write("(_cur)] = ");
+
+                                if (methodCallExpression.Arguments.Count > 2)
+                                {
+                                    context.Visitor.Visit(methodCallExpression.Arguments[2]);
+                                    writer.Write("(_cur);");
+                                }
+                                else
+                                {
+                                    writer.Write("_cur;");
+                                }
+
+                                writer.Write("return _obj;");
+                                writer.Write("}, {})");
+                            }
+                            return;
+                        }
                     case "FirstOrDefault":
                     case "First":
-                        context.PreventDefault();
-                        context.Visitor.Visit(methodCallExpression.Arguments[0]);
-                        var writer = context.GetWriter();
-                        using (writer.Operation(methodCallExpression))
                         {
-                            if (methodCallExpression.Arguments.Count > 1)
+                            context.PreventDefault();
+                            context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                            var writer = context.GetWriter();
+                            using (writer.Operation(methodCallExpression))
                             {
-                                writer.Write(".find");
-                                context.Visitor.Visit(methodCallExpression.Arguments[1]);
+                                if (methodCallExpression.Arguments.Count > 1)
+                                {
+                                    writer.Write(".find");
+                                    context.Visitor.Visit(methodCallExpression.Arguments[1]);
 
+                                }
                             }
+                            return;
                         }
-                        return;
                     default:
                         return;
                 }
