@@ -2496,6 +2496,9 @@ namespace Raven.Server.Documents.Indexes
                                 onProgress?.Invoke(result.Progress);
                             });
                         }
+                        
+                        // reset tree name back to null after processing
+                        result.TreeName = null;
 
                         IOExtensions.DeleteDirectory(environmentOptions.BasePath.FullPath);
                         IOExtensions.MoveDirectory(compactPath.FullPath, environmentOptions.BasePath.FullPath);

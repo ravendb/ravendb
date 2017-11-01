@@ -120,6 +120,7 @@ class notificationCenter {
         );
 
         this.customOperationMerger.push(smugglerDatabaseDetails);
+        this.customOperationMerger.push(compactDatabaseDetails);
 
         this.allNotifications = ko.pureComputed(() => {
             const globalNotifications = this.globalNotifications();

@@ -76,11 +76,15 @@ namespace Raven.Server.Documents
                             result.Progress.TreeProgress = progressReport.TreeProgress;
                             result.Progress.TreeTotal = progressReport.TreeTotal;
                             result.Progress.TreeName = progressReport.TreeName;
+                            result.Progress.GlobalProgress = progressReport.GlobalProgress;
+                            result.Progress.GlobalTotal = progressReport.GlobalTotal;
                             result.AddMessage(progressReport.Message);
                             onProgress?.Invoke(result);
                         }, _token);
                     }
 
+                    result.TreeName = null;
+                    
                     _token.ThrowIfCancellationRequested();
                     IOExtensions.MoveDirectory(basePath, basePath + "-old");
                     IOExtensions.MoveDirectory(basePath + "-Compacting", basePath);

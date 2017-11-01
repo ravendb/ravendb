@@ -1,28 +1,48 @@
-﻿using Raven.Client.Documents.Operations;
+﻿using System;
+using System.Collections.Generic;
+using Raven.Client.Documents.Operations;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents
 {
     public class CompactionProgressBase
     {
+        public virtual Dictionary<string, CompactionProgressBase> IndexesResults { get; set; } = new Dictionary<string, CompactionProgressBase>();
         public virtual string Message { get; set; }
         public virtual string TreeName { get; set; }
         public virtual long TreeProgress { get; set; }
         public virtual long TreeTotal { get; set; }
         public virtual long GlobalProgress { get; set; }
         public virtual long GlobalTotal { get; set; }
+        public virtual bool Skipped { get; set; }
+        public virtual bool Processed { get; set; }
         
         public virtual DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue(GetType())
+            var json = new DynamicJsonValue(GetType())
             {
                 [nameof(Message)] = Message,
                 [nameof(TreeName)] = TreeName,
                 [nameof(TreeProgress)] = TreeProgress,
                 [nameof(TreeTotal)] = TreeTotal,
                 [nameof(GlobalProgress)] = GlobalProgress,
-                [nameof(GlobalTotal)] = GlobalTotal
+                [nameof(GlobalTotal)] = GlobalTotal,
+                [nameof(Skipped)] = Skipped,
+                [nameof(Processed)] = Processed
             };
+            
+            if (IndexesResults.Count != 0)
+            {
+                var indexes = new DynamicJsonValue();
+                foreach (var index in IndexesResults)
+                {
+                    indexes[index.Key] = index.Value.ToJson();
+                }
+
+                json[nameof(IndexesResults)] = indexes;
+            }
+            
+            return json;
 
         }
     }
@@ -70,6 +90,24 @@ namespace Raven.Server.Documents
         {
             get => _result.GlobalTotal;
             set => _result.GlobalTotal = value;
+        }
+        
+        public override Dictionary<string, CompactionProgressBase> IndexesResults
+        {
+            get => _result.IndexesResults;
+            set => _result.IndexesResults = value;
+        }
+        
+        public override bool Skipped
+        {
+            get => _result.Skipped;
+            set => _result.Skipped = value;
+        }
+        
+        public override bool Processed
+        {
+            get => _result.Processed;
+            set => _result.Processed = value;
         }
     }
 }
