@@ -1688,6 +1688,68 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
         }
 
         [Fact]
+        public void Custom_Function_ToDictionary_Support()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new UserGroup()
+                    {
+                        Name = "Administrators",
+                        Users = new List<User>()
+                        {
+                            new User() { Name = "Bob", LastName = "Santa Claus" },
+                            new User() { Name = "Jack", LastName = "Ripper" },
+                            new User() { Name = "John", LastName = "Doe" },
+                        }
+                    });
+                    session.Store(new UserGroup()
+                    {
+                        Name = "Editors",
+                        Users = new List<User>()
+                        {
+                            new User() { Name = "Tom", LastName = "Smith" },
+                            new User() { Name = "Ed", LastName = "Lay" },
+                            new User() { Name = "Russell", LastName = "Leetch" },
+                        }
+                    });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from u in session.Query<UserGroup>()
+                                select new
+                                {
+                                    Name = u.Name,
+                                    UsersByName = u.Users.ToDictionary(a => a.Name),
+                                    UsersByNameLastName = u.Users.ToDictionary(a => a.Name, a => a.LastName)
+                                };
+
+                    Assert.Equal("FROM UserGroups as u SELECT { " +
+                        "Name : u.Name, " +
+                        "UsersByName : u.Users.reduce(function(_obj, _cur) {_obj[(function(a){return a.Name;})(_cur)] = _cur;return _obj;}, {}), " +
+                        "UsersByNameLastName : u.Users.reduce(function(_obj, _cur) {_obj[(function(a){return a.Name;})(_cur)] = (function(a){return a.LastName;})(_cur);return _obj;}, {}) }", query.ToString());
+
+                    var queryResult = query.ToList();
+                    Assert.Equal(2, queryResult.Count);
+
+                    Assert.Equal("Administrators", queryResult[0].Name);
+                    Assert.Equal("Doe", queryResult[0].UsersByName["John"].LastName);
+                    Assert.Equal("Ripper", queryResult[0].UsersByNameLastName["Jack"]);
+                    Assert.Equal(3, queryResult[0].UsersByName.Count);
+
+                    Assert.Equal("Editors", queryResult[1].Name);
+                    Assert.Equal("Smith", queryResult[1].UsersByName["Tom"].LastName);
+                    Assert.Equal("Leetch", queryResult[1].UsersByNameLastName["Russell"]);
+                    Assert.Equal(3, queryResult[1].UsersByNameLastName.Count);
+                }
+            }
+        }
+
+        [Fact]
         public void Custom_Function_First_And_FirstOrDefault_Support()
         {
             using (var store = GetDocumentStore())
@@ -2252,7 +2314,12 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
                 }
             }
         }
-    
+        
+        private class UserGroup
+        {
+            public List<User> Users { get; set; }
+            public string Name { get; set; }
+        }
         private class User
         {
             public string Name { get; set; }
