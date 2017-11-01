@@ -111,7 +111,7 @@ namespace Raven.Server.Web.Authentication
 
             if (PlatformDetails.RunningOnPosix)
             {
-                ValidateCaExistsInOsStores(certificate);
+                ValidateCaExistsInOsStores(newCertDef);
             }
 
             var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + selfSignedCertificate.Thumbprint, newCertDef));
