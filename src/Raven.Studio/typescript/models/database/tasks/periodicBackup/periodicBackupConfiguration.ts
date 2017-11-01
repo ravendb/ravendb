@@ -25,10 +25,13 @@ class periodicBackupConfiguration {
     fullBackupParsingError = ko.observable<string>();
     nextFullBackupOccurrenceServerTime = ko.observable<string>("N/A");
     nextFullBackupOccurrenceLocalTime = ko.observable<string>();
+    canDisplayNextFullBackupOccurrenceLocalTime: KnockoutComputed<boolean>; 
+
     incrementalBackupHumanReadable: KnockoutComputed<string>;
     incrementalBackupParsingError = ko.observable<string>();
     nextIncrementalBackupOccurrenceServerTime = ko.observable<string>("N/A");
     nextIncrementalBackupOccurrenceLocalTime = ko.observable<string>();
+    canDisplayNextIncrementalBackupOccurrenceLocalTime: KnockoutComputed<boolean>; 
 
     manualChooseMentor = ko.observable<boolean>(false);
     preferredMentor = ko.observable<string>();
@@ -121,7 +124,13 @@ class periodicBackupConfiguration {
             
             return anyDirty;
         });
-        
+
+        this.canDisplayNextFullBackupOccurrenceLocalTime = ko.pureComputed(() =>
+            this.nextFullBackupOccurrenceLocalTime() !== this.nextFullBackupOccurrenceServerTime());
+
+        this.canDisplayNextIncrementalBackupOccurrenceLocalTime = ko.pureComputed(() =>
+            this.nextIncrementalBackupOccurrenceServerTime() !== this.nextIncrementalBackupOccurrenceLocalTime());
+
         this.dirtyFlag = new ko.DirtyFlag([
             this.name, 
             this.backupType,
@@ -131,8 +140,6 @@ class periodicBackupConfiguration {
             this.preferredMentor,
             anyBackupTypeIsDirty
         ], false, jsonUtil.newLineNormalizingHashFunction);
-        
-        
     }
 
     private static getHumanReadable(backupFrequency: KnockoutObservable<string>,
