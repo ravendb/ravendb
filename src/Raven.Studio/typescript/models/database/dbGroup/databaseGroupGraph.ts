@@ -218,7 +218,7 @@ class databaseGroupGraph {
         }
         
         tasks.forEach((n, idx) => {
-            if (canUpdatePositions) {
+            if (canUpdatePositions && n.responsibleNode) {
                 n.x = n.responsibleNode.x * 2;
                 n.y = n.responsibleNode.y * 2;
             }
