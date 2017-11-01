@@ -32,6 +32,18 @@
     <Compile Include="..\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+<!-- this is required for the nuget build to properly include the right files -->
+    <Content Include="..\Sparrow\bin\Release\netstandard1.3\Sparrow.dll">
+      <PackagePath>lib/netstandard1.3/</PackagePath>
+      <Pack>true</Pack>
+    </Content>
+<!-- this is required for the nuget build to properly include the right files -->
+    <Content Include="..\Sparrow\bin\Release\netstandard2.0\Sparrow.dll">
+      <PackagePath>lib/netstandard2.0/</PackagePath>
+      <Pack>true</Pack>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\Sparrow\Sparrow.csproj" PrivateAssets="All" />
   </ItemGroup>
   <ItemGroup>
