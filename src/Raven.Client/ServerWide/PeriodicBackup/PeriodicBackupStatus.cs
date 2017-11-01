@@ -38,6 +38,8 @@ namespace Raven.Client.ServerWide.PeriodicBackup
 
         public long Version { get; set; }
 
+        public Error Error { get; set; }
+
         public DynamicJsonValue ToJson()
         {
             var json = new DynamicJsonValue();
@@ -61,11 +63,28 @@ namespace Raven.Client.ServerWide.PeriodicBackup
             json[nameof(FolderName)] = FolderName;
             json[nameof(DurationInMs)] = DurationInMs;
             json[nameof(Version)] = Version;
+            json[nameof(Error)] = Error?.ToJson();
         }
 
         public static string GenerateItemName(string databaseName, long taskId)
         {
             return $"values/{databaseName}/periodic-backups/{taskId}";
+        }
+    }
+
+    public class Error
+    {
+        public Exception Exception { get; set; }
+
+        public DateTime At { get; set; }
+
+        public virtual DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Exception)] = Exception,
+                [nameof(At)] = At
+            };
         }
     }
 }

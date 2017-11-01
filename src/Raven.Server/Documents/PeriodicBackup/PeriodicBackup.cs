@@ -19,6 +19,8 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public PeriodicBackupStatus BackupStatus { get; set; }
 
+        public PeriodicBackupStatus RunningBackupStatus { get; set; }
+
         public void DisableFutureBackups()
         {
             _updateTimerSemaphore.Wait();
