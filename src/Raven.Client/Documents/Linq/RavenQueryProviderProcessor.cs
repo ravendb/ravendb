@@ -1472,8 +1472,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                     var groupByFieldType = groupByExpression.Type;
 
-                    if (groupByFieldType.IsArray ||
-                        (typeof(IEnumerable).IsAssignableFrom(groupByFieldType) && typeof(string) != groupByFieldType))
+                    if (IsCollection(groupByFieldType))
                     {
                         switch (arrayBehavior)
                         {
@@ -1554,8 +1553,35 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     }
                     break;
                 case ExpressionType.Call:
-                    // .GroupBy(x => x.Lines.Select(y => y.Product)
-                    throw new NotImplementedException("TODO arek");
+                    // .GroupByArrayValues(x => x.Lines.Select(y => y.Product))
+                    // .GroupByArrayContent(x => x.Lines.Select(y => y.Product))
+
+                    var method = (MethodCallExpression)lambdaExpression.Body;
+                    var methodName = method.Method.Name;
+
+                    if (methodName != "Select")
+                    {
+                        throw new NotSupportedException(
+                            $"Expression passed to {nameof(LinqExtensions.GroupByArrayValues)} or {nameof(LinqExtensions.GroupByArrayContent)} " +
+                            $"can only contain Select method while it got {methodName}");
+                    }
+
+                    var parts = new List<string>();
+
+                    foreach (var methodArgument in method.Arguments)
+                    {
+                        var field = _linqPathProvider.GetMemberExpression(methodArgument);
+
+                        var path = GetSelectPath(field);
+
+                        if (IsCollection(field.Type))
+                            path += "[]";
+                     
+                        parts.Add(path);
+                    }
+
+                    _documentQuery.GroupBy(string.Join(".", parts));
+                    break;
                 default:
                     throw new NotSupportedException("Node not supported in GroupBy: " + body.NodeType);
 
@@ -2482,6 +2508,11 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         return finalQuery;
                     }
             }
+        }
+
+        private static bool IsCollection(Type type)
+        {
+            return type.IsArray || typeof(IEnumerable).IsAssignableFrom(type) && typeof(string) != type;
         }
 
         #region Nested type: SpecialQueryType
