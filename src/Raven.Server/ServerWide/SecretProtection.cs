@@ -426,6 +426,47 @@ namespace Raven.Server.ServerWide
             return loadedCertificate;
         }
 
+        public RavenServer.CertificateHolder LoadCertificateFromBase64(string certificate)
+        {
+            var source = "settings.json";
+            try
+            {
+                byte[] certBytes;
+                try
+                {
+                    certBytes = Convert.FromBase64String(certificate);
+                }
+                catch (Exception e)
+                {
+                    throw new ArgumentException($"Unable to parse the {certificate} property, expected a Base64 value", e);
+                }
+
+                var loadedCertificate = new X509Certificate2(certBytes);
+
+                return ValidateCertificateAndCreateCertificateHolder(certificate, source, loadedCertificate, certBytes);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException($"Could not load certificate from {source}", e);
+            }
+        }
+
+        public static RavenServer.CertificateHolder ValidateCertificateAndCreateCertificateHolder(string certificate, string source, X509Certificate2 loadedCertificate, byte[] certBytes)
+        {
+            ValidateExpiration(source, loadedCertificate);
+
+            ValidatePrivateKey(source, null, certBytes, out var privateKey);
+
+            ValidateKeyUsages(source, loadedCertificate);
+
+            return new RavenServer.CertificateHolder
+            {
+                Certificate = loadedCertificate,
+                CertificateForClients = certificate,
+                PrivateKey = privateKey
+            };
+        }
+
         public RavenServer.CertificateHolder LoadCertificateFromPath(string path, string password)
         {
             try

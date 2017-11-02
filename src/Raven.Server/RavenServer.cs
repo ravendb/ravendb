@@ -46,10 +46,13 @@ using Raven.Client;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Tcp;
+using Raven.Client.Util;
+using Raven.Server.Commercial;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Monitoring.Snmp;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.ResponseCompression;
+using Raven.Server.Web.System;
 using Sparrow;
 
 namespace Raven.Server
@@ -249,15 +252,17 @@ namespace Raven.Server
             }
         }
 
-        private CertificateHolder InitializeClusterCertificate(out CertificateHolder httpsCert)
+        public CertificateHolder InitializeClusterCertificate(out CertificateHolder httpsCert)
         {
             var clusterCert = LoadCertificate(
+                Configuration.Security.Base64,
                 Configuration.Security.ClusterCertificateExec,
                 Configuration.Security.ClusterCertificateExecArguments,
                 Configuration.Security.ClusterCertificatePath,
                 Configuration.Security.ClusterCertificatePassword);
 
             httpsCert = LoadCertificate(
+                Configuration.Security.Base64,
                 Configuration.Security.CertificateExec,
                 Configuration.Security.CertificateExecArguments,
                 Configuration.Security.CertificatePath,
@@ -287,10 +292,12 @@ namespace Raven.Server
             return Configuration.Core.ServerUrl;
         }
 
-        private CertificateHolder LoadCertificate(string exec, string execArgs, string path, string password)
+        private CertificateHolder LoadCertificate(string base64, string exec, string execArgs, string path, string password)
         {
             try
             {
+                if (string.IsNullOrEmpty(base64) == false)
+                    return ServerStore.Secrets.LoadCertificateFromBase64(base64);
                 if (string.IsNullOrEmpty(exec) == false)
                     return ServerStore.Secrets.LoadCertificateWithExecutable(exec, execArgs);
                 if (string.IsNullOrEmpty(path) == false)
@@ -517,7 +524,7 @@ namespace Raven.Server
             _snmpWatcher.Execute();
         }
 
-        private TcpListenerStatus StartTcpListener()
+        public TcpListenerStatus StartTcpListener()
         {
             string host = "<unknown>";
             var port = 0;
@@ -597,7 +604,7 @@ namespace Raven.Server
             }
         }
 
-        private IPAddress[] GetListenIpAddresses(string host)
+        public IPAddress[] GetListenIpAddresses(string host)
         {
             if (IPAddress.TryParse(host, out IPAddress ipAddress))
                 return new[] { ipAddress };

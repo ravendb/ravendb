@@ -10,7 +10,12 @@ namespace Raven.Server.Config.Categories
 {
     public class SecurityConfiguration : ConfigurationCategory
     {
-        [Description("The path to .pfx certificate file. If specified, RavenDB will use HTTPS/SSL for all network activities. You can use the '~/' prefix to refer to RavenDB's base directory.")]
+        [Description("The .pfx certificate in Base64 format. If specified, RavenDB will use HTTPS/SSL for all network activities. Certificate setting priority order: 1)Base64 2)Executable 3)Path")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Security.Certificate.Base64", ConfigurationEntryScope.ServerWideOnly)]
+        public string Base64 { get; set; }
+
+        [Description("The path to .pfx certificate file. If specified, RavenDB will use HTTPS/SSL for all network activities. You can use the '~/' prefix to refer to RavenDB's base directory. Certificate setting priority order: 1)Base64 2)Executable 3)Path")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.Certificate.Path", ConfigurationEntryScope.ServerWideOnly)]
         public string CertificatePath { get; set; }
@@ -20,7 +25,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Security.Certificate.Password", ConfigurationEntryScope.ServerWideOnly)]
         public string CertificatePassword { get; set; }
 
-        [Description("A command or executable providing a .pfx certificate file. If specified, RavenDB will use HTTPS/SSL for all network activities.")]
+        [Description("A command or executable providing a .pfx certificate file. If specified, RavenDB will use HTTPS/SSL for all network activities. Certificate setting priority order: 1)Base64 2)Executable 3)Path")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.Certificate.Exec", ConfigurationEntryScope.ServerWideOnly)]
         public string CertificateExec { get; set; }
@@ -30,7 +35,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Security.Certificate.Exec.Arguments", ConfigurationEntryScope.ServerWideOnly)]
         public string CertificateExecArguments { get; set; }
 
-        [Description("The number of milliseconds to wait for the certificate executable to exit. Default: 30 seconds")]
+        [Description("The number of seconds to wait for the certificate executable to exit. Default: 30 seconds")]
         [DefaultValue(30)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Security.Certificate.Exec.TimeoutInSec", ConfigurationEntryScope.ServerWideOnly)]

@@ -111,7 +111,7 @@ namespace Raven.Server.Web.Authentication
 
             if (PlatformDetails.RunningOnPosix)
             {
-                ValidateCaExistsInOsStores(newCertDef);
+                ValidateCaExistsInOsStores(newCertDef.Certificate, certificate.Name, ServerStore);
             }
 
             var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + selfSignedCertificate.Thumbprint, newCertDef));
@@ -120,13 +120,13 @@ namespace Raven.Server.Web.Authentication
             return selfSignedCertificate.Export(X509ContentType.Pfx, certificate.Password);
         }
 
-        private void ValidateCaExistsInOsStores(CertificateDefinition certificate)
+        public static void ValidateCaExistsInOsStores(string base64Cert, string name, ServerStore serverStore)
         {
             // Implementation of SslStream AuthenticateAsServer is different in Linux. See RavenDB-8524
             // A list of allowed CAs is sent from the server to the client. The handshake will fail if the client's CA is not in that list. This list is taken from the root and certificate authority stores of the OS.
             // In this workaround we make sure that the CA (who signed the certificate) is registered in one of the OS stores.
 
-            var x509Certificate2 = new X509Certificate2(Convert.FromBase64String(certificate.Certificate));
+            var x509Certificate2 = new X509Certificate2(Convert.FromBase64String(base64Cert));
 
             var chain = new X509Chain
             {
@@ -150,12 +150,12 @@ namespace Raven.Server.Web.Authentication
                         status.Append(chainStatus.Status + " : " + chainStatus.StatusInformation + "\r\n");
                 }
 
-                throw new InvalidOperationException($"The certificate chain for {certificate.Name} is broken, admin assistance required. {status}");
+                throw new InvalidOperationException($"The certificate chain for {name} is broken, admin assistance required. {status}");
             }
 
             var rootCert = GetRootCertificate(chain);
             if (rootCert == null)
-                throw new InvalidOperationException($"The certificate chain for {certificate.Name} is broken. Reason: partial chain, cannot extract CA from chain. Admin assistance required.");
+                throw new InvalidOperationException($"The certificate chain for {name} is broken. Reason: partial chain, cannot extract CA from chain. Admin assistance required.");
 
 
             using (var machineRootStore = new X509Store(StoreName.Root, StoreLocation.LocalMachine, OpenFlags.ReadOnly))
@@ -171,13 +171,13 @@ namespace Raven.Server.Web.Authentication
                 {
                     var path = new[]
                     {
-                        ServerStore.Configuration.Security.CertificatePath,
-                        ServerStore.Configuration.Security.ClusterCertificatePath,
-                        ServerStore.Configuration.Security.CertificateExec,
-                        ServerStore.Configuration.Security.ClusterCertificateExec
+                        serverStore.Configuration.Security.CertificatePath,
+                        serverStore.Configuration.Security.ClusterCertificatePath,
+                        serverStore.Configuration.Security.CertificateExec,
+                        serverStore.Configuration.Security.ClusterCertificateExec
                     }.FirstOrDefault(File.Exists) ?? "no path defined";
 
-                    throw new InvalidOperationException($"Cannot save the client certificate '{certificate.Name}'. " +
+                    throw new InvalidOperationException($"Cannot save the client certificate '{name}'. " +
                                                         $"First, you must register the CA of the certificate '{rootCert.SubjectName.Name}' in the trusted root store, on the server machine." +
                                                         $"The server certificate is located in: '{path}'" +
                                                         "This step is required because you are trying to save a certificate which was signed by an unknown or self-signed certificate authority.");
@@ -268,7 +268,7 @@ namespace Raven.Server.Web.Authentication
 
                     if (PlatformDetails.RunningOnPosix)
                     {
-                        ValidateCaExistsInOsStores(currentCertificate);
+                        ValidateCaExistsInOsStores(currentCertificate.Certificate, currentCertificate.Name, ServerStore);
                     }
 
                     if (first)
@@ -573,7 +573,7 @@ namespace Raven.Server.Web.Authentication
             return Task.CompletedTask;
         }
         
-        private static void ValidateCertificate(CertificateDefinition certificate, ServerStore serverStore)
+        public static void ValidateCertificate(CertificateDefinition certificate, ServerStore serverStore)
         {
             if (string.IsNullOrWhiteSpace(certificate.Name))
                 throw new ArgumentException($"{nameof(certificate.Name)} is a required field in the certificate definition");

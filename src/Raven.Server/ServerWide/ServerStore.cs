@@ -86,6 +86,7 @@ namespace Raven.Server.ServerWide
         public readonly NotificationCenter.NotificationCenter NotificationCenter;
         public readonly ServerDashboardNotifications ServerDashboardNotifications;
         public readonly LicenseManager LicenseManager;
+        public readonly SetupManager SetupManager;
         public readonly FeedbackSender FeedbackSender;
         public readonly SecretProtection Secrets;
 
@@ -118,6 +119,8 @@ namespace Raven.Server.ServerWide
             Operations = new Operations(ResourceName, _operationsStorage, NotificationCenter, null);
 
             LicenseManager = new LicenseManager(this);
+
+            SetupManager = new SetupManager(this);
 
             FeedbackSender = new FeedbackSender();
 
@@ -995,6 +998,7 @@ namespace Raven.Server.ServerWide
                         _engine,
                         NotificationCenter,
                         LicenseManager,
+                        SetupManager,
                         DatabasesLandlord,
                         _env,
                         ContextPool,
