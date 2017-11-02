@@ -32,13 +32,13 @@ class collectionsTracker {
             .execute()
             .done(stats => this.collectionsLoaded(stats, db));
 
-        this.configureRevisions(db.hasRevisionsConfiguration(), db);
+        this.configureRevisions(db);
 
         return this.loadStatsTask;
     }
 
-    configureRevisions(hasRevisionsEnabled: boolean, db: database) {
-        if (hasRevisionsEnabled) {
+    configureRevisions(db: database) {
+        if (db.hasRevisionsConfiguration()) {
             this.revisionsBin(new collection(collection.revisionsBinCollectionName, db));
         } else {
             this.revisionsBin(null);

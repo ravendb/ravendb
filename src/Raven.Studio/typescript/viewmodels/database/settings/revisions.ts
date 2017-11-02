@@ -201,7 +201,9 @@ class revisions extends viewModelBase {
             })
             .always(() => {
                 this.spinners.save(false);
-                collectionsTracker.default.configureRevisions(true, this.activeDatabase());
+                const db = this.activeDatabase();
+                db.hasRevisionsConfiguration(true);
+                collectionsTracker.default.configureRevisions(db);
             });
     }
 
