@@ -66,9 +66,8 @@ class ongoingTaskBackupListModel extends ongoingTask {
 
             const now = timeHelpers.utcNowWithSecondPrecision();
             const diff = now.diff(moment.utc(lastFullBackup));
-            const fromDuration = diff > 0 ?
-                generalUtils.formatDuration(moment.duration(diff), true, 2) :
-                "moments";
+            const formatDuration = generalUtils.formatDuration(moment.duration(diff), true, 2, true);
+            const fromDuration = diff > 0 && formatDuration ? formatDuration : "less then a minute ";
             return `${fromDuration} ago`;
         });
 
@@ -80,9 +79,8 @@ class ongoingTaskBackupListModel extends ongoingTask {
 
             const now = timeHelpers.utcNowWithSecondPrecision();
             const diff = now.diff(moment.utc(lastIncrementalBackup));
-            const fromDuration = diff > 0 ?
-                generalUtils.formatDuration(moment.duration(diff), true, 2) :
-                "moments";
+            const formatDuration = generalUtils.formatDuration(moment.duration(diff), true, 2, true);
+            const fromDuration = diff > 0 && formatDuration ? formatDuration : "less then a minute ";
             return `${fromDuration} ago`;
         });
 
@@ -115,9 +113,8 @@ class ongoingTaskBackupListModel extends ongoingTask {
 
             const now = timeHelpers.utcNowWithSecondPrecision();
             const diff = now.diff(moment.utc(onGoingBackup.StartTime));
-            const fromDuration = diff > 0 ?
-                generalUtils.formatDuration(moment.duration(diff), true, 2) :
-                "moments";
+            const formatDuration = generalUtils.formatDuration(moment.duration(diff), true, 2, true);
+            const fromDuration = diff > 0 && formatDuration ? formatDuration : "less then a minute ";
             return `${fromDuration} ago (${this.getBackupType(this.backupType(), onGoingBackup.IsFull)})`;
         });
 
