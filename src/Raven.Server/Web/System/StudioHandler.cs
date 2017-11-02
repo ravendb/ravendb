@@ -158,8 +158,19 @@ namespace Raven.Server.Web.System
         }
 
 
+        [RavenAction("/server-setup/$", "GET", AuthorizationStatus.UnauthenticatedClients)]
+        public Task GetSetupFile()
+        {
+            return GetStudioFileInternal();
+        }
+        
         [RavenAction("/studio/$", "GET", AuthorizationStatus.UnauthenticatedClients)]
-        public async Task GetStudioFile()
+        public Task GetStudioFile()
+        {
+            return GetStudioFileInternal();
+        }
+        
+        private async Task GetStudioFileInternal()
         {
             // This is casted to string on purpose here. Everything else works
             // with strings, so reifying this now is good.
@@ -602,8 +613,19 @@ namespace Raven.Server.Web.System
         [RavenAction("/", "GET", AuthorizationStatus.UnauthenticatedClients)]
         public Task RavenRoot()
         {
-            HttpContext.Response.Headers["Location"] = "/studio/index.html";
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.MovedPermanently;
+            bool setup = true; //TODO: set based on settings file
+            
+            if (setup)
+            {
+                 HttpContext.Response.Headers["Location"] = "/setup/index.html";
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.Moved;
+            } 
+            else
+            {
+                HttpContext.Response.Headers["Location"] = "/studio/index.html";
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.Moved;
+            }
+           
             return Task.CompletedTask;
         }
     }

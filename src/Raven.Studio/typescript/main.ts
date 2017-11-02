@@ -49,7 +49,13 @@ define(["durandal/system", "durandal/app", "durandal/viewLocator", "plugins/dial
 
         if ("WebSocket" in window) {
             //Show the app by setting the root view model for our application with a transition.
-            app.setRoot("viewmodels/shell");
+            
+            if (window.location.pathname.startsWith("/studio")) {
+                app.setRoot("viewmodels/shell");
+            } else {
+                app.setRoot("viewmodels/server-setup/setupShell")
+            }
+            
             composition.defaultTransitionName = "fadeIn";
         } else {
             //The browser doesn't support WebSocket
