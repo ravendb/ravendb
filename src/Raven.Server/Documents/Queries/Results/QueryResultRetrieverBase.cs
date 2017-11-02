@@ -362,7 +362,17 @@ namespace Raven.Server.Documents.Queries.Results
 
             _loadedDocuments[document.Id ?? string.Empty] = document;
             if (fieldToFetch.QueryField.SourceAlias != null)
-                IncludeUtil.GetDocIdFromInclude(document.Data, fieldToFetch.QueryField.SourceAlias, _loadedDocumentIds);
+            {
+                if (fieldToFetch.QueryField.IsQuoted)
+                {
+                    _loadedDocumentIds.Add(fieldToFetch.QueryField.SourceAlias);
+                }
+                else
+                {
+                    IncludeUtil.GetDocIdFromInclude(document.Data, fieldToFetch.QueryField.SourceAlias, _loadedDocumentIds);
+                }
+
+            }
             else
                 _loadedDocumentIds.Add(document.Id ?? string.Empty); // null source alias is the root doc
 

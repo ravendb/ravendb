@@ -2090,6 +2090,41 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
         }
 
         [Fact]
+        public void Query_With_Load_Where_Id_Is_Not_A_Path()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia", FriendId = "users/2"}, "users/1");
+                    session.Store(new Detail { Number = 15 }, "details/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from u in session.Query<User>()
+                                let detail = session.Load<Detail>("details/1")
+                                select new
+                                {
+                                    Name = u.Name,
+                                    Detail = detail
+                                };
+
+                    Assert.Equal("FROM Users as u LOAD \"details/1\" as detail " +
+                                 "SELECT { Name : u.Name, Detail : detail }", query.ToString());
+
+                    var queryResult = query.ToList();
+
+                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal("Jerry", queryResult[0].Name);
+                    Assert.Equal(15, queryResult[0].Detail.Number);
+
+                }
+            }
+        }
+
+        [Fact]
         public void Custom_Function_With_RavenQueryMetadata()
         {
             using (var store = GetDocumentStore())
