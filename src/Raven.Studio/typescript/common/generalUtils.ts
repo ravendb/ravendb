@@ -14,12 +14,23 @@ class genUtils {
         return moment.duration("-" + input).humanize(withSuffix);
     }
 
-    static formatDuration(duration: moment.Duration, longFormat = false, desiredAccuracy = 5) {
+    static formatDuration(duration: moment.Duration, longFormat = false, desiredAccuracy = 5, skipSecondsAndMilliseconds = false) {
         const timeTokens = [] as Array<string>;
-        if (duration.asDays() >= 1) {
+
+        if (duration.years() >= 1) {
             timeTokens.push(longFormat ?
-                pluralizeHelpers.pluralize(Math.floor(duration.asDays()), " day ", " days ") :
-                Math.floor(duration.asDays()) + " d ");
+                pluralizeHelpers.pluralize(Math.floor(duration.years()), " year ", " years ") :
+                Math.floor(duration.years()) + " y ");
+        }
+        if (duration.months() >= 1) {
+            timeTokens.push(longFormat ?
+                pluralizeHelpers.pluralize(Math.floor(duration.months()), " month ", " months ") :
+                Math.floor(duration.months()) + " m ");
+        }
+        if (duration.days() >= 1) {
+            timeTokens.push(longFormat ?
+                pluralizeHelpers.pluralize(Math.floor(duration.days()), " day ", " days ") :
+                Math.floor(duration.days()) + " d ");
         }
         if (duration.hours() > 0) {
             timeTokens.push(longFormat ?
@@ -31,12 +42,12 @@ class genUtils {
                 pluralizeHelpers.pluralize(duration.minutes(), " minute ", " minutes ") :
                 duration.minutes() + " m ");
         }
-        if (duration.seconds() > 0) {
+        if (duration.seconds() > 0 && !skipSecondsAndMilliseconds) {
             timeTokens.push(longFormat ?
                 pluralizeHelpers.pluralize(duration.seconds(), " second ", " seconds ") :
                 duration.seconds() + " s ");
         }
-        if (duration.milliseconds() > 0) {
+        if (duration.milliseconds() > 0 && !skipSecondsAndMilliseconds) {
             const millis = duration.milliseconds();
 
             const atLeastOneSecond = duration.asSeconds() >= 1;

@@ -1,5 +1,8 @@
 /// <reference path="../../../../typings/tsd.d.ts" />
 
+import timeHelpers = require("common/timeHelpers");
+import generalUtils = require("common/generalUtils");
+
 type knownDocumentFlags = "HasRevisions" | "Revision" | "HasAttachments" | "DeleteRevision";
 
 class documentMetadata {
@@ -13,6 +16,7 @@ class documentMetadata {
     nonStandardProps: Array<keyof documentMetadataDto>;
 
     lastModifiedFullDate: KnockoutComputed<string>;
+    lastModifiedInterval: KnockoutComputed<string>;
 
     attachments = ko.observableArray<documentAttachmentDto>();
     changeVector = ko.observable<string>();
@@ -25,13 +29,28 @@ class documentMetadata {
             this.nonAuthoritativeInfo = dto['Non-Authoritative-Information'];
             this.id = dto['@id'];
             this.tempIndexScore = dto['Temp-Index-Score'];
+
+            const dateFormat = "YYYY MMMM Do, h:mm A (UTC)";
             this.lastModifiedFullDate = ko.pureComputed(() => {
-                if (this.lastModified()) {
-                    const lastModifiedMoment = moment(this.lastModified());
-                    return lastModifiedMoment.utc().format("DD/MM/YYYY HH:mm (UTC)");
+                const lastModified = this.lastModified();
+                if (lastModified) {
+                    const lastModifiedMoment = moment(lastModified);
+                    return lastModifiedMoment.utc().format(dateFormat);
                 }
                 return "";
             });
+            this.lastModifiedInterval = ko.pureComputed(() => {
+                const lastModified = this.lastModified();
+                if (this.lastModified()) {
+                    const now = timeHelpers.utcNowWithSecondPrecision();
+                    const diff = now.diff(moment.utc(lastModified));
+                    const formatDuration = generalUtils.formatDuration(moment.duration(diff), true, 2, true);
+                    const fromDuration = diff > 0 && formatDuration ? formatDuration : "less then a minute ";
+                    return `${fromDuration} ago`;
+                }
+                return "";
+            });
+
             this.lastModified(dto['@last-modified']);
 
             this.attachments(dto['@attachments']);
