@@ -1,4 +1,6 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
+using Sparrow.Logging;
 
 namespace Voron.Recovery
 {
@@ -12,6 +14,7 @@ namespace Voron.Recovery
         public int InitialContextLongLivedSizeInKB { get; set; } = 16;
         public int ProgressIntervalInSec { get; set; } = 5;
         public bool DisableCopyOnWriteMode { get; set; }
+        public LogMode LoggingMode { get; set; } = LogMode.Operations;
 
         public static VoronRecoveryArgsProcessStatus ProcessArgs(string[] args, out VoronRecoveryConfiguration config)
         {
@@ -78,6 +81,12 @@ namespace Voron.Recovery
                         if (bool.TryParse(args[i + 1], out disableCopyOnWriteMode) == false)
                             return VoronRecoveryArgsProcessStatus.BadArg;
                         config.DisableCopyOnWriteMode = disableCopyOnWriteMode;
+                        break;
+                    case "-LogMode":
+                        LogMode mode;
+                        if(Enum.TryParse(args[i + 1], out mode) == false)
+                            return VoronRecoveryArgsProcessStatus.BadArg;
+                        config.LoggingMode = mode;
                         break;
                     default:
                         return VoronRecoveryArgsProcessStatus.BadArg;
