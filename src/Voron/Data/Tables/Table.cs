@@ -376,6 +376,11 @@ namespace Voron.Data.Tables
             ActiveDataSmallSection.DeleteSection(sectionPageNumber);
         }
 
+        private void ThrowInvalidAttemptToRemoveValueFromIndexAndNotFindingIt(long id, Slice indexDefName)
+        {
+            throw new InvalidOperationException(
+                $"Invalid index {indexDefName} on {Name}, attempted to delete value but the value from {id} wasn\'t in the index");
+        }
 
         private void DeleteValueFromIndex(long id, ref TableValueReader value)
         {
@@ -397,7 +402,10 @@ namespace Voron.Data.Tables
                 using (indexDef.GetSlice(_tx.Allocator, ref value, out Slice val))
                 {
                     var fst = GetFixedSizeTree(indexTree, val.Clone(_tx.Allocator), 0);
-                    fst.Delete(id);
+                    if (fst.Delete(id).NumberOfEntriesDeleted == 0)
+                    {
+                        ThrowInvalidAttemptToRemoveValueFromIndexAndNotFindingIt(id, indexDef.Name);
+                    }
                 }
             }
 
@@ -405,7 +413,22 @@ namespace Voron.Data.Tables
             {
                 var index = GetFixedSizeTree(indexDef);
                 var key = indexDef.GetValue(ref value);
-                index.Delete(key);
+                if (index.Delete(key).NumberOfEntriesDeleted == 0)
+                {
+                    ThrowInvalidAttemptToRemoveValueFromIndexAndNotFindingIt(id, indexDef.Name);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Resource intensive function that validates fixed size trees in the table's schema
+        /// </summary>
+        public void AssertValidFixedSizeTrees()
+        {
+            foreach (var fsi in _schema.FixedSizeIndexes)
+            {
+                var fixedSizeTree = GetFixedSizeTree(fsi.Value);
+                fixedSizeTree.ForceValidateTree();
             }
         }
 
@@ -617,13 +640,20 @@ namespace Voron.Data.Tables
                 {
                     var index = GetFixedSizeTree(indexDef);
                     long key = indexDef.GetValue(ref value);
-                    index.Add(key, idAsSlice);
+                    if (index.Add(key, idAsSlice) == false)
+                        ThrowInvalidDuplicateFixedSizeTreeKey(key, indexDef);
                 }
             }
         }
 
-        private FixedSizeTree GetFixedSizeTree(TableSchema.FixedSizeSchemaIndexDef indexDef)
+        private void ThrowInvalidDuplicateFixedSizeTreeKey(long key, TableSchema.FixedSizeSchemaIndexDef indexDef)
         {
+            throw new InvalidOperationException("Attempt to add duplicate value " + key + " to " + indexDef.Name + " on " + Name);
+        }
+
+        public FixedSizeTree GetFixedSizeTree(TableSchema.FixedSizeSchemaIndexDef indexDef)
+        {
+            
             if (indexDef.IsGlobal)
                 return _tx.GetGlobalFixedSizeTree(indexDef.Name, sizeof(long), isIndexTree: true, newPageAllocator: _globalPageAllocator);
 
@@ -1447,6 +1477,7 @@ namespace Voron.Data.Tables
 
         public void PrepareForCommit()
         {
+            AssertValidTable();
             if (_treesBySliceCache == null)
                 return;
 
@@ -1466,6 +1497,56 @@ namespace Voron.Data.Tables
                 }
             }
         }
+
+        private void ThrowInconsistentItemsCountInIndexes(string indexName, long expectedSize, long actualSize)
+        {
+            throw new InvalidOperationException($"Inconsistent index items count detected! Index name: {indexName} expected size: {expectedSize} actual size: {actualSize}");
+        }
+
+        /// <summary>
+        /// validate all globals indexes has the same number
+        /// validate all local indexes has the same number as the table itself
+        /// </summary>
+        internal void AssertValidTable()
+        {
+            long globalDocsCount = -1;
+
+            foreach (var fsi in _schema.FixedSizeIndexes)
+            {
+                var indexNumberOfEntries = GetFixedSizeTree(fsi.Value).NumberOfEntries;
+                if (fsi.Value.IsGlobal == false)
+                {
+                    if (NumberOfEntries != indexNumberOfEntries)
+                        ThrowInconsistentItemsCountInIndexes(fsi.Key.ToString(), NumberOfEntries, indexNumberOfEntries);
+                        
+                }
+                else
+                {
+                    if (globalDocsCount == -1)
+                        globalDocsCount = indexNumberOfEntries;
+                    else if (globalDocsCount != indexNumberOfEntries)
+                        ThrowInconsistentItemsCountInIndexes(fsi.Key.ToString(), NumberOfEntries, indexNumberOfEntries);
+                }
+            }
+           
+            if (_schema.Key == null)
+                return;
+
+            var pkIndexNumberOfEntries = GetTree(_schema.Key).State.NumberOfEntries;
+            if (_schema.Key.IsGlobal == false)
+            {
+                if (NumberOfEntries != pkIndexNumberOfEntries)
+                    ThrowInconsistentItemsCountInIndexes(_schema.Key.Name.ToString(), NumberOfEntries, pkIndexNumberOfEntries);
+            }
+            else
+            {
+                if (globalDocsCount == -1)
+                    globalDocsCount = pkIndexNumberOfEntries;
+                else if (globalDocsCount != pkIndexNumberOfEntries)
+                    ThrowInconsistentItemsCountInIndexes(_schema.Key.Name.ToString(), NumberOfEntries, pkIndexNumberOfEntries);
+            }
+        }
+
 
         public void Dispose()
         {

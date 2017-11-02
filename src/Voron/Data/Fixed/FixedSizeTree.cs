@@ -319,8 +319,18 @@ namespace Voron.Data.Fixed
             }
         }
 
+        public void ForceValidateTree()
+        {
+            AssertTreeIsValid();
+        }
+
         [Conditional("VALIDATE")]
         private void ValidateTree()
+        {
+            AssertTreeIsValid();    
+        }
+        
+        private void AssertTreeIsValid()
         {
             if (_type != RootObjectType.FixedSizeTree)
                 return;

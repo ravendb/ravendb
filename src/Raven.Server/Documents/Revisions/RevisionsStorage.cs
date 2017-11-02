@@ -191,6 +191,12 @@ namespace Raven.Server.Documents.Revisions
             TombstonesSchema.Create(tx, RevisionsTombstonesSlice, 16);
         }
 
+        public void AssertFixedSizeTrees(Transaction tx)
+        {
+            tx.OpenTable(RevisionsSchema, RevisionsCountSlice).AssertValidFixedSizeTrees();
+            tx.OpenTable(TombstonesSchema, RevisionsTombstonesSlice).AssertValidFixedSizeTrees();
+        }
+
         public RevisionsCollectionConfiguration GetRevisionsConfiguration(string collection, DocumentFlags flags = DocumentFlags.None)
         {
             if (Configuration == null)

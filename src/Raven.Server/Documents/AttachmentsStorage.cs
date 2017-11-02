@@ -87,6 +87,15 @@ namespace Raven.Server.Documents
             tx.CreateTree(AttachmentsSlice);
             AttachmentsSchema.Create(tx, AttachmentsMetadataSlice, 44);
             TombstonesSchema.Create(tx, AttachmentsTombstonesSlice, 16);
+
+        }
+
+        public void AssertFixedSizeTrees(Transaction tx)
+        {
+            tx.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice).AssertValidFixedSizeTrees();
+
+            TombstonesSchema.Create(tx, AttachmentsTombstonesSlice, 16);
+            tx.OpenTable(TombstonesSchema, AttachmentsTombstonesSlice).AssertValidFixedSizeTrees();
         }
 
         public IEnumerable<ReplicationBatchItem> GetAttachmentsFrom(DocumentsOperationContext context, long etag)

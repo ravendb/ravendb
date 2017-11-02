@@ -53,11 +53,24 @@ namespace Voron.Data.Tables
         }
 
         public SchemaIndexDef Key => _primaryKey;
+
+        // Indexes are conceptually Dictionary<index name, Dictionary<unique index value, HashSet<storage id>>
+
+        /// <summary>
+        /// Indexes are conceptually Dictionary&lt;index name, Dictionary&lt;unique index value, HashSet&lt;storage id&gt;&gt;
+        /// </summary>
         public Dictionary<Slice, SchemaIndexDef> Indexes => _indexes;
+
+        // FixedSizeIndexes are conceptually Dictionary<index name, Dictionary<long value, storage id>>
+
+        /// <summary>
+        /// FixedSizeIndexes are conceptually Dictionary&lt;index name, Dictionary&lt;long value, storage id&gt;&gt;
+        /// </summary>
         public Dictionary<Slice, FixedSizeSchemaIndexDef> FixedSizeIndexes => _fixedSizeIndexes;
 
         public class SchemaIndexDef
         {
+            
             public TableIndexType Type = TableIndexType.Default;
 
             /// <summary>
