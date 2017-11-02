@@ -1964,6 +1964,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     new JavascriptConversionExtensions.ConstSupport(),
                     new JavascriptConversionExtensions.LoadSupport(),
                     new JavascriptConversionExtensions.MetadataSupport(),
+                    new JavascriptConversionExtensions.ValueTypeParseSupport(),
                     MemberInitAsJson.ForAllTypes));
 
             if (expression.Type == typeof(TimeSpan) && expression.NodeType != ExpressionType.MemberAccess)

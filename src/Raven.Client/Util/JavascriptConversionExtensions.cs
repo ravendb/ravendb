@@ -428,6 +428,27 @@ namespace Raven.Client.Util
             }
         }
 
+        public class ValueTypeParseSupport : JavascriptConversionExtension
+        {
+            private static readonly HashSet<Type> ValueTypes = new HashSet<Type>() {
+                typeof(int), typeof(uint), typeof(double), typeof(decimal),
+                typeof(bool), typeof(char), typeof(long), typeof(ulong),
+                typeof(sbyte),  typeof(short), typeof(ushort), typeof(byte)
+            };
+
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                var methodCallExpression = context.Node as MethodCallExpression;
+                var method = methodCallExpression?.Method;
+
+                if (method == null || method.Name != "Parse" || !ValueTypes.Contains(method.DeclaringType))
+                    return;
+
+                context.PreventDefault();
+                context.Visitor.Visit(methodCallExpression.Arguments[0]);
+            }
+        }
+
         public class DateTimeSupport : JavascriptConversionExtension
         {
             public override void ConvertToJavascript(JavascriptConversionContext context)
