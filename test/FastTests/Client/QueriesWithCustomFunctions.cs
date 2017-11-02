@@ -96,7 +96,7 @@ namespace FastTests.Client
 
                     var queryResult = query.ToList();
 
-                    var ts = DateTime.Today - new DateTime(1942, 8, 1);
+                    var ts = DateTime.UtcNow.Date - new DateTime(1942, 8, 1);
 
                     Assert.Equal(1, queryResult.Count);
                     Assert.Equal(ts, queryResult[0].Age);
@@ -125,7 +125,7 @@ namespace FastTests.Client
 
                     var queryResult = await query.ToListAsync();
 
-                    var ts = DateTime.Today - new DateTime(1942, 8, 1);
+                    var ts = DateTime.UtcNow.Date - new DateTime(1942, 8, 1);
 
                     Assert.Equal(1, queryResult.Count);
                     Assert.Equal(ts, queryResult[0].Age);

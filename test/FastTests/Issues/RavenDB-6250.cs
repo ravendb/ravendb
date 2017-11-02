@@ -66,6 +66,7 @@ namespace FastTests.Issues
             {
                PerformanceHintType.Paging,
                PerformanceHintType.Indexing,
+               PerformanceHintType.RequestLatency
             };
 
             var operationWithoutDetails = new HashSet<PerformanceHintType>
