@@ -340,11 +340,11 @@ class trafficSection {
                         return 5;
                 }
             },
-            tooltipProvider: data => trafficSection.trafficTooltip(data)
+            tooltipProvider: data => this.trafficTooltip(data)
         });
     }
 
-    private static trafficTooltip(data: dashboardChartTooltipProviderArgs) {
+    private trafficTooltip(data: dashboardChartTooltipProviderArgs) {
         if (data) {
             const date = moment(data.date).format(serverDashboard.timeFormat);
             const requests = data.values['requests'];
@@ -353,9 +353,9 @@ class trafficSection {
 
             return `<div>
                 Time: <strong>${date}</strong><br />
-                # Total Requests/s: <strong>${requests.toLocaleString()}</strong><br />
-                # Writes/s: <strong>${writes.toLocaleString()}</strong><br />
-                # Data Written/s: <strong>${written.toLocaleString()}</strong>
+                Requests/s: <strong>${requests.toLocaleString()}</strong><br />
+                Writes/s: <strong>${writes.toLocaleString()}</strong><br />
+                Data Written/s: <strong>${this.sizeFormatter(written)}</strong>
                 </div>`;
         }
         return null;

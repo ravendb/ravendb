@@ -46,7 +46,9 @@
                                 <div>
                                     <i class="icon-processor"></i><span>CPU</span>
                                     <span data-bind="with: $root.node">
-                                        (<strong data-bind="text: utilizedCores, css: cssCores" data-toggle="tooltip" title="Assigned CPU cores limit"></strong>/<strong data-bind="text: numberOfCores" data-toggle="tooltip" title="Total CPU cores count"></strong>)
+                                        <span data-bind="if: utilizedCores">
+                                            (<strong data-bind="text: utilizedCores, css: cssCores" data-toggle="tooltip" title="Assigned CPU cores limit"></strong>/<strong data-bind="text: numberOfCores" data-toggle="tooltip" title="Total CPU cores count"></strong>)
+                                        </span>
                                     </span>
                                 </div>
                                 <div data-placement="bottom" data-toggle="tooltip" title="Machine CPU usage">
@@ -100,7 +102,7 @@
                 <div class="panel-body flex-vertical">
                     <div class="infogrid">
                         <div class="infogrid-label">
-                            <div class="margin-bottom">Total Requests/s<br/>
+                            <div class="margin-bottom">Requests/s<br/>
                                 <i class="total-requests-legend legend-rect"></i>
                                 <strong data-bind="text: totalRequestsPerSecond().toLocaleString()"></strong></div>
                             <div class="margin-bottom">Writes/s<br/> <i class="total-writes-legend legend-rect" ></i> <strong data-bind="text: totalWritesPerSecond().toLocaleString()"></strong></div>
