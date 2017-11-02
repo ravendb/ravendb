@@ -90,7 +90,7 @@
                                         </h3>
                                     </div>
                                     <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
-                                    <div class="status" data-bind="template: { name: 'status-template' }"></div>
+                                    <div class="status" data-bind="template: { name: 'state-template' }"></div>
                                     <div data-bind="template: { name: 'actions-template' }"></div>
                                 </div>
                             </div>
@@ -98,6 +98,9 @@
                                 <div class="padding padding-sm flex-horizontal">
                                     <div class="flex-grow">
                                         <ul class="properties">
+                                            <li><span>Task Status:</span>
+                                                <span class="text-details" data-bind="text: badgeText"></span>
+                                            </li>
                                             <li>
                                                 <span>Destination:</span>
                                                 <span title="Destination <database>@<Url>">
@@ -141,7 +144,7 @@
                                         </h3>
                                     </div>
                                     <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
-                                    <div class="status" data-bind="template: { name: 'status-template' }"></div>
+                                    <div class="status" data-bind="template: { name: 'state-template' }"></div>
                                     <div data-bind="template: { name: 'actions-template' }"></div>
                                 </div>
                             </div>
@@ -149,6 +152,9 @@
                                 <div class="padding padding-sm flex-horizontal">
                                     <div class="flex-grow">
                                         <ul class="properties">
+                                            <li><span>Task Status:</span>
+                                                <span class="text-details" data-bind="text: badgeText"></span>
+                                            </li>
                                             <li>
                                                 <span>Destination:</span>
                                                 <span title="Destination <database>@<Url>">
@@ -192,7 +198,7 @@
                                         </h3>
                                     </div>
                                     <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
-                                    <div class="status" data-bind="template: { name: 'status-template' }"></div>
+                                    <div class="status" data-bind="template: { name: 'state-template' }"></div>
                                     <div data-bind="template: { name: 'actions-template' }"></div>
                                 </div>
                             </div>
@@ -200,6 +206,9 @@
                                 <div class="padding padding-sm flex-horizontal">
                                     <div class="flex-grow">
                                         <ul class="properties">
+                                            <li><span>Task Status:</span>
+                                                <span class="text-details" data-bind="text: badgeText"></span>
+                                            </li>
                                             <li>
                                                 <span>Destination:</span>
                                                 <span title="Destination <database>@<server>">
@@ -243,7 +252,7 @@
                                         </h3>
                                     </div>
                                     <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
-                                    <div class="status" data-bind="template: { name: 'status-template' }"></div>
+                                    <div class="status" data-bind="template: { name: 'state-template' }"></div>
                                     <div data-bind="template: { name: 'actions-template' }"></div>
                                 </div>
                             </div>
@@ -251,6 +260,7 @@
                                 <div class="padding padding-sm flex-horizontal">
                                     <div class="flex-grow">
                                         <ul class="properties">
+                                            <li><span>Task Status:</span><span class="text-details" data-bind="text: badgeText"></span></li>
                                             <li data-bind="visible: lastFullBackupHumanized"><span data-bind="text: 'Last ' + fullBackupTypeName().toLowerCase() + ' backup'"></span><span class="text-details" data-bind="text: lastFullBackupHumanized"></span></li>
                                             <li data-bind="visible: lastIncrementalBackupHumanized"><span>Last incremental backup:</span><span  class="text-details" data-bind="text: lastIncrementalBackupHumanized"></span></li>
                                             <li data-bind="visible: nextBackup() && !onGoingBackup()"><span>Next estimated backup:</span><span data-bind="text: nextBackupHumanized, attr: { class: textClass() }"></span></li>
@@ -292,7 +302,7 @@
                                         </h3>
                                     </div>
                                     <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
-                                    <div class="status" data-bind="template: { name: 'status-template' }"></div>
+                                    <div class="status" data-bind="template: { name: 'state-template' }"></div>
                                     <div data-bind="template: { name: 'actions-template' }"></div>
                                 </div>
                             </div>
@@ -300,6 +310,12 @@
                                 <div class="padding padding-sm flex-horizontal">
                                     <div class="flex-grow">
                                         <ul class="properties">
+                                            <li><span>Task Status:</span>
+                                                <span class="text-details" data-bind="text: badgeText"></span>
+                                            </li>
+                                            <!-- ko if: clientDetailsIssue -->
+                                            <li><span>Client Status:</span><span data-bind="text: clientDetailsIssue, attr: { class: textClass() }"></span></li>
+                                            <!-- /ko -->
                                             <!-- ko if: !clientDetailsIssue() -->
                                             <li><span>Client IP:</span><span class="text-details" data-bind="text: clientIP"></span></li>
                                             <li><span>Connection Strategy:</span><span class="text-details" data-bind="text: connectionStrategy"></span></li>
@@ -315,9 +331,6 @@
                                                 </span>
                                                 <!-- /ko -->
                                             </li>
-                                            <!-- ko if: clientDetailsIssue -->
-                                            <li><span>Status:</span><span data-bind="text: clientDetailsIssue, attr: { class: textClass() }"></span></li>
-                                            <!-- /ko -->
                                         </ul>
                                     </div>
                                     <div>
@@ -388,11 +401,11 @@
     </div>
 </div>
 
-<script type="text/html" id="status-template">
+<script type="text/html" id="state-template">
     <div class="btn-group">
         <button type="button" class="btn dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
             <!--set-size-->
-            <span data-bind="text: badgeText"></span><span class="caret"></span>
+            <span data-bind="text: stateText()"></span><span class="caret"></span>
         </button>
         <ul class="dropdown-menu">
             <li><a href="#" data-bind="click: $root.confirmEnableOngoingTask"><span>Enable</span></a></li>
