@@ -111,8 +111,8 @@ namespace Voron.Recovery
                     {
                         if (ct.IsCancellationRequested)
                         {
-                            LogOperation(
-                                $"Cancellation requested while recovery was in position {GetFilePosition(startOffset, mem)}");
+                            if (_logger.IsOperationsEnabled)
+                                _logger.Operations($"Cancellation requested while recovery was in position {GetFilePosition(startOffset, mem)}");
                             _cancellationRequested = true;
                             break;
                         }
@@ -175,7 +175,8 @@ namespace Voron.Recovery
                                     rc = Sodium.crypto_generichash_init(hashStatePtr, null, UIntPtr.Zero, (UIntPtr)_streamHashResult.Length);
                                     if (rc != 0)
                                     {
-                                        LogOperation($"page #{pageHeader->PageNumber} (offset={(long)pageHeader}) failed to initialize Sodium for hash computation will skip this page.");
+                                        if (_logger.IsOperationsEnabled)
+                                            _logger.Operations($"page #{pageHeader->PageNumber} (offset={(long)pageHeader}) failed to initialize Sodium for hash computation will skip this page.");
                                         mem += numberOfPages * _pageSize;
                                         continue;
                                     }
@@ -199,7 +200,8 @@ namespace Voron.Recovery
                                         rc = Sodium.crypto_generichash_update(hashStatePtr, dataStart, (ulong)streamPageHeader->ChunkSize);
                                         if (rc != 0)
                                         {
-                                            LogOperation($"page #{pageHeader->PageNumber} (offset={(long)pageHeader}) failed to compute chunk hash, will skip it.");
+                                            if (_logger.IsOperationsEnabled)
+                                                _logger.Operations($"page #{pageHeader->PageNumber} (offset={(long)pageHeader}) failed to compute chunk hash, will skip it.");
                                             valid = false;
                                             break;
                                         }
@@ -213,7 +215,8 @@ namespace Voron.Recovery
                                         if (nextPage->Flags.HasFlag(PageFlags.Stream) == false || nextPage->Flags.HasFlag(PageFlags.Overflow) == false)
                                         {
                                             valid = false;
-                                            LogOperation($"page #{nextPage->PageNumber} (offset={(long)nextPage}) was suppose to be a stream chunck but isn't marked as Overflow | Stream");
+                                            if (_logger.IsOperationsEnabled)
+                                                _logger.Operations($"page #{nextPage->PageNumber} (offset={(long)nextPage}) was suppose to be a stream chunck but isn't marked as Overflow | Stream");
                                             break;
                                         }
                                         valid = ValidateOverflowPage(nextPage, eof, (long)nextPage, ref nextPagePtr);
@@ -233,7 +236,8 @@ namespace Voron.Recovery
                                     rc = Sodium.crypto_generichash_final(hashStatePtr, hashResultPtr, (UIntPtr)_streamHashResult.Length);
                                     if (rc != 0)
                                     {
-                                        LogOperation($"page #{pageHeader->PageNumber} (offset={(long)pageHeader}) failed to compute attachment hash, will skip it.");
+                                        if (_logger.IsOperationsEnabled)
+                                            _logger.Operations($"page #{pageHeader->PageNumber} (offset={(long)pageHeader}) failed to compute attachment hash, will skip it.");
                                         mem += numberOfPages * _pageSize;
                                         continue;
                                     }
@@ -355,31 +359,20 @@ namespace Voron.Recovery
                 documentsWriter.WriteEndObject();
                 conflictsWriter.WriteEndObject();
                 revisionsWriter.WriteEndObject();
-                
 
-                LogOperation(
-                    $"Discovered a total of {_numberOfDocumentsRetrieved:#,#;00} documents within {sw.Elapsed.TotalSeconds::#,#.#;;00} seconds.");
-                LogOperation($"Discovered a total of {_attachmentsHashs.Count:#,#;00} attachments.");
-                LogOperation($"Discovered a total of {_numberOfFaultedPages::#,#;00} faulted pages.");
+
+                if (_logger.IsOperationsEnabled)
+                {
+                    _logger.Operations($"Discovered a total of {_numberOfDocumentsRetrieved:#,#;00} documents within {sw.Elapsed.TotalSeconds::#,#.#;;00} seconds." + Environment.NewLine +
+                                       $"Discovered a total of {_attachmentsHashs.Count:#,#;00} attachments. " + Environment.NewLine + 
+                                       $"Discovered a total of {_numberOfFaultedPages::#,#;00} faulted pages.");
+                }
             }
             if (_cancellationRequested)
                 return RecoveryStatus.CancellationRequested;
             return RecoveryStatus.Success;
         }
 
-        private void LogInfo(string msg)
-        {
-            if(_logger.IsInfoEnabled == false)
-                return;
-            _logger.Info(msg);
-        }
-
-        private void LogOperation(string msg)
-        {
-            if (_logger.IsOperationsEnabled == false)
-                return;
-            _logger.Operations(msg);
-        }
         private static void ExtractTagFromLastPage(PageHeader* nextPage, StreamPageHeader* streamPageHeader, ref string tag)
         {
             var si = (StreamInfo*)((byte*)nextPage + streamPageHeader->ChunkSize + PageHeader.SizeOf);
@@ -480,7 +473,8 @@ namespace Voron.Recovery
                 return;
             if (_attachmentsHashs.Count == 0)
             {
-                LogOperation("No attachments were recoverd but there are documents pointing to attachments.");
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations("No attachments were recoverd but there are documents pointing to attachments.");
                 return;
             }
             if (_documentsAttachments.Count == 0)
@@ -524,8 +518,8 @@ namespace Voron.Recovery
                     //this is the case where we have a document with a hash but no attachment with that hash
                     if (compareResult > 0)
                     {
-                        LogOperation(
-                            $"Document {_documentsAttachments[index].docId} contians atachment with hash {documentHash} but we were not able to recover such attachment.");
+                        if (_logger.IsOperationsEnabled)
+                            _logger.Operations($"Document {_documentsAttachments[index].docId} contians atachment with hash {documentHash} but we were not able to recover such attachment.");
                         index++;
                         continue;
                     }
@@ -546,7 +540,8 @@ namespace Voron.Recovery
             {
                 msg.Append($" attachment tag = {tag}");
             }
-            LogOperation(msg.ToString());
+            if (_logger.IsOperationsEnabled)
+                _logger.Operations(msg.ToString());
             WriteDummyDocumentForAttachment(writer, hash, size, tag);
         }
 
@@ -674,7 +669,8 @@ namespace Voron.Recovery
                     document = DocumentsStorage.ParseRawDataSectionDocumentWithValidation(context, ref tvr, sizeInBytes);
                     if (document == null)
                     {
-                        LogOperation($"Failed to convert table value to document at position {GetFilePosition(startOffest, mem)}");
+                        if (_logger.IsOperationsEnabled)
+                            _logger.Operations($"Failed to convert table value to document at position {GetFilePosition(startOffest, mem)}");
                         return false;
                     }
                     document.EnsureMetadata();
@@ -693,8 +689,8 @@ namespace Voron.Recovery
                 }
                 catch (Exception e)
                 {
-                    LogOperation(
-                        $"Found invalid blittable document at pos={GetFilePosition(startOffest, mem)} with key={document?.Id ?? "null"}{Environment.NewLine}{e}");
+                    if (_logger.IsOperationsEnabled)
+                        _logger.Operations($"Found invalid blittable document at pos={GetFilePosition(startOffest, mem)} with key={document?.Id ?? "null"}{Environment.NewLine}{e}");
                     return false;
                 }
 
@@ -702,7 +698,8 @@ namespace Voron.Recovery
 
                 _documentWritten = true;
                 _numberOfDocumentsRetrieved++;
-                LogInfo($"Found document with key={document.Id}");
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Found document with key={document.Id}");
                 _lastRecoveredDocumentKey = document.Id;
 
                 HandleDocumentAttachments(document);
@@ -711,7 +708,8 @@ namespace Voron.Recovery
             }
             catch (Exception e)
             {
-                LogOperation($"Unexpected exception while writing document at position {GetFilePosition(startOffest, mem)}: {e}");
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations($"Unexpected exception while writing document at position {GetFilePosition(startOffest, mem)}: {e}");
                 return false;
             }
         }
@@ -723,8 +721,8 @@ namespace Voron.Recovery
                 var metadata = document.Data.GetMetadata();
                 if (metadata == null)
                 {
-                    LogOperation(
-                        $"Document {document.Id} has attachment flag set but was unable to read its metadata and retrieve the attachments hashes");
+                    if (_logger.IsOperationsEnabled)
+                        _logger.Operations($"Document {document.Id} has attachment flag set but was unable to read its metadata and retrieve the attachments hashes");
                     return;
                 }
                 var metadataDictionary = new MetadataAsDictionary(metadata);
@@ -756,7 +754,8 @@ namespace Voron.Recovery
                     revision = RevisionsStorage.ParseRawDataSectionRevisionWithValidation(context, ref tvr, sizeInBytes, out var changeVector);
                     if (revision == null)
                     {
-                        LogOperation($"Failed to convert table value to revision document at position {GetFilePosition(startOffest, mem)}");
+                        if (_logger.IsOperationsEnabled)
+                            _logger.Operations($"Failed to convert table value to revision document at position {GetFilePosition(startOffest, mem)}");
                         return false;
                     }
                     revision.EnsureMetadata();
@@ -764,8 +763,8 @@ namespace Voron.Recovery
                 }
                 catch (Exception e)
                 {
-                    LogOperation(
-                        $"Found invalid blittable revision document at pos={GetFilePosition(startOffest, mem)} with key={revision?.Id ?? "null"}{Environment.NewLine}{e}");
+                    if (_logger.IsOperationsEnabled)
+                        _logger.Operations($"Found invalid blittable revision document at pos={GetFilePosition(startOffest, mem)} with key={revision?.Id ?? "null"}{Environment.NewLine}{e}");
                     return false;
                 }
 
@@ -773,13 +772,15 @@ namespace Voron.Recovery
 
                 _revisionWritten = true;
                 _numberOfDocumentsRetrieved++;
-                LogInfo($"Found revision document with key={revision.Id}");
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Found revision document with key={revision.Id}");
                 _lastRecoveredDocumentKey = revision.Id;
                 return true;
             }
             catch (Exception e)
             {
-                LogOperation($"Unexpected exception while writing revision document at position {GetFilePosition(startOffest, mem)}: {e}");
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations($"Unexpected exception while writing revision document at position {GetFilePosition(startOffest, mem)}: {e}");
                 return false;
             }
         }
@@ -801,15 +802,16 @@ namespace Voron.Recovery
                     conflict = ConflictsStorage.ParseRawDataSectionConflictWithValidation(context, ref tvr, sizeInBytes, out var changeVector);
                     if (conflict == null)
                     {
-                        LogOperation($"Failed to convert table value to conflict document at position {GetFilePosition(startOffest, mem)}");
+                        if (_logger.IsOperationsEnabled)
+                            _logger.Operations($"Failed to convert table value to conflict document at position {GetFilePosition(startOffest, mem)}");
                         return false;
                     }
                     conflict.Doc.BlittableValidation();
                 }
                 catch (Exception e)
                 {
-                    LogOperation(
-                        $"Found invalid blittable conflict document at pos={GetFilePosition(startOffest, mem)} with key={conflict?.Id ?? "null"}{Environment.NewLine}{e}");
+                    if (_logger.IsOperationsEnabled)
+                        _logger.Operations($"Found invalid blittable conflict document at pos={GetFilePosition(startOffest, mem)} with key={conflict?.Id ?? "null"}{Environment.NewLine}{e}");
                     return false;
                 }
 
@@ -817,13 +819,15 @@ namespace Voron.Recovery
 
                 _conflictWritten = true;
                 _numberOfDocumentsRetrieved++;
-                LogInfo($"Found conflict document with key={conflict.Id}");
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Found conflict document with key={conflict.Id}");
                 _lastRecoveredDocumentKey = conflict.Id;
                 return true;
             }
             catch (Exception e)
             {
-                LogOperation($"Unexpected exception while writing conflict document at position {GetFilePosition(startOffest, mem)}: {e}");
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations($"Unexpected exception while writing conflict document at position {GetFilePosition(startOffest, mem)}: {e}");
                 return false;
             }
         }
@@ -831,7 +835,8 @@ namespace Voron.Recovery
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private byte* PrintErrorAndAdvanceMem(string message, byte* mem)
         {
-            LogOperation(message);
+            if (_logger.IsOperationsEnabled)
+                _logger.Operations(message);
             _numberOfFaultedPages++;
             return mem + _pageSize;
         }
