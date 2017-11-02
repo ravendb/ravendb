@@ -114,7 +114,7 @@ class editRavenEtlTask extends viewModelBase {
 
         this.dirtyFlag = new ko.DirtyFlag([           
             this.createNewConnectionString,
-            this.editedRavenEtl().dirtyFlag
+            this.editedRavenEtl().dirtyFlag().isDirty
         ], false, jsonUtil.newLineNormalizingHashFunction);
         
         this.newConnectionString(connectionStringRavenEtlModel.empty());

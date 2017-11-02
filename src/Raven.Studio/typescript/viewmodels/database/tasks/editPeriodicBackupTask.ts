@@ -65,7 +65,7 @@ class editPeriodicBackupTask extends viewModelBase {
 
     compositionComplete() {
         super.compositionComplete();
-
+        
         $('.edit-backup [data-toggle="tooltip"]').tooltip();
         
         document.getElementById("taskName").focus();
