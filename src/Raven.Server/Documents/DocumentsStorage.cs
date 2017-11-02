@@ -281,7 +281,7 @@ namespace Raven.Server.Documents
                     tx.CreateTree(DocsSlice);
                     tx.CreateTree(LastReplicatedEtagsSlice);
                     tx.CreateTree(GlobalTreeSlice);
-
+                    
                     CollectionsSchema.Create(tx, CollectionsSlice, 32);
 
                     RevisionsStorage = new RevisionsStorage(DocumentDatabase, tx);
@@ -289,6 +289,7 @@ namespace Raven.Server.Documents
                     Identities = new IdentitiesStorage(DocumentDatabase, tx);
                     ConflictsStorage = new ConflictsStorage(DocumentDatabase, tx);
                     AttachmentsStorage = new AttachmentsStorage(DocumentDatabase, tx);
+
                     DocumentPut = new DocumentPutAction(this, DocumentDatabase);
 
                     _lastEtag = ReadLastEtag(tx);
@@ -306,6 +307,14 @@ namespace Raven.Server.Documents
                 options.Dispose();
                 throw;
             }
+        }
+
+        public void AssertFixedSizeTrees(Transaction tx)
+        {
+            // here we validate the table fixed size indexes
+            tx.OpenTable(DocsSchema, DocsSlice).AssertValidFixedSizeTrees();
+            tx.OpenTable(DocsSchema, LastReplicatedEtagsSlice).AssertValidFixedSizeTrees();
+            tx.OpenTable(DocsSchema, GlobalTreeSlice).AssertValidFixedSizeTrees();
         }
 
         private static void AssertTransaction(DocumentsOperationContext context)

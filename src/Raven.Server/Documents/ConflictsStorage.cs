@@ -122,7 +122,14 @@ namespace Raven.Server.Documents
 
             ConflictsSchema.Create(tx, ConflictsSlice, 32);
 
-            ConflictsCount = tx.OpenTable(ConflictsSchema, ConflictsSlice).NumberOfEntries;
+            var conflictsTable = tx.OpenTable(ConflictsSchema, ConflictsSlice);
+            ConflictsCount = conflictsTable.NumberOfEntries;
+        }
+
+        public void AssertFixedSizeTrees(Transaction tx)
+        {
+            var conflictsTable = tx.OpenTable(ConflictsSchema, ConflictsSlice);
+            conflictsTable.AssertValidFixedSizeTrees();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
