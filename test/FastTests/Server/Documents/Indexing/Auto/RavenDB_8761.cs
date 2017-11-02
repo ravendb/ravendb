@@ -18,77 +18,97 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 using (var session = store.OpenSession())
                 {
-                    var products = session.Advanced.RawQuery<ProductCount>(
-                        @"
+                    foreach (var query in new IEnumerable<ProductCount>[]
+                    {
+                        // raw query
+                        session.Advanced.RawQuery<ProductCount>(
+                                @"
                         from Orders group by Lines[].Product
                         order by count()
                         select key() as ProductName, count()")
-                        .WaitForNonStaleResults()
-                        .ToList();
+                            .WaitForNonStaleResults(),
 
-                    Assert.Equal(2, products.Count);
+                        // linq
+                        session.Query<Order>().GroupByArrayValues(x => x.Lines.Select(y => y.Product)).Select(x => new ProductCount
+                        {
+                            Count = x.Count(),
+                            ProductName = x.Key
+                        }),
 
-                    Assert.Equal("products/1", products[0].ProductName);
-                    Assert.Equal(1, products[0].Count);
+                        // document query
+                        session.Advanced.DocumentQuery<Order>().GroupBy("Lines[].Product").SelectKey("ProductName").SelectCount().OfType<ProductCount>()
+                    })
+                    {
+                        var products = query.ToList();
 
-                    Assert.Equal("products/2", products[1].ProductName);
-                    Assert.Equal(2, products[1].Count);
+                        Assert.Equal(2, products.Count);
 
+                        Assert.Equal("products/1", products[0].ProductName);
+                        Assert.Equal(1, products[0].Count);
 
-                    // linq: TODO arek
-                    //var results = session.Query<Order>().GroupByArrayValues(x => x.Lines.Select(y => y.Product)).Select(x => new ProductCount
-                    //{
-                    //    Count = x.Count(),
-                    //    ProductName = x.Key
-                    //}).ToList();
+                        Assert.Equal("products/2", products[1].ProductName);
+                        Assert.Equal(2, products[1].Count);
+                    }
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var products = session.Advanced.RawQuery<ProductCount>(
-                            @"
+                    foreach (var query in new IEnumerable<ProductCount>[]
+                    {
+                        // raw query
+                        session.Advanced.RawQuery<ProductCount>(
+                                @"
                             from Orders 
                             group by Lines[].Product, ShipTo.Country 
                             order by count() 
                             select Lines[].Product as ProductName, ShipTo.Country as Country, count()")
-                        .WaitForNonStaleResults()
-                        .ToList();
+                            .WaitForNonStaleResults(),
+                    })
+                    {
+                        var products = query.ToList();
 
-                    Assert.Equal(2, products.Count);
+                        Assert.Equal(2, products.Count);
 
-                    Assert.Equal("products/1", products[0].ProductName);
-                    Assert.Equal(1, products[0].Count);
-                    Assert.Equal("USA", products[0].Country);
+                        Assert.Equal("products/1", products[0].ProductName);
+                        Assert.Equal(1, products[0].Count);
+                        Assert.Equal("USA", products[0].Country);
 
-                    Assert.Equal("products/2", products[1].ProductName);
-                    Assert.Equal(2, products[1].Count);
-                    Assert.Equal("USA", products[1].Country);
+                        Assert.Equal("products/2", products[1].ProductName);
+                        Assert.Equal(2, products[1].Count);
+                        Assert.Equal("USA", products[1].Country);
+                    }
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var products = session.Advanced.RawQuery<ProductCount>(
-                            @"
+                    foreach (var query in new IEnumerable<ProductCount>[]
+                    {
+                        // raw query
+                        session.Advanced.RawQuery<ProductCount>(
+                                @"
                             from Orders 
                             group by Lines[].Product, Lines[].Quantity 
                             order by Lines[].Quantity
                             select Lines[].Product as ProductName, Lines[].Quantity as Quantity, count()")
-                        .WaitForNonStaleResults()
-                        .ToList();
+                            .WaitForNonStaleResults(),
+                    })
+                    {
+                        var products = query.ToList();
 
-                    Assert.Equal(3, products.Count);
+                        Assert.Equal(3, products.Count);
 
-                    Assert.Equal("products/1", products[0].ProductName);
-                    Assert.Equal(1, products[0].Count);
-                    Assert.Equal(1, products[0].Quantity);
+                        Assert.Equal("products/1", products[0].ProductName);
+                        Assert.Equal(1, products[0].Count);
+                        Assert.Equal(1, products[0].Quantity);
 
-                    Assert.Equal("products/2", products[1].ProductName);
-                    Assert.Equal(1, products[1].Count);
-                    Assert.Equal(2, products[1].Quantity);
+                        Assert.Equal("products/2", products[1].ProductName);
+                        Assert.Equal(1, products[1].Count);
+                        Assert.Equal(2, products[1].Quantity);
 
-                    Assert.Equal("products/2", products[2].ProductName);
-                    Assert.Equal(1, products[2].Count);
-                    Assert.Equal(3, products[2].Quantity);
+                        Assert.Equal("products/2", products[2].ProductName);
+                        Assert.Equal(1, products[2].Count);
+                        Assert.Equal(3, products[2].Quantity);
+                    }
                 }
             }
         }
