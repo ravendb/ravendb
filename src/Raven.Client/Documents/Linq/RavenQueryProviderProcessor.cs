@@ -1566,6 +1566,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
                             $"can only contain Select method while it got {methodName}");
                     }
 
+                    if (arrayBehavior != GroupByArrayBehavior.ByIndividualValues)
+                        throw new NotImplementedException("TODO arek");
+
                     var parts = new List<string>();
 
                     foreach (var methodArgument in method.Arguments)
