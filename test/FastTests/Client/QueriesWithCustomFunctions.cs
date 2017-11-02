@@ -1577,7 +1577,7 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
         }
 
         [Fact]
-        public void Custom_Functions_Parse_Support()
+        public void Custom_Functions_ValueTypeParse_Support()
         {
             using (var store = GetDocumentStore())
             {
