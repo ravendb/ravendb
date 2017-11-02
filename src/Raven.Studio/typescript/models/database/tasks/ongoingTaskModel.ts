@@ -7,42 +7,62 @@ abstract class ongoingTaskModel {
     taskType = ko.observable<Raven.Client.ServerWide.Operations.OngoingTaskType>();
     responsibleNode = ko.observable<Raven.Client.ServerWide.Operations.NodeId>();
     taskState = ko.observable<Raven.Client.ServerWide.Operations.OngoingTaskState>();
-    taskConnectionStatus = ko.observable<Raven.Client.ServerWide.Operations.OngoingTaskConnectionStatus>(); // TODO: discuss this property...
+    taskConnectionStatus = ko.observable<Raven.Client.ServerWide.Operations.OngoingTaskConnectionStatus>();
     
     badgeText: KnockoutComputed<string>;
     badgeClass: KnockoutComputed<string>;
-   
+    stateText: KnockoutComputed<string>;
+
     protected initializeObservables() {
         
         this.badgeClass = ko.pureComputed(() => {
-            if (this.taskState() === 'Enabled') {
+            if (this.taskConnectionStatus() === 'Active') {
                 return "state-success";
             }
-
-            if (this.taskState() === "Disabled") {
+            if (this.taskConnectionStatus() === "Reconnect") {
                 return "state-warning";
             }
-
-            if (this.taskState() === "PartiallyEnabled") {
+            if (this.taskConnectionStatus() === "NotActive") {
                 return "state-warning";
             }
-
-            return "state-offline"; // ? 
+            if (this.taskConnectionStatus() === "NotOnThisNode") {
+                return "state-offline";
+            }
+            if (this.taskConnectionStatus() === "None") {
+                return "state-offline";
+            }
         });
 
         this.badgeText = ko.pureComputed(() => {
+            if (this.taskConnectionStatus() === "None") {
+                return "None";
+            }
+            if (this.taskConnectionStatus() === 'Active') {
+                return "Active";
+            }
+            if (this.taskConnectionStatus() === "NotActive") {
+                return "Not Active";
+            }
+            if (this.taskConnectionStatus() === "NotOnThisNode") {
+                return "Not On Node";
+            }
+            if (this.taskConnectionStatus() === "Reconnect") {
+                return "Reconnect";
+            }
+        });
+
+        this.stateText = ko.pureComputed(() => {
             if (this.taskState() === 'Enabled') {
                 return "Enabled";
             }
-
             if (this.taskState() === "Disabled") {
                 return "Disabled";
             }
             if (this.taskState() === "PartiallyEnabled") {
                 return "Partial";
+                // Relevant only for Etl tasks with some disabled scripts...
+                // Todo: to be handled in issue 8880
             }
-            
-            return "Offline"; // ?
         });
     }
 
