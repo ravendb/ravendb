@@ -428,7 +428,7 @@ namespace Voron.Data.Tables
             foreach (var fsi in _schema.FixedSizeIndexes)
             {
                 var fixedSizeTree = GetFixedSizeTree(fsi.Value);
-                fixedSizeTree.ForceValidateTree();
+                fixedSizeTree.ValidateTree_Forced();
             }
         }
 
@@ -1507,12 +1507,14 @@ namespace Voron.Data.Tables
         /// validate all globals indexes has the same number
         /// validate all local indexes has the same number as the table itself
         /// </summary>
+        [Conditional("VALIDATE")]
         internal void AssertValidTable()
         {
             long globalDocsCount = -1;
 
             foreach (var fsi in _schema.FixedSizeIndexes)
             {
+                _fstKey.ValidateTree_Forced();
                 var indexNumberOfEntries = GetFixedSizeTree(fsi.Value).NumberOfEntries;
                 if (fsi.Value.IsGlobal == false)
                 {
