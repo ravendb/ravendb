@@ -433,6 +433,20 @@ If you really want to do in memory filtering on the data returned from the query
         }
 
         /// <summary>
+        ///   This function exists solely to forbid in memory where clause on IDocumentQuery, because
+        ///   that is nearly always a mistake.
+        /// </summary>
+        [Obsolete(
+            @"
+Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session.Query<T>() method fully supports Linq to issue group by grouping, while session.Advanced.DocumentQuery<T>() is intended for lower level API access.
+"
+            , true)]
+        public IEnumerable<IGrouping<TKey, T>> GroupBy<TKey>(Func<T, TKey> keySelector)
+        {
+            throw new NotSupportedException();
+        }
+
+        /// <summary>
         ///   Includes the specified path in the query, loading the document specified in that path
         /// </summary>
         /// <param name = "path">The path.</param>
