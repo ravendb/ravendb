@@ -327,10 +327,10 @@ namespace Voron.Data.Fixed
         [Conditional("VALIDATE")]
         private void ValidateTree()
         {
-            AssertTreeIsValid();    
+            ValidateTree_Forced();
         }
-        
-        private void AssertTreeIsValid()
+
+        public  void ValidateTree_Forced()
         {
             if (_type != RootObjectType.FixedSizeTree)
                 return;
@@ -424,6 +424,9 @@ namespace Voron.Data.Fixed
 
         private void FreePage(long pageNumber)
         {
+            using (ModifyLargeHeader(out var largeHeader))
+                largeHeader->PageCount--;
+
             if (FreeSpaceTree)
             {
                 // we cannot recursively call free space handling to ensure that we won't modify a section
@@ -476,8 +479,7 @@ namespace Voron.Data.Fixed
                 parentPage.StartPosition = (ushort)Constants.FixedSizeTree.PageHeaderSize;
                 parentPage.ValueSize = _valSize;
 
-                FixedSizeTreeHeader.Large* largePtr;
-                using (ModifyLargeHeader(out largePtr))
+                using (ModifyLargeHeader(out var largePtr))
                 {
                     largePtr->RootPageNumber = parentPage.PageNumber;
                     largePtr->Depth++;
@@ -1122,10 +1124,6 @@ namespace Voron.Data.Fixed
         {
             FreePage(page.PageNumber);
 
-            FixedSizeTreeHeader.Large* largeHeader;
-            using (ModifyLargeHeader(out largeHeader))
-                largeHeader->PageCount--;
-
             if (_cursor.Count == 0) //remove the root page
             {
                 _parent.Delete(_treeName);
@@ -1173,53 +1171,7 @@ namespace Voron.Data.Fixed
         {
             if (_cursor.Count == 0)
             {
-                // root page
-                FixedSizeTreeHeader.Large* largeHeader;
-
-                if (page.IsBranch && page.NumberOfEntries == 1)
-                {
-                    var childPage = page.GetEntry(0)->PageNumber;
-                    var rootPageNum = page.PageNumber;
-                    Memory.Copy(page.Pointer, GetReadOnlyPage(childPage).Pointer, Constants.Storage.PageSize);
-                    page.PageNumber = rootPageNum; //overwritten by copy
-
-                    using (ModifyLargeHeader(out largeHeader))
-                    {
-                        largeHeader->Depth--;
-                        largeHeader->PageCount--;
-                    }
-
-                    FreePage(childPage);
-                    return page;
-                }
-
-                largeHeader = (FixedSizeTreeHeader.Large*)_parent.DirectRead(_treeName);
-
-                if (largeHeader->NumberOfEntries <= _maxEmbeddedEntries)
-                {
-                    System.Diagnostics.Debug.Assert(page.IsLeaf);
-                    System.Diagnostics.Debug.Assert(page.NumberOfEntries == largeHeader->NumberOfEntries);
-
-                    // and small enough to fit, converting to embedded
-                    byte* ptr;
-                    using (_parent.DirectAdd(_treeName,
-                            sizeof(FixedSizeTreeHeader.Embedded) + (_entrySize * page.NumberOfEntries),
-                            out ptr))
-                    {
-                        var header = (FixedSizeTreeHeader.Embedded*)ptr;
-                        header->RootObjectType = RootObjectType.EmbeddedFixedSizeTree;
-                        header->ValueSize = _valSize;
-                        header->NumberOfEntries = (byte)page.NumberOfEntries;
-                        _type = RootObjectType.EmbeddedFixedSizeTree;
-
-                        Memory.Copy(ptr + sizeof(FixedSizeTreeHeader.Embedded),
-                            page.Pointer + page.StartPosition,
-                            (_entrySize * page.NumberOfEntries));
-                    }
-
-                    FreePage(page.PageNumber);
-                }
-                return null;
+                return RebalanceRootPage(page);
             }
 
             var sizeOfEntryInPage = (page.IsLeaf ? _entrySize : BranchEntrySize);
@@ -1239,7 +1191,11 @@ namespace Voron.Data.Fixed
             if (page.NumberOfEntries == 0)// empty page, delete it and fixup the parent
             {
                 // fixup the implicit less than ref
-                if (parentPage.LastSearchPosition == 0 && parentPage.NumberOfEntries > 2)
+                if (parentPage.LastSearchPosition == 0
+                    // if we are 2 or less, we'll remove our entry and the parent page 
+                    // page will rebalance in turn, so we shouldn't modify the relevant
+                    // entry
+                    && parentPage.NumberOfEntries > 2) 
                 {
                     parentPage.NumberOfEntries--;
                     // remove the first value
@@ -1252,6 +1208,8 @@ namespace Voron.Data.Fixed
                     // need to remove from midway through. At any rate, we'll rebalance on next call
                     parentPage.RemoveEntry(parentPage.LastSearchPosition);
                 }
+                FreePage(page.PageNumber);
+                
                 return parentPage;
             }
 
@@ -1261,15 +1219,14 @@ namespace Voron.Data.Fixed
                 // write the page value to the parent
 
                 var entry = parentPage.GetEntry(parentPage.LastSearchPosition);
-                *entry = *page.GetEntry(0);
+                // we don't fixup the key here because there is no need and the 
+                // actual key used might be different between the current page
+                // and its child
+                entry->PageNumber = page.GetEntry(0)->PageNumber;
 
                 // then delete the page
                 FreePage(page.PageNumber);
-
-                FixedSizeTreeHeader.Large* largeHeader;
-                using (ModifyLargeHeader(out largeHeader))
-                    largeHeader->PageCount--;
-
+                
                 return parentPage;
             }
 
@@ -1306,10 +1263,6 @@ namespace Voron.Data.Fixed
                     page.NumberOfEntries += siblingPage.NumberOfEntries;
 
                     FreePage(siblingNum);
-
-                    FixedSizeTreeHeader.Large* largeHeader;
-                    using (ModifyLargeHeader(out largeHeader))
-                        largeHeader->PageCount--;
 
                     // now fix parent ref, in this case, just removing it is enough
                     parentPage.RemoveEntry(1);
@@ -1355,10 +1308,6 @@ namespace Voron.Data.Fixed
 
                     FreePage(page.PageNumber);
 
-                    FixedSizeTreeHeader.Large* largeHeader;
-                    using (ModifyLargeHeader(out largeHeader))
-                        largeHeader->PageCount--;
-
                     // now fix parent ref, in this case, just removing it is enough
                     parentPage.RemoveEntry(parentPage.LastSearchPosition);
 
@@ -1368,6 +1317,15 @@ namespace Voron.Data.Fixed
                 var entriesToTake = (siblingPage.NumberOfEntries / 2);
                 page.ResetStartPosition();
 
+                if (page.IsBranch)
+                {
+                    // if we are a branch page and we copy items from our left we need to make
+                    // sure that the implicit left entry is fixed. We do that by copying the
+                    // entry our parent has for us as the leftmost entry for our current state
+                    // and then we copy the entries to our left
+                    page.SetKey(parentPage.GetKey(parentPage.LastSearchPosition),0);
+                }
+                
                 UnmanagedMemory.Move(page.Pointer + page.StartPosition + (entriesToTake * sizeOfEntryInPage),
                     page.Pointer + page.StartPosition,
                     entriesToTake * sizeOfEntryInPage);
@@ -1387,6 +1345,59 @@ namespace Voron.Data.Fixed
 
                 return parentPage;
             }
+        }
+
+        private  FixedSizeTreePage RebalanceRootPage(FixedSizeTreePage page)
+        {
+            FixedSizeTreeHeader.Large* largeHeader;
+
+            if (page.IsBranch)
+            {
+                // can't proceed here
+                if (page.NumberOfEntries != 1)
+                    return null;
+                // can just replace the child and use my own page
+                var childPage = page.GetEntry(0)->PageNumber;
+                var rootPageNum = page.PageNumber;
+                Memory.Copy(page.Pointer, GetReadOnlyPage(childPage).Pointer, Constants.Storage.PageSize);
+                page.PageNumber = rootPageNum; //overwritten by copy
+
+                using (ModifyLargeHeader(out largeHeader))
+                {
+                    largeHeader->Depth--;
+                }
+
+                FreePage(childPage);
+                return page;
+            }
+
+            // here we are a leaf root page
+            largeHeader = (FixedSizeTreeHeader.Large*)_parent.DirectRead(_treeName);
+
+            if (largeHeader->NumberOfEntries <= _maxEmbeddedEntries)
+            {
+                System.Diagnostics.Debug.Assert(page.IsLeaf);
+                System.Diagnostics.Debug.Assert(page.NumberOfEntries == largeHeader->NumberOfEntries);
+
+                // and small enough to fit, converting to embedded
+                using (_parent.DirectAdd(_treeName,
+                    sizeof(FixedSizeTreeHeader.Embedded) + (_entrySize * page.NumberOfEntries),
+                    out var ptr))
+                {
+                    var header = (FixedSizeTreeHeader.Embedded*)ptr;
+                    header->RootObjectType = RootObjectType.EmbeddedFixedSizeTree;
+                    header->ValueSize = _valSize;
+                    header->NumberOfEntries = (byte)page.NumberOfEntries;
+                    _type = RootObjectType.EmbeddedFixedSizeTree;
+
+                    Memory.Copy(ptr + sizeof(FixedSizeTreeHeader.Embedded),
+                        page.Pointer + page.StartPosition,
+                        (_entrySize * page.NumberOfEntries));
+                }
+
+                FreePage(page.PageNumber);
+            }
+            return null;
         }
 
         private DeletionResult RemoveEmbeddedEntry(long key)
@@ -1568,8 +1579,7 @@ namespace Voron.Data.Fixed
 
         private Tree.DirectAddScope ModifyLargeHeader(out FixedSizeTreeHeader.Large* largeHeader)
         {
-            byte* ptr;
-            var largeHeaderScope = _parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large), out ptr);
+            var largeHeaderScope = _parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large), out var ptr);
 
             largeHeader = (FixedSizeTreeHeader.Large*)ptr;
 
