@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Util;
@@ -6,13 +7,14 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Commercial
 {
-    public class SecuredSetupInfo
+    public class SetupInfo
     {
         public License License { get; set; }
         public string Email { get; set; }
         public string Domain { get; set; }
         public string Challenge { get; set; }
-        public List<NodeInfo> NodeSetupInfos { get; set; }
+        public bool ModifyLocalServer { get; set; }
+        public Dictionary<string, NodeInfo> NodeSetupInfos { get; set; }
         
         public DynamicJsonValue ToJson()
         {
@@ -22,13 +24,13 @@ namespace Raven.Server.Commercial
                 [nameof(Email)] = Email,
                 [nameof(Domain)] = Domain,
                 [nameof(Challenge)] = Challenge,
-                [nameof(NodeSetupInfos)] = NodeSetupInfos.Select(node => node.ToJson()).ToArray()
+                [nameof(ModifyLocalServer)] = ModifyLocalServer,
+                [nameof(NodeSetupInfos)] = DynamicJsonValue.Convert(NodeSetupInfos)
             };
         }
 
         public class NodeInfo
         {
-            public string NodeTag { get; set; }
             public string ServerUrl { get; set; }
             public string PublicServerUrl { get; set; }
             public int Port { get; set; }
@@ -41,7 +43,6 @@ namespace Raven.Server.Commercial
             {
                 return new DynamicJsonValue
                 {
-                    [nameof(NodeTag)] = NodeTag,
                     [nameof(ServerUrl)] = ServerUrl,
                     [nameof(PublicServerUrl)] = PublicServerUrl,
                     [nameof(Port)] = Port,
@@ -57,13 +58,15 @@ namespace Raven.Server.Commercial
     {
         public string ServerUrl { get; set; }
         public string PublicServerUrl { get; set; }
+        public bool ModifyLocalServer { get; set; }
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
                 [nameof(ServerUrl)] = ServerUrl,
-                [nameof(PublicServerUrl)] = PublicServerUrl
+                [nameof(PublicServerUrl)] = PublicServerUrl,
+                [nameof(ModifyLocalServer)] = ModifyLocalServer,
             };
         }
     }
@@ -116,6 +119,7 @@ namespace Raven.Server.Commercial
         public long Processed { get; set; }
         public long Total { get; set; }
         public readonly List<string> Messages;
+        public byte[] SettingsZipFile;
 
         public SetupProgressAndResult()
         {
