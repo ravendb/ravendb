@@ -345,6 +345,10 @@ namespace Raven.Client.Documents.Session
                 if (fieldName == null || fieldName.Equals(projectedName, StringComparison.Ordinal))
                     fieldName = aliasedFieldName;
             }
+            else if (fieldName != null &&_aliasToGroupByFieldName.TryGetValue(fieldName, out aliasedFieldName))
+            {
+                fieldName = aliasedFieldName;
+            }
 
             SelectTokens.AddLast(GroupByKeyToken.Create(fieldName, projectedName));
         }

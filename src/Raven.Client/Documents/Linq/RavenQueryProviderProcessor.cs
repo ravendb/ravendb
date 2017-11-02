@@ -1495,14 +1495,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 case ExpressionType.New:
                     var newExpression = ((NewExpression)body);
 
-                    for (int index = 0; index < newExpression.Arguments.Count; index++)
-                    {
-                        var originalField = GetSelectPath((MemberExpression)newExpression.Arguments[index]);
-
-                        _documentQuery.GroupBy(originalField);
-
-                        AddGroupByAliasIfNeeded(newExpression.Members[index], originalField);
-                    }
+                    AddCompositeGroupByKey(newExpression);
                     break;
                 case ExpressionType.MemberInit:
                     var memberInitExpression = ((MemberInitExpression)body);
@@ -1573,21 +1566,62 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                     foreach (var methodArgument in method.Arguments)
                     {
-                        var field = _linqPathProvider.GetMemberExpression(methodArgument);
+                        switch (methodArgument.NodeType)
+                        {
+                            case ExpressionType.MemberAccess:
+                                AddPart();
+                                break;
+                            case ExpressionType.Lambda:
+                                var lambda = (LambdaExpression)methodArgument;
 
-                        var path = GetSelectPath(field);
+                                switch (lambda.Body.NodeType)
+                                {
+                                    case ExpressionType.MemberAccess:
+                                        AddPart();
+                                        break;
+                                    case ExpressionType.New:
+                                        AddCompositeGroupByKey((NewExpression)lambda.Body, parts);
+                                        return;
+                                    default:
+                                        throw new NotSupportedException("TODO arek");
+                                }
+                                break;
+                            default:
+                                throw new NotSupportedException("TODO arek");
+                        }
 
-                        if (IsCollection(field.Type))
-                            path += "[]";
+                        void AddPart()
+                        {
+                            var field = _linqPathProvider.GetMemberExpression(methodArgument);
+
+                            var path = GetSelectPath(field);
+
+                            if (IsCollection(field.Type))
+                                path += "[]";
                      
-                        parts.Add(path);
+                            parts.Add(path);
+                        }
                     }
 
                     _documentQuery.GroupBy(string.Join(".", parts));
                     break;
                 default:
                     throw new NotSupportedException("Node not supported in GroupBy: " + body.NodeType);
+            }
+        }
 
+        private void AddCompositeGroupByKey(NewExpression newExpression, List<string> prefix = null)
+        {
+            for (int index = 0; index < newExpression.Arguments.Count; index++)
+            {
+                var originalField = GetSelectPath((MemberExpression)newExpression.Arguments[index]);
+
+                if (prefix != null)
+                    originalField = string.Join(".", prefix.Union(new[] {originalField}));
+
+                _documentQuery.GroupBy(originalField);
+
+                AddGroupByAliasIfNeeded(newExpression.Members[index], originalField);
             }
         }
 
