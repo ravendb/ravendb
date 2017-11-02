@@ -430,10 +430,10 @@ namespace Raven.Client.Util
 
         public class ValueTypeParseSupport : JavascriptConversionExtension
         {
-            private static readonly HashSet<Type> ValueTypes = new HashSet<Type>() {
-                typeof(int), typeof(uint), typeof(double), typeof(decimal),
-                typeof(bool), typeof(char), typeof(long), typeof(ulong),
-                typeof(sbyte),  typeof(short), typeof(ushort), typeof(byte)
+            private static readonly Dictionary<Type, string> ValueTypes = new Dictionary<Type, string>() {
+                { typeof(int), "parseInt" }, { typeof(uint), "parseInt" }, { typeof(double), "parseFloat" }, { typeof(decimal), "parseFloat" },
+                { typeof(bool), "\"true\" == " }, { typeof(char), "" }, { typeof(long), "parseInt" }, { typeof(ulong), "parseInt" },
+                { typeof(sbyte), "parseInt" },  { typeof(short), "parseInt" }, {typeof(ushort), "parseInt" }, { typeof(byte), "parseInt" }
             };
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
@@ -441,11 +441,17 @@ namespace Raven.Client.Util
                 var methodCallExpression = context.Node as MethodCallExpression;
                 var method = methodCallExpression?.Method;
 
-                if (method == null || method.Name != "Parse" || !ValueTypes.Contains(method.DeclaringType))
+                if (method == null || method.Name != "Parse" || !ValueTypes.ContainsKey(method.DeclaringType))
                     return;
 
                 context.PreventDefault();
-                context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                var writer = context.GetWriter();
+                using (writer.Operation(methodCallExpression))
+                {
+                    writer.Write($"{ValueTypes[method.DeclaringType]}(");
+                    context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                    writer.Write(")");
+                }
             }
         }
 

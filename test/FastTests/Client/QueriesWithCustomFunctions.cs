@@ -1584,8 +1584,6 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Jerry", LastName = "Garcia" }, "users/1");
-                    session.Store(new User { Name = "Phil", LastName = "" }, "users/2");
-                    session.Store(new User { Name = "Pigpen" }, "users/3");
                     session.SaveChanges();
                 }
 
@@ -1594,9 +1592,9 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
                     var query = from u in session.Query<User>()
                                 select new
                                 {
-                                    IntParse = int.Parse("1234"),
+                                    IntParse = int.Parse("1234") + int.Parse("1234"),
                                     DoubleParse = double.Parse("1234"),
-                                    DecimalParse = decimal.Parse("1234"),
+                                    DecimalParse = decimal.Parse("12.34"),
                                     BoolParse = bool.Parse("true"),
                                     CharParse = char.Parse("s"),
                                     ByteParse = byte.Parse("127"),
@@ -1609,26 +1607,26 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
                                 };
 
                     Assert.Equal("FROM Users as u SELECT { " +
-                        "IntParse : \"1234\", " +
-                        "DoubleParse : \"1234\", " +
-                        "DecimalParse : \"1234\", " +
-                        "BoolParse : \"true\", " +
-                        "CharParse : \"s\", " +
-                        "ByteParse : \"127\", " +
-                        "LongParse : \"1234\", " +
-                        "SByteParse : \"127\", " +
-                        "ShortParse : \"1234\", " +
-                        "UintParse : \"1234\", " +
-                        "UlongParse : \"1234\", " +
-                        "UshortParse : \"1234\" }", query.ToString());
+                        "IntParse : parseInt(\"1234\")+parseInt(\"1234\"), " +
+                        "DoubleParse : parseFloat(\"1234\"), " +
+                        "DecimalParse : parseFloat(\"12.34\"), " +
+                        "BoolParse : \"true\" == (\"true\"), " +
+                        "CharParse : (\"s\"), " +
+                        "ByteParse : parseInt(\"127\"), " +
+                        "LongParse : parseInt(\"1234\"), " +
+                        "SByteParse : parseInt(\"127\"), " +
+                        "ShortParse : parseInt(\"1234\"), " +
+                        "UintParse : parseInt(\"1234\"), " +
+                        "UlongParse : parseInt(\"1234\"), " +
+                        "UshortParse : parseInt(\"1234\") }", query.ToString());
 
                     var queryResult = query.ToList();
-                    Assert.Equal(3, queryResult.Count);
+                    Assert.Equal(1, queryResult.Count);
 
 
-                    Assert.Equal(1234, queryResult[0].IntParse);
+                    Assert.Equal(int.Parse("1234") + int.Parse("1234"), queryResult[0].IntParse);
                     Assert.Equal(1234, queryResult[0].DoubleParse);
-                    Assert.Equal(1234, queryResult[0].DecimalParse);
+                    Assert.Equal(12.34M, queryResult[0].DecimalParse);
                     Assert.Equal(true, queryResult[0].BoolParse);
                     Assert.Equal('s', queryResult[0].CharParse);
                     Assert.Equal(127, queryResult[0].ByteParse);
