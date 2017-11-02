@@ -46,6 +46,8 @@ namespace Raven.Server.Documents.PeriodicBackup
         private readonly ConcurrentDictionary<long, PeriodicBackup> _periodicBackups
             = new ConcurrentDictionary<long, PeriodicBackup>();
 
+        private static readonly Dictionary<string, long> EmptyDictionary = new Dictionary<string, long>();
+
         private readonly ConcurrentSet<Task> _inactiveRunningPeriodicBackupsTasks = new ConcurrentSet<Task>();
         private bool _disposed;
 
@@ -1189,7 +1191,10 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
         {
-            var results = new Dictionary<string, long>();
+            if (_periodicBackups.Count == 0)
+                return EmptyDictionary;
+
+            var processedTombstonesPerCollection = new Dictionary<string, long>();
 
             var minLastEtag = long.MaxValue;
             foreach (var periodicBackup in _periodicBackups.Values)
@@ -1201,7 +1206,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 }
             }
 
-            if(minLastEtag == long.MaxValue)
+            if (minLastEtag == long.MaxValue)
                 minLastEtag = 0;
 
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -1209,11 +1214,11 @@ namespace Raven.Server.Documents.PeriodicBackup
             {
                 foreach (var collection in _database.DocumentsStorage.GetCollections(context).ToList())
                 {
-                    results[collection.Name] = minLastEtag;
+                    processedTombstonesPerCollection[collection.Name] = minLastEtag;
                 }
             }
 
-            return results;
+            return processedTombstonesPerCollection;
         }
     }
 }
