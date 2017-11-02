@@ -88,7 +88,6 @@ class editExternalReplicationTask extends viewModelBase {
     }
 
     private initObservables() {        
-
         this.shortErrorText = ko.pureComputed(() => {
             const result = this.testConnectionResult();
             if (!result || result.Success) {
@@ -123,14 +122,17 @@ class editExternalReplicationTask extends viewModelBase {
 
     saveExternalReplication() {
         let hasAnyErrors = false;
-        this.spinners.save(true);
+        
+        // Save discovery URL if user forgot to hit 'add url' button
+        if (this.createNewConnectionString() && this.isValid(this.newConnectionString().inputUrl().validationGroup)) {
+            this.newConnectionString().addDiscoveryUrlWithBlink();
+        }
         
         // 1. Validate *new connection string* (if relevant..) 
         if (this.createNewConnectionString()) {
             if (!this.isValid(this.newConnectionString().validationGroup)) {
                 hasAnyErrors = true;
-            }
-            else {
+            } else {
                 // Use the new connection string
                 this.editedExternalReplication().connectionStringName(this.newConnectionString().connectionStringName());
             }
@@ -139,12 +141,13 @@ class editExternalReplicationTask extends viewModelBase {
         // 2. Validate *general form*
         if (!this.isValid(this.editedExternalReplication().validationGroup)) {
             hasAnyErrors = true;
-        }            
+        }
        
         if (hasAnyErrors) {
-            this.spinners.save(false);
             return false;
         }
+
+        this.spinners.save(true);
 
         // 3. All is well, Save connection string (if relevant..) 
         let savingNewStringAction = $.Deferred<void>();
@@ -157,8 +160,7 @@ class editExternalReplicationTask extends viewModelBase {
                 .fail(() => {
                     this.spinners.save(false);
                 });
-        }
-        else {
+        } else {
             savingNewStringAction.resolve();
         }
         

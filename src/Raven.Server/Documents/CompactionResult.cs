@@ -14,7 +14,7 @@ namespace Raven.Server.Documents
         public long SizeAfterCompactionInMb { get; set; }
         private readonly List<string> _messages;
 
-        public CompactionResult() : this(String.Empty)
+        public CompactionResult() : this(string.Empty)
         {
             // used by json serialization
         }

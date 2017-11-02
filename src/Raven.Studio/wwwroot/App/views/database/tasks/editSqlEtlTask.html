@@ -3,7 +3,7 @@
         <div class="col-xs-12 col-lg-6 flex-vertical">
             <form class="flex-form" data-bind="submit: saveSqlEtl">
                 <div class="flex-header">
-                    <button type="submit" class="btn btn-primary" data-bind="enable: $root.dirtyFlag().isDirty, disable: $root.spinners.save(), css: { 'btn-spinner': $root.spinners.save }">
+                    <button type="submit" class="btn btn-primary" data-bind="disable: $root.spinners.save() || !$root.dirtyFlag().isDirty(), css: { 'btn-spinner': $root.spinners.save }">
                         <i class="icon-save"></i><span>Save</span>
                     </button>
                     <button data-bind="click: cancelOperation" class="btn btn-default">
