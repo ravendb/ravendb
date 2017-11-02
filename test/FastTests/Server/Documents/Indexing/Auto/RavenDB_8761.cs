@@ -91,6 +91,14 @@ namespace FastTests.Server.Documents.Indexing.Auto
                             order by Lines[].Quantity
                             select Lines[].Product as ProductName, Lines[].Quantity as Quantity, count()")
                             .WaitForNonStaleResults(),
+
+                        // linq
+                        session.Query<Order>().GroupByArrayValues(x => x.Lines.Select(y => new { y.Product, y.Quantity })).Select(x => new ProductCount
+                        {
+                            Count = x.Count(),
+                            ProductName = x.Key.Product,
+                            Quantity = x.Key.Quantity
+                        }),
                     })
                     {
                         var products = query.ToList();
