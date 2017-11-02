@@ -7,8 +7,8 @@ import ongoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskI
 import backupNowCommand = require("commands/database/tasks/backupNowCommand");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import backupNow = require("viewmodels/database/tasks/backupNow");
-import timeHelpers = require("common/timeHelpers");
 import generalUtils = require("common/generalUtils");
+import timeHelpers = require("common/timeHelpers");
 
 class ongoingTaskBackupListModel extends ongoingTask {
     private static neverBackedUpText = "Never backed up";
@@ -64,10 +64,7 @@ class ongoingTaskBackupListModel extends ongoingTask {
                 return ongoingTaskBackupListModel.neverBackedUpText;
             }
 
-            const now = timeHelpers.utcNowWithSecondPrecision();
-            const diff = now.diff(moment.utc(lastFullBackup));
-            const formatDuration = generalUtils.formatDuration(moment.duration(diff), true, 2, true);
-            const fromDuration = diff > 0 && formatDuration ? formatDuration : "less then a minute ";
+            const fromDuration = generalUtils.formatDurationByDate(moment.utc(lastFullBackup), true);
             return `${fromDuration} ago`;
         });
 
@@ -77,10 +74,7 @@ class ongoingTaskBackupListModel extends ongoingTask {
                 return ongoingTaskBackupListModel.neverBackedUpText;
             }
 
-            const now = timeHelpers.utcNowWithSecondPrecision();
-            const diff = now.diff(moment.utc(lastIncrementalBackup));
-            const formatDuration = generalUtils.formatDuration(moment.duration(diff), true, 2, true);
-            const fromDuration = diff > 0 && formatDuration ? formatDuration : "less then a minute ";
+            const fromDuration = generalUtils.formatDurationByDate(moment.utc(lastIncrementalBackup), true);
             return `${fromDuration} ago`;
         });
 
@@ -94,15 +88,13 @@ class ongoingTaskBackupListModel extends ongoingTask {
             this.textClass("text-details");
             const now = timeHelpers.utcNowWithSecondPrecision();
             const diff = moment.utc(nextBackup.DateTime).diff(now);
-            const fromDuration = diff > 0 ?
-                generalUtils.formatDuration(moment.duration(diff), true, 2) :
-                "a few moments";
+            const formatDuration = generalUtils.formatDuration(moment.duration(diff), true, 2, true);
 
             if (diff <= 0) {
                 this.refreshBackupInfo();
             }
 
-            return `in ${fromDuration} (${this.getBackupType(this.backupType(), nextBackup.IsFull)})`;
+            return `in ${formatDuration} (${this.getBackupType(this.backupType(), nextBackup.IsFull)})`;
         });
 
         this.onGoingBackupHumanized = ko.pureComputed(() => {
@@ -111,10 +103,7 @@ class ongoingTaskBackupListModel extends ongoingTask {
                 return null;
             }
 
-            const now = timeHelpers.utcNowWithSecondPrecision();
-            const diff = now.diff(moment.utc(onGoingBackup.StartTime));
-            const formatDuration = generalUtils.formatDuration(moment.duration(diff), true, 2, true);
-            const fromDuration = diff > 0 && formatDuration ? formatDuration : "less then a minute ";
+            const fromDuration = generalUtils.formatDurationByDate(moment.utc(onGoingBackup.StartTime), true);
             return `${fromDuration} ago (${this.getBackupType(this.backupType(), onGoingBackup.IsFull)})`;
         });
 

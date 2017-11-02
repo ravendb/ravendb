@@ -303,13 +303,9 @@ class periodicBackupConfiguration {
                 const nextBackupLocalTime = nextBackupUtc.local().format(dateFormat);
                 nextBackupOccuranceLocalTime(nextBackupLocalTime);
 
-                const now = moment.utc();
-                const diff = nextBackupUtc.diff(now);
-                const fromDuration = diff > 0 ?
-                    generalUtils.formatDuration(moment.duration(diff), true, 2) :
-                    "a few moments";
-
+                const fromDuration = generalUtils.formatDurationByDate(nextBackupUtc, true);
                 nextBackupInterval(`in ${fromDuration}`);
+
                 parsingError(null);
             })
             .fail((response: JQueryXHR) => {

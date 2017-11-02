@@ -1,6 +1,8 @@
 ﻿/// <reference path="../../typings/tsd.d.ts" />
 
 import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
+import timeHelpers = require("common/timeHelpers");
+import moment = require("moment");
 
 class genUtils {
 
@@ -57,7 +59,18 @@ class genUtils {
         if (timeTokens.length > desiredAccuracy) {
             timeTokens.length = desiredAccuracy;
         }
+
+        if (timeTokens.length === 0 && skipSecondsAndMilliseconds) {
+            timeTokens.push("less than a minute");
+        }
+
         return timeTokens.join(" ");
+    }
+
+    static formatDurationByDate(dateInUtc: moment.Moment, isFromDuration: boolean): string {
+        const now = timeHelpers.utcNowWithSecondPrecision();
+        const diff = isFromDuration ? now.diff(dateInUtc) : dateInUtc.diff(now);
+        return genUtils.formatDuration(moment.duration(diff), true, 2, true);
     }
 
     static formatMillis(input: number) {
