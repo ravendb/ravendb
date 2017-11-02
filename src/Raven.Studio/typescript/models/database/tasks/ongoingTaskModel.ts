@@ -16,38 +16,43 @@ abstract class ongoingTaskModel {
     protected initializeObservables() {
         
         this.badgeClass = ko.pureComputed(() => {
-            if (this.taskConnectionStatus() === 'Active') {
-                return "state-success";
+            switch (this.taskConnectionStatus()) {
+                case 'Active': {
+                    return "state-success";
+                }
+                case 'Reconnect': {
+                    return "state-warning";
+                }
+                case 'NotActive': {
+                    return "state-warning";
+                }
+                case 'NotOnThisNode': {
+                    return "state-offline";
+                }
+                case 'None': {
+                    return "state-offline";
+                }
             }
-            if (this.taskConnectionStatus() === "Reconnect") {
-                return "state-warning";
-            }
-            if (this.taskConnectionStatus() === "NotActive") {
-                return "state-warning";
-            }
-            if (this.taskConnectionStatus() === "NotOnThisNode") {
-                return "state-offline";
-            }
-            if (this.taskConnectionStatus() === "None") {
-                return "state-offline";
-            }
-        });
+        });            
 
         this.badgeText = ko.pureComputed(() => {
-            if (this.taskConnectionStatus() === "None") {
-                return "None";
-            }
-            if (this.taskConnectionStatus() === 'Active') {
-                return "Active";
-            }
-            if (this.taskConnectionStatus() === "NotActive") {
-                return "Not Active";
-            }
-            if (this.taskConnectionStatus() === "NotOnThisNode") {
-                return "Not On Node";
-            }
-            if (this.taskConnectionStatus() === "Reconnect") {
-                return "Reconnect";
+
+            switch (this.taskConnectionStatus()) {
+                case 'Active': {
+                    return "Active";
+                }
+                case 'Reconnect': {
+                    return "Reconnect";
+                }
+                case 'NotActive': {
+                    return "Not Active";
+                }
+                case 'NotOnThisNode': {
+                    return "Not On Node";
+                }
+                case 'None': {
+                    return "None";
+                }
             }
         });
 
