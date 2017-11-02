@@ -102,6 +102,12 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, CertificateDefinition> CertificateDefinition = GenerateJsonDeserializationRoutine<CertificateDefinition>();
 
+        public static readonly Func<BlittableJsonReaderObject, SecuredSetupInfo> SecuredSetupInfo = GenerateJsonDeserializationRoutine<SecuredSetupInfo>();
+
+        public static readonly Func<BlittableJsonReaderObject, UnsecuredSetupInfo> UnsecuredSetupInfo = GenerateJsonDeserializationRoutine<UnsecuredSetupInfo>();
+
+        public static readonly Func<BlittableJsonReaderObject, ClaimDomainInfo> ClaimDomainInfo = GenerateJsonDeserializationRoutine<ClaimDomainInfo>();
+
         public static readonly Func<BlittableJsonReaderObject, RestoreSettings> RestoreSettings = GenerateJsonDeserializationRoutine<RestoreSettings>();
 
         public static readonly Func<BlittableJsonReaderObject, CompactSettings> CompactSettings = GenerateJsonDeserializationRoutine<CompactSettings>();

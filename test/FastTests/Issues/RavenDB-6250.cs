@@ -38,12 +38,13 @@ namespace FastTests.Issues
                 Operations.OperationType.DatabaseCompact,
                 Operations.OperationType.CertificateGeneration,
                 Operations.OperationType.MigrationFromLegacyData,
-                Operations.OperationType.CollectionImportFromCsv
+                Operations.OperationType.CollectionImportFromCsv,
             };
 
             var operationWithoutDetails = new HashSet<Operations.OperationType>
             {
                 // empty for now
+                Operations.OperationType.SetupLetsEncrypt // TODO Handle in studio
             };
 
             var allKnownTypes = Enum.GetNames(typeof(Operations.OperationType)).ToHashSet();

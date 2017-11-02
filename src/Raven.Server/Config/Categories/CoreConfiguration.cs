@@ -5,7 +5,9 @@ using Raven.Server.Utils;
 using System;
 using System.Linq;
 using Microsoft.Extensions.Configuration;
+using Raven.Server.Commercial;
 using Raven.Server.ServerWide;
+using Raven.Server.Web.System;
 
 namespace Raven.Server.Config.Categories
 {
@@ -40,6 +42,11 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(@"~/Databases/{name}")]
         [ConfigurationEntry("DataDir", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public PathSetting DataDirectory { get; set; }
+
+        [Description("Determines what kind of security was chosen during setup.")]
+        [DefaultValue(SetupMode.Initial)]
+        [ConfigurationEntry("Setup.Mode", ConfigurationEntryScope.ServerWideOnly)]
+        public SetupMode SetupMode { get; set; }
 
         [Description("Indicates if we should throw an exception if any index could not be opened")]
         [DefaultValue(false)]
