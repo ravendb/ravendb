@@ -18,9 +18,9 @@ namespace Raven.Client.Documents.Session
             _query = query;
         }
 
-        public IGroupByDocumentQuery<T> SelectKey(string projectedName = null)
+        public IGroupByDocumentQuery<T> SelectKey(string fieldName = null, string projectedName = null)
         {
-            _query.GroupByKey(null, projectedName);
+            _query.GroupByKey(fieldName, projectedName);
             return this;
         }
 
@@ -56,9 +56,9 @@ namespace Raven.Client.Documents.Session
             _query = query;
         }
 
-        public IAsyncGroupByDocumentQuery<T> SelectKey(string projectedName = null)
+        public IAsyncGroupByDocumentQuery<T> SelectKey(string fieldName = null, string projectedName = null)
         {
-            _query.GroupByCount(projectedName);
+            _query.GroupByKey(fieldName, projectedName);
             return this;
         }
 

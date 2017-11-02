@@ -36,7 +36,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                         }),
 
                         // document query
-                        session.Advanced.DocumentQuery<Order>().GroupBy("Lines[].Product").SelectKey("ProductName").SelectCount().OfType<ProductCount>()
+                        session.Advanced.DocumentQuery<Order>().GroupBy("Lines[].Product").SelectKey(projectedName: "ProductName").SelectCount().OfType<ProductCount>()
                     })
                     {
                         var products = query.ToList();
@@ -63,6 +63,13 @@ namespace FastTests.Server.Documents.Indexing.Auto
                             order by count() 
                             select Lines[].Product as ProductName, ShipTo.Country as Country, count()")
                             .WaitForNonStaleResults(),
+
+                        session.Advanced.DocumentQuery<Order>()
+                            .GroupBy("Lines[].Product", "ShipTo.Country")
+                            .SelectKey("Lines[].Product", "ProductName")
+                            .SelectKey("ShipTo.Country", "Country")
+                            .SelectCount()
+                            .OfType<ProductCount>()
                     })
                     {
                         var products = query.ToList();
@@ -99,6 +106,15 @@ namespace FastTests.Server.Documents.Indexing.Auto
                             ProductName = x.Key.Product,
                             Quantity = x.Key.Quantity
                         }),
+
+                        // document query
+
+                        session.Advanced.DocumentQuery<Order>()
+                            .GroupBy("Lines[].Product", "Lines[].Quantity")
+                            .SelectKey("Lines[].Product", "ProductName")
+                            .SelectKey("Lines[].Quantity", "Quantity")
+                            .SelectCount()
+                            .OfType<ProductCount>()
                     })
                     {
                         var products = query.ToList();
