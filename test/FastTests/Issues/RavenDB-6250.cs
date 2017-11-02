@@ -44,7 +44,7 @@ namespace FastTests.Issues
             var operationWithoutDetails = new HashSet<Operations.OperationType>
             {
                 // empty for now
-                Operations.OperationType.SetupLetsEncrypt // TODO Handle in studio
+                Operations.OperationType.Setup // TODO Handle in studio
             };
 
             var allKnownTypes = Enum.GetNames(typeof(Operations.OperationType)).ToHashSet();

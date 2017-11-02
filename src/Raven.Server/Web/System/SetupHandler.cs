@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -89,15 +89,22 @@ namespace Raven.Server.Web.System
         public Task SetupUnsecured()
         {
             AssertOnlyInSetupMode();
-            // also get public server url and setup server, make sure we can access it, etc.
-            // validate by getting a GUID from the temp server.
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var setupInfoJson = context.ReadForMemory(RequestBodyStream(), "setup-unsecured"))
             {
                 var setupInfo = JsonDeserializationServer.UnsecuredSetupInfo(setupInfoJson);
-                // also set public server url
-                SetupManager.WriteSettingsJsonFile(null, null, setupInfo.ServerUrl, SetupManager.SettingsFileName, SetupMode.Unsecured, true);
+
+                var settingsJson = File.ReadAllText(SetupManager.SettingsPath);
+                dynamic jsonObj = JsonConvert.DeserializeObject(settingsJson);
+                jsonObj["Setup.Mode"] = SetupMode.Unsecured.ToString();
+                jsonObj["ServerUrl"] = setupInfo.ServerUrl;
+                jsonObj["PublicServerUrl"] = setupInfo.PublicServerUrl;
+                jsonObj["Security.Certificate.Base64"] = null;
+                var json = JsonConvert.SerializeObject(jsonObj, Formatting.Indented);
+
+                if (setupInfo.ModifyLocalServer)
+                    SetupManager.WriteSettingsJsonLocally(SetupManager.SettingsPath, json);
             }
 
             return NoContent();
@@ -109,74 +116,29 @@ namespace Raven.Server.Web.System
             AssertOnlyInSetupMode();
 
             var stream = TryGetRequestFromStream("Options") ?? RequestBodyStream();
+            var operationCancelToken = new OperationCancelToken(ServerStore.ServerShutdown);
+            var operationId = GetLongQueryString("operationId", false);
+
+            if (operationId.HasValue == false)
+                operationId = ServerStore.Operations.GetNextOperationId();
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var setupInfoJson = context.ReadForMemory(stream, "setup-secured"))
             {
-
-                var setupInfo = JsonDeserializationServer.SecuredSetupInfo(setupInfoJson);
-
-                foreach (var node in setupInfo.NodeSetupInfos)
-                {
-                    if (string.IsNullOrWhiteSpace(node.Certificate))
-                        throw new ArgumentException($"{nameof(node.Certificate)} is a mandatory property for a secured setup");
-                    if (string.IsNullOrWhiteSpace(node.ServerUrl))
-                        throw new ArgumentException($"{nameof(node.ServerUrl)} is a mandatory property for a secured setup");
-                    if (string.IsNullOrWhiteSpace(node.NodeTag))
-                        throw new ArgumentException($"{nameof(node.NodeTag)} is a mandatory property for a secured setup");
-
-                    if (PlatformDetails.RunningOnPosix)
-                    {
-                        AdminCertificatesHandler.ValidateCaExistsInOsStores(node.Certificate, "Setup server certificate", ServerStore);
-                    }
-                }
-
-                // Prepare settings.json files, and write the local one to disk
-                var settingsPath = SetupManager.SettingsFileName;
-                var jsons = new Dictionary<string, string>();
-                SecuredSetupInfo.NodeInfo localNode = null;
-
-                foreach (var node in setupInfo.NodeSetupInfos)
-                {
-                    try
-                    {
-                        if (node.NodeTag == "A")
-                        {
-                            jsons.Add(node.NodeTag,
-                                SetupManager.WriteSettingsJsonFile(node.Certificate, node.PublicServerUrl, node.ServerUrl, settingsPath, SetupMode.Secured, modifyLocalServer: true));
-                            localNode = node;
-                        }
-                        else
-                            jsons.Add(node.NodeTag, SetupManager.WriteSettingsJsonFile(node.Certificate, node.PublicServerUrl, node.ServerUrl, settingsPath, SetupMode.Secured, modifyLocalServer: false));
-                    }
-                    catch (Exception e)
-                    {
-                        throw new InvalidOperationException($"Failed to update {settingsPath} with new configuration.", e);
-                    }
-                }
-
-                // Here we need to take the jsons, create files and zip them all together
-                // Need to make this an async operation, just like when sending a certificate for the studio... to know that we're done and sending a file
-                var zip = new byte[]{};
+                var setupInfo = JsonDeserializationServer.SetupInfo(setupInfoJson);
                 
-                try
-                {
-                    var ips = localNode?.Ips.Select(ip => new IPEndPoint(IPAddress.Parse(ip), localNode.Port)).ToArray();
+                var operationResult = await ServerStore.Operations.AddOperation(
+                    null,
+                    "Setting up RavenDB in secured mode.",
+                    Documents.Operations.Operations.OperationType.Setup,
+                    progress => ServerStore.SetupManager.SetupSecuredTask(progress, operationCancelToken.Token, setupInfo),
+                    operationId.Value, operationCancelToken);
 
-                    var certBytes = Convert.FromBase64String(localNode?.Certificate);
-                    var x509Certificate2 = new X509Certificate2(certBytes);
-                    ServerStore.SetupManager.AssertServerCanStartSecured(x509Certificate2, localNode?.ServerUrl, ips, settingsPath);
+                var zip = ((SetupProgressAndResult)operationResult).SettingsZipFile;
 
-                    // Load the certificate in the local server, so we can generate client certs later
-                    Server.ClusterCertificateHolder = SecretProtection.ValidateCertificateAndCreateCertificateHolder(localNode?.Certificate, "Setup", x509Certificate2, certBytes);
-                }
-                catch (Exception e)
-                {
-                    throw new InvalidOperationException($"Failed to start server with the new configuration {settingsPath}.", e);
+                var localNode = setupInfo.NodeSetupInfos["A"];
 
-                }
-
-                var contentDisposition = "attachment; filename=settings.zip";
+                var contentDisposition = $"attachment; filename={localNode.PublicServerUrl ?? localNode.ServerUrl}.Cluster.Settings.zip";
                 HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
                 HttpContext.Response.ContentType = "binary/octet-stream";
 
@@ -206,45 +168,41 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/setup/letsencrypt", "POST", AuthorizationStatus.UnauthenticatedClients)]
-        public Task SetupLetsEncrypt()
+        [RavenAction("/setup/letsencrypt", "POST", AuthorizationStatus.UnauthenticatedClients)] //ask oren if we want the name letsencrypt in the API
+        public async Task SetupLetsEncrypt()
         {
             AssertOnlyInSetupMode();
 
             var stream = TryGetRequestFromStream("Options") ?? RequestBodyStream();
 
+            var operationCancelToken = new OperationCancelToken(ServerStore.ServerShutdown);
+            var operationId = GetLongQueryString("operationId", false);
+
+            if (operationId.HasValue == false)
+                operationId = ServerStore.Operations.GetNextOperationId();
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var setupInfoJson = context.ReadForMemory(stream, "setup-lets-encrypt"))
             {
-                var setupInfo = JsonDeserializationServer.SecuredSetupInfo(setupInfoJson);
-
-                var operationCancelToken = new OperationCancelToken(ServerStore.ServerShutdown);
-                var operationId = ServerStore.Operations.GetNextOperationId();
-
-                ServerStore.Operations.AddOperation(
+                var setupInfo = JsonDeserializationServer.SetupInfo(setupInfoJson);
+                
+                var operationResult = await ServerStore.Operations.AddOperation(
                     null,
                     "Setting up RavenDB with a Let's Encrypt certificate",
-                    Documents.Operations.Operations.OperationType.SetupLetsEncrypt,
-                    progress => ServerStore.SetupManager.FetchCertificateTask(progress, operationCancelToken.Token, setupInfo),
-                    operationId, operationCancelToken);
+                    Documents.Operations.Operations.OperationType.Setup,
+                    progress => ServerStore.SetupManager.SetupLetsEncryptTask(progress, operationCancelToken.Token, setupInfo),
+                    operationId.Value, operationCancelToken);
+                
+                var zip = ((SetupProgressAndResult)operationResult).SettingsZipFile;
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteOperationId(context, operationId);
-                }
+                var localNode = setupInfo.NodeSetupInfos["A"];
 
-                // Here we need to take the jsons, create files and zip them all together
-                // Need to make this an async operation, just like when sending a certificate for the studio... to know that we're done and sending a file
-                var zip = new byte[]{};
-
-                var contentDisposition = "attachment; filename=settings.zip";
+                var contentDisposition = $"attachment; filename={localNode.PublicServerUrl ?? localNode.ServerUrl}.Cluster.Settings.zip";
                 HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
                 HttpContext.Response.ContentType = "binary/octet-stream";
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
                 HttpContext.Response.Body.Write(zip, 0, zip.Length);
-                return Task.CompletedTask;
             }
         }
 
@@ -281,7 +239,7 @@ namespace Raven.Server.Web.System
                         },
                         operationId.Value);
 
-                var contentDisposition = "attachment; filename=" + Uri.EscapeDataString(certificate.Name) + ".pfx";
+                var contentDisposition = $"attachment; filename={certificate.Name}.pfx";
                 HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
                 HttpContext.Response.ContentType = "binary/octet-stream";
 
@@ -304,7 +262,7 @@ namespace Raven.Server.Web.System
                 Program.ResetServerMre.Set();
                 Program.ShutdownServerMre.Set();
             });
-            
+
             return NoContent();
         }
 
@@ -314,7 +272,7 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var setupInfoJson = context.ReadForDisk(RequestBodyStream(), "setup-lets-encrypt"))
             {
-                var setupInfo = JsonDeserializationServer.SecuredSetupInfo(setupInfoJson);
+                var setupInfo = JsonDeserializationServer.SetupInfo(setupInfoJson);
 
                 var operationCancelToken = new OperationCancelToken(ServerStore.ServerShutdown);
                 var operationId = ServerStore.Operations.GetNextOperationId();
@@ -322,8 +280,8 @@ namespace Raven.Server.Web.System
                 ServerStore.Operations.AddOperation(
                     null,
                     "Setting up RavenDB with a Let's Encrypt certificate",
-                    Documents.Operations.Operations.OperationType.SetupLetsEncrypt,
-                    progress => ServerStore.SetupManager.FetchCertificateTask(progress, operationCancelToken.Token, setupInfo),
+                    Documents.Operations.Operations.OperationType.Setup,
+                    progress => ServerStore.SetupManager.SetupLetsEncryptTask(progress, operationCancelToken.Token, setupInfo),
                     operationId, operationCancelToken);
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))

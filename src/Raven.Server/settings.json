@@ -1,7 +1,7 @@
 ﻿{
-  "ServerUrl": "http://localhost:8080",
-  "RunInMemory": false,
-  "Setup": {
-    "Mode": "Initial"
+    "ServerUrl": "http://localhost:8080",
+    "RunInMemory": false,
+    "Setup": {
+        "Mode": "Initial"
     }
 }

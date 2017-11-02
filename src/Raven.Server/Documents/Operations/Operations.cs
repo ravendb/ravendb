@@ -360,8 +360,8 @@ namespace Raven.Server.Documents.Operations
 
         public enum OperationType
         {
-            [Description("Setup Let's Encrypt")]
-            SetupLetsEncrypt,
+            [Description("Setup")]
+            Setup,
 
             [Description("Update by index")]
             UpdateByIndex,
