@@ -508,14 +508,16 @@ namespace Raven.Client.Util
                 var methodCallExpression = context.Node as MethodCallExpression;
                 var method = methodCallExpression?.Method;
 
-                if (method == null || method.Name != "Parse" || !ValueTypes.ContainsKey(method.DeclaringType))
+                if (method == null || method.Name != "Parse" || 
+                    !ValueTypes.TryGetValue(method.DeclaringType, out var expr))
                     return;
 
                 context.PreventDefault();
                 var writer = context.GetWriter();
                 using (writer.Operation(methodCallExpression))
                 {
-                    writer.Write($"{ValueTypes[method.DeclaringType]}(");
+                    writer.Write(expr);
+                    writer.Write("(");
                     context.Visitor.Visit(methodCallExpression.Arguments[0]);
                     writer.Write(")");
                 }
@@ -526,8 +528,7 @@ namespace Raven.Client.Util
         {
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
-                var newExp = context.Node as NewExpression;
-                if (newExp != null && newExp.Type == typeof(DateTime))
+                if (context.Node is NewExpression newExp && newExp.Type == typeof(DateTime))
                 {
                     context.PreventDefault();
                     var writer = context.GetWriter();
@@ -558,8 +559,7 @@ namespace Raven.Client.Util
                     return;
                 }
 
-                var node = context.Node as MemberExpression;
-                if (node == null)
+                if (!(context.Node is MemberExpression node))
                     return;
 
                 if (node.Type == typeof(DateTime))
