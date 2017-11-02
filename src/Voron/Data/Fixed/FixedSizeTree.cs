@@ -422,10 +422,13 @@ namespace Voron.Data.Fixed
             return allocatePage;
         }
 
-        private void FreePage(long pageNumber)
+        private void FreePage(long pageNumber, bool modifyPageCount = true)
         {
-            using (ModifyLargeHeader(out var largeHeader))
-                largeHeader->PageCount--;
+            if (modifyPageCount)
+            {
+                using (ModifyLargeHeader(out var largeHeader))
+                    largeHeader->PageCount--;
+            }
 
             if (FreeSpaceTree)
             {
@@ -1395,7 +1398,10 @@ namespace Voron.Data.Fixed
                         (_entrySize * page.NumberOfEntries));
                 }
 
-                FreePage(page.PageNumber);
+                // side affect, this updates the number of pages in the 
+                // large fixed size tree header, so we disable this to avoid 
+                // reverting to an large (and empty) fixed size tree
+                FreePage(page.PageNumber, modifyPageCount: false);
             }
             return null;
         }

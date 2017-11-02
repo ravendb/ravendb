@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Issues;
+using FastTests.Server.Documents.Indexing.MapReduce;
 using Raven.Server.Utils;
 using SlowTests.Voron.Issues;
 
@@ -33,8 +34,9 @@ namespace Tryouts
             for (int i = 0; i < 10000; i++)
             {
                 Console.WriteLine(i);
-                using (var ravenDb9055 = new RavenDB_9055())
-                    ravenDb9055.AggressivelyCacheWorksWhenTopologyUpdatesIsDisable();
+                using (var ravenDb9055 = new FastTests.Server.Documents.Expiration.ExpirationTests())
+                    ravenDb9055.CanAddALotOfEntitiesWithSameExpiry_ThenReadItBeforeItExpires_ButWillNotBeAbleToReadItAfterExpiry(count: 100).Wait();
+
             }
         }
 
