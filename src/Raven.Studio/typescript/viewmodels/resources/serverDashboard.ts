@@ -13,7 +13,6 @@ import appUrl = require("common/appUrl");
 import dashboardChart = require("models/resources/serverDashboard/dashboardChart");
 import storagePieChart = require("models/resources/serverDashboard/storagePieChart");
 import serverDashboardWebSocketClient = require("common/serverDashboardWebSocketClient");
-import timeHelpers = require("common/timeHelpers");
 import clusterNode = require("models/database/cluster/clusterNode");
 
 class machineResourcesSection {
@@ -513,14 +512,12 @@ class serverDashboard extends viewModelBase {
         super();
 
         this.formattedUpTime = ko.pureComputed(() => {
-            const now = timeHelpers.utcNowWithSecondPrecision();
             const startTime = this.startUpTime();
             if (!startTime) {
                 return "a few seconds";
             }
-            
-            const diff = now.diff(startTime);
-            return generalUtils.formatDuration(moment.duration(diff), true, 2);
+
+            return generalUtils.formatDurationByDate(startTime, true);
         });
 
         this.formattedStartTime = ko.pureComputed(() => {

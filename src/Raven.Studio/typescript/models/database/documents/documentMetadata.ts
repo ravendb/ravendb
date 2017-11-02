@@ -1,6 +1,5 @@
 /// <reference path="../../../../typings/tsd.d.ts" />
 
-import timeHelpers = require("common/timeHelpers");
 import generalUtils = require("common/generalUtils");
 
 type knownDocumentFlags = "HasRevisions" | "Revision" | "HasAttachments" | "DeleteRevision";
@@ -42,10 +41,7 @@ class documentMetadata {
             this.lastModifiedInterval = ko.pureComputed(() => {
                 const lastModified = this.lastModified();
                 if (this.lastModified()) {
-                    const now = timeHelpers.utcNowWithSecondPrecision();
-                    const diff = now.diff(moment.utc(lastModified));
-                    const formatDuration = generalUtils.formatDuration(moment.duration(diff), true, 2, true);
-                    const fromDuration = diff > 0 && formatDuration ? formatDuration : "less then a minute ";
+                    const fromDuration = generalUtils.formatDurationByDate(moment.utc(lastModified), true);
                     return `${fromDuration} ago`;
                 }
                 return "";
