@@ -1578,6 +1578,71 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
         }
 
         [Fact]
+        public void Custom_Functions_ValueTypeParse_Support()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia" }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from u in session.Query<User>()
+                                select new
+                                {
+                                    IntParse = int.Parse("1234") + int.Parse("1234"),
+                                    DoubleParse = double.Parse("1234"),
+                                    DecimalParse = decimal.Parse("12.34"),
+                                    BoolParse = bool.Parse("true"),
+                                    CharParse = char.Parse("s"),
+                                    ByteParse = byte.Parse("127"),
+                                    LongParse = long.Parse("1234"),
+                                    SByteParse = sbyte.Parse("127"),
+                                    ShortParse = short.Parse("1234"),
+                                    UintParse = uint.Parse("1234"),
+                                    UlongParse = ulong.Parse("1234"),
+                                    UshortParse = ushort.Parse("1234")
+                                };
+
+                    Assert.Equal("FROM Users as u SELECT { " +
+                        "IntParse : parseInt(\"1234\")+parseInt(\"1234\"), " +
+                        "DoubleParse : parseFloat(\"1234\"), " +
+                        "DecimalParse : parseFloat(\"12.34\"), " +
+                        "BoolParse : \"true\" == (\"true\"), " +
+                        "CharParse : (\"s\"), " +
+                        "ByteParse : parseInt(\"127\"), " +
+                        "LongParse : parseInt(\"1234\"), " +
+                        "SByteParse : parseInt(\"127\"), " +
+                        "ShortParse : parseInt(\"1234\"), " +
+                        "UintParse : parseInt(\"1234\"), " +
+                        "UlongParse : parseInt(\"1234\"), " +
+                        "UshortParse : parseInt(\"1234\") }", query.ToString());
+
+                    var queryResult = query.ToList();
+                    Assert.Equal(1, queryResult.Count);
+
+
+                    Assert.Equal(int.Parse("1234") + int.Parse("1234"), queryResult[0].IntParse);
+                    Assert.Equal(1234, queryResult[0].DoubleParse);
+                    Assert.Equal(12.34M, queryResult[0].DecimalParse);
+                    Assert.Equal(true, queryResult[0].BoolParse);
+                    Assert.Equal('s', queryResult[0].CharParse);
+                    Assert.Equal(127, queryResult[0].ByteParse);
+                    Assert.Equal(1234, queryResult[0].LongParse);
+                    Assert.Equal(127, queryResult[0].SByteParse);
+                    Assert.Equal(1234, queryResult[0].ShortParse);
+                    Assert.Equal((uint)1234, queryResult[0].UintParse);
+                    Assert.Equal((ulong)1234, queryResult[0].UlongParse);
+                    Assert.Equal((ushort)1234, queryResult[0].UshortParse);
+
+                }
+            }
+        }
+
+        [Fact]
         public void Custom_Functions_Nested_Conditional_Support()
         {
             using (var store = GetDocumentStore())

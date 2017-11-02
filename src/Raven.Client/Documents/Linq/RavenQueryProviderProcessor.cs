@@ -2050,7 +2050,7 @@ case "cmpxchg.match":
                     new JavascriptConversionExtensions.MetadataSupport(),
                     new JavascriptConversionExtensions.CmpXchgValueSupport(),
                     new JavascriptConversionExtensions.CmpXchgMatchSupport(),
-                    MemberInitAsJson.ForAllTypes));
+                    new JavascriptConversionExtensions.ValueTypeParseSupport(),                    MemberInitAsJson.ForAllTypes));
 
             if (expression.Type == typeof(TimeSpan) && expression.NodeType != ExpressionType.MemberAccess)
             {

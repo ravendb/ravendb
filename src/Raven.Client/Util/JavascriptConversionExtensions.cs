@@ -495,6 +495,33 @@ namespace Raven.Client.Util
             }
         }
 
+        public class ValueTypeParseSupport : JavascriptConversionExtension
+        {
+            private static readonly Dictionary<Type, string> ValueTypes = new Dictionary<Type, string>() {
+                { typeof(int), "parseInt" }, { typeof(uint), "parseInt" }, { typeof(double), "parseFloat" }, { typeof(decimal), "parseFloat" },
+                { typeof(bool), "\"true\" == " }, { typeof(char), "" }, { typeof(long), "parseInt" }, { typeof(ulong), "parseInt" },
+                { typeof(sbyte), "parseInt" },  { typeof(short), "parseInt" }, {typeof(ushort), "parseInt" }, { typeof(byte), "parseInt" }
+            };
+
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                var methodCallExpression = context.Node as MethodCallExpression;
+                var method = methodCallExpression?.Method;
+
+                if (method == null || method.Name != "Parse" || !ValueTypes.ContainsKey(method.DeclaringType))
+                    return;
+
+                context.PreventDefault();
+                var writer = context.GetWriter();
+                using (writer.Operation(methodCallExpression))
+                {
+                    writer.Write($"{ValueTypes[method.DeclaringType]}(");
+                    context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                    writer.Write(")");
+                }
+            }
+        }
+
         public class DateTimeSupport : JavascriptConversionExtension
         {
             public override void ConvertToJavascript(JavascriptConversionContext context)
