@@ -16,7 +16,9 @@ class alert extends abstractNotification {
 
         this.hasDetails = ko.pureComputed(() => !!this.details());
         
-        this.isLicenseAlert = ko.pureComputed(() => this.alertType().startsWith("LicenseManager"));
+        this.isLicenseAlert = ko.pureComputed(() => {
+            return this.alertType().startsWith("LicenseManager") && this.alertType() !== "LicenseManager_LeaseLicenseError";
+        });
 
         this.canBePostponed = ko.pureComputed(() => this.isPersistent() && !this.isLicenseAlert());
     }
