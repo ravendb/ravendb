@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes.Spatial;
@@ -422,10 +423,41 @@ namespace Raven.Client.Documents.Session
         TSelf CmpXchg(string key, T value);
     }
 
+    public interface IGroupByDocumentQueryBase<T, TSelf> where TSelf : IDocumentQueryBase<T, TSelf>
+    {
+        [Obsolete(
+            @"
+Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session.Query<T>() method fully supports Linq grouping, while session.Advanced.DocumentQuery<T>() is intended for lower level API access.
+"
+            , true)]
+        IEnumerable<IGrouping<TKey, T>> GroupBy<TKey>(Func<T, TKey> keySelector);
+
+        [Obsolete(
+            @"
+Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session.Query<T>() method fully supports Linq grouping, while session.Advanced.DocumentQuery<T>() is intended for lower level API access.
+"
+            , true)]
+        IEnumerable<IGrouping<TKey, TElement>> GroupBy<TKey, TElement>(Func<T, TKey> keySelector, Func<T, TElement> elementSelector);
+
+        [Obsolete(
+            @"
+Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session.Query<T>() method fully supports Linq grouping, while session.Advanced.DocumentQuery<T>() is intended for lower level API access.
+"
+            , true)]
+        IEnumerable<IGrouping<TKey, T>> GroupBy<TKey>(Func<T, TKey> keySelector, IEqualityComparer<TKey> comparer);
+
+        [Obsolete(
+            @"
+Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session.Query<T>() method fully supports Linq grouping, while session.Advanced.DocumentQuery<T>() is intended for lower level API access.
+"
+            , true)]
+        IEnumerable<IGrouping<TKey, TElement>> GroupBy<TKey, TElement>(Func<T, TKey> keySelector, Func<T, TElement> elementSelector, IEqualityComparer<TKey> comparer);
+    }
+
     /// <summary>
     ///     A query against a Raven index
     /// </summary>
-    public interface IDocumentQueryBase<T, TSelf> : IQueryBase<T, TSelf>, IFilterDocumentQueryBase<T, TSelf> where TSelf : IDocumentQueryBase<T, TSelf>
+    public interface IDocumentQueryBase<T, TSelf> : IQueryBase<T, TSelf>, IFilterDocumentQueryBase<T, TSelf>, IGroupByDocumentQueryBase<T, TSelf> where TSelf : IDocumentQueryBase<T, TSelf>
     {
         /// <summary>
         ///  The last term that we asked the query to use equals on

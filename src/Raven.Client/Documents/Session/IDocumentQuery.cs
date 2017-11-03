@@ -6,7 +6,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries;
@@ -163,13 +162,6 @@ namespace Raven.Client.Documents.Session
         IDocumentQuery<TResult> OfType<TResult>();
 
         IGroupByDocumentQuery<T> GroupBy(string fieldName, params string[] fieldNames);
-
-        [Obsolete(
-            @"
-Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session.Query<T>() method fully supports Linq grouping, while session.Advanced.DocumentQuery<T>() is intended for lower level API access.
-"
-            , true)]
-        IEnumerable<IGrouping<TKey, T>> GroupBy<TKey>(Func<T, TKey> keySelector);
 
         IDocumentQuery<T> MoreLikeThis(MoreLikeThisOptions options = null);
 
