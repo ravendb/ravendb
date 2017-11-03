@@ -286,7 +286,7 @@ namespace Raven.Server.Documents.Queries.AST
             VisitExpression(expr.Right);
         }
 
-        public override void VisitGroupByExpression(List<FieldExpression> expressions)
+        public override void VisitGroupByExpression(List<(QueryExpression Expression, StringSegment? Alias)> expressions)
         {
             throw new NotSupportedException();
         }

@@ -217,15 +217,10 @@ namespace Raven.Server.Documents.Queries.AST
             VisitCompoundWhereExpression(expr);
         }
 
-        public override void VisitGroupByExpression(List<FieldExpression> expressions)
+        public override void VisitGroupByExpression(List<(QueryExpression Expression, StringSegment? Alias)> expressions)
         {
             _writer.WritePropertyName("GroupBy");
-            _writer.WriteStartArray();
-            foreach (var field in expressions)
-            {
-                VisitExpression(field);
-            }
-            _writer.WriteEndArray();
+            WriteExpressionList(expressions);
         }
 
         public override void VisitFromClause(FieldExpression from, StringSegment? alias, QueryExpression filter, bool index)

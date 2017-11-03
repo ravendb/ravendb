@@ -6,15 +6,15 @@ namespace Raven.Server.Documents.Queries
     {
         public readonly QueryFieldName Name;
 
-        public readonly bool IsArray;
-
         public readonly GroupByArrayBehavior GroupByArrayBehavior;
 
-        public GroupByField(QueryFieldName name, bool array)
+        public readonly string Alias;
+
+        public GroupByField(QueryFieldName name, GroupByArrayBehavior byArrayBehavior, string alias)
         {
             Name = name;
-            IsArray = array;
-            GroupByArrayBehavior = array ? GroupByArrayBehavior.ByIndividualValues : GroupByArrayBehavior.ByContent; // TODO arek RavenDB-8761 - array(Lines[].Product) will set GroupByArrayBehavior.ByContent
+            GroupByArrayBehavior = byArrayBehavior;
+            Alias = alias;
         }
     }
 }

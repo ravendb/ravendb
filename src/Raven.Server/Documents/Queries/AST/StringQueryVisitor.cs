@@ -302,15 +302,12 @@ namespace Raven.Server.Documents.Queries.AST
             VisitExpression(expr.Right);
         }
 
-        public override void VisitGroupByExpression(List<FieldExpression> expressions)
+        public override void VisitGroupByExpression(List<(QueryExpression Expression, StringSegment? Alias)> expressions)
         {
             EnsureLine();
-            for (int i = 0; i < expressions.Count; i++)
-            {
-                if (i != 0)
-                    _sb.Append(", ");
-                VisitExpression(expressions[i]);
-            }
+            _sb.Append("GROUP BY ");
+
+            VisitExpressionList(expressions);
         }
 
         private static bool RequiresQuotes(StringSegment s)
