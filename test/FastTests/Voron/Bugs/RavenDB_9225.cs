@@ -1,4 +1,5 @@
 ﻿using Voron;
+using Voron.Data.BTrees;
 using Voron.Data.Fixed;
 using Xunit;
 
@@ -6,6 +7,52 @@ namespace FastTests.Voron.Bugs
 {
     public class RavenDB_9225 : StorageTest
     {
+        [Fact]
+        public unsafe void VariableSizeTree_DeletingFromMiddle()
+        {
+                        TreePage page;
+            ushort valSize = 1008;
+            var buffer = new byte[valSize];
+            using (var tx = Env.WriteTransaction())
+            using (Slice.From(tx.Allocator, "test", out var t))
+            {
+                var tree = tx.CreateTree(t);
+
+                long i = 0;
+                while (true)
+                {
+                    tree.Add(i.ToString("D19"), buffer);
+                    if (tree.State.Depth == 3)
+                    {
+                        page = tree.GetReadOnlyTreePage(tree.State.RootPageNumber);
+                        if (page.NumberOfEntries == 3)
+                        {
+                            page = tree.GetReadOnlyTreePage(page.GetNode(page.NumberOfEntries - 1)->PageNumber);
+                            if (page.NumberOfEntries == 3)
+                                break;
+                        }
+                    }
+                    i++;
+                }
+
+
+                page = tree.GetReadOnlyTreePage(tree.State.RootPageNumber);
+                page = tree.GetReadOnlyTreePage(page.GetNode(page.NumberOfEntries - 1)->PageNumber);
+                page = tree.GetReadOnlyTreePage(page.GetNode(0)->PageNumber);
+
+                var pageNumberOfEntries = page.NumberOfEntries;
+
+                for (i = 0; i < pageNumberOfEntries; i++)
+                {
+                    using (page.GetNodeKey(tx.LowLevelTransaction, 0, out var key))
+                        tree.Delete(key);
+                }
+                using (page.GetNodeKey(tx.LowLevelTransaction, 0, out var key))
+                    tree.Delete(key);
+                tree.ValidateTree_Forced(tree.State.RootPageNumber);
+            }
+        }
+
         [Fact]
         public unsafe void FixedSizeTree_DeletingFromMiddle()
         {

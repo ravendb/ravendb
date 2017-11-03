@@ -526,6 +526,11 @@ namespace Voron.Data.BTrees
         [Conditional("VALIDATE")]
         public void DebugValidateTree(long rootPageNumber)
         {
+            ValidateTree_Forced(rootPageNumber);
+        }
+
+        public void ValidateTree_Forced(long rootPageNumber)
+        {
             var pages = new HashSet<long>();
             var stack = new Stack<TreePage>();
             var root = GetReadOnlyTreePage(rootPageNumber);
