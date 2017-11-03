@@ -17,9 +17,13 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
+using Raven.Client;
 using Raven.Client.Documents.Operations;
+using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Config;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
+using Raven.Server.Utils;
 using Raven.Server.Web.Authentication;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
@@ -35,18 +39,35 @@ namespace Raven.Server.Commercial
         public const string LocalNodeTag = "A";
         public const string RavenDbDomain = "dbs.local.ravendb.net";
 
+        private SetupStage _lastSetupStage = SetupStage.Initial;
+
+        // TODO add logs everywhere
+
         private readonly ServerStore _serverStore;
         public Timer CertificateRenewalTimer { get; set; }
+
+        private SetupInfo _setupInfo;
 
         public SetupManager(ServerStore serverStore)
         {
             _serverStore = serverStore;
-            
-            // TODO If we are the leader (and in lets encrypt setup mode), start the timer with the renew task
+
+            if (_serverStore.Configuration.Core.SetupMode == SetupMode.Initial)
+            {
+                _lastSetupStage = SetupStage.Initial;
+                _setupInfo = null;
+            }
+
+            if (_serverStore.Configuration.Core.SetupMode == SetupMode.LetsEncrypt)
+            {
+                // TODO If we are the leader, start the timer with the renew task
+            }
         }
         
         public async Task<Uri> LetsEncryptAgreement(string email)
         {
+            AssertCorrectSetupStage(SetupStage.Agreement);
+
             using (var acmeClient = new AcmeClient(WellKnownServers.LetsEncryptStaging))
             {
                 var account = await acmeClient.NewRegistraton("mailto:" + email);
@@ -56,6 +77,9 @@ namespace Raven.Server.Commercial
 
         public async Task<IOperationResult> SetupSecuredTask(Action<IOperationProgress> onProgress, CancellationToken token, SetupInfo setupInfo)
         {
+            AssertCorrectSetupStage(SetupStage.Setup);
+            _setupInfo = setupInfo;
+
             // Total of 3 stages in this operation
             var progress = new SetupProgressAndResult
             {
@@ -64,23 +88,18 @@ namespace Raven.Server.Commercial
             };
 
             progress.AddInfo("Stage1: Validating provided setup information.");
-            ValidateSetupInfo(setupInfo, SetupMode.Secured);
+            ValidateSetupInfo(SetupMode.Secured);
 
             progress.AddInfo("Stage1: Validating provided certificate(s).");
             onProgress(progress);
 
             try
             {
-                // todo refactor here, only create the cert once...
-                if (PlatformDetails.RunningOnPosix)
-                    foreach (var node in setupInfo.NodeSetupInfos)
-                        AdminCertificatesHandler.ValidateCaExistsInOsStores(node.Value.Certificate, "Setup server certificate", _serverStore);
-
                 progress.Processed++;
                 progress.AddInfo("Stage1: Finished.");
                 progress.AddInfo("Stage2: Preparing configuration file(s) and making sure the local server can start.");
                 onProgress(progress);
-                
+
                 progress.SettingsZipFile = await CreateSettingsZipAndOptionallyWriteToLocalServer(onProgress, token, setupInfo, SetupMode.Secured);
 
                 try
@@ -93,7 +112,6 @@ namespace Raven.Server.Commercial
 
                     AssertServerCanStartSecured(x509Certificate2, localNode.ServerUrl, ips, SettingsPath);
 
-                    // Load the certificate in the local server, so we can generate client certificates later
                     _serverStore.Server.ClusterCertificateHolder = SecretProtection.ValidateCertificateAndCreateCertificateHolder(localNode.Certificate, "Setup", x509Certificate2, certBytes);
                 }
                 catch (Exception e)
@@ -113,8 +131,19 @@ namespace Raven.Server.Commercial
             return progress;
         }
 
+        public void AssertCorrectSetupStage(SetupStage currentStage)
+        {
+            if (_lastSetupStage >= currentStage)
+                throw new InvalidOperationException($"Tried to initiate stage {currentStage.ToString()} of the setup process but setup has already completed stage {_lastSetupStage.ToString()}. " +
+                                                    $"To restart the setup process, please set \"SetupMode\": \"Initial\" in {SettingsPath} and restart the server.");
+            _lastSetupStage++;
+        }
+
         public async Task<IOperationResult> SetupLetsEncryptTask(Action<IOperationProgress> onProgress, CancellationToken token, SetupInfo setupInfo)
         {
+            AssertCorrectSetupStage(SetupStage.Setup);
+            _setupInfo = setupInfo;
+
             // Total of 3 stages in this operation
             var progress = new SetupProgressAndResult
             {
@@ -123,7 +152,7 @@ namespace Raven.Server.Commercial
             };
 
             progress.AddInfo("Stage1: Validating provided setup information.");
-            ValidateSetupInfo(setupInfo, SetupMode.LetsEncrypt);
+            ValidateSetupInfo(SetupMode.LetsEncrypt);
 
             progress.AddInfo($"Stage1: Getting challenge from Let's Encrypt. Using e-mail: {setupInfo.Email}.");
             onProgress(progress);
@@ -185,9 +214,6 @@ namespace Raven.Server.Commercial
                         {
                             switch (i)
                             {
-                                case 30:
-                                    progress.AddInfo("Stage2: Still Waiting...");
-                                    break;
                                 case 60:
                                     progress.AddInfo("Stage2: Still Waiting... hang in there, just a few more seconds.");
                                     break;
@@ -234,8 +260,8 @@ namespace Raven.Server.Commercial
                         csr.AddName($"CN={setupInfo.Domain}");
                         csr.SubjectAlternativeNames.Add(setupInfo.Domain);
                         
-                        // TODO make sure this is allowed, otherwise we need a challenge for every single node seperately
-                        // If it works, we can add A-Z
+                        // TODO change process to handle multiple domains
+                        // This doesn't work yet
                         foreach (var node in setupInfo.NodeSetupInfos)
                         {
                             csr.SubjectAlternativeNames.Add($"{node.Key}.{setupInfo.Domain}");
@@ -250,23 +276,6 @@ namespace Raven.Server.Commercial
                             AdminCertificatesHandler.ValidateCaExistsInOsStores(base64Cert, "Let's Encrypt certificate", _serverStore);
                         
                         progress.SettingsZipFile = await CreateSettingsZipAndOptionallyWriteToLocalServer(onProgress, token, setupInfo, SetupMode.LetsEncrypt);
-
-                        try
-                        {
-                            var x509Certificate2 = new X509Certificate2(certBytes);
-                            var localNode = setupInfo.NodeSetupInfos["A"];
-                            var ips = localNode.Ips.Select(ip => new IPEndPoint(IPAddress.Parse(ip), localNode.Port)).ToArray();
-
-                            AssertServerCanStartSecured(x509Certificate2, localNode.ServerUrl, ips, SettingsPath);
-
-                            // Load the certificate in the local server, so we can generate client certificates later
-                            _serverStore.Server.ClusterCertificateHolder = SecretProtection.ValidateCertificateAndCreateCertificateHolder(localNode.Certificate, "Setup", x509Certificate2, certBytes);
-                        }
-                        catch (Exception e)
-                        {
-                            throw new InvalidOperationException($"Failed to start local server with the new configuration {SettingsPath}.", e);
-                        }
-
                     }
                     catch (Exception e)
                     {
@@ -288,11 +297,45 @@ namespace Raven.Server.Commercial
             return progress;
         }
 
-        public void ValidateSetupInfo(SetupInfo setupInfo, SetupMode setupMode)
+        public async Task<IOperationResult> SetupValidateTask(Action<IOperationProgress> onProgress, CancellationToken token)
+        {
+            AssertCorrectSetupStage(SetupStage.Setup);
+
+            //TODO reports and error handling here
+            var progress = new SetupProgressAndResult
+            {
+                Processed = 0,
+                Total = 3
+            };
+
+            progress.AddInfo("...");
+            onProgress.Invoke(progress);
+
+            try
+            {
+                var certBytes = Convert.FromBase64String(_setupInfo.NodeSetupInfos["A"].Certificate);
+
+                var x509Certificate2 = new X509Certificate2(certBytes);
+                var localNode = _setupInfo.NodeSetupInfos["A"];
+                var ips = localNode.Ips.Select(ip => new IPEndPoint(IPAddress.Parse(ip), localNode.Port)).ToArray();
+
+                AssertServerCanStartSecured(x509Certificate2, localNode.ServerUrl, ips, SettingsPath);
+
+                // Load the certificate in the local server, so we can generate client certificates later
+                _serverStore.Server.ClusterCertificateHolder = SecretProtection.ValidateCertificateAndCreateCertificateHolder(localNode.Certificate, "Setup", x509Certificate2, certBytes);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException($"Failed to start local server with the new configuration {SettingsPath}.", e);
+            }
+            return new SetupProgressAndResult();
+        }
+
+        public void ValidateSetupInfo(SetupMode setupMode)
         {
             try
             {
-                foreach (var node in setupInfo.NodeSetupInfos)
+                foreach (var node in _setupInfo.NodeSetupInfos)
                 {
                     if (string.IsNullOrWhiteSpace(node.Value.Certificate))
                         throw new ArgumentException($"{nameof(node.Value.Certificate)} is a mandatory property for a secured setup");
@@ -427,7 +470,7 @@ namespace Raven.Server.Commercial
                 .UseKestrel(options =>
                 {
                     if (addresses.Length == 0)
-                        options.Listen(new IPEndPoint(IPAddress.Parse("0.0.0.0"), 8080), listenOptions => listenOptions.UseHttps(serverCertificate));
+                        options.Listen(new IPEndPoint(IPAddress.Parse("0.0.0.0"), 443), listenOptions => listenOptions.UseHttps(serverCertificate));
 
                     foreach (var addr in addresses)
                     {
@@ -457,6 +500,40 @@ namespace Raven.Server.Commercial
                     throw new InvalidOperationException("Not a match");
                 }
             }
+        }
+
+        // Duplicate of AdminCertificatesHandler.GenerateCertificateInternal stripped from authz checks, used by an unauthenticated client during setup only
+        public async Task<byte[]> GenerateCertificateTask(CertificateDefinition certificate)
+        {
+            AssertCorrectSetupStage(SetupStage.GenarateCertificate);
+
+            if (string.IsNullOrWhiteSpace(certificate.Name))
+                throw new ArgumentException($"{nameof(certificate.Name)} is a required field in the certificate definition");
+
+            if (_serverStore.Server.ClusterCertificateHolder?.Certificate == null)
+                throw new InvalidOperationException($"Cannot generate the client certificate '{certificate.Name}' becuase the server certificate is not loaded.");
+
+            if (PlatformDetails.RunningOnPosix)
+            {
+                AdminCertificatesHandler.ValidateCaExistsInOsStores(certificate.Certificate, certificate.Name, _serverStore);
+            }
+
+            // this creates a client certificate which is signed by the current server certificate
+            var selfSignedCertificate = CertificateUtils.CreateSelfSignedClientCertificate(certificate.Name, _serverStore.Server.ClusterCertificateHolder);
+
+            var res = await _serverStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + selfSignedCertificate.Thumbprint,
+                new CertificateDefinition
+                {
+                    Name = certificate.Name,
+                    // this does not include the private key, that is only for the client
+                    Certificate = Convert.ToBase64String(selfSignedCertificate.Export(X509ContentType.Cert)),
+                    Permissions = certificate.Permissions,
+                    SecurityClearance = certificate.SecurityClearance,
+                    Thumbprint = selfSignedCertificate.Thumbprint
+                }));
+            await _serverStore.Cluster.WaitForIndexNotification(res.Index);
+
+            return selfSignedCertificate.Export(X509ContentType.Pfx, certificate.Password);
         }
 
         public Task RenewLetsEncryptCertificate()

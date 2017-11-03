@@ -58,15 +58,13 @@ namespace Raven.Server.Commercial
     {
         public string ServerUrl { get; set; }
         public string PublicServerUrl { get; set; }
-        public bool ModifyLocalServer { get; set; }
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
                 [nameof(ServerUrl)] = ServerUrl,
-                [nameof(PublicServerUrl)] = PublicServerUrl,
-                [nameof(ModifyLocalServer)] = ModifyLocalServer,
+                [nameof(PublicServerUrl)] = PublicServerUrl
             };
         }
     }
@@ -112,6 +110,16 @@ namespace Raven.Server.Commercial
         LetsEncrypt,
         Secured,
         Unsecured
+    }
+
+    public enum SetupStage
+    {
+        Initial = 0,
+        Agreement,
+        Setup,
+        Validation,
+        GenarateCertificate,
+        Finish
     }
 
     public class SetupProgressAndResult : IOperationResult, IOperationProgress
