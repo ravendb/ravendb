@@ -113,7 +113,7 @@ namespace SlowTests.MailingList
 
             IList<SectionFacet> getFacets(IQueryable<Article> results, IDocumentSession session)
             {
-                var facetResults = results.AggregateUsing("facets/ArticleFacets").ToDictionary();
+                var facetResults = results.AggregateUsing("facets/ArticleFacets").Execute();
                 var sections = facetResults.FirstOrDefault().Value;
                 return sections.Values.Select(value =>
                 {

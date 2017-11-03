@@ -162,7 +162,7 @@ namespace SlowTests.Tests.Faceted
                             .Customize(x => x.WaitForNonStaleResults())
                             .Where(exp)
                             .AggregateUsing("facets/CameraFacets")
-                            .ToDictionaryLazy();
+                            .ExecuteLazy();
 
                         Assert.Equal(oldRequests, s.Advanced.NumberOfRequests);
 
@@ -232,7 +232,7 @@ namespace SlowTests.Tests.Faceted
                         .Customize(x => x.WaitForNonStaleResults())
                         .Where(exp)
                         .AggregateUsing("facets/CameraFacets")
-                        .ToDictionary();
+                        .Execute();
                     facetQueryTimer.Stop();
 
                     var filteredData = _data.Where(exp.Compile()).ToList();
@@ -262,7 +262,7 @@ namespace SlowTests.Tests.Faceted
                         .Customize(x => x.WaitForNonStaleResults())
                         .Where(exp)
                         .AggregateUsing("facets/CameraFacets")
-                        .ToDictionaryAsync();
+                        .ExecuteAsync();
 
                     task.Wait();
                     facetQueryTimer.Stop();

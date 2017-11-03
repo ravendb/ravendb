@@ -61,13 +61,13 @@ namespace SlowTests.Tests.Faceted
                     var facetResultsA = s.Query<Item, Index>()
                         .Where(x => x.Active)
                         .AggregateBy(x => x.Category)
-                        .ToDictionary();
+                        .Execute();
 
                     var facetResultsB = s.Query<Item, Index>()
                         .Where(x => x.Active)
                         .AggregateBy(x => x.Category)
                         .AndAggregateOn(x => x.Age, f => f.WithRanges(null))
-                        .ToDictionary();
+                        .Execute();
 
                     throw new NotImplementedException();
 
@@ -92,7 +92,7 @@ namespace SlowTests.Tests.Faceted
                         .Where(x => x.Active)
                         .AggregateBy(x => x.Category)
                         .AndAggregateOn(x => x.Age, f => f.WithRanges(null))
-                        .ToDictionaryLazy().Value;
+                        .ExecuteLazy().Value;
 
                     /*
                     .ToFacetsLazy(new Facet[]

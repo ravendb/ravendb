@@ -50,7 +50,7 @@ namespace Raven.Client.Documents.Linq
             return this;
         }
 
-        public Dictionary<string, FacetResult> ToDictionary()
+        public Dictionary<string, FacetResult> Execute()
         {
             var inspector = (IRavenQueryInspector)_source;
             var iq = inspector.GetIndexQuery(isAsync: false);
@@ -69,17 +69,17 @@ namespace Raven.Client.Documents.Linq
             return results;
         }
         
-        public Task<Dictionary<string, FacetResult>> ToDictionaryAsync()
+        public Task<Dictionary<string, FacetResult>> ExecuteAsync()
         {
             throw new NotImplementedException();
         }
 
-        public Lazy<Dictionary<string, FacetResult>> ToDictionaryLazy()
+        public Lazy<Dictionary<string, FacetResult>> ExecuteLazy()
         {
             throw new NotImplementedException();
         }
 
-        public Lazy<Task<Dictionary<string, FacetResult>>> ToDictionaryLazyAsync()
+        public Lazy<Task<Dictionary<string, FacetResult>>> ExecuteLazyAsync()
         {
             throw new NotImplementedException();
         }

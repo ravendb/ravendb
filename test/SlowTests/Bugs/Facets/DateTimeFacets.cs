@@ -141,12 +141,12 @@ namespace SlowTests.Bugs.Facets
                         var facetResultsNew = s.Query<Camera, CameraCostIndex>()
                             .Where(exp)
                             .AggregateBy(facetsNewWay)
-                            .ToDictionary();
+                            .Execute();
 
                         var facetResultsOldSchool = s.Query<Camera, CameraCostIndex>()
                             .Where(exp)
                             .AggregateBy(facetOldSchool)
-                            .ToDictionary();
+                            .Execute();
 
                         var areFacetsEquiv = AreFacetsEquiv(facetResultsNew, facetResultsOldSchool);
                         if (areFacetsEquiv == false)

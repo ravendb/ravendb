@@ -110,10 +110,10 @@ namespace SlowTests.MailingList
                         .Spatial("Distance", x => x.WithinRadius(100, 52.156161, 1.602483));
                     var partialFacetResults = query
                             .AggregateUsing("facets/AttributeFacets")
-                            .ToDictionary();
+                            .Execute();
                     var fullFacetResults = session.Query<AccItem, AccItems_Attributes>()
                             .AggregateUsing("facets/AttributeFacets")
-                            .ToDictionary();
+                            .Execute();
 
                     var results = query.ToList();
 

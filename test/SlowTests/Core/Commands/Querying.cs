@@ -209,7 +209,7 @@ namespace SlowTests.Core.Commands
                         var facetResults = session
                             .Query<Camera, CameraCost>()
                             .AggregateUsing("facets/CameraFacets")
-                            .ToDictionary();
+                            .Execute();
 
                         Assert.Equal(3, facetResults.Count);
 
@@ -247,12 +247,12 @@ namespace SlowTests.Core.Commands
                         var r1 = session.Query<Camera, CameraCost>()
                             .Where(x => x.Cost < 200)
                             .AggregateUsing("facets/CameraFacets")
-                            .ToDictionary();
+                            .Execute();
 
                         var r2 = session.Query<Camera, CameraCost>()
                             .Where(x => x.Megapixels < 3)
                             .AggregateUsing("facets/CameraFacets")
-                            .ToDictionary();
+                            .Execute();
 
                         var multiFacetResults = new[] { r1, r2 };
 

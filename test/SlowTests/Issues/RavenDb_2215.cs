@@ -75,7 +75,7 @@ namespace SlowTests.Issues
                             factory => factory
                                 .SumOn(x => x.Nett)
                                 .Count())
-                        .ToDictionary();
+                        .Execute();
 
                     double cancelledFinanceSum = 0;
                     double cancelledFinanceCount = 0;
@@ -125,7 +125,7 @@ namespace SlowTests.Issues
                             factory => factory
                                 .WithDisplayName("AndAggregateOnName")
                                 .AverageOn(x => x.Val))
-                        .ToDictionary();
+                        .Execute();
 
                     double cancelledFinanceSum = 0;
                     double cancelledFinanceAverage = 0;
@@ -171,7 +171,7 @@ namespace SlowTests.Issues
                             .Where(x => x.IsCancelled)
                             .AggregateBy(x => x.IsCancelled, factory => factory.SumOn(x => x.Nett))
                             .AndAggregateOn(x => x.IsCancelled, factory => factory.AverageOn(x => x.Val))
-                            .ToDictionary());
+                            .Execute());
                 }
                 using (var session = store.OpenSession())
                 {
@@ -180,7 +180,7 @@ namespace SlowTests.Issues
                             .Where(x => x.IsCancelled)
                             .AggregateBy(x => x.IsCancelled, factory => factory.WithDisplayName("Name1").SumOn(x => x.Nett))
                             .AndAggregateOn(x => x.IsCancelled, factory => factory.WithDisplayName("Name1").AverageOn(x => x.Val))
-                            .ToDictionary());
+                            .Execute());
                 }
 
 
@@ -214,7 +214,7 @@ namespace SlowTests.Issues
                     var ex = Assert.Throws<InvalidOperationException>(() => session.Query<SalesIndex.Result, SalesIndex>()
                       .Where(x => x.IsCancelled)
                       .AggregateBy(x => x.IsCancelled, f => f.SumOn(x => x.Nett).AverageOn(x => x.Val)) // should throw, invalid
-                      .ToDictionary());
+                      .Execute());
                 }
             }
 
@@ -246,7 +246,7 @@ namespace SlowTests.Issues
                     var failedFinance = session.Query<SalesIndex.Result, SalesIndex>()
                        .Where(x => x.IsCancelled)
                        .AggregateBy(x => x.IsCancelled, f => f.SumOn(x => x.Nett).AverageOn(x => x.Nett))
-                       .ToDictionary();
+                       .Execute();
 
                     double cancelledFinanceSum = 0;
                     double cancelledFinanceAverage = 0;

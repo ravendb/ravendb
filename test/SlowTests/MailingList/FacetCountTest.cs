@@ -108,7 +108,7 @@ namespace SlowTests.MailingList
                         var facets = session.Query<WodBase, Wod_Search>()
                             .Where(x => x.ExerciseList.Contains("Pull-ups"))
                             .AggregateUsing("Facets/WodFacets")
-                            .ToDictionary();
+                            .Execute();
 
                         var pullupsCount = facets["ExerciseList"].Values.First(o => o.Range == "pull-ups").Hits;
 

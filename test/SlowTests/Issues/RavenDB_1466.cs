@@ -135,26 +135,26 @@ namespace SlowTests.Issues
                 // by using setup document
 
                 var northSalaryFacetQuery = session.Query<Employee, EmployeeByRegionAndSalary>()
-                                                    .Where(x => x.Region == Region.North).AggregateUsing("facets/EmployeeFacets").ToDictionary();
+                                                    .Where(x => x.Region == Region.North).AggregateUsing("facets/EmployeeFacets").Execute();
                 var southSalaryFacetQuery = session.Query<Employee, EmployeeByRegionAndSalary>()
-                                                    .Where(x => x.Region == Region.South).AggregateUsing("facets/EmployeeFacets").ToDictionary();
+                                                    .Where(x => x.Region == Region.South).AggregateUsing("facets/EmployeeFacets").Execute();
                 var eastSalaryFacetQuery = session.Query<Employee, EmployeeByRegionAndSalary>()
-                                                    .Where(x => x.Region == Region.East).AggregateUsing("facets/EmployeeFacets").ToDictionary();
+                                                    .Where(x => x.Region == Region.East).AggregateUsing("facets/EmployeeFacets").Execute();
                 var westSalaryFacetQuery = session.Query<Employee, EmployeeByRegionAndSalary>()
-                                                    .Where(x => x.Region == Region.West).AggregateUsing("facets/EmployeeFacets").ToDictionary();
+                                                    .Where(x => x.Region == Region.West).AggregateUsing("facets/EmployeeFacets").Execute();
 
                 AssertResults(northSalaryFacetQuery, southSalaryFacetQuery, eastSalaryFacetQuery, westSalaryFacetQuery);
 
                 // by using list of facets
 
                 northSalaryFacetQuery = session.Query<Employee, EmployeeByRegionAndSalary>()
-                                                .Where(x => x.Region == Region.North).AggregateBy(facets).ToDictionary();
+                                                .Where(x => x.Region == Region.North).AggregateBy(facets).Execute();
                 southSalaryFacetQuery = session.Query<Employee, EmployeeByRegionAndSalary>()
-                                                .Where(x => x.Region == Region.South).AggregateBy(facets).ToDictionary();
+                                                .Where(x => x.Region == Region.South).AggregateBy(facets).Execute();
                 eastSalaryFacetQuery = session.Query<Employee, EmployeeByRegionAndSalary>()
-                                                .Where(x => x.Region == Region.East).AggregateBy(facets).ToDictionary();
+                                                .Where(x => x.Region == Region.East).AggregateBy(facets).Execute();
                 westSalaryFacetQuery = session.Query<Employee, EmployeeByRegionAndSalary>()
-                                                .Where(x => x.Region == Region.West).AggregateBy(facets).ToDictionary();
+                                                .Where(x => x.Region == Region.West).AggregateBy(facets).Execute();
 
 
                 AssertResults(northSalaryFacetQuery, southSalaryFacetQuery, eastSalaryFacetQuery, westSalaryFacetQuery);

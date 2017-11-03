@@ -100,7 +100,7 @@ namespace SlowTests.Bugs.Caching
                                 Name = "Age"
                             }
                         })
-                        .ToDictionary();
+                        .Execute();
 
                     Assert.Equal(1, session.Advanced.RequestExecutor.Cache.NumberOfItems);
                     response = session.Query<Person, PersonsIndex>().Where(x => x.Name == "Johnny").AggregateBy(new[]
@@ -110,7 +110,7 @@ namespace SlowTests.Bugs.Caching
                                 Name = "Age"
                             }
                         })
-                        .ToDictionary();
+                        .Execute();
 
                     Assert.Equal(1, session.Advanced.RequestExecutor.Cache.NumberOfItems);
                 }
@@ -128,13 +128,13 @@ namespace SlowTests.Bugs.Caching
                     {
                         Name = "Age"
                     }))
-                        .ToDictionary();
+                        .Execute();
                     Assert.Equal(1, session.Advanced.RequestExecutor.Cache.NumberOfItems);
                     response = session.Query<Person, PersonsIndex>().Where(x => x.Name == "Johnny").AggregateBy(Enumerable.Repeat(1, 200).Select(x => new Facet()
                     {
                         Name = "Age"
                     }))
-                        .ToDictionary();
+                        .Execute();
                     Assert.Equal(1, session.Advanced.RequestExecutor.Cache.NumberOfItems);
                 }
             }
@@ -158,7 +158,7 @@ namespace SlowTests.Bugs.Caching
                                 Name = "Age"
                             }
                         })
-                        .ToDictionaryAsync();
+                        .ExecuteAsync();
 
                     Assert.Equal(1, session.Advanced.RequestExecutor.Cache.NumberOfItems);
 
@@ -173,7 +173,7 @@ namespace SlowTests.Bugs.Caching
                                 Name = "Age"
                             }
                         })
-                        .ToDictionaryAsync();
+                        .ExecuteAsync();
 
                     Assert.Equal(1, session.Advanced.RequestExecutor.Cache.NumberOfItems);
                 }

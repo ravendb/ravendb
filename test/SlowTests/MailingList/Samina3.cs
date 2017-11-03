@@ -66,7 +66,7 @@ namespace SlowTests.MailingList
 
                     var facetResults = query
                         .AggregateUsing("facets/PropertySearchingFacets")
-                        .ToDictionary();
+                        .Execute();
 
                     var facetedCount = facetResults["Feature"];
 

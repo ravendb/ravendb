@@ -63,7 +63,7 @@ namespace SlowTests.Issues
                     var filtered = await session.Query<Doc, DocIndex>().Where(x => x.IntVal == long.MinValue).ToListAsync();
                     Assert.Empty(filtered);
 
-                    var results = await session.Query<Doc, DocIndex>().AggregateBy(x => x.IntVal, factory => factory.Count()).ToDictionaryAsync();
+                    var results = await session.Query<Doc, DocIndex>().AggregateBy(x => x.IntVal, factory => factory.Count()).ExecuteAsync();
                     Assert.Empty(results["IntVal"].Values.Where(x => x.Range == "-9223372036854775808"));
                     Assert.NotEmpty(results["IntVal"].Values.Where(x => x.Range == "1"));
                 }

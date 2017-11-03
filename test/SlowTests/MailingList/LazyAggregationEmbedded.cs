@@ -40,7 +40,7 @@ namespace SlowTests.MailingList
                     var query = session.Query<Task, TaskIndex>()
                         .AggregateBy(t => t.AssigneeId, factory => factory.WithDisplayName("AssigneeId").Count());
 
-                    var lazyOperation = query.ToDictionaryLazy(); // blows up here
+                    var lazyOperation = query.ExecuteLazy(); // blows up here
 
                     var facetValue = lazyOperation.Value;
 

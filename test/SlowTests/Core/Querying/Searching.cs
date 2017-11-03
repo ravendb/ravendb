@@ -382,7 +382,7 @@ namespace SlowTests.Core.Querying
 
                     var facetResults = session.Query<Camera, CameraCost>()
                         .AggregateUsing("facets/CameraFacets")
-                        .ToDictionary();
+                        .Execute();
 
                     Assert.Equal(3, facetResults.Count);
 
@@ -416,7 +416,7 @@ namespace SlowTests.Core.Querying
 
                     var lazyFacetResults = session.Query<Camera, CameraCost>()
                         .AggregateUsing("facets/CameraFacets")
-                        .ToDictionaryLazy();
+                        .ExecuteLazy();
 
                     Assert.False(lazyFacetResults.IsValueCreated);
 

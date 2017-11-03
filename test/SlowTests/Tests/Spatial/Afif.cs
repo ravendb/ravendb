@@ -143,7 +143,7 @@ namespace SlowTests.Tests.Spatial
                     var value = session.Query<Vehicle, ByVehicle>()
                         .Spatial("Coordinates", factory => factory.WithinRadius(5, new Darwin().Latitude, new Darwin().Longitude))
                         .AggregateUsing("facets/Vehicle")
-                        .ToDictionary();
+                        .Execute();
 
                     Assert.NotNull(value);
                     Assert.Equal(2, value["Make"].Values.Count);
