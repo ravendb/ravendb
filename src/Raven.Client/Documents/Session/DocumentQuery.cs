@@ -569,6 +569,13 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
+        IGroupByDocumentQuery<T> IDocumentQuery<T>.GroupBy((string Name, GroupByMethod Method) field, params (string Name, GroupByMethod Method)[] fields)
+        {
+            GroupBy(field, fields);
+            return new GroupByDocumentQuery<T>(this);
+        }
+
+        /// <inheritdoc />
         IDocumentQuery<T> IRawDocumentQuery<T>.AddParameter(string name, object value)
         {
             AddParameter(name, value);

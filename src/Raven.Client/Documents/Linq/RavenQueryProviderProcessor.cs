@@ -1504,7 +1504,6 @@ case "cmpxchg.match":
                                 singleGroupByFieldName += "[]";
                                 break;
                             case GroupByArrayBehavior.ByContent:
-                                // TODO arek singleGroupByFieldName = $"array({singleGroupByFieldName})";
                                 break;
                         }
                     }
@@ -1578,9 +1577,6 @@ case "cmpxchg.match":
                             $"can only contain Select method while it got {methodName}");
                     }
 
-                    if (arrayBehavior != GroupByArrayBehavior.ByIndividualValues)
-                        throw new NotImplementedException("TODO arek");
-
                     var parts = new List<string>();
 
                     foreach (var methodArgument in method.Arguments)
@@ -1602,11 +1598,11 @@ case "cmpxchg.match":
                                         AddCompositeGroupByKey((NewExpression)lambda.Body, parts);
                                         return;
                                     default:
-                                        throw new NotSupportedException("TODO arek");
+                                        throw new NotSupportedException($"Unsupported body node type of lamda expression: {lambda.Body.NodeType}");
                                 }
                                 break;
                             default:
-                                throw new NotSupportedException("TODO arek");
+                                throw new NotSupportedException($"Unsupported argument type of Select call: {methodArgument.NodeType}");
                         }
 
                         void AddPart()
@@ -1622,7 +1618,7 @@ case "cmpxchg.match":
                         }
                     }
 
-                    _documentQuery.GroupBy(string.Join(".", parts));
+                    _documentQuery.GroupBy((string.Join(".", parts), arrayBehavior == GroupByArrayBehavior.ByContent ? GroupByMethod.Array : GroupByMethod.None));
                     break;
                 default:
                     throw new NotSupportedException("Node not supported in GroupBy: " + body.NodeType);

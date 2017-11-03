@@ -315,23 +315,28 @@ namespace Raven.Client.Documents.Session
 
         public void GroupBy(string fieldName, params string[] fieldNames)
         {
+            GroupBy((fieldName, GroupByMethod.None), fieldNames?.Select(x => (x, GroupByMethod.None)).ToArray());
+        }
+
+        public void GroupBy((string Name, GroupByMethod Method) field, params (string Name, GroupByMethod Method)[] fields)
+        {
             if (FromToken.IsDynamic == false)
                 throw new InvalidOperationException("GroupBy only works with dynamic queries.");
             AssertNoRawQuery();
             IsGroupBy = true;
 
-            fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
+            var fieldName = EnsureValidFieldName(field.Name, isNestedPath: false);
 
-            GroupByTokens.AddLast(GroupByToken.Create(fieldName));
+            GroupByTokens.AddLast(GroupByToken.Create(fieldName, field.Method));
 
-            if (fieldNames == null || fieldNames.Length <= 0)
+            if (fields == null || fields.Length <= 0)
                 return;
 
-            foreach (var name in fieldNames)
+            foreach (var item in fields)
             {
-                fieldName = EnsureValidFieldName(name, isNestedPath: false);
+                fieldName = EnsureValidFieldName(item.Name, isNestedPath: false);
 
-                GroupByTokens.AddLast(GroupByToken.Create(fieldName));
+                GroupByTokens.AddLast(GroupByToken.Create(fieldName, item.Method));
             }
         }
 
