@@ -182,7 +182,7 @@ namespace Raven.Client.Documents.Session.Operations
             }
 
             _currentQueryResults = result;
-            _currentQueryResults.EnsureSnapshot();
+            //_currentQueryResults.EnsureSnapshot();
 
             if (Logger.IsInfoEnabled)
             {

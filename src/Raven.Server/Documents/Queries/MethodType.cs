@@ -13,6 +13,7 @@
         Exact,
         Count,
         Sum,
+        Average,
         Intersect,
 
         CmpXchg,

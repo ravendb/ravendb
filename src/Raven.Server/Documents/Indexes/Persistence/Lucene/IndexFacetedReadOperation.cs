@@ -58,7 +58,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _searcher = _currentStateHolder.GetIndexSearcher(_state);
         }
 
-        public Dictionary<string, FacetResult> FacetedQuery(IndexQueryServerSide query, JsonOperationContext context, Func<string, SpatialField> getSpatialField, CancellationToken token)
+        public List<FacetResult> FacetedQuery(IndexQueryServerSide query, JsonOperationContext context, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
             var results = FacetedQueryParser.Parse(query.Metadata, out Dictionary<string, Facet> defaultFacets, out Dictionary<string, List<FacetedQueryParser.ParsedRange>> rangeFacets);
 
@@ -190,7 +190,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 IntArraysPool.Instance.FreeArray(readerFacetInfo.Results.Array);
             }
 
-            return results;
+            return results.Values.ToList();
         }
 
         private static unsafe uint CalculateQueryFieldsHash(IndexQueryServerSide query)
@@ -260,6 +260,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 results[key] = new FacetResult
                 {
+                    Name = key,
                     Values = values,
                     RemainingTermsCount = allTerms.Count - (query.Start + values.Count),
                     RemainingHits = groups.Values.Sum(x => x.Hits) - (previousHits + values.Sum(x => x.Hits))

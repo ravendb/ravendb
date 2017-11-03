@@ -45,7 +45,10 @@ namespace Raven.Server.Documents.Queries.Faceted
 
                 if (facet.Ranges?.Count == 0)
                 {
-                    results[key] = new FacetResult();
+                    results[key] = new FacetResult
+                    {
+                        Name = key
+                    };
                 }
                 else
                 {
@@ -55,6 +58,7 @@ namespace Raven.Server.Documents.Queries.Faceted
 
                     results[key] = new FacetResult
                     {
+                        Name = key,
                         Values = facet.Ranges
                             .Select(range => new FacetValue
                             {

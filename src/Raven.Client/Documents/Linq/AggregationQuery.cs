@@ -7,7 +7,9 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Extensions;
+using Sparrow.Json;
 
 namespace Raven.Client.Documents.Linq
 {
@@ -57,7 +59,14 @@ namespace Raven.Client.Documents.Linq
 
             inspector.Session.RequestExecutor.Execute(command, inspector.Session.Context);
 
-            return null;
+            var results = new Dictionary<string, FacetResult>();
+            foreach (BlittableJsonReaderObject result in command.Result.Results)
+            {
+                var facetResult = (FacetResult)EntityToBlittable.ConvertToEntity(typeof(FacetResult), "facet/result", result, inspector.Session.Conventions);
+                results[facetResult.Name] = facetResult;
+            }
+
+            return results;
         }
         
         public Task<Dictionary<string, FacetResult>> ToDictionaryAsync()
