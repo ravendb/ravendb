@@ -9,7 +9,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Exceptions;
-using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Parser;
@@ -669,12 +668,12 @@ namespace Raven.Server.Documents.Queries
             for (var i = 0; i < expression.Arguments.Count; i++)
             {
                 var argument = expression.Arguments[i];
-                if (argument is FieldExpression fe)
+                if (argument is FieldExpression || argument is ValueExpression)
                 {
                     if (name != null)
                         throw new InvalidOperationException("TODO ppekrol");
 
-                    name = new QueryFieldName(fe.FieldValue, fe.IsQuoted);
+                    name = ExtractFieldNameFromArgument(argument, "facet", parameters, QueryText);
                     continue;
                 }
 
@@ -683,19 +682,43 @@ namespace Raven.Server.Documents.Queries
                     var methodType = QueryMethod.GetMethodType(me.Name);
                     switch (methodType)
                     {
+                        case MethodType.Id:
+                            if (expression.Arguments.Count != 1)
+                                throw new InvalidOperationException("TODO ppekrol");
+
+                            if (me.Arguments.Count != 1)
+                                throw new InvalidOperationException("TODO ppekrol");
+
+                            result.FacetSetupDocumentId = ExtractFieldNameFromArgument(me.Arguments[0], me.Name, parameters, QueryText);
+                            break;
                         case MethodType.Average:
                             AddFacetAggregation(me, result, FacetAggregation.Average, parameters);
                             break;
                         case MethodType.Sum:
                             AddFacetAggregation(me, result, FacetAggregation.Sum, parameters);
                             break;
-                        case MethodType.Count:
-                            AddFacetAggregation(me, result, FacetAggregation.Count, parameters);
+                        case MethodType.Min:
+                            AddFacetAggregation(me, result, FacetAggregation.Min, parameters);
+                            break;
+                        case MethodType.Max:
+                            AddFacetAggregation(me, result, FacetAggregation.Max, parameters);
                             break;
                         default:
                             throw new InvalidOperationException("TODO ppekrol");
                     }
 
+                    continue;
+                }
+
+                if (argument is BetweenExpression bee)
+                {
+                    result.Ranges.Add(bee);
+                    continue;
+                }
+
+                if (argument is BinaryExpression be)
+                {
+                    result.Ranges.Add(be);
                     continue;
                 }
 
@@ -710,12 +733,10 @@ namespace Raven.Server.Documents.Queries
 
         private void AddFacetAggregation(MethodExpression me, FacetField field, FacetAggregation aggregation, BlittableJsonReaderObject parameters)
         {
-            var count = aggregation == FacetAggregation.Count ? 0 : 1;
-
-            if (me.Arguments.Count != count)
+            if (me.Arguments.Count != 1)
                 throw new InvalidOperationException("TODO ppekrol");
 
-            var methodFieldName = count > 0 ? ExtractFieldNameFromArgument(me.Arguments[0], me.Name, parameters, QueryText) : null;
+            var methodFieldName = ExtractFieldNameFromArgument(me.Arguments[0], me.Name, parameters, QueryText);
 
             field.AddAggregation(aggregation, methodFieldName);
         }

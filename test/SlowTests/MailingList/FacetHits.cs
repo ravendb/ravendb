@@ -99,7 +99,7 @@ namespace SlowTests.MailingList
                     var priceFacet = facetResults["Price_D_Range"];
 
                     foreach (var val in priceFacet.Values)
-                        Assert.NotEqual(0, val.Hits);
+                        Assert.NotEqual(0, val.Count);
                 }
             }
         }

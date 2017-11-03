@@ -110,7 +110,7 @@ namespace SlowTests.MailingList
                             .AggregateUsing("Facets/WodFacets")
                             .Execute();
 
-                        var pullupsCount = facets["ExerciseList"].Values.First(o => o.Range == "pull-ups").Hits;
+                        var pullupsCount = facets["ExerciseList"].Values.First(o => o.Range == "pull-ups").Count;
 
                         Assert.Equal(11, wods.Count);
                         Assert.Equal(11, pullupsCount);

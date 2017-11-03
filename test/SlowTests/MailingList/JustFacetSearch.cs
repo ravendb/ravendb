@@ -123,7 +123,7 @@ namespace SlowTests.MailingList
                     {
                         Id = section.Id.ToString(),
                         Name = section.Name,
-                        Count = value.Hits
+                        Count = value.Count
                     };
                 }).ToList();
             }

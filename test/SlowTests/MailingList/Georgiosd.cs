@@ -45,8 +45,8 @@ namespace SlowTests.MailingList
                         Assert.Equal("1", facetResult.Values[0].Range);
                         Assert.Equal("2", facetResult.Values[1].Range);
 
-                        Assert.Equal(5, facetResult.Values[0].Hits);
-                        Assert.Equal(5, facetResult.Values[1].Hits);
+                        Assert.Equal(5, facetResult.Values[0].Count);
+                        Assert.Equal(5, facetResult.Values[1].Count);
                     }
                 }
             }

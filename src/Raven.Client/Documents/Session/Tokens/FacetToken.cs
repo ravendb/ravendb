@@ -7,36 +7,49 @@ namespace Raven.Client.Documents.Session.Tokens
 {
     public class FacetToken : QueryToken
     {
+        private readonly string _facetSetupDocumentKey;
         private readonly string _fieldName;
         private readonly string _alias;
+        private readonly List<string> _ranges;
         private readonly string _optionsParameterName;
 
         private readonly List<FacetAggregationToken> _aggregations;
 
         public string Name => _alias ?? _fieldName;
 
-        private FacetToken(string fieldName, string alias, string optionsParameterName)
+        private FacetToken(string facetSetupDocumentKey)
+        {
+            _facetSetupDocumentKey = facetSetupDocumentKey;
+        }
+
+        private FacetToken(string fieldName, string alias, List<string> ranges, string optionsParameterName)
         {
             _fieldName = fieldName;
             _alias = alias;
+            _ranges = ranges;
             _optionsParameterName = optionsParameterName;
             _aggregations = new List<FacetAggregationToken>();
+        }
+
+        public static FacetToken Create(string facetSetupDocumentKey)
+        {
+            if (string.IsNullOrWhiteSpace(facetSetupDocumentKey))
+                throw new ArgumentNullException(nameof(facetSetupDocumentKey));
+
+            return new FacetToken(facetSetupDocumentKey);
         }
 
         public static FacetToken Create(Facet facet, Func<object, string> addQueryParameter)
         {
             var optionsParameterName = facet.Options != null && facet.Options != FacetOptions.Default ? addQueryParameter(facet.Options) : null;
 
-            var token = new FacetToken(facet.Name, facet.DisplayName, optionsParameterName);
+            var token = new FacetToken(facet.Name, facet.DisplayName, facet.Ranges, optionsParameterName);
 
             foreach (var aggregation in facet.Aggregations)
             {
                 FacetAggregationToken aggregationToken;
                 switch (aggregation.Key)
                 {
-                    case FacetAggregation.Count:
-                        aggregationToken = FacetAggregationToken.Count();
-                        break;
                     case FacetAggregation.Max:
                         aggregationToken = FacetAggregationToken.Max(aggregation.Value);
                         break;
@@ -61,21 +74,31 @@ namespace Raven.Client.Documents.Session.Tokens
 
         public override void WriteTo(StringBuilder writer)
         {
-            if (_aggregations.Count == 0)
-                throw new InvalidOperationException("TODO ppekrol");
-
             writer
-                .Append("facet(")
-                .Append(_fieldName)
-                .Append(", ");
+                .Append("facet(");
 
-            var first = true;
+            if (_facetSetupDocumentKey != null)
+            {
+                writer
+                    .Append("id('")
+                    .Append(_facetSetupDocumentKey)
+                    .Append("'))");
+
+                return;
+            }
+
+            writer.Append(_fieldName);
+
+            foreach (var range in _ranges)
+            {
+                writer
+                    .Append(", ")
+                    .Append(range);
+            }
+
             foreach (var aggregation in _aggregations)
             {
-                if (first == false)
-                    writer.Append(", ");
-
-                first = false;
+                writer.Append(", ");
 
                 aggregation.WriteTo(writer);
             }
@@ -112,9 +135,6 @@ namespace Raven.Client.Documents.Session.Tokens
             {
                 switch (_aggregation)
                 {
-                    case FacetAggregation.Count:
-                        writer.Append("count()");
-                        break;
                     case FacetAggregation.Max:
                         writer
                             .Append("max(")
@@ -129,7 +149,7 @@ namespace Raven.Client.Documents.Session.Tokens
                         break;
                     case FacetAggregation.Average:
                         writer
-                            .Append("average(")
+                            .Append("avg(")
                             .Append(_fieldName)
                             .Append(")");
                         break;
@@ -142,11 +162,6 @@ namespace Raven.Client.Documents.Session.Tokens
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
-            }
-
-            public static FacetAggregationToken Count()
-            {
-                return new FacetAggregationToken(null, FacetAggregation.Count);
             }
 
             public static FacetAggregationToken Max(string fieldName)

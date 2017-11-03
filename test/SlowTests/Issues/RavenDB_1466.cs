@@ -164,32 +164,32 @@ namespace SlowTests.Issues
         private static void AssertResults(params Dictionary<string, FacetResult>[] results)
         {
             var northResults = results[0]["Salary_D_Range"].Values;
-            Assert.Equal(1, northResults[0].Hits);
-            Assert.Equal(1, northResults[1].Hits);
-            Assert.Equal(0, northResults[2].Hits);
-            Assert.Equal(0, northResults[3].Hits);
-            Assert.Equal(0, northResults[4].Hits);
+            Assert.Equal(1, northResults[0].Count);
+            Assert.Equal(1, northResults[1].Count);
+            Assert.Equal(0, northResults[2].Count);
+            Assert.Equal(0, northResults[3].Count);
+            Assert.Equal(0, northResults[4].Count);
 
             var southResults = results[1]["Salary_D_Range"].Values;
-            Assert.Equal(0, southResults[0].Hits);
-            Assert.Equal(1, southResults[1].Hits);
-            Assert.Equal(0, southResults[2].Hits);
-            Assert.Equal(0, southResults[3].Hits);
-            Assert.Equal(0, southResults[4].Hits);
+            Assert.Equal(0, southResults[0].Count);
+            Assert.Equal(1, southResults[1].Count);
+            Assert.Equal(0, southResults[2].Count);
+            Assert.Equal(0, southResults[3].Count);
+            Assert.Equal(0, southResults[4].Count);
 
             var eastResults = results[2]["Salary_D_Range"].Values;
-            Assert.Equal(0, eastResults[0].Hits);
-            Assert.Equal(0, eastResults[1].Hits);
-            Assert.Equal(2, eastResults[2].Hits);
-            Assert.Equal(0, eastResults[3].Hits);
-            Assert.Equal(0, eastResults[4].Hits);
+            Assert.Equal(0, eastResults[0].Count);
+            Assert.Equal(0, eastResults[1].Count);
+            Assert.Equal(2, eastResults[2].Count);
+            Assert.Equal(0, eastResults[3].Count);
+            Assert.Equal(0, eastResults[4].Count);
 
             var westResults = results[3]["Salary_D_Range"].Values;
-            Assert.Equal(1, westResults[0].Hits);
-            Assert.Equal(0, westResults[1].Hits);
-            Assert.Equal(0, westResults[2].Hits);
-            Assert.Equal(0, westResults[3].Hits);
-            Assert.Equal(1, westResults[4].Hits);
+            Assert.Equal(1, westResults[0].Count);
+            Assert.Equal(0, westResults[1].Count);
+            Assert.Equal(0, westResults[2].Count);
+            Assert.Equal(0, westResults[3].Count);
+            Assert.Equal(1, westResults[4].Count);
         }
     }
 }

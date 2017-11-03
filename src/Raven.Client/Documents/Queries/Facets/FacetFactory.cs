@@ -1,13 +1,17 @@
 using System;
 using System.Linq.Expressions;
-using Raven.Client.Documents.Session;
 using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Queries.Facets
 {
     public class FacetFactory<T>
     {
-        internal readonly Facet Facet = new Facet();
+        internal Facet Facet = new Facet();
+
+        public FacetFactory(string name)
+        {
+            Facet.Name = name;
+        }
 
         public FacetFactory<T> WithOptions(FacetOptions options)
         {
@@ -17,7 +21,18 @@ namespace Raven.Client.Documents.Queries.Facets
 
         public FacetFactory<T> WithRanges(Expression<Func<T, bool>> path, params Expression<Func<T, bool>>[] paths)
         {
-            throw new NotImplementedException();
+            if (path == null) 
+                throw new ArgumentNullException(nameof(path));
+
+            Facet.Ranges.Add(Facet<T>.Parse(path));
+
+            if (paths != null)
+            {
+                foreach (var p in paths)
+                    Facet.Ranges.Add(Facet<T>.Parse(p));
+            }
+
+            return this;
         }
 
         public FacetFactory<T> WithDisplayName(string displayName)
@@ -47,12 +62,6 @@ namespace Raven.Client.Documents.Queries.Facets
         public FacetFactory<T> AverageOn(Expression<Func<T, object>> path)
         {
             Facet.Aggregations[FacetAggregation.Average] = path.ToPropertyPath();
-            return this;
-        }
-
-        public FacetFactory<T> Count()
-        {
-            Facet.Aggregations[FacetAggregation.Count] = null;
             return this;
         }
     }

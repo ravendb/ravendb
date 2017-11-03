@@ -124,15 +124,15 @@ namespace SlowTests.Bugs.Caching
             {
                 using (var session = store.OpenSession())
                 {
-                    var response = session.Query<Person, PersonsIndex>().Where(x => x.Name == "Johnny").AggregateBy(Enumerable.Repeat(1, 200).Select(x => new Facet()
+                    var response = session.Query<Person, PersonsIndex>().Where(x => x.Name == "Johnny").AggregateBy(Enumerable.Range(1, 200).Select(x => new Facet()
                     {
-                        Name = "Age"
+                        Name = "Age" + x
                     }))
                         .Execute();
                     Assert.Equal(1, session.Advanced.RequestExecutor.Cache.NumberOfItems);
-                    response = session.Query<Person, PersonsIndex>().Where(x => x.Name == "Johnny").AggregateBy(Enumerable.Repeat(1, 200).Select(x => new Facet()
+                    response = session.Query<Person, PersonsIndex>().Where(x => x.Name == "Johnny").AggregateBy(Enumerable.Range(1, 200).Select(x => new Facet()
                     {
-                        Name = "Age"
+                        Name = "Age" + x
                     }))
                         .Execute();
                     Assert.Equal(1, session.Advanced.RequestExecutor.Cache.NumberOfItems);

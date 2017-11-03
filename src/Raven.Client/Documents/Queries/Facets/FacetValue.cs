@@ -8,14 +8,9 @@ namespace Raven.Client.Documents.Queries.Facets
         public string Range { get; set; }
 
         /// <summary>
-        /// Number of terms that are covered by this facet.
+        /// Stores count value.
         /// </summary>
-        public int Hits { get; set; }
-
-        /// <summary>
-        /// Stores count value if FacetAggregation.Count was set.
-        /// </summary>
-        public int? Count { get; set; }
+        public int Count { get; set; }
 
         /// <summary>
         /// Stores sum of all values if FacetAggregation.Sum was set.
@@ -39,9 +34,7 @@ namespace Raven.Client.Documents.Queries.Facets
 
         public override string ToString()
         {
-            var msg = Range + " -  Hits: " + Hits + ",";
-            if (Count != null)
-                msg += "Count: " + Count + ",";
+            var msg = Range + " -  Count: " + Count + ",";
             if (Sum != null)
                 msg += "Sum: " + Sum + ",";
             if (Max != null)

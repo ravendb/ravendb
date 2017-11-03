@@ -38,13 +38,13 @@ namespace SlowTests.MailingList
                     WaitForIndexing(store);
 
                     var query = session.Query<Task, TaskIndex>()
-                        .AggregateBy(t => t.AssigneeId, factory => factory.WithDisplayName("AssigneeId").Count());
+                        .AggregateBy(t => t.AssigneeId, factory => factory.WithDisplayName("AssigneeId"));
 
                     var lazyOperation = query.ExecuteLazy(); // blows up here
 
                     var facetValue = lazyOperation.Value;
 
-                    var userStatistics = facetValue["AssigneeId"].Values.ToDictionary(v => v.Range, v => v.Count.GetValueOrDefault());
+                    var userStatistics = facetValue["AssigneeId"].Values.ToDictionary(v => v.Range, v => v.Count);
 
                     Assert.Equal(2, userStatistics["users/1"]);
 

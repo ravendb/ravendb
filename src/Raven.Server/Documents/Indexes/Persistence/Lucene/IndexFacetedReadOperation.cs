@@ -19,6 +19,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.LowMemory;
 
@@ -58,9 +59,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _searcher = _currentStateHolder.GetIndexSearcher(_state);
         }
 
-        public List<FacetResult> FacetedQuery(IndexQueryServerSide query, JsonOperationContext context, Func<string, SpatialField> getSpatialField, CancellationToken token)
+        public List<FacetResult> FacetedQuery(IndexQueryServerSide query, DocumentsOperationContext context, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
-            var results = FacetedQueryParser.Parse(query.Metadata, out Dictionary<string, Facet> defaultFacets, out Dictionary<string, List<FacetedQueryParser.ParsedRange>> rangeFacets);
+            var results = FacetedQueryParser.Parse(context, query.Metadata, out Dictionary<string, Facet> defaultFacets, out Dictionary<string, List<FacetedQueryParser.ParsedRange>> rangeFacets);
 
             var facetsByName = new Dictionary<string, Dictionary<string, FacetValue>>();
 
@@ -68,7 +69,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (query.Metadata.IsDistinct)
                 fieldsHash = CalculateQueryFieldsHash(query);
 
-            var baseQuery = GetLuceneQuery(context, query.Metadata, query.QueryParameters, _analyzer, _queryBuilderFactories);
+            var baseQuery = GetLuceneQuery(query.Metadata, query.QueryParameters, _analyzer, _queryBuilderFactories);
             var returnedReaders = GetQueryMatchingDocuments(_searcher, baseQuery, _state);
 
             foreach (var facet in defaultFacets.Values)
@@ -101,7 +102,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                             }
                         }
 
-                        var needToApplyAggregation = facet.Aggregations.Count > 1 || facet.Aggregations.ContainsKey(FacetAggregation.Count) == false;
+                        var needToApplyAggregation = facet.Aggregations.Count > 0;
                         var intersectedDocuments = GetIntersectedDocuments(new ArraySegment<int>(kvp.Value), readerFacetInfo.Results, alreadySeen, query, fieldsHash, needToApplyAggregation, context);
                         var intersectCount = intersectedDocuments.Count;
                         if (intersectCount == 0)
@@ -115,8 +116,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                             };
                             facetValues.Add(kvp.Key, facetValue);
                         }
-                        facetValue.Hits += intersectCount;
-                        facetValue.Count = facetValue.Hits;
+
+                        facetValue.Count += intersectCount;
 
                         if (needToApplyAggregation)
                         {
@@ -130,7 +131,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             foreach (var range in rangeFacets)
             {
                 var facet = defaultFacets[range.Key];
-                var needToApplyAggregation = facet.Aggregations.Count > 1 || facet.Aggregations.ContainsKey(FacetAggregation.Count) == false;
+                var needToApplyAggregation = facet.Aggregations.Count > 0;
 
                 Dictionary<string, HashSet<IndexSearcherHolder.StringCollectionValue>> distinctItems = null;
                 HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen = null;
@@ -165,8 +166,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                                 if (intersectCount == 0)
                                     continue;
 
-                                facetValue.Hits += intersectCount;
-                                facetValue.Count = facetValue.Hits;
+                                facetValue.Count += intersectCount;
 
                                 if (needToApplyAggregation)
                                 {
@@ -223,16 +223,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 switch (facet.Options.TermSortMode)
                 {
                     case FacetTermSortMode.ValueAsc:
-                        allTerms = new List<string>(groups.OrderBy(x => x.Key).ThenBy(x => x.Value.Hits).Select(x => x.Key));
+                        allTerms = new List<string>(groups.OrderBy(x => x.Key).ThenBy(x => x.Value.Count).Select(x => x.Key));
                         break;
                     case FacetTermSortMode.ValueDesc:
-                        allTerms = new List<string>(groups.OrderByDescending(x => x.Key).ThenBy(x => x.Value.Hits).Select(x => x.Key));
+                        allTerms = new List<string>(groups.OrderByDescending(x => x.Key).ThenBy(x => x.Value.Count).Select(x => x.Key));
                         break;
-                    case FacetTermSortMode.HitsAsc:
-                        allTerms = new List<string>(groups.OrderBy(x => x.Value.Hits).ThenBy(x => x.Key).Select(x => x.Key));
+                    case FacetTermSortMode.CountAsc:
+                        allTerms = new List<string>(groups.OrderBy(x => x.Value.Count).ThenBy(x => x.Key).Select(x => x.Key));
                         break;
-                    case FacetTermSortMode.HitsDesc:
-                        allTerms = new List<string>(groups.OrderByDescending(x => x.Value.Hits).ThenBy(x => x.Key).Select(x => x.Key));
+                    case FacetTermSortMode.CountDesc:
+                        allTerms = new List<string>(groups.OrderByDescending(x => x.Value.Count).ThenBy(x => x.Key).Select(x => x.Key));
                         break;
                     default:
                         throw new ArgumentException(string.Format("Could not understand '{0}'", facet.Options.TermSortMode));
@@ -253,7 +253,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     if (groups.TryGetValue(allTerm, out FacetValue facetValue) == false || facetValue == null)
                         return 0;
 
-                    return facetValue.Hits;
+                    return facetValue.Count;
                 });
 
                 var key = string.IsNullOrWhiteSpace(facet.DisplayName) ? facet.Name : facet.DisplayName;
@@ -263,7 +263,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     Name = key,
                     Values = values,
                     RemainingTermsCount = allTerms.Count - (query.Start + values.Count),
-                    RemainingHits = groups.Values.Sum(x => x.Hits) - (previousHits + values.Sum(x => x.Hits))
+                    RemainingHits = groups.Values.Sum(x => x.Count) - (previousHits + values.Sum(x => x.Count))
                 };
 
                 if (facet.Options.IncludeRemainingTerms)
@@ -283,10 +283,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                     foreach (var facetValue in facetResult.Value.Values)
                     {
-                        if (facetValue.Hits == 0)
+                        if (facetValue.Count == 0)
                             facetValue.Average = double.NaN;
                         else
-                            facetValue.Average = facetValue.Average / facetValue.Hits;
+                            facetValue.Average = facetValue.Average / facetValue.Count;
                     }
                 }
             }

@@ -71,7 +71,7 @@ namespace SlowTests.MailingList
                     var facetedCount = facetResults["Feature"];
 
                     Assert.Equal(1, result.Count());
-                    Assert.Equal(1, facetResults["Feature"].Values.First(x => x.Range == "pool").Hits);
+                    Assert.Equal(1, facetResults["Feature"].Values.First(x => x.Range == "pool").Count);
                     Assert.Equal("PropertiesSearchIndex", stats.IndexName);
                 }
             }

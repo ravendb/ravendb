@@ -353,6 +353,8 @@ namespace Raven.Client.Documents.Session
 
         void AggregateBy(Facet facet);
 
+        void AggregateUsing(string facetSetupDocumentKey);
+
         void AddFromAliasToWhereTokens(string fromAlias);
     }
 }

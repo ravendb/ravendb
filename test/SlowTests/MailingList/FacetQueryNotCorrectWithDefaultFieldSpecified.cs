@@ -59,7 +59,7 @@ namespace SlowTests.MailingList
             Assert.Contains("Brand", result.Select(x => x.Key));
             FacetResult facetResult = result["Brand"];
             Assert.Equal(1, facetResult.Values.Count);
-            facetResult.Values[0] = new FacetValue { Range = "mybrand1", Hits = 1 };
+            facetResult.Values[0] = new FacetValue { Range = "mybrand1", Count = 1 };
         }
 
         private static Dictionary<string, FacetResult> ExecuteTest(IDocumentStore store)

@@ -57,14 +57,14 @@ namespace SlowTests.Tests.Faceted
                 {
                     var results = session.Query<Car>("Cars")
                                          .Where(car => car.Year == 2011)
-                                         .AggregateBy(x => x.Make, f => f.Count())
+                                         .AggregateBy(x => x.Make)
                                          .Execute();
 
 
                     Assert.Equal(3, results["Make"].Values.Count);
-                    Assert.Equal(2, results["Make"].Values.First(x => x.Range == "toyota").Count.Value);
-                    Assert.Equal(2, results["Make"].Values.First(x => x.Range == "ford").Count.Value);
-                    Assert.Equal(1, results["Make"].Values.First(x => x.Range == "hunday").Count.Value);
+                    Assert.Equal(2, results["Make"].Values.First(x => x.Range == "toyota").Count);
+                    Assert.Equal(2, results["Make"].Values.First(x => x.Range == "ford").Count);
+                    Assert.Equal(1, results["Make"].Values.First(x => x.Range == "hunday").Count);
                 }
             }
         }

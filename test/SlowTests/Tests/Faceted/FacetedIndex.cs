@@ -298,7 +298,7 @@ namespace SlowTests.Tests.Faceted
             foreach (var facet in facetResults["Manufacturer"].Values)
             {
                 var inMemoryCount = filteredData.Count(x => x.Manufacturer.ToLower() == facet.Range);
-                Assert.Equal(inMemoryCount, facet.Hits);
+                Assert.Equal(inMemoryCount, facet.Count);
             }
 
             //Go through the expected (in-memory) results and check that there is a corresponding facet result
@@ -332,7 +332,7 @@ namespace SlowTests.Tests.Faceted
             if (expectedCount > 0)
             {
                 Assert.NotNull(facets);
-                Assert.Equal(expectedCount, facets.Hits);
+                Assert.Equal(expectedCount, facets.Count);
             }
         }
     }

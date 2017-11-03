@@ -1872,7 +1872,7 @@ namespace Raven.Server.Documents.Indexes
 
                             using (var reader = IndexPersistence.OpenFacetedIndexReader(indexTx.InnerTransaction))
                             {
-                                result.Results = reader.FacetedQuery(query, indexContext, GetOrAddSpatialField, token.Token);
+                                result.Results = reader.FacetedQuery(query, documentsContext, GetOrAddSpatialField, token.Token);
                                 return result;
                             }
                         }

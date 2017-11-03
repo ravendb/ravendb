@@ -1,143 +1,202 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
-using Lucene.Net.Util;
 using Raven.Client.Documents.Commands;
-using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries.Facets;
-using Sparrow;
+using Raven.Client.Documents.Session;
+using Raven.Server.Documents.Queries.AST;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Queries.Faceted
 {
     public static class FacetedQueryParser
     {
-        public static Dictionary<string, FacetResult> Parse(QueryMetadata metadata, out Dictionary<string, Facet> defaultFacets, out Dictionary<string, List<ParsedRange>> rangeFacets)
+        public static Dictionary<string, FacetResult> Parse(DocumentsOperationContext context, QueryMetadata metadata, out Dictionary<string, Facet> defaultFacets, out Dictionary<string, List<ParsedRange>> rangeFacets)
         {
-            var results = new Dictionary<string, FacetResult>();
-            defaultFacets = new Dictionary<string, Facet>();
-            rangeFacets = new Dictionary<string, List<ParsedRange>>();
-            foreach (var field in metadata.SelectFields)
+            DocumentsTransaction tx = null;
+
+            try
             {
-                if (field.IsFacet == false)
-                    throw new InvalidOperationException("Should not happen!");
-
-                var facetField = (FacetField)field;
-
-                var facet = new Facet
+                var results = new Dictionary<string, FacetResult>();
+                defaultFacets = new Dictionary<string, Facet>();
+                rangeFacets = new Dictionary<string, List<ParsedRange>>();
+                foreach (var field in metadata.SelectFields)
                 {
-                    Name = facetField.Name,
-                    DisplayName = facetField.Alias,
-                    Aggregations = facetField.Aggregations,
-                    Options = FacetOptions.Default // TODO [ppekrol]
+                    if (field.IsFacet == false)
+                        throw new InvalidOperationException("Should not happen!");
+
+                    var facetField = (FacetField)field;
+                    if (facetField.FacetSetupDocumentId != null)
+                    {
+                        if (tx == null)
+                            tx = context.OpenReadTransaction();
+
+                        var documentJson = context.DocumentDatabase.DocumentsStorage.Get(context, facetField.FacetSetupDocumentId);
+                        if (documentJson == null)
+                            throw new InvalidOperationException("TODO ppekrol");
+
+                        var document = (FacetSetup)EntityToBlittable.ConvertToEntity(typeof(FacetSetup), facetField.FacetSetupDocumentId, documentJson.Data, DocumentConventions.Default);
+
+                        foreach (var f in document.Facets)
+                        {
+                            if (f.Options == null)
+                                f.Options = FacetOptions.Default;
+
+                            Process(f, null, defaultFacets, rangeFacets, results);
+                        }
+
+                        continue;
+                    }
+
+                    var facet = new Facet
+                    {
+                        Name = facetField.Name,
+                        DisplayName = facetField.Alias,
+                        Aggregations = facetField.Aggregations,
+                        Options = FacetOptions.Default // TODO [ppekrol]
+                    };
+
+                    Process(facet, facetField.Ranges, defaultFacets, rangeFacets, results);
+                }
+
+                return results;
+            }
+            finally
+            {
+                tx?.Dispose();
+            }
+        }
+
+        private static void Process(Facet facet, List<QueryExpression> facetRanges, Dictionary<string, Facet> defaultFacets, Dictionary<string, List<ParsedRange>> rangeFacets, Dictionary<string, FacetResult> results)
+        {
+            var key = string.IsNullOrWhiteSpace(facet.DisplayName) ? facet.Name : facet.DisplayName;
+
+            defaultFacets[key] = facet;
+
+            if (facetRanges == null || facetRanges.Count == 0)
+            {
+                results[key] = new FacetResult
+                {
+                    Name = key
+                };
+            }
+            else
+            {
+                var result = results[key] = new FacetResult
+                {
+                    Name = key
                 };
 
-                var key = string.IsNullOrWhiteSpace(facet.DisplayName) ? facet.Name : facet.DisplayName;
-
-                defaultFacets[key] = facet;
-
-                if (facet.Ranges?.Count == 0)
+                var ranges = rangeFacets[key] = new List<ParsedRange>();
+                foreach (var range in facetRanges)
                 {
-                    results[key] = new FacetResult
+                    var parsedRange = ParseRange(facet.Name, range);
+                    
+                    ranges.Add(parsedRange);
+                    result.Values.Add(new FacetValue
                     {
-                        Name = key
-                    };
-                }
-                else
-                {
-                    rangeFacets[key] = facet.Ranges
-                        .Select(range => ParseRange(facet.Name, range))
-                        .ToList();
-
-                    results[key] = new FacetResult
-                    {
-                        Name = key,
-                        Values = facet.Ranges
-                            .Select(range => new FacetValue
-                            {
-                                Range = range
-                            })
-                            .ToList()
-                    };
+                        Range = parsedRange.RangeText
+                    });
                 }
             }
-
-            return results;
         }
 
-        private static ParsedRange ParseRange(string field, string range)
+        private static ParsedRange ParseRange(string field, QueryExpression expression)
         {
-            var parts = range.Split(new[] { " TO " }, 2, StringSplitOptions.RemoveEmptyEntries);
-
-            if (parts.Length != 2)
-                throw new ArgumentException("Could not understand range query: " + range);
-
-            var trimmedLow = parts[0].Trim();
-            var trimmedHigh = parts[1].Trim();
-            var parsedRange = new ParsedRange
+            if (expression is BetweenExpression bee)
             {
-                Field = field,
-                RangeText = range,
-                LowInclusive = IsInclusive(trimmedLow[0]),
-                HighInclusive = IsInclusive(trimmedHigh[trimmedHigh.Length - 1]),
-                LowValue = trimmedLow.Substring(1),
-                HighValue = trimmedHigh.Substring(0, trimmedHigh.Length - 1)
-            };
-
-            parsedRange.LowValue = ConvertFieldValue(field, parsedRange.LowValue);
-            parsedRange.HighValue = ConvertFieldValue(field, parsedRange.HighValue);
-
-            parsedRange.LowValue = UnescapeValueIfNecessary(parsedRange.LowValue);
-            parsedRange.HighValue = UnescapeValueIfNecessary(parsedRange.HighValue);
-
-            return parsedRange;
-        }
-
-        private static string UnescapeValueIfNecessary(string value)
-        {
-            if (string.IsNullOrEmpty(value))
-                return value;
-
-            var unescapedValue = QueryBuilder.Unescape(value);
-
-            if (DateTime.TryParseExact(unescapedValue, DefaultFormat.OnlyDateTimeFormat, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime _))
-                return unescapedValue;
-
-            return value;
-        }
-
-        private static string ConvertFieldValue(string field, string value)
-        {
-            if (NumberUtil.IsNull(value))
-                return null;
-
-            var rangeType = FieldUtil.GetRangeTypeFromFieldName(field);
-            switch (rangeType)
-            {
-                case RangeType.Long:
-                    var longValue = NumberUtil.StringToLong(value);
-                    return NumericUtils.LongToPrefixCoded(longValue.Value);
-                case RangeType.Double:
-                    var doubleValue = NumberUtil.StringToDouble(value);
-                    return NumericUtils.DoubleToPrefixCoded(doubleValue.Value);
-                default:
-                    return value;
+                return new ParsedRange
+                {
+                    Field = field,
+                    HighInclusive = true,
+                    HighValue = bee.Max.Token,
+                    LowInclusive = true,
+                    LowValue = bee.Min.Token,
+                    RangeText = expression.GetText()
+                };
             }
+
+            if (expression is BinaryExpression be)
+            {
+                switch (be.Operator)
+                {
+                    case OperatorType.LessThan:
+                    case OperatorType.GreaterThan:
+                    case OperatorType.LessThanEqual:
+                    case OperatorType.GreaterThanEqual:
+                        var fieldName = ExtractFieldName(be);
+                        if (string.Equals(field, fieldName, StringComparison.OrdinalIgnoreCase) == false)
+                            throw new InvalidOperationException("TODO ppekrol");
+
+                        var fieldValue = ExtractFieldValue(be);
+
+                        var range = new ParsedRange
+                        {
+                            Field = field,
+                            RangeText = expression.GetText()
+                        };
+
+                        if (be.Operator == OperatorType.LessThan || be.Operator == OperatorType.LessThanEqual)
+                        {
+                            range.HighValue = fieldValue;
+                            range.HighInclusive = be.Operator == OperatorType.LessThanEqual;
+
+                            return range;
+                        }
+
+                        if (be.Operator == OperatorType.GreaterThan || be.Operator == OperatorType.GreaterThanEqual)
+                        {
+                            range.LowValue = fieldValue;
+                            range.LowInclusive = be.Operator == OperatorType.GreaterThanEqual;
+
+                            return range;
+                        }
+
+                        return range;
+                    case OperatorType.And:
+                        var left = ParseRange(field, be.Left);
+                        var right = ParseRange(field, be.Right);
+
+                        if (left.HighValue == null)
+                        {
+                            left.HighValue = right.HighValue;
+                            left.HighInclusive = right.HighInclusive;
+                        }
+
+                        if (left.LowValue == null)
+                        {
+                            left.LowValue = right.LowValue;
+                            left.LowInclusive = right.LowInclusive;
+                        }
+
+                        left.RangeText = expression.GetText();
+                        return left;
+                    default:
+                        throw new InvalidOperationException("TODO ppekrol");
+                }
+            }
+
+            throw new InvalidOperationException("TODO ppekrol");
         }
 
-        private static bool IsInclusive(char ch)
+        private static string ExtractFieldName(BinaryExpression be)
         {
-            switch (ch)
-            {
-                case '[':
-                case ']':
-                    return true;
-                case '{':
-                case '}':
-                    return false;
-                default:
-                    throw new ArgumentException("Could not understand range prefix: " + ch);
-            }
+            if (be.Left is FieldExpression lfe)
+                return lfe.FieldValue;
+
+            if (be.Left is ValueExpression lve)
+                return lve.Token;
+
+            throw new InvalidOperationException("TODO ppekrol");
+        }
+
+        private static string ExtractFieldValue(BinaryExpression be)
+        {
+            if (be.Right is ValueExpression rve)
+                return rve.Token;
+
+            throw new InvalidOperationException("TODO ppekrol");
         }
 
         public class ParsedRange

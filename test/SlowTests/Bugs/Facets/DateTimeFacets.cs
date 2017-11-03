@@ -170,7 +170,7 @@ namespace SlowTests.Bugs.Facets
                 return false;
             }
             //deeper check onthe ranges.
-            if (left.Sum(r => r.Value.Values.Sum(var => var.Hits)) != right.Sum(r => r.Value.Values.Sum(var => var.Hits)))
+            if (left.Sum(r => r.Value.Values.Sum(var => var.Count)) != right.Sum(r => r.Value.Values.Sum(var => var.Count)))
             {
                 return false;
             }
@@ -182,7 +182,7 @@ namespace SlowTests.Bugs.Facets
                 var rightFacetResult = right.First(r => r.Key.Contains(lfr.Key) || lfr.Key.Contains(r.Key)).Value;
                 for (int i = 0; i < leftFacetResult.Values.Count; i++)
                 {
-                    if (leftFacetResult.Values[i].Hits != rightFacetResult.Values[i].Hits)
+                    if (leftFacetResult.Values[i].Count != rightFacetResult.Values[i].Count)
                     {
                         return false;
                     }

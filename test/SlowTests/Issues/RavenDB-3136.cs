@@ -29,7 +29,7 @@ namespace SlowTests.Issues
                 {
                     var resultInteger =
                         session.Query<SampleData, SampleData_Index>()
-                            .AggregateBy(x => x.IntegerAge, factory => factory.Count())
+                            .AggregateBy(x => x.IntegerAge)
                             .Execute();
 
                     Assert.Equal(resultInteger.Count, 1);
@@ -65,7 +65,7 @@ namespace SlowTests.Issues
                 {
                     var resultInteger =
                         session.Query<SampleData, SampleData_Index>()
-                            .AggregateBy("IntegerAge", factory => factory.Count())
+                            .AggregateBy("IntegerAge")
                             .Execute();
 
                     Assert.Equal(resultInteger.Count, 1);
@@ -96,7 +96,7 @@ namespace SlowTests.Issues
                 {
                     var resultString =
                         session.Query<SampleData, SampleData_Index>()
-                            .AggregateBy(x => x.StringAge, f => f.Count())
+                            .AggregateBy(x => x.StringAge)
                             .Execute();
 
                     Assert.Equal(resultString.Count, 1);
