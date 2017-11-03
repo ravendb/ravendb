@@ -437,8 +437,7 @@ If you really want to do in memory filtering on the data returned from the query
         }
 
         /// <summary>
-        ///   This function exists solely to forbid in memory group by clause on IDocumentQuery, because
-        ///   that is nearly always a mistake.
+        ///   This function exists solely to forbid Linq group by clause on IDocumentQuery
         /// </summary>
         [Obsolete(
             @"
@@ -446,6 +445,45 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 "
             , true)]
         public IEnumerable<IGrouping<TKey, T>> GroupBy<TKey>(Func<T, TKey> keySelector)
+        {
+            throw new NotSupportedException();
+        }
+
+        /// <summary>
+        ///   This function exists solely to forbid Linq group by clause on IDocumentQuery
+        /// </summary>
+        [Obsolete(
+            @"
+Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session.Query<T>() method fully supports Linq to issue group by grouping, while session.Advanced.DocumentQuery<T>() is intended for lower level API access.
+"
+            , true)]
+        public IEnumerable<IGrouping<TKey, TElement>> GroupBy<TKey, TElement>(Func<T, TKey> keySelector, Func<T, TElement> elementSelector)
+        {
+            throw new NotSupportedException();
+        }
+
+        /// <summary>
+        ///   This function exists solely to forbid Linq group by clause on IDocumentQuery
+        /// </summary>
+        [Obsolete(
+            @"
+Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session.Query<T>() method fully supports Linq to issue group by grouping, while session.Advanced.DocumentQuery<T>() is intended for lower level API access.
+"
+            , true)]
+        public IEnumerable<IGrouping<TKey, T>> GroupBy<TKey>(Func<T, TKey> keySelector, IEqualityComparer<TKey> comparer)
+        {
+            throw new NotSupportedException();
+        }
+
+        /// <summary>
+        ///   This function exists solely to forbid Linq group by clause on IDocumentQuery
+        /// </summary>
+        [Obsolete(
+            @"
+Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session.Query<T>() method fully supports Linq to issue group by grouping, while session.Advanced.DocumentQuery<T>() is intended for lower level API access.
+"
+            , true)]
+        public IEnumerable<IGrouping<TKey, TElement>> GroupBy<TKey, TElement>(Func<T, TKey> keySelector, Func<T, TElement> elementSelector, IEqualityComparer<TKey> comparer)
         {
             throw new NotSupportedException();
         }
