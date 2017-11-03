@@ -399,12 +399,15 @@ namespace SlowTests.Tests.Faceted
                 using (var session = store.OpenSession())
                 {
                     var r = session.Query<Order>("Orders/All")
-                       .AggregateBy(x => x.Product, f => f.SumOn(x => x.Total))
-                       .AndAggregateOn(x => x.Total, f => f.SumOn(x => x.Total).WithRanges(x => x.Total < 100,
-                            x => x.Total >= 100 && x.Total < 500,
-                            x => x.Total >= 500 && x.Total < 1500,
-                            x => x.Total >= 1500))
-                       .Execute();
+                        .AggregateBy(x => x.Product, f => f.SumOn(x => x.Total))
+                        .AndAggregateOn(x => x.Total, f => f
+                            .SumOn(x => x.Total)
+                            .WithRanges(
+                                x => x.Total < 100,
+                                x => x.Total >= 100 && x.Total < 500,
+                                x => x.Total >= 500 && x.Total < 1500,
+                                x => x.Total >= 1500))
+                        .Execute();
 
                     var facetResult = r["Product"];
                     Assert.Equal(2, facetResult.Values.Count);

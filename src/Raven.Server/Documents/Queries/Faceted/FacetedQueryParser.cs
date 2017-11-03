@@ -6,6 +6,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Session;
 using Raven.Server.Documents.Queries.AST;
+using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Queries.Faceted
@@ -38,12 +39,35 @@ namespace Raven.Server.Documents.Queries.Faceted
 
                         var document = (FacetSetup)EntityToBlittable.ConvertToEntity(typeof(FacetSetup), facetField.FacetSetupDocumentId, documentJson.Data, DocumentConventions.Default);
 
+                        QueryParser queryParser = null;
+                        List<QueryExpression> facetRanges = null;
                         foreach (var f in document.Facets)
                         {
                             if (f.Options == null)
                                 f.Options = FacetOptions.Default;
 
-                            Process(f, null, defaultFacets, rangeFacets, results);
+                            if (f.Ranges != null && f.Ranges.Count > 0)
+                            {
+                                if (queryParser == null)
+                                    queryParser = new QueryParser();
+
+                                if (facetRanges == null)
+                                    facetRanges = new List<QueryExpression>();
+                                else
+                                    facetRanges.Clear();
+
+                                foreach (var range in f.Ranges)
+                                {
+                                    queryParser.Init(range);
+
+                                    if (queryParser.Expression(out var qr) == false)
+                                        throw new InvalidOperationException("TODO ppekrol");
+
+                                    facetRanges.Add(qr);
+                                }
+                            }
+
+                            ProcessFacet(f, facetRanges, defaultFacets, rangeFacets, results);
                         }
 
                         continue;
@@ -57,7 +81,10 @@ namespace Raven.Server.Documents.Queries.Faceted
                         Options = FacetOptions.Default // TODO [ppekrol]
                     };
 
-                    Process(facet, facetField.Ranges, defaultFacets, rangeFacets, results);
+                    foreach (var range in facetField.Ranges)
+                        facet.Ranges.Add(range.GetText());
+
+                    ProcessFacet(facet, facetField.Ranges, defaultFacets, rangeFacets, results);
                 }
 
                 return results;
@@ -68,7 +95,7 @@ namespace Raven.Server.Documents.Queries.Faceted
             }
         }
 
-        private static void Process(Facet facet, List<QueryExpression> facetRanges, Dictionary<string, Facet> defaultFacets, Dictionary<string, List<ParsedRange>> rangeFacets, Dictionary<string, FacetResult> results)
+        private static void ProcessFacet(Facet facet, List<QueryExpression> facetRanges, Dictionary<string, Facet> defaultFacets, Dictionary<string, List<ParsedRange>> rangeFacets, Dictionary<string, FacetResult> results)
         {
             var key = string.IsNullOrWhiteSpace(facet.DisplayName) ? facet.Name : facet.DisplayName;
 
@@ -92,7 +119,7 @@ namespace Raven.Server.Documents.Queries.Faceted
                 foreach (var range in facetRanges)
                 {
                     var parsedRange = ParseRange(facet.Name, range);
-                    
+
                     ranges.Add(parsedRange);
                     result.Values.Add(new FacetValue
                     {
