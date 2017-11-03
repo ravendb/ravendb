@@ -11,6 +11,7 @@ using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
+using Raven.Server.Documents.Queries.Faceted;
 using Raven.Server.Documents.Queries.Suggestion;
 using Raven.Server.Utils;
 using Sparrow;
@@ -58,51 +59,18 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteFacetedQueryResult(this BlittableJsonTextWriter writer, JsonOperationContext context, FacetedQueryResult result)
+        public static void WriteFacetedQueryResult(this BlittableJsonTextWriter writer, JsonOperationContext context, FacetedQueryResult result, out int numberOfResults)
         {
-            writer.WriteStartObject();
-
-            writer.WritePropertyName(nameof(result.IndexName));
-            writer.WriteString(result.IndexName);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(result.Results));
-            writer.WriteStartObject();
-            var isFirstInternal = true;
-            foreach (var kvp in result.Results)
-            {
-                if (isFirstInternal == false)
-                    writer.WriteComma();
-
-                isFirstInternal = false;
-
-                writer.WritePropertyName(kvp.Key);
-                writer.WriteFacetResult(context, kvp.Value);
-            }
-            writer.WriteEndObject();
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(result.IndexTimestamp));
-            writer.WriteString(result.IndexTimestamp.ToString(DefaultFormat.DateTimeFormatsToWrite));
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(result.LastQueryTime));
-            writer.WriteString(result.LastQueryTime.ToString(DefaultFormat.DateTimeFormatsToWrite));
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(result.IsStale));
-            writer.WriteBool(result.IsStale);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(result.ResultEtag));
-            writer.WriteInteger(result.ResultEtag);
-
-            writer.WriteEndObject();
+            writer.WriteQueryResult(context, result, metadataOnly: false, numberOfResults: out numberOfResults);
         }
 
         public static void WriteFacetResult(this BlittableJsonTextWriter writer, JsonOperationContext context, FacetResult result)
         {
             writer.WriteStartObject();
+
+            writer.WritePropertyName(nameof(result.Name));
+            writer.WriteString(result.Name);
+            writer.WriteComma();
 
             writer.WritePropertyName(nameof(result.RemainingHits));
             writer.WriteInteger(result.RemainingHits);
@@ -300,6 +268,13 @@ namespace Raven.Server.Json
             {
                 writer.WritePropertyName(nameof(result.Results));
                 writer.WriteObjects(context, objects, out numberOfResults);
+                writer.WriteComma();
+            }
+            else if (results is List<FacetResult> facets)
+            {
+                numberOfResults = facets.Count;
+
+                writer.WriteArray(context, nameof(result.Results), facets, (w, c, facet) => w.WriteFacetResult(c, facet));
                 writer.WriteComma();
             }
             else

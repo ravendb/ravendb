@@ -79,11 +79,11 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private async Task FacetedQuery(IndexQueryServerSide query, DocumentsOperationContext context, OperationCancelToken token)
+        private async Task FacetedQuery(IndexQueryServerSide indexQuery, DocumentsOperationContext context, OperationCancelToken token)
         {
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
 
-            var result = await Database.QueryRunner.ExecuteFacetedQuery(query, null, existingResultEtag, context, token);
+            var result = await Database.QueryRunner.ExecuteFacetedQuery(indexQuery, null, existingResultEtag, context, token);
 
             if (result.NotModified)
             {
@@ -93,12 +93,14 @@ namespace Raven.Server.Documents.Handlers
 
             HttpContext.Response.Headers[Constants.Headers.Etag] = CharExtensions.ToInvariantString(result.ResultEtag);
 
+            int numberOfResults;
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                writer.WriteFacetedQueryResult(context, result);
+                writer.WriteFacetedQueryResult(context, result, numberOfResults: out numberOfResults);
             }
 
-            Database.QueryMetadataCache.MaybeAddToCache(query.Metadata, result.IndexName);
+            Database.QueryMetadataCache.MaybeAddToCache(indexQuery.Metadata, result.IndexName);
+            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(FacetedQuery)} ({indexQuery.Metadata.IndexName})", HttpContext, numberOfResults, indexQuery.PageSize, TimeSpan.FromMilliseconds(result.DurationInMs));
         }
 
         private async Task Query(DocumentsOperationContext context, OperationCancelToken token, HttpMethod method)

@@ -55,21 +55,6 @@ namespace Raven.Client.Documents.Queries
     public class QueryResult : QueryResult<BlittableJsonReaderArray, BlittableJsonReaderObject>
     {
         /// <summary>
-        /// Ensures that the query results can be used in snapshots
-        /// </summary>
-        public void EnsureSnapshot()
-        {
-            //foreach (var result in Results.Where(x => x != null))
-            //{
-            //    result.EnsureCannotBeChangeAndEnableSnapshotting();
-            //}
-            //foreach (var result in Includes)
-            //{
-            //    result.EnsureCannotBeChangeAndEnableSnapshotting();
-            //}
-        }
-
-        /// <summary>
         /// Creates a snapshot of the query results
         /// </summary>
         public QueryResult CreateSnapshot()

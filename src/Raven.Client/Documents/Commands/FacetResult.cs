@@ -5,6 +5,8 @@ namespace Raven.Client.Documents.Commands
 {
     public class FacetResult
     {
+        public string Name { get; set; }
+
         /// <summary>
         /// The facet terms and hits up to a limit of MaxResults items (as specified in the facet setup document), sorted
         /// in TermSortMode order (as indicated in the facet setup document).

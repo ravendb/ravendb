@@ -683,19 +683,14 @@ namespace Raven.Server.Documents.Queries
                     var methodType = QueryMethod.GetMethodType(me.Name);
                     switch (methodType)
                     {
+                        case MethodType.Average:
+                            AddFacetAggregation(me, result, FacetAggregation.Average, parameters);
+                            break;
                         case MethodType.Sum:
-                            if (me.Arguments.Count != 1)
-                                throw new InvalidOperationException("TODO ppekrol");
-
-                            var methodFieldName = ExtractFieldNameFromArgument(me.Arguments[0], me.Name, parameters, QueryText);
-
-                            result.AddAggregation(FacetAggregation.Sum, methodFieldName);
+                            AddFacetAggregation(me, result, FacetAggregation.Sum, parameters);
                             break;
                         case MethodType.Count:
-                            if (me.Arguments.Count != 0)
-                                throw new InvalidOperationException("TODO ppekrol");
-
-                            result.AddAggregation(FacetAggregation.Count, null);
+                            AddFacetAggregation(me, result, FacetAggregation.Count, parameters);
                             break;
                         default:
                             throw new InvalidOperationException("TODO ppekrol");
@@ -711,6 +706,18 @@ namespace Raven.Server.Documents.Queries
             result.Alias = alias;
 
             return result;
+        }
+
+        private void AddFacetAggregation(MethodExpression me, FacetField field, FacetAggregation aggregation, BlittableJsonReaderObject parameters)
+        {
+            var count = aggregation == FacetAggregation.Count ? 0 : 1;
+
+            if (me.Arguments.Count != count)
+                throw new InvalidOperationException("TODO ppekrol");
+
+            var methodFieldName = count > 0 ? ExtractFieldNameFromArgument(me.Arguments[0], me.Name, parameters, QueryText) : null;
+
+            field.AddAggregation(aggregation, methodFieldName);
         }
 
         private void ThrowInvalidArgumentToId(BlittableJsonReaderObject parameters)
