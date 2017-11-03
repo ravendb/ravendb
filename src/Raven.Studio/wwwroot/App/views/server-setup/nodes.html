@@ -5,8 +5,6 @@
 <div>
     <form class="flex-form" data-bind="submit: save">
 
-        TODO:
-
         <div data-bind="foreach: model.nodes">
             <div class="panel panel-default padding">
                 <div>Node <span data-bind="text: $index() + 1"></span>
@@ -14,11 +12,71 @@
                         <i class="icon-trash"></i>
                     </button>
                 </div>
+ 
+                
+                <div class="form-group" data-bind="validationElement: nodeTag">
+                    <label for="nodeTag" class="control-label">Node Tag<i class="required"></i></label>
+                    <div class="flex-grow">
+                        <input type="text" autocomplete="off" class="form-control" id="nodeTag"
+                               placeholder="Node Tag"
+                               data-bind="textInput: nodeTag">
+                    </div>
+                </div>
+
+                <div class="form-group" data-bind="validationElement: port">
+                    <label for="port" class="control-label">Port<i class="required"></i></label>
+                    <div class="flex-grow">
+                        <input type="text" autocomplete="off" class="form-control" id="port"
+                               placeholder="Server port"
+                               data-bind="numberInput: port">
+                    </div>
+                </div>
+
+                <div class="form-group" data-bind="validationElement: ipInput">
+                    <label for="ipInput" class="control-label">IPs<i class="required"></i></label>
+                    <div class="flex-grow">
+                        <input type="text" autocomplete="off" class="form-control" id="ipInput"
+                               placeholder="Enter server IP address"
+                               data-bind="textInput: ipInput">
+                    </div>
+                </div>
+
+                <div class="form-group" data-bind="validationElement: certificate">
+                    <label for="certificate" class="control-label">Certificate<i class="required"></i></label>
+                    <div class="flex-grow input-group file-input" data-bind="validationElement: certificate">
+                        <input type="file" tabindex="-1" name="importFile" id="certificate" accept="" > <!--data-bind="event: { change: _.partial($root.fileSelected, $element) }" -->
+                        <span class="static-name form-control" data-bind="text: certificateFileName() || 'Select .pfx file...'"></span>
+                        <span class="input-group-btn">
+                            <label for="certificate" class="btn btn-default">
+                                <i class="icon-document"></i>
+                                <span>Browse</span>
+                            </label>
+                        </span>
+                        <p class="help-block" data-bind="validationMessage: certificate"></p>
+                    </div>
+                </div>
+
+                <div class="form-group" data-bind="validationElement: certificatePassword">
+                    <label for="ipInput" class="control-label">Certificate passphrase</label>
+                    <div class="flex-grow">
+                        <input type="password" autocomplete="off" class="form-control" id="certificatePassword"
+                               data-bind="textInput: certificatePassword">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="ipInput" class="control-label">CN names:</label>
+                    <div class="flex-grow form-control-static">
+                        TODO: put CN + alternative names from cert
+                    </div>
+                </div>
+                
             </div>
         </div>
 
         <div>
-            <button type="button" data-bind="click: $root.addNode"><i class="icon-plus"></i> <span>Add node</span>
+            <button type="button" class="btn btn-default" data-bind="click: $root.addNode">
+                <i class="icon-plus"></i> <span>Add node</span>
             </button>
         </div>
 
@@ -32,7 +90,11 @@
     <div class="bg-info padding">
         <ul>
             <li>TODO:</li>
-            <li>handle back in code - it might be dynamic</li>
+            <li>node info drop down - visible only in secure setup</li>
+            <li>ips - allow multiple</li>
+            <li>use $index() for id/for labels</li>
+            <li>Node tag is only visible in 'secure mode'</li>
+            <li>Add scroll to this page!</li>
         </ul>
     </div>
 </div>
