@@ -1,0 +1,40 @@
+<div>
+    Domain selection step
+</div>
+
+<div>
+    <form class="flex-form" data-bind="with: model.domain, submit: save">
+
+        <div class="form-group" data-bind="validationElement: domain">
+            <label for="domain" class="control-label">Domain<i class="required"></i></label>
+            <div class="flex-grow">
+                <input type="text" autocomplete="off" class="form-control" id="domain"
+                       placeholder="domain"
+                       data-bind="textInput: domain">
+            </div>
+            <div>.dbs.local.ravendb.net</div>
+        </div>
+
+        <div class="form-group" data-bind="validationElement: userEmail">
+            <label for="userEmail" class="control-label">E-mail<i class="required"></i></label>
+            <div class="flex-grow">
+                <input type="text" autocomplete="off" class="form-control" id="userEmail"
+                       placeholder="E-mail"
+                       data-bind="textInput: userEmail">
+            </div>
+        </div>
+
+        <div>
+            <a href="#welcome" class="btn btn-default"><i class="icon-arrow-left"></i><span>Back</span></a>
+            <button type="submit" class="btn btn-primary"><span>Next</span> <i class="icon-arrow-right"></i></button>
+        </div>
+    </form>
+
+    <div class="bg-info padding">
+        <ul>
+            <li>domain input should have suffix .dbs.local.ravendb.net</li>
+            <li>what if user already claimed domain for this license - can we query for this information?</li>
+        </ul>
+    </div>
+</div>
+      

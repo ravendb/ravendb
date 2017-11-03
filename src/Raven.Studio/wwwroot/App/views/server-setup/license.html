@@ -1,0 +1,49 @@
+<div>
+    TODO: write some text here - license step
+</div>
+
+<div>
+    <form class="flex-form" data-bind="with: model.license, submit: save">
+        <div class="form-group" data-bind="validationElement: license">
+            <label for="inputLicenseKey" class="control-label">License <i class="required"></i></label>
+            <div class="flex-grow">
+                                <textarea rows="9" class="form-control" id="inputLicenseKey"
+                                          data-bind="textInput: license"
+                                          placeholder='e.g.
+ {
+             "Id": "12345678-1234-1234-1234-123456789101",
+             "Name": "RavenDB License Owner",
+             "Keys": [
+                 "aBcDeFgHiJkLmNoPqRsTuVwXyZ",
+                 "~!@#$%^&*()_+=-0987654321`"
+             ]
+ }'></textarea>
+            </div>
+        </div>
+
+        <div class="bg-info padding">
+            <p class="text-center ">
+                Click here to <strong><a target="_blank" data-bind="attr: { 'href': $root.licenseUrl }">obtain a license</a></strong>
+            </p>
+        </div>
+       
+
+        <div>
+            <a href="#welcome" class="btn btn-default"><i class="icon-arrow-left"></i><span>Back</span></a>
+            <button type="submit" class="btn btn-primary"><span>Next</span> <i class="icon-arrow-right"></i></button>
+        </div>
+        
+        
+
+    </form>
+    
+    <div class="padding bg-warning">
+        <ul>
+            <li>Add link to obtain license - if user doesn't have one - work on wording</li>
+        </ul>
+    </div>
+    
+    
+
+</div>
+      

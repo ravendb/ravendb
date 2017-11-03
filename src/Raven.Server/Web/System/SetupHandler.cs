@@ -100,8 +100,7 @@ namespace Raven.Server.Web.System
                 SetupManager.WriteSettingsJsonFile(null, null, setupInfo.ServerUrl, SetupManager.SettingsFileName, SetupMode.Unsecured, true);
             }
 
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-            return Task.CompletedTask;
+            return NoContent();
         }
 
         [RavenAction("/setup/secured", "POST", AuthorizationStatus.UnauthenticatedClients)]
@@ -191,12 +190,11 @@ namespace Raven.Server.Web.System
         {
             AssertOnlyInSetupMode();
 
-            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var setupInfoJson = context.ReadForMemory(RequestBodyStream(), "claim-domain"))
-            {
-                var setupInfo = JsonDeserializationServer.SecuredSetupInfo(setupInfoJson);
+            var email = GetQueryStringValueAndAssertIfSingleAndNotEmpty("email");
 
-                var uri = await ServerStore.SetupManager.LetsEncryptAgreement(setupInfo.Email);
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                var uri = await ServerStore.SetupManager.LetsEncryptAgreement(email);
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
@@ -308,8 +306,8 @@ namespace Raven.Server.Web.System
                 Program.ResetServerMre.Set();
                 Program.ShutdownServerMre.Set();
             });
-
-            return Task.CompletedTask;
+            
+            return NoContent();
         }
 
         [RavenAction("/admin/setup/letsencrypt/force-renew", "POST", AuthorizationStatus.ClusterAdmin)]

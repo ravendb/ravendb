@@ -1,25 +1,40 @@
 
-
-<h3>Welcome!</h3>
+<div>
+    This wizard is designed to assist you in RavenDB server setup. 
+    It will guide you through step-by-step instructions on how to set up your RavenDB instance and how to make it secure.
+</div>
 
 <div>
-    <div class="margin-bottom">
-        Choose configuration mode:
-    </div>
+    <p class="margin-bottom">
+        First, please choose configuration mode:
+    </p>
     
+    <p>
+        <button data-bind="click: chooseGenerate" class="btn btn-default">Generate certificates using Let's Encrypt</button>
+        - RavenDB will be running using https protocol but certificates will be automatically generated using Let's Encrypt service.
+    </p>
+   
+    <p>
+        <button data-bind="click: chooseSecured" class="btn btn-default">Secured with own certificates</button>
+        - RavenDB will be running using https protocol with certificates provided by user. 
+    </p>
 
-    <button data-bind="click: chooseUnsecured" class="btn btn-default">Unsecured</button>
-    <button data-bind="click: chooseSecured" class="btn btn-default">Secured with own certificates</button>
-    <button data-bind="click: chooseGenerate" class="btn btn-default">Generate certs using Let's encrypt</button>
+    <p>
+        <button data-bind="click: chooseUnsecured" class="btn btn-default">Unsecured</button>
+        - RavenDB will be running using http protocol. Everyone who can access server will have admin privileges.
+        This option is useful for development.
+    </p>
+    
+    
     
     
     <br />
     <br />
-    <div class="alert alert-warning">
+    <div class="bg-info padding">
         TODO:
         <ul>
             <li>icons</li>
-            <li>explain implications of each choice</li>
+            <li>explain implications of each choice - check wording here</li>
         </ul>
     </div>
 </div>

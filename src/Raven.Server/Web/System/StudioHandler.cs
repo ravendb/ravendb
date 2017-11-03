@@ -21,6 +21,7 @@ using System.Threading;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Extensions.Streams;
+using Raven.Server.Commercial;
 using Sparrow.Collections;
 using Sparrow.Threading;
 using StringSegment = Sparrow.StringSegment;
@@ -161,22 +162,35 @@ namespace Raven.Server.Web.System
         [RavenAction("/server-setup/$", "GET", AuthorizationStatus.UnauthenticatedClients)]
         public Task GetSetupFile()
         {
-            return GetStudioFileInternal();
+            string serverRelativeFileName = new StringSegment(
+                RouteMatch.Url, RouteMatch.MatchLength, RouteMatch.Url.Length - RouteMatch.MatchLength);
+            return GetStudioFileInternal(serverRelativeFileName);
+        }
+
+        [RavenAction("/studio/index.html", "GET", AuthorizationStatus.UnauthenticatedClients)]
+        public Task GetStudioIndexFile()
+        {
+            if (ServerStore.Configuration.Core.SetupMode == SetupMode.Initial)
+            {
+                HttpContext.Response.Headers["Location"] = "/server-setup/index.html";
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.Moved;
+            }
+
+            return GetStudioFileInternal("index.html");
         }
         
         [RavenAction("/studio/$", "GET", AuthorizationStatus.UnauthenticatedClients)]
         public Task GetStudioFile()
         {
-            return GetStudioFileInternal();
-        }
-        
-        private async Task GetStudioFileInternal()
-        {
             // This is casted to string on purpose here. Everything else works
             // with strings, so reifying this now is good.
             string serverRelativeFileName = new StringSegment(
                 RouteMatch.Url, RouteMatch.MatchLength, RouteMatch.Url.Length - RouteMatch.MatchLength);
-
+            return GetStudioFileInternal(serverRelativeFileName);
+        }
+        
+        private async Task GetStudioFileInternal(string serverRelativeFileName)
+        {
             HttpContext.Response.Headers["Raven-Static-Served-From"] = "Cache";
             if (await ServeFromCache(serverRelativeFileName))
                 return;
@@ -613,18 +627,8 @@ namespace Raven.Server.Web.System
         [RavenAction("/", "GET", AuthorizationStatus.UnauthenticatedClients)]
         public Task RavenRoot()
         {
-            bool setup = true; //TODO: set based on settings file
-            
-            if (setup)
-            {
-                 HttpContext.Response.Headers["Location"] = "/setup/index.html";
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.Moved;
-            } 
-            else
-            {
-                HttpContext.Response.Headers["Location"] = "/studio/index.html";
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.Moved;
-            }
+            HttpContext.Response.Headers["Location"] = "/studio/index.html";
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.MovedPermanently;
            
             return Task.CompletedTask;
         }

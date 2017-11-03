@@ -3,8 +3,10 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import serverSetup = require("models/setup/serverSetup");
 
-class setupStep extends viewModelBase {
+abstract class setupStep extends viewModelBase {
    protected model = serverSetup.default;
+   
+   //TODO:  create method to validate preconditions of each configurationo step, like (mode is filled in)
    
    
 }

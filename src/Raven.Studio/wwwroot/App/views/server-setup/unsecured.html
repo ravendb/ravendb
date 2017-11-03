@@ -1,8 +1,59 @@
-
-
 <h3>Unsecured mode setup</h3>
 
 <div>
-  TODO:
+    <form class="flex-form" data-bind="with: model.unsecureSetup, submit: save">
+        <div class="margin-bottom">
+            <div class="form-group">
+                <label for="serverUrl" class="control-label">Server url <i class="required"></i></label>
+                <div class="flex-grow">
+                    <input type="text" autocomplete="off" class="form-control" id="serverUrl"
+                           placeholder="The URL which the server should listen to. It can be hostname, ip address or 0.0.0.0:{port}"
+                           data-bind="textInput: serverUrl">
+                </div>
+                <button data-bind="click: $root.useDefaultServerUrl" class="btn btn-default">Use default</button>
+            </div>
+            <div class="form-group">
+                <label for="publicServerUrl" class="control-label">Public server url</label>
+                <div class="flex-grow">
+                    <input type="text" autocomplete="off" class="form-control" id="publicServerUrl"
+                           placeholder="The URL under which server is publicly available, used for inter-node communication and access from behind a firewall, proxy etc."
+                           data-bind="textInput: publicServerUrl">
+                </div>
+            </div>
+        </div>
+
+        <div class="padding margin-bottom bg-danger">
+            RavenDB server will be running in a potentially unsafe mode.<br/>
+            TODO: we can detect network type (private/public) as send this info in /ips endpoint, based on this
+            information
+            we can suggest user correct setting for: UnsecuredAccessAddressRange
+            <br/>
+            What if user enters hostname? Then we should try to resolve its IP address and again check in /ips
+            output<br/>
+
+            <div class="toggle">
+                <input id="unsafeNetworkWarning" type="checkbox" data-bind="checked: unsafeNetworkConfirm">
+                <label for="unsafeNetworkWarning">I understand the risk. </label>
+            </div>
+        </div>
+
+        <a href="#welcome" class="btn btn-default"><i class="icon-arrow-left"></i><span>Back</span></a>
+        <button type="submit" class="btn btn-primary"><span>Next</span> <i class="icon-arrow-right"></i></button>
+
+    </form>
+
+    <br/>
+    <br/>
+    <div class="bg-info padding">
+        TODO:
+        <ul>
+            <li>how to connect result of /ips endpoint to this form? - we can have autocomplete in server url input</li>
+            <li>Info that user can enter 0.0.0.0:port?</li>
+            <li>Do we want Public server url here?</li>
+            <li>Dialog about unsafe is displayed only if either server or public server url if different than:
+                localhost, 127.0.0.1 or ::1.
+            </li>
+        </ul>
+    </div>
 </div>
       
