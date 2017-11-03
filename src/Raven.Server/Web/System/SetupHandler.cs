@@ -1,30 +1,19 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.NetworkInformation;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using Raven.Client;
-using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Commercial;
 using Raven.Server.Documents;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Smuggler.Documents;
-using Raven.Server.Utils;
-using Raven.Server.Web.Authentication;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
-using Sparrow.Platform;
 
 namespace Raven.Server.Web.System
 {
@@ -96,6 +85,7 @@ namespace Raven.Server.Web.System
                 var setupInfo = JsonDeserializationServer.UnsecuredSetupInfo(setupInfoJson);
 
                 var settingsJson = File.ReadAllText(SetupManager.SettingsPath);
+
                 dynamic jsonObj = JsonConvert.DeserializeObject(settingsJson);
                 jsonObj["Setup.Mode"] = SetupMode.Unsecured.ToString();
                 jsonObj["ServerUrl"] = setupInfo.ServerUrl;
@@ -103,8 +93,7 @@ namespace Raven.Server.Web.System
                 jsonObj["Security.Certificate.Base64"] = null;
                 var json = JsonConvert.SerializeObject(jsonObj, Formatting.Indented);
 
-                if (setupInfo.ModifyLocalServer)
-                    SetupManager.WriteSettingsJsonLocally(SetupManager.SettingsPath, json);
+                SetupManager.WriteSettingsJsonLocally(SetupManager.SettingsPath, json);
             }
 
             return NoContent();
@@ -206,8 +195,30 @@ namespace Raven.Server.Web.System
             }
         }
 
+        [RavenAction("/setup/validate", "POST", AuthorizationStatus.UnauthenticatedClients)]
+        public async Task SetupValidate()
+        {
+            AssertOnlyInSetupMode();
+
+            var operationCancelToken = new OperationCancelToken(ServerStore.ServerShutdown);
+            var operationId = GetLongQueryString("operationId", false);
+
+            if (operationId.HasValue == false)
+                operationId = ServerStore.Operations.GetNextOperationId();
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                await ServerStore.Operations.AddOperation(
+                    null,
+                    "Setting up RavenDB in secured mode.",
+                    Documents.Operations.Operations.OperationType.Setup,
+                    progress => ServerStore.SetupManager.SetupValidateTask(progress, operationCancelToken.Token),
+                    operationId.Value, operationCancelToken);
+            }
+        }
+
         [RavenAction("/setup/generate", "POST", AuthorizationStatus.UnauthenticatedClients)]
-        public async Task Generate()
+        public async Task SetupGenerate()
         {
             AssertOnlyInSetupMode();
 
@@ -233,7 +244,7 @@ namespace Raven.Server.Web.System
                         Documents.Operations.Operations.OperationType.CertificateGeneration,
                         async onProgress =>
                         {
-                            pfx = await GenerateCertificateInternal(certificate);
+                            pfx = await ServerStore.SetupManager.GenerateCertificateTask(certificate);
 
                             return ClientCertificateGenerationResult.Instance;
                         },
@@ -252,6 +263,7 @@ namespace Raven.Server.Web.System
         public Task SetupFinish()
         {
             AssertOnlyInSetupMode();
+            ServerStore.SetupManager.AssertCorrectSetupStage(SetupStage.Finish);
 
             Task.Run(async () =>
             {
@@ -300,38 +312,6 @@ namespace Raven.Server.Web.System
                 return;
 
             throw new UnauthorizedAccessException("RavenDB has already been setup. Cannot use the /setup endpoints any longer.");
-        }
-        
-        // Duplicate of AdminCertificatesHandler.GenerateCertificateInternal, but used by an unauthenticated client during setup only
-        private async Task<byte[]> GenerateCertificateInternal(CertificateDefinition certificate)
-        {
-            if (string.IsNullOrWhiteSpace(certificate.Name))
-                throw new ArgumentException($"{nameof(certificate.Name)} is a required field in the certificate definition");
-
-            if (Server.ClusterCertificateHolder?.Certificate == null)
-                throw new InvalidOperationException($"Cannot generate the client certificate '{certificate.Name}' becuase the server certificate is not loaded.");
-
-            if (PlatformDetails.RunningOnPosix)
-            {
-                AdminCertificatesHandler.ValidateCaExistsInOsStores(certificate.Certificate, certificate.Name, ServerStore);
-            }
-
-            // this creates a client certificate which is signed by the current server certificate
-            var selfSignedCertificate = CertificateUtils.CreateSelfSignedClientCertificate(certificate.Name, Server.ClusterCertificateHolder);
-
-            var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + selfSignedCertificate.Thumbprint,
-                new CertificateDefinition
-                {
-                    Name = certificate.Name,
-                    // this does not include the private key, that is only for the client
-                    Certificate = Convert.ToBase64String(selfSignedCertificate.Export(X509ContentType.Cert)),
-                    Permissions = certificate.Permissions,
-                    SecurityClearance = certificate.SecurityClearance,
-                    Thumbprint = selfSignedCertificate.Thumbprint
-                }));
-            await ServerStore.Cluster.WaitForIndexNotification(res.Index);
-
-            return selfSignedCertificate.Export(X509ContentType.Pfx, certificate.Password);
         }
     }
 }
