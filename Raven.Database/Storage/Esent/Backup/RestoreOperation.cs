@@ -12,6 +12,7 @@ using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 using Raven.Database.Data;
 using System.Linq;
+using System.Security.Principal;
 using Raven.Storage.Esent;
 
 namespace Raven.Database.Storage.Esent.Backup
@@ -27,6 +28,31 @@ namespace Raven.Database.Storage.Esent.Backup
         protected override bool IsValidBackup(string backupFilename)
         {
             return File.Exists(Path.Combine(backupLocation, backupFilename));
+        }
+
+        protected override void CheckBackupOwner()
+        {
+            CheckBackupOwner(backupLocation, output);
+        }
+
+        public static void CheckBackupOwner(string backupLocation, Action<string> output)
+        {
+            try
+            {
+                var dirAccess = Directory.GetAccessControl(backupLocation);
+                var dirOwner = dirAccess.GetOwner(typeof(SecurityIdentifier));
+                var currentUser = WindowsIdentity.GetCurrent().User;
+
+                if (currentUser != null && currentUser != dirOwner)
+                {
+                    output($"WARNING: Current user '{currentUser.Translate(typeof(NTAccount))}' isn't an owner of the backup location ({backupLocation}, " +
+                           $"current owner: '{dirOwner.Translate(typeof(NTAccount))}'). Restoring Esent backup might require user running RavenDB to be an owner of the backup files.");
+                }
+            }
+            catch (Exception e)
+            {
+                output($"WARNING: Could not verify the owner of the backup location. Exception message: {e.Message}");
+            }
         }
 
         public override void Execute()

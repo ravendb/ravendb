@@ -51,6 +51,8 @@ namespace Raven.Database.FileSystem.Storage
                 throw new IOException("Filesystem already exists, cannot restore to an existing filesystem.");
             }
 
+            CheckBackupOwner();
+
             if (Directory.Exists(databaseLocation) == false)
                 Directory.CreateDirectory(databaseLocation);
 
@@ -59,6 +61,10 @@ namespace Raven.Database.FileSystem.Storage
 
             if (Directory.Exists(journalLocation) == false)
                 Directory.CreateDirectory(journalLocation);
+        }
+
+        protected virtual void CheckBackupOwner()
+        {
         }
 
         protected abstract bool IsValidBackup(string backupFilename);

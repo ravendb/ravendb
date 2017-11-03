@@ -72,6 +72,8 @@ namespace Raven.Database.Storage
                 throw new IOException("Database location directory is not empty. Point to non-existing or empty directory.");
             }
 
+            CheckBackupOwner();
+
             if (Directory.Exists(databaseLocation) == false)
                 Directory.CreateDirectory(databaseLocation);
 
@@ -83,6 +85,10 @@ namespace Raven.Database.Storage
         }
 
         protected abstract bool IsValidBackup(string backupFilename);
+
+        protected virtual void CheckBackupOwner()
+        {
+        }
 
         protected string BackupIndexesPath()
         {
