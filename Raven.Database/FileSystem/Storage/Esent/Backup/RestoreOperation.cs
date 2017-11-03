@@ -29,6 +29,11 @@ namespace Raven.Database.FileSystem.Storage.Esent.Backup
             return File.Exists(Path.Combine(backupLocation, backupFilename));
         }
 
+        protected override void CheckBackupOwner()
+        {
+            Database.Storage.Esent.Backup.RestoreOperation.CheckBackupOwner(backupLocation, output);
+        }
+
         public override void Execute()
         {
             ValidateRestorePreconditionsAndReturnLogsPath("RavenDB.Backup");
