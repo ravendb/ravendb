@@ -6,7 +6,6 @@
 
 using System;
 using System.Globalization;
-using System.Runtime.CompilerServices;
 
 namespace Raven.Client.Documents.Indexes
 {
@@ -32,43 +31,19 @@ namespace Raven.Client.Documents.Indexes
         }
 
         /// <summary>
-        /// Translate an indexable string to a nullable long
-        /// </summary>
-        public static long? StringToLong(string number)
-        {
-            if (number == null)
-                return null;
-
-            if (IsNull(number))
-                return null;
-
-            if (number.Length == 0)
-                throw new ArgumentException("String must be greater than 0 characters");
-
-            return long.Parse(number, CultureInfo.InvariantCulture);
-        }
-
-        /// <summary>
         /// Translate an indexable string to a nullable double
         /// </summary>
-        public static double? StringToDouble(string number)
+        public static bool TryStringToDouble(string number, out double value)
         {
-            if (number == null)
-                return null;
+            value = 0;
 
-            if (IsNull(number))
-                return null;
+            if (number == null)
+                return false;
 
             if (number.Length == 0)
                 throw new ArgumentException("String must be greater than 0 characters");
 
-            return double.Parse(number, CultureInfo.InvariantCulture);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool IsNull(string value)
-        {
-            return "NULL".Equals(value, StringComparison.OrdinalIgnoreCase) || "*".Equals(value, StringComparison.OrdinalIgnoreCase);
+            return double.TryParse(number, NumberStyles.None, CultureInfo.InvariantCulture, out value);
         }
     }
 }
