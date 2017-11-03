@@ -1,13 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Globalization;
+using Lucene.Net.Util;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Session;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 
 namespace Raven.Server.Documents.Queries.Faceted
 {
@@ -137,9 +140,9 @@ namespace Raven.Server.Documents.Queries.Faceted
                 {
                     Field = field,
                     HighInclusive = true,
-                    HighValue = bee.Max.Token,
+                    HighValue = UnescapeValueIfNecessary(ConvertFieldValue(bee.Max.Token)),
                     LowInclusive = true,
-                    LowValue = bee.Min.Token,
+                    LowValue = UnescapeValueIfNecessary(ConvertFieldValue(bee.Min.Token)),
                     RangeText = expression.GetText()
                 };
             }
@@ -156,7 +159,7 @@ namespace Raven.Server.Documents.Queries.Faceted
                         if (string.Equals(field, fieldName, StringComparison.OrdinalIgnoreCase) == false)
                             throw new InvalidOperationException("TODO ppekrol");
 
-                        var fieldValue = ExtractFieldValue(be);
+                        var fieldValue = UnescapeValueIfNecessary(ConvertFieldValue(ExtractFieldValue(be)));
 
                         var range = new ParsedRange
                         {
@@ -224,6 +227,27 @@ namespace Raven.Server.Documents.Queries.Faceted
                 return rve.Token;
 
             throw new InvalidOperationException("TODO ppekrol");
+        }
+
+        private static string UnescapeValueIfNecessary(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+                return value;
+
+            var unescapedValue = QueryBuilder.Unescape(value);
+
+            if (DateTime.TryParseExact(unescapedValue, DefaultFormat.OnlyDateTimeFormat, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime _))
+                return unescapedValue;
+
+            return value;
+        }
+
+        private static string ConvertFieldValue(string value)
+        {
+            if (NumberUtil.TryStringToDouble(value, out var dbl))
+                return NumericUtils.DoubleToPrefixCoded(dbl);
+
+            return value;
         }
 
         public class ParsedRange

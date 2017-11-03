@@ -140,7 +140,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 foreach (var readerFacetInfo in returnedReaders)
                 {
-                    var termsForField = IndexedTerms.GetTermsAndDocumentsFor(readerFacetInfo.Reader, readerFacetInfo.DocBase, facet.Name, _indexName, _state);
+                    var name = FieldUtil.ApplyRangeSuffixIfNecessary(facet.Name, RangeType.Double);
+                    var termsForField = IndexedTerms.GetTermsAndDocumentsFor(readerFacetInfo.Reader, readerFacetInfo.DocBase, name, _indexName, _state);
                     if (query.Metadata.IsDistinct)
                     {
                         if (distinctItems.TryGetValue(range.Key, out alreadySeen) == false)
