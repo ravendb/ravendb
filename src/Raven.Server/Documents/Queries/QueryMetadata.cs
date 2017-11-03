@@ -123,7 +123,7 @@ namespace Raven.Server.Documents.Queries
 
                 for (var i = 0; i < Query.GroupBy.Count; i++)
                 {
-                    GroupBy[i] = GetGroupByField(Query.GroupBy[i], parameters);
+                    GroupBy[i] = GetGroupByField(Query.GroupBy[i].Expression, Query.GroupBy[i].Alias, parameters);
                 }
             }
 
@@ -733,25 +733,46 @@ namespace Raven.Server.Documents.Queries
             return fieldNameOrAlias;
         }
 
-        private GroupByField GetGroupByField(FieldExpression field, BlittableJsonReaderObject parameters)
+        private GroupByField GetGroupByField(QueryExpression expression, string alias, BlittableJsonReaderObject parameters)
         {
-            var name = GetIndexFieldName(field, parameters);
+            var byArrayBehavior = GroupByArrayBehavior.NotApplicable;
+            QueryFieldName name;
 
-            var isArray = false;
-
-            if (field.Compound.Count > 1)
+            if (expression is FieldExpression field)
             {
-                foreach (var part in field.Compound)
+                name = GetIndexFieldName(field, parameters);
+
+                if (field.Compound.Count > 1)
                 {
-                    if (part == "[]")
+                    foreach (var part in field.Compound)
                     {
-                        isArray = true;
-                        break;
+                        if (part == "[]")
+                        {
+                            byArrayBehavior = GroupByArrayBehavior.ByIndividualValues;
+                            break;
+                        }
                     }
                 }
             }
+            else if (expression is MethodExpression method)
+            {
+                var methodType = QueryMethod.GetMethodType(method.Name);
 
-            return new GroupByField(name, isArray);
+                switch (methodType)
+                {
+                    case MethodType.Array:
+                        name = GetIndexFieldName(method.Arguments[0] as FieldExpression, parameters);
+                        byArrayBehavior = GroupByArrayBehavior.ByContent;
+                        break;
+                    
+                    default:
+                        throw new InvalidQueryException($"Unsupported method '{method.Name}' in GROUP BY", QueryText, parameters);
+                }
+            }
+            else
+                throw new InvalidQueryException($"Unsupported expression type '{expression.Type}' in GROUP BY", QueryText, parameters);
+
+            return new GroupByField(name, byArrayBehavior, alias);
         }
 
         private static void ThrowBetweenMustHaveFieldSource(string queryText, BlittableJsonReaderObject parameters)

@@ -13,7 +13,7 @@ namespace Raven.Server.Documents.Queries.AST
         public List<(QueryExpression Expression, StringSegment? Alias)> Load;
         public List<QueryExpression> Include;
         public List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> OrderBy;
-        public List<FieldExpression> GroupBy;
+        public List<(QueryExpression Expression, StringSegment? Alias)> GroupBy;
 
         public Dictionary<StringSegment, string> DeclaredFunctions;
 

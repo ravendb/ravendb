@@ -27,6 +27,8 @@
 
         MoreLikeThis,
 
+        Array,
+
         Unknown,
     }
 }

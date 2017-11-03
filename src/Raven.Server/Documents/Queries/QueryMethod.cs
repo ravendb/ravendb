@@ -71,6 +71,9 @@ namespace Raven.Server.Documents.Queries
             if (string.Equals(methodName, "moreLikeThis", StringComparison.OrdinalIgnoreCase))
                 return MethodType.MoreLikeThis;
 
+            if (string.Equals(methodName, "array", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Array;
+
             if (throwIfNoMatch == false)
                 return MethodType.Unknown;
 

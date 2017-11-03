@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using Esprima;
-using Raven.Client.Documents.Linq;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries.AST;
 using Sparrow;
@@ -174,19 +173,43 @@ namespace Raven.Server.Documents.Queries.Parser
             return (name, functionText);
         }
 
-        private List<FieldExpression> GroupBy()
+        private List<(QueryExpression Expression, StringSegment? Alias)> GroupBy()
         {
-            var fields = new List<FieldExpression>();
+            var fields = new List<(QueryExpression Expression, StringSegment? Alias)>();
             do
             {
-                if (Field(out var field) == false)
+                QueryExpression op = null;
+                if (Field(out var field))
+                {
+                    if (Scanner.TryScan('('))
+                    {
+                        if (Method(field, out var method) == false)
+                            ThrowParseException($"Unable to parse method call {field} for GROUP BY");
+                        op = method;
+                    }
+                    else
+                    {
+                        op = field;
+                    }
+                }
+                else if (Value(out var value))
+                {
+                    op = value;
+                }
+                else
+                {
                     ThrowParseException("Unable to get field for GROUP BY");
+                }
 
-                fields.Add(field);
+                Alias(false, out var alias);
+
+                fields.Add((op, alias));
 
                 if (Scanner.TryScan(",") == false)
                     break;
+
             } while (true);
+
             return fields;
         }
 

@@ -226,7 +226,7 @@ namespace Raven.Server.Documents.Queries.AST
         {
         }
 
-        public virtual void VisitGroupByExpression(List<FieldExpression> expressions)
+        public virtual void VisitGroupByExpression(List<(QueryExpression Expression, StringSegment? Alias)> expressions)
         {
             
         }
