@@ -58,7 +58,7 @@ namespace SlowTests.Tests.Faceted
                         .WhereEquals("Facet1", "term1")
                         .WhereEquals("Facet1", "term2")
                         .AggregateUsing("Facets")
-                        .ToDictionary();
+                        .Execute();
 
                     Assert.Equal(facetResults["Facet1"].Values.Count, 0);
 
@@ -71,7 +71,7 @@ namespace SlowTests.Tests.Faceted
 
                     facetResults = query
                         .AggregateUsing("Facets")
-                        .ToDictionaryLazy().Value;
+                        .ExecuteLazy().Value;
 
                     Assert.Equal(facetResults["Facet1"].Values.Count, 0);
                 }

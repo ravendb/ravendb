@@ -94,7 +94,7 @@ namespace SlowTests.MailingList
                 using (var s = store.OpenSession())
                 {
                     var query = s.Query<Product>("Products/Stats");
-                    var facetResults = query.AggregateUsing("facets/StatsFacet").ToDictionary();
+                    var facetResults = query.AggregateUsing("facets/StatsFacet").Execute();
 
                     var priceFacet = facetResults["Price_D_Range"];
 

@@ -38,7 +38,7 @@ namespace SlowTests.MailingList
                     for (int i = 0; i < 5; i++)
                     {
                         var facetResults = session.Query<Org, OrgIndex>().Customize(c => c.WaitForNonStaleResults())
-                            .AggregateUsing(LocalFacet.Reference).ToDictionaryLazy().Value;
+                            .AggregateUsing(LocalFacet.Reference).ExecuteLazy().Value;
                         var facetResult = facetResults["Sectors_Id"];
                         Assert.Equal(2, facetResult.Values.Count);
 

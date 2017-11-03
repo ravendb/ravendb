@@ -36,7 +36,7 @@ namespace SlowTests.Issues
                         .Include(x => x.Sections);
 
 
-                    var facetResultsLazy = query.AggregateUsing("facets/ArticleFacets").ToDictionaryLazyAsync();
+                    var facetResultsLazy = query.AggregateUsing("facets/ArticleFacets").ExecuteLazyAsync();
 
                     var articleResults = query
                         .Customize(x => x.ShowTimings())

@@ -43,7 +43,7 @@ namespace SlowTests.Tests.Faceted
 
                     var facetResults = s.Query<Camera>("CameraCost")
                         .AggregateUsing("facets/CameraFacets")
-                        .ToDictionary();
+                        .Execute();
 
                     Assert.Equal(5, facetResults["Manufacturer"].Values.Count());
                     Assert.Equal("canon", facetResults["Manufacturer"].Values[0].Range);
@@ -110,7 +110,7 @@ namespace SlowTests.Tests.Faceted
                     var facetResults = s.Query<Camera>("CameraCost")
                         .Where(x => x.DateOfListing > new DateTime(2000, 1, 1))
                         .AggregateUsing("facets/CameraFacets")
-                        .ToDictionary();
+                        .Execute();
 
                     Assert.Equal(2, facetResults["Manufacturer"].Values.Count());
                     Assert.Equal("canon", facetResults["Manufacturer"].Values[0].Range);
@@ -165,7 +165,7 @@ namespace SlowTests.Tests.Faceted
                     var facetResults = s.Query<Camera>("CameraCost")
                         .Where(x => x.DateOfListing > new DateTime(2000, 1, 1))
                         .AggregateUsing("facets/CameraFacets")
-                        .ToDictionary();
+                        .Execute();
 
                     Assert.Equal(3, facetResults["Manufacturer"].Values.Count());
                     Assert.Equal("sony", facetResults["Manufacturer"].Values[0].Range);
@@ -220,7 +220,7 @@ namespace SlowTests.Tests.Faceted
 
                     var facetResults = s.Query<Camera>("CameraCost")
                         .AggregateUsing("facets/CameraFacets")
-                        .ToDictionary();
+                        .Execute();
 
                     var cameraCounts = from d in _data
                                        group d by d.Manufacturer
@@ -287,7 +287,7 @@ namespace SlowTests.Tests.Faceted
 
                     var facetResults = s.Query<Camera>("CameraCost")
                         .AggregateUsing("facets/CameraFacets")
-                        .ToDictionary();
+                        .Execute();
 
                     var cameraCounts = from d in _data
                                        group d by d.Manufacturer
@@ -333,7 +333,7 @@ namespace SlowTests.Tests.Faceted
 
                     var facetResults = s.Advanced.DocumentQuery<Camera>("CameraCost")
                         .AggregateUsing("facets/CameraFacets")
-                        .ToDictionary();
+                        .Execute();
 
                     Assert.Equal(5, facetResults["Manufacturer"].Values.Count());
                     Assert.Equal("canon", facetResults["Manufacturer"].Values[0].Range);
@@ -400,7 +400,7 @@ namespace SlowTests.Tests.Faceted
                     var facetResults = s.Advanced.DocumentQuery<Camera>("CameraCost")
                         .WhereGreaterThan(x => x.DateOfListing, new DateTime(2000, 1, 1))
                         .AggregateUsing("facets/CameraFacets")
-                        .ToDictionary();
+                        .Execute();
 
                     Assert.Equal(2, facetResults["Manufacturer"].Values.Count());
                     Assert.Equal("canon", facetResults["Manufacturer"].Values[0].Range);
@@ -455,7 +455,7 @@ namespace SlowTests.Tests.Faceted
                     var facetResults = s.Advanced.DocumentQuery<Camera>("CameraCost")
                         .WhereGreaterThan(x => x.DateOfListing, new DateTime(2000, 1, 1))
                         .AggregateUsing("facets/CameraFacets")
-                        .ToDictionary();
+                        .Execute();
 
                     Assert.Equal(3, facetResults["Manufacturer"].Values.Count());
                     Assert.Equal("sony", facetResults["Manufacturer"].Values[0].Range);
@@ -510,7 +510,7 @@ namespace SlowTests.Tests.Faceted
 
                     var facetResults = s.Advanced.DocumentQuery<Camera>("CameraCost")
                         .AggregateUsing("facets/CameraFacets")
-                        .ToDictionary();
+                        .Execute();
 
                     var cameraCounts = from d in _data
                                        group d by d.Manufacturer
@@ -572,7 +572,7 @@ namespace SlowTests.Tests.Faceted
 
                     var facetResults = s.Advanced.DocumentQuery<Camera>("CameraCost")
                         .AggregateUsing("facets/CameraFacets")
-                        .ToDictionary();
+                        .Execute();
 
                     var cameraCounts = from d in _data
                                        group d by d.Manufacturer

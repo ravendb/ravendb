@@ -143,7 +143,7 @@ namespace SlowTests.Tests.DistinctFacets
                         .Distinct()
                         .SelectFields<Books_Search.Result>("Author")
                         .AggregateBy("Category")
-                        .ToDictionary();
+                        .Execute();
 
                     Assert.Equal("databases", results["Category"].Values[0].Range);
                     Assert.Equal(1, results["Category"].Values[0].Hits);
@@ -168,7 +168,7 @@ namespace SlowTests.Tests.DistinctFacets
                         .Distinct()
                         .SelectFields<Books_Search.Result>("Author")
                         .AggregateBy("Category")
-                        .ToDictionaryLazy().Value;
+                        .ExecuteLazy().Value;
 
                     Assert.Equal("databases", results["Category"].Values[0].Range);
                     Assert.Equal(1, results["Category"].Values[0].Hits);
@@ -180,7 +180,7 @@ namespace SlowTests.Tests.DistinctFacets
                         .Distinct()
                         .SelectFields<Books_Search.Result>("Author")
                         .AggregateBy("Category")
-                        .ToDictionaryLazy().Value;
+                        .ExecuteLazy().Value;
 
                     Assert.Equal("databases", results["Category"].Values[0].Range);
                     Assert.Equal(1, results["Category"].Values[0].Hits);

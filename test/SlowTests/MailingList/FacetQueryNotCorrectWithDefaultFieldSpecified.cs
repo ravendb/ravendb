@@ -69,7 +69,7 @@ namespace SlowTests.MailingList
                 return session.Advanced.DocumentQuery<Product, Product_AvailableForSale2>()
                     .WhereEquals("Any", "MyName1")
                     .AggregateUsing("facets/ProductFacets")
-                    .ToDictionary();
+                    .Execute();
             }
         }
 

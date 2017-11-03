@@ -106,10 +106,10 @@ namespace SlowTests.MailingList
                         .Where(x => x.Bedrooms == 2);
                     var partialFacetResults = query
                         .AggregateUsing("facets/AttributeFacets")
-                        .ToDictionary();
+                        .Execute();
                     var fullFacetResults = session.Query<AccItem, AccItems_Attributes>()
                             .AggregateUsing("facets/AttributeFacets")
-                            .ToDictionary();
+                            .Execute();
 
                     RavenTestHelper.AssertNoIndexErrors(store);
 

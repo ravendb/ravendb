@@ -60,7 +60,7 @@ namespace SlowTests.MailingList
                                 Name = user => user.Admin
                             }
                         })
-                        .ToDictionary();
+                        .Execute();
 
                     Assert.Empty(x["Admin"].Values);
                 }
@@ -78,7 +78,7 @@ namespace SlowTests.MailingList
                                 Name = user => user.Admin
                             }
                         })
-                        .ToDictionaryLazy().Value;
+                        .ExecuteLazy().Value;
 
                     Assert.Empty(x["Admin"].Values);
                 }

@@ -56,7 +56,7 @@ namespace SlowTests.MailingList
                 {
                     var q = session.Query<BlogPost, BlogIndex>();
 
-                    var f = q.AggregateUsing("facets/BlogFacets").ToDictionary();
+                    var f = q.AggregateUsing("facets/BlogFacets").Execute();
 
                     Assert.Equal(1, f.Count);
                     Assert.Equal(3, f["Tags"].Values.Count);

@@ -51,7 +51,7 @@ namespace SlowTests.MailingList
                             Name = "prop_brand",
                         },
                     })
-                    .ToDictionary();
+                    .Execute();
 
                 Assert.True(facets.ContainsKey("prop_brand"));
 

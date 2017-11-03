@@ -59,10 +59,10 @@ namespace SlowTests.Issues
                     session.Store(new FacetSetup { Id = "facets/CameraFacets", Facets = facets });
                     session.SaveChanges();
 
-                    var e = Assert.Throws<InvalidQueryException>(() => session.Query<Camera>().Where(x => x.Cost >= 100 && x.Cost <= 300).AggregateUsing("facets/CameraFacets").ToDictionary());
+                    var e = Assert.Throws<InvalidQueryException>(() => session.Query<Camera>().Where(x => x.Cost >= 100 && x.Cost <= 300).AggregateUsing("facets/CameraFacets").Execute());
                     Assert.Contains("Facet query must be executed against static index", e.Message);
 
-                    var e2 = Assert.Throws<IndexDoesNotExistException>(() => session.Query<Camera>("SomeIndex").Where(x => x.Cost >= 100 && x.Cost <= 300).AggregateUsing("facets/CameraFacets").ToDictionary());
+                    var e2 = Assert.Throws<IndexDoesNotExistException>(() => session.Query<Camera>("SomeIndex").Where(x => x.Cost >= 100 && x.Cost <= 300).AggregateUsing("facets/CameraFacets").Execute());
                     Assert.Contains("There is no index with 'SomeIndex' name.", e2.Message);
                 }
             }

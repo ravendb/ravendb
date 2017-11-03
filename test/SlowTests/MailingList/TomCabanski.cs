@@ -42,7 +42,7 @@ namespace SlowTests.MailingList
                     session.Query<User>("test")
                         .Where(x => x.IsActive && x.BookVendor == "stroheim & romann")
                         .AggregateUsing("facets/test")
-                        .ToDictionary();
+                        .Execute();
                 }
             }
         }

@@ -39,7 +39,7 @@ namespace SlowTests.Tests.Faceted
                         var facetResults = s.Query<Camera, CameraCostIndex>()
                             .Where(exp)
                             .AggregateBy(facets)
-                            .ToDictionary();
+                            .Execute();
 
                         var filteredData = cameras.Where(exp.Compile()).ToList();
 
@@ -77,7 +77,7 @@ namespace SlowTests.Tests.Faceted
                         var facetResults = s.Query<Camera, CameraCostIndex>()
                             .Where(exp)
                             .AggregateBy(facets)
-                            .ToDictionary();
+                            .Execute();
 
                         var filteredData = cameras.Where(exp.Compile()).ToList();
 

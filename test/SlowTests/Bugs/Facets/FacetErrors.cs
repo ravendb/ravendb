@@ -54,7 +54,7 @@ namespace SlowTests.Bugs.Facets
                 //CameraCostIndex does not include zoom, bad index specified.
                 var query = session.Query<Camera, CameraCostIndex>().Where(x => x.Zoom > 3);
                 Assert.Throws<RavenException>(() => query.ToList());
-                Assert.Throws<RavenException>(() => query.AggregateBy(facets).ToDictionary());
+                Assert.Throws<RavenException>(() => query.AggregateBy(facets).Execute());
             }
         }
     }

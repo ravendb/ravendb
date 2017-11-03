@@ -28,7 +28,7 @@ namespace SlowTests.MailingList
                     WaitForIndexing(store);
 
                     var query = session.Advanced.DocumentQuery<Product>(new Products().IndexName);
-                    var results = query.AggregateUsing("facets/Products").ToDictionary();
+                    var results = query.AggregateUsing("facets/Products").Execute();
                     Assert.Equal(100, results["Prices"].Values.First().Min);
                     Assert.Equal(200, results["PricesMax"].Values.First().Max);
                 }
