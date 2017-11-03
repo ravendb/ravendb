@@ -1,3 +1,4 @@
+/// <reference path="../../../typings/tsd.d.ts"/>
 
 class routes {
 
@@ -33,8 +34,12 @@ class routes {
                 title: "RavenDB setup wizard",
                 moduleId: "viewmodels/server-setup/nodes",
                 nav: false
+            },{
+                route: "agreement",
+                title: "RavenDB setup wizard",
+                moduleId: "viewmodels/server-setup/agreement",
+                nav: false
             }
-           
         ] as Array<DurandalRouteConfiguration>;
 
         return routes;

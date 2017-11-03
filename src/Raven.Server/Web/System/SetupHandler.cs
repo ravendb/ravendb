@@ -204,8 +204,6 @@ namespace Raven.Server.Web.System
                     writer.WriteEndObject();
                 }
             }
-
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
         }
 
         [RavenAction("/setup/letsencrypt", "POST", AuthorizationStatus.UnauthenticatedClients)]

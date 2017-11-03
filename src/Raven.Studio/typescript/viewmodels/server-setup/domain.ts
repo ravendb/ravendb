@@ -29,7 +29,9 @@ class domain extends setupStep {
             .execute();
             //TODO: post exectuion callbacks
             */
-        router.navigate("#nodes")
+        router.navigate("#agreement");
+        
+        
 
     }
 
