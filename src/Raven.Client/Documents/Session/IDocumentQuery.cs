@@ -163,6 +163,8 @@ namespace Raven.Client.Documents.Session
 
         IGroupByDocumentQuery<T> GroupBy(string fieldName, params string[] fieldNames);
 
+        IGroupByDocumentQuery<T> GroupBy((string Name, GroupByMethod Method) field, params (string Name, GroupByMethod Method)[] fields);
+
         IDocumentQuery<T> MoreLikeThis(MoreLikeThisOptions options = null);
 
         IDocumentQuery<T> MoreLikeThis(string document, MoreLikeThisOptions options = null);

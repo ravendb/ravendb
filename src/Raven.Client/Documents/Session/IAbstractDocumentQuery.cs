@@ -326,6 +326,8 @@ namespace Raven.Client.Documents.Session
 
         void GroupBy(string fieldName, params string[] fieldNames);
 
+        void GroupBy((string Name, GroupByMethod Method) field, params (string Name, GroupByMethod Method)[] fields);
+
         void GroupByKey(string fieldName, string projectedName = null);
 
         void GroupBySum(string fieldName, string projectedName = null);
