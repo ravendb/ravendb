@@ -34,11 +34,11 @@ namespace SlowTests.Tests.DistinctFacets
 
                     Assert.Equal(3, result["Tag"].Values.Count);
 
-                    Assert.Equal(5, result["TotalCount"].Values[0].Hits);
+                    Assert.Equal(5, result["TotalCount"].Values[0].Count);
 
-                    Assert.Equal(5, result["Tag"].Values.First(x => x.Range == "0").Hits);
-                    Assert.Equal(5, result["Tag"].Values.First(x => x.Range == "1").Hits);
-                    Assert.Equal(5, result["Tag"].Values.First(x => x.Range == "2").Hits);
+                    Assert.Equal(5, result["Tag"].Values.First(x => x.Range == "0").Count);
+                    Assert.Equal(5, result["Tag"].Values.First(x => x.Range == "1").Count);
+                    Assert.Equal(5, result["Tag"].Values.First(x => x.Range == "2").Count);
                 }
             }
         }

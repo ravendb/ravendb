@@ -146,7 +146,7 @@ namespace SlowTests.Tests.DistinctFacets
                         .Execute();
 
                     Assert.Equal("databases", results["Category"].Values[0].Range);
-                    Assert.Equal(1, results["Category"].Values[0].Hits);
+                    Assert.Equal(1, results["Category"].Values[0].Count);
                 }
             }
         }
@@ -171,7 +171,7 @@ namespace SlowTests.Tests.DistinctFacets
                         .ExecuteLazy().Value;
 
                     Assert.Equal("databases", results["Category"].Values[0].Range);
-                    Assert.Equal(1, results["Category"].Values[0].Hits);
+                    Assert.Equal(1, results["Category"].Values[0].Count);
 
                     results = session.Advanced.DocumentQuery<Book, Books_Search>()
                         .WhereEquals("PrimaryTag", "RavenDB").Boost(4)
@@ -183,7 +183,7 @@ namespace SlowTests.Tests.DistinctFacets
                         .ExecuteLazy().Value;
 
                     Assert.Equal("databases", results["Category"].Values[0].Range);
-                    Assert.Equal(1, results["Category"].Values[0].Hits);
+                    Assert.Equal(1, results["Category"].Values[0].Count);
                 }
             }
         }

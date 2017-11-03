@@ -158,7 +158,7 @@ namespace Raven.Client.Documents
                     continue;
                 }
 
-                query.AndAggregateOn(facet);
+                query = query.AndAggregateOn(facet);
             }
 
             return query;
@@ -166,9 +166,8 @@ namespace Raven.Client.Documents
 
         public static AggregationQuery<T> AggregateBy<T>(this IQueryable<T> source, string path, Action<FacetFactory<T>> factory = null)
         {
-            var f = new FacetFactory<T>();
+            var f = new FacetFactory<T>(path);
             factory?.Invoke(f);
-            f.Facet.Name = path;
 
             return source.AggregateBy(f.Facet);
         }
@@ -181,9 +180,23 @@ namespace Raven.Client.Documents
             return source.AggregateBy(path.ToPropertyPath('_'), factory);
         }
 
-        public static AggregationQuery<T> AggregateUsing<T>(this IQueryable<T> source, string facetSetupDocumentKey)
+        public static AggregationQueryBase<T> AggregateUsing<T>(this IQueryable<T> source, string facetSetupDocumentKey)
         {
-            throw new NotImplementedException();
+            if (facetSetupDocumentKey == null)
+                throw new ArgumentNullException(nameof(facetSetupDocumentKey));
+
+#if CURRENT
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+#endif
+#if LEGACY
+            MethodInfo currentMethod = null;
+            throw new NotImplementedException("TODO ppekrol");
+#endif
+
+            var expression = ConvertExpressionIfNecessary(source);
+            source = source.Provider.CreateQuery<T>(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(facetSetupDocumentKey)));
+
+            return new AggregationQuery<T>(source, ConvertExpressionIfNecessary, currentMethod);
         }
 
         /// <summary>

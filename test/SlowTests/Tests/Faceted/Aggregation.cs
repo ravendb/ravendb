@@ -66,7 +66,7 @@ namespace SlowTests.Tests.Faceted
                        .Execute();
 
                     var facetResult = r["Region"];
-                    Assert.Equal(2, facetResult.Values[0].Hits);
+                    Assert.Equal(2, facetResult.Values[0].Count);
                     Assert.Equal(1, facetResult.Values[0].Min);
                     Assert.Equal(1.1, facetResult.Values[0].Max);
                     Assert.Equal(1, facetResult.Values.Count(x => x.Range == "1"));
@@ -102,7 +102,7 @@ namespace SlowTests.Tests.Faceted
                         .Execute();
 
                     var facetResult = r["Region"];
-                    Assert.Equal(2, facetResult.Values[0].Hits);
+                    Assert.Equal(2, facetResult.Values[0].Count);
                     Assert.Equal(1, facetResult.Values[0].Min);
                     Assert.Equal(1.5, facetResult.Values[0].Max);
 
@@ -139,7 +139,7 @@ namespace SlowTests.Tests.Faceted
                         .Execute();
 
                     var facetResult = r["Region"];
-                    Assert.Equal(2, facetResult.Values[0].Hits);
+                    Assert.Equal(2, facetResult.Values[0].Count);
                     Assert.Equal(1, facetResult.Values[0].Min);
                     Assert.Equal(2, facetResult.Values[0].Max);
 
@@ -176,7 +176,7 @@ namespace SlowTests.Tests.Faceted
                        .Execute();
 
                     var facetResult = r["Product"];
-                    Assert.Equal(2, facetResult.Values[0].Hits);
+                    Assert.Equal(2, facetResult.Values[0].Count);
                     Assert.Equal(1, facetResult.Values[0].Min);
                     Assert.Equal(2, facetResult.Values[0].Max);
 
@@ -366,7 +366,7 @@ namespace SlowTests.Tests.Faceted
                 {
                     var r = session.Query<Order>("Orders/All")
                        .AggregateBy(x => x.Product, f => f.WithDisplayName("ProductMax").MaxOn(x => x.Total))
-                       .AndAggregateOn(x => x.Product, f => f.WithDisplayName("ProductMin").Count())
+                       .AndAggregateOn(x => x.Product, f => f.WithDisplayName("ProductMin"))
                        .Execute();
 
                     Assert.Equal(2, r.Count);
@@ -447,7 +447,7 @@ namespace SlowTests.Tests.Faceted
                 {
                     var r = session.Query<ItemsOrder>("ItemsOrders/All")
                         .Where(x => x.At >= end0)
-                       .AggregateBy(x => x.At, f => f.Count().WithRanges(
+                       .AggregateBy(x => x.At, f => f.WithRanges(
                             x => x.At >= minValue, // all - 4
                             x => x.At >= end0 && x.At < end1, // 1
                             x => x.At >= end1 && x.At < end2 // 3
@@ -490,7 +490,7 @@ namespace SlowTests.Tests.Faceted
                     var r = session.Query<ItemsOrder>("ItemsOrders/All")
                         .Where(x => x.At >= end0)
                         .Where(x => x.Items.In(items))
-                        .AggregateBy(x => x.At, f => f.Count().WithRanges(
+                        .AggregateBy(x => x.At, f => f.WithRanges(
                             x => x.At >= minValue, // all - 3
                             x => x.At >= end0 && x.At < end1, // 1
                             x => x.At >= end1 && x.At < end2 // 2
@@ -536,7 +536,6 @@ namespace SlowTests.Tests.Faceted
                         .AggregateBy(
                             x => x.At,
                             f => f
-                                .Count()
                                 .WithRanges(
                                     x => x.At >= minValue, // all - 3
                                     x => x.At >= end0 && x.At < end1, // 1

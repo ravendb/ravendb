@@ -22,7 +22,7 @@ namespace Raven.Client.Documents.Session
             throw new NotImplementedException();
         }
 
-        public AggregationQuery<T> AggregateUsing(string facetSetupDocumentKey)
+        public new AggregationQuery<T> AggregateUsing(string facetSetupDocumentKey)
         {
             throw new NotImplementedException();
         }

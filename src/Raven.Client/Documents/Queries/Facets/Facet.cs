@@ -5,7 +5,6 @@ using System.Linq.Expressions;
 using System.Reflection;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Session;
 using Sparrow.Extensions;
 
 namespace Raven.Client.Documents.Queries.Facets
@@ -127,28 +126,32 @@ namespace Raven.Client.Documents.Queries.Facets
         {
             var operation = (BinaryExpression)expr.Body;
 
-            if (operation.Left is MemberExpression)
+            if (operation.Left is MemberExpression me)
             {
+                var fieldName = GetFieldName(me);
                 var subExpressionValue = ParseSubExpression(operation);
-                var expression = GetStringRepresentation(operation.NodeType, subExpressionValue);
+                var expression = GetStringRepresentation(fieldName, operation.NodeType, subExpressionValue);
                 return expression;
             }
 
             var left = operation.Left as BinaryExpression;
             var right = operation.Right as BinaryExpression;
-            if ((left == null || right == null) || operation.NodeType != ExpressionType.AndAlso)
-                throw new InvalidOperationException("Range can be only specified using: \"&&\". Cannot use: \"" + operation.NodeType + "\"");
+            if (left == null || right == null || operation.NodeType != ExpressionType.AndAlso)
+                throw new InvalidOperationException($"Range can be only specified using: '&&'. Cannot use: '{operation.NodeType}'");
 
             var leftMember = left.Left as MemberExpression;
             var rightMember = right.Left as MemberExpression;
             if (leftMember == null || rightMember == null)
             {
-                throw new InvalidOperationException("Expressions on both sides of \"&&\" must point to range field. Ex. x => x.Age > 18 && x.Age < 99");
+                throw new InvalidOperationException("Expressions on both sides of '&&' must point to range field. E.g. x => x.Age > 18 && x.Age < 99");
             }
 
-            if (GetFieldName(leftMember) != GetFieldName(rightMember))
+            var leftFieldName = GetFieldName(leftMember);
+            var rightFieldName = GetFieldName(rightMember);
+
+            if (leftFieldName != rightFieldName)
             {
-                throw new InvalidOperationException("Different range fields were detected: \"" + GetFieldName(leftMember) + "\" and \"" + GetFieldName(rightMember) + "\"");
+                throw new InvalidOperationException($"Different range fields were detected: '{leftFieldName}' and '{rightFieldName}'");
             }
 
             // option #1: expression has form: x > 5 && x < 10
@@ -157,7 +160,7 @@ namespace Raven.Client.Documents.Queries.Facets
 
             if (hasForm1)
             {
-                return GetStringRepresentation(left.NodeType, right.NodeType, ParseSubExpression(left), ParseSubExpression(right));
+                return GetStringRepresentation(leftFieldName, left.NodeType, right.NodeType, ParseSubExpression(left), ParseSubExpression(right));
             }
 
             // option #2: expression has form x < 10 && x > 5 --> reverse expression to end up with form #1
@@ -166,7 +169,7 @@ namespace Raven.Client.Documents.Queries.Facets
 
             if (hasForm2)
             {
-                return GetStringRepresentation(right.NodeType, left.NodeType, ParseSubExpression(right), ParseSubExpression(left));
+                return GetStringRepresentation(leftFieldName, right.NodeType, left.NodeType, ParseSubExpression(right), ParseSubExpression(left));
             }
 
             throw new InvalidOperationException("Members in sub-expression(s) are not the correct types (expected \"<\", \"<=\", \">\" or \">=\")");
@@ -181,28 +184,24 @@ namespace Raven.Client.Documents.Queries.Facets
 
         private static object ParseSubExpression(BinaryExpression operation)
         {
-            if (operation.Right is UnaryExpression)
+            if (operation.Right is UnaryExpression ue)
             {
-                return ParseUnaryExpression((UnaryExpression)operation.Right);
+                return ParseUnaryExpression(ue);
             }
 
-            if (operation.Right is ConstantExpression)
+            if (operation.Right is ConstantExpression ce)
             {
-                var right = (ConstantExpression)operation.Right;
-                return right.Value;
+                return ce.Value;
             }
 
             //http://stackoverflow.com/questions/238765/given-a-type-expressiontype-memberaccess-how-do-i-get-the-field-value
             //http://stackoverflow.com/questions/671968/retrieving-property-name-from-lambda-expression
-            if (operation.Right is MemberExpression)
+            if (operation.Right is MemberExpression me)
             {
-                var right = (MemberExpression)operation.Right;
-                var field = right.Member as FieldInfo;
-                if (field != null)
+                if (me.Member is FieldInfo field)
                 {
                     //This handles x < somefield
-                    var obj = right.Expression as ConstantExpression;
-                    if (obj != null)
+                    if (me.Expression is ConstantExpression obj)
                     {
                         var value = field.GetValue(obj.Value);
                         return value;
@@ -211,8 +210,7 @@ namespace Raven.Client.Documents.Queries.Facets
                 else
                 {
                     //This handles things like DateTime.Now
-                    var property = right.Member as PropertyInfo;
-                    if (property != null && right.Member != null)
+                    if (me.Member is PropertyInfo property && me.Member != null)
                     {
                         //This chokes on anonymous types!?													
                         var value = property.GetValue(property, null);
@@ -259,47 +257,40 @@ namespace Raven.Client.Documents.Queries.Facets
             throw new NotSupportedException("Not supported unary expression type " + expression.NodeType);
         }
 
-        private static string GetStringRepresentation(ExpressionType op, object value)
+        private static string GetStringRepresentation(string fieldName, ExpressionType op, object value)
         {
             var valueAsStr = GetStringValue(value);
             if (op == ExpressionType.LessThan)
-                return string.Format("[NULL TO {0}]", valueAsStr);
+                return $"{fieldName} < {valueAsStr}";
             if (op == ExpressionType.GreaterThan)
-                return string.Format("[{0} TO NULL]", valueAsStr);
+                return $"{fieldName} > {valueAsStr}";
             if (op == ExpressionType.LessThanOrEqual)
-                return string.Format("[NULL TO {0}}}", valueAsStr);
+                return $"{fieldName} <= {valueAsStr}";
             if (op == ExpressionType.GreaterThanOrEqual)
-                return string.Format("{{{0} TO NULL]", valueAsStr);
+                return $"{fieldName} >= {valueAsStr}";
             throw new InvalidOperationException("Cannot use " + op + " as facet range. Allowed operators: <, <=, >, >=.");
         }
 
-        private static string GetStringRepresentation(ExpressionType leftOp, ExpressionType rightOp, object lValue, object rValue)
+        private static string GetStringRepresentation(string fieldName, ExpressionType leftOp, ExpressionType rightOp, object lValue, object rValue)
         {
-            var lValueAsComparable = lValue as IComparable;
-            var rValueAsComparable = rValue as IComparable;
-
-            if (lValueAsComparable != null && rValueAsComparable != null)
+            if (lValue is IComparable lValueAsComparable && rValue is IComparable rValueAsComparable)
             {
                 if (lValueAsComparable.CompareTo(rValueAsComparable) > 0)
                 {
                     throw new InvalidOperationException("Invalid range: " + lValue + ".." + rValue);
                 }
             }
-            var lValueAsStr = GetStringValue(lValue);
-            var rValueAsStr = GetStringValue(rValue);
-            if (lValueAsStr != null && rValueAsStr != null)
-                return $"{CalculateBraces(leftOp, true)}{lValueAsStr} TO {rValueAsStr}{CalculateBraces(rightOp, false)}";
+
+            if (lValue != null && rValue != null)
+            {
+                if (leftOp == ExpressionType.GreaterThanOrEqual && rightOp == ExpressionType.LessThanOrEqual)
+                    return $"{fieldName} BETWEEN {GetStringValue(lValue)} AND {GetStringValue(rValue)}";
+
+                return $"{GetStringRepresentation(fieldName, leftOp, lValue)} AND {GetStringRepresentation(fieldName, rightOp, rValue)}";
+            }
+
             throw new InvalidOperationException("Unable to parse the given operation into a facet range!!! ");
         }
-
-        private static string CalculateBraces(ExpressionType op, bool isLeft)
-        {
-            if (op == ExpressionType.GreaterThanOrEqual || op == ExpressionType.LessThanOrEqual)
-                return isLeft ? "{" : "}";
-
-            return isLeft ? "[" : "]";
-        }
-
 
         private static string GetStringValue(object value)
         {
@@ -307,9 +298,9 @@ namespace Raven.Client.Documents.Queries.Facets
             {
                 //The nullable stuff here it a bit weird, but it helps with trying to cast Value types
                 case "System.DateTime":
-                    return ((DateTime)value).GetDefaultRavenFormat();
+                    return $"'{((DateTime)value).GetDefaultRavenFormat()}'";
                 case "System.Int32":
-                    return NumberUtil.NumberToString(((int)value));
+                    return NumberUtil.NumberToString((int)value);
                 case "System.Int64":
                     return NumberUtil.NumberToString((long)value);
                 case "System.Single":
@@ -319,7 +310,7 @@ namespace Raven.Client.Documents.Queries.Facets
                 case "System.Decimal":
                     return NumberUtil.NumberToString((double)(decimal)value);
                 case "System.String":
-                    return value.ToString();
+                    return $"'{value}'";
                 default:
                     throw new InvalidOperationException("Unable to parse the given type " + value.GetType().Name + ", into a facet range!!! ");
             }

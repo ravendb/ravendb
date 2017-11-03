@@ -21,5 +21,10 @@ namespace Raven.Client.Documents.Session
 
             SelectTokens.AddLast(FacetToken.Create(facet, AddQueryParameter));
         }
+
+        public void AggregateUsing(string facetSetupDocumentKey)
+        {
+            SelectTokens.AddLast(FacetToken.Create(facetSetupDocumentKey));
+        }
     }
 }

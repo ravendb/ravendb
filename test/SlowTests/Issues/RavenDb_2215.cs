@@ -73,8 +73,7 @@ namespace SlowTests.Issues
                         .AggregateBy(
                             x => x.IsCancelled,
                             factory => factory
-                                .SumOn(x => x.Nett)
-                                .Count())
+                                .SumOn(x => x.Nett))
                         .Execute();
 
                     double cancelledFinanceSum = 0;
@@ -82,7 +81,7 @@ namespace SlowTests.Issues
                     if (failedFinance["IsCancelled"].Values.Any())
                     {
                         cancelledFinanceSum = failedFinance["IsCancelled"].Values[0].Sum.GetValueOrDefault(0);
-                        cancelledFinanceCount = failedFinance["IsCancelled"].Values[0].Count.GetValueOrDefault(0);
+                        cancelledFinanceCount = failedFinance["IsCancelled"].Values[0].Count;
                     }
 
                     Assert.Equal(5, cancelledFinanceCount);

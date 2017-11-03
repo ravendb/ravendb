@@ -1,3 +1,5 @@
+using System;
+
 namespace Raven.Server.Documents.Queries.AST
 {
     public class BinaryExpression : QueryExpression
@@ -21,7 +23,44 @@ namespace Raven.Server.Documents.Queries.AST
 
         public override string GetText()
         {
-            return ToString();
+            string op;
+            switch (Operator)
+            {
+                case OperatorType.Equal:
+                    op = "=";
+                    break;
+                case OperatorType.NotEqual:
+                    op = "!=";
+                    break;
+                case OperatorType.LessThan:
+                    op = "<";
+                    break;
+                case OperatorType.GreaterThan:
+                    op = ">";
+                    break;
+                case OperatorType.LessThanEqual:
+                    op = "<=";
+                    break;
+                case OperatorType.GreaterThanEqual:
+                    op = ">=";
+                    break;
+                case OperatorType.And:
+                    op = "AND";
+                    break;
+                case OperatorType.AndNot:
+                    op = "AND NOT";
+                    break;
+                case OperatorType.Or:
+                    op = "OR";
+                    break;
+                case OperatorType.OrNot:
+                    op = "OR NOT";
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+
+            return Left.GetText() + " " + op + " " + Right.GetText();
         }
     }
 }

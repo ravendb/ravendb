@@ -25,7 +25,7 @@ namespace SlowTests.MailingList
                         Name = "Tags",
                         Options = new FacetOptions
                         {
-                            TermSortMode = FacetTermSortMode.HitsDesc
+                            TermSortMode = FacetTermSortMode.CountDesc
                         }
                     }
                 };
@@ -61,7 +61,7 @@ namespace SlowTests.MailingList
                     Assert.Equal(1, f.Count);
                     Assert.Equal(3, f["Tags"].Values.Count);
                     Assert.Equal("news", f["Tags"].Values[0].Range);
-                    Assert.Equal(2, f["Tags"].Values[0].Hits);
+                    Assert.Equal(2, f["Tags"].Values[0].Count);
 
                 }
 

@@ -77,7 +77,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var docsToGet = pageSize;
             var position = query.Start;
 
-            var luceneQuery = GetLuceneQuery(documentsContext, query.Metadata, query.QueryParameters, _analyzer, _queryBuilderFactories);
+            var luceneQuery = GetLuceneQuery(query.Metadata, query.QueryParameters, _analyzer, _queryBuilderFactories);
             var sort = GetSort(query, getSpatialField);
             var returnedResults = 0;
 
@@ -154,7 +154,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 if (whereExpression == null)
                     throw new InvalidQueryException($"Invalid intersect query. The intersect clause at position {i} isn't a valid expression", query.Metadata.QueryText, query.QueryParameters);
 
-                subQueries[i] = GetLuceneQuery(documentsContext, query.Metadata, whereExpression, query.QueryParameters, _analyzer, _queryBuilderFactories);
+                subQueries[i] = GetLuceneQuery(query.Metadata, whereExpression, query.QueryParameters, _analyzer, _queryBuilderFactories);
             }
 
             //Not sure how to select the page size here??? The problem is that only docs in this search can be part 
@@ -520,7 +520,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var docsToGet = GetPageSize(_searcher, query.PageSize);
             var position = query.Start;
 
-            var luceneQuery = GetLuceneQuery(documentsContext, query.Metadata, query.QueryParameters, _analyzer, _queryBuilderFactories);
+            var luceneQuery = GetLuceneQuery(query.Metadata, query.QueryParameters, _analyzer, _queryBuilderFactories);
             var sort = GetSort(query, getSpatialField);
 
             var search = ExecuteQuery(luceneQuery, query.Start, docsToGet, sort);

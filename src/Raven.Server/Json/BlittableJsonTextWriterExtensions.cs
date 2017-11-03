@@ -118,14 +118,7 @@ namespace Raven.Server.Json
                 writer.WriteComma();
 
                 writer.WritePropertyName(nameof(value.Count));
-                if (value.Count.HasValue)
-                    writer.WriteInteger(value.Count.Value);
-                else
-                    writer.WriteNull();
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(value.Hits));
-                writer.WriteInteger(value.Hits);
+                writer.WriteInteger(value.Count);
                 writer.WriteComma();
 
                 writer.WritePropertyName(nameof(value.Max));

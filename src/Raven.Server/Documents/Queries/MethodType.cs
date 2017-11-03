@@ -11,10 +11,13 @@
         Lucene,
         Exists,
         Exact,
+        Intersect,
+
         Count,
         Sum,
+        Min,
+        Max,
         Average,
-        Intersect,
 
         CmpXchg,
         

@@ -64,7 +64,7 @@ namespace SlowTests.Issues
                        {
                            Id = section.Id,
                            Name = section.Name,
-                           Count = value.Hits
+                           Count = value.Count
                        };
                    }).ToList();
                     await Task.WhenAll(results);

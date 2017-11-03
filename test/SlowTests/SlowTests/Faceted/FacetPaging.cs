@@ -32,7 +32,7 @@ namespace SlowTests.SlowTests.Faceted
                     Options = new FacetOptions
                     {
                         //MaxResults = null,
-                        TermSortMode = FacetTermSortMode.HitsDesc,
+                        TermSortMode = FacetTermSortMode.CountDesc,
                         IncludeRemainingTerms = true
                     }
                 }
@@ -66,7 +66,7 @@ namespace SlowTests.SlowTests.Faceted
                     foreach (var facet in facetResults["Manufacturer"].Values)
                     {
                         var inMemoryCount = _data.Where(x => x.Manufacturer.ToLower() == facet.Range).Count();
-                        Assert.Equal(inMemoryCount, facet.Hits);
+                        Assert.Equal(inMemoryCount, facet.Count);
                     }
 
                     Assert.Equal(0, facetResults["Manufacturer"].RemainingTermsCount);
@@ -88,7 +88,7 @@ namespace SlowTests.SlowTests.Faceted
                     Options = new FacetOptions
                     {
                         //MaxResults = 2,
-                        TermSortMode = FacetTermSortMode.HitsDesc,
+                        TermSortMode = FacetTermSortMode.CountDesc,
                         IncludeRemainingTerms = true
                     }
                 }
@@ -121,7 +121,7 @@ namespace SlowTests.SlowTests.Faceted
                     foreach (var facet in facetResults["Manufacturer"].Values)
                     {
                         var inMemoryCount = _data.Where(x => x.Manufacturer.ToLower() == facet.Range).Count();
-                        Assert.Equal(inMemoryCount, facet.Hits);
+                        Assert.Equal(inMemoryCount, facet.Count);
                     }
 
                     Assert.Equal(1, facetResults["Manufacturer"].RemainingTermsCount);
@@ -143,7 +143,7 @@ namespace SlowTests.SlowTests.Faceted
                     Options = new FacetOptions
                     {
                         //MaxResults = 3,
-                        TermSortMode = FacetTermSortMode.HitsDesc,
+                        TermSortMode = FacetTermSortMode.CountDesc,
                         IncludeRemainingTerms = true
                     }
                 }
@@ -177,7 +177,7 @@ namespace SlowTests.SlowTests.Faceted
                     foreach (var facet in facetResults["Manufacturer"].Values)
                     {
                         var inMemoryCount = _data.Where(x => x.Manufacturer.ToLower() == facet.Range).Count();
-                        Assert.Equal(inMemoryCount, facet.Hits);
+                        Assert.Equal(inMemoryCount, facet.Count);
                     }
 
                     Assert.Equal(1, facetResults["Manufacturer"].RemainingTermsCount);
@@ -199,7 +199,7 @@ namespace SlowTests.SlowTests.Faceted
                     Options = new FacetOptions
                     {
                         //MaxResults = 3,
-                        TermSortMode = FacetTermSortMode.HitsAsc,
+                        TermSortMode = FacetTermSortMode.CountAsc,
                         IncludeRemainingTerms = true
                     }
                 }
@@ -233,7 +233,7 @@ namespace SlowTests.SlowTests.Faceted
                     foreach (var facet in facetResults["Manufacturer"].Values)
                     {
                         var inMemoryCount = _data.Where(x => x.Manufacturer.ToLower() == facet.Range).Count();
-                        Assert.Equal(inMemoryCount, facet.Hits);
+                        Assert.Equal(inMemoryCount, facet.Count);
                     }
 
                     Assert.Equal(1, facetResults["Manufacturer"].RemainingTermsCount);
@@ -289,7 +289,7 @@ namespace SlowTests.SlowTests.Faceted
                     foreach (var facet in facetResults["Manufacturer"].Values)
                     {
                         var inMemoryCount = _data.Where(x => x.Manufacturer.ToLower() == facet.Range).Count();
-                        Assert.Equal(inMemoryCount, facet.Hits);
+                        Assert.Equal(inMemoryCount, facet.Count);
                     }
 
                     Assert.Equal(1, facetResults["Manufacturer"].RemainingTermsCount);
@@ -345,7 +345,7 @@ namespace SlowTests.SlowTests.Faceted
                     foreach (var facet in facetResults["Manufacturer"].Values)
                     {
                         var inMemoryCount = _data.Where(x => x.Manufacturer.ToLower() == facet.Range).Count();
-                        Assert.Equal(inMemoryCount, facet.Hits);
+                        Assert.Equal(inMemoryCount, facet.Count);
                     }
 
                     Assert.Equal(1, facetResults["Manufacturer"].RemainingTermsCount);
@@ -367,7 +367,7 @@ namespace SlowTests.SlowTests.Faceted
                     Options = new FacetOptions
                     {
                         //MaxResults = 3,
-                        TermSortMode = FacetTermSortMode.HitsDesc,
+                        TermSortMode = FacetTermSortMode.CountDesc,
                         IncludeRemainingTerms = true
                     }
                 }
@@ -401,7 +401,7 @@ namespace SlowTests.SlowTests.Faceted
                     foreach (var facet in facetResults["Manufacturer"].Values)
                     {
                         var inMemoryCount = _data.Where(x => x.Manufacturer.ToLower() == facet.Range).Count();
-                        Assert.Equal(inMemoryCount, facet.Hits);
+                        Assert.Equal(inMemoryCount, facet.Count);
                     }
 
                     Assert.Equal(1, facetResults["Manufacturer"].RemainingTermsCount);
@@ -423,7 +423,7 @@ namespace SlowTests.SlowTests.Faceted
                     Options = new FacetOptions
                     {
                         //MaxResults = 3,
-                        TermSortMode = FacetTermSortMode.HitsAsc,
+                        TermSortMode = FacetTermSortMode.CountAsc,
                         IncludeRemainingTerms = true
                     }
                 }
@@ -457,7 +457,7 @@ namespace SlowTests.SlowTests.Faceted
                     foreach (var facet in facetResults["Manufacturer"].Values)
                     {
                         var inMemoryCount = _data.Where(x => x.Manufacturer.ToLower() == facet.Range).Count();
-                        Assert.Equal(inMemoryCount, facet.Hits);
+                        Assert.Equal(inMemoryCount, facet.Count);
                     }
 
                     Assert.Equal(1, facetResults["Manufacturer"].RemainingTermsCount);
@@ -513,7 +513,7 @@ namespace SlowTests.SlowTests.Faceted
                     foreach (var facet in facetResults["Manufacturer"].Values)
                     {
                         var inMemoryCount = _data.Where(x => x.Manufacturer.ToLower() == facet.Range).Count();
-                        Assert.Equal(inMemoryCount, facet.Hits);
+                        Assert.Equal(inMemoryCount, facet.Count);
                     }
 
                     Assert.Equal(1, facetResults["Manufacturer"].RemainingTermsCount);
@@ -569,7 +569,7 @@ namespace SlowTests.SlowTests.Faceted
                     foreach (var facet in facetResults["Manufacturer"].Values)
                     {
                         var inMemoryCount = _data.Where(x => x.Manufacturer.ToLower() == facet.Range).Count();
-                        Assert.Equal(inMemoryCount, facet.Hits);
+                        Assert.Equal(inMemoryCount, facet.Count);
                     }
 
                     Assert.Equal(1, facetResults["Manufacturer"].RemainingTermsCount);
@@ -591,7 +591,7 @@ namespace SlowTests.SlowTests.Faceted
                     Options = new FacetOptions
                     {
                         //MaxResults = null,
-                        TermSortMode = FacetTermSortMode.HitsDesc,
+                        TermSortMode = FacetTermSortMode.CountDesc,
                         IncludeRemainingTerms = true
                     }
                 }
@@ -625,7 +625,7 @@ namespace SlowTests.SlowTests.Faceted
                     foreach (var facet in facetResults["Manufacturer"].Values)
                     {
                         var inMemoryCount = _data.Where(x => x.Manufacturer.ToLower() == facet.Range).Count();
-                        Assert.Equal(inMemoryCount, facet.Hits);
+                        Assert.Equal(inMemoryCount, facet.Count);
                     }
 
                     Assert.Equal(0, facetResults["Manufacturer"].RemainingTermsCount);
@@ -647,7 +647,7 @@ namespace SlowTests.SlowTests.Faceted
                     Options = new FacetOptions
                     {
                         //MaxResults = 2,
-                        TermSortMode = FacetTermSortMode.HitsDesc,
+                        TermSortMode = FacetTermSortMode.CountDesc,
                         IncludeRemainingTerms = true
                     }
                 }
@@ -680,7 +680,7 @@ namespace SlowTests.SlowTests.Faceted
                     foreach (var facet in facetResults["Manufacturer"].Values)
                     {
                         var inMemoryCount = _data.Where(x => x.Manufacturer.ToLower() == facet.Range).Count();
-                        Assert.Equal(inMemoryCount, facet.Hits);
+                        Assert.Equal(inMemoryCount, facet.Count);
                     }
 
                     Assert.Equal(1, facetResults["Manufacturer"].RemainingTermsCount);

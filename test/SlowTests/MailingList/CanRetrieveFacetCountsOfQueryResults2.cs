@@ -124,12 +124,12 @@ namespace SlowTests.MailingList
                     var partialGardenFacet =
                         partialFacetResults["Attributes"].Values.First(
                             x => x.Range.Contains("hasgarden"));
-                    Assert.Equal(2, partialGardenFacet.Hits);
+                    Assert.Equal(2, partialGardenFacet.Count);
 
                     var fullGardenFacet =
                         fullFacetResults["Attributes"].Values.First(
                             x => x.Range.Contains("hasgarden"));
-                    Assert.Equal(3, fullGardenFacet.Hits);
+                    Assert.Equal(3, fullGardenFacet.Count);
 
                     RavenTestHelper.AssertNoIndexErrors(store);
                 }

@@ -1056,6 +1056,13 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                     _documentQuery.AggregateBy(aggregateFacet as Facet);
                     break;
+                case nameof(LinqExtensions.AggregateUsing):
+                    VisitExpression(expression.Arguments[0]);
+
+                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var aggregateDocumentKey);
+
+                    _documentQuery.AggregateUsing(aggregateDocumentKey as string);
+                    break;
                 case nameof(LinqExtensions.GroupByArrayValues):
                 case nameof(LinqExtensions.GroupByArrayContent):
                     EnsureValidDynamicGroupByMethod(expression.Method.Name);
