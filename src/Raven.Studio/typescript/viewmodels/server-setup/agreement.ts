@@ -17,7 +17,8 @@ class agreement extends setupStep {
     }
     
     activate() {
-        return new loadAgreementCommand(this.model.domain().userEmail())
+        //tODO: return 
+         new loadAgreementCommand(this.model.domain().userEmail())
             .execute()
             .done(url => {
                 this.url(url);
