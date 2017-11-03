@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -38,11 +38,12 @@ namespace Raven.Server.Commercial
         public const string SettingsPath = "settings.json";
         public const string LocalNodeTag = "A";
         public const string RavenDbDomain = "dbs.local.ravendb.net";
+        public static readonly Uri LetsEncryptServer = WellKnownServers.LetsEncryptStaging;
 
         private SetupStage _lastSetupStage = SetupStage.Initial;
 
-        // TODO add logs everywhere
-
+        //TODO handle progress, logs and errors everywhere
+        
         private readonly ServerStore _serverStore;
         public Timer CertificateRenewalTimer { get; set; }
 
@@ -68,7 +69,7 @@ namespace Raven.Server.Commercial
         {
             AssertCorrectSetupStage(SetupStage.Agreement);
 
-            using (var acmeClient = new AcmeClient(WellKnownServers.LetsEncryptStaging))
+            using (var acmeClient = new AcmeClient(LetsEncryptServer))
             {
                 var account = await acmeClient.NewRegistraton("mailto:" + email);
                 return account.GetTermsOfServiceUri();
@@ -77,6 +78,8 @@ namespace Raven.Server.Commercial
 
         public async Task<IOperationResult> SetupSecuredTask(Action<IOperationProgress> onProgress, CancellationToken token, SetupInfo setupInfo)
         {
+            //TODO handle progress, logs and errors
+
             AssertCorrectSetupStage(SetupStage.Setup);
             _setupInfo = setupInfo;
 
@@ -100,7 +103,7 @@ namespace Raven.Server.Commercial
                 progress.AddInfo("Stage2: Preparing configuration file(s) and making sure the local server can start.");
                 onProgress(progress);
 
-                progress.SettingsZipFile = await CreateSettingsZipAndOptionallyWriteToLocalServer(onProgress, token, setupInfo, SetupMode.Secured);
+                progress.SettingsZipFile = await CreateSettingsZipAndOptionallyWriteToLocalServer(onProgress, token, SetupMode.Secured);
 
                 try
                 {
@@ -141,6 +144,8 @@ namespace Raven.Server.Commercial
 
         public async Task<IOperationResult> SetupLetsEncryptTask(Action<IOperationProgress> onProgress, CancellationToken token, SetupInfo setupInfo)
         {
+            //TODO handle progress, logs and errors
+
             AssertCorrectSetupStage(SetupStage.Setup);
             _setupInfo = setupInfo;
 
@@ -159,7 +164,7 @@ namespace Raven.Server.Commercial
 
             try
             {
-                using (var acmeClient = new AcmeClient(WellKnownServers.LetsEncryptStaging))
+                using (var acmeClient = new AcmeClient(LetsEncryptServer))
                 {
                     var account = await acmeClient.NewRegistraton("mailto:" + setupInfo.Email);
                     account.Data.Agreement = account.GetTermsOfServiceUri();
@@ -275,7 +280,7 @@ namespace Raven.Server.Commercial
                         if (PlatformDetails.RunningOnPosix)
                             AdminCertificatesHandler.ValidateCaExistsInOsStores(base64Cert, "Let's Encrypt certificate", _serverStore);
                         
-                        progress.SettingsZipFile = await CreateSettingsZipAndOptionallyWriteToLocalServer(onProgress, token, setupInfo, SetupMode.LetsEncrypt);
+                        progress.SettingsZipFile = await CreateSettingsZipAndOptionallyWriteToLocalServer(onProgress, token, SetupMode.LetsEncrypt);
                     }
                     catch (Exception e)
                     {
@@ -301,7 +306,7 @@ namespace Raven.Server.Commercial
         {
             AssertCorrectSetupStage(SetupStage.Setup);
 
-            //TODO reports and error handling here
+            //TODO handle progress, logs and errors
             var progress = new SetupProgressAndResult
             {
                 Processed = 0,
@@ -335,6 +340,9 @@ namespace Raven.Server.Commercial
         {
             try
             {
+                if (_setupInfo.NodeSetupInfos.ContainsKey(LocalNodeTag) == false)
+                    throw new InvalidOperationException($"At least one of the nodes must have the node tag \"{LocalNodeTag}\".");
+
                 foreach (var node in _setupInfo.NodeSetupInfos)
                 {
                     if (string.IsNullOrWhiteSpace(node.Value.Certificate))
@@ -369,10 +377,9 @@ namespace Raven.Server.Commercial
                 Syscall.FsyncDirectoryFor(settingsPath);
         }
 
-        private async Task<byte[]> CreateSettingsZipAndOptionallyWriteToLocalServer(Action<IOperationProgress> onProgress, CancellationToken token, SetupInfo setupInfo, SetupMode setupMode)
+        private async Task<byte[]> CreateSettingsZipAndOptionallyWriteToLocalServer(Action<IOperationProgress> onProgress, CancellationToken token, SetupMode setupMode)
         {
-            if (setupInfo.NodeSetupInfos.ContainsKey(LocalNodeTag) == false)
-                throw new InvalidOperationException($"At least one of the nodes must have the node tag \"{LocalNodeTag}\".");
+            //TODO handle progress, logs and errors
             try
             {
                 using (var ms = new MemoryStream())
@@ -383,19 +390,19 @@ namespace Raven.Server.Commercial
                         dynamic jsonObj = JsonConvert.DeserializeObject(settingsJson);
                         jsonObj["Setup.Mode"] = setupMode.ToString(); //TODO: setup.mode vs setup: { "mode": .... }
 
-                        foreach (var node in setupInfo.NodeSetupInfos)
+                        foreach (var node in _setupInfo.NodeSetupInfos)
                         {
-                            jsonObj["ServerUrl"] = serverUrl;
-				            jsonObj["PublicServerUrl"] = null;
-				            if (string.IsNullOrEmpty(publicUrl))
-				            {
-				                jsonObj["PublicServerUrl"] = publicUrl;                
-				            }
-				            jsonObj["Security.Certificate.Base64"] = base64Cert;
+                            jsonObj["ServerUrl"] = node.Value.ServerUrl;
+                            jsonObj["PublicServerUrl"] = null;
+                            if (string.IsNullOrEmpty(node.Value.PublicServerUrl))
+                            {
+                                jsonObj["PublicServerUrl"] = node.Value.PublicServerUrl;                
+                            }
+                            jsonObj["Security.Certificate.Base64"] = node.Value.Certificate;
 
                             var jsonString = JsonConvert.SerializeObject(jsonObj, Formatting.Indented);
 
-                            if (node.Key == LocalNodeTag && setupInfo.ModifyLocalServer)
+                            if (node.Key == LocalNodeTag && _setupInfo.ModifyLocalServer)
                             {
                                 try
                                 {
