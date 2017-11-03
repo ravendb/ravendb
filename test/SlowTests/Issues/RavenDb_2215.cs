@@ -188,7 +188,7 @@ namespace SlowTests.Issues
 
         }
         [Fact]
-        public void CantQueryReturningMultipleValuesOnDifferentArguments()
+        public void CanQueryReturningMultipleValuesOnDifferentArguments()
         {
             using (var store = GetDocumentStore())
             {
@@ -211,10 +211,13 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var ex = Assert.Throws<InvalidOperationException>(() => session.Query<SalesIndex.Result, SalesIndex>()
-                      .Where(x => x.IsCancelled)
-                      .AggregateBy(x => x.IsCancelled, f => f.SumOn(x => x.Nett).AverageOn(x => x.Val)) // should throw, invalid
-                      .Execute());
+                    var results = session.Query<SalesIndex.Result, SalesIndex>()
+                        .Where(x => x.IsCancelled)
+                        .AggregateBy(x => x.IsCancelled, f => f.SumOn(x => x.Nett).AverageOn(x => x.Val))
+                        .Execute();
+
+                    Assert.Equal(6310, results["IsCancelled"].Values[0].Sum);
+                    Assert.Equal(4, results["IsCancelled"].Values[0].Average);
                 }
             }
 
