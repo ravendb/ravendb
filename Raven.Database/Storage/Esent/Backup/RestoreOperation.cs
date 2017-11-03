@@ -45,13 +45,13 @@ namespace Raven.Database.Storage.Esent.Backup
 
                 if (currentUser != null && currentUser != dirOwner)
                 {
-                    output($"WARNING: Current user '{currentUser.Translate(typeof(NTAccount))}' isn't an owner of the backup location ({backupLocation}, " +
-                           $"current owner: '{dirOwner.Translate(typeof(NTAccount))}'). Restoring Esent backup might require user running RavenDB to be an owner of the backup files.");
+                    output("WARNING: Current user '" + currentUser.Translate(typeof(NTAccount)) + "' isn't an owner of the backup location (" + backupLocation + ", " +
+                           "current owner: '" + dirOwner.Translate(typeof(NTAccount)) + "'). Restoring Esent backup might require user running RavenDB to be an owner of the backup files.");
                 }
             }
             catch (Exception e)
             {
-                output($"WARNING: Could not verify the owner of the backup location. Exception message: {e.Message}");
+                output("WARNING: Could not verify the owner of the backup location. Exception message: " + e.Message);
             }
         }
 
