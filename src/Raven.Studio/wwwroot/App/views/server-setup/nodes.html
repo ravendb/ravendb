@@ -3,15 +3,30 @@
 </div>
 
 <div>
-    <form class="flex-form" data-bind="with: model.domain, submit: save">
+    <form class="flex-form" data-bind="submit: save">
 
         TODO:
-    </form>
 
-    <div>
-        <a href="#welcome" class="btn btn-default"><i class="icon-arrow-left"></i><span>Back</span></a>
-        <button type="submit" class="btn btn-primary"><span>Next</span> <i class="icon-arrow-right"></i></button>
-    </div>
+        <div data-bind="foreach: model.nodes">
+            <div class="panel panel-default padding">
+                <div>Node <span data-bind="text: $index() + 1"></span>
+                    <button  data-bind="click: $root.removeNode" class="btn btn-danger pull-right" title="Delete this node">
+                        <i class="icon-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <button type="button" data-bind="click: $root.addNode"><i class="icon-plus"></i> <span>Add node</span>
+            </button>
+        </div>
+
+        <div>
+            <a href="#welcome" class="btn btn-default"><i class="icon-arrow-left"></i><span>Back</span></a>
+            <button type="submit" class="btn btn-primary"><span>Next</span> <i class="icon-arrow-right"></i></button>
+        </div>
+    </form>
 
 
     <div class="bg-info padding">
