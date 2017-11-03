@@ -1,19 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Lucene.Net.Util;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
-using Raven.Client.Documents.Session;
-using Raven.Server.Json;
-using Raven.Server.Web;
 using Sparrow;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries.Faceted
 {
@@ -181,27 +174,6 @@ namespace Raven.Server.Documents.Queries.Faceted
             {
                 return string.Format("{0}:{1}", Field, RangeText);
             }
-        }
-
-        public static async Task<(List<Facet> Facets, long FacetsEtag)> ParseFromStringAsync(string facetsArrayAsString, JsonOperationContext context)
-        {
-            using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(facetsArrayAsString)))
-            {
-                var input = await context.ReadForMemoryAsync(stream, "facets");
-                if (input.TryGet("Facets", out BlittableJsonReaderArray array) == false)
-                    RequestHandler.ThrowRequiredPropertyNameInRequest("Facets");
-                return ParseFromJson(array);
-            }
-        }
-
-        public static unsafe (List<Facet> Facets, long FacetsEtag) ParseFromJson(BlittableJsonReaderArray array)
-        {
-            var results = new List<Facet>();
-
-            foreach (BlittableJsonReaderObject facetAsJson in array)
-                results.Add(JsonDeserializationServer.Facet(facetAsJson));
-
-            return (results, Hashing.XXHash32.Calculate(array.Parent.BasePointer, array.Parent.Size));
         }
     }
 }

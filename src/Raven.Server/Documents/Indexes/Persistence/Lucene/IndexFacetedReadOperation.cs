@@ -307,16 +307,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     var doc = docsInQuery.Array[index];
                     var currentVal = doubles[doc - docBase];
 
-                    if (facet.Aggregations.ContainsKey(FacetAggregation.Average))
+                    if (facet.Aggregations.TryGetValue(FacetAggregation.Average, out var avg) && g.Key == avg)
                         value.Average = currentVal + (value.Average ?? 0d);
 
-                    if (facet.Aggregations.ContainsKey(FacetAggregation.Min))
+                    if (facet.Aggregations.TryGetValue(FacetAggregation.Min, out var min) && g.Key == min)
                         value.Min = Math.Min(value.Min ?? double.MaxValue, currentVal);
 
-                    if (facet.Aggregations.ContainsKey(FacetAggregation.Max))
+                    if (facet.Aggregations.TryGetValue(FacetAggregation.Max, out var max) && g.Key == max)
                         value.Max = Math.Max(value.Max ?? double.MinValue, currentVal);
 
-                    if (facet.Aggregations.ContainsKey(FacetAggregation.Sum))
+                    if (facet.Aggregations.TryGetValue(FacetAggregation.Sum, out var sum) && g.Key == sum)
                         value.Sum = currentVal + (value.Sum ?? 0d);
                 }
             }
